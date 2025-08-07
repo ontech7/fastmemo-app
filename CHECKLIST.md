@@ -21,7 +21,8 @@
 - [x] Change UI for "edit mode" to bottom in Home screen
 - [x] Add intro with carousel when opening the app first time
 - [x] Add Import/Export notes with generated passphrase
-- [x] Internalization (i18n) for Italian, English, French, German, Spanish and Chinese
+- [x] Internalization (i18n) for Italian, English, French, German, Spanish and
+      Chinese
 - [x] Add Cloud Sync with encryption
 - [x] Add number of letters
 - [x] Add max dimension of the note
