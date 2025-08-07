@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "fastmemo-app-new-arch",
-    "slug": "fastmemo-app-new-arch",
-    "version": "1.0.0",
+    "name": "FastMemo",
+    "slug": "FastMemoApp",
+    "version": "0.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "fastmemoappnewarch",

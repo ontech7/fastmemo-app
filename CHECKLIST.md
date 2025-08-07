@@ -1,0 +1,35 @@
+# Checklist
+
+- [x] Create text Notes
+- [x] Add Categories on left
+- [x] Add Notes in Categories
+- [x] Added Notes as Favorite
+- [x] Create Categories
+- [x] Delete Categories
+- [x] Add Read-only Notes
+- [x] Add Protected Notes
+- [x] Save Notes in local storage (temporary disabled for testing)
+- [x] Create temporary trash for Notes
+- [x] Add Change category name and icon in Reorganize categories
+- [x] Add Reorganize categories
+- [x] Add Settings in Notes
+- [x] Rich Text
+- [x] Share notes
+- [x] Add Change category Note Settings
+- [x] Add General settings
+- [x] Add local secret code when opening the app first time
+- [x] Change UI for "edit mode" to bottom in Home screen
+- [x] Add intro with carousel when opening the app first time
+- [x] Add Import/Export notes with generated passphrase
+- [x] Internalization (i18n) for Italian, English, French, German, Spanish and Chinese
+- [x] Add Cloud Sync with encryption
+- [x] Add number of letters
+- [x] Add max dimension of the note
+- [x] Add number of items and checked items in ToDo note
+- [x] Add max limit (3) to cloud sync devices
+- [x] Report an issue + Suggest to a friend
+- [x] Hidden notes
+- [ ] Add custom filters
+- [ ] Generate note snippets on fastmemo.vercel.app from Mobile App
+- [ ] Add remind-me push notifications
+- [ ] Add widgets

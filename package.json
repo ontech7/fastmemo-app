@@ -1,14 +1,16 @@
 {
   "name": "fastmemo-app-new-arch",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "scripts": {
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,md,json}\"",
+    "format:diff": "prettier --write $(git diff --name-only | grep '.ts\\|.tsx\\|.js\\|.json\\|.md')",
+    "clean": "rm -rf node_modules .expo"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -40,10 +42,18 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@ianvs/prettier-plugin-sort-imports": "^4.6.0",
     "@types/react": "~19.0.10",
-    "typescript": "~5.8.3",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "@typescript-eslint/parser": "^8.39.0",
     "eslint": "^9.25.0",
-    "eslint-config-expo": "~9.2.0"
+    "eslint-config-expo": "~9.2.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "prettier": "^3.6.2",
+    "typescript": "~5.8.3"
   },
   "private": true
 }
