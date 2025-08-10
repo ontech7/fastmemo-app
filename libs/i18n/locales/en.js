@@ -87,8 +87,7 @@ const en = {
   note: {
     title_placeholder: "Title",
     description_placeholder: "Write something here...",
-    no_items:
-      "There are no items.\nAdd one by pressing the bottom right button.",
+    no_items: "There are no items.\nAdd one by pressing the bottom right button.",
     characters: "characters",
     completed: "completed",
     on: "on",
@@ -114,6 +113,8 @@ const en = {
     edit: "Edit settings",
     resync: "Resync data",
     deleteDevices: "Manage devices",
+    handshakeFailed: "Connection attempt failed",
+    handshakeFailedDesc: "Unable to connect to the Firebase server.",
   },
   synceddevices: {
     title: "Synced Devices",
@@ -133,8 +134,7 @@ const en = {
   },
   trashednotes: {
     title: "Trashed Notes",
-    countdown:
-      "Delete in: %{days} day(s), %{hours} hour(s) and %{minutes} minute(s)",
+    countdown: "Delete in: {{days}} day(s), {{hours}} hour(s) and {{minutes}} minute(s)",
     settings: {
       delete_all: "Delete all",
       restore_all: "Restore all",
@@ -172,8 +172,7 @@ const en = {
     export_import_popup_title: "Secret Passphrase",
     export_popup_description:
       "Write your secret passphrase here. Remember to save it otherwise you won't be able to recover your notes.",
-    import_popup_description:
-      "Write your secret passphrase here to import your notes.",
+    import_popup_description: "Write your secret passphrase here to import your notes.",
     webhooks: "Webhooks",
     wipe_data: "Wipe data",
     about: "About",
@@ -206,25 +205,20 @@ const en = {
       title: "How can I create a note?",
       text_1_0: "You can create a note by clicking the",
       text_1_1: "button on bottom-right corner of Home page.",
-      text_2_0:
-        "It will popup a new page where you can write a title and a description to your note.",
+      text_2_0: "It will popup a new page where you can write a title and a description to your note.",
       text_3_0: "You are able to save it by going back in the Home page.",
     },
     how_to_create_todo_note: {
       title: "How can I create a To-Do note?",
       text_1_0: "You can create a To-Do note by clicking the",
       text_1_1: "button on bottom-right corner of Home page.",
-      text_2_0:
-        "It will popup a new page where you can write a title and a list of To-Do texts to your note.",
-      text_3_0:
-        "By pressing the 6 dots on the right of an item, you will be able to move it up and down.",
+      text_2_0: "It will popup a new page where you can write a title and a list of To-Do texts to your note.",
+      text_3_0: "By pressing the 6 dots on the right of an item, you will be able to move it up and down.",
       text_4_0: "The cross button on the right will delete that item.",
       text_5_0: "The buttons on the bottom are: ",
       text_6_0: "• Add: a new To-Do item will be added in the list.",
-      text_7_0:
-        "• Hide/Unhide Checked: it will be hide/unhide To-Do items if they are checked.",
-      text_8_0:
-        "• Delete All: it will remove all the To-Do items present in the note.",
+      text_7_0: "• Hide/Unhide Checked: it will be hide/unhide To-Do items if they are checked.",
+      text_8_0: "• Delete All: it will remove all the To-Do items present in the note.",
       text_9_0: "You are able to save it by going back in the Home page.",
     },
     how_to_edit_note: {
@@ -235,8 +229,7 @@ const en = {
       title: "How can I delete a note?",
       text_1_0: "You can delete a note by clicking",
       text_1_1: "on top-right corner, when viewing a note.",
-      text_2_0:
-        "It will open a popup menù. The first option is what you are looking for.",
+      text_2_0: "It will open a popup menù. The first option is what you are looking for.",
     },
     how_to_select_notes: {
       title: "How can I select some notes?",
@@ -251,40 +244,32 @@ const en = {
       text_3_0: "• Bold: you can put in bold your text.",
       text_4_0: "• Italic: you can put in italic your text.",
       text_5_0: "• Underline: you can put in underline your text.",
-      text_6_0:
-        "• Subset: you can put your text in a bottom position relative to your text.",
-      text_7_0:
-        "• Superset: you can put your text in a top position relative to your text.",
+      text_6_0: "• Subset: you can put your text in a bottom position relative to your text.",
+      text_7_0: "• Superset: you can put your text in a top position relative to your text.",
       text_8_0: "• Bullet list: you can create a bullet list.",
       text_9_0: "• Ordered list: you can create an ordered list.",
-      text_10_0:
-        "• Code: you can create a wrapper where you can write formatted code.",
+      text_10_0: "• Code: you can create a wrapper where you can write formatted code.",
     },
     what_are_settings_note: {
       title: "What are the settings for a note?",
       text_1_0: "The settings for notes are:",
       text_2_0: "• Delete: you can delete the current note.",
       text_3_0: "• Important: you can set your note as important",
-      text_4_0:
-        "• Protect: you can lock your note. You will need a code or your fingerprint if activated.",
+      text_4_0: "• Protect: you can lock your note. You will need a code or your fingerprint if activated.",
       text_5_0: "• Read-Only: your note cannot be modified.",
-      text_6_0:
-        "• Change Category: you can change the category of a note to another.",
-      text_7_0:
-        "• Share: you can share the text of your note to another social application.",
+      text_6_0: "• Change Category: you can change the category of a note to another.",
+      text_7_0: "• Share: you can share the text of your note to another social application.",
     },
     how_create_category: {
       title: "How can I create a category?",
       text_1_0: "You can create a new category by clicking",
       text_1_1: "on top-left corner in Home page.",
-      text_2_0:
-        "You will be redirected to 'Organize' page. On bottom-right corner you need to click",
+      text_2_0: "You will be redirected to 'Organize' page. On bottom-right corner you need to click",
       text_2_1: "",
       text_3_0:
         "Once again you will be redirected to 'Create Category' page. You will be asked to create a name and select an unique icon.",
       text_4_0: "After compiling the form, the",
-      text_4_1:
-        "will appear on bottom-right corner. You must click it to save your new category.",
+      text_4_1: "will appear on bottom-right corner. You must click it to save your new category.",
     },
     how_edit_category: {
       title: "How can I edit a category?",
@@ -308,16 +293,14 @@ const en = {
     },
     how_delete_category: {
       title: "How can I delete a category?",
-      text_1_0:
-        "When being in Home page, you can long press on a category, and you go in 'edit mode'.",
+      text_1_0: "When being in Home page, you can long press on a category, and you go in 'edit mode'.",
       text_2_0: "If you click the",
       text_2_1:
         "a popup will appear, asking you if you want to delete the category along with your notes, or just transfer them to ALL notes.",
     },
     what_are_trashed_notes: {
       title: "What are the trashed notes?",
-      text_1_0:
-        "When deleting a note, it will go to the trashed notes. It's a bin where all the notes temporarily go.",
+      text_1_0: "When deleting a note, it will go to the trashed notes. It's a bin where all the notes temporarily go.",
       text_2_0:
         "By default they will last only 7 days, and then they are gone. You can change this setting from the Basic settings.",
     },
@@ -325,16 +308,12 @@ const en = {
       title: "How can I restore trashed notes?",
       text_1_0:
         "When being in 'Trashed notes' page, you can select a note and a popup will appear asking you if you want to restore that note.",
-      text_2_0:
-        "You can restore multiple notes by long pressing a note, and select the notes you want. Click the",
+      text_2_0: "You can restore multiple notes by long pressing a note, and select the notes you want. Click the",
       text_2_1: "on top-right corner.",
-      text_3_0:
-        "A popup will appear, and the second option is what you are looking for.",
-      text_4_0:
-        "You can also restore all the notes present in the bin, by clicking",
+      text_3_0: "A popup will appear, and the second option is what you are looking for.",
+      text_4_0: "You can also restore all the notes present in the bin, by clicking",
       text_4_1: "on top-right corner.",
-      text_5_0:
-        "A popup will appear, and the second option is what you are looking for.",
+      text_5_0: "A popup will appear, and the second option is what you are looking for.",
     },
     how_restore_delete_notes: {
       title: "How can I restore delete notes?",
@@ -342,40 +321,31 @@ const en = {
         "When being in 'Trashed notes' page, you can long press a note you will go in 'edit mode', and select the notes you want to delete.",
       text_2_0: "Click the",
       text_2_1: "on top-right corner.",
-      text_3_0:
-        "A popup will appear, and the first option is what you are looking for.",
-      text_4_0:
-        "You can also delete all the notes present in the bin, by clicking",
+      text_3_0: "A popup will appear, and the first option is what you are looking for.",
+      text_4_0: "You can also delete all the notes present in the bin, by clicking",
       text_4_1: "on top-right corner.",
-      text_5_0:
-        "A popup will appear, and the second option is what you are looking for.",
+      text_5_0: "A popup will appear, and the second option is what you are looking for.",
     },
     what_cloud_sync: {
       title: "What is Cloud Sync?",
-      text_1_0:
-        "It's possible to sync your notes by connecting your Google Firebase account and enabling the sync mode.",
-      text_2_0:
-        "You don't need to do anything else. Your notes will be stored in your Google Firebase, crypted.",
+      text_1_0: "It's possible to sync your notes by connecting your Google Firebase account and enabling the sync mode.",
+      text_2_0: "You don't need to do anything else. Your notes will be stored in your Google Firebase, crypted.",
     },
     what_secret_code: {
       title: "What is a secret code?",
-      text_1_0:
-        "Your locked notes will require a secret code you generated when opening the app for the first time.",
+      text_1_0: "Your locked notes will require a secret code you generated when opening the app for the first time.",
       text_2_0: "You can change it from Basic settings.",
     },
     what_import_export: {
       title: "What is Import/Export data?",
       text_1_0: "You can import or export data locally.",
-      text_2_0:
-        "By exporting them, a file will be generated in the folder you want to save in.",
-      text_3_0:
-        "It will be crypted by default. You will need a passphrase to import it.",
+      text_2_0: "By exporting them, a file will be generated in the folder you want to save in.",
+      text_3_0: "It will be crypted by default. You will need a passphrase to import it.",
     },
     what_wipe_data: {
       title: "What is Wipe data?",
       text_1_0: "You can wipe all the notes and categories.",
-      text_2_0:
-        "A popup will appear in order to ask you if you are sure about this action.",
+      text_2_0: "A popup will appear in order to ask you if you are sure about this action.",
       text_3_0: "They will be deleted permanently.",
     },
   },
@@ -394,8 +364,7 @@ const en = {
       other: "Other",
     },
     descriptionPlaceholder: "Please describe the issue in detail (required)",
-    deviceInfoCheckbox:
-      "For more accurate diagnosis, kindly provide us with device details.",
+    deviceInfoCheckbox: "For more accurate diagnosis, kindly provide us with device details.",
     attachments: "Add Images",
     sendReport: "Send Report",
 
@@ -428,8 +397,7 @@ const en = {
 
   /* popup */
   popup: {
-    delete_category:
-      "Do you want to delete this Category?\nYou can MOVE notes to 'ALL' category",
+    delete_category: "Do you want to delete this Category?\nYou can MOVE notes to 'ALL' category",
     restore_single_note: "Do you want to restore this Note?",
     restore_notes: "Do you want to restore those Notes?",
     delete_notes: "Do you want to delete those Notes?",
@@ -438,10 +406,8 @@ const en = {
     delete_all_notes_perma: "Do you want to delete ALL Notes permanently?",
     select_one_option: "Please select one option",
     passphrase_wrong: "The passphrase you entered is wrong.",
-    are_you_sure_wipe:
-      "Are you sure you want to wipe your data?\nYou will lose all notes and categories created.",
-    finish_organize_categories:
-      "Finish to organize categories or undo your changes.",
+    are_you_sure_wipe: "Are you sure you want to wipe your data?\nYou will lose all notes and categories created.",
+    finish_organize_categories: "Finish to organize categories or undo your changes.",
   },
 
   /* generic */

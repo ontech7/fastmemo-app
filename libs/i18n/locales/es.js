@@ -87,8 +87,7 @@ const es = {
   note: {
     title_placeholder: "Título",
     description_placeholder: "Escribe algo aqui...",
-    no_items:
-      "No hay elementos.\nAgregue uno presionando el botón inferior derecho.",
+    no_items: "No hay elementos.\nAgregue uno presionando el botón inferior derecho.",
     characters: "caracteres",
     completati: "terminado",
     on: "de",
@@ -114,6 +113,8 @@ const es = {
     edit: "Editar ajustes",
     resync: "Resincronizar datos",
     deleteDevices: "Administrar dispositivos",
+    handshakeFailed: "Error en el intento de conexión",
+    handshakeFailedDesc: "No se pudo conectar al servidor de Firebase.",
   },
   synceddevices: {
     title: "Dispositivos conectados",
@@ -133,7 +134,7 @@ const es = {
   },
   trashednotes: {
     title: "Notas Desechadas",
-    countdown: "Eliminar en: %{days} días, %{hours} horas e %{minutes} minutos",
+    countdown: "Eliminar en: {{days}} días, {{hours}} horas e {{minutes}} minutos",
     settings: {
       delete_all: "Eliminar todos",
       restore_all: "Restaura todos",
@@ -171,8 +172,7 @@ const es = {
     export_import_popup_title: "Frase de contraseña secreta",
     export_popup_description:
       "Escribe tu contraseña secreta aquí. Recuerda guardarlo, de lo contrario no podrás recuperar tus notas.",
-    import_popup_description:
-      "Escriba su contraseña secreta aquí para importar sus notas.",
+    import_popup_description: "Escriba su contraseña secreta aquí para importar sus notas.",
     webhooks: "Webhooks",
     wipe_data: "Borrar información",
     about: "Acerca de",
@@ -205,8 +205,7 @@ const es = {
       title: "¿Cómo puedo crear una nota?",
       text_1_0: "Puede crear una nota haciendo clic en el botón",
       text_1_1: "en la esquina inferior derecha de la página de inicio.",
-      text_2_0:
-        "Aparecerá una nueva página donde puede escribir un título y una descripción para su nota.",
+      text_2_0: "Aparecerá una nueva página donde puede escribir un título y una descripción para su nota.",
       text_3_0: "Puede guardarlo volviendo a la página de inicio.",
     },
     how_to_create_todo_note: {
@@ -215,15 +214,12 @@ const es = {
       text_1_1: "botón en la esquina inferior derecha de la página de inicio.",
       text_2_0:
         "Aparecerá una nueva página donde puedes escribir un título y una lista de textos de tareas pendientes en tu nota.",
-      text_3_0:
-        "Al presionar los 6 puntos a la derecha de un elemento, podrás moverlo hacia arriba y hacia abajo.",
+      text_3_0: "Al presionar los 6 puntos a la derecha de un elemento, podrás moverlo hacia arriba y hacia abajo.",
       text_4_0: "El botón de cruz a la derecha eliminará ese elemento.",
       text_5_0: "Los botones en la parte inferior son: ",
       text_6_0: "• Agregar: se agregará una nueva tarea a la lista.",
-      text_7_0:
-        "• Ocultar/Mostrar marcados: ocultará/mostrará las tareas pendientes si están marcados.",
-      text_8_0:
-        "• Eliminar todo: eliminará todos los elementos pendientes presentes en la nota.",
+      text_7_0: "• Ocultar/Mostrar marcados: ocultará/mostrará las tareas pendientes si están marcados.",
+      text_8_0: "• Eliminar todo: eliminará todos los elementos pendientes presentes en la nota.",
       text_9_0: "Puedes guardarlo volviendo a la página de inicio.",
     },
     how_to_edit_note: {
@@ -234,8 +230,7 @@ const es = {
       title: "¿Cómo puedo eliminar una nota?",
       text_1_0: "Puedes eliminar una nota haciendo clic",
       text_1_1: "en la esquina superior derecha, al ver una nota.",
-      text_2_0:
-        "Se abrirá un menú emergente. La primera opción es lo que estás buscando.",
+      text_2_0: "Se abrirá un menú emergente. La primera opción es lo que estás buscando.",
     },
     how_to_select_notes: {
       title: "¿Cómo puedo seleccionar algunas notas?",
@@ -245,46 +240,37 @@ const es = {
     },
     what_toolbar_below: {
       title: "¿Qué es esa barra de herramientas debajo?",
-      text_1_0:
-        "La barra de herramientas puede enriquecer tu texto de muchas maneras.",
+      text_1_0: "La barra de herramientas puede enriquecer tu texto de muchas maneras.",
       text_2_0: "• Imagen: puedes poner y cortar una imagen de tu Galería.",
       text_3_0: "• Negrita: puedes poner tu texto en negrita.",
       text_4_0: "• Cursiva: puedes poner tu texto en cursiva.",
       text_5_0: "• Subrayado: puedes subrayar tu texto.",
-      text_6_0:
-        "• Subconjunto: puedes poner tu texto en una posición inferior en relación con tu texto.",
-      text_7_0:
-        "• Superconjunto: puedes poner tu texto en una posición superior en relación con tu texto.",
+      text_6_0: "• Subconjunto: puedes poner tu texto en una posición inferior en relación con tu texto.",
+      text_7_0: "• Superconjunto: puedes poner tu texto en una posición superior en relación con tu texto.",
       text_8_0: "• Lista de viñetas: puedes crear una lista de viñetas.",
       text_9_0: "• Lista ordenada: puedes crear una lista ordenada.",
-      text_10_0:
-        "• Código: puedes crear un envoltorio donde puedes escribir código formateado.",
+      text_10_0: "• Código: puedes crear un envoltorio donde puedes escribir código formateado.",
     },
     what_are_settings_note: {
       title: "¿Cuáles son los ajustes para una nota?",
       text_1_0: "La configuración de las notas es:",
       text_2_0: "• Eliminar: puedes eliminar la nota actual.",
       text_3_0: "• Importante: puedes configurar tu nota como importante",
-      text_4_0:
-        "• Proteger: puedes bloquear tu nota. Necesitarás un código o tu huella digital si está activado.",
+      text_4_0: "• Proteger: puedes bloquear tu nota. Necesitarás un código o tu huella digital si está activado.",
       text_5_0: "• Solo lectura: tu nota no se puede modificar.",
-      text_6_0:
-        "• Cambiar categoría: puedes cambiar la categoría de una nota a otra.",
-      text_7_0:
-        "• Compartir: puede compartir el texto de su nota en otra aplicación social.",
+      text_6_0: "• Cambiar categoría: puedes cambiar la categoría de una nota a otra.",
+      text_7_0: "• Compartir: puede compartir el texto de su nota en otra aplicación social.",
     },
     how_create_category: {
       title: "¿Cómo puedo crear una categoría?",
       text_1_0: "Puedes crear una nueva categoría haciendo clic",
       text_1_1: "en la esquina superior izquierda de la página de inicio.",
-      text_2_0:
-        "Serás redirigido a la página 'Organizar'. En la esquina inferior derecha, debes hacer clic",
+      text_2_0: "Serás redirigido a la página 'Organizar'. En la esquina inferior derecha, debes hacer clic",
       texto_2_1: "",
       text_3_0:
         "Una vez más serás redirigido a la página 'Crear categoría'. Se te pedirá que crees un nombre y selecciones un ícono único.",
       text_4_0: "Después de compilar el formulario, el",
-      text_4_1:
-        "aparecerá en la esquina inferior derecha. Debes hacer clic en él para guardar tu nueva categoría.",
+      text_4_1: "aparecerá en la esquina inferior derecha. Debes hacer clic en él para guardar tu nueva categoría.",
     },
     how_edit_category: {
       title: "¿Cómo puedo editar una categoría?",
@@ -308,16 +294,14 @@ const es = {
     },
     how_delete_category: {
       title: "¿Cómo puedo eliminar una categoría?",
-      text_1_0:
-        "Cuando estás en la página de inicio, puedes mantener presionada una categoría y entrar en 'modo de edición'.",
+      text_1_0: "Cuando estás en la página de inicio, puedes mantener presionada una categoría y entrar en 'modo de edición'.",
       text_2_0: "Si haces clic en",
       text_2_1:
         "Aparecerá una ventana emergente que le preguntará si desea eliminar la categoría junto con sus notas o simplemente transferirlas a TODAS las notas.",
     },
     what_are_trashed_notes: {
       title: "¿Qué son las notas desechadas?",
-      text_1_0:
-        "Al eliminar una nota, irá a la papelera. Es un contenedor donde todas las notas van temporalmente.",
+      text_1_0: "Al eliminar una nota, irá a la papelera. Es un contenedor donde todas las notas van temporalmente.",
       text_2_0:
         "De manera predeterminada, durarán solo 7 días y luego desaparecerán. Puedes cambiar esta configuración desde la configuración básica.",
     },
@@ -328,13 +312,10 @@ const es = {
       text_2_0:
         "Puede restaurar varias notas manteniendo presionada una nota y seleccionando las notas que desee. Haga clic en",
       text_2_1: "en la esquina superior derecha.",
-      text_3_0:
-        "Aparecerá una ventana emergente y la segunda opción es lo que estás buscando.",
-      text_4_0:
-        "También puedes restaurar todas las notas presentes en la papelera, haciendo clic en",
+      text_3_0: "Aparecerá una ventana emergente y la segunda opción es lo que estás buscando.",
+      text_4_0: "También puedes restaurar todas las notas presentes en la papelera, haciendo clic en",
       text_4_1: "en la esquina superior derecha.",
-      text_5_0:
-        "Aparecerá una ventana emergente y la segunda opción es lo que estás buscando.",
+      text_5_0: "Aparecerá una ventana emergente y la segunda opción es lo que estás buscando.",
     },
     how_restore_delete_notes: {
       title: "¿Cómo puedo restaurar las notas borradas?",
@@ -342,40 +323,32 @@ const es = {
         "Cuando estés en la página de 'Notas descartadas', puedes mantener presionada una nota, accederás al 'modo de edición' y seleccionar las notas que deseas eliminar.",
       text_2_0: "Haz clic en",
       text_2_1: "en la esquina superior derecha.",
-      text_3_0:
-        "Aparecerá una ventana emergente y la primera opción es lo que estás buscando.",
-      text_4_0:
-        "También puedes eliminar todas las notas presentes en la papelera, haciendo clic en",
+      text_3_0: "Aparecerá una ventana emergente y la primera opción es lo que estás buscando.",
+      text_4_0: "También puedes eliminar todas las notas presentes en la papelera, haciendo clic en",
       text_4_1: "en la esquina superior derecha.",
-      text_5_0:
-        "Aparecerá una ventana emergente y la segunda opción es lo que estás buscando.",
+      text_5_0: "Aparecerá una ventana emergente y la segunda opción es lo que estás buscando.",
     },
     what_cloud_sync: {
       title: "¿Qué es la sincronización en la nube?",
       text_1_0:
         "Es posible sincronizar tus notas conectando tu cuenta de Google Firebase y habilitando el modo de sincronización.",
-      text_2_0:
-        "No necesitas hacer nada más. Tus notas se almacenarán en tu Google Firebase, cifradas.",
+      text_2_0: "No necesitas hacer nada más. Tus notas se almacenarán en tu Google Firebase, cifradas.",
     },
     what_secret_code: {
       title: "¿Qué es un código secreto?",
-      text_1_0:
-        "Tus notas bloqueadas requerirán un código secreto que generaste al abrir la aplicación por primera vez.",
+      text_1_0: "Tus notas bloqueadas requerirán un código secreto que generaste al abrir la aplicación por primera vez.",
       text_2_0: "Puedes cambiarlo desde la configuración básica.",
     },
     what_import_export: {
       title: "¿Qué son los datos de importación/exportación?",
       text_1_0: "Puedes importar o exportar datos localmente.",
-      text_2_0:
-        "Al exportarlos, se generará un archivo en la carpeta en la que deseas guardar.",
-      text_3_0:
-        "Se cifrará de forma predeterminada. Necesitarás una frase de contraseña para importarlo.",
+      text_2_0: "Al exportarlos, se generará un archivo en la carpeta en la que deseas guardar.",
+      text_3_0: "Se cifrará de forma predeterminada. Necesitarás una frase de contraseña para importarlo.",
     },
     what_wipe_data: {
       title: "¿Qué es Borrar datos?",
       text_1_0: "Puedes borrar todas las notas y categorías.",
-      text_2_0:
-        "Aparecerá una ventana emergente para preguntarte si estás seguro de esta acción.",
+      text_2_0: "Aparecerá una ventana emergente para preguntarte si estás seguro de esta acción.",
       text_3_0: "Se eliminarán de forma permanente.",
     },
   },
@@ -393,10 +366,8 @@ const es = {
       suggestions: "Sugerencias",
       other: "Otro",
     },
-    descriptionPlaceholder:
-      "Por favor, describa el problema en detalle (obligatorio)",
-    deviceInfoCheckbox:
-      "Para un diagnóstico más preciso, por favor proporciónenos detalles del dispositivo.",
+    descriptionPlaceholder: "Por favor, describa el problema en detalle (obligatorio)",
+    deviceInfoCheckbox: "Para un diagnóstico más preciso, por favor proporciónenos detalles del dispositivo.",
     attachments: "Añadir imágenes",
     sendReport: "Enviar Reporte",
 
@@ -429,21 +400,17 @@ const es = {
 
   /* popup */
   popup: {
-    delete_category:
-      "¿Quieres eliminar esta categoría?\nPuedes MOVER notas a la categoría 'TODAS'",
+    delete_category: "¿Quieres eliminar esta categoría?\nPuedes MOVER notas a la categoría 'TODAS'",
     restore_single_note: "¿Quieres restaurar este Note?",
     restore_notes: "¿Quieres restaurar esas Notas?",
     delete_notes: "¿Quieres eliminar esas Notas?",
     delete_notes_perma: "¿Quieres eliminar esas notas de forma permanente?",
     restore_all_notes: "¿Quieres restaurar TODAS las notas?",
-    delete_all_notes_perma:
-      "¿Quieres eliminar TODAS las notas de forma permanente?",
+    delete_all_notes_perma: "¿Quieres eliminar TODAS las notas de forma permanente?",
     select_one_option: "Por favor selecciona una opcion",
     passphrase_wrong: "La contraseña que ingresaste es incorrecta.",
-    are_you_sure_wipe:
-      "¿Estás seguro de que quieres borrar tus datos?\nPerderás todas las notas y categorías creadas.",
-    finish_organize_categories:
-      "Finalice para organizar categorías o deshacer sus cambios.",
+    are_you_sure_wipe: "¿Estás seguro de que quieres borrar tus datos?\nPerderás todas las notas y categorías creadas.",
+    finish_organize_categories: "Finalice para organizar categorías o deshacer sus cambios.",
   },
 
   /* generic */

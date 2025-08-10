@@ -1,6 +1,5 @@
 import { Platform } from "react-native";
 
-export type ColorType = keyof typeof COLOR;
 export const COLOR = {
   black: "#000",
   softWhite: "#f4f6fa",
@@ -17,9 +16,8 @@ export const COLOR = {
   importantIcon: "#B66465",
   yellow: "#EEE78E",
   darkYellow: "#D8D28B",
-};
+} as const;
 
-export type FontSizeType = keyof typeof FONTSIZE;
 export const FONTSIZE = {
   title: 32,
   intro: 28,
@@ -29,16 +27,14 @@ export const FONTSIZE = {
   small: 12,
   inputTitle: 18,
   cardTitle: 18,
-};
+} as const;
 
-export type FontWeightType = keyof typeof FONTWEIGHT;
 export const FONTWEIGHT = {
   semiBold: Platform.OS === "ios" ? "600" : "700",
   regular: "400",
   light: "300",
-};
+} as const;
 
-export type PaddingMarginType = keyof typeof PADDING_MARGIN;
 export const PADDING_MARGIN = {
   xs: 3,
   sm: 8,
@@ -46,20 +42,18 @@ export const PADDING_MARGIN = {
   lg: 18,
   xl: 35,
   xxl: 50,
-};
+} as const;
 
-export type SizeType = keyof typeof SIZE;
 export const SIZE = {
   full: "100%",
   half: "50%",
   third: "33.33%",
   quarter: "25%",
-};
+} as const;
 
-export type BorderType = keyof typeof BORDER;
 export const BORDER = {
   small: 7,
   normal: 12,
   big: 20,
   rounded: 999,
-};
+} as const;

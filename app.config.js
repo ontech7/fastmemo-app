@@ -21,6 +21,7 @@ module.exports = {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: configs.app.backgroundColor,
       },
+      softwareKeyboardLayoutMode: "pan",
       edgeToEdgeEnabled: true,
       package: configs.app.bundle,
       versionCode: 17,
@@ -39,16 +40,28 @@ module.exports = {
         "expo-splash-screen",
         {
           image: "./assets/images/splash-icon.png",
-          imageWidth: 200,
-          resizeMode: "cover",
+          imageWidth: 150,
           backgroundColor: configs.app.backgroundColor,
         },
       ],
-      ["./plugins/withDisableForcedDarkModeAndroid.js", {}],
+      [
+        "@sentry/react-native/expo",
+        {
+          url: "https://sentry.io/",
+          note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
+          project: "fastmemo-app",
+          organization: "andrea-losavio",
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,
     },
     githubUrl: "https://github.com/ontech7/fastmemo-app-new-arch",
+    extra: {
+      eas: {
+        projectId: "44c5f162-d9f8-40db-ae28-269fe48982ca",
+      },
+    },
   },
 };
