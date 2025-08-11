@@ -11,13 +11,13 @@ import settingsReducer from "./settingsSlice";
 
 // Config persist individuale per ogni slice
 const notesPersistConfig = {
-  key: "notes",
+  key: "root_notes",
   storage: FSStorage(),
   migrate: async (state) => {
     if (state === undefined) {
       // Migrazione da AsyncStorage (vecchia versione)
       const asyncState = await getStoredState({
-        key: "notes",
+        key: "root_notes",
         storage: AsyncStorage,
       });
       return asyncState;
@@ -27,12 +27,12 @@ const notesPersistConfig = {
 };
 
 const categoriesPersistConfig = {
-  key: "categories",
+  key: "root_categories",
   storage: AsyncStorage,
 };
 
 const settingsPersistConfig = {
-  key: "settings",
+  key: "root_settings",
   storage: AsyncStorage,
 };
 
