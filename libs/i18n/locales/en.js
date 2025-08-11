@@ -83,6 +83,7 @@ const en = {
   home: {
     notes: "Notes",
     search: "Search something...",
+    deepSearch: "Deep search (text, lists…)",
   },
   note: {
     title_placeholder: "Title",

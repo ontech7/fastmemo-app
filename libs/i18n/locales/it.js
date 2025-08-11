@@ -83,11 +83,12 @@ const it = {
   },
   home: {
     notes: "Note",
-    search: "Cerca qualcosa...",
+    search: "Cerca qualcosa…",
+    deepSearch: "Ricerca approfondita (testo, liste…)",
   },
   note: {
     title_placeholder: "Titolo",
-    description_placeholder: "Scrivi qualcosa qui...",
+    description_placeholder: "Scrivi qualcosa qui…",
     no_items: "Non sono presenti elementi.\nAggiungine uno premendo il tasto in basso a destra.",
     characters: "caratteri",
     completed: "completati",
@@ -107,7 +108,7 @@ const it = {
   },
   cloudsync: {
     title: "Cloud Sync",
-    syncing_1: "Sincronizzazione in corso...",
+    syncing_1: "Sincronizzazione in corso…",
     syncing_2: "Aspetta fino al termine",
     enable: "Abilita Cloud sync",
     save: "Salva impostazioni",

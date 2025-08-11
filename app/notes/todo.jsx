@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import {
   BackHandler,
@@ -307,14 +306,9 @@ export default function NoteTodoScreen() {
 
   const [autoFocus, setAutoFocus] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!isNewlyCreated) {
-        setAutoFocus(true);
-        return () => setAutoFocus(false);
-      }
-    }, [isNewlyCreated])
-  );
+  useEffect(() => {
+    setTimeout(() => setAutoFocus(true), 20);
+  }, []);
 
   const renderTodoItem = ({ item, drag, isActive }) => (
     <TodoItem

@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { createSelector } from "reselect";
 
 import { COLLECTIONS, deleteCollectionInCloud, only_if_cloudConnected } from "@/libs/firebase";
 import { order_asc_sort } from "@/utils/sort";
@@ -168,20 +169,21 @@ export const {
 } = categoriesSlice.actions;
 
 // Selectors
-export const getCurrentCategory = (state) => state.categories.items.find((cat) => cat.selected);
-
 export const getCategories = (state) => state.categories.items;
 
 export const getCloudCategories = (state) => state.categories.cloud.items;
 
-export const getUnusedCategories = (catExcpt) => (state) => {
-  const mutableCategoryMap = { ...CATEGORY_MAP };
-  state.categories.items.forEach((category) => {
-    if (catExcpt !== category.icon) {
-      mutableCategoryMap[category.icon] = null;
-    }
+export const getCurrentCategory = createSelector([getCategories], (categories) => categories.find((cat) => cat.selected));
+
+export const getUnusedCategories = (catExcpt) =>
+  createSelector([getCategories], (categories) => {
+    const mutableCategoryMap = { ...CATEGORY_MAP };
+    categories.forEach((category) => {
+      if (catExcpt !== category.icon) {
+        mutableCategoryMap[category.icon] = null;
+      }
+    });
+    return Object.values(mutableCategoryMap).filter(Boolean);
   });
-  return Object.values(mutableCategoryMap).filter(Boolean);
-};
 
 export default categoriesSlice.reducer;

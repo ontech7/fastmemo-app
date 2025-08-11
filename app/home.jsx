@@ -13,7 +13,10 @@ import { useDispatch, useSelector, useStore } from "react-redux";
 
 import { popupAlert } from "@/utils/alert";
 import { toggleWithSecret } from "@/utils/crypt";
+import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
+import DeepSearchButton from "@/components/buttons/DeepSearchButton";
+import GridSizeButton from "@/components/buttons/GridSizeButton";
 import Sidebar from "@/components/Sidebar";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
@@ -38,11 +41,13 @@ import {
   toggleReadOnlyNotes,
 } from "../slicers/notesSlice";
 import {
+  selectorGridSize,
   selectorIsFingerprintEnabled,
   selectorShowHidden,
   selectorWebhook_deleteNote,
   selectorWebhook_temporaryDeleteNote,
   selectorWebhook_updateNote,
+  setGridSize,
 } from "../slicers/settingsSlice";
 
 export default function HomeScreen() {
@@ -64,10 +69,15 @@ export default function HomeScreen() {
   const webhook_updateNote = useSelector(selectorWebhook_updateNote);
 
   const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
+  const gridSize = useSelector(selectorGridSize);
 
   const dispatch = useDispatch();
 
+  const [showDeepSearch, setShowDeepSearch] = useState(false);
+
+  const [deepFilterText, setDeepFilterText] = useState("");
   const [filterText, setFilterText] = useState("");
+
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState([]);
 
@@ -199,12 +209,22 @@ export default function HomeScreen() {
   );
 
   const filteredNotes = useMemo(() => {
-    if (!filterText.trim()) {
-      return notes;
-    }
+    const text = !showDeepSearch ? filterText.trim().toLowerCase() : deepFilterText.trim().toLowerCase();
 
-    return notes.filter((note) => note.title?.toLowerCase().includes(filterText.toLowerCase()));
-  }, [filterText, notes]);
+    if (!showDeepSearch) {
+      return !text ? notes : notes.filter((note) => note.title?.toLowerCase().includes(filterText.toLowerCase()));
+    } else {
+      return !text
+        ? notes
+        : notes.filter((note) => {
+            if ((note.type || "text") === "text") {
+              return formatToPlainText(note.text?.toLowerCase()).includes(text);
+            } else {
+              return note.list.find((item) => item.text?.toLowerCase().includes(text));
+            }
+          });
+    }
+  }, [filterText, deepFilterText, showDeepSearch, notes]);
 
   // hardware back for resetting deleteMode
   useEffect(() => {
@@ -346,17 +366,27 @@ export default function HomeScreen() {
                 <Text style={styles.categoryName}>{currentCategory.name != "All" ? currentCategory.name : t("All")}</Text>
               </View>
 
-              {isDeleteMode && (
-                <View style={styles.deleteModeContainer}>
+              {isDeleteMode ? (
+                <View style={styles.topContainer}>
                   <DeleteNotesButton onPressDelete={temporaryDeleteSelectedNotesFromItems} />
+                </View>
+              ) : (
+                <View style={styles.topContainer}>
+                  <DeepSearchButton onPress={() => setShowDeepSearch((p) => !p)} />
+                  <GridSizeButton onChange={() => dispatch(setGridSize((gridSize || 1) === 1 ? 2 : gridSize === 2 ? 3 : 1))} />
                 </View>
               )}
             </View>
 
-            <SearchNotesInput text={filterText} onChangeText={setFilterText} />
+            <SearchNotesInput
+              text={!showDeepSearch ? filterText : deepFilterText}
+              onChangeText={!showDeepSearch ? setFilterText : setDeepFilterText}
+              showDeepSearch={showDeepSearch}
+            />
 
             <FlashList
               showsVerticalScrollIndicator={false}
+              numColumns={gridSize || 1}
               data={filteredNotes}
               extraData={{ isDeleteMode }}
               renderItem={renderItem}
@@ -399,8 +429,9 @@ const styles = StyleSheet.create({
     height: SIZE.full,
     flexDirection: "row",
   },
-  deleteModeContainer: {
+  topContainer: {
     flexDirection: "row",
+    gap: PADDING_MARGIN.md,
   },
   saveNoteButton: {
     marginBottom: PADDING_MARGIN.sm,

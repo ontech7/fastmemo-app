@@ -1,11 +1,11 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Keyboard, StyleSheet, TextInput, TouchableWithoutFeedback, View } from "react-native";
-import { MagnifyingGlassIcon, XMarkIcon } from "react-native-heroicons/outline";
+import { DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, XMarkIcon } from "react-native-heroicons/outline";
 
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
 
-export default function SearchNotesInput({ text, onChangeText }) {
+export default function SearchNotesInput({ text, onChangeText, showDeepSearch }) {
   const { t } = useTranslation();
 
   return (
@@ -15,14 +15,19 @@ export default function SearchNotesInput({ text, onChangeText }) {
         onChangeText={onChangeText}
         style={styles.searchInput}
         cursorColor={COLOR.softWhite}
-        placeholder={t("home.search")}
+        placeholder={!showDeepSearch ? t("home.search") : t("home.deepSearch")}
         placeholderTextColor={COLOR.placeholder}
       />
 
       {!text ? (
-        <MagnifyingGlassIcon size={18} color={COLOR.softWhite} />
+        !showDeepSearch ? (
+          <MagnifyingGlassIcon style={styles.icon} size={18} color={COLOR.softWhite} />
+        ) : (
+          <DocumentMagnifyingGlassIcon style={styles.icon} size={18} color={COLOR.softWhite} />
+        )
       ) : (
         <TouchableWithoutFeedback
+          style={styles.icon}
           onPress={() => {
             onChangeText("");
             Keyboard.dismiss();
@@ -51,5 +56,8 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLOR.gray,
     paddingHorizontal: PADDING_MARGIN.sm,
+  },
+  icon: {
+    marginRight: PADDING_MARGIN.xs,
   },
 });

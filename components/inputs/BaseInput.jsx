@@ -20,7 +20,8 @@ export default function BaseInput({ label, ...props }) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    padding: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: PADDING_MARGIN.xs,
     marginBottom: PADDING_MARGIN.lg,
     backgroundColor: COLOR.blue,
     borderRadius: BORDER.normal,

@@ -105,7 +105,9 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
           {isStringEmpty(title) ? t("empty_title") : title}
         </Text>
 
-        <Text style={[styles.date, important && styles.dateImportant]}>{date}</Text>
+        <Text style={[styles.date, important && styles.dateImportant]} numberOfLines={1} ellipsizeMode="tail">
+          {date}
+        </Text>
       </View>
 
       {important && (

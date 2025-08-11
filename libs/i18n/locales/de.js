@@ -82,11 +82,12 @@ const de = {
   },
   home: {
     notes: "Notiz",
-    search: "Nach etwas suchen...",
+    search: "Nach etwas suchen…",
+    deepSearch: "Tiefensuche (Text, Listen…)",
   },
   note: {
     title_placeholder: "Titel",
-    description_placeholder: "Schreiben Sie hier etwas...",
+    description_placeholder: "Schreiben Sie hier etwas…",
     no_items: "Es sind keine Elemente vorhanden.\nFügen Sie eines hinzu, indem Sie auf die Schaltfläche unten rechts klicken.",
     characters: "Textzeichen",
     completati: "vollendet",
@@ -106,7 +107,7 @@ const de = {
   },
   cloudsync: {
     title: "Cloud Sync",
-    syncing_1: "Synchronisierung läuft...",
+    syncing_1: "Synchronisierung läuft…",
     syncing_2: "Warten Sie, bis der Vorgang abgeschlossen ist",
     enable: "Aktivieren Sie die Cloud-Sync",
     save: "Einstellungen speichern",
