@@ -309,11 +309,11 @@ export default function NoteTodoScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!createdAt) {
+      if (!isNewlyCreated) {
         setAutoFocus(true);
         return () => setAutoFocus(false);
       }
-    }, [createdAt])
+    }, [isNewlyCreated])
   );
 
   const renderTodoItem = ({ item, drag, isActive }) => (

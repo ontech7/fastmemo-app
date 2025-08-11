@@ -322,8 +322,6 @@ export default function NoteTextScreen() {
           }}
         />
       </KeyboardAvoidingView>
-
-      {showKeyboardDismiss && <DismissKeyboardButton />}
     </SafeAreaView>
   );
 }

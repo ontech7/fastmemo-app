@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { configs } from "@/configs";
+import * as Sentry from "@sentry/react-native";
 import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -93,7 +94,7 @@ export default function ReportScreen() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== "granted") {
-      popupAlert(t("report.messages.permissionDenied"), "", { confirmText: t("ok") });
+      popupAlert(t("report.messages.permissionDenied"), "", { confirmText: t("ok"), confirmHandler: () => {} });
       return;
     }
 
@@ -101,8 +102,8 @@ export default function ReportScreen() {
       mediaTypes: "images",
       base64: true,
       allowsEditing: false,
-      quality: 0.8, // riduce peso se necessario
-      selectionLimit: 1, // nuovo parametro per iOS
+      quality: 0.8,
+      selectionLimit: 1,
     });
 
     if (result.canceled) return;
@@ -111,7 +112,7 @@ export default function ReportScreen() {
     const fileInfo = await FileSystem.getInfoAsync(asset.uri);
 
     if (!fileInfo.exists) {
-      popupAlert(t("report.messages.fileNotFound"), "", { confirmText: t("ok") });
+      popupAlert(t("report.messages.fileNotFound"), "", { confirmText: t("ok"), confirmHandler: () => {} });
       return;
     }
 
@@ -124,7 +125,7 @@ export default function ReportScreen() {
 
     const mimeType = asset.type ?? "unknown";
     if (mimeType !== "image") {
-      popupAlert(t("report.messages.invalidType"), "", { confirmText: t("ok") });
+      popupAlert(t("report.messages.invalidType"), "", { confirmText: t("ok"), confirmHandler: () => {} });
       return;
     }
 
@@ -187,7 +188,7 @@ export default function ReportScreen() {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch("https://fastmemo.vercel.app/api/report", {
+      const response = await fetch(`${configs.apiUrl}/report`, {
         method: "POST",
         signal: controller.signal,
         body: JSON.stringify(data),
@@ -196,6 +197,7 @@ export default function ReportScreen() {
           "Content-Type": "application/json",
         },
       });
+
       clearTimeout(id);
 
       const json = await response.json();
@@ -212,7 +214,8 @@ export default function ReportScreen() {
           confirmHandler: () => {},
         });
       }
-    } catch (e) {
+    } catch (error) {
+      Sentry.captureException(error);
       popupAlert(t("report.messages.error.title"), t("report.messages.error.text"), {
         confirmText: t("retry"),
         confirmHandler: () => {},

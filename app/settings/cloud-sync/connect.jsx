@@ -3,7 +3,13 @@ import { useNetInfo } from "@react-native-community/netinfo";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Linking, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { ArrowPathIcon, CheckIcon, InformationCircleIcon, PencilIcon, TrashIcon } from "react-native-heroicons/outline";
+import {
+  ArrowPathIcon,
+  CheckIcon,
+  DevicePhoneMobileIcon,
+  InformationCircleIcon,
+  PencilIcon,
+} from "react-native-heroicons/outline";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 
@@ -123,7 +129,7 @@ export default function CloudSyncScreen() {
                   </View>
                 </View>
 
-                <View style={styles.sectionWrapper}>
+                <View style={[styles.sectionWrapper, { marginBottom: PADDING_MARGIN.lg }]}>
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionHeaderTitle}>App Id</Text>
                   </View>
@@ -146,13 +152,7 @@ export default function CloudSyncScreen() {
                 {state.isEditable && (
                   <View style={styles.sectionWrapper}>
                     <View style={styles.sectionList}>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "flex-end",
-                          marginTop: PADDING_MARGIN.lg,
-                        }}
-                      >
+                      <View style={styles.saveSettingsWrapper}>
                         <Text style={styles.saveSettingsText}>{t("cloudsync.save")}</Text>
 
                         <TouchableOpacity
@@ -181,13 +181,7 @@ export default function CloudSyncScreen() {
                   <>
                     <View style={styles.sectionWrapper}>
                       <View style={styles.sectionList}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "flex-end",
-                            marginTop: PADDING_MARGIN.lg,
-                          }}
-                        >
+                        <View style={styles.saveSettingsWrapper}>
                           <Text style={styles.saveSettingsText}>{t("cloudsync.edit")}</Text>
 
                           <TouchableOpacity
@@ -213,12 +207,7 @@ export default function CloudSyncScreen() {
 
                     <View style={styles.sectionWrapper}>
                       <View style={styles.sectionList}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "flex-end",
-                          }}
-                        >
+                        <View style={styles.saveSettingsWrapper}>
                           <Text style={styles.saveSettingsText}>{t("cloudsync.resync")}</Text>
 
                           <TouchableOpacity
@@ -238,12 +227,7 @@ export default function CloudSyncScreen() {
 
                     <View style={styles.sectionWrapper}>
                       <View style={styles.sectionList}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "flex-end",
-                          }}
-                        >
+                        <View style={styles.saveSettingsWrapper}>
                           <Text style={styles.saveSettingsText}>{t("cloudsync.deleteDevices")}</Text>
 
                           <TouchableOpacity
@@ -263,7 +247,7 @@ export default function CloudSyncScreen() {
                               })
                             }
                           >
-                            <TrashIcon size={28} color={COLOR.blue} />
+                            <DevicePhoneMobileIcon size={28} color={COLOR.blue} />
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -376,11 +360,15 @@ const styles = StyleSheet.create({
   textInput_disabled: {
     opacity: 0.5,
   },
+  saveSettingsWrapper: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
   saveSettingsText: {
     color: COLOR.softWhite,
     fontSize: FONTSIZE.paragraph,
     fontWeight: FONTWEIGHT.semiBold,
-    paddingVertical: PADDING_MARGIN.md,
     marginRight: PADDING_MARGIN.lg,
   },
   saveButton: {

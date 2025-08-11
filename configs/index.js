@@ -1,6 +1,8 @@
 const configs = {
   environment: process.env.EXPO_PUBLIC_ENV || "DEV",
 
+  apiUrl: process.env.EXPO_PUBLIC_API_URL || "",
+
   app: {
     name: withEnvSuffix("Fast Memo"),
     slug: withEnvSuffix("FastMemoApp"),

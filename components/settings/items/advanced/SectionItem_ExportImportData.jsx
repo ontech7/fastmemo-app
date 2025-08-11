@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import * as Sentry from "@sentry/react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { StorageAccessFramework } from "expo-file-system";
@@ -70,8 +71,9 @@ export default function SectionItem_ExportImportData({ isLast }) {
       });
 
       webhook(webhook_exportData, { action: "generic/export" });
-    } catch (e) {
-      popupAlert(t("error"), e, {
+    } catch (error) {
+      Sentry.captureException(error);
+      popupAlert(t("error"), error.message, {
         confirmText: t("retry"),
         confirmHandler: () => {},
       });
@@ -107,8 +109,9 @@ export default function SectionItem_ExportImportData({ isLast }) {
       });
 
       webhook(webhook_exportData, { action: "generic/export" });
-    } catch (e) {
-      popupAlert(t("error"), e, {
+    } catch (error) {
+      Sentry.captureException(error);
+      popupAlert(t("error"), error.message, {
         confirmText: t("retry"),
         confirmHandler: () => {},
       });
@@ -155,8 +158,9 @@ export default function SectionItem_ExportImportData({ isLast }) {
       dispatch(setCategories({ categories: importedData.categories }));
 
       webhook(webhook_importData, { action: "generic/import" });
-    } catch (e) {
-      popupAlert(t("error"), e, {
+    } catch (error) {
+      Sentry.captureException(error);
+      popupAlert(t("error"), error.message, {
         confirmText: t("retry"),
         confirmHandler: () => {},
       });
