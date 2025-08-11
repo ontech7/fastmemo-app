@@ -2,12 +2,13 @@ const { configs } = require("./configs");
 
 module.exports = {
   expo: {
+    owner: "dontrok1",
     name: configs.app.name,
     slug: configs.app.slug,
     version: configs.app.version,
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "fastmemoapp",
+    scheme: configs.app.slug,
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     backgroundColor: configs.app.backgroundColor,
@@ -60,7 +61,7 @@ module.exports = {
     githubUrl: "https://github.com/ontech7/fastmemo-app",
     extra: {
       eas: {
-        projectId: configs.app.projectId,
+        projectId: "1080a020-2103-4429-8f79-d517d79559cb", // DEV
       },
     },
   },

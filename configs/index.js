@@ -10,8 +10,6 @@ const configs = {
     version: "2.4.0",
     backgroundColor: "#020e35",
 
-    projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
-
     websiteUrl: "https://fastmemo.vercel.app",
     playStoreUrl: "http://play.google.com/store/apps/details?id=com.ontech7.FastMemoApp",
     appStoreUrl: "https://apps.apple.com/it/app/fast-memo-note-in-un-click/id6450381916",
