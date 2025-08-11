@@ -7,7 +7,7 @@ module.exports = {
     version: configs.app.version,
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "fastmemoappnewarch",
+    scheme: "fastmemoapp",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     backgroundColor: configs.app.backgroundColor,
@@ -57,10 +57,10 @@ module.exports = {
     experiments: {
       typedRoutes: true,
     },
-    githubUrl: "https://github.com/ontech7/fastmemo-app-new-arch",
+    githubUrl: "https://github.com/ontech7/fastmemo-app",
     extra: {
       eas: {
-        projectId: "44c5f162-d9f8-40db-ae28-269fe48982ca",
+        projectId: configs.app.projectId,
       },
     },
   },

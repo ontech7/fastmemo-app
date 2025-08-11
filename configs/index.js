@@ -4,11 +4,13 @@ const configs = {
   apiUrl: process.env.EXPO_PUBLIC_API_URL || "",
 
   app: {
-    name: withEnvSuffix("Fast Memo"),
-    slug: withEnvSuffix("FastMemoApp"),
-    bundle: withEnvSuffix("com.ontech7.FastMemoApp"),
+    name: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "Fast Memo" : "Fast Memo Test",
+    slug: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "FastMemoApp" : "fastmemoapptest",
+    bundle: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "com.ontech7.FastMemoApp" : "com.ontech7.fastmemoapptest",
     version: "2.4.0",
     backgroundColor: "#020e35",
+
+    projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
 
     websiteUrl: "https://fastmemo.vercel.app",
     playStoreUrl: "http://play.google.com/store/apps/details?id=com.ontech7.FastMemoApp",
@@ -33,9 +35,5 @@ const configs = {
     appName: "fastmemo",
   },
 };
-
-function withEnvSuffix(str) {
-  return process.env.EXPO_PUBLIC_ENV !== "DEV" ? str : str + "Test";
-}
 
 module.exports = { configs };

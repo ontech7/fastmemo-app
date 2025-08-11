@@ -9,7 +9,7 @@
       "developmentClient": true,
       "distribution": "internal"
     },
-    "test": {
+    "preview": {
       "environment": "preview",
       "distribution": "internal"
     },

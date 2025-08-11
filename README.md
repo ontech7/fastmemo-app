@@ -7,6 +7,8 @@
 
 Memo application for Mobile and Tablets, made in React Native using Expo
 
+(original release: **14/11/2022** - migration _newArch_: **11/08/2025**)
+
 # Build
 
 ![Build](https://i.imgur.com/YO8xtam.png)
