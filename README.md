@@ -1,6 +1,6 @@
 ![Fast Memo](https://i.imgur.com/dPRR6pJ.png)
 
-![version](https://badgen.net/badge/version/v2.3.0/black?icon=github)
+![version](https://badgen.net/badge/version/v2.4.0/black?icon=github)
 ![Android](https://badgen.net/badge/android/deployed/green?icon=github)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey?icon=github)
 ![web](https://badgen.net/badge/web/coming%20soon/grey?icon=github)

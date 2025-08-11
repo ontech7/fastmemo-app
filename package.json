@@ -1,12 +1,17 @@
 {
   "name": "fastmemo-app-new-arch",
   "main": "expo-router/entry",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "scripts": {
     "start": "expo start",
     "start:clear-cache": "expo start -c",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "ios-build": "eas build -p ios",
+    "ios-build:submit": "eas build -p ios --auto-submit",
+    "android-build:dev": "eas build -p android --profile development",
+    "android-build:stage": "eas build -p android --profile preview",
+    "android-build:prod": "eas build -p android --profile production",
     "web": "expo start --web",
     "lint": "expo lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,md,json}\"",

@@ -7,7 +7,7 @@ const configs = {
     name: withEnvSuffix("Fast Memo"),
     slug: withEnvSuffix("FastMemoApp"),
     bundle: withEnvSuffix("com.ontech7.FastMemoApp"),
-    version: "2.3.0",
+    version: "2.4.0",
     backgroundColor: "#020e35",
 
     websiteUrl: "https://fastmemo.vercel.app",
