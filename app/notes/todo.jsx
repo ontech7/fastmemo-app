@@ -110,7 +110,7 @@ export default function NoteTodoScreen() {
     dispatch(
       addNote({
         id: currNote.id,
-        type: currNote.type,
+        type: currNote.type || "todo",
         title: currNote.title,
         list: currNote.list,
         createdAt: currNote.createdAt,
@@ -239,7 +239,7 @@ export default function NoteTodoScreen() {
     if (locked !== undefined && locked !== note.locked) {
       setNoteAsync({
         id,
-        type,
+        type: type || "todo",
         title,
         list,
         createdAt,
@@ -273,7 +273,7 @@ export default function NoteTodoScreen() {
         await webhook(webhook_updateNote, {
           action: "note/updateNote",
           id: note.id,
-          type: note.type,
+          type: note.type || "todo",
           title: note.title,
           list: note.list,
           createdAt: note.createdAt,

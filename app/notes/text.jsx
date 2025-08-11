@@ -83,7 +83,7 @@ export default function NoteTextScreen() {
     webhook(webhook_addTextNote, {
       action: "note/addTextNote",
       id: note.id,
-      type: note.type,
+      type: note.type || "text",
       title: note.title,
       text: note.text,
       createdAt: note.createdAt,
@@ -200,7 +200,7 @@ export default function NoteTextScreen() {
         await webhook(webhook_updateNote, {
           action: "note/updateNote",
           id: note.id,
-          type: note.type,
+          type: note.type || "text",
           title: note.title,
           text: note.text,
           createdAt: note.createdAt,

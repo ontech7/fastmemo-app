@@ -1,7 +1,7 @@
 {
   "name": "fastmemo-app-new-arch",
   "main": "expo-router/entry",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "scripts": {
     "start": "expo start",
     "start:clear-cache": "expo start -c",

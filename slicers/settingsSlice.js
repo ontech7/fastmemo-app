@@ -3,7 +3,6 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   isIntroFinished: false,
   secretCode: "1234",
-  gridSize: 1,
   isFingerprintEnabled: false,
   showHidden: false,
   isCloudSyncEnabled: false,
@@ -40,9 +39,6 @@ const settingsSlice = createSlice({
     setIsIntroFinished: (state, action) => {
       state.isIntroFinished = action.payload;
     },
-    setGridSize: (state, action) => {
-      state.gridSize = action.payload;
-    },
     setSecretCode: (state, action) => {
       state.secretCode = action.payload;
     },
@@ -72,7 +68,6 @@ const settingsSlice = createSlice({
 
 export const {
   setIsIntroFinished,
-  setGridSize,
   setSecretCode,
   setIsFingerprintEnabled,
   setShowHidden,
@@ -86,7 +81,6 @@ export const {
 // Selectors
 export const getAllSettings = (state) => state.settings;
 export const selectorIsIntroFinished = (state) => state.settings.isIntroFinished;
-export const selectorGridSize = (state) => state.settings.gridSize;
 export const selectorCurrentSecretCode = (state) => state.settings.secretCode;
 export const selectorIsFingerprintEnabled = (state) => state.settings.isFingerprintEnabled;
 export const selectorShowHidden = (state) => state.settings.showHidden;

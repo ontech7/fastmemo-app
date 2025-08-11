@@ -57,7 +57,7 @@ export default function ChangeCategoryScreen() {
     });
 
     router.dismiss();
-    router.replace(note.type === "text" ? "/notes/text" : "/notes/todo");
+    router.replace((note.type || "text") === "text" ? "/notes/text" : "/notes/todo");
   };
 
   return (

@@ -13,8 +13,7 @@ const fr = {
   changelog: {
     title: "Quoi de neuf?",
 
-    description_2_4_1: `• Structure interne de l’application revue et améliorée pour plus de rapidité et de stabilité.
-• Ajout de la possibilité d’ajuster la taille de la grille dans la liste des notes.
+    description_2_4_2: `• Structure interne de l’application revue et améliorée pour plus de rapidité et de stabilité.
 • Ajout de la fonctionnalité de recherche approfondie (texte et listes).
 • Corrections diverses.`,
 
