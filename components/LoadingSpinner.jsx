@@ -1,15 +1,16 @@
 import React from "react";
 import { BlurView } from "expo-blur";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from "react-native";
 
-import { WINDOW_HEIGHT, WINDOW_WIDTH } from "@/constants/carousel";
 import { COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
+
+const { width: WINDOW_WIDTH, height: WINDOW_HEIGHT } = Dimensions.get("window");
 
 export default function LoadingSpinner({ visible, color = null, text = null }) {
   if (!visible) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height: WINDOW_HEIGHT + 32, width: WINDOW_WIDTH + 32 }]}>
       <BlurView intensity={50} experimentalBlurMethod="dimezisBlurView" tint="dark" style={styles.blurContainer}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color={color || COLOR.softWhite} />
@@ -26,8 +27,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: -16,
     top: -16,
-    height: WINDOW_HEIGHT + 32,
-    width: WINDOW_WIDTH + 32,
   },
   blurContainer: {
     flex: 1,

@@ -1,20 +1,59 @@
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import Carousel, { Pagination } from "@ontech7/react-native-snap-carousel";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowRightIcon } from "react-native-heroicons/outline";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { CAROUSEL_DATA, ITEM_HEIGHT, ITEM_WIDTH, WINDOW_WIDTH } from "@/constants/carousel";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+
+const { width: WINDOW_WIDTH, height: WINDOW_HEIGHT } = Dimensions.get("window");
 
 export default function IntroScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
   const carouselRef = useRef(null);
+
   const [activeItemIndex, setActiveItemIndex] = useState(0);
+
+  const DIMENSION_RATIO = WINDOW_HEIGHT / WINDOW_WIDTH;
+
+  const LIMITER = DIMENSION_RATIO > 1.1 ? 1.1 : DIMENSION_RATIO < 0.8 ? 0.35 : DIMENSION_RATIO;
+
+  const ITEM_WIDTH = Math.round((WINDOW_WIDTH / 2) * LIMITER);
+  const ITEM_HEIGHT = Math.round(ITEM_WIDTH * 1.8736);
+
+  const carouselSteps = useMemo(
+    () => [
+      {
+        image: require("../assets/intro/step1.png"),
+        description: t("intro.step1"),
+      },
+      {
+        image: require("../assets/intro/step2.png"),
+        description: t("intro.step2"),
+      },
+      {
+        image: require("../assets/intro/step3.png"),
+        description: t("intro.step3"),
+      },
+      {
+        image: require("../assets/intro/step4.png"),
+        description: t("intro.step4"),
+      },
+      {
+        image: require("../assets/intro/step5.png"),
+        description: t("intro.step5"),
+      },
+      {
+        image: require("../assets/intro/step6.png"),
+        description: t("intro.step6"),
+      },
+    ],
+    [t]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -24,8 +63,8 @@ export default function IntroScreen() {
         <Carousel
           disableIntervalMomentum={true}
           ref={carouselRef}
-          data={CAROUSEL_DATA}
-          renderItem={CarouselItem}
+          data={carouselSteps}
+          renderItem={({ item }) => <CarouselItem item={item} width={ITEM_WIDTH} height={ITEM_HEIGHT} />}
           sliderWidth={WINDOW_WIDTH}
           itemWidth={ITEM_WIDTH}
           useScrollView={true}
@@ -33,7 +72,7 @@ export default function IntroScreen() {
         />
 
         <Pagination
-          dotsLength={CAROUSEL_DATA.length}
+          dotsLength={carouselSteps.length}
           activeDotIndex={activeItemIndex}
           carouselRef={carouselRef}
           dotStyle={styles.carouselDot}
@@ -56,10 +95,10 @@ export default function IntroScreen() {
   );
 }
 
-function CarouselItem({ item }) {
+function CarouselItem({ item, width, height }) {
   return (
-    <View style={styles.container}>
-      <Image style={styles.carouselImage} source={item.image} resizeMode="contain" />
+    <View style={styles.carouselItemContainer}>
+      <Image style={[styles.carouselImage, { width, height }]} source={item.image} resizeMode="contain" />
       <Text style={styles.carouselDescription}>{item.description}</Text>
     </View>
   );
@@ -81,13 +120,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   carouselItemContainer: {
+    display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center",
   },
   carouselImage: {
-    width: ITEM_WIDTH,
-    height: ITEM_HEIGHT,
     marginBottom: PADDING_MARGIN.lg,
   },
   carouselDescription: {
