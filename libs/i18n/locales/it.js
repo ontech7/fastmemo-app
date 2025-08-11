@@ -13,6 +13,11 @@ const it = {
   changelog: {
     title: "Cosa c'è di nuovo?",
 
+    description_2_4_0: `• Rivista e migliorata la struttura interna dell’app per renderla più veloce e stabile.
+• Aggiunta regolazione dimensione griglia nella lista note.
+• Aggiunta la possibilità di fare ricerche approfondite (testo e liste).
+• Correzioni varie.`,
+
     description_2_3_0: `• Aggiunta la lingua Giapponese.
 • Aggiornati webhooks alla versione BETA 2.0.
 • Correzioni varie.`,

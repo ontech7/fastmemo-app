@@ -13,6 +13,11 @@ const fr = {
   changelog: {
     title: "Quoi de neuf?",
 
+    description_2_4_0: `• Structure interne de l’application revue et améliorée pour plus de rapidité et de stabilité.
+• Ajout de la possibilité d’ajuster la taille de la grille dans la liste des notes.
+• Ajout de la fonctionnalité de recherche approfondie (texte et listes).
+• Corrections diverses.`,
+
     description_2_3_0: `• Ajout de la langue japonaise.
 • Mise à jour des webhooks à la version BETA 2.0.
 • Corrections diverses.`,
