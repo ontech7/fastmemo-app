@@ -13,7 +13,7 @@ const it = {
   changelog: {
     title: "Cosa c'è di nuovo?",
 
-    description_2_4_0: `• Rivista e migliorata la struttura interna dell’app per renderla più veloce e stabile.
+    description_2_4_1: `• Rivista e migliorata la struttura interna dell’app per renderla più veloce e stabile.
 • Aggiunta regolazione dimensione griglia nella lista note.
 • Aggiunta la possibilità di fare ricerche approfondite (testo e liste).
 • Correzioni varie.`,

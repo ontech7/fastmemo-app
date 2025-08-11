@@ -13,7 +13,7 @@ const es = {
   changelog: {
     title: "¿Qué hay de nuevo?",
 
-    description_2_4_0: `• Revisada y mejorada la estructura interna de la app para hacerla más rápida y estable.
+    description_2_4_1: `• Revisada y mejorada la estructura interna de la app para hacerla más rápida y estable.
 • Añadida la opción de ajustar el tamaño de la cuadrícula en la lista de notas.
 • Añadida la posibilidad de realizar búsquedas profundas (texto y listas).
 • Varias correcciones.`,

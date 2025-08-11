@@ -13,7 +13,7 @@ const de = {
   changelog: {
     title: "Was gibt's Neues?",
 
-    description_2_4_0: `• Überarbeitete und verbesserte interne Struktur der App für mehr Geschwindigkeit und Stabilität.
+    description_2_4_1: `• Überarbeitete und verbesserte interne Struktur der App für mehr Geschwindigkeit und Stabilität.
 • Hinzugefügt: Anpassung der Rastergröße in der Notizenliste.
 • Hinzugefügt: Möglichkeit zur Durchführung von Tiefensuchen (Text und Listen).
 • Verschiedene Fehlerbehebungen.`,

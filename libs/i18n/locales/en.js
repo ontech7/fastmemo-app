@@ -13,7 +13,7 @@ const en = {
   changelog: {
     title: "What's new?",
 
-    description_2_4_0: `• Revised and improved the app’s internal structure to make it faster and more stable.
+    description_2_4_1: `• Revised and improved the app’s internal structure to make it faster and more stable.
 • Added grid size adjustment in the notes list.
 • Added the ability to perform deep searches (text and lists).
 • Various fixes.`,
