@@ -1,15 +1,23 @@
 import React from "react";
+import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CheckIcon, DocumentMagnifyingGlassIcon, FunnelIcon } from "react-native-heroicons/outline";
 import { Menu, MenuOption, MenuOptions, MenuTrigger } from "react-native-popup-menu";
+import { useSelector } from "react-redux";
 
+import { toggleWithSecret } from "@/utils/crypt";
 import ContextMenu from "@/components/renderers/ContextMenu";
+import { selectorIsFingerprintEnabled } from "@/slicers/settingsSlice";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
 export default function NoteFiltersButton({ filters }) {
   const { t } = useTranslation();
+
+  const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
+
+  const router = useRouter();
 
   return (
     <Menu renderer={ContextMenu}>
@@ -18,7 +26,20 @@ export default function NoteFiltersButton({ filters }) {
       </MenuTrigger>
 
       <MenuOptions customStyles={menuOptionsCustomStyles}>
-        <MenuOption style={styles.menuOption} onSelect={filters.toggleDeepSearch}>
+        <MenuOption
+          style={styles.menuOption}
+          onSelect={() => {
+            if (!filters.showDeepSearch) {
+              toggleWithSecret({
+                router,
+                isFingerprintEnabled: selectorFingerprintEnabled,
+                callback: filters.toggleDeepSearch,
+              });
+            } else {
+              filters.toggleDeepSearch();
+            }
+          }}
+        >
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             {filters.showDeepSearch && <CheckIcon size={16} color={COLOR.softWhite} style={{ marginRight: 5 }} />}
 
