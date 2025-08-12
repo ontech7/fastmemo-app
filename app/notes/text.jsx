@@ -18,6 +18,7 @@ import { webhook } from "@/utils/webhook";
 import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
@@ -227,11 +228,11 @@ export default function NoteTextScreen() {
     return () => backHandler.remove();
   }, [updateNoteWebhook]);
 
-  const [showKeyboardDismiss, setShowKeyboardDismiss] = useState(false);
+  const [isKeyboardShown, setIsKeyboardShown] = useState(false);
 
   useEffect(() => {
-    const keyboardDidShowHandler = Keyboard.addListener("keyboardDidShow", () => setShowKeyboardDismiss(true));
-    const keyboardDidHideHandler = Keyboard.addListener("keyboardDidHide", () => setShowKeyboardDismiss(false));
+    const keyboardDidShowHandler = Keyboard.addListener("keyboardDidShow", () => setIsKeyboardShown(true));
+    const keyboardDidHideHandler = Keyboard.addListener("keyboardDidHide", () => setIsKeyboardShown(false));
 
     return () => {
       keyboardDidShowHandler.remove();
@@ -282,6 +283,7 @@ export default function NoteTextScreen() {
           onChange={setText}
           initialContentHTML={initialText}
           placeholder={t("note.description_placeholder")}
+          pasteAsPlainText
           editorStyle={{
             backgroundColor: COLOR.darkBlue,
             color: COLOR.softWhite,
@@ -291,13 +293,13 @@ export default function NoteTextScreen() {
         />
 
         <DismissKeyboardButton
-          showKeyboardDismiss={showKeyboardDismiss}
+          showKeyboardDismiss={isKeyboardShown}
           onPress={() => richTextEditor.current?.dismissKeyboard()}
-          style={{ display: !showKeyboardDismiss ? "none" : "flex" }}
+          style={{ display: !isKeyboardShown ? "none" : "flex" }}
         />
 
         <RichToolbar
-          style={[styles.richToolbarContainer, { display: !showKeyboardDismiss ? "none" : "flex" }]}
+          style={[styles.richToolbarContainer, { display: !isKeyboardShown ? "none" : "flex" }]}
           editor={richTextEditor}
           onPressAddImage={pickImage}
           iconSize={20}
@@ -322,6 +324,15 @@ export default function NoteTextScreen() {
           }}
         />
       </KeyboardAvoidingView>
+
+      {!isKeyboardShown && (
+        <VoiceRecognitionButton
+          setTranscript={(transcript, isFinal) => {
+            richTextEditor.current?.setContentHTML(note.text + " " + transcript);
+            if (isFinal) setText(note.text + " " + transcript);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }

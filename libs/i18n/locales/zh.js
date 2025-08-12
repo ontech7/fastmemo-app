@@ -1,5 +1,6 @@
 const zh = {
-  language: "zh",
+  languageCode: "zh",
+  languageName: "普通话",
 
   date: {
     mon: "周一",
@@ -14,6 +15,7 @@ const zh = {
     title: "什么是新的？",
 
     description_2_4_2: `• 优化并改进了应用的内部结构，使其更快更稳定。
+• 添加了语音识别功能，用于转录笔记（文本和列表）。
 • 新增深度搜索功能（文本和列表）。
 • 各种修复。`,
 
@@ -182,6 +184,7 @@ const zh = {
     export_popup_description: "在这里写下您的秘密密码。请记住保存它，否则您将无法恢复您的笔记。",
     import_popup_description: "在这里写下您的秘密密码以导入您的笔记。",
     webhooks: "网络钩子",
+    voice_recognition: "语音识别",
     wipe_data: "抹掉数据",
     about: "关于",
     about_the_app: "关于应用程序",
@@ -206,6 +209,13 @@ const zh = {
     information: "信息",
     developer: "开发商",
     website: "网站",
+  },
+  voicerecognition: {
+    title: "语音识别",
+    enabled: "已启用",
+    interimResults: "实时转录",
+    continuous: "手动停止",
+    language: "语言",
   },
   help: {
     title: "帮助",

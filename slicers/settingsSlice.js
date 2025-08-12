@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import * as Localization from "expo-localization";
 
 const initialState = {
   isIntroFinished: false,
@@ -28,6 +29,12 @@ const initialState = {
     exportData: { url: "", enabled: false },
     importData: { url: "", enabled: false },
     wipeData: { url: "", enabled: false },
+  },
+  voiceRecognition: {
+    enabled: true,
+    interimResults: true,
+    continuous: true,
+    language: Localization.getLocales()[0].languageTag || "en-US",
   },
   reportDate: null,
 };
@@ -63,6 +70,9 @@ const settingsSlice = createSlice({
     setWebhooks: (state, action) => {
       state.webhooks = action.payload;
     },
+    setVoiceRecognition: (state, action) => {
+      state.voiceRecognition = action.payload;
+    },
   },
 });
 
@@ -76,6 +86,7 @@ export const {
   setCloudSettings,
   setCloudConnected,
   setWebhooks,
+  setVoiceRecognition,
 } = settingsSlice.actions;
 
 // Selectors
@@ -101,5 +112,12 @@ export const selectorWebhook_updateCategory = (state) => state.settings.webhooks
 export const selectorWebhook_exportData = (state) => state.settings.webhooks.exportData;
 export const selectorWebhook_importData = (state) => state.settings.webhooks.importData;
 export const selectorWebhook_wipeData = (state) => state.settings.webhooks.wipeData;
+export const selectorVoiceRecognition = (state) =>
+  state.settings.voiceRecognition || {
+    enabled: state.settings.voiceRecognition?.enabled || true,
+    interimResults: state.settings.voiceRecognition?.interimResults || true,
+    continuous: state.settings.voiceRecognition?.continuous || true,
+    language: state.settings.voiceRecognition?.language || Localization.getLocales()[0].languageTag || "en-US",
+  };
 
 export default settingsSlice.reducer;

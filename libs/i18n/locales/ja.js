@@ -1,5 +1,6 @@
 const ja = {
-  language: "ja",
+  languageCode: "ja",
+  languageName: "日本語",
 
   date: {
     mon: "月曜日",
@@ -14,6 +15,7 @@ const ja = {
     title: "新着情報",
 
     description_2_4_2: `• アプリの内部構造を見直し、速度と安定性を向上しました。
+• ノートの文字起こし（テキストとリスト）用の音声認識を追加しました。
 • 詳細検索機能（テキストおよびリスト）を追加しました。
 • その他の修正。`,
 
@@ -182,6 +184,7 @@ const ja = {
     export_popup_description: "ここに秘密のパスフレーズを入力してください。保存しないと、ノートを回復できなくなります。",
     import_popup_description: "ここに秘密のパスフレーズを入力してください。ノートをインポートするには保存してください。",
     webhooks: "Webhooks",
+    voice_recognition: "音声認識",
     wipe_data: "データを削除",
     about: "について",
     about_the_app: "アプリについて",
@@ -206,6 +209,13 @@ const ja = {
     information: "情報",
     developer: "開発者",
     website: "ウェブサイト",
+  },
+  voicerecognition: {
+    title: "音声認識",
+    enabled: "有効",
+    interimResults: "リアルタイム文字起こし",
+    continuous: "手動停止",
+    language: "言語",
   },
   help: {
     title: "ヘルプ",
@@ -442,3 +452,5 @@ const ja = {
 
   empty_title: "(タイトルなし)",
 };
+
+export default ja;

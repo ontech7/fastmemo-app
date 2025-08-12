@@ -1,5 +1,6 @@
 const de = {
-  language: "de",
+  languageCode: "de",
+  languageName: "Deutsch",
 
   date: {
     mon: "Mon",
@@ -14,6 +15,7 @@ const de = {
     title: "Was gibt's Neues?",
 
     description_2_4_2: `• Überarbeitete und verbesserte interne Struktur der App für mehr Geschwindigkeit und Stabilität.
+• Sprach­erkennung zur Transkription von Notizen (Text und Listen) hinzugefügt.
 • Hinzugefügt: Möglichkeit zur Durchführung von Tiefensuchen (Text und Listen).
 • Verschiedene Fehlerbehebungen.`,
 
@@ -183,6 +185,7 @@ const de = {
       "Geben Sie hier Ihre geheime Passphrase ein. Denken Sie daran, es zu speichern, da Sie Ihre Notizen sonst nicht wiederherstellen können.",
     import_popup_description: "Geben Sie hier Ihre geheime Passphrase ein, um Ihre Notizen zu importieren.",
     webhooks: "Webhooks",
+    voice_recognition: "Spracherkennung",
     wipe_data: "Daten löschen",
     about: "Um",
     about_the_app: "Über die App",
@@ -207,6 +210,13 @@ const de = {
     information: "Information",
     developer: "Entwickler",
     website: "Webseite",
+  },
+  voicerecognition: {
+    title: "Spracherkennung",
+    enabled: "Aktiviert",
+    interimResults: "Echtzeit-Transkription",
+    continuous: "Manueller Stopp",
+    language: "Sprache",
   },
   help: {
     title: "Hilfe",

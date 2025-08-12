@@ -66,7 +66,7 @@ export default function WebhooksScreen() {
 
         <Text style={styles.headerTitle}>{t("webhooks.title")}</Text>
 
-        <TouchableOpacity onPress={() => Linking.openURL(`${configs.app.websiteUrl}/${t("language")}/guides/webhooks`)}>
+        <TouchableOpacity onPress={() => Linking.openURL(`${configs.app.websiteUrl}/${t("languageCode")}/guides/webhooks`)}>
           <InformationCircleIcon size={28} color={COLOR.softWhite} />
         </TouchableOpacity>
       </View>

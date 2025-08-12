@@ -1,5 +1,6 @@
 const it = {
-  language: "it",
+  languageCode: "it",
+  languageName: "Italiano",
 
   date: {
     mon: "Lun",
@@ -13,7 +14,8 @@ const it = {
   changelog: {
     title: "Cosa c'è di nuovo?",
 
-    description_2_4_1: `• Rivista e migliorata la struttura interna dell’app per renderla più veloce e stabile.
+    description_2_4_2: `• Rivista e migliorata la struttura interna dell’app per renderla più veloce e stabile.
+• Aggiunto il riconoscimento vocale per la trascrizione delle note (testo e liste).
 • Aggiunta la possibilità di fare ricerche approfondite (testo e liste).
 • Correzioni varie.`,
 
@@ -184,6 +186,7 @@ const it = {
       "Scrivi qui la tua frase segreta. Ricordati di salvarlo altrimenti non sarai in grado di recuperare le tue note.",
     import_popup_description: "Scrivi qui la tua frase segreta per importare le tue note.",
     webhooks: "Webhooks",
+    voice_recognition: "Riconoscimento vocale",
     wipe_data: "Cancella dati",
     about: "Info",
     about_the_app: "Informazioni sull'app",
@@ -208,6 +211,13 @@ const it = {
     information: "Informazioni",
     developer: "Sviluppatore",
     website: "Sito web",
+  },
+  voicerecognition: {
+    title: "Riconoscimento vocale",
+    enabled: "Abilitato",
+    interimResults: "Trascrizione in tempo reale",
+    continuous: "Interruzione manuale",
+    language: "Lingua",
   },
   help: {
     title: "Aiuto",

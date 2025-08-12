@@ -1,5 +1,6 @@
 const fr = {
-  language: "fr",
+  languageCode: "fr",
+  languageName: "Français",
 
   date: {
     mon: "Lun",
@@ -14,6 +15,7 @@ const fr = {
     title: "Quoi de neuf?",
 
     description_2_4_2: `• Structure interne de l’application revue et améliorée pour plus de rapidité et de stabilité.
+• Ajout de la reconnaissance vocale pour la transcription des notes (texte et listes).
 • Ajout de la fonctionnalité de recherche approfondie (texte et listes).
 • Corrections diverses.`,
 
@@ -183,6 +185,7 @@ const fr = {
       "Écrivez votre mot de passe secret ici. Pensez à le sauvegarder sinon vous ne pourrez pas récupérer vos notes.",
     import_popup_description: "Écrivez votre mot de passe secret ici pour importer vos notes.",
     webhooks: "Webhooks",
+    voice_recognition: "Reconnaissance vocale",
     wipe_data: "Effacer les données",
     about: "À propos",
     about_the_app: "À propos de l'application",
@@ -207,6 +210,13 @@ const fr = {
     information: "Information",
     developer: "Développeur",
     website: "Site Internet",
+  },
+  voicerecognition: {
+    title: "Reconnaissance vocale",
+    enabled: "Activé",
+    interimResults: "Transcription en temps réel",
+    continuous: "Arrêt manuel",
+    language: "Langue",
   },
   help: {
     title: "Aider",

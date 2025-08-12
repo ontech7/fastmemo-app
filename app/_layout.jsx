@@ -129,6 +129,10 @@ export default Sentry.wrap(function RootLayout() {
                     name="settings/webhooks"
                     options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
                   />
+                  <Stack.Screen
+                    name="settings/voice-recognition"
+                    options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
+                  />
                   <Stack.Screen name="+not-found" />
                 </Stack>
               </KeyboardProvider>
