@@ -88,6 +88,10 @@ const ja = {
     notes: "メモ",
     search: "何かを検索...",
     deepSearch: "詳細検索（テキスト、リストなど）",
+
+    filters: {
+      deepSearch: "詳細検索",
+    },
   },
   note: {
     title_placeholder: "タイトル",

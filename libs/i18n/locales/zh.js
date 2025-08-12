@@ -88,6 +88,10 @@ const zh = {
     notes: "笔记",
     search: "写一些东西...",
     deepSearch: "深度搜索（文本、列表等）",
+
+    filters: {
+      deepSearch: "深度搜索",
+    },
   },
   note: {
     title_placeholder: "标题",

@@ -89,6 +89,10 @@ const it = {
     notes: "Note",
     search: "Cerca qualcosa…",
     deepSearch: "Ricerca approfondita (testo, liste…)",
+
+    filters: {
+      deepSearch: "Ricerca approfondita",
+    },
   },
   note: {
     title_placeholder: "Titolo",

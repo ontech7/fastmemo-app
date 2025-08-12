@@ -27,21 +27,21 @@ export default function LoadingScreen() {
   useEffect(() => {
     Animated.timing(splashAnim, {
       toValue: 1,
-      duration: 200,
+      duration: 150,
       easing: Easing.linear,
       useNativeDriver: true,
     }).start(() => {
       // Play lottie after fade in
       setTimeout(() => {
         logoAnimRef.current?.play();
-      }, 200);
+      }, 150);
     });
   }, []);
 
   const opacityEvent = () => {
     Animated.timing(splashAnim, {
       toValue: 0,
-      duration: 150,
+      duration: 100,
       easing: Easing.linear,
       useNativeDriver: true,
     }).start(({ finished }) => {
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   lottieLogo: {
-    width: 150,
-    height: 150,
+    width: 145,
+    height: 145,
   },
 });

@@ -15,7 +15,7 @@ import { popupAlert } from "@/utils/alert";
 import { toggleWithSecret } from "@/utils/crypt";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
-import DeepSearchButton from "@/components/buttons/DeepSearchButton";
+import NoteFiltersButton from "@/components/buttons/NoteFiltersButton";
 import Sidebar from "@/components/Sidebar";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
@@ -341,6 +341,14 @@ export default function HomeScreen() {
     checkVersion();
   }, []);
 
+  // filters
+
+  const toggleDeepSearch = () => {
+    setShowDeepSearch((p) => !p);
+    setFilterText("");
+    setDeepFilterText("");
+  };
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <View style={styles.container}>
@@ -368,11 +376,10 @@ export default function HomeScreen() {
                 </View>
               ) : (
                 <View style={styles.topContainer}>
-                  <DeepSearchButton
-                    onPress={() => {
-                      setShowDeepSearch((p) => !p);
-                      setFilterText("");
-                      setDeepFilterText("");
+                  <NoteFiltersButton
+                    filters={{
+                      showDeepSearch,
+                      toggleDeepSearch,
                     }}
                   />
                 </View>
