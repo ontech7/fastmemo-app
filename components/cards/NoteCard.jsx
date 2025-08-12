@@ -26,7 +26,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
   const navigateToNote = () => {
     storeNote(content);
 
-    router.push(type === "text" ? "/notes/text" : "/notes/todo");
+    router.push((type || "text") === "text" ? "/notes/text" : "/notes/todo");
   };
 
   const onLongPressHandler = () => {

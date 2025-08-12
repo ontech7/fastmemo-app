@@ -54,7 +54,7 @@ export default function CloudSyncScreen() {
           <Text style={styles.headerTitle}>{t("cloudsync.title")}</Text>
 
           <TouchableOpacity
-            onPress={() => Linking.openURL(`${configs.app.websiteUrl}/${t("language")}/guides/google-firebase`)}
+            onPress={() => Linking.openURL(`${configs.app.websiteUrl}/${t("languageCode")}/guides/google-firebase`)}
           >
             <InformationCircleIcon size={28} color={COLOR.softWhite} />
           </TouchableOpacity>

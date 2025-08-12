@@ -1,5 +1,6 @@
 const es = {
-  language: "es",
+  languageCode: "es",
+  languageName: "Español",
 
   date: {
     mon: "Lun",
@@ -13,8 +14,8 @@ const es = {
   changelog: {
     title: "¿Qué hay de nuevo?",
 
-    description_2_4_1: `• Revisada y mejorada la estructura interna de la app para hacerla más rápida y estable.
-• Añadida la opción de ajustar el tamaño de la cuadrícula en la lista de notas.
+    description_2_4_2: `• Revisada y mejorada la estructura interna de la app para hacerla más rápida y estable.
+• Se ha añadido el reconocimiento de voz para la transcripción de notas (texto y listas).
 • Añadida la posibilidad de realizar búsquedas profundas (texto y listas).
 • Varias correcciones.`,
 
@@ -89,6 +90,10 @@ const es = {
     notes: "Notas",
     search: "Buscar algo...",
     deepSearch: "Búsqueda profunda (texto, listas…)",
+
+    filters: {
+      deepSearch: "Búsqueda profunda",
+    },
   },
   note: {
     title_placeholder: "Título",
@@ -180,6 +185,7 @@ const es = {
       "Escribe tu contraseña secreta aquí. Recuerda guardarlo, de lo contrario no podrás recuperar tus notas.",
     import_popup_description: "Escriba su contraseña secreta aquí para importar sus notas.",
     webhooks: "Webhooks",
+    voice_recognition: "Reconocimiento de voz",
     wipe_data: "Borrar información",
     about: "Acerca de",
     about_the_app: "Acerca de la aplicación",
@@ -204,6 +210,13 @@ const es = {
     information: "Información",
     developer: "Desarrollador",
     website: "Sitio web",
+  },
+  voicerecognition: {
+    title: "Reconocimiento de voz",
+    enabled: "Activado",
+    interimResults: "Transcripción en tiempo real",
+    continuous: "Parada manual",
+    language: "Idioma",
   },
   help: {
     title: "Ayuda",

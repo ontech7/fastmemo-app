@@ -85,7 +85,7 @@ export default function SecretCodeScreen() {
           return;
         }
 
-        router.replace(note.type === "text" ? "/notes/text" : "/notes/todo");
+        router.replace((note.type || "text") === "text" ? "/notes/text" : "/notes/todo");
 
         break;
       case "toggleProtectedNote":
@@ -96,7 +96,7 @@ export default function SecretCodeScreen() {
 
         storeNote({ ...note, locked: !note.locked });
 
-        router.push(note.type === "text" ? "/notes/text" : "/notes/todo");
+        router.push((note.type || "text") === "text" ? "/notes/text" : "/notes/todo");
 
         break;
       case "toggleProtectedSelectedNotes":

@@ -7,7 +7,7 @@ const configs = {
     name: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "Fast Memo" : "Fast Memo Test",
     slug: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "FastMemoApp" : "fastmemoapptest",
     bundle: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "com.ontech7.FastMemoApp" : "com.ontech7.fastmemoapptest",
-    version: "2.4.1",
+    version: "2.4.2",
     backgroundColor: "#020e35",
 
     websiteUrl: "https://fastmemo.vercel.app",

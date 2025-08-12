@@ -1,5 +1,6 @@
 const en = {
-  language: "en",
+  languageCode: "en",
+  languageName: "English",
 
   date: {
     mon: "Mon",
@@ -13,8 +14,8 @@ const en = {
   changelog: {
     title: "What's new?",
 
-    description_2_4_1: `• Revised and improved the app’s internal structure to make it faster and more stable.
-• Added grid size adjustment in the notes list.
+    description_2_4_2: `• Revised and improved the app’s internal structure to make it faster and more stable.
+• Added voice recognition for note transcription (text and lists).
 • Added the ability to perform deep searches (text and lists).
 • Various fixes.`,
 
@@ -89,6 +90,10 @@ const en = {
     notes: "Notes",
     search: "Search something...",
     deepSearch: "Deep search (text, lists…)",
+
+    filters: {
+      deepSearch: "Deep search",
+    },
   },
   note: {
     title_placeholder: "Title",
@@ -180,6 +185,7 @@ const en = {
       "Write your secret passphrase here. Remember to save it otherwise you won't be able to recover your notes.",
     import_popup_description: "Write your secret passphrase here to import your notes.",
     webhooks: "Webhooks",
+    voice_recognition: "Voice recognition",
     wipe_data: "Wipe data",
     about: "About",
     about_the_app: "About the app",
@@ -204,6 +210,13 @@ const en = {
     information: "Information",
     developer: "Developer",
     website: "Website",
+  },
+  voicerecognition: {
+    title: "Voice recognition",
+    enabled: "Enabled",
+    interimResults: "Real-time transcription",
+    continuous: "Manual stop",
+    language: "Language",
   },
   help: {
     title: "Help",

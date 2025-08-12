@@ -13,7 +13,7 @@ export default function SectionItem_TemporaryTrash({ isLast }) {
 
   const currTimespan = useSelector(getTemporaryTrashTimespan);
 
-  const changeTemporasyTrashTimespan = () => {
+  const changeTemporaryTrashTimespan = () => {
     let nextTimespan = currTimespan;
 
     switch (currTimespan) {
@@ -41,7 +41,7 @@ export default function SectionItem_TemporaryTrash({ isLast }) {
       <SectionItemList_Text
         title={t("generalsettings.temporary_trash_lifespan")}
         text={`${currTimespan} ${t("generalsettings.days")}`}
-        onPress={changeTemporasyTrashTimespan}
+        onPress={changeTemporaryTrashTimespan}
       />
     </SectionItemList>
   );

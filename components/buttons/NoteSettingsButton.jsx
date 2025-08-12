@@ -19,7 +19,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { storeNote } from "@/libs/registry";
 import { webhook } from "@/utils/webhook";
 
-import { BORDER, COLOR, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
 import { temporaryDeleteNote } from "../../slicers/notesSlice";
 import { selectorIsFingerprintEnabled, selectorWebhook_temporaryDeleteNote } from "../../slicers/settingsSlice";
@@ -179,9 +179,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  menuOptionDisabled: { opacity: 0.5 },
-  menuOptionIcon: { marginLeft: PADDING_MARGIN.lg },
-  menuOptionText: { color: COLOR.softWhite, fontSize: 14 },
+  menuOptionDisabled: {
+    opacity: 0.5,
+  },
+  menuOptionIcon: {
+    marginLeft: PADDING_MARGIN.lg,
+  },
+  menuOptionText: {
+    color: COLOR.softWhite,
+    fontSize: FONTSIZE.medium,
+  },
   menuOptionTextSelected: {
     fontWeight: FONTWEIGHT.semiBold,
   },

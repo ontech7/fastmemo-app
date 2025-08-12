@@ -11,12 +11,13 @@ const separate = (string) => string.split("");
 
 export default function CodeInput({ value, onChangeCode, onSubmit, disabled }) {
   const code = separate(value);
-  const is_code_empty = code.length == 0;
-  const is_code_set = code.length == 4;
+
+  const isCodeEmpty = code.length == 0;
+  const isCodeSet = code.length == 4;
 
   const addNumberWithVibration = useCallback(
     (number) => () => {
-      if (is_code_set) {
+      if (isCodeSet) {
         return;
       }
 
@@ -29,7 +30,7 @@ export default function CodeInput({ value, onChangeCode, onSubmit, disabled }) {
   );
 
   const removeNumberWithVibration = useCallback(() => {
-    if (is_code_empty) {
+    if (isCodeEmpty) {
       return;
     }
 
@@ -41,7 +42,7 @@ export default function CodeInput({ value, onChangeCode, onSubmit, disabled }) {
   }, [code]);
 
   useEffect(() => {
-    if (!is_code_set) {
+    if (!isCodeSet) {
       return;
     }
     onSubmit && onSubmit(value);

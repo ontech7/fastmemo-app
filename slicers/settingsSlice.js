@@ -1,9 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
+import * as Localization from "expo-localization";
 
 const initialState = {
   isIntroFinished: false,
   secretCode: "1234",
-  gridSize: 1,
   isFingerprintEnabled: false,
   showHidden: false,
   isCloudSyncEnabled: false,
@@ -30,6 +30,12 @@ const initialState = {
     importData: { url: "", enabled: false },
     wipeData: { url: "", enabled: false },
   },
+  voiceRecognition: {
+    enabled: true,
+    interimResults: true,
+    continuous: true,
+    language: Localization.getLocales()[0].languageTag || "en-US",
+  },
   reportDate: null,
 };
 
@@ -39,9 +45,6 @@ const settingsSlice = createSlice({
   reducers: {
     setIsIntroFinished: (state, action) => {
       state.isIntroFinished = action.payload;
-    },
-    setGridSize: (state, action) => {
-      state.gridSize = action.payload;
     },
     setSecretCode: (state, action) => {
       state.secretCode = action.payload;
@@ -67,12 +70,14 @@ const settingsSlice = createSlice({
     setWebhooks: (state, action) => {
       state.webhooks = action.payload;
     },
+    setVoiceRecognition: (state, action) => {
+      state.voiceRecognition = action.payload;
+    },
   },
 });
 
 export const {
   setIsIntroFinished,
-  setGridSize,
   setSecretCode,
   setIsFingerprintEnabled,
   setShowHidden,
@@ -81,12 +86,12 @@ export const {
   setCloudSettings,
   setCloudConnected,
   setWebhooks,
+  setVoiceRecognition,
 } = settingsSlice.actions;
 
 // Selectors
 export const getAllSettings = (state) => state.settings;
 export const selectorIsIntroFinished = (state) => state.settings.isIntroFinished;
-export const selectorGridSize = (state) => state.settings.gridSize;
 export const selectorCurrentSecretCode = (state) => state.settings.secretCode;
 export const selectorIsFingerprintEnabled = (state) => state.settings.isFingerprintEnabled;
 export const selectorShowHidden = (state) => state.settings.showHidden;
@@ -107,5 +112,12 @@ export const selectorWebhook_updateCategory = (state) => state.settings.webhooks
 export const selectorWebhook_exportData = (state) => state.settings.webhooks.exportData;
 export const selectorWebhook_importData = (state) => state.settings.webhooks.importData;
 export const selectorWebhook_wipeData = (state) => state.settings.webhooks.wipeData;
+export const selectorVoiceRecognition = (state) =>
+  state.settings.voiceRecognition || {
+    enabled: state.settings.voiceRecognition?.enabled || true,
+    interimResults: state.settings.voiceRecognition?.interimResults || true,
+    continuous: state.settings.voiceRecognition?.continuous || true,
+    language: state.settings.voiceRecognition?.language || Localization.getLocales()[0].languageTag || "en-US",
+  };
 
 export default settingsSlice.reducer;

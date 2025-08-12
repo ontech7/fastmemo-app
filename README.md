@@ -1,9 +1,7 @@
 ![Fast Memo](https://i.imgur.com/dPRR6pJ.png)
 
-![version](https://badgen.net/badge/version/v2.4.1/black?icon=github)
-![Android](https://badgen.net/badge/android/deployed/green?icon=github)
-![iOS](https://badgen.net/badge/iOS/dismissed/grey?icon=github)
-![web](https://badgen.net/badge/web/coming%20soon/grey?icon=github)
+![version](https://badgen.net/badge/version/v2.4.2/blue) ![Android](https://badgen.net/badge/android/deployed/green)
+![iOS](https://badgen.net/badge/iOS/dismissed/grey) ![web](https://badgen.net/badge/web/coming%20soon/grey)
 
 Memo application for Mobile and Tablets, made in React Native using Expo
 

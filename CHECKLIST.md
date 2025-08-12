@@ -30,7 +30,6 @@
 - [x] Report an issue + Suggest to a friend
 - [x] Hidden notes
 - [x] Deep search
-- [x] Grid size
 - [ ] Add custom filters
 - [ ] Generate note snippets on fastmemo.vercel.app from Mobile App
 - [ ] Add remind-me push notifications

@@ -34,7 +34,7 @@ export const toggleWithSecret = ({ isFingerprintEnabled, router, callback }) => 
 
 export const CryptNote = {
   encrypt: (note) => {
-    const type = note?.type ?? "text";
+    const type = note?.type || "text";
 
     if (type === "text") {
       const noteText = CryptoJS.AES.encrypt(note.text, configs.cloud.secretKey).toString();
@@ -59,7 +59,7 @@ export const CryptNote = {
   },
 
   decrypt: (note) => {
-    const type = note?.type ?? "text";
+    const type = note?.type || "text";
 
     if (type === "text") {
       const bytes = CryptoJS.AES.decrypt(note.text, configs.cloud.secretKey);

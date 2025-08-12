@@ -15,8 +15,7 @@ import { popupAlert } from "@/utils/alert";
 import { toggleWithSecret } from "@/utils/crypt";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
-import DeepSearchButton from "@/components/buttons/DeepSearchButton";
-import GridSizeButton from "@/components/buttons/GridSizeButton";
+import NoteFiltersButton from "@/components/buttons/NoteFiltersButton";
 import Sidebar from "@/components/Sidebar";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
@@ -41,13 +40,11 @@ import {
   toggleReadOnlyNotes,
 } from "../slicers/notesSlice";
 import {
-  selectorGridSize,
   selectorIsFingerprintEnabled,
   selectorShowHidden,
   selectorWebhook_deleteNote,
   selectorWebhook_temporaryDeleteNote,
   selectorWebhook_updateNote,
-  setGridSize,
 } from "../slicers/settingsSlice";
 
 export default function HomeScreen() {
@@ -69,7 +66,6 @@ export default function HomeScreen() {
   const webhook_updateNote = useSelector(selectorWebhook_updateNote);
 
   const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
-  const gridSize = useSelector(selectorGridSize);
 
   const dispatch = useDispatch();
 
@@ -345,6 +341,14 @@ export default function HomeScreen() {
     checkVersion();
   }, []);
 
+  // filters
+
+  const toggleDeepSearch = () => {
+    setShowDeepSearch((p) => !p);
+    setFilterText("");
+    setDeepFilterText("");
+  };
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <View style={styles.container}>
@@ -372,8 +376,12 @@ export default function HomeScreen() {
                 </View>
               ) : (
                 <View style={styles.topContainer}>
-                  <DeepSearchButton onPress={() => setShowDeepSearch((p) => !p)} />
-                  <GridSizeButton onChange={() => dispatch(setGridSize((gridSize || 1) === 1 ? 2 : gridSize === 2 ? 3 : 1))} />
+                  <NoteFiltersButton
+                    filters={{
+                      showDeepSearch,
+                      toggleDeepSearch,
+                    }}
+                  />
                 </View>
               )}
             </View>
@@ -386,7 +394,6 @@ export default function HomeScreen() {
 
             <FlashList
               showsVerticalScrollIndicator={false}
-              numColumns={gridSize || 1}
               data={filteredNotes}
               extraData={{ isDeleteMode }}
               renderItem={renderItem}

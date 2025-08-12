@@ -25,6 +25,7 @@ import { isStringEmpty } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import TodoItem from "@/components/todo/TodoItem";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
@@ -110,7 +111,7 @@ export default function NoteTodoScreen() {
     dispatch(
       addNote({
         id: currNote.id,
-        type: currNote.type,
+        type: currNote.type || "todo",
         title: currNote.title,
         list: currNote.list,
         createdAt: currNote.createdAt,
@@ -239,7 +240,7 @@ export default function NoteTodoScreen() {
     if (locked !== undefined && locked !== note.locked) {
       setNoteAsync({
         id,
-        type,
+        type: type || "todo",
         title,
         list,
         createdAt,
@@ -273,7 +274,7 @@ export default function NoteTodoScreen() {
         await webhook(webhook_updateNote, {
           action: "note/updateNote",
           id: note.id,
-          type: note.type,
+          type: note.type || "todo",
           title: note.title,
           list: note.list,
           createdAt: note.createdAt,
@@ -398,6 +399,42 @@ export default function NoteTodoScreen() {
             </View>
           </TouchableWithoutFeedback>
         </View>
+
+        <VoiceRecognitionButton
+          setTranscript={(transcript, isFinal) => {
+            if (isFinal) {
+              let lastItem = note.list[note.list.length - 1];
+              let mutableList = Object.assign([], note.list);
+
+              if (!lastItem) {
+                lastItem = {
+                  id: uuid(),
+                  text: "",
+                  checked: false,
+                };
+                mutableList = Object.assign([lastItem], note.list);
+              }
+
+              const index = mutableList.findIndex((todoItem) => todoItem.id === lastItem.id);
+              mutableList[index] = { ...mutableList[index], text: transcript };
+
+              setNoteAsync({
+                ...note,
+                list: [
+                  ...mutableList,
+                  {
+                    id: uuid(),
+                    text: "",
+                    checked: false,
+                  },
+                ],
+              });
+            }
+          }}
+          style={{
+            bottom: 135,
+          }}
+        />
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -470,7 +507,7 @@ const styles = StyleSheet.create({
   addListItemButton: {
     zIndex: 2,
     position: "absolute",
-    bottom: 45,
+    bottom: 20,
     right: 40,
     padding: PADDING_MARGIN.md,
     borderRadius: BORDER.normal,
@@ -484,7 +521,7 @@ const styles = StyleSheet.create({
   hideDoneItemsButton: {
     zIndex: 2,
     position: "absolute",
-    bottom: 51,
+    bottom: 26,
     right: 115,
     padding: PADDING_MARGIN.sm,
     borderRadius: BORDER.normal,
@@ -498,7 +535,7 @@ const styles = StyleSheet.create({
   deleteAllListButton: {
     zIndex: 2,
     position: "absolute",
-    bottom: 51,
+    bottom: 26,
     left: 40,
     padding: PADDING_MARGIN.sm,
     borderRadius: BORDER.normal,

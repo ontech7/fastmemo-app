@@ -1,5 +1,6 @@
 import SectionItem_ExportImportData from "./items/advanced/SectionItem_ExportImportData";
 import SectionItem_ShowHidden from "./items/advanced/SectionItem_ShowHidden";
+import SectionItem_VoiceRecognition from "./items/advanced/SectionItem_VoiceRecognition";
 import SectionItem_Webhooks from "./items/advanced/SectionItem_Webhooks";
 import SectionItem_WipeData from "./items/advanced/SectionItem_WipeData";
 import SectionItem_ChangeSecretCode from "./items/basic/SectionItem_ChangeSecretCode";
@@ -25,6 +26,7 @@ export const SECTION_ADVANCED = [
   SectionItem_ShowHidden,
   SectionItem_ExportImportData,
   SectionItem_Webhooks,
+  SectionItem_VoiceRecognition,
   SectionItem_WipeData,
 ];
 
