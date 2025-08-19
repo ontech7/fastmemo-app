@@ -1,11 +1,8 @@
-import i18n from "i18next";
+import * as Localization from "expo-localization";
 
-export const compareDates = (d1, d2) => {
-  let date1 = new Date(d1).getTime();
-  let date2 = new Date(d2).getTime();
+import { supportedLanguages } from "@/libs/i18n";
 
-  return date1 >= date2;
-};
+import { capitalize } from "./string";
 
 export const reverseDate = (dateFormatted) => {
   const [, date, , time] = dateFormatted.split(" ");
@@ -19,26 +16,26 @@ export const getReversedDateTime = (dateFormatted) => {
   return new Date(reverseDate(dateFormatted)).getTime();
 };
 
-export const formatDate = (date) => {
-  const _date = new Date(date || new Date());
+export const formatDateTime = (timestamp = null) => {
+  const date = new Date(timestamp || Date.now());
 
-  const dayNames = [
-    i18n.t("date.sun"),
-    i18n.t("date.mon"),
-    i18n.t("date.tue"),
-    i18n.t("date.wed"),
-    i18n.t("date.thu"),
-    i18n.t("date.fri"),
-    i18n.t("date.sat"),
-  ];
+  const locale = Localization.getLocales()[0];
 
-  const pad = (n) => n.toString().padStart(2, "0");
+  let languageTag = "en-US";
 
-  const day = pad(_date.getDate());
-  const month = pad(_date.getMonth() + 1);
-  const year = _date.getFullYear();
-  const hours = pad(_date.getHours());
-  const minutes = pad(_date.getMinutes());
+  if (supportedLanguages.includes(locale.languageCode)) {
+    languageTag = locale.languageTag;
+  }
 
-  return `${dayNames[_date.getDay()]} ${day}/${month}/${year} - ${hours}:${minutes}`;
+  const formatter = new Intl.DateTimeFormat(languageTag, {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  return capitalize(formatter.format(date));
 };

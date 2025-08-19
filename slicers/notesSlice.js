@@ -5,7 +5,7 @@ import { configs } from "../configs";
 import { defaultCategory } from "../configs/default";
 import { COLLECTIONS, deleteCollectionInCloud, only_if_cloudConnected } from "../libs/firebase";
 import { CryptNote } from "../utils/crypt";
-import { createdAt_asc_sort, createdAt_desc_sort } from "../utils/sort";
+import { createdAt_asc_sort } from "../utils/sort";
 import { addCloudNotesAsync, deleteCloudNotesAsync } from "./thunks/notes";
 
 const initialState = {
@@ -18,6 +18,10 @@ const initialState = {
       delete: {},
     },
   },
+  filters: {
+    sortBy: "createdAt", // "createdAt" | "updatedAt"
+    order: "desc", // "asc" | "desc"
+  },
 };
 
 const notesSlice = createSlice({
@@ -26,13 +30,50 @@ const notesSlice = createSlice({
   reducers: {
     addNote: (state, action) => {
       const idx = state.items.findIndex((n) => n.id === action.payload.id);
+
       if (idx === -1) {
-        state.items.unshift(action.payload);
+        if (state.filters?.order || "desc") {
+          state.items.unshift(action.payload);
+        } else {
+          state.items.push(action.payload);
+        }
       } else {
         state.items[idx] = action.payload;
+
+        // reorder
+        state.items.sort((a, b) => {
+          const field = state.filters?.sortBy || "createdAt";
+          const order = state.filters?.order || "desc";
+
+          if (!a[field] || !b[field]) {
+            return 0;
+          }
+
+          if (a[field] < b[field]) return order === "asc" ? -1 : 1;
+          if (a[field] > b[field]) return order === "asc" ? 1 : -1;
+        });
       }
+
       only_if_cloudConnected(() => {
         state.cloud.items.add[action.payload.id] = CryptNote.encrypt(action.payload);
+      });
+    },
+
+    setNoteFilters: (state, action) => {
+      state.filters = action.payload;
+    },
+
+    reorderNotes: (state, action) => {
+      state.items.sort((a, b) => {
+        const field = state.filters?.sortBy || "createdAt";
+        const order = state.filters?.order || "desc";
+
+        if (!a[field] || !b[field]) {
+          return 0;
+        }
+
+        if (a[field] < b[field]) return order === "asc" ? -1 : 1;
+        if (a[field] > b[field]) return order === "asc" ? 1 : -1;
       });
     },
 
@@ -122,11 +163,25 @@ const notesSlice = createSlice({
         }
 
         const idx = state.items.findIndex((n) => n.id === note.id);
+
         if (idx === -1) {
           state.items.unshift(note);
         } else {
           state.items[idx] = note;
         }
+
+        // reorder
+        state.items.sort((a, b) => {
+          const field = state.filters?.sortBy || "createdAt";
+          const order = state.filters?.order || "desc";
+
+          if (!a[field] || !b[field]) {
+            return 0;
+          }
+
+          if (a[field] < b[field]) return order === "asc" ? -1 : 1;
+          if (a[field] > b[field]) return order === "asc" ? 1 : -1;
+        });
 
         only_if_cloudConnected(() => {
           state.cloud.items.add[note.id] = CryptNote.encrypt(note);
@@ -157,6 +212,19 @@ const notesSlice = createSlice({
         });
         return false;
       });
+
+      // reorder
+      state.items.sort((a, b) => {
+        const field = state.filters?.sortBy || "createdAt";
+        const order = state.filters?.order || "desc";
+
+        if (!a[field] || !b[field]) {
+          return 0;
+        }
+
+        if (a[field] < b[field]) return order === "asc" ? -1 : 1;
+        if (a[field] > b[field]) return order === "asc" ? 1 : -1;
+      });
     },
 
     restoreAllTrashedNotes: (state, action) => {
@@ -179,11 +247,39 @@ const notesSlice = createSlice({
         });
       });
       state.temporaryItems = [];
+
+      // reorder
+      state.items.sort((a, b) => {
+        const field = state.filters?.sortBy || "createdAt";
+        const order = state.filters?.order || "desc";
+
+        if (!a[field] || !b[field]) {
+          return 0;
+        }
+
+        if (a[field] < b[field]) return order === "asc" ? -1 : 1;
+        if (a[field] > b[field]) return order === "asc" ? 1 : -1;
+      });
     },
 
     setNotes: (state, action) => {
-      const { notes, reorder, fromSync } = action.payload;
-      state.items = reorder ? [...notes].sort(createdAt_desc_sort) : notes;
+      const { notes, fromSync } = action.payload;
+
+      state.items = [...notes];
+
+      // reorder
+      state.items.sort((a, b) => {
+        const field = state.filters?.sortBy || "createdAt";
+        const order = state.filters?.order || "desc";
+
+        if (!a[field] || !b[field]) {
+          return 0;
+        }
+
+        if (a[field] < b[field]) return order === "asc" ? -1 : 1;
+        if (a[field] > b[field]) return order === "asc" ? 1 : -1;
+      });
+
       if (!fromSync) {
         only_if_cloudConnected(() => {
           state.items.forEach((note) => {
@@ -344,6 +440,8 @@ const notesSlice = createSlice({
 // Actions
 export const {
   addNote,
+  setNoteFilters,
+  reorderNotes,
   changeNotesCategory,
   changeNoteCategory,
   deleteNote,
@@ -377,6 +475,11 @@ export const getAllNotes = (state) => state.notes.items;
 export const getAllTrashedNotes = (state) => state.notes.temporaryItems;
 export const getCloudNotes = (state) => state.notes.cloud.items;
 export const getTemporaryTrashTimespan = (state) => state.notes.temporaryTrashTimespan;
+export const getNoteFilters = (state) =>
+  state.notes.filters || {
+    sortBy: "createdAt",
+    order: "desc",
+  };
 
 export const getNotesFilteredPerCategory = (currentCategory, showHidden) =>
   createSelector([getAllNotes], (notes) => {

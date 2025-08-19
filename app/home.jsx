@@ -369,7 +369,6 @@ export default function HomeScreen() {
             <Animated.View
               style={{
                 flex: 1,
-                borderRadius: BORDER.normal,
                 overflow: "hidden",
                 maxHeight: heightInterpolation,
               }}

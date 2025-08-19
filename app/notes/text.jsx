@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { configs } from "@/configs";
+import { useFocusEffect } from "@react-navigation/native";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, StyleSheet, Text, TextInput, View } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
 
 import { retrieveNote } from "@/libs/registry";
-import { formatDate } from "@/utils/date";
+import { formatDateTime } from "@/utils/date";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
 import { toast } from "@/utils/toast";
 import { webhook } from "@/utils/webhook";
@@ -64,7 +65,7 @@ export default function NoteTextScreen() {
     text: initialText || "",
     createdAt: createdAt || Date.now(),
     updatedAt: updatedAt || Date.now(),
-    date: date || formatDate(),
+    date: date || formatDateTime(),
     category: category || currentCategory,
     important: important || false,
     readOnly: readOnly || false,
@@ -110,8 +111,9 @@ export default function NoteTextScreen() {
         dispatch(
           addNote({
             ...currNote,
+            type: currNote.type || "text",
             updatedAt: Date.now(),
-            date: formatDate(),
+            date: formatDateTime(),
           })
         );
       }
@@ -186,37 +188,35 @@ export default function NoteTextScreen() {
     }
   }, [lockedParam, note, setNoteAsync]);
 
-  const updateNoteWebhook = useCallback(() => {
-    (async () => {
-      if (isStringEmpty(note.title) && isStringEmpty(note.text)) {
-        await webhook(webhook_temporaryDeleteNote, {
-          action: "note/temporaryDeleteNote",
-          id: note.id,
-        });
-        await webhook(webhook_deleteNote, {
-          action: "note/deleteNote",
-          id: note.id,
-        });
-      } else {
-        await webhook(webhook_updateNote, {
-          action: "note/updateNote",
-          id: note.id,
-          type: note.type || "text",
-          title: note.title,
-          text: note.text,
-          createdAt: note.createdAt,
-          updatedAt: note.updatedAt,
-          important: note.important,
-          readOnly: note.readOnly,
-          hidden: note.hidden,
-          locked: note.locked,
-          category: {
-            iconId: note.category.icon,
-            name: note.category.name,
-          },
-        });
-      }
-    })();
+  const updateNoteWebhook = useCallback(async () => {
+    if (isStringEmpty(note.title) && isStringEmpty(note.text)) {
+      await webhook(webhook_temporaryDeleteNote, {
+        action: "note/temporaryDeleteNote",
+        id: note.id,
+      });
+      await webhook(webhook_deleteNote, {
+        action: "note/deleteNote",
+        id: note.id,
+      });
+    } else {
+      await webhook(webhook_updateNote, {
+        action: "note/updateNote",
+        id: note.id,
+        type: note.type || "text",
+        title: note.title,
+        text: note.text,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+        important: note.important,
+        readOnly: note.readOnly,
+        hidden: note.hidden,
+        locked: note.locked,
+        category: {
+          iconId: note.category.icon,
+          name: note.category.name,
+        },
+      });
+    }
   }, [note, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote]);
 
   useEffect(() => {
@@ -230,14 +230,27 @@ export default function NoteTextScreen() {
 
   const [isKeyboardShown, setIsKeyboardShown] = useState(false);
 
-  useEffect(() => {
-    const keyboardDidShowHandler = Keyboard.addListener("keyboardDidShow", () => setIsKeyboardShown(true));
-    const keyboardDidHideHandler = Keyboard.addListener("keyboardDidHide", () => setIsKeyboardShown(false));
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        KeyboardController.dismiss();
+        Keyboard.dismiss();
+      };
+    }, [])
+  );
 
-    return () => {
-      keyboardDidShowHandler.remove();
-      keyboardDidHideHandler.remove();
-    };
+  useEffect(() => {
+    const show = () => setIsKeyboardShown(true);
+    const hide = () => setIsKeyboardShown(false);
+
+    const subs = [
+      Keyboard.addListener("keyboardWillShow", show),
+      Keyboard.addListener("keyboardDidShow", show),
+      Keyboard.addListener("keyboardWillHide", hide),
+      Keyboard.addListener("keyboardDidHide", hide),
+    ];
+
+    return () => subs.forEach((s) => s.remove());
   }, []);
 
   return (

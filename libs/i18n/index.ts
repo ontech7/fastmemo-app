@@ -10,6 +10,8 @@ import it from "./locales/it";
 import ja from "./locales/ja";
 import zh from "./locales/zh";
 
+export const supportedLanguages = ["de", "en", "es", "fr", "it", "ja", "zh"];
+
 i18n.use(initReactI18next).init({
   lng: Localization.getLocales()[0].languageCode || "en",
   fallbackLng: "en",

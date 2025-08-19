@@ -25,7 +25,7 @@ import { toast } from "@/utils/toast";
 import { defaultCategory } from "@/configs/default";
 
 import { getCategories, resetCloudCategories, setCategories } from "../slicers/categoriesSlice";
-import { getAllNotes, resetCloudNotes, setNotes } from "../slicers/notesSlice";
+import { getAllNotes, getNoteFilters, resetCloudNotes, setNotes } from "../slicers/notesSlice";
 import {
   getCloudConnected,
   getCloudSettings,
@@ -40,6 +40,7 @@ export const useCloudSync = () => {
 
   const allNotes = useSelector(getAllNotes);
   const allCategories = useSelector(getCategories);
+  const noteFilters = useSelector(getNoteFilters);
 
   const selectorCloudSyncEnabled = useSelector(selectorIsCloudSyncEnabled);
   const selectorCloudSettings = useSelector(getCloudSettings);

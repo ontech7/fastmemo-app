@@ -12,7 +12,7 @@ import { CheckIcon, PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useStore } from "react-redux";
 
-import { compareDates, formatDate } from "@/utils/date";
+import { formatDateTime } from "@/utils/date";
 import BackButton from "@/components/buttons/BackButton";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -58,7 +58,7 @@ export default function ReportScreen() {
   const store = useStore();
   const state = store.getState();
   // @ts-ignore
-  const isAvailableToReport = state.settings.reportDate ? compareDates(new Date(), state.settings.reportDate) : false;
+  const isAvailableToReport = state.settings.reportDate ? new Date() >= state.settings.reportDate : false;
 
   const logoAnimRef = useRef(null);
 
@@ -377,7 +377,7 @@ export default function ReportScreen() {
                   }}
                 >
                   {/* @ts-ignore */}
-                  {formatDate(state.settings.reportDate)}
+                  {formatDateTime(state.settings.reportDate)}
                 </Text>
               </Text>
             </View>

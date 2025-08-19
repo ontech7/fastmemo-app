@@ -93,6 +93,9 @@ const zh = {
 
     filters: {
       deepSearch: "深度搜索",
+      orderBy: "排序方式:",
+      createdAt: "创建日期",
+      updatedAt: "更新日期",
     },
   },
   note: {
@@ -101,7 +104,9 @@ const zh = {
     no_items: "没有项目。\n按右下角的按钮添加一个。",
     characters: "文本字符",
     completed: "完全的",
-    on: "on",
+    on: "上に",
+    created: "创建: ",
+    updated: "修改: ",
     settings: {
       delete: "删除",
       important: "重要的",

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import {
   BackHandler,
@@ -14,13 +15,13 @@ import {
 import DraggableFlatList from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { EyeIcon, EyeSlashIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
 
 import { retrieveNote } from "@/libs/registry";
-import { formatDate } from "@/utils/date";
+import { formatDateTime } from "@/utils/date";
 import { capitalize, isStringEmpty } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 import BackButton from "@/components/buttons/BackButton";
@@ -61,9 +62,9 @@ export default function NoteTodoScreen() {
     type: type || "todo",
     title: title || "",
     list: list?.length > 0 ? list : [{ id: uuid(), text: "", checked: false }],
-    createdAt: createdAt || new Date().getTime(),
-    updatedAt: updatedAt || new Date().getTime(),
-    date: date || formatDate(),
+    createdAt: createdAt || Date.now(),
+    updatedAt: updatedAt || Date.now(),
+    date: date || formatDateTime(),
     category: category || currentCategory,
     important: important || false,
     readOnly: readOnly || false,
@@ -110,18 +111,10 @@ export default function NoteTodoScreen() {
 
     dispatch(
       addNote({
-        id: currNote.id,
+        ...currNote,
         type: currNote.type || "todo",
-        title: currNote.title,
-        list: currNote.list,
-        createdAt: currNote.createdAt,
-        updatedAt: new Date().getTime(),
-        date: formatDate(),
-        category: currNote.category,
-        important: currNote.important,
-        readOnly: currNote.readOnly,
-        hidden: currNote.hidden,
-        locked: currNote.locked,
+        updatedAt: Date.now(),
+        date: formatDateTime(),
       })
     );
   }, []);
@@ -252,42 +245,38 @@ export default function NoteTodoScreen() {
   }, [locked]);
 
   // updateNote webhook
-  const updateNoteWebhook = useCallback(() => {
-    const asyncUpdateNote = async () => {
-      const no_title = isStringEmpty(note.title);
-      const no_list_items = !note.list?.length || (note.list?.length == 1 && isStringEmpty(note.list?.[0].text));
+  const updateNoteWebhook = useCallback(async () => {
+    const no_title = isStringEmpty(note.title);
+    const no_list_items = !note.list?.length || (note.list?.length == 1 && isStringEmpty(note.list?.[0].text));
 
-      if (no_title && no_list_items) {
-        await webhook(webhook_temporaryDeleteNote, {
-          action: "note/temporaryDeleteNote",
-          id: note.id,
-        });
-        await webhook(webhook_deleteNote, {
-          action: "note/deleteNote",
-          id: note.id,
-        });
-      } else {
-        await webhook(webhook_updateNote, {
-          action: "note/updateNote",
-          id: note.id,
-          type: note.type || "todo",
-          title: note.title,
-          list: note.list,
-          createdAt: note.createdAt,
-          updatedAt: note.updatedAt,
-          important: note.important,
-          readOnly: note.readOnly,
-          hidden: note.hidden,
-          locked: note.locked,
-          category: {
-            iconId: note.category.icon,
-            name: note.category.name,
-          },
-        });
-      }
-    };
-
-    asyncUpdateNote();
+    if (no_title && no_list_items) {
+      await webhook(webhook_temporaryDeleteNote, {
+        action: "note/temporaryDeleteNote",
+        id: note.id,
+      });
+      await webhook(webhook_deleteNote, {
+        action: "note/deleteNote",
+        id: note.id,
+      });
+    } else {
+      await webhook(webhook_updateNote, {
+        action: "note/updateNote",
+        id: note.id,
+        type: note.type || "todo",
+        title: note.title,
+        list: note.list,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+        important: note.important,
+        readOnly: note.readOnly,
+        hidden: note.hidden,
+        locked: note.locked,
+        category: {
+          iconId: note.category.icon,
+          name: note.category.name,
+        },
+      });
+    }
   }, [webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, note]);
 
   useEffect(() => {
@@ -299,7 +288,14 @@ export default function NoteTodoScreen() {
     return () => backHandler.remove();
   }, [updateNoteWebhook]);
 
-  /* render item */
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        KeyboardController.dismiss();
+        Keyboard.dismiss();
+      };
+    }, [])
+  );
 
   const [autoFocus, setAutoFocus] = useState(false);
 
@@ -400,16 +396,20 @@ export default function NoteTodoScreen() {
           <VoiceRecognitionButton
             setTranscript={(transcript, isFinal) => {
               if (isFinal) {
-                let lastItem = note.list[note.list.length - 1];
-                let mutableList = Object.assign([], note.list);
+                if (!transcript.trim()) {
+                  return;
+                }
 
-                if (!lastItem) {
+                let lastItem = note.list[note.list.length - 1];
+                let mutableList = [...note.list];
+
+                if (!lastItem || lastItem.text.trim()) {
                   lastItem = {
                     id: uuid(),
                     text: "",
                     checked: false,
                   };
-                  mutableList = Object.assign([lastItem], note.list);
+                  mutableList.push(lastItem);
                 }
 
                 const index = mutableList.findIndex((todoItem) => todoItem.id === lastItem.id);
@@ -417,14 +417,7 @@ export default function NoteTodoScreen() {
 
                 setNoteAsync({
                   ...note,
-                  list: [
-                    ...mutableList,
-                    {
-                      id: uuid(),
-                      text: "",
-                      checked: false,
-                    },
-                  ],
+                  list: mutableList,
                 });
               }
             }}

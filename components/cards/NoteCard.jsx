@@ -7,6 +7,7 @@ import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, ListBulletIcon, StarIco
 import { useSelector } from "react-redux";
 
 import { storeNote } from "@/libs/registry";
+import { formatDateTime, reverseDate } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
@@ -19,7 +20,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
 
   const router = useRouter();
 
-  const { id, type, title, date, category, important, readOnly, hidden, locked } = content;
+  const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked } = content;
 
   const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
 
@@ -107,7 +108,13 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
         </Text>
 
         <Text style={[styles.date, important && styles.dateImportant]} numberOfLines={1} ellipsizeMode="tail">
-          {date}
+          {t("note.updated")}
+          <Text style={{ fontWeight: "600" }}>{formatDateTime(updatedAt || reverseDate(date))}</Text>
+        </Text>
+
+        <Text style={[styles.date, important && styles.dateImportant]} numberOfLines={1} ellipsizeMode="tail">
+          {t("note.created")}
+          <Text style={{ fontWeight: "600" }}>{formatDateTime(createdAt || reverseDate(date))}</Text>
         </Text>
       </View>
 
@@ -191,16 +198,18 @@ const styles = StyleSheet.create({
   hiddenContainer: { opacity: 0.5 },
   iconDeleteMode: { right: 40 },
   iconTypeDeleteMode: { right: 60 },
-  iconCategory: { marginRight: PADDING_MARGIN.sm },
+  iconCategory: { marginRight: PADDING_MARGIN.md },
   iconFavorite: { position: "absolute", top: 10, right: 10 },
-  iconLocked: { position: "absolute", top: 28, right: 10 },
-  iconReadOnly: { position: "absolute", top: 45, right: 10 },
-  iconHidden: { position: "absolute", top: 10, right: 30 },
-  iconTodoList: { position: "absolute", top: 45, right: 30 },
+  iconLocked: { position: "absolute", top: 27, right: 10 },
+  iconReadOnly: { position: "absolute", top: 44, right: 10 },
+  iconHidden: { position: "absolute", top: 61, right: 10 },
+  iconTodoList: { position: "absolute", top: 10, right: 30 },
   title: {
     fontSize: FONTSIZE.cardTitle,
     fontWeight: FONTWEIGHT.semiBold,
     color: COLOR.darkBlue,
+    marginTop: -4,
+    marginBottom: PADDING_MARGIN.sm,
   },
   titleImportant: { color: COLOR.softWhite },
   date: {

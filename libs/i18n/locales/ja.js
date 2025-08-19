@@ -93,6 +93,9 @@ const ja = {
 
     filters: {
       deepSearch: "詳細検索",
+      orderBy: "並び替え:",
+      createdAt: "作成日",
+      updatedAt: "更新日",
     },
   },
   note: {
@@ -102,6 +105,8 @@ const ja = {
     characters: "文字",
     completed: "完了",
     on: "オン",
+    created: "作成: ",
+    updated: "更新: ",
     settings: {
       delete: "削除",
       important: "重要",

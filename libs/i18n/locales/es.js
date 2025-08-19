@@ -93,6 +93,9 @@ const es = {
 
     filters: {
       deepSearch: "Búsqueda profunda",
+      orderBy: "Ordenar por:",
+      createdAt: "Fecha de creación",
+      updatedAt: "Fecha de actualización",
     },
   },
   note: {
@@ -102,6 +105,8 @@ const es = {
     characters: "caracteres",
     completati: "terminado",
     on: "de",
+    created: "Creado: ",
+    updated: "Modificado: ",
     settings: {
       delete: "Borrar",
       important: "Importante",

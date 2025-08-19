@@ -227,8 +227,10 @@ export default function SectionItem_ExportImportData({ isLast }) {
             exportDataIOS(passphrase);
           }
 
-          KeyboardController.dismiss();
-          Keyboard.dismiss();
+          setTimeout(() => {
+            KeyboardController.dismiss();
+            Keyboard.dismiss();
+          }, 20);
 
           setShowExportSecretDialog(false);
           setShowSuccessDialog(true);
