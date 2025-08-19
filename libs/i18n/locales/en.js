@@ -14,6 +14,10 @@ const en = {
   changelog: {
     title: "What's new?",
 
+    description_2_5_0: `• Added the ability to reorder notes by creation date and update date.
+• Redesign of modals.
+• Various fixes.`,
+
     description_2_4_2: `• Revised and improved the app’s internal structure to make it faster and more stable.
 • Added voice recognition for note transcription (text and lists).
 • Added the ability to perform deep searches (text and lists).
@@ -93,6 +97,9 @@ const en = {
 
     filters: {
       deepSearch: "Deep search",
+      orderBy: "Order by:",
+      createdAt: "Creation date",
+      updatedAt: "Update date",
     },
   },
   note: {
@@ -102,6 +109,8 @@ const en = {
     characters: "characters",
     completed: "completed",
     on: "on",
+    created: "Created: ",
+    updated: "Updated: ",
     settings: {
       delete: "Delete",
       important: "Important",
@@ -181,6 +190,7 @@ const en = {
     show_hidden: "Show hidden notes",
     export_import_data: "Export/Import data",
     export_import_popup_title: "Secret Passphrase",
+    export_import_placeholder_input: "Enter secret code...",
     export_popup_description:
       "Write your secret passphrase here. Remember to save it otherwise you won't be able to recover your notes.",
     import_popup_description: "Write your secret passphrase here to import your notes.",

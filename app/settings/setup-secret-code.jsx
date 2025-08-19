@@ -99,7 +99,7 @@ export default function SetupSecretCodeScreen() {
 
         <Text style={styles.headerTitle}>{t("setupcode.title")}</Text>
 
-        <TouchableOpacity onPress={redoInsert}>
+        <TouchableOpacity activeOpacity={0.7} onPress={redoInsert}>
           <ArrowPathIcon size={28} color={COLOR.softWhite} />
         </TouchableOpacity>
 

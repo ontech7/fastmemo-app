@@ -6,7 +6,7 @@ import { COLOR } from "@/constants/styles";
 
 export default function DeleteNotesButton({ onPressDelete, color = null }) {
   return (
-    <TouchableOpacity onPress={onPressDelete}>
+    <TouchableOpacity activeOpacity={0.7} onPress={onPressDelete}>
       <TrashIcon color={color || COLOR.softWhite} />
     </TouchableOpacity>
   );

@@ -6,7 +6,7 @@ import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 export default function FavoriteNotesButton({ onPressSave }) {
   return (
-    <TouchableOpacity style={styles.saveNoteButton} onPress={onPressSave}>
+    <TouchableOpacity activeOpacity={0.7} style={styles.saveNoteButton} onPress={onPressSave}>
       <StarIcon size={16} color={COLOR.softWhite} />
     </TouchableOpacity>
   );

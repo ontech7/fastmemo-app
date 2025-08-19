@@ -268,7 +268,7 @@ const Accordion = ({ title, children }) => {
 
   return (
     <View style={styles.sectionWrapper}>
-      <TouchableOpacity style={styles.sectionHeader} onPress={toggleAccordion}>
+      <TouchableOpacity activeOpacity={0.7} style={styles.sectionHeader} onPress={toggleAccordion}>
         <Text style={styles.sectionHeaderTitle}>{title}</Text>
 
         <ChevronDownIcon

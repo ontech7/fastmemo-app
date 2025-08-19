@@ -14,6 +14,10 @@ const ja = {
   changelog: {
     title: "新着情報",
 
+    description_2_5_0: `• ノートを作成日と更新日で並べ替える機能を追加。
+• モーダルをリニューアル。
+• 各種修正。`,
+
     description_2_4_2: `• アプリの内部構造を見直し、速度と安定性を向上しました。
 • ノートの文字起こし（テキストとリスト）用の音声認識を追加しました。
 • 詳細検索機能（テキストおよびリスト）を追加しました。
@@ -93,6 +97,9 @@ const ja = {
 
     filters: {
       deepSearch: "詳細検索",
+      orderBy: "並び替え:",
+      createdAt: "作成日",
+      updatedAt: "更新日",
     },
   },
   note: {
@@ -102,6 +109,8 @@ const ja = {
     characters: "文字",
     completed: "完了",
     on: "オン",
+    created: "作成: ",
+    updated: "更新: ",
     settings: {
       delete: "削除",
       important: "重要",
@@ -181,6 +190,7 @@ const ja = {
     show_hidden: "隠しノートを表示",
     export_import_data: "データのエクスポート/インポート",
     export_import_popup_title: "秘密のパスフレーズ",
+    export_import_placeholder_input: "秘密のコードを入力してください...",
     export_popup_description: "ここに秘密のパスフレーズを入力してください。保存しないと、ノートを回復できなくなります。",
     import_popup_description: "ここに秘密のパスフレーズを入力してください。ノートをインポートするには保存してください。",
     webhooks: "Webhooks",

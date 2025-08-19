@@ -32,6 +32,7 @@ export default function AddNoteButton({ isDeleteMode, toggleDeleteMode, style = 
   return (
     <TouchableOpacity
       style={[styles.addBtn, style]}
+      activeOpacity={0.7}
       onPress={() => {
         if (!isDeleteMode) {
           storeNote({});

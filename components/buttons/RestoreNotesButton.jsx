@@ -6,7 +6,7 @@ import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 export default function RestoreNotesButton({ onPressRestore, color = null }) {
   return (
-    <TouchableOpacity style={styles.restoreNoteButton} onPress={onPressRestore}>
+    <TouchableOpacity activeOpacity={0.7} style={styles.restoreNoteButton} onPress={onPressRestore}>
       <ArrowPathIcon color={color || COLOR.softWhite} />
     </TouchableOpacity>
   );

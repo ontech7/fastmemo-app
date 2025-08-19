@@ -14,6 +14,10 @@ const de = {
   changelog: {
     title: "Was gibt's Neues?",
 
+    description_2_5_0: `• Möglichkeit hinzugefügt, Notizen nach Erstellungsdatum und Aktualisierungsdatum neu anzuordnen.
+• Überarbeitung der Modals.
+• Verschiedene Korrekturen.`,
+
     description_2_4_2: `• Überarbeitete und verbesserte interne Struktur der App für mehr Geschwindigkeit und Stabilität.
 • Sprach­erkennung zur Transkription von Notizen (Text und Listen) hinzugefügt.
 • Hinzugefügt: Möglichkeit zur Durchführung von Tiefensuchen (Text und Listen).
@@ -93,6 +97,9 @@ const de = {
 
     filters: {
       deepSearch: "Tiefensuche",
+      orderBy: "Sortieren nach:",
+      createdAt: "Erstellungsdatum",
+      updatedAt: "Aktualisierungsdatum",
     },
   },
   note: {
@@ -102,6 +109,8 @@ const de = {
     characters: "Textzeichen",
     completati: "vollendet",
     on: "von",
+    created: "Erstellt: ",
+    updated: "Geändert: ",
     settings: {
       delete: "Löschen",
       important: "Wichtig",
@@ -181,6 +190,7 @@ const de = {
     show_hidden: "Versteckte Notizen anzeigen",
     export_import_data: "Daten exportieren/importieren",
     export_import_popup_title: "Geheime Passphrase",
+    export_import_placeholder_input: "Geheimcode eingeben...",
     export_popup_description:
       "Geben Sie hier Ihre geheime Passphrase ein. Denken Sie daran, es zu speichern, da Sie Ihre Notizen sonst nicht wiederherstellen können.",
     import_popup_description: "Geben Sie hier Ihre geheime Passphrase ein, um Ihre Notizen zu importieren.",

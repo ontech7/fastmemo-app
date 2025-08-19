@@ -7,7 +7,11 @@ import CategoryIcon from "../CategoryIcon";
 
 function UnusedCategoryButton({ name, selected, toggleCategoryIcon }) {
   return (
-    <TouchableOpacity style={[styles.button, selected && styles.selectedButton]} onPress={() => toggleCategoryIcon(name)}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      style={[styles.button, selected && styles.selectedButton]}
+      onPress={() => toggleCategoryIcon(name)}
+    >
       <CategoryIcon name={name} color={selected ? COLOR.darkBlue : COLOR.softWhite} />
     </TouchableOpacity>
   );

@@ -6,7 +6,7 @@ import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 export default function HiddenNotesButton({ onPressHidden }) {
   return (
-    <TouchableOpacity style={styles.hiddenNoteButton} onPress={onPressHidden}>
+    <TouchableOpacity activeOpacity={0.7} style={styles.hiddenNoteButton} onPress={onPressHidden}>
       <EyeSlashIcon size={16} color={COLOR.softWhite} />
     </TouchableOpacity>
   );

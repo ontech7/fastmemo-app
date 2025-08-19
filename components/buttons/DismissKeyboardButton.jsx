@@ -7,6 +7,7 @@ import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
 export default function DismissKeyboardButton({ showKeyboardDismiss = false, onPress = null, style = {} }) {
   return (
     <TouchableOpacity
+      activeOpacity={0.7}
       onPress={() => {
         !onPress ? Keyboard.dismiss() : onPress();
       }}

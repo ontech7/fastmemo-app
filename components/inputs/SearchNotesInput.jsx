@@ -13,10 +13,10 @@ export default function SearchNotesInput({ text, onChangeText, showDeepSearch })
       <TextInput
         value={text}
         onChangeText={onChangeText}
-        style={styles.searchInput}
         cursorColor={COLOR.softWhite}
         placeholder={!showDeepSearch ? t("home.search") : t("home.deepSearch")}
         placeholderTextColor={COLOR.placeholder}
+        style={styles.searchInput}
       />
 
       {!text ? (

@@ -76,6 +76,7 @@ export default function OrganizeCategoryCard({
     <View style={styles.buttonWrapper}>
       <TouchableOpacity
         style={styles.button}
+        activeOpacity={0.7}
         onPress={() => {
           if (!editMode) {
             navigateToCreateCategory();

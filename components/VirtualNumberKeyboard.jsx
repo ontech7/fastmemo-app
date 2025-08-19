@@ -8,73 +8,139 @@ function VirtualNumberKeyboard({ onAdd, onRemove, disabled }) {
   return (
     <View style={styles.keyboard_wrapper}>
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onAdd(1)} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onAdd(1)}
+          disabled={disabled}
+        >
           <Text style={styles.keyboard_text}>1</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onAdd(2)} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onAdd(2)}
+          disabled={disabled}
+        >
           <Text style={styles.keyboard_text}>2</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onAdd(3)} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onAdd(3)}
+          disabled={disabled}
+        >
           <Text style={styles.keyboard_text}>3</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onAdd(4)} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onAdd(4)}
+          disabled={disabled}
+        >
           <Text style={styles.keyboard_text}>4</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onAdd(5)} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onAdd(5)}
+          disabled={disabled}
+        >
           <Text style={styles.keyboard_text}>5</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onAdd(6)} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onAdd(6)}
+          disabled={disabled}
+        >
           <Text style={styles.keyboard_text}>6</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onAdd(7)} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onAdd(7)}
+          disabled={disabled}
+        >
           <Text style={styles.keyboard_text}>7</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onAdd(8)} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onAdd(8)}
+          disabled={disabled}
+        >
           <Text style={styles.keyboard_text}>8</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onAdd(9)} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onAdd(9)}
+          disabled={disabled}
+        >
           <Text style={styles.keyboard_text}>9</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} disabled>
+        <TouchableOpacity activeOpacity={0.7} delayPressIn={0} style={styles.keyboard_input} disabled>
           <Text style={styles.keyboard_text} />
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onAdd(0)} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onAdd(0)}
+          disabled={disabled}
+        >
           <Text style={styles.keyboard_text}>0</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.keyboard_input_wrapper}>
-        <TouchableOpacity delayPressIn={0} style={styles.keyboard_input} onPress={onRemove} disabled={disabled}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          delayPressIn={0}
+          style={styles.keyboard_input}
+          onPress={onRemove}
+          disabled={disabled}
+        >
           <BackspaceIcon size={38} color={COLOR.softWhite} />
         </TouchableOpacity>
       </View>

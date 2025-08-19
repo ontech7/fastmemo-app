@@ -14,6 +14,10 @@ const it = {
   changelog: {
     title: "Cosa c'è di nuovo?",
 
+    description_2_5_0: `• Aggiunta la possibilità di riordinare le note per data di creazione e data di aggiornamento.
+• Rifacimento delle modali.
+• Correzioni varie.`,
+
     description_2_4_2: `• Rivista e migliorata la struttura interna dell’app per renderla più veloce e stabile.
 • Aggiunto il riconoscimento vocale per la trascrizione delle note (testo e liste).
 • Aggiunta la possibilità di fare ricerche approfondite (testo e liste).
@@ -33,7 +37,7 @@ const it = {
 • Aggiunto limite massimo dispositivi su cloud (3).
 • Correzioni varie.`,
 
-    description_2_0_0: `• Aggiunto Cloud Sync con Google Firebase.
+    description_2_0_0: `• Aggiunto sincronizzazione Cloud con Google Firebase.
 • Aggiunta gestione Webhook (per utenti esperti).
 • Aggiunto allineamento a sinistra e centro nelle opzioni delle note di testo.
 • Aggiunto codice segreto per alcune opzioni.
@@ -94,6 +98,9 @@ const it = {
 
     filters: {
       deepSearch: "Ricerca approfondita",
+      orderBy: "Ordina per:",
+      createdAt: "Data di creazione",
+      updatedAt: "Data di modifica",
     },
   },
   note: {
@@ -103,6 +110,8 @@ const it = {
     characters: "caratteri",
     completed: "completati",
     on: "su",
+    created: "Creato: ",
+    updated: "Modificato: ",
     settings: {
       delete: "Cancella",
       important: "Importante",
@@ -117,10 +126,10 @@ const it = {
     title: "Cambia Categoria",
   },
   cloudsync: {
-    title: "Cloud Sync",
+    title: "Sincronizzazione Cloud",
     syncing_1: "Sincronizzazione in corso…",
     syncing_2: "Aspetta fino al termine",
-    enable: "Abilita Cloud sync",
+    enable: "Abilita sincronizzazione Cloud",
     save: "Salva impostazioni",
     edit: "Modifica impostazioni",
     resync: "Risincronizza i dati",
@@ -173,7 +182,7 @@ const it = {
   generalsettings: {
     title: "Impostazioni",
     basic: "Base",
-    cloudsync: "Cloud Sync",
+    cloudsync: "Sincronizzazione Cloud",
     temporary_trash_lifespan: "Durata cestino temporaneo",
     days: "giorni",
     change_secret_code: "Cambia il codice segreto",
@@ -182,6 +191,7 @@ const it = {
     show_hidden: "Mostra note nascoste",
     export_import_data: "Esporta/Importa dati",
     export_import_popup_title: "Frase segreta",
+    export_import_placeholder_input: "Inserisci codice segreto...",
     export_popup_description:
       "Scrivi qui la tua frase segreta. Ricordati di salvarlo altrimenti non sarai in grado di recuperare le tue note.",
     import_popup_description: "Scrivi qui la tua frase segreta per importare le tue note.",
@@ -347,7 +357,7 @@ const it = {
       text_5_0: "Apparirà un popup e la seconda opzione è quella che stai cercando.",
     },
     what_cloud_sync: {
-      title: "Cos'è Cloud Sync?",
+      title: "Cos'è sincronizzazione Cloud?",
       text_1_0:
         "È possibile sincronizzare le tue note collegando il tuo account Google Firebase e attivando la modalità di sincronizzazione.",
       text_2_0: "Non devi fare nient'altro. Le tue note verranno archiviate in Google Firebase, criptate.",

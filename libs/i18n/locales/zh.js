@@ -14,6 +14,10 @@ const zh = {
   changelog: {
     title: "什么是新的？",
 
+    description_2_5_0: `• 新增按创建日期和更新日期重新排序笔记的功能。
+• 重新设计了模态框。
+• 各种修复。`,
+
     description_2_4_2: `• 优化并改进了应用的内部结构，使其更快更稳定。
 • 添加了语音识别功能，用于转录笔记（文本和列表）。
 • 新增深度搜索功能（文本和列表）。
@@ -93,6 +97,9 @@ const zh = {
 
     filters: {
       deepSearch: "深度搜索",
+      orderBy: "排序方式:",
+      createdAt: "创建日期",
+      updatedAt: "更新日期",
     },
   },
   note: {
@@ -101,7 +108,9 @@ const zh = {
     no_items: "没有项目。\n按右下角的按钮添加一个。",
     characters: "文本字符",
     completed: "完全的",
-    on: "on",
+    on: "上に",
+    created: "创建: ",
+    updated: "修改: ",
     settings: {
       delete: "删除",
       important: "重要的",
@@ -181,6 +190,7 @@ const zh = {
     show_hidden: "显示隐藏的注释",
     export_import_data: "导出/导入数据",
     export_import_popup_title: "秘密密码",
+    export_import_placeholder_input: "输入秘密代码...",
     export_popup_description: "在这里写下您的秘密密码。请记住保存它，否则您将无法恢复您的笔记。",
     import_popup_description: "在这里写下您的秘密密码以导入您的笔记。",
     webhooks: "网络钩子",

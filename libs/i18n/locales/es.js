@@ -14,6 +14,10 @@ const es = {
   changelog: {
     title: "¿Qué hay de nuevo?",
 
+    description_2_5_0: `• Se agregó la posibilidad de reordenar las notas por fecha de creación y fecha de actualización.
+• Rediseño de las modales.
+• Varias correcciones.`,
+
     description_2_4_2: `• Revisada y mejorada la estructura interna de la app para hacerla más rápida y estable.
 • Se ha añadido el reconocimiento de voz para la transcripción de notas (texto y listas).
 • Añadida la posibilidad de realizar búsquedas profundas (texto y listas).
@@ -93,6 +97,9 @@ const es = {
 
     filters: {
       deepSearch: "Búsqueda profunda",
+      orderBy: "Ordenar por:",
+      createdAt: "Fecha de creación",
+      updatedAt: "Fecha de actualización",
     },
   },
   note: {
@@ -102,6 +109,8 @@ const es = {
     characters: "caracteres",
     completati: "terminado",
     on: "de",
+    created: "Creado: ",
+    updated: "Modificado: ",
     settings: {
       delete: "Borrar",
       important: "Importante",
@@ -181,6 +190,7 @@ const es = {
     show_hidden: "Mostrar notas ocultas",
     export_import_data: "Exportar/Importar datos",
     export_import_popup_title: "Frase de contraseña secreta",
+    export_import_placeholder_input: "Introduce el código secreto...",
     export_popup_description:
       "Escribe tu contraseña secreta aquí. Recuerda guardarlo, de lo contrario no podrás recuperar tus notas.",
     import_popup_description: "Escriba su contraseña secreta aquí para importar sus notas.",

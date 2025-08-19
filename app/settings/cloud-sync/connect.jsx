@@ -54,6 +54,7 @@ export default function CloudSyncScreen() {
           <Text style={styles.headerTitle}>{t("cloudsync.title")}</Text>
 
           <TouchableOpacity
+            activeOpacity={0.7}
             onPress={() => Linking.openURL(`${configs.app.websiteUrl}/${t("languageCode")}/guides/google-firebase`)}
           >
             <InformationCircleIcon size={28} color={COLOR.softWhite} />
@@ -156,6 +157,7 @@ export default function CloudSyncScreen() {
                         <Text style={styles.saveSettingsText}>{t("cloudsync.save")}</Text>
 
                         <TouchableOpacity
+                          activeOpacity={0.7}
                           disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
                           style={[
                             styles.saveButton,
@@ -185,6 +187,7 @@ export default function CloudSyncScreen() {
                           <Text style={styles.saveSettingsText}>{t("cloudsync.edit")}</Text>
 
                           <TouchableOpacity
+                            activeOpacity={0.7}
                             disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
                             style={[
                               styles.saveButton,
@@ -211,6 +214,7 @@ export default function CloudSyncScreen() {
                           <Text style={styles.saveSettingsText}>{t("cloudsync.resync")}</Text>
 
                           <TouchableOpacity
+                            activeOpacity={0.7}
                             disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
                             style={[
                               styles.saveButton,
@@ -231,6 +235,7 @@ export default function CloudSyncScreen() {
                           <Text style={styles.saveSettingsText}>{t("cloudsync.deleteDevices")}</Text>
 
                           <TouchableOpacity
+                            activeOpacity={0.7}
                             disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
                             style={[
                               styles.saveButton,

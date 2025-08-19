@@ -103,7 +103,7 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }) {
         </View>
       )}
 
-      <TouchableOpacity style={styles.registerButton} onPress={recognizing ? handleStop : handleStart}>
+      <TouchableOpacity activeOpacity={0.7} style={styles.registerButton} onPress={recognizing ? handleStop : handleStart}>
         <MicrophoneIcon size={28} color={COLOR.darkBlue} />
       </TouchableOpacity>
     </Animated.View>
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   container: {
     height: 52,
     position: "absolute",
-    bottom: 80,
+    bottom: 100,
     right: 40,
     flexDirection: "row",
     alignItems: "center",

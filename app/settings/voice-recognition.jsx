@@ -123,7 +123,11 @@ export default function VoiceRecognitionScreen() {
               />
             </View>
 
-            <TouchableOpacity style={[styles.sectionItemList, styles.sectionItemList_last]} onPress={changeLanguage}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[styles.sectionItemList, styles.sectionItemList_last]}
+              onPress={changeLanguage}
+            >
               <Text style={styles.sectionItemList_title}>{t("voicerecognition.language")}</Text>
 
               <Text style={styles.sectionItemList_text}>{lang("languageName")}</Text>

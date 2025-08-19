@@ -9,7 +9,7 @@ export default function AddCategoryButton() {
   const router = useRouter();
 
   return (
-    <TouchableOpacity style={styles.addBtn} onPress={() => router.push("/categories/create")}>
+    <TouchableOpacity activeOpacity={0.7} style={styles.addBtn} onPress={() => router.push("/categories/create")}>
       <FolderPlusIcon size={28} color={COLOR.darkBlue} />
     </TouchableOpacity>
   );

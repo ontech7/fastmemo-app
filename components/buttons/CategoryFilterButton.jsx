@@ -1,10 +1,17 @@
-import React, { memo, useEffect, useRef } from "react";
+import React, { memo, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { XMarkIcon } from "react-native-heroicons/outline";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ExclamationTriangleIcon, XMarkIcon } from "react-native-heroicons/outline";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { useDispatch, useSelector } from "react-redux";
 
-import { popupAlert } from "@/utils/alert";
 import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
@@ -13,112 +20,115 @@ import { deleteCategory, swapCategory } from "../../slicers/categoriesSlice";
 import { deleteNotesCategory, resetNotesCategory } from "../../slicers/notesSlice";
 import { selectorWebhook_deleteCategory } from "../../slicers/settingsSlice";
 import CategoryIcon from "../CategoryIcon";
+import ComplexDialog from "../dialogs/ComplexDialog";
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleDeleteMode }) {
   const { t } = useTranslation();
+
+  const [showDeleteFavoriteCategoryDialog, setShowDeleteFavoriteCategoryDialog] = useState(false);
 
   const dispatch = useDispatch();
 
   const webhook_deleteCategory = useSelector(selectorWebhook_deleteCategory);
 
-  /* anim */
-
-  const rotateCategoryAnim = useRef(new Animated.Value(0)).current;
-
-  const rotateCategoryInterpolation = rotateCategoryAnim.interpolate({
-    inputRange: [0, 1, 2, 3, 4],
-    outputRange: ["0deg", "5deg", "0deg", "-5deg", "0deg"],
-  });
-
-  const animLoop = Animated.loop(
-    Animated.timing(rotateCategoryAnim, {
-      toValue: 4,
-      duration: 300,
-      easing: Easing.linear,
-      useNativeDriver: true,
-    })
-  );
-
-  const rotateCategoryEvent = () => {
-    if (deleteMode) animLoop.start(() => rotateCategoryAnim.setValue(0));
-    else {
-      animLoop.reset();
-    }
-  };
-
-  useEffect(() => {
-    rotateCategoryEvent();
-  }, [deleteMode]);
-
-  /* events */
-
   const swapFavoriteCategory = () => {
     dispatch(swapCategory({ name, index, icon, selected }));
   };
 
-  const deleteFavoriteCategory = () => {
-    popupAlert(
-      t("warning"),
-      t("popup.delete_category"),
-      {
-        confirmText: t("delete_and_move"),
-        confirmHandler: () => {
-          dispatch(deleteCategory({ name, index, icon, selected }));
-          dispatch(resetNotesCategory(icon));
-          webhook(webhook_deleteCategory, {
-            action: "note/deleteCategory",
-            iconId: icon,
-          });
-          toggleDeleteMode();
-        },
-      },
-      {
-        alternateText: t("delete_with_notes"),
-        alternateHandler: () => {
-          dispatch(deleteCategory({ name, index, icon, selected }));
-          dispatch(deleteNotesCategory(icon));
-          webhook(webhook_deleteCategory, {
-            action: "category/deleteCategory",
-            iconId: icon,
-          });
-          toggleDeleteMode();
-        },
-      }
-    );
-  };
+  /* animation */
+
+  const rotate = useSharedValue(0);
+
+  const rotateAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotate.value}deg` }],
+  }));
+
+  useEffect(() => {
+    if (deleteMode) {
+      rotate.value = withRepeat(
+        withSequence(
+          withTiming(0, { duration: 75, easing: Easing.linear }),
+          withTiming(5, { duration: 75, easing: Easing.linear }),
+          withTiming(0, { duration: 75, easing: Easing.linear }),
+          withTiming(-5, { duration: 75, easing: Easing.linear })
+        ),
+        -1,
+        true
+      );
+    } else {
+      rotate.value = withTiming(0);
+    }
+  }, [deleteMode]);
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={[
-          styles.button,
-          selected && styles.selectedButton,
-          {
-            transform: [
-              {
-                rotate: deleteMode ? rotateCategoryInterpolation : "0deg",
-              },
-            ],
+    <>
+      <ComplexDialog
+        open={showDeleteFavoriteCategoryDialog}
+        actionsColumn
+        adornmentStart={<ExclamationTriangleIcon size={22} style={{ marginBottom: -3 }} />}
+        title={t("warning")}
+        description={t("popup.delete_category")}
+        confirm={{
+          label: t("delete_and_move"),
+          handler: () => {
+            dispatch(deleteCategory({ name, index, icon, selected }));
+            dispatch(resetNotesCategory(icon));
+            webhook(webhook_deleteCategory, {
+              action: "note/deleteCategory",
+              iconId: icon,
+            });
+            toggleDeleteMode();
+            setShowDeleteFavoriteCategoryDialog(false);
           },
-        ]}
-        onPress={swapFavoriteCategory}
-        onLongPress={toggleDeleteMode}
-      >
-        {index ? (
-          <Text style={[styles.all, selected && styles.selectedAll]}>ALL</Text>
-        ) : (
-          <CategoryIcon name={icon} color={selected ? COLOR.darkBlue : COLOR.softWhite} />
+        }}
+        cancel={{
+          label: t("delete_with_notes"),
+          handler: () => {
+            dispatch(deleteCategory({ name, index, icon, selected }));
+            dispatch(deleteNotesCategory(icon));
+            webhook(webhook_deleteCategory, {
+              action: "category/deleteCategory",
+              iconId: icon,
+            });
+            toggleDeleteMode();
+            setShowDeleteFavoriteCategoryDialog(false);
+          },
+        }}
+        alternative={{
+          label: t("cancel"),
+          handler: () => setShowDeleteFavoriteCategoryDialog(false),
+        }}
+      />
+
+      <View style={styles.container}>
+        <AnimatedTouchableOpacity
+          style={[styles.button, selected && styles.selectedButton, rotateAnimStyle]}
+          activeOpacity={0.7}
+          onPress={swapFavoriteCategory}
+          onLongPress={toggleDeleteMode}
+        >
+          {index ? (
+            <Text style={[styles.all, selected && styles.selectedAll]}>ALL</Text>
+          ) : (
+            <CategoryIcon name={icon} color={selected ? COLOR.darkBlue : COLOR.softWhite} />
+          )}
+        </AnimatedTouchableOpacity>
+
+        {selected && <View style={styles.selectedTriangle}></View>}
+
+        {!index && deleteMode && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.deleteButton}
+            onPress={() => setShowDeleteFavoriteCategoryDialog(true)}
+          >
+            <XMarkIcon size={14} color={COLOR.softWhite} />
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
-
-      {selected && <View style={styles.selectedTriangle}></View>}
-
-      {!index && deleteMode && (
-        <TouchableOpacity style={styles.deleteButton} onPress={deleteFavoriteCategory}>
-          <XMarkIcon size={14} color={COLOR.softWhite} />
-        </TouchableOpacity>
-      )}
-    </View>
+      </View>
+    </>
   );
 }
 

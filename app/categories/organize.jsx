@@ -5,7 +5,7 @@ import { CheckIcon, PencilSquareIcon, XMarkIcon } from "react-native-heroicons/o
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
-import { popupAlert } from "@/utils/alert";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
@@ -35,6 +35,8 @@ export default function OrganizeCategoriesScreen() {
     setIsEditMode(false);
   };
 
+  const [showFinishOrganizeDialog, setShowFinishOrganizeDialog] = useState(false);
+
   const saveCategoryOrganization = () => {
     if (orderedCategories.notNumberedCategoryList.length == 0) {
       let orderedList = [...orderedCategories.reorganizedCategoryList];
@@ -44,10 +46,7 @@ export default function OrganizeCategoriesScreen() {
       dispatch(setCategories({ categories: orderedList, reorder: true }));
       setIsEditMode(false);
     } else {
-      popupAlert(t("error"), t("popup.finish_organize_categories"), {
-        confirmText: t("ok"),
-        confirmHandler: null,
-      });
+      setShowFinishOrganizeDialog(true);
     }
   };
 
@@ -76,38 +75,50 @@ export default function OrganizeCategoriesScreen() {
   }, [categories]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <BackButton />
-
-        {isEditMode && <View style={{ padding: PADDING_MARGIN.lg }} />}
-
-        <Text style={styles.headerTitle}>{t("organizecategory.title")}</Text>
-
-        {isEditMode ? (
-          <>
-            <TouchableOpacity style={{ marginRight: PADDING_MARGIN.sm }} onPress={undoCategoryOrganization}>
-              <XMarkIcon size={28} color={COLOR.softWhite} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={saveCategoryOrganization}>
-              <CheckIcon size={28} color={COLOR.softWhite} />
-            </TouchableOpacity>
-          </>
-        ) : (
-          <TouchableOpacity onPress={() => setIsEditMode(true)}>
-            <PencilSquareIcon size={28} color={COLOR.softWhite} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <OrganizeCategoryList
-        orderedCategories={orderedCategories}
-        setOrderedCategories={setOrderedCategories}
-        editMode={isEditMode}
+    <>
+      <ConfirmOrCancelDialog
+        open={showFinishOrganizeDialog}
+        description={t("popup.finish_organize_categories")}
+        onConfirm={() => setShowFinishOrganizeDialog(false)}
       />
 
-      {!isEditMode && <AddCategoryButton />}
-    </SafeAreaView>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <BackButton />
+
+          {isEditMode && <View style={{ padding: PADDING_MARGIN.lg }} />}
+
+          <Text style={styles.headerTitle}>{t("organizecategory.title")}</Text>
+
+          {isEditMode ? (
+            <>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={{ marginRight: PADDING_MARGIN.sm }}
+                onPress={undoCategoryOrganization}
+              >
+                <XMarkIcon size={28} color={COLOR.softWhite} />
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7} onPress={saveCategoryOrganization}>
+                <CheckIcon size={28} color={COLOR.softWhite} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity activeOpacity={0.7} onPress={() => setIsEditMode(true)}>
+              <PencilSquareIcon size={28} color={COLOR.softWhite} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <OrganizeCategoryList
+          orderedCategories={orderedCategories}
+          setOrderedCategories={setOrderedCategories}
+          editMode={isEditMode}
+        />
+
+        {!isEditMode && <AddCategoryButton />}
+      </SafeAreaView>
+    </>
   );
 }
 

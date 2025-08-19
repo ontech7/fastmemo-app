@@ -33,6 +33,7 @@ export default function AddNoteTextButton({ isDeleteMode, toggleDeleteMode, styl
     <Animated.View style={{ transform: [{ scaleX: scaleInterpolation }] }}>
       <TouchableOpacity
         style={[styles.addBtn, style]}
+        activeOpacity={0.7}
         onPress={() => {
           if (!isDeleteMode) {
             storeNote({});

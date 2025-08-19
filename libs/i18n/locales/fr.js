@@ -14,6 +14,10 @@ const fr = {
   changelog: {
     title: "Quoi de neuf?",
 
+    description_2_5_0: `• Ajout de la possibilité de réorganiser les notes par date de création et date de mise à jour.
+• Refonte des modales.
+• Corrections diverses.`,
+
     description_2_4_2: `• Structure interne de l’application revue et améliorée pour plus de rapidité et de stabilité.
 • Ajout de la reconnaissance vocale pour la transcription des notes (texte et listes).
 • Ajout de la fonctionnalité de recherche approfondie (texte et listes).
@@ -93,6 +97,9 @@ const fr = {
 
     filters: {
       deepSearch: "Recherche approfondie",
+      orderBy: "Trier par:",
+      createdAt: "Date de création",
+      updatedAt: "Date de mise à jour",
     },
   },
   note: {
@@ -102,6 +109,8 @@ const fr = {
     characters: "caractères",
     completed: "complété",
     on: "sur",
+    created: "Créé: ",
+    updated: "Modifié: ",
     settings: {
       delete: "Supprimer",
       important: "Important",
@@ -181,6 +190,7 @@ const fr = {
     show_hidden: "Afficher les notes masquées",
     export_import_data: "Exporter/Importer des données",
     export_import_popup_title: "Mot de passe secret",
+    export_import_placeholder_input: "Entrez le code secret...",
     export_popup_description:
       "Écrivez votre mot de passe secret ici. Pensez à le sauvegarder sinon vous ne pourrez pas récupérer vos notes.",
     import_popup_description: "Écrivez votre mot de passe secret ici pour importer vos notes.",

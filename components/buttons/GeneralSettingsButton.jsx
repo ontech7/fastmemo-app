@@ -11,6 +11,7 @@ export default function GeneralSettingsButton() {
   return (
     <View style={styles.container}>
       <TouchableOpacity
+        activeOpacity={0.7}
         style={styles.button}
         onPress={() => {
           router.push("/settings/general");

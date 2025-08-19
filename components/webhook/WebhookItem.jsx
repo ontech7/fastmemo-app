@@ -19,7 +19,7 @@ export default function WebhookItem({ title, webhook, setWebhookUrl, toggleWebho
       >
         {/* checkbox */}
 
-        <TouchableOpacity style={{ marginRight: PADDING_MARGIN.sm }} onPress={toggleWebhook}>
+        <TouchableOpacity activeOpacity={0.7} style={{ marginRight: PADDING_MARGIN.sm }} onPress={toggleWebhook}>
           <View style={styles.checkbox}>
             {webhook.enabled && <CheckIcon size={28} color={COLOR.softWhite} style={{ margin: 7 }} />}
           </View>

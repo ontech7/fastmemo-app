@@ -1,12 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
 
-import { popupAlert } from "@/utils/alert";
 import { toggleWithSecret } from "@/utils/crypt";
 import { webhook } from "@/utils/webhook";
+import ComplexDialog from "@/components/dialogs/ComplexDialog";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 
 import { wipeCategories } from "../../../../slicers/categoriesSlice";
 import { wipeNotes } from "../../../../slicers/notesSlice";
@@ -28,48 +30,72 @@ export default function SectionItem_WipeData({ isLast }) {
 
   const netInfo = useNetInfo();
 
-  const wipeData = () => {
-    popupAlert(
-      t("warning"),
-      t("popup.are_you_sure_wipe"),
-      {
-        confirmText: t("wipe"),
-        confirmHandler: () => {
-          dispatch(wipeNotes(false));
-          dispatch(wipeCategories(false));
-          webhook(webhook_wipeData, {
-            action: "generic/wipeData",
-            cloud: false,
-          });
-        },
-      },
-      isCloudConnected && netInfo?.isConnected
-        ? {
-            alternateText: t("wipeWithCloud"),
-            alternateHandler: () => {
-              dispatch(wipeNotes(true));
-              dispatch(wipeCategories(true));
-              webhook(webhook_wipeData, {
-                action: "generic/wipeData",
-                cloud: true,
-              });
-            },
-          }
-        : {}
-    );
-  };
-
-  const wipeDataWithSecret = () => {
-    toggleWithSecret({
-      router,
-      isFingerprintEnabled,
-      callback: wipeData,
-    });
-  };
+  const [showWipeDataDialog, setShowWipeDataDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   return (
-    <SectionItemList isLast={isLast}>
-      <SectionItemList_Text title={t("generalsettings.wipe_data")} onPress={wipeDataWithSecret} />
-    </SectionItemList>
+    <>
+      <ComplexDialog
+        open={showWipeDataDialog}
+        actionsColumn={isCloudConnected && netInfo?.isConnected}
+        adornmentStart={<ExclamationTriangleIcon size={22} style={{ marginBottom: -3 }} />}
+        title={t("warning")}
+        description={t("popup.are_you_sure_wipe")}
+        confirm={{
+          label: t("wipe"),
+          handler: () => {
+            dispatch(wipeNotes(false));
+            dispatch(wipeCategories(false));
+            webhook(webhook_wipeData, {
+              action: "generic/wipeData",
+              cloud: false,
+            });
+            setShowWipeDataDialog(false);
+            setShowSuccessDialog(true);
+          },
+        }}
+        alternative={
+          isCloudConnected && netInfo?.isConnected
+            ? {
+                label: t("wipeWithCloud"),
+                handler: () => {
+                  dispatch(wipeNotes(true));
+                  dispatch(wipeCategories(true));
+                  webhook(webhook_wipeData, {
+                    action: "generic/wipeData",
+                    cloud: true,
+                  });
+                  setShowWipeDataDialog(false);
+                  setShowSuccessDialog(true);
+                },
+              }
+            : null
+        }
+        cancel={{
+          label: t("cancel"),
+          handler: () => setShowWipeDataDialog(false),
+        }}
+      />
+
+      <ConfirmOrCancelDialog
+        open={showSuccessDialog}
+        title={t("report.messages.success.title")}
+        description={null}
+        onConfirm={() => setShowSuccessDialog(false)}
+      />
+
+      <SectionItemList isLast={isLast}>
+        <SectionItemList_Text
+          title={t("generalsettings.wipe_data")}
+          onPress={() =>
+            toggleWithSecret({
+              router,
+              isFingerprintEnabled,
+              callback: () => setShowWipeDataDialog(true),
+            })
+          }
+        />
+      </SectionItemList>
+    </>
   );
 }
