@@ -14,6 +14,10 @@ const en = {
   changelog: {
     title: "What's new?",
 
+    description_2_5_0: `• Added the ability to reorder notes by creation date and update date.
+• Redesign of modals.
+• Various fixes.`,
+
     description_2_4_2: `• Revised and improved the app’s internal structure to make it faster and more stable.
 • Added voice recognition for note transcription (text and lists).
 • Added the ability to perform deep searches (text and lists).

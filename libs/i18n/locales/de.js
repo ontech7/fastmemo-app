@@ -14,6 +14,10 @@ const de = {
   changelog: {
     title: "Was gibt's Neues?",
 
+    description_2_5_0: `• Möglichkeit hinzugefügt, Notizen nach Erstellungsdatum und Aktualisierungsdatum neu anzuordnen.
+• Überarbeitung der Modals.
+• Verschiedene Korrekturen.`,
+
     description_2_4_2: `• Überarbeitete und verbesserte interne Struktur der App für mehr Geschwindigkeit und Stabilität.
 • Sprach­erkennung zur Transkription von Notizen (Text und Listen) hinzugefügt.
 • Hinzugefügt: Möglichkeit zur Durchführung von Tiefensuchen (Text und Listen).

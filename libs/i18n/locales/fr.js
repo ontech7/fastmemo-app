@@ -14,6 +14,10 @@ const fr = {
   changelog: {
     title: "Quoi de neuf?",
 
+    description_2_5_0: `• Ajout de la possibilité de réorganiser les notes par date de création et date de mise à jour.
+• Refonte des modales.
+• Corrections diverses.`,
+
     description_2_4_2: `• Structure interne de l’application revue et améliorée pour plus de rapidité et de stabilité.
 • Ajout de la reconnaissance vocale pour la transcription des notes (texte et listes).
 • Ajout de la fonctionnalité de recherche approfondie (texte et listes).

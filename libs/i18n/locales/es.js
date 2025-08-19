@@ -14,6 +14,10 @@ const es = {
   changelog: {
     title: "¿Qué hay de nuevo?",
 
+    description_2_5_0: `• Se agregó la posibilidad de reordenar las notas por fecha de creación y fecha de actualización.
+• Rediseño de las modales.
+• Varias correcciones.`,
+
     description_2_4_2: `• Revisada y mejorada la estructura interna de la app para hacerla más rápida y estable.
 • Se ha añadido el reconocimiento de voz para la transcripción de notas (texto y listas).
 • Añadida la posibilidad de realizar búsquedas profundas (texto y listas).

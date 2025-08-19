@@ -1,6 +1,6 @@
 ![Fast Memo](https://i.imgur.com/dPRR6pJ.png)
 
-![version](https://badgen.net/badge/version/v2.4.2/blue) ![Android](https://badgen.net/badge/android/deployed/green)
+![version](https://badgen.net/badge/version/v2.5.0/blue) ![Android](https://badgen.net/badge/android/deployed/green)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey) ![web](https://badgen.net/badge/web/coming%20soon/grey)
 
 Memo application for Mobile and Tablets, made in React Native using Expo
@@ -28,7 +28,10 @@ Memo application for Mobile and Tablets, made in React Native using Expo
 - [x] Import/Export notes with generated passphrase
 - [x] Internalization (i18n) for Italian, English, French, German, Spanish and Chinese
 - [x] Cloud Sync with encryption
+- [x] Reorder notes by createdAt and updatedAt dates
 - [ ] ...
+
+[(check CHANGELOG.md)](/CHANGELOG.md)
 
 # Cloud Sync with Google Firebase
 
