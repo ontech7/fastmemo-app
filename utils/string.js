@@ -19,3 +19,7 @@ export const getTextLength = (htmlString) => {
 export const getTextSize = (htmlString) => {
   return new TextEncoder().encode(htmlString).length;
 };
+
+export const capitalize = (str = "") => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
