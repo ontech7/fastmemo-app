@@ -295,7 +295,6 @@ export default function NoteTextScreen() {
         <DismissKeyboardButton
           showKeyboardDismiss={isKeyboardShown}
           onPress={() => richTextEditor.current?.dismissKeyboard()}
-          style={{ display: !isKeyboardShown ? "none" : "flex" }}
         />
 
         <RichToolbar
@@ -323,16 +322,16 @@ export default function NoteTextScreen() {
             heading1: require("../../assets/actions/heading1.png"),
           }}
         />
-      </KeyboardAvoidingView>
 
-      {!isKeyboardShown && (
-        <VoiceRecognitionButton
-          setTranscript={(transcript, isFinal) => {
-            richTextEditor.current?.setContentHTML(note.text + " " + transcript);
-            if (isFinal) setText(note.text + " " + transcript);
-          }}
-        />
-      )}
+        {!note.readOnly && (
+          <VoiceRecognitionButton
+            setTranscript={(transcript, isFinal) => {
+              richTextEditor.current?.setContentHTML(note.text + " " + transcript);
+              if (isFinal) setText(note.text + " " + transcript);
+            }}
+          />
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
