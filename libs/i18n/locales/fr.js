@@ -181,6 +181,7 @@ const fr = {
     show_hidden: "Afficher les notes masquées",
     export_import_data: "Exporter/Importer des données",
     export_import_popup_title: "Mot de passe secret",
+    export_import_placeholder_input: "Entrez le code secret...",
     export_popup_description:
       "Écrivez votre mot de passe secret ici. Pensez à le sauvegarder sinon vous ne pourrez pas récupérer vos notes.",
     import_popup_description: "Écrivez votre mot de passe secret ici pour importer vos notes.",

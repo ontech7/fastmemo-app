@@ -11,11 +11,11 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector, useStore } from "react-redux";
 
-import { popupAlert } from "@/utils/alert";
 import { toggleWithSecret } from "@/utils/crypt";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 import NoteFiltersButton from "@/components/buttons/NoteFiltersButton";
+import CancelOrConfirmDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import Sidebar from "@/components/Sidebar";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
@@ -69,33 +69,30 @@ export default function HomeScreen() {
 
   const dispatch = useDispatch();
 
-  const [showDeepSearch, setShowDeepSearch] = useState(false);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
 
+  const [showDeepSearch, setShowDeepSearch] = useState(false);
   const [deepFilterText, setDeepFilterText] = useState("");
   const [filterText, setFilterText] = useState("");
 
-  const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState([]);
+  const isNoteProtected = selectedNotes.some((id) => id.split("|")[1] == "true");
 
-  const is_protected_note = selectedNotes.some((id) => id.split("|")[1] == "true");
+  const [showDeleteNotesDialog, setShowDeleteNotesDialog] = useState(false);
 
   const temporaryDeleteSelectedNotesFromItems = () => {
-    const deleteNotes = () =>
-      popupAlert(t("warning"), t("popup.delete_notes"), {
-        confirmText: t("delete"),
-        confirmHandler: () => {
-          dispatch(temporaryDeleteSelectedNotes(selectedNotes));
-          webhook(webhook_temporaryDeleteNote, {
-            action: "note/temporaryDeleteNote",
-            extra: "multiple",
-            ids: selectedNotes.map((noteId) => noteId.split("|")[0]),
-          });
-          setSelectedNotes([]);
-          setIsDeleteMode(false);
-        },
+    const deleteNotes = () => {
+      dispatch(temporaryDeleteSelectedNotes(selectedNotes));
+      webhook(webhook_temporaryDeleteNote, {
+        action: "note/temporaryDeleteNote",
+        extra: "multiple",
+        ids: selectedNotes.map((noteId) => noteId.split("|")[0]),
       });
+      setSelectedNotes([]);
+      setIsDeleteMode(false);
+    };
 
-    if (is_protected_note) {
+    if (isNoteProtected) {
       toggleWithSecret({
         router,
         isFingerprintEnabled: selectorFingerprintEnabled,
@@ -350,80 +347,95 @@ export default function HomeScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <View style={styles.container}>
-        <Sidebar />
+    <>
+      <CancelOrConfirmDialog
+        open={showDeleteNotesDialog}
+        description={t("popup.delete_notes")}
+        onCancel={() => {
+          toggleDeleteMode();
+          setShowDeleteNotesDialog(false);
+        }}
+        onConfirm={() => {
+          temporaryDeleteSelectedNotesFromItems();
+          setShowDeleteNotesDialog(false);
+        }}
+      />
 
-        <SafeAreaView style={{ flex: 1 }}>
-          <Animated.View
-            style={{
-              flex: 1,
-              borderRadius: BORDER.normal,
-              overflow: "hidden",
-              maxHeight: heightInterpolation,
-            }}
-          >
-            <View style={styles.header}>
-              <View>
-                <Text style={styles.headerTitle}>{t("home.notes")}</Text>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <View style={styles.container}>
+          <Sidebar />
 
-                <Text style={styles.categoryName}>{currentCategory.name != "All" ? currentCategory.name : t("All")}</Text>
+          <SafeAreaView style={{ flex: 1 }}>
+            <Animated.View
+              style={{
+                flex: 1,
+                borderRadius: BORDER.normal,
+                overflow: "hidden",
+                maxHeight: heightInterpolation,
+              }}
+            >
+              <View style={styles.header}>
+                <View>
+                  <Text style={styles.headerTitle}>{t("home.notes")}</Text>
+
+                  <Text style={styles.categoryName}>{currentCategory.name != "All" ? currentCategory.name : t("All")}</Text>
+                </View>
+
+                {isDeleteMode ? (
+                  <View style={styles.topContainer}>
+                    <DeleteNotesButton onPressDelete={() => setShowDeleteNotesDialog(true)} />
+                  </View>
+                ) : (
+                  <View style={styles.topContainer}>
+                    <NoteFiltersButton
+                      filters={{
+                        showDeepSearch,
+                        toggleDeepSearch,
+                      }}
+                    />
+                  </View>
+                )}
               </View>
 
-              {isDeleteMode ? (
-                <View style={styles.topContainer}>
-                  <DeleteNotesButton onPressDelete={temporaryDeleteSelectedNotesFromItems} />
-                </View>
-              ) : (
-                <View style={styles.topContainer}>
-                  <NoteFiltersButton
-                    filters={{
-                      showDeepSearch,
-                      toggleDeepSearch,
-                    }}
-                  />
-                </View>
-              )}
-            </View>
+              <SearchNotesInput
+                text={!showDeepSearch ? filterText : deepFilterText}
+                onChangeText={!showDeepSearch ? setFilterText : setDeepFilterText}
+                showDeepSearch={showDeepSearch}
+              />
 
-            <SearchNotesInput
-              text={!showDeepSearch ? filterText : deepFilterText}
-              onChangeText={!showDeepSearch ? setFilterText : setDeepFilterText}
-              showDeepSearch={showDeepSearch}
-            />
+              <FlashList
+                showsVerticalScrollIndicator={false}
+                data={filteredNotes}
+                extraData={{ isDeleteMode }}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.id}
+                estimatedItemSize={79}
+              />
+            </Animated.View>
+          </SafeAreaView>
 
-            <FlashList
-              showsVerticalScrollIndicator={false}
-              data={filteredNotes}
-              extraData={{ isDeleteMode }}
-              renderItem={renderItem}
-              keyExtractor={(item) => item.id}
-              estimatedItemSize={79}
-            />
+          <Animated.View
+            style={[
+              styles.editModeToolbar,
+              { transform: [{ translateY: translateInterpolation }] },
+              { opacity: opacityInterpolation },
+            ]}
+          >
+            <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} />
+
+            <ProtectNotesButton onPressProtect={toggleProtectedNotesFromItems} />
+
+            <HiddenNotesButton onPressHidden={toggleHiddenNotesFromItems} />
+
+            <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
           </Animated.View>
-        </SafeAreaView>
 
-        <Animated.View
-          style={[
-            styles.editModeToolbar,
-            { transform: [{ translateY: translateInterpolation }] },
-            { opacity: opacityInterpolation },
-          ]}
-        >
-          <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} />
+          <AddNoteTodoButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
 
-          <ProtectNotesButton onPressProtect={toggleProtectedNotesFromItems} />
-
-          <HiddenNotesButton onPressHidden={toggleHiddenNotesFromItems} />
-
-          <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
-        </Animated.View>
-
-        <AddNoteTodoButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
-
-        <AddNoteTextButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
-      </View>
-    </KeyboardAvoidingView>
+          <AddNoteTextButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
+        </View>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 

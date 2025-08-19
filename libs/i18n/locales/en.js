@@ -181,6 +181,7 @@ const en = {
     show_hidden: "Show hidden notes",
     export_import_data: "Export/Import data",
     export_import_popup_title: "Secret Passphrase",
+    export_import_placeholder_input: "Enter secret code...",
     export_popup_description:
       "Write your secret passphrase here. Remember to save it otherwise you won't be able to recover your notes.",
     import_popup_description: "Write your secret passphrase here to import your notes.",

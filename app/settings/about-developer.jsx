@@ -48,7 +48,7 @@ export default function AboutDeveloperScreen() {
             </View>
 
             <View style={styles.sectionItemList}>
-              <TouchableOpacity style={styles.link_button} onPress={() => Linking.openURL(WEBSITE_URL)}>
+              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => Linking.openURL(WEBSITE_URL)}>
                 <Text style={styles.sectionItemList_title}>{t("aboutdeveloper.website")}</Text>
 
                 <View style={styles.sectionItemList_textWrapper}>
@@ -61,7 +61,7 @@ export default function AboutDeveloperScreen() {
             </View>
 
             <View style={styles.sectionItemList}>
-              <TouchableOpacity style={styles.link_button} onPress={() => Linking.openURL(LINKEDIN_URL)}>
+              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => Linking.openURL(LINKEDIN_URL)}>
                 <Text style={styles.sectionItemList_title}>LinkedIn</Text>
 
                 <View style={styles.sectionItemList_textWrapper}>
@@ -74,7 +74,7 @@ export default function AboutDeveloperScreen() {
             </View>
 
             <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
-              <TouchableOpacity style={styles.link_button} onPress={() => Linking.openURL(GITHUB_URL)}>
+              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => Linking.openURL(GITHUB_URL)}>
                 <Text style={styles.sectionItemList_title}>GitHub</Text>
 
                 <View style={styles.sectionItemList_textWrapper}>

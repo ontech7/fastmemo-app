@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
@@ -6,7 +6,6 @@ import { ArrowPathIcon, EllipsisVerticalIcon, TrashIcon } from "react-native-her
 import { Menu, MenuOption, MenuOptions, MenuTrigger } from "react-native-popup-menu";
 import { useDispatch, useSelector } from "react-redux";
 
-import { popupAlert } from "@/utils/alert";
 import { toggleWithSecret } from "@/utils/crypt";
 import { webhook } from "@/utils/webhook";
 
@@ -20,6 +19,7 @@ import {
   restoreSelectedTrashedNotes,
 } from "../../slicers/notesSlice";
 import { selectorWebhook_deleteNote, selectorWebhook_restoreNote } from "../../slicers/settingsSlice";
+import ConfirmOrCancelDialog from "../dialogs/ConfirmOrCancelDialog";
 import ContextMenu from "../renderers/ContextMenu";
 
 export default function TrashedNotesSettingsButton({
@@ -33,7 +33,7 @@ export default function TrashedNotesSettingsButton({
 
   const router = useRouter();
 
-  const is_protected_note = selectedNotes.some((id) => id.split("|")[1] == "true");
+  const isNoteProtected = selectedNotes.some((id) => id.split("|")[1] == "true");
 
   const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
   const webhook_restoreNote = useSelector(selectorWebhook_restoreNote);
@@ -42,27 +42,36 @@ export default function TrashedNotesSettingsButton({
 
   const dispatch = useDispatch();
 
-  const restoreSelectedNotesFromItems = () => {
-    popupAlert(t("warning"), t("popup.restore_notes"), {
-      confirmText: t("restore"),
-      confirmHandler: () => {
-        dispatch(restoreSelectedTrashedNotes({ categories, selectedNotes }));
-        webhook(webhook_restoreNote, {
-          action: "note/restoreNote",
-          extra: "mutiple",
-          ids: selectedNotes,
-        });
-        setSelectedNotes([]);
-        setIsDeleteMode(false);
-      },
-    });
-  };
+  const [showRestoreSelectedNotesDialog, setShowRestoreSelectedNotesDialog] = useState(false);
+  const [showDeleteSelectedNotesDialog, setShowDeleteSelectedNotesDialog] = useState(false);
+  const [showRestoreAllNotesDialog, setShowRestoreAllNotesDialog] = useState(false);
+  const [showDeleteAllNotesDialog, setShowDeleteAllNotesDialog] = useState(false);
 
-  const deleteSelectedNotesFromItems = () => {
-    const popupDeleteSelectedNotes = () =>
-      popupAlert(t("warning"), t("popup.delete_notes_perma"), {
-        confirmText: t("delete"),
-        confirmHandler: () => {
+  return (
+    <>
+      <ConfirmOrCancelDialog
+        open={showRestoreSelectedNotesDialog}
+        description={t("popup.restore_notes")}
+        onCancel={() => setShowRestoreSelectedNotesDialog(false)}
+        onConfirm={() => {
+          dispatch(restoreSelectedTrashedNotes({ categories, selectedNotes }));
+          webhook(webhook_restoreNote, {
+            action: "note/restoreNote",
+            extra: "mutiple",
+            ids: selectedNotes,
+          });
+          setSelectedNotes([]);
+          setIsDeleteMode(false);
+          setShowRestoreSelectedNotesDialog(false);
+        }}
+        confirmLabel={t("restore")}
+      />
+
+      <ConfirmOrCancelDialog
+        open={showDeleteSelectedNotesDialog}
+        description={t("popup.delete_notes_perma")}
+        onCancel={() => setShowDeleteSelectedNotesDialog(false)}
+        onConfirm={() => {
           dispatch(deleteSelectedNotes({ selectedNotes }));
           webhook(webhook_deleteNote, {
             action: "note/deleteNote",
@@ -71,91 +80,101 @@ export default function TrashedNotesSettingsButton({
           });
           setSelectedNotes([]);
           setIsDeleteMode(false);
-        },
-      });
+          setShowDeleteSelectedNotesDialog(false);
+        }}
+        confirmLabel={t("delete")}
+      />
 
-    if (is_protected_note) {
-      toggleWithSecret({
-        router,
-        isFingerprintEnabled,
-        callback: popupDeleteSelectedNotes,
-      });
-    } else {
-      popupDeleteSelectedNotes();
-    }
-  };
+      <ConfirmOrCancelDialog
+        open={showRestoreAllNotesDialog}
+        description={t("popup.restore_all_notes")}
+        onCancel={() => setShowRestoreAllNotesDialog(false)}
+        onConfirm={() => {
+          dispatch(restoreAllTrashedNotes({ categories }));
+          webhook(webhook_restoreNote, {
+            action: "note/restoreNote",
+            extra: "all",
+          });
+          setIsDeleteMode(false);
+          setShowRestoreAllNotesDialog(false);
+        }}
+        confirmLabel={t("restore")}
+      />
 
-  const restoreAllNotesFromItems = () => {
-    popupAlert(t("warning"), t("popup.restore_all_notes"), {
-      confirmText: t("restore"),
-      confirmHandler: () => {
-        dispatch(restoreAllTrashedNotes({ categories }));
-        webhook(webhook_restoreNote, {
-          action: "note/restoreNote",
-          extra: "all",
-        });
-        setIsDeleteMode(false);
-      },
-    });
-  };
-
-  const deleteAllNotesFromItems = () => {
-    const popupDeleteAllNotes = () =>
-      popupAlert(t("warning"), t("popup.delete_all_notes_perma"), {
-        confirmText: t("delete"),
-        confirmHandler: () => {
+      <ConfirmOrCancelDialog
+        open={showDeleteAllNotesDialog}
+        description={t("popup.delete_all_notes_perma")}
+        onCancel={() => setShowDeleteAllNotesDialog(false)}
+        onConfirm={() => {
           dispatch(deleteAllNotes());
           webhook(webhook_deleteNote, {
             action: "note/deleteNote",
             extra: "all",
           });
           setIsDeleteMode(false);
-        },
-      });
+          setShowDeleteAllNotesDialog(false);
+        }}
+        confirmLabel={t("delete")}
+      />
 
-    toggleWithSecret({
-      router,
-      isFingerprintEnabled,
-      callback: popupDeleteAllNotes,
-    });
-  };
+      <Menu renderer={ContextMenu}>
+        <MenuTrigger customStyles={{ TriggerTouchableComponent: TouchableOpacity }}>
+          <EllipsisVerticalIcon size={28} color={COLOR.softWhite} />
+        </MenuTrigger>
 
-  return (
-    <Menu renderer={ContextMenu}>
-      <MenuTrigger customStyles={{ TriggerTouchableComponent: TouchableOpacity }}>
-        <EllipsisVerticalIcon size={28} color={COLOR.softWhite} />
-      </MenuTrigger>
+        {!isDeleteMode ? (
+          <MenuOptions customStyles={menuOptionsCustomStyles}>
+            <MenuOption
+              style={[styles.menuOption]}
+              onSelect={() =>
+                toggleWithSecret({
+                  router,
+                  isFingerprintEnabled,
+                  callback: () => setShowDeleteAllNotesDialog(true),
+                })
+              }
+            >
+              <Text style={styles.menuOptionText}>{t("trashednotes.settings.delete_all")}</Text>
 
-      {!isDeleteMode ? (
-        <MenuOptions customStyles={menuOptionsCustomStyles}>
-          <MenuOption style={[styles.menuOption]} onSelect={deleteAllNotesFromItems}>
-            <Text style={styles.menuOptionText}>{t("trashednotes.settings.delete_all")}</Text>
+              <TrashIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
+            </MenuOption>
 
-            <TrashIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-          </MenuOption>
+            <MenuOption style={[styles.menuOption]} onSelect={() => setShowRestoreAllNotesDialog(true)}>
+              <Text style={styles.menuOptionText}>{t("trashednotes.settings.restore_all")}</Text>
 
-          <MenuOption style={[styles.menuOption]} onSelect={restoreAllNotesFromItems}>
-            <Text style={styles.menuOptionText}>{t("trashednotes.settings.restore_all")}</Text>
+              <ArrowPathIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
+            </MenuOption>
+          </MenuOptions>
+        ) : (
+          <MenuOptions customStyles={menuOptionsCustomStyles}>
+            <MenuOption
+              style={[styles.menuOption]}
+              onSelect={() => {
+                if (isNoteProtected) {
+                  toggleWithSecret({
+                    router,
+                    isFingerprintEnabled,
+                    callback: () => setShowDeleteSelectedNotesDialog(true),
+                  });
+                } else {
+                  setShowDeleteSelectedNotesDialog(true);
+                }
+              }}
+            >
+              <Text style={styles.menuOptionText}>{t("trashednotes.settings.delete_selected")}</Text>
 
-            <ArrowPathIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-          </MenuOption>
-        </MenuOptions>
-      ) : (
-        <MenuOptions customStyles={menuOptionsCustomStyles}>
-          <MenuOption style={[styles.menuOption]} onSelect={deleteSelectedNotesFromItems}>
-            <Text style={styles.menuOptionText}>{t("trashednotes.settings.delete_selected")}</Text>
+              <TrashIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
+            </MenuOption>
 
-            <TrashIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-          </MenuOption>
+            <MenuOption style={[styles.menuOption]} onSelect={() => setShowRestoreSelectedNotesDialog(true)}>
+              <Text style={styles.menuOptionText}>{t("trashednotes.settings.restore_selected")}</Text>
 
-          <MenuOption style={[styles.menuOption]} onSelect={restoreSelectedNotesFromItems}>
-            <Text style={styles.menuOptionText}>{t("trashednotes.settings.restore_selected")}</Text>
-
-            <ArrowPathIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-          </MenuOption>
-        </MenuOptions>
-      )}
-    </Menu>
+              <ArrowPathIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
+            </MenuOption>
+          </MenuOptions>
+        )}
+      </Menu>
+    </>
   );
 }
 

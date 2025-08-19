@@ -6,7 +6,7 @@ import { COLOR } from "@/constants/styles";
 
 export default function DeepSearchButton({ onPress, color = null }) {
   return (
-    <TouchableOpacity onPress={onPress}>
+    <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
       <DocumentMagnifyingGlassIcon color={color || COLOR.softWhite} />
     </TouchableOpacity>
   );

@@ -15,17 +15,14 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: configs.app.bundle,
-      buildNumber: "10",
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: configs.app.backgroundColor,
       },
-      softwareKeyboardLayoutMode: "pan",
       edgeToEdgeEnabled: true,
       package: configs.app.bundle,
-      versionCode: 17,
     },
     web: {
       bundler: "metro",

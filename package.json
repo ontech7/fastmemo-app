@@ -19,6 +19,7 @@
     "clean": "rm -rf node_modules .expo"
   },
   "dependencies": {
+    "@ontech7/react-native-dialog": "^1.1.2",
     "@ontech7/react-native-snap-carousel": "^3.9.3",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/netinfo": "^11.4.1",
@@ -29,7 +30,6 @@
     "@sentry/react-native": "~6.14.0",
     "@shopify/flash-list": "1.7.6",
     "expo": "~53.0.20",
-    "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.7",
     "expo-dev-client": "~5.2.4",
     "expo-device": "~7.1.4",
@@ -62,11 +62,10 @@
     "react-i18next": "^15.6.1",
     "react-native": "0.79.5",
     "react-native-crypto-js": "^1.0.0",
-    "react-native-dialog": "^9.3.0",
     "react-native-draggable-flatlist": "^4.0.3",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-heroicons": "^4.0.0",
-    "react-native-keyboard-controller": "^1.18.3",
+    "react-native-keyboard-controller": "^1.18.5",
     "react-native-pell-rich-editor": "^1.10.0",
     "react-native-popup-menu": "^0.18.0",
     "react-native-reanimated": "~3.17.4",

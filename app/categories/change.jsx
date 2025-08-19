@@ -68,7 +68,7 @@ export default function ChangeCategoryScreen() {
         <Text style={styles.headerTitle}>{t("changecategory.title")}</Text>
 
         {selectedCategory && (
-          <TouchableOpacity onPress={updateExistentCategory}>
+          <TouchableOpacity activeOpacity={0.7} onPress={updateExistentCategory}>
             <CheckIcon size={28} color={COLOR.softWhite} />
           </TouchableOpacity>
         )}

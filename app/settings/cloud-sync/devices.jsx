@@ -205,6 +205,7 @@ export default function SyncedDevicesScreen() {
                     />
                   ) : (
                     <TouchableOpacity
+                      activeOpacity={0.7}
                       style={{ marginRight: PADDING_MARGIN.sm }}
                       onPress={() => deleteDeviceFromCloud(connectedDevice.uuid)}
                     >

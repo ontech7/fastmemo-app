@@ -12,6 +12,7 @@ export default function ReorganizeButton() {
     <View style={styles.container}>
       <TouchableOpacity
         style={styles.button}
+        activeOpacity={0.7}
         onPress={() => {
           router.push("/categories/organize");
         }}

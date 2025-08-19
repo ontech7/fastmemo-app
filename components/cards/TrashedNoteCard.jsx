@@ -1,10 +1,9 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, ListBulletIcon, StarIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
 
-import { popupAlert } from "@/utils/alert";
 import { isStringEmpty } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 
@@ -14,6 +13,7 @@ import { getCategories } from "../../slicers/categoriesSlice";
 import { restoreNote } from "../../slicers/notesSlice";
 import { selectorWebhook_restoreNote } from "../../slicers/settingsSlice";
 import CategoryIcon from "../CategoryIcon";
+import ConfirmOrCancelDialog from "../dialogs/ConfirmOrCancelDialog";
 
 function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode }) {
   const { t } = useTranslation();
@@ -26,18 +26,7 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
 
   const categories = useSelector(getCategories);
 
-  const restoreTrashedNoteToNotes = () => {
-    popupAlert(t("warning"), t("popup.restore_single_note"), {
-      confirmText: t("restore"),
-      confirmHandler: () => {
-        dispatch(restoreNote({ id, categories }));
-        webhook(webhook_restoreNote, {
-          action: "note/restore",
-          id: id,
-        });
-      },
-    });
-  };
+  const [showRestoreNoteDialog, setShowRestoreNoteDialog] = useState(false);
 
   const onLongPressHandler = () => {
     if (!isDeleteMode) selectNote(id, locked);
@@ -50,78 +39,99 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
       return;
     }
 
-    restoreTrashedNoteToNotes();
+    setShowRestoreNoteDialog(true);
   };
 
   const importantColor = important ? COLOR.softWhite : COLOR.darkBlue;
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.container,
-        type == "todo" && styles.containerTodo,
-        important && styles.importantContainer,
-        isSelected && styles.selectedContainer,
-        isSelected && type == "todo" && styles.selectedContainerTodo,
-        important && isSelected && styles.selectedImportantContainer,
-        hidden && styles.hiddenContainer,
-        isDeleteMode && styles.containerDeleteMode,
-      ]}
-      onPress={onPressHandler}
-      onLongPress={onLongPressHandler}
-    >
-      {type == "todo" && (
-        <ListBulletIcon
-          style={[styles.iconTodoList, isDeleteMode && styles.iconTypeDeleteMode]}
-          size={16}
-          color={importantColor}
-        />
-      )}
+    <>
+      <ConfirmOrCancelDialog
+        open={showRestoreNoteDialog}
+        description={t("popup.restore_single_note")}
+        onCancel={() => setShowRestoreNoteDialog(false)}
+        onConfirm={() => {
+          dispatch(restoreNote({ id, categories }));
+          webhook(webhook_restoreNote, {
+            action: "note/restore",
+            id: id,
+          });
+          setShowRestoreNoteDialog(false);
+        }}
+      />
 
-      {hidden && (
-        <EyeSlashIcon style={[styles.iconHidden, isDeleteMode && styles.iconTypeDeleteMode]} size={14} color={importantColor} />
-      )}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={[
+          styles.container,
+          type == "todo" && styles.containerTodo,
+          important && styles.importantContainer,
+          isSelected && styles.selectedContainer,
+          isSelected && type == "todo" && styles.selectedContainerTodo,
+          important && isSelected && styles.selectedImportantContainer,
+          hidden && styles.hiddenContainer,
+          isDeleteMode && styles.containerDeleteMode,
+        ]}
+        onPress={onPressHandler}
+        onLongPress={onLongPressHandler}
+      >
+        {type == "todo" && (
+          <ListBulletIcon
+            style={[styles.iconTodoList, isDeleteMode && styles.iconTypeDeleteMode]}
+            size={16}
+            color={importantColor}
+          />
+        )}
 
-      {!category.index && (
-        <View style={styles.iconCategory}>
-          <CategoryIcon name={category.icon} color={importantColor} />
+        {hidden && (
+          <EyeSlashIcon
+            style={[styles.iconHidden, isDeleteMode && styles.iconTypeDeleteMode]}
+            size={14}
+            color={importantColor}
+          />
+        )}
+
+        {!category.index && (
+          <View style={styles.iconCategory}>
+            <CategoryIcon name={category.icon} color={importantColor} />
+          </View>
+        )}
+
+        <View style={{ width: !isDeleteMode ? "85%" : "82%" }}>
+          <Text style={[styles.title, important && styles.titleImportant]} numberOfLines={1} ellipsizeMode="tail">
+            {isStringEmpty(title) ? t("empty_title") : title}
+          </Text>
+
+          <Text style={[styles.date, important && styles.dateImportant]}>{date}</Text>
+
+          <CountdownDate deleteDate={deleteDate} important={important} />
         </View>
-      )}
 
-      <View style={{ width: !isDeleteMode ? "85%" : "82%" }}>
-        <Text style={[styles.title, important && styles.titleImportant]} numberOfLines={1} ellipsizeMode="tail">
-          {isStringEmpty(title) ? t("empty_title") : title}
-        </Text>
+        {important && (
+          <StarIcon style={[styles.iconFavorite, isDeleteMode && styles.iconDeleteMode]} size={14} color={COLOR.softWhite} />
+        )}
 
-        <Text style={[styles.date, important && styles.dateImportant]}>{date}</Text>
+        {readOnly && (
+          <BookOpenIcon style={[styles.iconReadOnly, isDeleteMode && styles.iconDeleteMode]} size={14} color={importantColor} />
+        )}
 
-        <CountdownDate deleteDate={deleteDate} important={important} />
-      </View>
+        {locked && (
+          <KeyIcon style={[styles.iconLocked, isDeleteMode && styles.iconDeleteMode]} size={14} color={importantColor} />
+        )}
 
-      {important && (
-        <StarIcon style={[styles.iconFavorite, isDeleteMode && styles.iconDeleteMode]} size={14} color={COLOR.softWhite} />
-      )}
+        {!important && isDeleteMode && (
+          <View style={[styles.deleteMode, isSelected && styles.deleteModeSelected]}>
+            {isSelected && <CheckIcon size={14} color={COLOR.lightBlue} />}
+          </View>
+        )}
 
-      {readOnly && (
-        <BookOpenIcon style={[styles.iconReadOnly, isDeleteMode && styles.iconDeleteMode]} size={14} color={importantColor} />
-      )}
-
-      {locked && (
-        <KeyIcon style={[styles.iconLocked, isDeleteMode && styles.iconDeleteMode]} size={14} color={importantColor} />
-      )}
-
-      {!important && isDeleteMode && (
-        <View style={[styles.deleteMode, isSelected && styles.deleteModeSelected]}>
-          {isSelected && <CheckIcon size={14} color={COLOR.lightBlue} />}
-        </View>
-      )}
-
-      {important && isDeleteMode && (
-        <View style={[styles.deleteModeImportant, important && styles.deleteModeImportantSelected]}>
-          {isSelected && <CheckIcon size={14} color={COLOR.darkBlue} />}
-        </View>
-      )}
-    </TouchableOpacity>
+        {important && isDeleteMode && (
+          <View style={[styles.deleteModeImportant, important && styles.deleteModeImportantSelected]}>
+            {isSelected && <CheckIcon size={14} color={COLOR.darkBlue} />}
+          </View>
+        )}
+      </TouchableOpacity>
+    </>
   );
 }
 

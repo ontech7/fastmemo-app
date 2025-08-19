@@ -3,7 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
 import { useRouter } from "expo-router";
 import LottieView from "lottie-react-native";
-import { Animated, Easing, StyleSheet, Text, TextInput } from "react-native";
+import { StyleSheet } from "react-native";
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { initFirebase } from "@/libs/firebase";
 import { isObjectEmpty } from "@/utils/string";
@@ -16,36 +17,29 @@ export default function LoadingScreen() {
   // lottie splash animation
   const logoAnimRef = useRef(null);
 
-  const [animFinished, setAnimFinished] = useState(false);
-  const splashAnim = useRef(new Animated.Value(0)).current;
+  const progress = useSharedValue(0);
 
-  const opacityInterpolation = splashAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
+  const splashAnimStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+  }));
 
   useEffect(() => {
-    Animated.timing(splashAnim, {
-      toValue: 1,
-      duration: 150,
-      easing: Easing.linear,
-      useNativeDriver: true,
-    }).start(() => {
-      // Play lottie after fade in
-      setTimeout(() => {
-        logoAnimRef.current?.play();
-      }, 150);
+    const playLottie = () => {
+      setTimeout(() => logoAnimRef.current?.play(), 100);
+    };
+
+    progress.value = withTiming(1, { duration: 100, easing: Easing.linear }, (finished) => {
+      if (finished) {
+        runOnJS(playLottie)();
+      }
     });
   }, []);
 
-  const opacityEvent = () => {
-    Animated.timing(splashAnim, {
-      toValue: 0,
-      duration: 100,
-      easing: Easing.linear,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished && initialRoute) setAnimFinished(true);
+  const handleLottieFinish = () => {
+    progress.value = withTiming(0, { duration: 100, easing: Easing.linear }, (finished) => {
+      if (finished && initialRoute) {
+        runOnJS(router.replace)(initialRoute);
+      }
     });
   };
 
@@ -56,9 +50,6 @@ export default function LoadingScreen() {
   useEffect(() => {
     const runInitialActions = async () => {
       try {
-        // block font scaling globally
-        disableFontScaling();
-
         // enable firebase if cloudSync config is available
         const cloudSyncRaw = await AsyncStorage.getItem("@cloudSync");
         const cloudSyncConfig = JSON.parse(cloudSyncRaw ?? "{}");
@@ -66,10 +57,11 @@ export default function LoadingScreen() {
           initFirebase(cloudSyncConfig);
         }
 
-        // if the app is just downloaded, show intro screen
+        // if the app has just been downloaded, show intro screen
         const firstScreen = await AsyncStorage.getItem("@firstScreen");
         setInitialRoute(!firstScreen ? "/intro" : "/home");
       } catch (error) {
+        setInitialRoute("/home");
         Sentry.captureException(error);
       }
     };
@@ -77,38 +69,19 @@ export default function LoadingScreen() {
     runInitialActions();
   }, [router]);
 
-  useEffect(() => {
-    if (initialRoute && animFinished) {
-      router.replace(initialRoute);
-    }
-  }, [initialRoute, animFinished]);
-
   return (
-    <Animated.View
-      style={[styles.splashContainer, { opacity: opacityInterpolation }]}
-      pointerEvents={!animFinished ? "auto" : "none"}
-    >
+    <Animated.View style={[styles.splashContainer, splashAnimStyle]}>
       <LottieView
         ref={logoAnimRef}
         style={styles.lottieLogo}
         source={lottieJson}
         loop={false}
         resizeMode="contain"
-        onAnimationFinish={opacityEvent}
+        onAnimationFinish={handleLottieFinish}
+        speed={1.3}
       />
     </Animated.View>
   );
-}
-
-function disableFontScaling() {
-  // @ts-ignore
-  Text.defaultProps = Text.defaultProps || {};
-  // @ts-ignore
-  TextInput.defaultProps = TextInput.defaultProps || {};
-  // @ts-ignore
-  Text.defaultProps.allowFontScaling = false;
-  // @ts-ignore
-  TextInput.defaultProps.allowFontScaling = false;
 }
 
 /* STYLES */

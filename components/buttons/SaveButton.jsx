@@ -6,7 +6,7 @@ import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 export default function SaveButton({ onPress, color = null }) {
   return (
-    <TouchableOpacity style={styles.addBtn} onPress={onPress}>
+    <TouchableOpacity activeOpacity={0.7} style={styles.addBtn} onPress={onPress}>
       <CheckIcon size={28} color={color || COLOR.black} />
     </TouchableOpacity>
   );

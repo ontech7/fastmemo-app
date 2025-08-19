@@ -3,14 +3,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
-export default function SectionItemList_Text({
-  title,
-  text = null,
-  extra = null,
-  onPress,
-}) {
+export default function SectionItemList_Text({ title, text = null, extra = null, onPress }) {
   return (
-    <TouchableOpacity style={styles.sectionItemList_button} onPress={onPress}>
+    <TouchableOpacity activeOpacity={0.7} style={styles.sectionItemList_button} onPress={onPress}>
       <View style={{ flexDirection: "row" }}>
         <Text style={styles.sectionItemList_title}>{title}</Text>
 

@@ -181,6 +181,7 @@ const de = {
     show_hidden: "Versteckte Notizen anzeigen",
     export_import_data: "Daten exportieren/importieren",
     export_import_popup_title: "Geheime Passphrase",
+    export_import_placeholder_input: "Geheimcode eingeben...",
     export_popup_description:
       "Geben Sie hier Ihre geheime Passphrase ein. Denken Sie daran, es zu speichern, da Sie Ihre Notizen sonst nicht wiederherstellen können.",
     import_popup_description: "Geben Sie hier Ihre geheime Passphrase ein, um Ihre Notizen zu importieren.",

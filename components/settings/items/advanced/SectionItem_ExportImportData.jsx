@@ -6,17 +6,20 @@ import { StorageAccessFramework } from "expo-file-system";
 import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { useTranslation } from "react-i18next";
-import { Platform } from "react-native";
+import { Keyboard, Platform } from "react-native";
 import CryptoJS from "react-native-crypto-js";
+import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
+import { KeyboardController } from "react-native-keyboard-controller";
 import { useDispatch, useStore } from "react-redux";
 
-import { popupAlert } from "@/utils/alert";
 import { isSecretPassphraseCorrect, toggleWithSecret } from "@/utils/crypt";
 import { webhook } from "@/utils/webhook";
+import ComplexDialog from "@/components/dialogs/ComplexDialog";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
+import SecretPassphraseDialog from "@/components/dialogs/SecretPassphraseDialog";
 
 import { setCategories } from "../../../../slicers/categoriesSlice";
 import { setNotes, setTrashedNotes } from "../../../../slicers/notesSlice";
-import SecretPassphraseDialog from "../../../SecretPassphraseDialog";
 import SectionItemList_Text from "../../components/item/SectionItemList_Text";
 import SectionItemList from "../../components/list/SectionItemList";
 
@@ -45,8 +48,14 @@ export default function SectionItem_ExportImportData({ isLast }) {
   // @ts-ignore
   const isFingerprintEnabled = state.settings.isFingerprintEnabled;
 
-  const [secretImportVisible, setSecretImportVisible] = useState(false);
-  const [secretExportVisible, setSecretExportVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+
+  const [showImportExportDialog, setShowImportExportDialog] = useState(false);
+
+  const [showImportSecretDialog, setShowImportSecretDialog] = useState(false);
+  const [showExportSecretDialog, setShowExportSecretDialog] = useState(false);
 
   const exportDataIOS = async (secretPassphrase) => {
     try {
@@ -73,13 +82,11 @@ export default function SectionItem_ExportImportData({ isLast }) {
       webhook(webhook_exportData, { action: "generic/export" });
     } catch (error) {
       Sentry.captureException(error);
-      popupAlert(t("error"), error.message, {
-        confirmText: t("retry"),
-        confirmHandler: () => {},
-      });
+      setErrorMessage(error.message);
+      setShowErrorDialog(true);
     }
 
-    setSecretExportVisible(false);
+    setShowExportSecretDialog(false);
   };
 
   const exportData = async (secretPassphrase) => {
@@ -111,13 +118,11 @@ export default function SectionItem_ExportImportData({ isLast }) {
       webhook(webhook_exportData, { action: "generic/export" });
     } catch (error) {
       Sentry.captureException(error);
-      popupAlert(t("error"), error.message, {
-        confirmText: t("retry"),
-        confirmHandler: () => {},
-      });
+      setErrorMessage(error.message);
+      setShowErrorDialog(true);
     }
 
-    setSecretExportVisible(false);
+    setShowExportSecretDialog(false);
   };
 
   const importData = async (secretPassphrase) => {
@@ -143,10 +148,8 @@ export default function SectionItem_ExportImportData({ isLast }) {
       const bytes = CryptoJS.AES.decrypt(content, secretPassphrase);
 
       if (!isSecretPassphraseCorrect(bytes)) {
-        popupAlert(t("error"), t("popup.passphrase_wrong"), {
-          confirmText: t("retry"),
-          confirmHandler: () => {},
-        });
+        setErrorMessage(t("popup.passphrase_wrong"));
+        setShowErrorDialog(true);
         return;
       }
 
@@ -160,57 +163,110 @@ export default function SectionItem_ExportImportData({ isLast }) {
       webhook(webhook_importData, { action: "generic/import" });
     } catch (error) {
       Sentry.captureException(error);
-      popupAlert(t("error"), error.message, {
-        confirmText: t("retry"),
-        confirmHandler: () => {},
-      });
+      setErrorMessage(error.message);
+      setShowErrorDialog(true);
     }
 
-    setSecretImportVisible(false);
-  };
-
-  const importExportData = () => {
-    popupAlert(
-      t("warning"),
-      t("popup.select_one_option"),
-      {
-        confirmText: t("import"),
-        confirmHandler: () => setSecretImportVisible(true),
-      },
-      {
-        alternateText: t("export"),
-        alternateHandler: () => setSecretExportVisible(true),
-      }
-    );
-  };
-
-  const importExportDataWithSecret = () => {
-    toggleWithSecret({
-      router,
-      isFingerprintEnabled,
-      callback: importExportData,
-    });
+    setShowImportExportDialog(false);
   };
 
   return (
-    <SectionItemList isLast={isLast}>
-      <SectionItemList_Text title={t("generalsettings.export_import_data")} onPress={importExportDataWithSecret} />
+    <>
+      <ConfirmOrCancelDialog
+        open={showErrorDialog}
+        title={t("error")}
+        description={errorMessage}
+        onConfirm={() => setShowErrorDialog(false)}
+      />
+
+      <ConfirmOrCancelDialog
+        open={showSuccessDialog}
+        title={t("report.messages.success.title")}
+        description={null}
+        onConfirm={() => setShowSuccessDialog(false)}
+      />
+
+      <ComplexDialog
+        open={showImportExportDialog}
+        adornmentStart={<ExclamationTriangleIcon size={22} style={{ marginBottom: -3 }} />}
+        title={t("warning")}
+        description={t("popup.select_one_option")}
+        confirm={{
+          label: t("import"),
+          handler: () => {
+            setShowImportExportDialog(false);
+            setShowImportSecretDialog(true);
+          },
+        }}
+        cancel={{
+          label: t("export"),
+          handler: () => {
+            setShowImportExportDialog(false);
+            setShowExportSecretDialog(true);
+          },
+        }}
+        alternative={{
+          label: t("cancel"),
+          handler: () => setShowImportExportDialog(false),
+        }}
+      />
 
       <SecretPassphraseDialog
+        open={showExportSecretDialog}
         title={t("generalsettings.export_import_popup_title")}
         description={t("generalsettings.export_popup_description")}
-        visible={secretExportVisible}
-        setVisible={setSecretExportVisible}
-        onSetSecretPassphrase={Platform.OS !== "ios" ? exportData : exportDataIOS}
+        onCancel={() => setShowExportSecretDialog(false)}
+        onConfirm={(passphrase) => {
+          if (!passphrase) {
+            return;
+          }
+
+          if (Platform.OS !== "ios") {
+            exportData(passphrase);
+          } else {
+            exportDataIOS(passphrase);
+          }
+
+          KeyboardController.dismiss();
+          Keyboard.dismiss();
+
+          setShowExportSecretDialog(false);
+          setShowSuccessDialog(true);
+        }}
       />
 
       <SecretPassphraseDialog
+        open={showImportSecretDialog}
         title={t("generalsettings.export_import_popup_title")}
         description={t("generalsettings.import_popup_description")}
-        visible={secretImportVisible}
-        setVisible={setSecretImportVisible}
-        onSetSecretPassphrase={importData}
+        onCancel={() => setShowImportSecretDialog(false)}
+        onConfirm={(passphrase) => {
+          if (!passphrase) {
+            return;
+          }
+
+          importData(passphrase);
+
+          KeyboardController.dismiss();
+          Keyboard.dismiss();
+
+          setShowImportSecretDialog(false);
+          setShowSuccessDialog(true);
+        }}
       />
-    </SectionItemList>
+
+      <SectionItemList isLast={isLast}>
+        <SectionItemList_Text
+          title={t("generalsettings.export_import_data")}
+          onPress={() =>
+            toggleWithSecret({
+              router,
+              isFingerprintEnabled,
+              callback: () => setShowImportExportDialog(true),
+            })
+          }
+        />
+      </SectionItemList>
+    </>
   );
 }

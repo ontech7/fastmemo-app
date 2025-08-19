@@ -181,6 +181,7 @@ const zh = {
     show_hidden: "显示隐藏的注释",
     export_import_data: "导出/导入数据",
     export_import_popup_title: "秘密密码",
+    export_import_placeholder_input: "输入秘密代码...",
     export_popup_description: "在这里写下您的秘密密码。请记住保存它，否则您将无法恢复您的笔记。",
     import_popup_description: "在这里写下您的秘密密码以导入您的笔记。",
     webhooks: "网络钩子",

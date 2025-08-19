@@ -12,9 +12,9 @@ import { CheckIcon, PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useStore } from "react-redux";
 
-import { popupAlert } from "@/utils/alert";
 import { compareDates, formatDate } from "@/utils/date";
 import BackButton from "@/components/buttons/BackButton";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { setReportDate } from "@/slicers/settingsSlice";
 
@@ -43,6 +43,12 @@ export default function ReportScreen() {
 
   const [isLoading, setLoading] = useState(false);
 
+  const [reportMessage, setReportMessage] = useState({
+    title: null,
+    description: null,
+  });
+  const [showReportMessageDialog, setShowReportMessageDialog] = useState(false);
+
   const lockReportForOneDay = () => {
     const now = new Date();
     now.setDate(now.getDate() + 1);
@@ -52,7 +58,7 @@ export default function ReportScreen() {
   const store = useStore();
   const state = store.getState();
   // @ts-ignore
-  const isAvailableToReport = state.settings.reportDate || compareDates(new Date(), state.settings.reportDate);
+  const isAvailableToReport = state.settings.reportDate ? compareDates(new Date(), state.settings.reportDate) : false;
 
   const logoAnimRef = useRef(null);
 
@@ -94,7 +100,11 @@ export default function ReportScreen() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== "granted") {
-      popupAlert(t("report.messages.permissionDenied"), "", { confirmText: t("ok"), confirmHandler: () => {} });
+      setReportMessage({
+        title: null,
+        description: t("report.messages.permissionDenied"),
+      });
+      setShowReportMessageDialog(true);
       return;
     }
 
@@ -112,20 +122,31 @@ export default function ReportScreen() {
     const fileInfo = await FileSystem.getInfoAsync(asset.uri);
 
     if (!fileInfo.exists) {
-      popupAlert(t("report.messages.fileNotFound"), "", { confirmText: t("ok"), confirmHandler: () => {} });
+      setReportMessage({
+        title: null,
+        description: t("report.messages.fileNotFound"),
+      });
+      setShowReportMessageDialog(true);
       return;
     }
 
     if (!isLessThan(fileInfo.size ?? 0, 5)) {
-      popupAlert(t("report.messages.size.title"), t("report.messages.size.text"), {
-        confirmText: t("ok"),
+      setReportMessage({
+        title: t("report.messages.size.title"),
+        description: t("report.messages.size.text"),
       });
+      setShowReportMessageDialog(true);
       return;
     }
 
     const mimeType = asset.type ?? "unknown";
+
     if (mimeType !== "image") {
-      popupAlert(t("report.messages.invalidType"), "", { confirmText: t("ok"), confirmHandler: () => {} });
+      setReportMessage({
+        title: null,
+        description: t("report.messages.invalidType"),
+      });
+      setShowReportMessageDialog(true);
       return;
     }
 
@@ -153,10 +174,11 @@ export default function ReportScreen() {
     const data = {};
 
     if (!topicsSelected.length || !problemDescription) {
-      popupAlert(t("report.messages.missing.title"), t("report.messages.missing.text"), {
-        confirmText: t("ok"),
-        confirmHandler: () => {},
+      setReportMessage({
+        title: t("report.messages.missing.title"),
+        description: t("report.messages.missing.text"),
       });
+      setShowReportMessageDialog(true);
       return;
     }
 
@@ -203,23 +225,26 @@ export default function ReportScreen() {
       const json = await response.json();
 
       if (json.success) {
-        popupAlert(t("report.messages.success.title"), t("report.messages.success.text"), {
-          confirmText: t("ok"),
-          confirmHandler: () => router.back(),
+        setReportMessage({
+          title: t("report.messages.success.title"),
+          description: t("report.messages.success.text"),
         });
+        setShowReportMessageDialog(true);
         lockReportForOneDay();
       } else {
-        popupAlert(t("report.messages.error.title"), t("report.messages.error.text"), {
-          confirmText: t("retry"),
-          confirmHandler: () => {},
+        setReportMessage({
+          title: t("report.messages.error.title"),
+          description: t("report.messages.error.text"),
         });
+        setShowReportMessageDialog(true);
       }
     } catch (error) {
       Sentry.captureException(error);
-      popupAlert(t("report.messages.error.title"), t("report.messages.error.text"), {
-        confirmText: t("retry"),
-        confirmHandler: () => {},
+      setReportMessage({
+        title: t("report.messages.error.title"),
+        description: t("report.messages.error.text"),
       });
+      setShowReportMessageDialog(true);
     } finally {
       setLoading(false);
     }
@@ -227,6 +252,13 @@ export default function ReportScreen() {
 
   return (
     <>
+      <ConfirmOrCancelDialog
+        open={showReportMessageDialog}
+        title={reportMessage.title}
+        description={reportMessage.description}
+        onConfirm={() => setShowReportMessageDialog(false)}
+      />
+
       <LoadingSpinner visible={isLoading} text={t("report.loading")} />
 
       <SafeAreaView style={styles.container}>
@@ -253,6 +285,7 @@ export default function ReportScreen() {
                 {topicList.map((topic) => (
                   <TouchableOpacity
                     key={topic}
+                    activeOpacity={0.7}
                     onPress={() => toggleTopic(topic)}
                     style={[styles.topicButton, topicsSelected.includes(topic) && styles.topicButtonSelected]}
                   >
@@ -285,7 +318,7 @@ export default function ReportScreen() {
               </View>
 
               {/* device info */}
-              <TouchableOpacity onPress={toggleSendDeviceInfo}>
+              <TouchableOpacity activeOpacity={0.7} onPress={toggleSendDeviceInfo}>
                 <View style={[styles.sendDeviceInfoCheckbox, sendDeviceInfo && { backgroundColor: COLOR.gray }]}>
                   <CheckIcon size={20} color={COLOR.darkBlue} style={{ opacity: sendDeviceInfo ? 1 : 0 }} />
                 </View>
@@ -296,7 +329,11 @@ export default function ReportScreen() {
               <ScrollView horizontal>
                 {attachments.map((attachment, i) => (
                   <View key={i} style={[styles.addImageOrVideo, styles.imageOrVideoWrapper]}>
-                    <TouchableOpacity onPress={() => removeAttachment(attachment.filename)} style={styles.removeImageOrVideo}>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => removeAttachment(attachment.filename)}
+                      style={styles.removeImageOrVideo}
+                    >
                       <XMarkIcon size={14} color={COLOR.softWhite} />
                     </TouchableOpacity>
                     <Image
@@ -309,7 +346,7 @@ export default function ReportScreen() {
                 ))}
 
                 {attachments.length < 3 && (
-                  <TouchableOpacity onPress={pickImageOrVideo} style={styles.addImageOrVideo}>
+                  <TouchableOpacity activeOpacity={0.7} onPress={pickImageOrVideo} style={styles.addImageOrVideo}>
                     <PlusIcon size={24} color={COLOR.softWhite} />
 
                     <Text style={[styles.text, { textAlign: "center" }]}>{t("report.attachments")}</Text>
@@ -348,7 +385,7 @@ export default function ReportScreen() {
 
           {/* send report */}
           {isAvailableToReport && (
-            <TouchableOpacity onPress={sendReport} style={styles.sendReportButton}>
+            <TouchableOpacity activeOpacity={0.7} onPress={sendReport} style={styles.sendReportButton}>
               <Text style={styles.text}>{t("report.sendReport")}</Text>
             </TouchableOpacity>
           )}

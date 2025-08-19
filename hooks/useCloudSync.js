@@ -3,6 +3,7 @@ import { configs } from "@/configs";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
+import { Alert } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
 import {
@@ -18,7 +19,6 @@ import {
   setElementInCloud,
   updateLastSyncInCloud,
 } from "@/libs/firebase";
-import { popupAlert } from "@/utils/alert";
 import { CryptNote } from "@/utils/crypt";
 import { getReversedDateTime } from "@/utils/date";
 import { toast } from "@/utils/toast";
@@ -237,10 +237,11 @@ export const useCloudSync = () => {
 
           setIsLoading(false);
 
-          popupAlert(t("cloudsync.handshakeFailed"), t("cloudsync.handshakeFailedDesc"), {
-            confirmText: t("confirm"),
-            confirmHandler: () => {},
-          });
+          Alert.alert(t("cloudsync.handshakeFailed"), t("cloudsync.handshakeFailedDesc"), [
+            {
+              text: t("confirm"),
+            },
+          ]);
 
           break;
         default:

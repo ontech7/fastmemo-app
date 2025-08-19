@@ -17,7 +17,7 @@ function OrderedCategoryCard({ category, order, selected = false, toggleCategory
 
   return (
     <View style={styles.buttonWrapper}>
-      <TouchableOpacity style={[styles.button, selected && styles.selectedButton]} onPress={onPress}>
+      <TouchableOpacity activeOpacity={0.7} style={[styles.button, selected && styles.selectedButton]} onPress={onPress}>
         <View style={styles.categoryWrapper}>
           {!index && <CategoryIcon name={icon} color={selected ? COLOR.darkBlue : COLOR.softWhite} />}
 

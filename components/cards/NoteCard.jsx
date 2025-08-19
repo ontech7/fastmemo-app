@@ -69,6 +69,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
 
   return (
     <TouchableOpacity
+      activeOpacity={0.7}
       style={[
         styles.container,
         type == "todo" && styles.containerTodo,

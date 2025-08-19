@@ -11,6 +11,7 @@ export default function CloseButton({ callback = null, style = {} }) {
   return (
     <TouchableOpacity
       style={style}
+      activeOpacity={0.7}
       onPress={() => {
         if (callback) callback();
         router.back();

@@ -181,6 +181,7 @@ const ja = {
     show_hidden: "隠しノートを表示",
     export_import_data: "データのエクスポート/インポート",
     export_import_popup_title: "秘密のパスフレーズ",
+    export_import_placeholder_input: "秘密のコードを入力してください...",
     export_popup_description: "ここに秘密のパスフレーズを入力してください。保存しないと、ノートを回復できなくなります。",
     import_popup_description: "ここに秘密のパスフレーズを入力してください。ノートをインポートするには保存してください。",
     webhooks: "Webhooks",

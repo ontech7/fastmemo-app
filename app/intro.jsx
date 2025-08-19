@@ -86,7 +86,7 @@ export default function IntroScreen() {
       <TouchableOpacity
         style={styles.continueButton}
         onPress={() => router.replace("/settings/setup-secret-code")}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
       >
         <Text style={styles.continueButton_text}>{t("intro.continue")}</Text>
         <ArrowRightIcon size={22} color={COLOR.softWhite} />

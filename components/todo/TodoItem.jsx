@@ -26,7 +26,12 @@ export default function TodoItem({ item, setText, checkItem, deleteItem, drag, d
           >
             {/* checkbox */}
 
-            <TouchableOpacity disabled={disabled} style={{ marginRight: PADDING_MARGIN.sm }} onPress={() => checkItem(item.id)}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={disabled}
+              style={{ marginRight: PADDING_MARGIN.sm }}
+              onPress={() => checkItem(item.id)}
+            >
               <View style={styles.checkbox}>
                 {item.checked && <CheckIcon size={28} color={COLOR.softWhite} style={{ margin: 7 }} />}
               </View>
@@ -47,7 +52,7 @@ export default function TodoItem({ item, setText, checkItem, deleteItem, drag, d
 
             {/* drag and drop */}
 
-            <TouchableOpacity disabled={disabled} style={styles.drag} onPressIn={drag}>
+            <TouchableOpacity activeOpacity={0.7} disabled={disabled} style={styles.drag} onPressIn={drag}>
               <DragIcon
                 iconProps={{
                   color: COLOR.softWhite,
@@ -59,7 +64,12 @@ export default function TodoItem({ item, setText, checkItem, deleteItem, drag, d
 
           {/* delete item */}
 
-          <TouchableOpacity disabled={disabled} style={{ marginLeft: PADDING_MARGIN.sm }} onPress={() => deleteItem(item.id)}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            disabled={disabled}
+            style={{ marginLeft: PADDING_MARGIN.sm }}
+            onPress={() => deleteItem(item.id)}
+          >
             <XCircleIcon size={28} color={COLOR.softWhite} style={{ marginVertical: 8 }} />
           </TouchableOpacity>
         </View>

@@ -6,7 +6,7 @@ import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 export default function ReadOnlyNotesButton({ onPressReadOnly }) {
   return (
-    <TouchableOpacity style={styles.readOnlyNoteButton} onPress={onPressReadOnly}>
+    <TouchableOpacity activeOpacity={0.7} style={styles.readOnlyNoteButton} onPress={onPressReadOnly}>
       <BookOpenIcon size={16} color={COLOR.softWhite} />
     </TouchableOpacity>
   );

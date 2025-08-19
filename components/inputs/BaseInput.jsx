@@ -3,13 +3,18 @@ import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import { BORDER, COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
-export default function BaseInput({ label, ...props }) {
+export default function BaseInput({ label, style = {}, ...props }) {
   return (
     <>
       {label && <Text style={styles.label}>{label}</Text>}
 
       <View style={styles.container}>
-        <TextInput style={styles.input} {...props} cursorColor={COLOR.softWhite} placeholderTextColor={COLOR.placeholder} />
+        <TextInput
+          cursorColor={COLOR.softWhite}
+          placeholderTextColor={COLOR.placeholder}
+          {...props}
+          style={[styles.input, style]}
+        />
       </View>
     </>
   );

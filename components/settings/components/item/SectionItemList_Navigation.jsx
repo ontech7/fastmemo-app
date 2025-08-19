@@ -9,7 +9,7 @@ export default function SectionItemList_Navigation({ title, extra = null, route 
   const router = useRouter();
 
   return (
-    <TouchableOpacity style={styles.sectionItemList_button} onPress={onPress ?? (() => router.push(route))}>
+    <TouchableOpacity activeOpacity={0.7} style={styles.sectionItemList_button} onPress={onPress ?? (() => router.push(route))}>
       <View style={{ flexDirection: "row" }}>
         <Text style={styles.sectionItemList_title}>{title}</Text>
 

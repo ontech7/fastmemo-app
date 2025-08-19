@@ -12,6 +12,7 @@ export default function BackButton({ callback = null, style = {} }) {
   return (
     <TouchableOpacity
       style={style}
+      activeOpacity={0.7}
       onPress={() => {
         if (callback) callback();
         KeyboardController.dismiss();
