@@ -1,6 +1,6 @@
 ![Fast Memo](https://i.imgur.com/dPRR6pJ.png)
 
-![version](https://badgen.net/badge/version/v2.5.0/blue) ![Android](https://badgen.net/badge/android/deployed/green)
+![version](https://badgen.net/badge/version/v2.5.1/blue) ![Android](https://badgen.net/badge/android/deployed/green)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey) ![web](https://badgen.net/badge/web/coming%20soon/grey)
 
 Memo application for Mobile and Tablets, made in React Native using Expo

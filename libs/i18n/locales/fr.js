@@ -14,7 +14,7 @@ const fr = {
   changelog: {
     title: "Quoi de neuf?",
 
-    description_2_5_0: `• Ajout de la possibilité de réorganiser les notes par date de création et date de mise à jour.
+    description_2_5_1: `• Ajout de la possibilité de réorganiser les notes par date de création et date de mise à jour.
 • Refonte des modales.
 • Corrections diverses.`,
 

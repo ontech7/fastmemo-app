@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
 
-import { retrieveNote } from "@/libs/registry";
+import { retrieveNote, storeDirtyNoteId } from "@/libs/registry";
 import { formatDateTime } from "@/utils/date";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
 import { toast } from "@/utils/toast";
@@ -80,7 +80,9 @@ export default function NoteTextScreen() {
 
   // Send webhook on just created note only once
   useEffect(() => {
-    if (!isNewlyCreated) return;
+    if (!isNewlyCreated) {
+      return;
+    }
 
     webhook(webhook_addTextNote, {
       action: "note/addTextNote",
@@ -99,8 +101,7 @@ export default function NoteTextScreen() {
         name: note.category.name,
       },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isNewlyCreated]);
 
   const updateNoteGlobal = useCallback(
     (currNote) => {
@@ -121,8 +122,24 @@ export default function NoteTextScreen() {
     [dispatch]
   );
 
+  const dirtyRef = useRef(false);
+
+  useEffect(() => {
+    dirtyRef.current = false;
+  }, [note.id]);
+
+  useEffect(() => {
+    return () => {
+      dirtyRef.current = false;
+    };
+  }, []);
+
   const setNoteAsync = useCallback(
     (currNote) => {
+      if (!dirtyRef.current) {
+        storeDirtyNoteId(currNote.id);
+        dirtyRef.current = true;
+      }
       setNote(currNote);
       updateNoteGlobal(currNote);
     },

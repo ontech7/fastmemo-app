@@ -1,6 +1,8 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { createSelector } from "reselect";
 
+import { retrieveDirtyNoteId } from "@/libs/registry";
+
 import { configs } from "../configs";
 import { defaultCategory } from "../configs/default";
 import { COLLECTIONS, deleteCollectionInCloud, only_if_cloudConnected } from "../libs/firebase";
@@ -40,18 +42,22 @@ const notesSlice = createSlice({
       } else {
         state.items[idx] = action.payload;
 
-        // reorder
-        state.items.sort((a, b) => {
-          const field = state.filters?.sortBy || "createdAt";
-          const order = state.filters?.order || "desc";
+        const dirtyId = retrieveDirtyNoteId();
 
-          if (!a[field] || !b[field]) {
-            return 0;
-          }
+        if (dirtyId === action.payload.id) {
+          // reorder
+          state.items.sort((a, b) => {
+            const field = state.filters?.sortBy || "createdAt";
+            const order = state.filters?.order || "desc";
 
-          if (a[field] < b[field]) return order === "asc" ? -1 : 1;
-          if (a[field] > b[field]) return order === "asc" ? 1 : -1;
-        });
+            if (!a[field] || !b[field]) {
+              return 0;
+            }
+
+            if (a[field] < b[field]) return order === "asc" ? -1 : 1;
+            if (a[field] > b[field]) return order === "asc" ? 1 : -1;
+          });
+        }
       }
 
       only_if_cloudConnected(() => {
@@ -63,7 +69,7 @@ const notesSlice = createSlice({
       state.filters = action.payload;
     },
 
-    reorderNotes: (state, action) => {
+    reorderNotes: (state) => {
       state.items.sort((a, b) => {
         const field = state.filters?.sortBy || "createdAt";
         const order = state.filters?.order || "desc";

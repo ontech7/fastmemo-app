@@ -13,7 +13,7 @@ import lottieJson from "../assets/lottie/Logo.json";
 
 function getVersionChangelogs(t) {
   return [
-    { version: "v2.5.0", text: t("changelog.description_2_5_0") },
+    { version: "v2.5.1", text: t("changelog.description_2_5_1") },
     { version: "v2.4.2", text: t("changelog.description_2_4_2") },
     { version: "v2.3.0", text: t("changelog.description_2_3_0") },
     { version: "v2.2.1", text: t("changelog.description_2_2_0") },

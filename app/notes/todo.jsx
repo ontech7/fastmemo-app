@@ -20,7 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
 
-import { retrieveNote } from "@/libs/registry";
+import { retrieveNote, storeDirtyNoteId } from "@/libs/registry";
 import { formatDateTime } from "@/utils/date";
 import { capitalize, isStringEmpty } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
@@ -99,30 +99,52 @@ export default function NoteTodoScreen() {
     });
   }, [isNewlyCreated]);
 
-  const updateNoteGlobal = useCallback((currNote) => {
-    const no_title = isStringEmpty(currNote.title);
-    const no_list_items = !currNote.list?.length || (currNote.list?.length == 1 && isStringEmpty(currNote.list?.[0].text));
+  const updateNoteGlobal = useCallback(
+    (currNote) => {
+      const no_title = isStringEmpty(currNote.title);
+      const no_list_items = !currNote.list?.length || (currNote.list?.length == 1 && isStringEmpty(currNote.list?.[0].text));
 
-    if (no_title && no_list_items) {
-      dispatch(temporaryDeleteNote(currNote.id));
-      dispatch(deleteNote(currNote.id));
-      return;
-    }
+      if (no_title && no_list_items) {
+        dispatch(temporaryDeleteNote(currNote.id));
+        dispatch(deleteNote(currNote.id));
+        return;
+      }
 
-    dispatch(
-      addNote({
-        ...currNote,
-        type: currNote.type || "todo",
-        updatedAt: Date.now(),
-        date: formatDateTime(),
-      })
-    );
+      dispatch(
+        addNote({
+          ...currNote,
+          type: currNote.type || "todo",
+          updatedAt: Date.now(),
+          date: formatDateTime(),
+        })
+      );
+    },
+    [dispatch]
+  );
+
+  const dirtyRef = useRef(false);
+
+  useEffect(() => {
+    dirtyRef.current = false;
+  }, [note.id]);
+
+  useEffect(() => {
+    return () => {
+      dirtyRef.current = false;
+    };
   }, []);
 
-  const setNoteAsync = useCallback((currNote) => {
-    setNote(currNote);
-    updateNoteGlobal(currNote);
-  }, []);
+  const setNoteAsync = useCallback(
+    (currNote) => {
+      if (!dirtyRef.current) {
+        storeDirtyNoteId(currNote.id);
+        dirtyRef.current = true;
+      }
+      setNote(currNote);
+      updateNoteGlobal(currNote);
+    },
+    [updateNoteGlobal]
+  );
 
   /* local */
 

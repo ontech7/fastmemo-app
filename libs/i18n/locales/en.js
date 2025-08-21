@@ -14,7 +14,7 @@ const en = {
   changelog: {
     title: "What's new?",
 
-    description_2_5_0: `• Added the ability to reorder notes by creation date and update date.
+    description_2_5_1: `• Added the ability to reorder notes by creation date and update date.
 • Redesign of modals.
 • Various fixes.`,
 

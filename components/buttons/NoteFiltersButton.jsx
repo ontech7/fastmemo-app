@@ -38,8 +38,6 @@ export default function NoteFiltersButton({ filters }) {
     }
 
     dispatch(setNoteFilters({ sortBy, order }));
-
-    return { sortBy, order };
   };
 
   return (
@@ -81,8 +79,8 @@ export default function NoteFiltersButton({ filters }) {
         <MenuOption
           style={styles.menuOption}
           onSelect={() => {
-            const notesOrder = changeNotesOrder("createdAt");
-            dispatch(reorderNotes(notesOrder));
+            changeNotesOrder("createdAt");
+            dispatch(reorderNotes());
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
@@ -101,8 +99,8 @@ export default function NoteFiltersButton({ filters }) {
         <MenuOption
           style={styles.menuOption}
           onSelect={() => {
-            const notesOrder = changeNotesOrder("updatedAt");
-            dispatch(reorderNotes(notesOrder));
+            changeNotesOrder("updatedAt");
+            dispatch(reorderNotes());
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>

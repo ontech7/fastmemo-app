@@ -14,7 +14,7 @@ const es = {
   changelog: {
     title: "¿Qué hay de nuevo?",
 
-    description_2_5_0: `• Se agregó la posibilidad de reordenar las notas por fecha de creación y fecha de actualización.
+    description_2_5_1: `• Se agregó la posibilidad de reordenar las notas por fecha de creación y fecha de actualización.
 • Rediseño de las modales.
 • Varias correcciones.`,
 
