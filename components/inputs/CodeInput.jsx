@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect } from "react";
-import { impactAsync, ImpactFeedbackStyle, notificationAsync, NotificationFeedbackType } from "expo-haptics";
+import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
 import { StyleSheet, Text, View } from "react-native";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
@@ -16,7 +16,7 @@ export default function CodeInput({ value, onChangeCode, onSubmit, disabled }) {
   const isCodeSet = code.length == 4;
 
   const addNumberWithVibration = useCallback(
-    (number) => () => {
+    (number) => {
       if (isCodeSet) {
         return;
       }
@@ -38,7 +38,7 @@ export default function CodeInput({ value, onChangeCode, onSubmit, disabled }) {
     codeUpdated.pop();
 
     onChangeCode(unify(codeUpdated));
-    notificationAsync(NotificationFeedbackType.Error);
+    impactAsync(ImpactFeedbackStyle.Light);
   }, [code]);
 
   useEffect(() => {

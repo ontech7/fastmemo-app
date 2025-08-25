@@ -440,6 +440,7 @@ const es = {
     passphrase_wrong: "La contraseña que ingresaste es incorrecta.",
     are_you_sure_wipe: "¿Estás seguro de que quieres borrar tus datos?\nPerderás todas las notas y categorías creadas.",
     finish_organize_categories: "Finalice para organizar categorías o deshacer sus cambios.",
+    generic_success_description: "La operación fue exitosa.",
   },
 
   /* generic */

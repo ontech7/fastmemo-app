@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef } from "react";
 import LottieView from "lottie-react-native";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import CloseButton from "@/components/buttons/CloseButton";
 import ChangelogItem from "@/components/changelog/ChangelogItem";
+import SafeAreaView from "@/components/SafeAreaView";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 

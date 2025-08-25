@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from "react";
-import { useRouter } from "expo-router";
 import { Animated, Easing, StyleSheet, TouchableOpacity } from "react-native";
 import { ListBulletIcon } from "react-native-heroicons/outline";
 
 import { storeNote } from "@/libs/registry";
+import { useRouter } from "@/hooks/useRouter";
 
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
 
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   addBtn: {
     zIndex: 2,
     position: "absolute",
-    bottom: 115,
+    bottom: 135,
     right: 29,
     padding: PADDING_MARGIN.sm,
     borderRadius: BORDER.normal,

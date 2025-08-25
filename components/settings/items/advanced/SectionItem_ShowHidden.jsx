@@ -1,10 +1,10 @@
 import React from "react";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Switch, Text, View } from "react-native";
 import { useDispatch, useSelector, useStore } from "react-redux";
 
 import { toggleWithSecret } from "@/utils/crypt";
+import { useRouter } from "@/hooks/useRouter";
 
 import { COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 

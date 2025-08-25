@@ -4,10 +4,10 @@ import { FlashList } from "@shopify/flash-list";
 import { useTranslation } from "react-i18next";
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { InformationCircleIcon } from "react-native-heroicons/outline";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
+import SafeAreaView from "@/components/SafeAreaView";
 import WebhookItem from "@/components/webhook/WebhookItem";
 import { selectorWebhooks, setWebhooks } from "@/slicers/settingsSlice";
 
@@ -50,15 +50,6 @@ export default function WebhooksScreen() {
     );
   };
 
-  const renderItem = ({ item, index }) => (
-    <WebhookItem
-      title={t("webhooks." + webhooks_keys[index])}
-      webhook={item}
-      toggleWebhook={toggleWebhook(webhooks_keys[index])}
-      setWebhookUrl={setWebhookUrl(webhooks_keys[index])}
-    />
-  );
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -75,11 +66,21 @@ export default function WebhooksScreen() {
       </View>
 
       <FlashList
+        maintainVisibleContentPosition={{
+          disabled: true,
+        }}
         showsVerticalScrollIndicator={false}
         data={webhooks_values}
-        renderItem={renderItem}
+        extraData={{ toggleWebhook, setWebhookUrl, t }}
+        renderItem={({ item, index }) => (
+          <WebhookItem
+            title={t("webhooks." + webhooks_keys[index])}
+            webhook={item}
+            toggleWebhook={toggleWebhook(webhooks_keys[index])}
+            setWebhookUrl={setWebhookUrl(webhooks_keys[index])}
+          />
+        )}
         keyExtractor={(_, index) => webhooks_keys[index]}
-        estimatedItemSize={40}
       />
     </SafeAreaView>
   );

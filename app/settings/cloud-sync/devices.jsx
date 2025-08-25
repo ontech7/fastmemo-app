@@ -14,7 +14,6 @@ import {
   View,
 } from "react-native";
 import { ComputerDesktopIcon, TrashIcon } from "react-native-heroicons/outline";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getAllConnectedDevices, getDeviceUuid, removeDeviceFromCloud, removeDeviceFromDevicesToSync } from "@/libs/firebase";
 import { useTimeoutTask } from "@/hooks/useTimeoutTask";
@@ -23,6 +22,7 @@ import DeviceAndroidIcon from "@/components/icons/DeviceAndroidIcon";
 import DeviceAppleIcon from "@/components/icons/DeviceAppleIcon";
 import NoCloudIcon from "@/components/icons/NoCloudIcon";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import SafeAreaView from "@/components/SafeAreaView";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 

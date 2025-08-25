@@ -444,6 +444,7 @@ const de = {
     are_you_sure_wipe:
       "Sind Sie sicher, dass Sie Ihre Daten löschen möchten?\nSie verlieren alle erstellten Notizen und Kategorien.",
     finish_organize_categories: "Fertigstellen, um Kategorien zu organisieren oder Ihre Änderungen rückgängig zu machen.",
+    generic_success_description: "Der Vorgang war erfolgreich.",
   },
 
   /* generic */

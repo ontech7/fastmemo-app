@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { ArrowPathIcon, EllipsisVerticalIcon, TrashIcon } from "react-native-heroicons/outline";
@@ -8,6 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { toggleWithSecret } from "@/utils/crypt";
 import { webhook } from "@/utils/webhook";
+import { useRouter } from "@/hooks/useRouter";
 
 import { BORDER, COLOR, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 

@@ -1,6 +1,5 @@
 import { configs } from "@/configs";
 import { useNetInfo } from "@react-native-community/netinfo";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Linking, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import {
@@ -10,14 +9,15 @@ import {
   InformationCircleIcon,
   PencilIcon,
 } from "react-native-heroicons/outline";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 
 import { toggleWithSecret } from "@/utils/crypt";
 import { toast } from "@/utils/toast";
 import { useCloudSync } from "@/hooks/useCloudSync";
+import { useRouter } from "@/hooks/useRouter";
 import BackButton from "@/components/buttons/BackButton";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import SafeAreaView from "@/components/SafeAreaView";
 import { selectorIsFingerprintEnabled } from "@/slicers/settingsSlice";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";

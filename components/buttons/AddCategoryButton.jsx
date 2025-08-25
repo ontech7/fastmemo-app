@@ -1,7 +1,8 @@
 import React from "react";
-import { useRouter } from "expo-router";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { FolderPlusIcon } from "react-native-heroicons/outline";
+
+import { useRouter } from "@/hooks/useRouter";
 
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
 
@@ -20,7 +21,7 @@ export default function AddCategoryButton() {
 const styles = StyleSheet.create({
   addBtn: {
     position: "absolute",
-    bottom: 40,
+    bottom: 60,
     right: 40,
     padding: PADDING_MARGIN.md,
     borderRadius: BORDER.normal,

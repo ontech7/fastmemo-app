@@ -1,6 +1,7 @@
 import React from "react";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+
+import { useRouter } from "@/hooks/useRouter";
 
 import SectionItemList_Text from "../../components/item/SectionItemList_Text";
 import SectionItemList from "../../components/list/SectionItemList";

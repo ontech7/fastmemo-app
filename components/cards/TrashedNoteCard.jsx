@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     fontWeight: FONTWEIGHT.semiBold,
     color: COLOR.darkBlue,
     marginTop: -4,
-    marginBottom: PADDING_MARGIN.sm,
+    marginBottom: 2,
   },
   titleImportant: { color: COLOR.softWhite },
   date: {

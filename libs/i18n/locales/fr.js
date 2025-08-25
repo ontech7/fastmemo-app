@@ -444,6 +444,7 @@ const fr = {
     passphrase_wrong: "La phrase de passe que vous avez saisie est erronée.",
     are_you_sure_wipe: "Voulez-vous vraiment effacer vos données?\nVous perdrez toutes les notes et catégories créées.",
     finish_organize_categories: "Terminer pour organiser les catégories ou annuler vos modifications.",
+    generic_success_description: "L'opération a réussi.",
   },
 
   /* generic */

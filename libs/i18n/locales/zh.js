@@ -428,6 +428,7 @@ const zh = {
     passphrase_wrong: "您输入的密码错误。",
     are_you_sure_wipe: "您确定要擦除数据吗？\n您将丢失所有创建的笔记和类别。",
     finish_organize_categories: "完成以组织类别或撤消更改。",
+    generic_success_description: "操作成功。",
   },
 
   /* generic */

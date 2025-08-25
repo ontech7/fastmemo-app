@@ -16,7 +16,6 @@ import DraggableFlatList from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { EyeIcon, EyeSlashIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
 
@@ -27,6 +26,7 @@ import { webhook } from "@/utils/webhook";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
+import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";

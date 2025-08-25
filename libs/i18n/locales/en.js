@@ -437,6 +437,7 @@ const en = {
     passphrase_wrong: "The passphrase you entered is wrong.",
     are_you_sure_wipe: "Are you sure you want to wipe your data?\nYou will lose all notes and categories created.",
     finish_organize_categories: "Finish to organize categories or undo your changes.",
+    generic_success_description: "The operation was successful.",
   },
 
   /* generic */

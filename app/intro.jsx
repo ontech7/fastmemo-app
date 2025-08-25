@@ -1,10 +1,11 @@
 import React, { useMemo, useRef, useState } from "react";
 import Carousel, { Pagination } from "@ontech7/react-native-snap-carousel";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowRightIcon } from "react-native-heroicons/outline";
-import { SafeAreaView } from "react-native-safe-area-context";
+
+import { useRouter } from "@/hooks/useRouter";
+import SafeAreaView from "@/components/SafeAreaView";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 

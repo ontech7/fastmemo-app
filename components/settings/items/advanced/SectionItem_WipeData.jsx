@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useNetInfo } from "@react-native-community/netinfo";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
 
 import { toggleWithSecret } from "@/utils/crypt";
 import { webhook } from "@/utils/webhook";
+import { useRouter } from "@/hooks/useRouter";
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 
@@ -80,7 +80,7 @@ export default function SectionItem_WipeData({ isLast }) {
       <ConfirmOrCancelDialog
         open={showSuccessDialog}
         title={t("report.messages.success.title")}
-        description={null}
+        description={t("popup.generic_success_description")}
         onConfirm={() => setShowSuccessDialog(false)}
       />
 

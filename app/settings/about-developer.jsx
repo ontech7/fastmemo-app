@@ -2,9 +2,9 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowTopRightOnSquareIcon } from "react-native-heroicons/outline";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import BackButton from "@/components/buttons/BackButton";
+import SafeAreaView from "@/components/SafeAreaView";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 

@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import * as Haptics from "expo-haptics";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import i18n from "i18next";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
 import { retrieveNote, retrieveSecretCodeCallback, storeNote } from "@/libs/registry";
+import { useRouter } from "@/hooks/useRouter";
+import SafeAreaView from "@/components/SafeAreaView";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 

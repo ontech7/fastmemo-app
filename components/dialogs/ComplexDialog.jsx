@@ -17,9 +17,19 @@ export default function ComplexDialog({
         {description && <DialogDescription>{description}</DialogDescription>}
       </DialogHeader>
       <DialogFooter style={[actionsColumn && { flexDirection: "column", alignItems: "flex-end" }]}>
-        {alternative && alternative.handler && <DialogAction onPress={alternative.handler}>{alternative.label}</DialogAction>}
-        {cancel && cancel.handler && <DialogAction onPress={cancel.handler}>{cancel.label}</DialogAction>}
-        <DialogAction onPress={confirm.handler}>{confirm.label}</DialogAction>
+        {alternative && alternative.handler && (
+          <DialogAction onPress={alternative.handler} adornmentEnd={alternative.adornment}>
+            {alternative.label}
+          </DialogAction>
+        )}
+        {cancel && cancel.handler && (
+          <DialogAction onPress={cancel.handler} adornmentEnd={cancel.adornment}>
+            {cancel.label}
+          </DialogAction>
+        )}
+        <DialogAction onPress={confirm.handler} adornmentEnd={confirm.adornment}>
+          {confirm.label}
+        </DialogAction>
       </DialogFooter>
     </Dialog>
   );

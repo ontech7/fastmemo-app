@@ -438,6 +438,7 @@ const it = {
     passphrase_wrong: "La frase segreta inserita è errata.",
     are_you_sure_wipe: "Sei sicuro di voler cancellare i tuoi dati?\nPerderai tutte le note e le categorie create.",
     finish_organize_categories: "Finisci di organizzare le categorie o annulla le modifiche.",
+    generic_success_description: "L'operazione è andata a buon fine.",
   },
 
   /* generic */

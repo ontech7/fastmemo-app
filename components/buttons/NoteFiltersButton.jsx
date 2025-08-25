@@ -1,5 +1,4 @@
 import React from "react";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
@@ -13,6 +12,7 @@ import { Menu, MenuOption, MenuOptions, MenuTrigger } from "react-native-popup-m
 import { useDispatch, useSelector } from "react-redux";
 
 import { toggleWithSecret } from "@/utils/crypt";
+import { useRouter } from "@/hooks/useRouter";
 import ContextMenu from "@/components/renderers/ContextMenu";
 import { getNoteFilters, reorderNotes, setNoteFilters } from "@/slicers/notesSlice";
 import { selectorIsFingerprintEnabled } from "@/slicers/settingsSlice";

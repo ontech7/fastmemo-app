@@ -433,6 +433,7 @@ const ja = {
     passphrase_wrong: "入力したパスフレーズが間違っています。",
     are_you_sure_wipe: "データを消去してもよろしいですか？\n作成されたすべてのノートとカテゴリが失われます。",
     finish_organize_categories: "カテゴリの整理を完了するか、変更を元に戻します。",
+    generic_success_description: "操作は成功しました。",
   },
 
   /* generic */
