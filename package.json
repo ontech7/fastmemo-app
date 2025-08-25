@@ -60,7 +60,7 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-i18next": "^15.6.1",
-    "react-native": "0.79.5",
+    "react-native": "0.79.6",
     "react-native-crypto-js": "^1.0.0",
     "react-native-draggable-flatlist": "^4.0.3",
     "react-native-gesture-handler": "~2.24.0",
