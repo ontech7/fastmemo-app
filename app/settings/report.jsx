@@ -58,7 +58,7 @@ export default function ReportScreen() {
   const store = useStore();
   const state = store.getState();
   // @ts-ignore
-  const isAvailableToReport = state.settings.reportDate ? new Date() >= state.settings.reportDate : false;
+  const isAvailableToReport = state.settings.reportDate ? new Date() >= state.settings.reportDate : true;
 
   const logoAnimRef = useRef(null);
 
@@ -463,7 +463,8 @@ const styles = StyleSheet.create({
     marginTop: PADDING_MARGIN.sm,
     borderRadius: BORDER.normal,
     backgroundColor: COLOR.softenGray,
-    padding: PADDING_MARGIN.md,
+    paddingVertical: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.md,
   },
   sendDeviceInfoText: {
     color: COLOR.softWhite,
