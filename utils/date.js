@@ -23,7 +23,7 @@ export const formatDateTime = (timestamp = null) => {
 
   let languageTag = "en-US";
 
-  if (supportedLanguages.includes(locale.languageCode)) {
+  if (supportedLanguages[locale.languageCode]) {
     languageTag = locale.languageTag;
   }
 

@@ -226,6 +226,7 @@ const zh = {
     interimResults: "实时转录",
     continuous: "手动停止",
     language: "语言",
+    language_default: "默认（系统）",
   },
   help: {
     title: "帮助",

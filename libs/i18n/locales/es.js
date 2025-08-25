@@ -227,6 +227,7 @@ const es = {
     interimResults: "Transcripción en tiempo real",
     continuous: "Parada manual",
     language: "Idioma",
+    language_default: "Predeterminado (sistema)",
   },
   help: {
     title: "Ayuda",

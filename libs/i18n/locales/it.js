@@ -228,6 +228,7 @@ const it = {
     interimResults: "Trascrizione in tempo reale",
     continuous: "Interruzione manuale",
     language: "Lingua",
+    language_default: "Predefinita (sistema)",
   },
   help: {
     title: "Aiuto",

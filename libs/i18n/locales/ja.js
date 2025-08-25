@@ -226,6 +226,7 @@ const ja = {
     interimResults: "リアルタイム文字起こし",
     continuous: "手動停止",
     language: "言語",
+    language_default: "デフォルト（システム）",
   },
   help: {
     title: "ヘルプ",

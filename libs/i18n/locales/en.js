@@ -227,6 +227,7 @@ const en = {
     interimResults: "Real-time transcription",
     continuous: "Manual stop",
     language: "Language",
+    language_default: "Default (system)",
   },
   help: {
     title: "Help",

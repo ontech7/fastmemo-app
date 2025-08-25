@@ -227,6 +227,7 @@ const de = {
     interimResults: "Echtzeit-Transkription",
     continuous: "Manueller Stopp",
     language: "Sprache",
+    language_default: "Standard (System)",
   },
   help: {
     title: "Hilfe",

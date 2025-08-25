@@ -1,7 +1,10 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createSlice } from "@reduxjs/toolkit";
 import * as Localization from "expo-localization";
+import i18n from "i18next";
 
 const initialState = {
+  language: "system",
   isIntroFinished: false,
   secretCode: "1234",
   isFingerprintEnabled: false,
@@ -34,7 +37,7 @@ const initialState = {
     enabled: true,
     interimResults: true,
     continuous: true,
-    language: Localization.getLocales()[0].languageTag || "en-US",
+    language: "system",
   },
   reportDate: null,
 };
@@ -43,6 +46,11 @@ const settingsSlice = createSlice({
   name: "settings",
   initialState,
   reducers: {
+    setLanguage: (state, action) => {
+      state.language = action.payload;
+      AsyncStorage.setItem("@appLanguage", action.payload);
+      i18n.changeLanguage(action.payload !== "system" ? action.payload : Localization.getLocales()[0].languageCode || "en");
+    },
     setIsIntroFinished: (state, action) => {
       state.isIntroFinished = action.payload;
     },
@@ -77,6 +85,7 @@ const settingsSlice = createSlice({
 });
 
 export const {
+  setLanguage,
   setIsIntroFinished,
   setSecretCode,
   setIsFingerprintEnabled,
@@ -91,6 +100,7 @@ export const {
 
 // Selectors
 export const getAllSettings = (state) => state.settings;
+export const selectorLanguage = (state) => state.settings.language || "system";
 export const selectorIsIntroFinished = (state) => state.settings.isIntroFinished;
 export const selectorCurrentSecretCode = (state) => state.settings.secretCode;
 export const selectorIsFingerprintEnabled = (state) => state.settings.isFingerprintEnabled;
@@ -117,7 +127,7 @@ export const selectorVoiceRecognition = (state) =>
     enabled: state.settings.voiceRecognition?.enabled || true,
     interimResults: state.settings.voiceRecognition?.interimResults || true,
     continuous: state.settings.voiceRecognition?.continuous || true,
-    language: state.settings.voiceRecognition?.language || Localization.getLocales()[0].languageTag || "en-US",
+    language: state.settings.voiceRecognition?.language || "system",
   };
 
 export default settingsSlice.reducer;

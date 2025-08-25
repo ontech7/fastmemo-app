@@ -227,6 +227,7 @@ const fr = {
     interimResults: "Transcription en temps réel",
     continuous: "Arrêt manuel",
     language: "Langue",
+    language_default: "Par défaut (système)",
   },
   help: {
     title: "Aider",
