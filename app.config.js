@@ -7,7 +7,7 @@ module.exports = {
     slug: configs.app.slug,
     version: configs.app.version,
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
+    icon: configs.app.icon,
     scheme: configs.app.slug,
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
@@ -18,7 +18,7 @@ module.exports = {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/images/adaptive-icon.png",
+        foregroundImage: configs.app.adaptiveIcon,
         backgroundColor: configs.app.backgroundColor,
       },
       edgeToEdgeEnabled: true,
@@ -27,7 +27,7 @@ module.exports = {
     web: {
       bundler: "metro",
       output: "static",
-      favicon: "./assets/images/favicon.png",
+      favicon: configs.app.favicon,
     },
     plugins: [
       "expo-router",

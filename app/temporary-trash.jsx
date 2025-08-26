@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
-import { useNavigation } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { BackHandler, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
 import { webhook } from "@/utils/webhook";
+import SafeAreaView from "@/components/SafeAreaView";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
@@ -53,16 +53,6 @@ export default function TemporaryTrashScreen() {
       }
     });
   }, []);
-
-  const renderItem = ({ item }) => (
-    <TrashedNoteCard
-      content={item}
-      isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
-      selectNote={selectNote}
-      isDeleteMode={isDeleteMode}
-      toggleDeleteMode={toggleDeleteMode}
-    />
-  );
 
   const filteredNotes = useMemo(() => {
     if (!filterText.trim()) {
@@ -143,12 +133,22 @@ export default function TemporaryTrashScreen() {
       <SearchNotesInput text={filterText} onChangeText={setFilterText} />
 
       <FlashList
+        maintainVisibleContentPosition={{
+          disabled: true,
+        }}
         showsVerticalScrollIndicator={false}
         data={filteredNotes}
         extraData={{ isDeleteMode }}
-        renderItem={renderItem}
+        renderItem={({ item }) => (
+          <TrashedNoteCard
+            content={item}
+            isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
+            selectNote={selectNote}
+            isDeleteMode={isDeleteMode}
+            toggleDeleteMode={toggleDeleteMode}
+          />
+        )}
         keyExtractor={(item) => item.id}
-        estimatedItemSize={93}
       />
     </SafeAreaView>
   );

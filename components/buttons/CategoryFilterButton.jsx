@@ -141,10 +141,11 @@ const styles = StyleSheet.create({
     paddingTop: PADDING_MARGIN.sm,
   },
   all: {
+    textAlign: "center",
     height: 28,
-    paddingVertical: 3.5,
+    paddingVertical: 4,
     color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
+    fontSize: FONTSIZE.medium,
     fontWeight: FONTWEIGHT.semiBold,
   },
   selectedAll: {

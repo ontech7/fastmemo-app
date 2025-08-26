@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
 import i18n from "i18next";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowPathIcon } from "react-native-heroicons/outline";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 
+import { useRouter } from "@/hooks/useRouter";
+import SafeAreaView from "@/components/SafeAreaView";
 import { addNote } from "@/slicers/notesSlice";
 import { defaultNote } from "@/configs/default";
 

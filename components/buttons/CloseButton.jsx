@@ -1,7 +1,8 @@
 import React from "react";
-import { useRouter } from "expo-router";
 import { TouchableOpacity } from "react-native";
 import { XMarkIcon } from "react-native-heroicons/outline";
+
+import { useRouter } from "@/hooks/useRouter";
 
 import { COLOR } from "@/constants/styles";
 

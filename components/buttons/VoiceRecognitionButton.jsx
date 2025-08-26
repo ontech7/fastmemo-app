@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import * as Localization from "expo-localization";
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
 import { Dimensions, StyleSheet, TouchableOpacity, View } from "react-native";
 import { MicrophoneIcon } from "react-native-heroicons/outline";
@@ -68,7 +69,7 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }) {
     setRecognizing(true);
 
     ExpoSpeechRecognitionModule.start({
-      lang: selectors.language,
+      lang: selectors.language !== "default" ? selectors.language : Localization.getLocales()[0].languageTag || "en-US",
       interimResults: selectors.interimResults,
       continuous: selectors.continuous,
       maxAlternatives: 1,

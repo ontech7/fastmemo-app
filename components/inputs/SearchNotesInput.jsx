@@ -5,7 +5,7 @@ import { DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, XMarkIcon } from "rea
 
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
 
-export default function SearchNotesInput({ text, onChangeText, showDeepSearch }) {
+export default function SearchNotesInput({ text, onChangeText, showDeepSearch = false }) {
   const { t } = useTranslation();
 
   return (

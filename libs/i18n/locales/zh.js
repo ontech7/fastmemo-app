@@ -14,7 +14,8 @@ const zh = {
   changelog: {
     title: "什么是新的？",
 
-    description_2_5_1: `• 新增按创建日期和更新日期重新排序笔记的功能。
+    description_2_5_2: `• 新增按创建日期和更新日期重新排序笔记的功能。
+• 新增直接从设置更改语言的功能。
 • 重新设计了模态框。
 • 各种修复。`,
 
@@ -226,6 +227,7 @@ const zh = {
     interimResults: "实时转录",
     continuous: "手动停止",
     language: "语言",
+    language_default: "默认（系统）",
   },
   help: {
     title: "帮助",
@@ -428,6 +430,7 @@ const zh = {
     passphrase_wrong: "您输入的密码错误。",
     are_you_sure_wipe: "您确定要擦除数据吗？\n您将丢失所有创建的笔记和类别。",
     finish_organize_categories: "完成以组织类别或撤消更改。",
+    generic_success_description: "操作成功。",
   },
 
   /* generic */

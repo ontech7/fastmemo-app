@@ -3,6 +3,7 @@ import SectionItem_ShowHidden from "./items/advanced/SectionItem_ShowHidden";
 import SectionItem_VoiceRecognition from "./items/advanced/SectionItem_VoiceRecognition";
 import SectionItem_Webhooks from "./items/advanced/SectionItem_Webhooks";
 import SectionItem_WipeData from "./items/advanced/SectionItem_WipeData";
+import SectionItem_AppLanguage from "./items/basic/SectionItem_AppLanguage";
 import SectionItem_ChangeSecretCode from "./items/basic/SectionItem_ChangeSecretCode";
 import SectionItem_CloudSync from "./items/basic/SectionItem_CloudSync";
 import SectionItem_EnableFingerprint from "./items/basic/SectionItem_EnableFingerprint";
@@ -20,6 +21,7 @@ export const SECTION_BASIC = [
   SectionItem_TemporaryTrash,
   SectionItem_ChangeSecretCode,
   SectionItem_EnableFingerprint,
+  SectionItem_AppLanguage,
 ];
 
 export const SECTION_ADVANCED = [

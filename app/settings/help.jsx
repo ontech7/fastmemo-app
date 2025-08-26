@@ -12,9 +12,9 @@ import {
   RectangleGroupIcon,
   XMarkIcon,
 } from "react-native-heroicons/outline";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import BackButton from "@/components/buttons/BackButton";
+import SafeAreaView from "@/components/SafeAreaView";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 

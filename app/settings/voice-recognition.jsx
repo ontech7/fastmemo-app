@@ -1,14 +1,14 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
+import { supportedLanguages } from "@/libs/i18n";
+import BackButton from "@/components/buttons/BackButton";
+import SafeAreaView from "@/components/SafeAreaView";
 import { selectorVoiceRecognition, setVoiceRecognition } from "@/slicers/settingsSlice";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
-
-import BackButton from "../../components/buttons/BackButton";
 
 export default function VoiceRecognitionScreen() {
   const { t } = useTranslation();
@@ -16,8 +16,6 @@ export default function VoiceRecognitionScreen() {
   const dispatch = useDispatch();
 
   const allValues = useSelector(selectorVoiceRecognition);
-
-  const { t: lang } = useTranslation(undefined, { lng: allValues.language });
 
   const setValue = async (key, value) => {
     dispatch(
@@ -28,10 +26,18 @@ export default function VoiceRecognitionScreen() {
     );
   };
 
+  const languageName =
+    allValues.language !== "system"
+      ? supportedLanguages[allValues.language.split("-")[0]].name
+      : t("voicerecognition.language_default");
+
   const changeLanguage = () => {
     let nextLanguage = allValues.language;
 
     switch (allValues.language) {
+      case "system":
+        nextLanguage = "en-US";
+        break;
       case "en-US":
         nextLanguage = "it-IT";
         break;
@@ -51,10 +57,10 @@ export default function VoiceRecognitionScreen() {
         nextLanguage = "ja-JP";
         break;
       case "ja-JP":
-        nextLanguage = "en-US";
+        nextLanguage = "system";
         break;
       default:
-        nextLanguage = "en-US";
+        nextLanguage = "system";
         break;
     }
 
@@ -130,7 +136,7 @@ export default function VoiceRecognitionScreen() {
             >
               <Text style={styles.sectionItemList_title}>{t("voicerecognition.language")}</Text>
 
-              <Text style={styles.sectionItemList_text}>{lang("languageName")}</Text>
+              <Text style={styles.sectionItemList_text}>{languageName}</Text>
             </TouchableOpacity>
           </View>
         </View>

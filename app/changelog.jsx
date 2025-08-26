@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef } from "react";
 import LottieView from "lottie-react-native";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import CloseButton from "@/components/buttons/CloseButton";
 import ChangelogItem from "@/components/changelog/ChangelogItem";
+import SafeAreaView from "@/components/SafeAreaView";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
@@ -13,7 +13,7 @@ import lottieJson from "../assets/lottie/Logo.json";
 
 function getVersionChangelogs(t) {
   return [
-    { version: "v2.5.1", text: t("changelog.description_2_5_1") },
+    { version: "v2.5.2", text: t("changelog.description_2_5_2") },
     { version: "v2.4.2", text: t("changelog.description_2_4_2") },
     { version: "v2.3.0", text: t("changelog.description_2_3_0") },
     { version: "v2.2.1", text: t("changelog.description_2_2_0") },

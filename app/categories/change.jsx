@@ -1,14 +1,14 @@
 import React, { useCallback, useState } from "react";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CheckIcon } from "react-native-heroicons/outline";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
 import { retrieveNote, storeNote } from "@/libs/registry";
+import { useRouter } from "@/hooks/useRouter";
 import BackButton from "@/components/buttons/BackButton";
 import OrderedCategoryCard from "@/components/cards/OrderedCategoryCard";
+import SafeAreaView from "@/components/SafeAreaView";
 import { getCategories } from "@/slicers/categoriesSlice";
 import { changeNoteCategory } from "@/slicers/notesSlice";
 

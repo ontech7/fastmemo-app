@@ -3,7 +3,6 @@ import * as Sentry from "@sentry/react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { StorageAccessFramework } from "expo-file-system";
-import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { useTranslation } from "react-i18next";
 import { Keyboard, Platform } from "react-native";
@@ -14,6 +13,7 @@ import { useDispatch, useStore } from "react-redux";
 
 import { isSecretPassphraseCorrect, toggleWithSecret } from "@/utils/crypt";
 import { webhook } from "@/utils/webhook";
+import { useRouter } from "@/hooks/useRouter";
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import SecretPassphraseDialog from "@/components/dialogs/SecretPassphraseDialog";
@@ -80,6 +80,8 @@ export default function SectionItem_ExportImportData({ isLast }) {
       });
 
       webhook(webhook_exportData, { action: "generic/export" });
+
+      setShowSuccessDialog(true);
     } catch (error) {
       Sentry.captureException(error);
       setErrorMessage(error.message);
@@ -116,6 +118,8 @@ export default function SectionItem_ExportImportData({ isLast }) {
       });
 
       webhook(webhook_exportData, { action: "generic/export" });
+
+      setShowSuccessDialog(true);
     } catch (error) {
       Sentry.captureException(error);
       setErrorMessage(error.message);
@@ -161,6 +165,8 @@ export default function SectionItem_ExportImportData({ isLast }) {
       dispatch(setCategories({ categories: importedData.categories }));
 
       webhook(webhook_importData, { action: "generic/import" });
+
+      setShowSuccessDialog(true);
     } catch (error) {
       Sentry.captureException(error);
       setErrorMessage(error.message);
@@ -182,7 +188,7 @@ export default function SectionItem_ExportImportData({ isLast }) {
       <ConfirmOrCancelDialog
         open={showSuccessDialog}
         title={t("report.messages.success.title")}
-        description={null}
+        description={t("popup.generic_success_description")}
         onConfirm={() => setShowSuccessDialog(false)}
       />
 
@@ -233,7 +239,6 @@ export default function SectionItem_ExportImportData({ isLast }) {
           }, 20);
 
           setShowExportSecretDialog(false);
-          setShowSuccessDialog(true);
         }}
       />
 
@@ -253,7 +258,6 @@ export default function SectionItem_ExportImportData({ isLast }) {
           Keyboard.dismiss();
 
           setShowImportSecretDialog(false);
-          setShowSuccessDialog(true);
         }}
       />
 

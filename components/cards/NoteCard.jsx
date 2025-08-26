@@ -1,6 +1,5 @@
 import { memo } from "react";
 import * as LocalAuthentication from "expo-local-authentication";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, ListBulletIcon, StarIcon } from "react-native-heroicons/outline";
@@ -9,6 +8,7 @@ import { useSelector } from "react-redux";
 import { storeNote } from "@/libs/registry";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
+import { useRouter } from "@/hooks/useRouter";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
@@ -50,8 +50,6 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
     }
 
     if (!selectorFingerprintEnabled) {
-      storeNote(content);
-
       router.push({
         pathname: "/secret-code",
         params: {
@@ -62,7 +60,10 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
     }
 
     LocalAuthentication.authenticateAsync().then((authResult) => {
-      if (authResult?.success) navigateToNote();
+      if (authResult?.success) {
+        storeNote(content);
+        navigateToNote();
+      }
     });
   };
 
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     fontWeight: FONTWEIGHT.semiBold,
     color: COLOR.darkBlue,
     marginTop: -4,
-    marginBottom: PADDING_MARGIN.sm,
+    marginBottom: 2,
   },
   titleImportant: { color: COLOR.softWhite },
   date: {

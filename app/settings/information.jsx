@@ -3,7 +3,8 @@ import { configs } from "@/configs";
 import LottieView from "lottie-react-native";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+
+import SafeAreaView from "@/components/SafeAreaView";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 

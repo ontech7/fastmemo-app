@@ -14,7 +14,8 @@ const it = {
   changelog: {
     title: "Cosa c'è di nuovo?",
 
-    description_2_5_1: `• Aggiunta la possibilità di riordinare le note per data di creazione e data di aggiornamento.
+    description_2_5_2: `• Aggiunta la possibilità di riordinare le note per data di creazione e data di aggiornamento.
+• Aggiunta la possibilità di cambiare lingua direttamente dalle impostazioni.
 • Rifacimento delle modali.
 • Correzioni varie.`,
 
@@ -228,6 +229,7 @@ const it = {
     interimResults: "Trascrizione in tempo reale",
     continuous: "Interruzione manuale",
     language: "Lingua",
+    language_default: "Predefinita (sistema)",
   },
   help: {
     title: "Aiuto",
@@ -438,6 +440,7 @@ const it = {
     passphrase_wrong: "La frase segreta inserita è errata.",
     are_you_sure_wipe: "Sei sicuro di voler cancellare i tuoi dati?\nPerderai tutte le note e le categorie create.",
     finish_organize_categories: "Finisci di organizzare le categorie o annulla le modifiche.",
+    generic_success_description: "L'operazione è andata a buon fine.",
   },
 
   /* generic */

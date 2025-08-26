@@ -1,7 +1,8 @@
 import React from "react";
-import { useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ChevronRightIcon } from "react-native-heroicons/outline";
+
+import { useRouter } from "@/hooks/useRouter";
 
 import { COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 

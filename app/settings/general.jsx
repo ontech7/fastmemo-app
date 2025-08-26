@@ -1,9 +1,9 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import BackButton from "@/components/buttons/BackButton";
+import SafeAreaView from "@/components/SafeAreaView";
 import { SECTION_ADVANCED, SECTION_BASIC, SECTION_FEEDBACK, SECTION_INFO } from "@/components/settings/data";
 import Section from "@/components/settings/Section";
 

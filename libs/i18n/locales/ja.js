@@ -14,7 +14,8 @@ const ja = {
   changelog: {
     title: "新着情報",
 
-    description_2_5_1: `• ノートを作成日と更新日で並べ替える機能を追加。
+    description_2_5_2: `• ノートを作成日と更新日で並べ替える機能を追加。
+• 設定から直接言語を変更する機能を追加。
 • モーダルをリニューアル。
 • 各種修正。`,
 
@@ -226,6 +227,7 @@ const ja = {
     interimResults: "リアルタイム文字起こし",
     continuous: "手動停止",
     language: "言語",
+    language_default: "デフォルト（システム）",
   },
   help: {
     title: "ヘルプ",
@@ -433,6 +435,7 @@ const ja = {
     passphrase_wrong: "入力したパスフレーズが間違っています。",
     are_you_sure_wipe: "データを消去してもよろしいですか？\n作成されたすべてのノートとカテゴリが失われます。",
     finish_organize_categories: "カテゴリの整理を完了するか、変更を元に戻します。",
+    generic_success_description: "操作は成功しました。",
   },
 
   /* generic */

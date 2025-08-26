@@ -17,7 +17,7 @@ export default function SaveButton({ onPress, color = null }) {
 const styles = StyleSheet.create({
   addBtn: {
     position: "absolute",
-    bottom: 40,
+    bottom: 60,
     right: 40,
     padding: PADDING_MARGIN.md,
     borderRadius: BORDER.normal,

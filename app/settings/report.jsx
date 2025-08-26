@@ -4,18 +4,18 @@ import * as Sentry from "@sentry/react-native";
 import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
 import LottieView from "lottie-react-native";
 import { useTranslation } from "react-i18next";
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CheckIcon, PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useStore } from "react-redux";
 
 import { formatDateTime } from "@/utils/date";
+import { useRouter } from "@/hooks/useRouter";
 import BackButton from "@/components/buttons/BackButton";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import SafeAreaView from "@/components/SafeAreaView";
 import { setReportDate } from "@/slicers/settingsSlice";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
@@ -58,7 +58,7 @@ export default function ReportScreen() {
   const store = useStore();
   const state = store.getState();
   // @ts-ignore
-  const isAvailableToReport = state.settings.reportDate ? new Date() >= state.settings.reportDate : false;
+  const isAvailableToReport = state.settings.reportDate ? new Date() >= state.settings.reportDate : true;
 
   const logoAnimRef = useRef(null);
 
@@ -463,7 +463,8 @@ const styles = StyleSheet.create({
     marginTop: PADDING_MARGIN.sm,
     borderRadius: BORDER.normal,
     backgroundColor: COLOR.softenGray,
-    padding: PADDING_MARGIN.md,
+    paddingVertical: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.md,
   },
   sendDeviceInfoText: {
     color: COLOR.softWhite,

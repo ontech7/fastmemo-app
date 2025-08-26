@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
-import { BackHandler, FlatList, StyleSheet } from "react-native";
+import { BackHandler, StyleSheet } from "react-native";
 
 import CategoryFilterButton from "../buttons/CategoryFilterButton";
 
@@ -33,23 +34,25 @@ export default function FavoriteCategoryList({ categories }) {
     Haptics.selectionAsync();
   }, [isDeleteMode]);
 
-  const renderItem = ({ item }) => (
-    <CategoryFilterButton
-      name={item.name}
-      index={item.index}
-      selected={item.selected}
-      icon={item.icon}
-      deleteMode={isDeleteMode}
-      toggleDeleteMode={toggleDeleteMode}
-    />
-  );
-
   return (
-    <FlatList
+    <FlashList
       style={styles.categoryList}
+      maintainVisibleContentPosition={{
+        disabled: true,
+      }}
       showsVerticalScrollIndicator={false}
       data={categories}
-      renderItem={renderItem}
+      extraData={{ isDeleteMode, toggleDeleteMode }}
+      renderItem={({ item }) => (
+        <CategoryFilterButton
+          name={item.name}
+          index={item.index}
+          selected={item.selected}
+          icon={item.icon}
+          deleteMode={isDeleteMode}
+          toggleDeleteMode={toggleDeleteMode}
+        />
+      )}
       keyExtractor={(item) => `${item.name}_${item.icon}`}
     />
   );

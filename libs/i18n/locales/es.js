@@ -14,7 +14,8 @@ const es = {
   changelog: {
     title: "¿Qué hay de nuevo?",
 
-    description_2_5_1: `• Se agregó la posibilidad de reordenar las notas por fecha de creación y fecha de actualización.
+    description_2_5_2: `• Se agregó la posibilidad de reordenar las notas por fecha de creación y fecha de actualización.
+• Se agregó la posibilidad de cambiar el idioma directamente desde la configuración.
 • Rediseño de las modales.
 • Varias correcciones.`,
 
@@ -227,6 +228,7 @@ const es = {
     interimResults: "Transcripción en tiempo real",
     continuous: "Parada manual",
     language: "Idioma",
+    language_default: "Predeterminado (sistema)",
   },
   help: {
     title: "Ayuda",
@@ -440,6 +442,7 @@ const es = {
     passphrase_wrong: "La contraseña que ingresaste es incorrecta.",
     are_you_sure_wipe: "¿Estás seguro de que quieres borrar tus datos?\nPerderás todas las notas y categorías creadas.",
     finish_organize_categories: "Finalice para organizar categorías o deshacer sus cambios.",
+    generic_success_description: "La operación fue exitosa.",
   },
 
   /* generic */

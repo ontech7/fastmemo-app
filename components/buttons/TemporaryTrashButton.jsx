@@ -1,7 +1,8 @@
 import React from "react";
-import { useRouter } from "expo-router";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { ArchiveBoxXMarkIcon } from "react-native-heroicons/outline";
+
+import { useRouter } from "@/hooks/useRouter";
 
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 

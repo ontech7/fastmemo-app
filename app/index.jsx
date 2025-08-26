@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
-import { useRouter } from "expo-router";
+import * as Localization from "expo-localization";
+import i18n from "i18next";
 import LottieView from "lottie-react-native";
 import { StyleSheet } from "react-native";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { initFirebase } from "@/libs/firebase";
 import { isObjectEmpty } from "@/utils/string";
+import { useRouter } from "@/hooks/useRouter";
 
 import { COLOR } from "@/constants/styles";
 
@@ -25,10 +27,10 @@ export default function LoadingScreen() {
 
   useEffect(() => {
     const playLottie = () => {
-      setTimeout(() => logoAnimRef.current?.play(), 100);
+      logoAnimRef.current?.play();
     };
 
-    progress.value = withTiming(1, { duration: 100, easing: Easing.linear }, (finished) => {
+    progress.value = withTiming(1, { duration: 120, easing: Easing.linear }, (finished) => {
       if (finished) {
         runOnJS(playLottie)();
       }
@@ -36,7 +38,7 @@ export default function LoadingScreen() {
   }, []);
 
   const handleLottieFinish = () => {
-    progress.value = withTiming(0, { duration: 100, easing: Easing.linear }, (finished) => {
+    progress.value = withTiming(0, { duration: 120, easing: Easing.linear }, (finished) => {
       if (finished && initialRoute) {
         runOnJS(router.replace)(initialRoute);
       }
@@ -50,6 +52,10 @@ export default function LoadingScreen() {
   useEffect(() => {
     const runInitialActions = async () => {
       try {
+        // set app language
+        const language = await AsyncStorage.getItem("@appLanguage");
+        i18n.changeLanguage(language && language !== "system" ? language : Localization.getLocales()[0].languageCode || "en");
+
         // enable firebase if cloudSync config is available
         const cloudSyncRaw = await AsyncStorage.getItem("@cloudSync");
         const cloudSyncConfig = JSON.parse(cloudSyncRaw ?? "{}");
@@ -78,7 +84,7 @@ export default function LoadingScreen() {
         loop={false}
         resizeMode="contain"
         onAnimationFinish={handleLottieFinish}
-        speed={1.3}
+        speed={1.32}
       />
     </Animated.View>
   );

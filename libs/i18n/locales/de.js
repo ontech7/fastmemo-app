@@ -14,7 +14,8 @@ const de = {
   changelog: {
     title: "Was gibt's Neues?",
 
-    description_2_5_1: `• Möglichkeit hinzugefügt, Notizen nach Erstellungsdatum und Aktualisierungsdatum neu anzuordnen.
+    description_2_5_2: `• Möglichkeit hinzugefügt, Notizen nach Erstellungsdatum und Aktualisierungsdatum neu anzuordnen.
+• Möglichkeit hinzugefügt, die Sprache direkt in den Einstellungen zu ändern.
 • Überarbeitung der Modals.
 • Verschiedene Korrekturen.`,
 
@@ -227,6 +228,7 @@ const de = {
     interimResults: "Echtzeit-Transkription",
     continuous: "Manueller Stopp",
     language: "Sprache",
+    language_default: "Standard (System)",
   },
   help: {
     title: "Hilfe",
@@ -444,6 +446,7 @@ const de = {
     are_you_sure_wipe:
       "Sind Sie sicher, dass Sie Ihre Daten löschen möchten?\nSie verlieren alle erstellten Notizen und Kategorien.",
     finish_organize_categories: "Fertigstellen, um Kategorien zu organisieren oder Ihre Änderungen rückgängig zu machen.",
+    generic_success_description: "Der Vorgang war erfolgreich.",
   },
 
   /* generic */

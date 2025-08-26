@@ -4,10 +4,14 @@ const configs = {
   apiUrl: process.env.EXPO_PUBLIC_API_URL || "",
 
   app: {
+    version: "2.5.2",
     name: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "Fast Memo" : "Fast Memo Test",
     slug: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "FastMemoApp" : "fastmemoapptest",
     bundle: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "com.ontech7.FastMemoApp" : "com.ontech7.fastmemoapptest",
-    version: "2.5.1",
+    icon: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "./assets/images/icon.png" : "./assets/images/test/icon.png",
+    adaptiveIcon:
+      process.env.EXPO_PUBLIC_ENV !== "DEV" ? "./assets/images/adaptive-icon.png" : "./assets/images/test/adaptive-icon.png",
+    favicon: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "./assets/images/favicon.png" : "./assets/images/test/favicon.png",
     backgroundColor: "#020e35",
 
     websiteUrl: "https://fastmemo.vercel.app",

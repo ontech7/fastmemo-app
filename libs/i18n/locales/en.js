@@ -14,7 +14,8 @@ const en = {
   changelog: {
     title: "What's new?",
 
-    description_2_5_1: `• Added the ability to reorder notes by creation date and update date.
+    description_2_5_2: `• Added the ability to reorder notes by creation date and update date.
+• Added the ability to change language directly from settings.
 • Redesign of modals.
 • Various fixes.`,
 
@@ -227,6 +228,7 @@ const en = {
     interimResults: "Real-time transcription",
     continuous: "Manual stop",
     language: "Language",
+    language_default: "Default (system)",
   },
   help: {
     title: "Help",
@@ -437,6 +439,7 @@ const en = {
     passphrase_wrong: "The passphrase you entered is wrong.",
     are_you_sure_wipe: "Are you sure you want to wipe your data?\nYou will lose all notes and categories created.",
     finish_organize_categories: "Finish to organize categories or undo your changes.",
+    generic_success_description: "The operation was successful.",
   },
 
   /* generic */

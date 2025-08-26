@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from "react";
-import { useRouter } from "expo-router";
 import { Animated, Easing, StyleSheet, TouchableOpacity } from "react-native";
 import { PlusIcon } from "react-native-heroicons/outline";
 
 import { storeNote } from "@/libs/registry";
+import { useRouter } from "@/hooks/useRouter";
 
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
 
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   addBtn: {
     zIndex: 2,
     position: "absolute",
-    bottom: 40,
+    bottom: 60,
     right: 40,
     padding: PADDING_MARGIN.md,
     borderRadius: BORDER.normal,

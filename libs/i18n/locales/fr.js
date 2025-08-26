@@ -14,7 +14,8 @@ const fr = {
   changelog: {
     title: "Quoi de neuf?",
 
-    description_2_5_1: `• Ajout de la possibilité de réorganiser les notes par date de création et date de mise à jour.
+    description_2_5_2: `• Ajout de la possibilité de réorganiser les notes par date de création et date de mise à jour.
+• Ajout de la possibilité de changer de langue directement depuis les paramètres.
 • Refonte des modales.
 • Corrections diverses.`,
 
@@ -227,6 +228,7 @@ const fr = {
     interimResults: "Transcription en temps réel",
     continuous: "Arrêt manuel",
     language: "Langue",
+    language_default: "Par défaut (système)",
   },
   help: {
     title: "Aider",
@@ -444,6 +446,7 @@ const fr = {
     passphrase_wrong: "La phrase de passe que vous avez saisie est erronée.",
     are_you_sure_wipe: "Voulez-vous vraiment effacer vos données?\nVous perdrez toutes les notes et catégories créées.",
     finish_organize_categories: "Terminer pour organiser les catégories ou annuler vos modifications.",
+    generic_success_description: "L'opération a réussi.",
   },
 
   /* generic */

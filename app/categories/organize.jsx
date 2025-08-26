@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CheckIcon, PencilSquareIcon, XMarkIcon } from "react-native-heroicons/outline";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
+import SafeAreaView from "@/components/SafeAreaView";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 

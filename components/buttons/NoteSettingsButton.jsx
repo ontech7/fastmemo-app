@@ -1,6 +1,5 @@
 import React from "react";
 import * as LocalAuthentication from "expo-local-authentication";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
@@ -18,6 +17,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { storeNote } from "@/libs/registry";
 import { webhook } from "@/utils/webhook";
+import { useRouter } from "@/hooks/useRouter";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
