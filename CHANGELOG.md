@@ -1,11 +1,11 @@
-## v2.6.0
+## v2.5.2
 
 - Added support to switch app language
 - Various fixes:
 
 1. Added custom SafeAreaView because sometimes, in some devices, you encounter flickering bug at start up
 2. Added custom useRouter to avoid multiple-push if user clicks fast
-3. Updated and adapted @shopify/flash-list to 2.03
+3. Updated and adapted @shopify/flash-list to 2.0.3
 4. Reworked VirtualNumberKeyboard component
 5. Fixed report flag logic
 6. Fixed import/export success dialog and added description

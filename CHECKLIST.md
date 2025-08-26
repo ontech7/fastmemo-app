@@ -27,10 +27,8 @@
 - [x] Add max dimension of the note
 - [x] Add number of items and checked items in ToDo note
 - [x] Add max limit (3) to cloud sync devices
-- [x] Report an issue + Suggest to a friend
-- [x] Hidden notes
-- [x] Deep search
-- [ ] Add custom filters
-- [ ] Generate note snippets on fastmemo.vercel.app from Mobile App
-- [ ] Add remind-me push notifications
-- [ ] Add widgets
+- [x] Add report an issue + Suggest to a friend
+- [x] Add Hidden notes
+- [x] Add Deep search
+- [x] Add voice recognition on text and todo notes
+- [x] Add sortBy and order filters

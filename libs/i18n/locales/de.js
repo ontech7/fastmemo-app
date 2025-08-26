@@ -14,7 +14,8 @@ const de = {
   changelog: {
     title: "Was gibt's Neues?",
 
-    description_2_5_1: `• Möglichkeit hinzugefügt, Notizen nach Erstellungsdatum und Aktualisierungsdatum neu anzuordnen.
+    description_2_5_2: `• Möglichkeit hinzugefügt, Notizen nach Erstellungsdatum und Aktualisierungsdatum neu anzuordnen.
+• Möglichkeit hinzugefügt, die Sprache direkt in den Einstellungen zu ändern.
 • Überarbeitung der Modals.
 • Verschiedene Korrekturen.`,
 
