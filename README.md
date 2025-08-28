@@ -5,6 +5,8 @@
 
 Memo application for Mobile and Tablets, made in React Native using Expo.
 
+If you like it, ☕ [buy me a coffee](https://www.buymeacoffee.com/ontech7)
+
 (original release: **14/11/2022** - migration _newArch_: **11/08/2025**)
 
 # Build
