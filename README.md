@@ -104,3 +104,11 @@ It's worth noting that Google Firebase is a **free service**, making it an acces
 - [**React Redux**](https://react-redux.js.org/): A state-management library for React and React Native.
 - [**Redux Persist**](https://github.com/rt2zz/redux-persist): An add-on for React Redux to have an easy persistance of the data
   inside the app.
+
+# Credits
+
+Written by [Andrea Losavio](https://www.linkedin.com/in/andrea-losavio/).
+
+# Apologies
+
+*Disclaimer: when I started making this app, I was on another repo with Expo SDK 48 and React Navigation, using JavaScript instead of TypeScript. Now there is a new repo, migrated on Expo SDK 53 and using Expo Router and New Architecture. I'm sorry if it's still in JavaScript. Don't have time to convert it to TS.*
