@@ -5,15 +5,15 @@
 
 Memo application for Mobile and Tablets, made in React Native using Expo.
 
-If you like it, ☕ [buy me a coffee](https://www.buymeacoffee.com/ontech7)
+If you like it, kindly [buy me a coffee](https://www.buymeacoffee.com/ontech7) ☕
 
 (original release: **14/11/2022** - migration _newArch_: **11/08/2025**)
 
-# Build
+## Screenshots / Previews
 
 ![Build](https://i.imgur.com/YO8xtam.png)
 
-# Features
+## Features
 
 - [x] Notes creation
 - [x] Categories creation (title + icon)
@@ -38,7 +38,7 @@ If you like it, ☕ [buy me a coffee](https://www.buymeacoffee.com/ontech7)
 
 [(check CHANGELOG.md)](/CHANGELOG.md)
 
-# Cloud Sync with Google Firebase
+## Cloud Sync with Google Firebase
 
 ![Firebase](https://i.imgur.com/W9Uyfp7.png)
 
@@ -47,7 +47,7 @@ devices.
 The main goal is to ensure seamless and reliable synchronization between a local app and a Firestore app, using the API key,
 project ID, and app ID provided by Google Firebase.
 
-## Requirements
+### Requirements
 
 Before getting started, you need a Google account to create a Firestore app and obtain the necessary credentials for connection.
 
@@ -57,7 +57,7 @@ Make sure you have the following information:
 - **Project ID**: the unique identifier of the Firebase project.
 - **App ID**: the identifier of the app within the Firebase project.
 
-## Functionality
+### Functionality
 
 Cloud synchronization with Google Firebase is designed to be completely autonomous and on-demand.  
 It does not rely on a centralized database or real-time solution but allows for data upload and download between the local app
@@ -87,13 +87,23 @@ Here's how it works:
    accumulated. Once the device is back online, the accumulated changes are sent to the Firestore app to ensure complete
    synchronization.
 
-## Conclusion
-
 Cloud synchronization with Google Firebase offers a reliable and secure way to share and synchronize data across devices.  
 Leveraging the features of Firestore and the Firebase APIs, you can ensure seamless synchronization.  
 It's worth noting that Google Firebase is a **free service**, making it an accessible choice for everyone.
 
-# Libraries used
+## Bugs / Contribution
+If you encounter any bugs or experience issues while using **Fast Memo**, we kindly ask you to report the problem by opening an issue on this repository. Follow the steps below to report a bug:
+
+1) Click on the "Issues" tab at the top of the page.
+2) Click on "New Issue" to open a new issue.
+3) Describe the bug in as much detail as possible. Providing information such as the operating system, app version, the actions you took before the issue occurred, and any error messages will help us better understand the problem.
+4) Click "Submit new issue" to create your report.
+
+I will take care of the bugs and improve the Fast Memo experience. Please be patient and keep an eye on your issue for any updates or clarification requests from me.
+
+**I apprecciate if people will contribute to this project by doing pull requests!**
+
+## Libraries used
 
 - [**Expo**](https://expo.dev/): Open-source wrapper framework for building React Native apps, for iOS, Android and eventually
   web.
@@ -105,10 +115,10 @@ It's worth noting that Google Firebase is a **free service**, making it an acces
 - [**Redux Persist**](https://github.com/rt2zz/redux-persist): An add-on for React Redux to have an easy persistance of the data
   inside the app.
 
-# Credits
+## Credits
 
 Written by [Andrea Losavio](https://www.linkedin.com/in/andrea-losavio/).
 
-# Apologies
+## APPlogies
 
 *Disclaimer: when I started making this app, I was on another repo with Expo SDK 48 and React Navigation, using JavaScript instead of TypeScript. Now there is a new repo, migrated on Expo SDK 53 and using Expo Router and New Architecture. I'm sorry if it's still in JavaScript. Don't have time to convert it to TS.*
