@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { configs } from "@/configs";
 import * as Sentry from "@sentry/react-native";
 import * as Device from "expo-device";
-import * as FileSystem from "expo-file-system";
+import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import LottieView from "lottie-react-native";
 import { useTranslation } from "react-i18next";
@@ -58,7 +58,7 @@ export default function ReportScreen() {
   const store = useStore();
   const state = store.getState();
   // @ts-ignore
-  const isAvailableToReport = state.settings.reportDate ? new Date() >= state.settings.reportDate : true;
+  const isAvailableToReport = state.settings.reportDate ? new Date() >= new Date(state.settings.reportDate) : true;
 
   const logoAnimRef = useRef(null);
 
@@ -119,9 +119,16 @@ export default function ReportScreen() {
     if (result.canceled) return;
 
     const asset = result.assets[0];
-    const fileInfo = await FileSystem.getInfoAsync(asset.uri);
 
-    if (!fileInfo.exists) {
+    let file;
+
+    try {
+      file = new File(asset.uri);
+    } catch (e) {
+      file = null;
+    }
+
+    if (!file || !file.exists) {
       setReportMessage({
         title: null,
         description: t("report.messages.fileNotFound"),
@@ -130,7 +137,7 @@ export default function ReportScreen() {
       return;
     }
 
-    if (!isLessThan(fileInfo.size ?? 0, 5)) {
+    if (!isLessThan(file.size ?? 0, 5)) {
       setReportMessage({
         title: t("report.messages.size.title"),
         description: t("report.messages.size.text"),
