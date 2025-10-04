@@ -1,3 +1,11 @@
+## v2.5.3
+
+- Various fixes:
+
+1. Upgraded from Expo SDK 53 to 54
+2. Adapted new `expo-file-system` package
+3. Fixed report flag logic (for real)
+
 ## v2.5.2
 
 - Added support to switch app language

@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import * as Sentry from "@sentry/react-native";
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
-import { StorageAccessFramework } from "expo-file-system";
+import { Directory, File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { useTranslation } from "react-i18next";
 import { Keyboard, Platform } from "react-native";
@@ -67,13 +66,11 @@ export default function SectionItem_ExportImportData({ isLast }) {
 
       const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(exportData), secretPassphrase).toString();
 
-      // create local file and share it
-      const fileUri = FileSystem.cacheDirectory + `FastMemo_exportedData_${new Date().getTime()}.txt`;
-      await FileSystem.writeAsStringAsync(fileUri, encryptedData, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      const cacheFile = new File(Paths.cache, `FastMemo_exportedData_${Date.now()}.txt`);
+      cacheFile.create({ overwrite: true });
+      cacheFile.write(encryptedData, {});
 
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(cacheFile.uri, {
         dialogTitle: "Save file",
         UTI: "text/plain",
         mimeType: "text/plain",
@@ -93,9 +90,9 @@ export default function SectionItem_ExportImportData({ isLast }) {
 
   const exportData = async (secretPassphrase) => {
     try {
-      const permissions = await StorageAccessFramework.requestDirectoryPermissionsAsync();
+      const pickedDir = await Directory.pickDirectoryAsync();
 
-      if (!permissions.granted) {
+      if (!pickedDir || !pickedDir.exists) {
         return;
       }
 
@@ -107,15 +104,8 @@ export default function SectionItem_ExportImportData({ isLast }) {
 
       const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(exportData), secretPassphrase).toString();
 
-      let fileUri = await StorageAccessFramework.createFileAsync(
-        permissions.directoryUri,
-        `FastMemo_exportedData_${new Date().getTime()}.txt`,
-        "text/plain"
-      );
-
-      await FileSystem.writeAsStringAsync(fileUri, encryptedData, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      const outFile = pickedDir.createFile(`FastMemo_exportedData_${Date.now()}.txt`, "text/plain");
+      outFile.write(encryptedData, {});
 
       webhook(webhook_exportData, { action: "generic/export" });
 
@@ -138,16 +128,14 @@ export default function SectionItem_ExportImportData({ isLast }) {
       }
 
       const fileUri = result.assets[0].uri;
-
-      const asset = await FileSystem.getInfoAsync(fileUri);
-
-      if (!asset.exists) {
-        return;
+      let pickedFile;
+      try {
+        pickedFile = new File(fileUri);
+      } catch (e) {
+        pickedFile = null;
       }
-
-      const content = await FileSystem.readAsStringAsync(fileUri, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      if (!pickedFile || !pickedFile.exists) return;
+      const content = await pickedFile.text();
 
       const bytes = CryptoJS.AES.decrypt(content, secretPassphrase);
 

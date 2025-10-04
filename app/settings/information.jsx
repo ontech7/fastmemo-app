@@ -11,10 +11,10 @@ import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants
 import lottieJson from "../../assets/lottie/Logo.json";
 import BackButton from "../../components/buttons/BackButton";
 
-const REACT_VER = "19.0.0";
-const REACT_NATIVE_VER = "0.79.5";
+const REACT_VER = "19.1.0";
+const REACT_NATIVE_VER = "0.81.4";
 const FIREBASE_VER = "9.22.1";
-const EXPO_SDK_VER = "53.0.20";
+const EXPO_SDK_VER = "54.0.12";
 const HEROICONS_VER = "4.0.0";
 
 export default function InformationScreen() {
