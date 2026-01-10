@@ -6,6 +6,7 @@ import { MicrophoneIcon } from "react-native-heroicons/outline";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
+import { toast } from "@/utils/toast";
 import { selectorVoiceRecognition } from "@/slicers/settingsSlice";
 
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
@@ -37,6 +38,11 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }) {
     }
   });
 
+  useSpeechRecognitionEvent("error", (event) => {
+    console.warn("Speech recognition error:", event.error, event.message);
+    setRecognizing(false);
+  });
+
   const panelWidth = useSharedValue(52);
 
   useEffect(() => {
@@ -59,21 +65,42 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }) {
   }, [recognizing]);
 
   const handleStart = async () => {
-    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    try {
+      const isAvailable = ExpoSpeechRecognitionModule.isRecognitionAvailable();
 
-    if (!result.granted) {
+      if (!isAvailable) {
+        toast("Not available");
+        console.warn("Speech recognition not available");
+        return;
+      }
+
+      const currentPermissions = await ExpoSpeechRecognitionModule.getMicrophonePermissionsAsync();
+
+      let permissionGranted = currentPermissions.granted;
+
+      if (!permissionGranted) {
+        const result = await ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync();
+        permissionGranted = result.granted;
+      }
+
+      if (!permissionGranted) {
+        console.warn("Permissions not granted");
+        setRecognizing(false);
+        return;
+      }
+
+      setRecognizing(true);
+
+      ExpoSpeechRecognitionModule.start({
+        lang: selectors.language !== "system" ? selectors.language : Localization.getLocales()[0].languageTag || "en-US",
+        interimResults: selectors.interimResults,
+        continuous: selectors.continuous,
+        maxAlternatives: 1,
+      });
+    } catch (error) {
+      console.error("Error starting speech recognition:", error);
       setRecognizing(false);
-      return;
     }
-
-    setRecognizing(true);
-
-    ExpoSpeechRecognitionModule.start({
-      lang: selectors.language !== "default" ? selectors.language : Localization.getLocales()[0].languageTag || "en-US",
-      interimResults: selectors.interimResults,
-      continuous: selectors.continuous,
-      maxAlternatives: 1,
-    });
   };
 
   const handleStop = async () => {
