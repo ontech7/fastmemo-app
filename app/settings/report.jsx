@@ -58,7 +58,7 @@ export default function ReportScreen() {
   const store = useStore();
   const state = store.getState();
   // @ts-ignore
-  const isAvailableToReport = state.settings.reportDate ? new Date() >= state.settings.reportDate : true;
+  const isAvailableToReport = state.settings.reportDate ? new Date() >= new Date(state.settings.reportDate) : true;
 
   const logoAnimRef = useRef(null);
 

@@ -16,7 +16,8 @@
     "lint": "expo lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,md,json}\"",
     "format:diff": "prettier --write $(git diff --name-only | grep '.ts\\|.tsx\\|.js\\|.json\\|.md')",
-    "clean": "rm -rf node_modules .expo"
+    "clean:projects": "rm -rf android ios",
+    "clean:all": "rm -rf node_modules .expo android ios .expo-shared .eas"
   },
   "dependencies": {
     "@ontech7/react-native-dialog": "^1.1.2",
