@@ -83,11 +83,7 @@ export default Sentry.wrap(function RootLayout() {
                       options={{ headerShown: false, presentation: "transparentModal", animation: "fade_from_bottom" }}
                     />
                     <Stack.Screen
-                      name="notes/text"
-                      options={{ headerShown: false, presentation: "transparentModal", animation: "fade_from_bottom" }}
-                    />
-                    <Stack.Screen
-                      name="notes/todo"
+                      name="notes/[noteId]"
                       options={{ headerShown: false, presentation: "transparentModal", animation: "fade_from_bottom" }}
                     />
                     <Stack.Screen

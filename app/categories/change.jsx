@@ -1,30 +1,37 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CheckIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
 
-import { retrieveNote, storeNote } from "@/libs/registry";
 import { useRouter } from "@/hooks/useRouter";
 import BackButton from "@/components/buttons/BackButton";
 import OrderedCategoryCard from "@/components/cards/OrderedCategoryCard";
 import SafeAreaView from "@/components/SafeAreaView";
 import { getCategories } from "@/slicers/categoriesSlice";
-import { changeNoteCategory } from "@/slicers/notesSlice";
+import { changeNoteCategory, getNote } from "@/slicers/notesSlice";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 export default function ChangeCategoryScreen() {
   const { t } = useTranslation();
 
-  const note = retrieveNote();
+  const { noteId } = useLocalSearchParams();
+  const currentNote = useSelector(getNote(noteId));
 
-  const [selectedCategory, setSelectedCategory] = useState(note.category);
+  const [selectedCategory, setSelectedCategory] = useState(currentNote?.category);
   const categories = useSelector(getCategories);
 
   const router = useRouter();
 
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (!currentNote) {
+      router.back();
+    }
+  }, [currentNote, router]);
 
   const toggleCategory = useCallback((_selectedCategory) => {
     setSelectedCategory((prevCategory) => {
@@ -39,25 +46,14 @@ export default function ChangeCategoryScreen() {
   const updateExistentCategory = () => {
     dispatch(
       changeNoteCategory({
-        note,
+        note: currentNote,
         iconTo: selectedCategory.icon,
         nameTo: selectedCategory.name,
       })
     );
 
-    storeNote({
-      ...note,
-      category: {
-        order: note.category.order ?? 0,
-        icon: selectedCategory.icon,
-        name: selectedCategory.name,
-        index: selectedCategory.icon === "none",
-        selected: note.category.selected,
-      },
-    });
-
     router.dismiss();
-    router.replace((note.type || "text") === "text" ? "/notes/text" : "/notes/todo");
+    router.replace(`/notes/${currentNote.id}`);
   };
 
   return (

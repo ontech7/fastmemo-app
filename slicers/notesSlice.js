@@ -475,8 +475,7 @@ export const {
 } = notesSlice.actions;
 
 // Selectors
-export const getNoteIndex = (id) => (state) => state.items.findIndex((note) => note.id === id);
-
+export const getNote = (id) => (state) => state.notes.items.find((note) => note.id === id);
 export const getAllNotes = (state) => state.notes.items;
 export const getAllTrashedNotes = (state) => state.notes.temporaryItems;
 export const getCloudNotes = (state) => state.notes.cloud.items;

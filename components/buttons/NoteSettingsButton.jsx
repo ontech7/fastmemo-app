@@ -15,7 +15,6 @@ import {
 import { Menu, MenuOption, MenuOptions, MenuTrigger } from "react-native-popup-menu";
 import { useDispatch, useSelector } from "react-redux";
 
-import { storeNote } from "@/libs/registry";
 import { webhook } from "@/utils/webhook";
 import { useRouter } from "@/hooks/useRouter";
 
@@ -53,12 +52,11 @@ export default function NoteSettingsButton({ note, setNote }) {
 
   const toggleProtectedNoteFromItems = () => {
     if (!selectorFingerprintEnabled) {
-      storeNote(note);
-
       router.push({
         pathname: "/secret-code",
         params: {
           startPhase: "toggleProtectedNote",
+          noteId: id,
         },
       });
       return;
@@ -80,9 +78,12 @@ export default function NoteSettingsButton({ note, setNote }) {
   };
 
   const changeCategory = () => {
-    storeNote(note);
-
-    router.push("/categories/change");
+    router.push({
+      pathname: "/categories/change",
+      params: {
+        noteId: id,
+      },
+    });
   };
 
   return (

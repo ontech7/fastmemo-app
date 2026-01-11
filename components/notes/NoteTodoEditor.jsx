@@ -19,7 +19,7 @@ import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
 
-import { retrieveNote, storeDirtyNoteId } from "@/libs/registry";
+import { storeDirtyNoteId } from "@/libs/registry";
 import { formatDateTime } from "@/utils/date";
 import { capitalize, isStringEmpty } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
@@ -28,7 +28,6 @@ import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem";
-import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
   selectorWebhook_addTodoNote,
@@ -39,10 +38,8 @@ import {
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-export default function NoteTodoScreen() {
+export default function NoteTodoEditor({ initialNote }) {
   const { t } = useTranslation();
-
-  const { id, type, title, list, createdAt, updatedAt, date, category, important, readOnly, hidden, locked } = retrieveNote();
 
   const draggableListRef = useRef(null);
 
@@ -51,25 +48,12 @@ export default function NoteTodoScreen() {
   const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
 
-  const currentCategory = useSelector(getCurrentCategory);
-
   const dispatch = useDispatch();
 
-  /* note */
-
   const [note, setNote] = useState({
-    id: id || uuid(),
-    type: type || "todo",
-    title: title || "",
-    list: list?.length > 0 ? list : [{ id: uuid(), text: "", checked: false }],
-    createdAt: createdAt || Date.now(),
-    updatedAt: updatedAt || Date.now(),
-    date: date || formatDateTime(),
-    category: category || currentCategory,
-    important: important || false,
-    readOnly: readOnly || false,
-    hidden: hidden || false,
-    locked: locked || false,
+    ...initialNote,
+    type: initialNote.type || "todo",
+    list: initialNote.list?.length > 0 ? initialNote.list : [{ id: uuid(), text: "", checked: false }],
   });
 
   const isNewlyCreated = note.createdAt === note.updatedAt;
@@ -152,7 +136,7 @@ export default function NoteTodoScreen() {
     (titleVal) => {
       setNoteAsync({ ...note, title: titleVal });
     },
-    [note]
+    [note, setNoteAsync]
   );
 
   const setTextListItem = useCallback(
@@ -163,7 +147,7 @@ export default function NoteTodoScreen() {
 
       setNoteAsync({ ...note, list: mutableList });
     },
-    [note]
+    [note, setNoteAsync]
   );
 
   const checkListItem = useCallback(
@@ -181,7 +165,7 @@ export default function NoteTodoScreen() {
 
       setNoteAsync({ ...note, list: mutableList });
     },
-    [note]
+    [note, setNoteAsync]
   );
 
   const deleteListItem = useCallback(
@@ -194,7 +178,7 @@ export default function NoteTodoScreen() {
 
       setNoteAsync({ ...note, list: mutableList });
     },
-    [note]
+    [note, setNoteAsync]
   );
 
   const numberOfAllItems = useMemo(() => note.list.length, [note.list]);
@@ -218,7 +202,7 @@ export default function NoteTodoScreen() {
         },
       ],
     });
-  }, [note]);
+  }, [note, setNoteAsync]);
 
   const deleteAllList = useCallback(() => {
     if (note.readOnly) {
@@ -226,7 +210,7 @@ export default function NoteTodoScreen() {
     }
 
     setNoteAsync({ ...note, list: [] });
-  }, [note]);
+  }, [note, setNoteAsync]);
 
   const [hideDoneItems, setHideDoneItems] = useState(false);
 
@@ -234,39 +218,6 @@ export default function NoteTodoScreen() {
     setHideDoneItems((prev) => !prev);
   }, []);
 
-  /* change category */
-
-  useEffect(() => {
-    if (category?.icon && category.icon !== note.category?.icon) {
-      setNoteAsync({
-        ...note,
-        category,
-      });
-    }
-  }, [category?.icon]);
-
-  /* locked note */
-
-  useEffect(() => {
-    if (locked !== undefined && locked !== note.locked) {
-      setNoteAsync({
-        id,
-        type: type || "todo",
-        title,
-        list,
-        createdAt,
-        updatedAt,
-        date,
-        category,
-        important,
-        readOnly,
-        hidden,
-        locked,
-      });
-    }
-  }, [locked]);
-
-  // updateNote webhook
   const updateNoteWebhook = useCallback(async () => {
     const no_title = isStringEmpty(note.title);
     const no_list_items = !note.list?.length || (note.list?.length == 1 && isStringEmpty(note.list?.[0].text));

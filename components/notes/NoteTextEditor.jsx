@@ -8,9 +8,8 @@ import { BackHandler, Keyboard, Platform, StyleSheet, Text, TextInput, View } fr
 import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
 import { useDispatch, useSelector } from "react-redux";
-import uuid from "react-uuid";
 
-import { retrieveNote, storeDirtyNoteId } from "@/libs/registry";
+import { storeDirtyNoteId } from "@/libs/registry";
 import { formatDateTime } from "@/utils/date";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
 import { toast } from "@/utils/toast";
@@ -20,7 +19,6 @@ import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import SafeAreaView from "@/components/SafeAreaView";
-import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
   selectorWebhook_addTextNote,
@@ -31,46 +29,19 @@ import {
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-export default function NoteTextScreen() {
+export default function NoteTextEditor({ initialNote }) {
   const { t } = useTranslation();
-
-  const {
-    id,
-    type,
-    title,
-    text: initialText,
-    createdAt,
-    updatedAt,
-    date,
-    category,
-    important,
-    readOnly,
-    hidden,
-    locked: lockedParam,
-  } = retrieveNote();
 
   const webhook_addTextNote = useSelector(selectorWebhook_addTextNote);
   const webhook_updateNote = useSelector(selectorWebhook_updateNote);
   const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
 
-  const currentCategory = useSelector(getCurrentCategory);
-
   const dispatch = useDispatch();
 
   const [note, setNote] = useState({
-    id: id || uuid(),
-    type: type || "text",
-    title: title || "",
-    text: initialText || "",
-    createdAt: createdAt || Date.now(),
-    updatedAt: updatedAt || Date.now(),
-    date: date || formatDateTime(),
-    category: category || currentCategory,
-    important: important || false,
-    readOnly: readOnly || false,
-    hidden: hidden || false,
-    locked: lockedParam || false,
+    ...initialNote,
+    type: initialNote.type || "text",
   });
 
   const [noteTextLength, setNoteTextLength] = useState(getTextLength(note.text));
@@ -193,18 +164,6 @@ export default function NoteTextScreen() {
     [note, setNoteAsync, t]
   );
 
-  useEffect(() => {
-    if (category?.icon && category.icon !== note.category.icon) {
-      setNoteAsync({ ...note, category });
-    }
-  }, [category, note, setNoteAsync]);
-
-  useEffect(() => {
-    if (lockedParam !== undefined && lockedParam !== note.locked) {
-      setNoteAsync({ ...note, locked: lockedParam });
-    }
-  }, [lockedParam, note, setNoteAsync]);
-
   const updateNoteWebhook = useCallback(async () => {
     if (isStringEmpty(note.title) && isStringEmpty(note.text)) {
       await webhook(webhook_temporaryDeleteNote, {
@@ -311,7 +270,7 @@ export default function NoteTextScreen() {
           ref={richTextEditor}
           allowFileAccess={true}
           onChange={setText}
-          initialContentHTML={initialText}
+          initialContentHTML={initialNote.text}
           placeholder={t("note.description_placeholder")}
           pasteAsPlainText
           editorStyle={{
