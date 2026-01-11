@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
 import * as Localization from "expo-localization";
+import * as SplashScreen from "expo-splash-screen";
 import i18n from "i18next";
 import LottieView from "lottie-react-native";
 import { StyleSheet } from "react-native";
@@ -27,7 +28,10 @@ export default function LoadingScreen() {
 
   useEffect(() => {
     const playLottie = () => {
-      logoAnimRef.current?.play();
+      SplashScreen.hideAsync().catch(() => {});
+      setTimeout(() => {
+        logoAnimRef.current?.play();
+      }, 10);
     };
 
     progress.value = withTiming(1, { duration: 120, easing: Easing.linear }, (finished) => {
