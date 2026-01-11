@@ -92,14 +92,18 @@ Leveraging the features of Firestore and the Firebase APIs, you can ensure seaml
 It's worth noting that Google Firebase is a **free service**, making it an accessible choice for everyone.
 
 ## Bugs / Contribution
-If you encounter any bugs or experience issues while using **Fast Memo**, we kindly ask you to report the problem by opening an issue on this repository. Follow the steps below to report a bug:
 
-1) Click on the "Issues" tab at the top of the page.
-2) Click on "New Issue" to open a new issue.
-3) Describe the bug in as much detail as possible. Providing information such as the operating system, app version, the actions you took before the issue occurred, and any error messages will help us better understand the problem.
-4) Click "Submit new issue" to create your report.
+If you encounter any bugs or experience issues while using **Fast Memo**, we kindly ask you to report the problem by opening an
+issue on this repository. Follow the steps below to report a bug:
 
-I will take care of the bugs and improve the Fast Memo experience. Please be patient and keep an eye on your issue for any updates or clarification requests from me.
+1. Click on the "Issues" tab at the top of the page.
+2. Click on "New Issue" to open a new issue.
+3. Describe the bug in as much detail as possible. Providing information such as the operating system, app version, the actions
+   you took before the issue occurred, and any error messages will help us better understand the problem.
+4. Click "Submit new issue" to create your report.
+
+I will take care of the bugs and improve the Fast Memo experience. Please be patient and keep an eye on your issue for any
+updates or clarification requests from me.
 
 **I apprecciate if people will contribute to this project by doing pull requests!**
 
@@ -121,4 +125,6 @@ Written by [Andrea Losavio](https://www.linkedin.com/in/andrea-losavio/).
 
 ## APPlogies
 
-*Disclaimer: when I started making this app, I was on another repo with Expo SDK 48 and React Navigation, using JavaScript instead of TypeScript. Now there is a new repo, migrated on Expo SDK 53 and using Expo Router and New Architecture. I'm sorry if it's still in JavaScript. Don't have time to convert it to TS.*
+_Disclaimer: when I started making this app, I was on another repo with Expo SDK 48 and React Navigation, using JavaScript
+instead of TypeScript. Now there is a new repo, migrated on Expo SDK 53 and using Expo Router and New Architecture. I'm sorry if
+it's still in JavaScript. Don't have time to convert it to TS._

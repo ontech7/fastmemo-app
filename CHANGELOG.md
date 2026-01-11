@@ -1,3 +1,14 @@
+## v2.5.3
+
+- Various fixes:
+
+1. Fixed VoiceRecognitionButton not working anymore on Android 16
+2. Fixed report flag logic (for real)
+3. Fixed toggle protected note inside NoteSettings
+4. Changed `/notes/todo` and `/notes/text` routes to `/notes/[noteId]` orchestrator route
+5. Fixed route-change animations (some animations are inverted)
+6. Fixed splash animation sometimes it doesn't appear
+
 ## v2.5.2
 
 - Added support to switch app language

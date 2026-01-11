@@ -14,6 +14,8 @@ const en = {
   changelog: {
     title: "What's new?",
 
+    description_2_5_3: `• Various fixes.`,
+
     description_2_5_2: `• Added the ability to reorder notes by creation date and update date.
 • Added the ability to change language directly from settings.
 • Redesign of modals.
