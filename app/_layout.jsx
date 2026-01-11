@@ -100,11 +100,11 @@ export default Sentry.wrap(function RootLayout() {
                     />
                     <Stack.Screen
                       name="temporary-trash"
-                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_right" }}
+                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
                     />
                     <Stack.Screen
                       name="settings/general"
-                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_right" }}
+                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
                     />
                     <Stack.Screen
                       name="settings/cloud-sync/connect"
