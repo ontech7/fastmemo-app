@@ -5,7 +5,6 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, ListBulletIcon, StarIcon } from "react-native-heroicons/outline";
 import { useSelector } from "react-redux";
 
-import { storeNote } from "@/libs/registry";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
 import { useRouter } from "@/hooks/useRouter";
@@ -23,13 +22,6 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
   const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked } = content;
 
   const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
-
-  const navigateToNote = () => {
-    storeNote(content);
-
-    router.push((type || "text") === "text" ? "/notes/text" : "/notes/todo");
-  };
-
   const onLongPressHandler = () => {
     if (!isDeleteMode) {
       selectNote(id, locked);
@@ -45,7 +37,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
     }
 
     if (!locked) {
-      navigateToNote();
+      router.push(`/notes/${id}`);
       return;
     }
 
@@ -54,6 +46,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
         pathname: "/secret-code",
         params: {
           startPhase: "unlockCode",
+          noteId: id,
         },
       });
       return;
@@ -61,8 +54,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
 
     LocalAuthentication.authenticateAsync().then((authResult) => {
       if (authResult?.success) {
-        storeNote(content);
-        navigateToNote();
+        router.push(`/notes/${id}`);
       }
     });
   };

@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, TouchableOpacity } from "react-native";
 import { ListBulletIcon } from "react-native-heroicons/outline";
 
-import { storeNote } from "@/libs/registry";
 import { useRouter } from "@/hooks/useRouter";
 
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
@@ -36,8 +35,7 @@ export default function AddNoteTextButton({ isDeleteMode, toggleDeleteMode, styl
         activeOpacity={0.7}
         onPress={() => {
           if (!isDeleteMode) {
-            storeNote({});
-            router.push("/notes/todo");
+            router.push("/notes/new-todo");
           } else {
             toggleDeleteMode();
           }

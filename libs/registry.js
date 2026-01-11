@@ -4,15 +4,7 @@
 
 const registry = new Map();
 
-/* NOTE */
-
-export function storeNote(data) {
-  registry.set("note", data);
-}
-
-export function retrieveNote() {
-  return registry.get("note") || {};
-}
+/* NOTE - Dirty tracking */
 
 export function storeDirtyNoteId(uuid) {
   registry.set("dirtyNote", uuid);

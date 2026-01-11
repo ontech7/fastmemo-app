@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
-import { retrieveNote, retrieveSecretCodeCallback, storeNote } from "@/libs/registry";
+import { retrieveSecretCodeCallback } from "@/libs/registry";
 import { useRouter } from "@/hooks/useRouter";
 import SafeAreaView from "@/components/SafeAreaView";
 
@@ -14,7 +14,7 @@ import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles"
 
 import BackButton from "../components/buttons/BackButton";
 import CodeInput from "../components/inputs/CodeInput";
-import { toggleProtectedNotes } from "../slicers/notesSlice";
+import { getNote, toggleProtectedNotes } from "../slicers/notesSlice";
 import { selectorCurrentSecretCode, setSecretCode } from "../slicers/settingsSlice";
 
 const CODE_PHASE = {
@@ -32,10 +32,10 @@ const CODE_PHASE = {
 export default function SecretCodeScreen() {
   const { t } = useTranslation();
 
-  const note = retrieveNote();
   const callback = retrieveSecretCodeCallback();
 
-  const { startPhase, selectedNotes } = useLocalSearchParams();
+  const { startPhase, selectedNotes, noteId } = useLocalSearchParams();
+  const currentNote = useSelector(getNote(noteId));
 
   const [phase, setPhase] = useState(startPhase);
   const [code, setCode] = useState("");
@@ -86,7 +86,7 @@ export default function SecretCodeScreen() {
           return;
         }
 
-        router.replace((note.type || "text") === "text" ? "/notes/text" : "/notes/todo");
+        router.replace(`/notes/${currentNote.id}`);
 
         break;
       case "toggleProtectedNote":
@@ -95,9 +95,9 @@ export default function SecretCodeScreen() {
           return;
         }
 
-        storeNote({ ...note, locked: !note.locked });
+        dispatch(toggleProtectedNotes([`${currentNote.id}|${currentNote.locked}`]));
 
-        router.push((note.type || "text") === "text" ? "/notes/text" : "/notes/todo");
+        router.dismissTo(`/notes/${currentNote.id}`);
 
         break;
       case "toggleProtectedSelectedNotes":

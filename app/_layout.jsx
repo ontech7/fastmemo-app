@@ -83,11 +83,7 @@ export default Sentry.wrap(function RootLayout() {
                       options={{ headerShown: false, presentation: "transparentModal", animation: "fade_from_bottom" }}
                     />
                     <Stack.Screen
-                      name="notes/text"
-                      options={{ headerShown: false, presentation: "transparentModal", animation: "fade_from_bottom" }}
-                    />
-                    <Stack.Screen
-                      name="notes/todo"
+                      name="notes/[noteId]"
                       options={{ headerShown: false, presentation: "transparentModal", animation: "fade_from_bottom" }}
                     />
                     <Stack.Screen
@@ -104,11 +100,11 @@ export default Sentry.wrap(function RootLayout() {
                     />
                     <Stack.Screen
                       name="temporary-trash"
-                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_right" }}
+                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
                     />
                     <Stack.Screen
                       name="settings/general"
-                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_right" }}
+                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
                     />
                     <Stack.Screen
                       name="settings/cloud-sync/connect"
