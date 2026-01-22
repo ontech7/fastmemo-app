@@ -14,6 +14,10 @@ const de = {
   changelog: {
     title: "Was gibt's Neues?",
 
+    description_2_6_0: `• Notiztyp Kanban hinzugefügt.
+• Startseite beim Drücken von „+“ überarbeitet.
+• Notiztyp als Abzeichen oben neu gestaltet.`,
+
     description_2_5_3: `• Verschiedene Korrekturen.`,
 
     description_2_5_2: `• Möglichkeit hinzugefügt, Notizen nach Erstellungsdatum und Aktualisierungsdatum neu anzuordnen.
@@ -114,6 +118,11 @@ const de = {
     on: "von",
     created: "Erstellt: ",
     updated: "Geändert: ",
+    type: {
+      todo: "Liste",
+      kanban: "Kanban",
+      text: "Text",
+    },
     settings: {
       delete: "Löschen",
       important: "Wichtig",
@@ -123,6 +132,17 @@ const de = {
       changecategory: "Kategorie ändern",
       share: "Aktie",
     },
+  },
+  kanban: {
+    add_column: "Spalte hinzufügen",
+    add_card: "Karte hinzufügen",
+    column_name_placeholder: "Spaltenname",
+    delete_column: "Spalte löschen",
+    move_to: "Verschieben nach",
+    no_columns: "Keine Spalten.\nFügen Sie eine hinzu, um zu beginnen.",
+    no_cards: "Keine Karten",
+    columns_count: "Spalten",
+    cards_count: "Karten",
   },
   changecategory: {
     title: "Kategorie ändern",
@@ -169,6 +189,7 @@ const de = {
     title: "Webhooks",
     addTextNote: "Textnotiz hinzufügen",
     addTodoNote: "Todo-Notiz hinzufügen",
+    addKanbanNote: "Kanban-Notiz hinzufügen",
     updateNote: "Nota de actualización",
     temporaryDeleteNote: "Notiz vorübergehend löschen",
     deleteNote: "Notiz löschen",

@@ -15,8 +15,7 @@ import { toggleWithSecret } from "@/utils/crypt";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 import { useRouter } from "@/hooks/useRouter";
-import AddNoteTextButton from "@/components/buttons/AddNoteTextButton";
-import AddNoteTodoButton from "@/components/buttons/AddNoteTodoButton";
+import AddNoteOverlayButton from "@/components/buttons/AddNoteOverlayButton";
 import DeleteNotesButton from "@/components/buttons/DeleteNotesButton";
 import FavoriteNotesButton from "@/components/buttons/FavoriteNotesButton";
 import HiddenNotesButton from "@/components/buttons/HiddenNotesButton";
@@ -417,9 +416,7 @@ export default function HomeScreen() {
           <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
         </Animated.View>
 
-        <AddNoteTodoButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
-
-        <AddNoteTextButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
+        <AddNoteOverlayButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
       </KeyboardAvoidingView>
     </>
   );

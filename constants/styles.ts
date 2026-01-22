@@ -16,6 +16,8 @@ export const COLOR = {
   importantIcon: "#B66465",
   yellow: "#EEE78E",
   darkYellow: "#D8D28B",
+  oceanBreeze: "#A7C7F4",
+  darkOceanBreeze: "#799EDC",
 } as const;
 
 export const FONTSIZE = {

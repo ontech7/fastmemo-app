@@ -14,6 +14,10 @@ const ja = {
   changelog: {
     title: "新着情報",
 
+    description_2_6_0: `• カンバンタイプのノートを追加。
+• 「+」を押したときのホームのデザインを再設計。
+• ノートのタイプは上部のバッジとして表示されるように再設計。`,
+
     description_2_5_3: `• 各種修正。`,
 
     description_2_5_2: `• ノートを作成日と更新日で並べ替える機能を追加。
@@ -114,6 +118,11 @@ const ja = {
     on: "オン",
     created: "作成: ",
     updated: "更新: ",
+    type: {
+      todo: "リスト",
+      kanban: "カンバン",
+      text: "テキスト",
+    },
     settings: {
       delete: "削除",
       important: "重要",
@@ -123,6 +132,17 @@ const ja = {
       changecategory: "カテゴリを変更",
       share: "共有",
     },
+  },
+  kanban: {
+    add_column: "列を追加",
+    add_card: "カードを追加",
+    column_name_placeholder: "列名",
+    delete_column: "列を削除",
+    move_to: "移動先",
+    no_columns: "列がありません。\n追加して開始してください。",
+    no_cards: "カードがありません",
+    columns_count: "列",
+    cards_count: "カード",
   },
   changecategory: {
     title: "カテゴリーの変更",
@@ -169,6 +189,7 @@ const ja = {
     title: "Webhooks",
     addTextNote: "テキストノートを追加",
     addTodoNote: "ToDoノートを追加",
+    addKanbanNote: "カンバンノートを追加",
     updateNote: "ノートを更新",
     temporaryDeleteNote: "一時的にノートを削除",
     deleteNote: "ノートを削除",

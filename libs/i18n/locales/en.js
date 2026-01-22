@@ -14,6 +14,10 @@ const en = {
   changelog: {
     title: "What's new?",
 
+    description_2_6_0: `• Added Kanban type note.
+• Redesigned Home action menu when pressing “+”.
+• Redesigned note type as a badge at the top.`,
+
     description_2_5_3: `• Various fixes.`,
 
     description_2_5_2: `• Added the ability to reorder notes by creation date and update date.
@@ -114,6 +118,11 @@ const en = {
     on: "on",
     created: "Created: ",
     updated: "Updated: ",
+    type: {
+      todo: "To-Do",
+      kanban: "Kanban",
+      text: "Text",
+    },
     settings: {
       delete: "Delete",
       important: "Important",
@@ -123,6 +132,17 @@ const en = {
       changecategory: "Change Category",
       share: "Share",
     },
+  },
+  kanban: {
+    add_column: "Add column",
+    add_card: "Add card",
+    column_name_placeholder: "Column name",
+    delete_column: "Delete column",
+    move_to: "Move to",
+    no_columns: "No columns.\nAdd one to get started.",
+    no_cards: "No cards",
+    columns_count: "columns",
+    cards_count: "cards",
   },
   changecategory: {
     title: "Change Category",
@@ -169,6 +189,7 @@ const en = {
     title: "Webhooks",
     addTextNote: "Add Text Note",
     addTodoNote: "Add Todo Note",
+    addKanbanNote: "Add Kanban Note",
     updateNote: "Update Note",
     temporaryDeleteNote: "Temporary Delete Note",
     deleteNote: "Delete Note",

@@ -2,7 +2,7 @@ import { memo } from "react";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, ListBulletIcon, StarIcon } from "react-native-heroicons/outline";
+import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, StarIcon } from "react-native-heroicons/outline";
 import { useSelector } from "react-redux";
 
 import { formatDateTime, reverseDate } from "@/utils/date";
@@ -67,9 +67,11 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
       style={[
         styles.container,
         type == "todo" && styles.containerTodo,
+        type == "kanban" && styles.containerKanban,
         important && styles.importantContainer,
         isSelected && styles.selectedContainer,
         isSelected && type == "todo" && styles.selectedContainerTodo,
+        isSelected && type == "kanban" && styles.selectedContainerKanban,
         important && isSelected && styles.selectedImportantContainer,
         hidden && styles.hiddenContainer,
         isDeleteMode && styles.containerDeleteMode,
@@ -77,16 +79,8 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
       onPress={onPressHandler}
       onLongPress={onLongPressHandler}
     >
-      {type == "todo" && (
-        <ListBulletIcon
-          style={[styles.iconTodoList, isDeleteMode && styles.iconTypeDeleteMode]}
-          size={14}
-          color={importantColor}
-        />
-      )}
-
       {hidden && (
-        <EyeSlashIcon style={[styles.iconHidden, isDeleteMode && styles.iconTypeDeleteMode]} size={14} color={importantColor} />
+        <EyeSlashIcon style={[styles.iconHidden, isDeleteMode && styles.iconDeleteMode]} size={14} color={importantColor} />
       )}
 
       {!category.index && (
@@ -96,6 +90,20 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
       )}
 
       <View style={{ width: !isDeleteMode ? "85%" : "82%" }}>
+        {type && type !== "text" && (
+          <View
+            style={[
+              styles.typeBadge,
+              type === "todo" && styles.typeBadgeTodo,
+              type === "kanban" && styles.typeBadgeKanban,
+              isSelected && type === "todo" && styles.typeBadgeTodoSelected,
+              isSelected && type === "kanban" && styles.typeBadgeKanbanSelected,
+              important && styles.typeBadgeImportant,
+            ]}
+          >
+            <Text style={[styles.typeBadgeText, important && styles.typeBadgeTextImportant]}>{t(`note.type.${type}`)}</Text>
+          </View>
+        )}
         <Text style={[styles.title, important && styles.titleImportant]} numberOfLines={1} ellipsizeMode="tail">
           {isStringEmpty(title) ? t("empty_title") : title}
         </Text>
@@ -156,11 +164,17 @@ const styles = StyleSheet.create({
   containerTodo: {
     backgroundColor: COLOR.yellow,
   },
+  containerKanban: {
+    backgroundColor: COLOR.oceanBreeze,
+  },
   selectedContainer: {
     backgroundColor: COLOR.lightBlue,
   },
   selectedContainerTodo: {
     backgroundColor: COLOR.darkYellow,
+  },
+  selectedContainerKanban: {
+    backgroundColor: COLOR.darkOceanBreeze,
   },
   deleteMode: {
     position: "absolute",
@@ -190,13 +204,42 @@ const styles = StyleSheet.create({
   selectedImportantContainer: { backgroundColor: COLOR.darkImportant },
   hiddenContainer: { opacity: 0.5 },
   iconDeleteMode: { right: 40 },
-  iconTypeDeleteMode: { right: 60 },
   iconCategory: { marginRight: PADDING_MARGIN.md },
   iconFavorite: { position: "absolute", top: 10, right: 10 },
   iconLocked: { position: "absolute", top: 27, right: 10 },
   iconReadOnly: { position: "absolute", top: 44, right: 10 },
   iconHidden: { position: "absolute", top: 61, right: 10 },
-  iconTodoList: { position: "absolute", top: 10, right: 30 },
+  typeBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER.small,
+    marginBottom: PADDING_MARGIN.sm,
+  },
+  typeBadgeTodo: {
+    backgroundColor: COLOR.darkYellow,
+  },
+  typeBadgeTodoSelected: {
+    backgroundColor: COLOR.yellow,
+  },
+  typeBadgeKanban: {
+    backgroundColor: COLOR.darkOceanBreeze,
+  },
+  typeBadgeKanbanSelected: {
+    backgroundColor: COLOR.oceanBreeze,
+  },
+  typeBadgeImportant: {
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+  },
+  typeBadgeText: {
+    fontSize: 10,
+    fontWeight: FONTWEIGHT.semiBold,
+    color: COLOR.darkBlue,
+    textTransform: "uppercase",
+  },
+  typeBadgeTextImportant: {
+    color: COLOR.softWhite,
+  },
   title: {
     fontSize: FONTSIZE.cardTitle,
     fontWeight: FONTWEIGHT.semiBold,

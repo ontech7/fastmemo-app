@@ -14,6 +14,10 @@ const es = {
   changelog: {
     title: "¿Qué hay de nuevo?",
 
+    description_2_6_0: `• Se agregó nota de tipo Kanban.
+• Rediseño de la Home al presionar “+”.
+• El tipo de nota ahora es una insignia en la parte superior.`,
+
     description_2_5_3: `• Varias correcciones.`,
 
     description_2_5_2: `• Se agregó la posibilidad de reordenar las notas por fecha de creación y fecha de actualización.
@@ -114,6 +118,11 @@ const es = {
     on: "de",
     created: "Creado: ",
     updated: "Modificado: ",
+    type: {
+      todo: "Lista",
+      kanban: "Kanban",
+      text: "Texto",
+    },
     settings: {
       delete: "Borrar",
       important: "Importante",
@@ -123,6 +132,17 @@ const es = {
       changecategory: "Cambiar categoría",
       share: "Compartir",
     },
+  },
+  kanban: {
+    add_column: "Agregar columna",
+    add_card: "Agregar tarjeta",
+    column_name_placeholder: "Nombre de columna",
+    delete_column: "Eliminar columna",
+    move_to: "Mover a",
+    no_columns: "No hay columnas.\nAgregue una para comenzar.",
+    no_cards: "Sin tarjetas",
+    columns_count: "columnas",
+    cards_count: "tarjetas",
   },
   changecategory: {
     title: "Cambiar Categoría",
@@ -169,6 +189,7 @@ const es = {
     título: "Webhooks",
     addTextNote: "Agregar nota de texto",
     addTodoNote: "Agregar Nota Todo",
+    addKanbanNote: "Agregar Nota Kanban",
     updateNote: "Nota de actualización",
     temporaryDeleteNote: "Nota de borrado temporal",
     deleteNote: "Borrar nota",

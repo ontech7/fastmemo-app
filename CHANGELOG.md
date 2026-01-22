@@ -1,3 +1,9 @@
+## v2.6.0
+
+- Added new note type: Kanban note
+- Redesigned Home action UI when pressing “+”
+- Redesigned note type indicator: now shown as a badge at the top
+
 ## v2.5.3
 
 - Various fixes:
