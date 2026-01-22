@@ -14,6 +14,10 @@ const fr = {
   changelog: {
     title: "Quoi de neuf?",
 
+    description_2_6_0: `• Ajout d’une note de type Kanban.
+• Refonte de l’écran d’accueil lors de l’appui sur « + ».
+• Le type de note est désormais affiché comme un badge en haut.`,
+
     description_2_5_3: `• Corrections diverses.`,
 
     description_2_5_2: `• Ajout de la possibilité de réorganiser les notes par date de création et date de mise à jour.
@@ -114,6 +118,11 @@ const fr = {
     on: "sur",
     created: "Créé: ",
     updated: "Modifié: ",
+    type: {
+      todo: "Liste",
+      kanban: "Kanban",
+      text: "Texte",
+    },
     settings: {
       delete: "Supprimer",
       important: "Important",
@@ -123,6 +132,17 @@ const fr = {
       changecategory: "Changer de catégorie",
       share: "Partager",
     },
+  },
+  kanban: {
+    add_column: "Ajouter une colonne",
+    add_card: "Ajouter une carte",
+    column_name_placeholder: "Nom de la colonne",
+    delete_column: "Supprimer la colonne",
+    move_to: "Déplacer vers",
+    no_columns: "Aucune colonne.\nAjoutez-en une pour commencer.",
+    no_cards: "Aucune carte",
+    columns_count: "colonnes",
+    cards_count: "cartes",
   },
   changecategory: {
     title: "Changer de Catégorie",
@@ -169,6 +189,7 @@ const fr = {
     title: "Webhooks",
     addTextNote: "Ajouter une note textuelle",
     addTodoNote: "Ajouter une note de tâche",
+    addKanbanNote: "Ajouter une note Kanban",
     updateNote: "Note de mise à jour",
     temporaryDeleteNote: "Note de suppression temporaire",
     deleteNote: "Supprimer la note",

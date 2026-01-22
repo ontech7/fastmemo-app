@@ -14,6 +14,10 @@ const zh = {
   changelog: {
     title: "什么是新的？",
 
+    description_2_6_0: `• 新增看板类型笔记。
+• 重新设计主页在点击“+”时的界面。
+• 笔记类型现在以顶部徽章显示。`,
+
     description_2_5_3: `• 各种修复。`,
 
     description_2_5_2: `• 新增按创建日期和更新日期重新排序笔记的功能。
@@ -114,6 +118,11 @@ const zh = {
     on: "上に",
     created: "创建: ",
     updated: "修改: ",
+    type: {
+      todo: "列表",
+      kanban: "看板",
+      text: "文本",
+    },
     settings: {
       delete: "删除",
       important: "重要的",
@@ -123,6 +132,17 @@ const zh = {
       changecategory: "更改类别",
       share: "分享",
     },
+  },
+  kanban: {
+    add_column: "添加列",
+    add_card: "添加卡片",
+    column_name_placeholder: "列名",
+    delete_column: "删除列",
+    move_to: "移动到",
+    no_columns: "没有列。\n添加一个以开始。",
+    no_cards: "没有卡片",
+    columns_count: "列",
+    cards_count: "卡片",
   },
   changecategory: {
     title: "更改类别",
@@ -169,6 +189,7 @@ const zh = {
     title: "网络钩子",
     addTextNote: "添加文本注释",
     addTodoNote: "添加待办事项",
+    addKanbanNote: "添加看板笔记",
     updateNote: "更新说明",
     temporaryDeleteNote: "临时删除笔记",
     deleteNote: "删除笔记",

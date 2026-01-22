@@ -22,6 +22,7 @@ const initialState = {
   webhooks: {
     addTextNote: { url: "", enabled: false },
     addTodoNote: { url: "", enabled: false },
+    addKanbanNote: { url: "", enabled: false },
     updateNote: { url: "", enabled: false },
     temporaryDeleteNote: { url: "", enabled: false },
     deleteNote: { url: "", enabled: false },
@@ -112,6 +113,7 @@ export const getCloudConnected = (state) => state.settings.cloudConnected;
 export const selectorWebhooks = (state) => state.settings.webhooks;
 export const selectorWebhook_addTextNote = (state) => state.settings.webhooks.addTextNote;
 export const selectorWebhook_addTodoNote = (state) => state.settings.webhooks.addTodoNote;
+export const selectorWebhook_addKanbanNote = (state) => state.settings.webhooks.addKanbanNote;
 export const selectorWebhook_updateNote = (state) => state.settings.webhooks.updateNote;
 export const selectorWebhook_temporaryDeleteNote = (state) => state.settings.webhooks.temporaryDeleteNote;
 export const selectorWebhook_deleteNote = (state) => state.settings.webhooks.deleteNote;

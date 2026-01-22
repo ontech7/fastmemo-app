@@ -1,6 +1,6 @@
 ![Fast Memo](https://i.imgur.com/dPRR6pJ.png)
 
-![version](https://badgen.net/badge/version/v2.5.2/blue) ![Android](https://badgen.net/badge/android/deployed/green)
+![version](https://badgen.net/badge/version/v2.6.0/blue) ![Android](https://badgen.net/badge/android/deployed/green)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey) ![web](https://badgen.net/badge/web/coming%20soon/black)
 
 Memo application for Mobile and Tablets, made in React Native using Expo.
@@ -34,6 +34,7 @@ If you like it, kindly [buy me a coffee](https://www.buymeacoffee.com/ontech7) â
 - [x] Deep search
 - [x] Reorder notes by createdAt and updatedAt dates
 - [x] Voice recognition on text and todo notes
+- [x] Kanban note
 - [ ] ...
 
 [(check CHANGELOG.md)](/CHANGELOG.md)

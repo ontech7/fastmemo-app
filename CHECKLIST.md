@@ -32,3 +32,4 @@
 - [x] Add Deep search
 - [x] Add voice recognition on text and todo notes
 - [x] Add sortBy and order filters
+- [x] Kanban note
