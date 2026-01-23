@@ -14,7 +14,7 @@ const en = {
   changelog: {
     title: "What's new?",
 
-    description_2_6_0: `• Added Kanban type note.
+    description_2_6_1: `• Added Kanban type note.
 • Redesigned Home action menu when pressing “+”.
 • Redesigned note type as a badge at the top.`,
 

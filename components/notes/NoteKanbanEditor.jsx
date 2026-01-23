@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { KanbanDragProvider } from "@/contexts/KanbanDragContext";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Keyboard, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { BackHandler, Keyboard, Platform, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PlusIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
@@ -14,7 +14,6 @@ import { isStringEmpty } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
-import KanbanColumn from "@/components/kanban/KanbanColumn";
 import SafeAreaView from "@/components/SafeAreaView";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
@@ -24,12 +23,18 @@ import {
   selectorWebhook_updateNote,
 } from "@/slicers/settingsSlice";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-const COLUMN_COLORS = ["#EEE78E", "#A7ABB9", "#B66465", "#B9B5A7", "#DAD9DE"];
+import KanbanBoard from "../kanban/KanbanBoard";
+
+const COLUMN_PEEK = 40;
 
 export default function NoteKanbanEditor({ initialNote }) {
   const { t } = useTranslation();
+  const { width: screenWidth } = useWindowDimensions();
+
+  const columnWidth = screenWidth - PADDING_MARGIN.lg * 2 - COLUMN_PEEK;
+  const snapInterval = columnWidth + PADDING_MARGIN.md;
 
   const webhook_addKanbanNote = useSelector(selectorWebhook_addKanbanNote);
   const webhook_updateNote = useSelector(selectorWebhook_updateNote);
@@ -37,12 +42,15 @@ export default function NoteKanbanEditor({ initialNote }) {
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
 
   const dispatch = useDispatch();
+  const scrollViewRef = useRef(null);
 
   const [note, setNote] = useState({
     ...initialNote,
     type: initialNote.type || "kanban",
     columns:
-      initialNote.columns?.length > 0 ? initialNote.columns : [{ id: uuid(), name: "", color: COLUMN_COLORS[0], items: [] }],
+      initialNote.columns?.length > 0
+        ? initialNote.columns
+        : [{ id: uuid(), name: "", color: KANBAN_COLUMN_COLORS[0], items: [] }],
   });
 
   const isNewlyCreated = note.createdAt === note.updatedAt;
@@ -129,111 +137,7 @@ export default function NoteKanbanEditor({ initialNote }) {
     [note, setNoteAsync]
   );
 
-  /* Column operations */
-
-  const addColumn = useCallback(() => {
-    if (note.readOnly) return;
-    if (note.columns.length >= 5) return;
-
-    const colorIndex = note.columns.length % COLUMN_COLORS.length;
-    setNoteAsync({
-      ...note,
-      columns: [
-        ...note.columns,
-        {
-          id: uuid(),
-          name: "",
-          color: COLUMN_COLORS[colorIndex],
-          items: [],
-        },
-      ],
-    });
-  }, [note, setNoteAsync]);
-
-  const setColumnName = useCallback(
-    (columnId, name) => {
-      const columns = note.columns.map((col) => (col.id === columnId ? { ...col, name } : col));
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
-  );
-
-  const setColumnColor = useCallback(
-    (columnId, color) => {
-      const columns = note.columns.map((col) => (col.id === columnId ? { ...col, color } : col));
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
-  );
-
-  const deleteColumn = useCallback(
-    (columnId) => {
-      if (note.readOnly) return;
-
-      const columns = note.columns.filter((col) => col.id !== columnId);
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
-  );
-
-  /* Card operations */
-
-  const addCard = useCallback(
-    (columnId) => {
-      if (note.readOnly) return;
-
-      const columns = note.columns.map((col) => {
-        if (col.id !== columnId) return col;
-        return {
-          ...col,
-          items: [...col.items, { id: uuid(), text: "", createdAt: Date.now() }],
-        };
-      });
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
-  );
-
-  const setCardText = useCallback(
-    (columnId, cardId, text) => {
-      const columns = note.columns.map((col) => {
-        if (col.id !== columnId) return col;
-        return {
-          ...col,
-          items: col.items.map((item) => (item.id === cardId ? { ...item, text } : item)),
-        };
-      });
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
-  );
-
-  const deleteCard = useCallback(
-    (columnId, cardId) => {
-      if (note.readOnly) return;
-
-      const columns = note.columns.map((col) => {
-        if (col.id !== columnId) return col;
-        return {
-          ...col,
-          items: col.items.filter((item) => item.id !== cardId),
-        };
-      });
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
-  );
-
-  const reorderCards = useCallback(
-    (columnId, newItems) => {
-      const columns = note.columns.map((col) => {
-        if (col.id !== columnId) return col;
-        return { ...col, items: newItems };
-      });
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
-  );
+  /* Card movement for drag provider */
 
   const moveCard = useCallback(
     (cardId, fromColumnId, toColumnId, toIndex) => {
@@ -264,10 +168,16 @@ export default function NoteKanbanEditor({ initialNote }) {
     [note, setNoteAsync]
   );
 
-  /* Stats */
-
-  const numberOfColumns = useMemo(() => note.columns.length, [note.columns]);
-  const numberOfCards = useMemo(() => note.columns.reduce((acc, col) => acc + col.items.length, 0), [note.columns]);
+  const reorderCards = useCallback(
+    (columnId, newItems) => {
+      const columns = note.columns.map((col) => {
+        if (col.id !== columnId) return col;
+        return { ...col, items: newItems };
+      });
+      setNoteAsync({ ...note, columns });
+    },
+    [note, setNoteAsync]
+  );
 
   /* Webhook on back */
 
@@ -324,12 +234,6 @@ export default function NoteKanbanEditor({ initialNote }) {
     }, [])
   );
 
-  const [autoFocus, setAutoFocus] = useState(false);
-
-  useEffect(() => {
-    setTimeout(() => setAutoFocus(true), 20);
-  }, []);
-
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
@@ -350,56 +254,26 @@ export default function NoteKanbanEditor({ initialNote }) {
 
             <NoteSettingsButton note={note} setNote={setNoteAsync} />
           </View>
-
-          <View style={styles.subtitleWrapper}>
-            <Text style={[styles.subtitle, { flexGrow: 1 }]}>
-              {numberOfColumns} {t("kanban.columns_count")} | {numberOfCards} {t("kanban.cards_count")}
-            </Text>
-          </View>
         </View>
 
         <View style={styles.boardContainer}>
           <GestureHandlerRootView style={{ flex: 1 }}>
-            {note.columns.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.columnsScrollView}>
-                {note.columns.map((column) => (
-                  <KanbanColumn
-                    key={column.id}
-                    column={column}
-                    columns={note.columns}
-                    setColumnName={setColumnName}
-                    setColumnColor={setColumnColor}
-                    deleteColumn={deleteColumn}
-                    setCardText={setCardText}
-                    deleteCard={deleteCard}
-                    addCard={addCard}
-                    moveCard={moveCard}
-                    reorderCards={reorderCards}
-                    disabled={note.readOnly}
-                    autoFocus={autoFocus}
-                    t={t}
-                  />
-                ))}
-
-                {/* Add Column Button */}
-                {!note.readOnly && note.columns.length < 5 && (
-                  <TouchableOpacity activeOpacity={0.7} style={styles.addColumnButton} onPress={addColumn}>
-                    <PlusIcon size={32} color={COLOR.lightBlue} />
-                    <Text style={styles.addColumnText}>{t("kanban.add_column")}</Text>
-                  </TouchableOpacity>
-                )}
-              </ScrollView>
-            ) : (
-              <View style={styles.emptyBoard}>
-                <Text style={styles.emptyBoardText}>{t("kanban.no_columns")}</Text>
-                {!note.readOnly && (
-                  <TouchableOpacity activeOpacity={0.7} style={styles.addFirstColumnButton} onPress={addColumn}>
-                    <PlusIcon size={24} color={COLOR.darkBlue} />
-                    <Text style={styles.addFirstColumnText}>{t("kanban.add_column")}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
+            <KanbanDragProvider
+              columns={note.columns}
+              onMoveCard={moveCard}
+              onReorderCards={reorderCards}
+              scrollViewRef={scrollViewRef}
+              columnWidth={columnWidth}
+              columnGap={PADDING_MARGIN.md}
+            >
+              <KanbanBoard
+                note={note}
+                setNoteAsync={setNoteAsync}
+                columnWidth={columnWidth}
+                snapInterval={snapInterval}
+                scrollViewRef={scrollViewRef}
+              />
+            </KanbanDragProvider>
           </GestureHandlerRootView>
         </View>
       </SafeAreaView>
@@ -431,76 +305,8 @@ const styles = StyleSheet.create({
     color: COLOR.softWhite,
     borderRadius: BORDER.normal,
   },
-  subtitleWrapper: {
-    flexGrow: 1,
-    marginTop: PADDING_MARGIN.sm,
-    marginHorizontal: PADDING_MARGIN.xl,
-    flexDirection: "row",
-  },
-  subtitle: {
-    marginTop: PADDING_MARGIN.xs,
-    textAlign: "center",
-    fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.lightBlue,
-  },
-  maxColumnsText: {
-    color: "#B66465",
-    fontWeight: FONTWEIGHT.semiBold,
-  },
-  remainingText: {
-    color: COLOR.lightBlue,
-    fontWeight: FONTWEIGHT.semiBold,
-  },
   boardContainer: {
     flex: 1,
     marginTop: PADDING_MARGIN.lg,
-  },
-  columnsScrollView: {
-    paddingHorizontal: PADDING_MARGIN.lg,
-    paddingBottom: PADDING_MARGIN.lg,
-  },
-  addColumnButton: {
-    width: 170,
-    height: SIZE.full,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
-    borderStyle: "dashed",
-    borderRadius: BORDER.normal,
-  },
-  addColumnText: {
-    marginTop: PADDING_MARGIN.sm,
-    fontSize: FONTSIZE.small,
-    color: COLOR.lightBlue,
-    textAlign: "center",
-  },
-  emptyBoard: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: PADDING_MARGIN.xl,
-  },
-  emptyBoardText: {
-    color: COLOR.placeholder,
-    fontSize: FONTSIZE.cardTitle,
-    textAlign: "center",
-    lineHeight: 25,
-  },
-  addFirstColumnButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: PADDING_MARGIN.lg,
-    paddingVertical: PADDING_MARGIN.md,
-    paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.lightBlue,
-    borderRadius: BORDER.normal,
-  },
-  addFirstColumnText: {
-    marginLeft: PADDING_MARGIN.sm,
-    fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.darkBlue,
   },
 });

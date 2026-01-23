@@ -14,7 +14,7 @@ const es = {
   changelog: {
     title: "¿Qué hay de nuevo?",
 
-    description_2_6_0: `• Se agregó nota de tipo Kanban.
+    description_2_6_1: `• Se agregó nota de tipo Kanban.
 • Rediseño de la Home al presionar “+”.
 • El tipo de nota ahora es una insignia en la parte superior.`,
 

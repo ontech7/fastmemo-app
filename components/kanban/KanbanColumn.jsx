@@ -1,75 +1,49 @@
-import React, { useCallback } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import DraggableFlatList from "react-native-draggable-flatlist";
+import React, { useCallback, useEffect, useRef } from "react";
+import { useKanbanDrag } from "@/contexts/KanbanDragContext";
+import { useTranslation } from "react-i18next";
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { PlusIcon, TrashIcon } from "react-native-heroicons/outline";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
 
 import KanbanCard from "./KanbanCard";
 
-const COLUMN_COLORS = [
-  "#EEE78E", // yellow
-  "#A7ABB9", // lightBlue
-  "#B66465", // importantIcon (red)
-  "#B9B5A7", // lightGray
-  "#DAD9DE", // gray
-];
-
 export default function KanbanColumn({
   column,
-  columns,
+  columnIndex,
+  columnWidth,
   setColumnName,
   setColumnColor,
   deleteColumn,
   setCardText,
   deleteCard,
   addCard,
-  moveCard,
-  reorderCards,
   disabled,
-  autoFocus,
-  t,
 }) {
-  const handleMoveCard = useCallback(
-    (cardId) => {
-      const otherColumns = columns.filter((col) => col.id !== column.id);
-      if (otherColumns.length === 0) return;
+  const { t } = useTranslation();
 
-      // Simple implementation: move to next column
-      const currentIndex = columns.findIndex((col) => col.id === column.id);
-      const nextIndex = (currentIndex + 1) % columns.length;
-      const targetColumn = columns[nextIndex];
+  const columnRef = useRef(null);
+  const { registerColumnPosition, isDragging, draggedItem, sourceColumnId } = useKanbanDrag();
 
-      if (targetColumn) {
-        moveCard(cardId, column.id, targetColumn.id, targetColumn.items.length);
-      }
-    },
-    [column, columns, moveCard]
-  );
-
-  const renderCard = useCallback(
-    ({ item, drag, isActive }) => (
-      <KanbanCard
-        item={item}
-        setText={(id, text) => setCardText(column.id, id, text)}
-        deleteItem={(id) => deleteCard(column.id, id)}
-        onLongPress={() => handleMoveCard(item.id)}
-        drag={drag}
-        disabled={isActive || disabled}
-        autoFocus={autoFocus && !item.text}
-      />
-    ),
-    [column.id, setCardText, deleteCard, handleMoveCard, disabled, autoFocus]
-  );
+  // register column position for drop detection
+  useEffect(() => {
+    if (columnRef.current) {
+      columnRef.current.measureInWindow((x, y, width, height) => {
+        registerColumnPosition(column.id, x, width);
+      });
+    }
+  }, [column.id, columnWidth, registerColumnPosition]);
 
   const cycleColor = useCallback(() => {
-    const currentIndex = COLUMN_COLORS.indexOf(column.color);
-    const nextIndex = (currentIndex + 1) % COLUMN_COLORS.length;
-    setColumnColor(column.id, COLUMN_COLORS[nextIndex]);
+    const currentIndex = KANBAN_COLUMN_COLORS.indexOf(column.color);
+    const nextIndex = (currentIndex + 1) % KANBAN_COLUMN_COLORS.length;
+    setColumnColor(column.id, KANBAN_COLUMN_COLORS[nextIndex]);
   }, [column.id, column.color, setColumnColor]);
 
+  const isDropTarget = isDragging && sourceColumnId !== column.id;
+
   return (
-    <View style={styles.container}>
+    <View ref={columnRef} style={[styles.container, { width: columnWidth }, isDropTarget && styles.dropTarget]}>
       {/* Column Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -108,13 +82,23 @@ export default function KanbanColumn({
       {/* Cards List */}
       <View style={styles.cardsContainer}>
         {column.items.length > 0 ? (
-          <DraggableFlatList
-            data={column.items}
-            onDragEnd={({ data }) => reorderCards(column.id, data)}
-            keyExtractor={(item) => item.id}
-            renderItem={renderCard}
-            containerStyle={styles.cardsList}
-          />
+          <ScrollView
+            style={styles.cardsList}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled
+            contentContainerStyle={styles.cardsListContent}
+          >
+            {column.items.map((item, index) => (
+              <KanbanCard
+                key={item.id}
+                item={item}
+                columnId={column.id}
+                setText={(id, text) => setCardText(column.id, id, text)}
+                deleteItem={(id) => deleteCard(column.id, id)}
+                disabled={disabled}
+              />
+            ))}
+          </ScrollView>
         ) : (
           <Text style={styles.noCards}>{t ? t("kanban.no_cards") : "No cards"}</Text>
         )}
@@ -133,13 +117,16 @@ export default function KanbanColumn({
 
 const styles = StyleSheet.create({
   container: {
-    width: 300,
     marginRight: PADDING_MARGIN.md,
     backgroundColor: COLOR.darkBlue,
     borderRadius: BORDER.normal,
     borderWidth: 2,
     borderColor: COLOR.boldBlue,
     overflow: "hidden",
+  },
+  dropTarget: {
+    borderColor: COLOR.lightBlue,
+    borderWidth: 3,
   },
   header: {
     flexDirection: "row",
@@ -181,6 +168,9 @@ const styles = StyleSheet.create({
   },
   cardsList: {
     flex: 1,
+  },
+  cardsListContent: {
+    paddingBottom: PADDING_MARGIN.sm,
   },
   noCards: {
     textAlign: "center",

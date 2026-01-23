@@ -1,3 +1,7 @@
+## v2.6.1
+
+- Improved Kanban note type experience with Drag and Drop
+
 ## v2.6.0
 
 - Added new note type: Kanban note

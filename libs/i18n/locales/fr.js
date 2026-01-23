@@ -14,7 +14,7 @@ const fr = {
   changelog: {
     title: "Quoi de neuf?",
 
-    description_2_6_0: `• Ajout d’une note de type Kanban.
+    description_2_6_1: `• Ajout d’une note de type Kanban.
 • Refonte de l’écran d’accueil lors de l’appui sur « + ».
 • Le type de note est désormais affiché comme un badge en haut.`,
 

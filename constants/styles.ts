@@ -20,6 +20,8 @@ export const COLOR = {
   darkOceanBreeze: "#799EDC",
 } as const;
 
+export const KANBAN_COLUMN_COLORS = ["#EEE78E", "#A7ABB9", "#B66465", "#B9B5A7", "#DAD9DE"] as const;
+
 export const FONTSIZE = {
   title: 32,
   intro: 28,
