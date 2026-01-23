@@ -55,7 +55,19 @@ export const CryptNote = {
       return { ...note, list: noteTodoList };
     }
 
-    return null;
+    if (type === "kanban") {
+      const columns = (note.columns || []).map((column) => ({
+        ...column,
+        items: (column.items || []).map((item) => ({
+          ...item,
+          text: item.text ? CryptoJS.AES.encrypt(item.text, configs.cloud.secretKey).toString() : item.text,
+        })),
+      }));
+
+      return { ...note, columns };
+    }
+
+    return { ...note };
   },
 
   decrypt: (note) => {
@@ -80,6 +92,22 @@ export const CryptNote = {
       return { ...note, list: noteTodoList };
     }
 
-    return null;
+    if (type === "kanban") {
+      const columns = (note.columns || []).map((column) => ({
+        ...column,
+        items: (column.items || []).map((item) => {
+          if (!item?.text) return item;
+
+          const bytes = CryptoJS.AES.decrypt(item.text, configs.cloud.secretKey);
+          const convertedBytes = bytes.toString(CryptoJS.enc.Utf8);
+
+          return { ...item, text: convertedBytes };
+        }),
+      }));
+
+      return { ...note, columns };
+    }
+
+    return { ...note };
   },
 };

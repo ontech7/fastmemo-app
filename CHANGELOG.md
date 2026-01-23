@@ -1,3 +1,8 @@
+## v2.6.2
+
+- Fixed sync when using new note type Kanban
+- Aligned UI for TrashedNoteCard
+
 ## v2.6.1
 
 - Improved Kanban note type experience with Drag and Drop

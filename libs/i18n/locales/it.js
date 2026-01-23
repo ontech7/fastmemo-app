@@ -14,9 +14,10 @@ const it = {
   changelog: {
     title: "Cosa c'è di nuovo?",
 
-    description_2_6_1: `• Aggiunta nota di tipo Kanban.
+    description_2_6_2: `• Aggiunta nota di tipo Kanban.
 • Rivisitato il design della Home quando si clicca “+”.
-• Rivisitato il tipo di nota: ora è un badge in alto.`,
+• Rivisitato il tipo di nota: ora è un badge in alto.
+• Correzioni varie.`,
 
     description_2_5_3: `• Correzioni varie.`,
 

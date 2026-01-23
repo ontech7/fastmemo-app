@@ -14,9 +14,10 @@ const de = {
   changelog: {
     title: "Was gibt's Neues?",
 
-    description_2_6_1: `• Notiztyp Kanban hinzugefügt.
+    description_2_6_2: `• Notiztyp Kanban hinzugefügt.
 • Startseite beim Drücken von „+“ überarbeitet.
-• Notiztyp als Abzeichen oben neu gestaltet.`,
+• Notiztyp als Abzeichen oben neu gestaltet.
+• Verschiedene Korrekturen.`,
 
     description_2_5_3: `• Verschiedene Korrekturen.`,
 
