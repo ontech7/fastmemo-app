@@ -296,7 +296,11 @@ export default function NoteTextEditor({ initialNote }) {
         />
 
         <RichToolbar
-          style={[styles.richToolbarContainer, { display: Platform.OS !== "web" && !isKeyboardShown ? "none" : "flex" }]}
+          style={[
+            styles.richToolbarContainer,
+            Platform.OS === "web" && styles.richToolbarContainerDesktop,
+            { display: Platform.OS !== "web" && !isKeyboardShown ? "none" : "flex" },
+          ]}
           editor={richTextEditor}
           onPressAddImage={pickImage}
           iconSize={20}
@@ -380,6 +384,9 @@ const styles = StyleSheet.create({
     height: 38,
     backgroundColor: COLOR.blue,
     borderTopLeftRadius: BORDER.normal,
+  },
+  richToolbarContainerDesktop: {
+    borderRadius: BORDER.normal,
   },
   textWrapper: {
     marginVertical: PADDING_MARGIN.xl,
