@@ -90,9 +90,6 @@ const es = {
     repeatCode: "Repite tu nuevo código secreto.",
     savedCode: "¡Tu nuevo código secreto ha sido guardado!",
     unlockCode: "Inserta tu código secreto",
-    toggleProtectedNote: "Inserta tu código secreto",
-    toggleProtectedSelectedNotes: "Inserta tu código secreto",
-    toggleGeneric: "Inserta tu código secreto",
     error: "El código que ingresaste no coincide. Intentar otra vez.",
   },
   firstMemo: {

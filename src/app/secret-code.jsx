@@ -14,7 +14,7 @@ import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles"
 
 import BackButton from "../components/buttons/BackButton";
 import CodeInput from "../components/inputs/CodeInput";
-import { getNote, toggleProtectedNotes } from "../slicers/notesSlice";
+import { getNote } from "../slicers/notesSlice";
 import { selectorCurrentSecretCode, setSecretCode } from "../slicers/settingsSlice";
 
 const CODE_PHASE = {
@@ -23,10 +23,6 @@ const CODE_PHASE = {
   repeatCode: i18n.t("secretcode.repeatCode"),
   savedCode: i18n.t("secretcode.savedCode"),
   unlockCode: i18n.t("secretcode.unlockCode"),
-  toggleProtectedNote: i18n.t("secretcode.toggleProtectedNote"),
-  toggleProtectedSelectedNotes: i18n.t("secretcode.toggleProtectedSelectedNotes"),
-  toggleCloudSync: i18n.t("secretcode.toggleCloudSync"),
-  toggleGeneric: i18n.t("secretcode.toggleGeneric"),
 };
 
 export default function SecretCodeScreen() {
@@ -34,7 +30,7 @@ export default function SecretCodeScreen() {
 
   const callback = retrieveSecretCodeCallback();
 
-  const { startPhase, selectedNotes, noteId } = useLocalSearchParams();
+  const { startPhase, noteId } = useLocalSearchParams();
   const currentNote = useSelector(getNote(noteId));
 
   const [phase, setPhase] = useState(startPhase);
@@ -86,27 +82,7 @@ export default function SecretCodeScreen() {
           return;
         }
 
-        router.replace(`/notes/${currentNote.id}`);
-
-        break;
-      case "toggleProtectedSelectedNotes":
-        if (code !== currentSecretCode) {
-          setError(true);
-          return;
-        }
-
-        dispatch(toggleProtectedNotes(selectedNotes));
-        router.dismissAll();
-
-        break;
-      case "toggleGeneric":
-        if (code !== currentSecretCode) {
-          setError(true);
-          return;
-        }
-
         callback?.();
-        router.back();
 
         break;
       default:

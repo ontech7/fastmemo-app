@@ -1,3 +1,9 @@
+import ComplexDialog from "@/components/dialogs/ComplexDialog";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
+import SecretPassphraseDialog from "@/components/dialogs/SecretPassphraseDialog";
+import { useSecret } from "@/hooks/useSecret";
+import { isSecretPassphraseCorrect } from "@/utils/crypt";
+import { webhook } from "@/utils/webhook";
 import * as Sentry from "@sentry/react-native";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -5,14 +11,6 @@ import { Keyboard, Platform } from "react-native";
 import CryptoJS from "react-native-crypto-js";
 import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
 import { useDispatch, useStore } from "react-redux";
-
-import ComplexDialog from "@/components/dialogs/ComplexDialog";
-import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
-import SecretPassphraseDialog from "@/components/dialogs/SecretPassphraseDialog";
-import { useRouter } from "@/hooks/useRouter";
-import { isSecretPassphraseCorrect, toggleWithSecret } from "@/utils/crypt";
-import { webhook } from "@/utils/webhook";
-
 import { setCategories } from "../../../../slicers/categoriesSlice";
 import { setNotes, setTrashedNotes } from "../../../../slicers/notesSlice";
 import SectionItemList_Text from "../../components/item/SectionItemList_Text";
@@ -39,7 +37,7 @@ const isTauri = () => typeof window !== "undefined" && "__TAURI__" in window;
 export default function SectionItem_ExportImportData({ isLast }) {
   const { t } = useTranslation();
 
-  const router = useRouter();
+  const { unlockWithSecret } = useSecret();
 
   const store = useStore();
   const state = store.getState();
@@ -57,9 +55,6 @@ export default function SectionItem_ExportImportData({ isLast }) {
   const webhook_exportData = state.settings.webhooks.exportData;
   // @ts-ignore
   const webhook_importData = state.settings.webhooks.importData;
-
-  // @ts-ignore
-  const isFingerprintEnabled = state.settings.isFingerprintEnabled;
 
   const [errorMessage, setErrorMessage] = useState(null);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -395,13 +390,7 @@ export default function SectionItem_ExportImportData({ isLast }) {
       <SectionItemList isLast={isLast}>
         <SectionItemList_Text
           title={t("generalsettings.export_import_data")}
-          onPress={() =>
-            toggleWithSecret({
-              router,
-              isFingerprintEnabled,
-              callback: () => setShowImportExportDialog(true),
-            })
-          }
+          onPress={() => unlockWithSecret(() => setShowImportExportDialog(true))}
         />
       </SectionItemList>
     </>

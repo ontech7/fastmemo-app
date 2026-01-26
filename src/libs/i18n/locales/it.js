@@ -91,9 +91,6 @@ const it = {
     repeatCode: "Ripeti il ​​tuo nuovo codice segreto.",
     savedCode: "Il tuo nuovo codice segreto è stato salvato!",
     unlockCode: "Inserisci il tuo codice segreto",
-    toggleProtectedNote: "Inserisci il tuo codice segreto",
-    toggleProtectedSelectedNotes: "Inserisci il tuo codice segreto",
-    toggleGeneric: "Inserisci il tuo codice segreto",
     error: "Il codice inserito non corrisponde. Riprova.",
   },
   firstMemo: {

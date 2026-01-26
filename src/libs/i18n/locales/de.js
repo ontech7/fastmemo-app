@@ -90,9 +90,6 @@ const de = {
     repeatCode: "Wiederholen Sie Ihren neuen Geheimcode.",
     savedCode: "Ihr neuer Geheimcode wurde gespeichert!",
     unlockCode: "Geben Sie Ihren Geheimcode ein",
-    toggleProtectedNote: "Geben Sie Ihren Geheimcode ein",
-    toggleProtectedSelectedNotes: "Geben Sie Ihren Geheimcode ein",
-    toggleGeneric: "Geben Sie Ihren Geheimcode ein",
     error: "Der von Ihnen eingegebene Code stimmt nicht überein. Versuchen Sie es erneut.",
   },
   firstMemo: {

@@ -90,9 +90,6 @@ const en = {
     repeatCode: "Repeat your new secret code.",
     savedCode: "Your new secret code has been saved!",
     unlockCode: "Insert your secret code",
-    toggleProtectedNote: "Insert your secret code",
-    toggleProtectedSelectedNotes: "Insert your secret code",
-    toggleGeneric: "Insert your secret code",
     error: "The code you entered doesn't match. Try again.",
   },
   firstMemo: {

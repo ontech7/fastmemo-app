@@ -1,8 +1,5 @@
 import { configs } from "@/configs";
-import { Platform } from "react-native";
 import CryptoJS from "react-native-crypto-js";
-
-import { storeSecretCodeCallback } from "@/libs/registry";
 
 export const isSecretPassphraseCorrect = (bytes) => {
   try {
@@ -12,25 +9,6 @@ export const isSecretPassphraseCorrect = (bytes) => {
     return false;
   }
   return true;
-};
-
-export const toggleWithSecret = ({ isFingerprintEnabled, router, callback }) => {
-  if (Platform.OS === "web" || !isFingerprintEnabled) {
-    storeSecretCodeCallback(callback);
-
-    router.push({
-      pathname: "/secret-code",
-      params: {
-        startPhase: "toggleGeneric",
-      },
-    });
-    return;
-  }
-
-  const LocalAuthentication = require("expo-local-authentication");
-  LocalAuthentication.authenticateAsync().then((authResult) => {
-    if (authResult?.success) callback();
-  });
 };
 
 export const CryptNote = {

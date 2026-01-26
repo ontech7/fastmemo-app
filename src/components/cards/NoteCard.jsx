@@ -1,27 +1,25 @@
 import { memo } from "react";
-import * as LocalAuthentication from "expo-local-authentication";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, StarIcon } from "react-native-heroicons/outline";
-import { useSelector } from "react-redux";
 
+import { useRouter } from "@/hooks/useRouter";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
-import { useRouter } from "@/hooks/useRouter";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
-import { selectorIsFingerprintEnabled } from "../../slicers/settingsSlice";
+import { useSecret } from "@/hooks/useSecret";
 import CategoryIcon from "../CategoryIcon";
 
 function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode }) {
   const { t } = useTranslation();
 
   const router = useRouter();
+  const { unlockWithSecret } = useSecret();
 
   const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked } = content;
 
-  const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
   const onLongPressHandler = () => {
     if (!isDeleteMode) {
       selectNote(id, locked);
@@ -41,22 +39,13 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
       return;
     }
 
-    if (!selectorFingerprintEnabled) {
-      router.push({
-        pathname: "/secret-code",
-        params: {
-          startPhase: "unlockCode",
-          noteId: id,
-        },
-      });
-      return;
-    }
-
-    LocalAuthentication.authenticateAsync().then((authResult) => {
-      if (authResult?.success) {
+    unlockWithSecret((router, isFingerprint) => {
+      if (isFingerprint) {
         router.push(`/notes/${id}`);
+      } else {
+        router.replace(`/notes/${id}`);
       }
-    });
+    }, "none");
   };
 
   const importantColor = important ? COLOR.softWhite : COLOR.darkBlue;

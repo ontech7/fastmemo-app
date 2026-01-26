@@ -1,4 +1,3 @@
-import * as LocalAuthentication from "expo-local-authentication";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -20,7 +19,7 @@ import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
-import { storeSecretCodeCallback } from "@/libs/registry";
+import { useSecret } from "@/hooks/useSecret";
 import { temporaryDeleteNote } from "../../slicers/notesSlice";
 import { selectorIsFingerprintEnabled, selectorWebhook_temporaryDeleteNote } from "../../slicers/settingsSlice";
 import ContextMenu from "../renderers/ContextMenu";
@@ -37,6 +36,7 @@ export default function NoteSettingsButton({ note, setNote }) {
   const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
 
   const dispatch = useDispatch();
+  const { unlockWithSecret } = useSecret();
 
   const deleteNoteFromItems = () => {
     dispatch(temporaryDeleteNote(id));
@@ -52,24 +52,8 @@ export default function NoteSettingsButton({ note, setNote }) {
   };
 
   const toggleProtectedNoteFromItems = () => {
-    if (!selectorFingerprintEnabled) {
-      storeSecretCodeCallback(() => {
-        setNote({ ...note, locked: !locked });
-      });
-
-      router.push({
-        pathname: "/secret-code",
-        params: {
-          startPhase: "toggleGeneric",
-        },
-      });
-      return;
-    }
-
-    LocalAuthentication.authenticateAsync().then((authResult) => {
-      if (authResult?.success) {
-        setNote({ ...note, locked: !locked });
-      }
+    unlockWithSecret(() => {
+      setNote({ ...note, locked: !locked });
     });
   };
 

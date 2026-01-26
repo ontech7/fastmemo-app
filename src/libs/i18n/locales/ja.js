@@ -90,9 +90,6 @@ const ja = {
     repeatCode: "新しい秘密コードを再入力してください。",
     savedCode: "新しい秘密コードが保存されました！",
     unlockCode: "秘密コードを入力してください。",
-    toggleProtectedNote: "秘密コードを入力してください。",
-    toggleProtectedSelectedNotes: "秘密コードを入力してください。",
-    toggleGeneric: "秘密コードを入力してください。",
     error: "入力したコードが一致しません。もう一度やり直してください。",
   },
   firstMemo: {

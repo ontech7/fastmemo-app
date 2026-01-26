@@ -5,12 +5,11 @@ import { ArrowPathIcon, EllipsisVerticalIcon, TrashIcon } from "react-native-her
 import { Menu, MenuOption, MenuOptions, MenuTrigger } from "react-native-popup-menu";
 import { useDispatch, useSelector } from "react-redux";
 
-import { toggleWithSecret } from "@/utils/crypt";
 import { webhook } from "@/utils/webhook";
-import { useRouter } from "@/hooks/useRouter";
 
 import { BORDER, COLOR, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
+import { useSecret } from "@/hooks/useSecret";
 import { getCategories } from "../../slicers/categoriesSlice";
 import {
   deleteAllNotes,
@@ -31,7 +30,7 @@ export default function TrashedNotesSettingsButton({
 }) {
   const { t } = useTranslation();
 
-  const router = useRouter();
+  const { unlockWithSecret } = useSecret();
 
   const isNoteProtected = selectedNotes.some((id) => id.split("|")[1] == "true");
 
@@ -124,16 +123,7 @@ export default function TrashedNotesSettingsButton({
 
         {!isDeleteMode ? (
           <MenuOptions customStyles={menuOptionsCustomStyles}>
-            <MenuOption
-              style={[styles.menuOption]}
-              onSelect={() =>
-                toggleWithSecret({
-                  router,
-                  isFingerprintEnabled,
-                  callback: () => setShowDeleteAllNotesDialog(true),
-                })
-              }
-            >
+            <MenuOption style={[styles.menuOption]} onSelect={() => unlockWithSecret(() => setShowDeleteAllNotesDialog(true))}>
               <Text style={styles.menuOptionText}>{t("trashednotes.settings.delete_all")}</Text>
 
               <TrashIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
@@ -151,11 +141,7 @@ export default function TrashedNotesSettingsButton({
               style={[styles.menuOption]}
               onSelect={() => {
                 if (isNoteProtected) {
-                  toggleWithSecret({
-                    router,
-                    isFingerprintEnabled,
-                    callback: () => setShowDeleteSelectedNotesDialog(true),
-                  });
+                  unlockWithSecret(() => setShowDeleteSelectedNotesDialog(true));
                 } else {
                   setShowDeleteSelectedNotesDialog(true);
                 }

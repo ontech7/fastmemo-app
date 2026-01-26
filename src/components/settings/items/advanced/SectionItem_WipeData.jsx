@@ -1,34 +1,28 @@
+import ComplexDialog from "@/components/dialogs/ComplexDialog";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
+import useNetInfo from "@/hooks/useNetInfo";
+import { useSecret } from "@/hooks/useSecret";
+import { wipeCategories } from "@/slicers/categoriesSlice";
+import { wipeNotes } from "@/slicers/notesSlice";
+import { getCloudConnected, selectorWebhook_wipeData } from "@/slicers/settingsSlice";
+import { webhook } from "@/utils/webhook";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
-
-import ComplexDialog from "@/components/dialogs/ComplexDialog";
-import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
-import { useRouter } from "@/hooks/useRouter";
-import { toggleWithSecret } from "@/utils/crypt";
-import { webhook } from "@/utils/webhook";
-
-import useNetInfo from "@/hooks/useNetInfo";
-import { wipeCategories } from "../../../../slicers/categoriesSlice";
-import { wipeNotes } from "../../../../slicers/notesSlice";
-import { getCloudConnected, selectorIsFingerprintEnabled, selectorWebhook_wipeData } from "../../../../slicers/settingsSlice";
 import SectionItemList_Text from "../../components/item/SectionItemList_Text";
 import SectionItemList from "../../components/list/SectionItemList";
 
 export default function SectionItem_WipeData({ isLast }) {
   const { t } = useTranslation();
 
-  const router = useRouter();
-
   const dispatch = useDispatch();
-
-  const webhook_wipeData = useSelector(selectorWebhook_wipeData);
-
-  const isCloudConnected = useSelector(getCloudConnected);
-  const isFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
+  const { unlockWithSecret } = useSecret();
 
   const netInfo = useNetInfo();
+
+  const webhook_wipeData = useSelector(selectorWebhook_wipeData);
+  const isCloudConnected = useSelector(getCloudConnected);
 
   const [showWipeDataDialog, setShowWipeDataDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
@@ -87,13 +81,7 @@ export default function SectionItem_WipeData({ isLast }) {
       <SectionItemList isLast={isLast}>
         <SectionItemList_Text
           title={t("generalsettings.wipe_data")}
-          onPress={() =>
-            toggleWithSecret({
-              router,
-              isFingerprintEnabled,
-              callback: () => setShowWipeDataDialog(true),
-            })
-          }
+          onPress={() => unlockWithSecret(() => setShowWipeDataDialog(true))}
         />
       </SectionItemList>
     </>

@@ -9,29 +9,23 @@ import {
   InformationCircleIcon,
   PencilIcon,
 } from "react-native-heroicons/outline";
-import { useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
 import { useCloudSync } from "@/hooks/useCloudSync";
-import { useRouter } from "@/hooks/useRouter";
-import { selectorIsFingerprintEnabled } from "@/slicers/settingsSlice";
-import { toggleWithSecret } from "@/utils/crypt";
 import { toast } from "@/utils/toast";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { useSecret } from "@/hooks/useSecret";
 
 export default function CloudSyncScreen() {
   const { t } = useTranslation();
 
-  const router = useRouter();
-
-  const { methods, state, cloudSettings } = useCloudSync();
-
+  const { unlockWithSecret } = useSecret();
   const netInfo = useNetInfo();
 
-  const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
+  const { methods, state, cloudSettings } = useCloudSync();
 
   const isCloudSettingsComplete = cloudSettings.apiKey != "" && cloudSettings.projectId != "" && cloudSettings.appId != "";
 
@@ -74,13 +68,7 @@ export default function CloudSyncScreen() {
                       true: COLOR.darkYellow + "60",
                     }}
                     thumbColor={state.isCloudSyncEnabled ? COLOR.yellow : COLOR.softWhite}
-                    onValueChange={() =>
-                      toggleWithSecret({
-                        router,
-                        isFingerprintEnabled: selectorFingerprintEnabled,
-                        callback: toggleCloudSync,
-                      })
-                    }
+                    onValueChange={() => unlockWithSecret(toggleCloudSync)}
                     value={state.isCloudSyncEnabled}
                     style={{ height: 25 }}
                   />
@@ -164,13 +152,7 @@ export default function CloudSyncScreen() {
                             (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) &&
                               styles.saveButton_disabled,
                           ]}
-                          onPress={() =>
-                            toggleWithSecret({
-                              router,
-                              isFingerprintEnabled: selectorFingerprintEnabled,
-                              callback: methods.saveCloudSettings,
-                            })
-                          }
+                          onPress={() => unlockWithSecret(methods.saveCloudSettings)}
                         >
                           <CheckIcon size={28} color={COLOR.blue} />
                         </TouchableOpacity>
@@ -194,13 +176,7 @@ export default function CloudSyncScreen() {
                               (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) &&
                                 styles.saveButton_disabled,
                             ]}
-                            onPress={() =>
-                              toggleWithSecret({
-                                router,
-                                isFingerprintEnabled: selectorFingerprintEnabled,
-                                callback: methods.editCloudSettings,
-                              })
-                            }
+                            onPress={() => unlockWithSecret(methods.editCloudSettings)}
                           >
                             <PencilIcon size={28} color={COLOR.blue} />
                           </TouchableOpacity>
@@ -243,13 +219,13 @@ export default function CloudSyncScreen() {
                                 styles.saveButton_disabled,
                             ]}
                             onPress={() =>
-                              toggleWithSecret({
-                                router,
-                                isFingerprintEnabled: selectorFingerprintEnabled,
-                                callback: () => {
+                              unlockWithSecret((router, isFingerprint) => {
+                                if (isFingerprint) {
                                   router.push("/settings/cloud-sync/devices");
-                                },
-                              })
+                                } else {
+                                  router.replace("/settings/cloud-sync/devices");
+                                }
+                              }, "none")
                             }
                           >
                             <DevicePhoneMobileIcon size={28} color={COLOR.blue} />

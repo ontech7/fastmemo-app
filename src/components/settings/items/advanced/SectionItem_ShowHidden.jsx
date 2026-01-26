@@ -1,38 +1,25 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Switch, Text, View } from "react-native";
-import { useDispatch, useSelector, useStore } from "react-redux";
-
-import { toggleWithSecret } from "@/utils/crypt";
-import { useRouter } from "@/hooks/useRouter";
+import { useDispatch, useSelector } from "react-redux";
 
 import { COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
+import { useSecret } from "@/hooks/useSecret";
 import { selectorShowHidden, setShowHidden } from "../../../../slicers/settingsSlice";
 import SectionItemList from "../../components/list/SectionItemList";
 
 export default function SectionItem_ShowHidden({ isLast }) {
   const { t } = useTranslation();
 
-  const router = useRouter();
-
-  const store = useStore();
-  const state = store.getState();
-
   const dispatch = useDispatch();
-
-  // @ts-ignore
-  const isFingerprintEnabled = state.settings.isFingerprintEnabled;
+  const { unlockWithSecret } = useSecret();
 
   const showHidden = useSelector(selectorShowHidden);
   const toggleShowHidden = () => dispatch(setShowHidden(!showHidden));
 
   const toggleShowHiddenWithSecret = () => {
-    toggleWithSecret({
-      router,
-      isFingerprintEnabled,
-      callback: toggleShowHidden,
-    });
+    unlockWithSecret(toggleShowHidden);
   };
 
   return (

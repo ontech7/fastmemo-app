@@ -1,20 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { configs } from "@/configs";
 import { useNavigation } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
-import * as LocalAuthentication from "expo-local-authentication";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Platform, StyleSheet, Text, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useDispatch, useSelector, useStore } from "react-redux";
 
-import Haptics from "@/libs/haptics";
-import { AsyncStorage } from "@/libs/storage";
-import { toggleWithSecret } from "@/utils/crypt";
-import { formatToPlainText } from "@/utils/string";
-import { webhook } from "@/utils/webhook";
-import { useRouter } from "@/hooks/useRouter";
 import AddNoteOverlayButton from "@/components/buttons/AddNoteOverlayButton";
 import DeleteNotesButton from "@/components/buttons/DeleteNotesButton";
 import FavoriteNotesButton from "@/components/buttons/FavoriteNotesButton";
@@ -27,6 +20,9 @@ import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import SearchNotesInput from "@/components/inputs/SearchNotesInput";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
+import { useRouter } from "@/hooks/useRouter";
+import Haptics from "@/libs/haptics";
+import { AsyncStorage } from "@/libs/storage";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import {
   deleteNote,
@@ -38,14 +34,16 @@ import {
   toggleReadOnlyNotes,
 } from "@/slicers/notesSlice";
 import {
-  selectorIsFingerprintEnabled,
   selectorShowHidden,
   selectorWebhook_deleteNote,
   selectorWebhook_temporaryDeleteNote,
   selectorWebhook_updateNote,
 } from "@/slicers/settingsSlice";
+import { formatToPlainText } from "@/utils/string";
+import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { useSecret } from "@/hooks/useSecret";
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -65,8 +63,6 @@ export default function HomeScreen() {
   const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
   const webhook_updateNote = useSelector(selectorWebhook_updateNote);
 
-  const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
-
   const dispatch = useDispatch();
 
   const [isDeleteMode, setIsDeleteMode] = useState(false);
@@ -79,6 +75,8 @@ export default function HomeScreen() {
   const isNoteProtected = selectedNotes.some((id) => id.split("|")[1] == "true");
 
   const [showDeleteNotesDialog, setShowDeleteNotesDialog] = useState(false);
+
+  const { unlockWithSecret } = useSecret();
 
   const temporaryDeleteSelectedNotesFromItems = () => {
     const deleteNotes = () => {
@@ -93,11 +91,7 @@ export default function HomeScreen() {
     };
 
     if (isNoteProtected) {
-      toggleWithSecret({
-        router,
-        isFingerprintEnabled: selectorFingerprintEnabled,
-        callback: deleteNotes,
-      });
+      unlockWithSecret(deleteNotes);
     } else {
       deleteNotes();
     }
@@ -140,14 +134,8 @@ export default function HomeScreen() {
   };
 
   const toggleProtectedNotesFromItems = () => {
-    if (!selectorFingerprintEnabled) {
-      router.push({
-        pathname: "/secret-code",
-        params: {
-          startPhase: "toggleProtectedSelectedNotes",
-          selectedNotes,
-        },
-      });
+    unlockWithSecret(() => {
+      dispatch(toggleProtectedNotes(selectedNotes));
       webhook(webhook_updateNote, {
         action: "note/updateNote",
         extra: "multiple",
@@ -156,21 +144,6 @@ export default function HomeScreen() {
       });
       setSelectedNotes([]);
       setIsDeleteMode(false);
-      return;
-    }
-
-    LocalAuthentication.authenticateAsync().then((authResult) => {
-      if (authResult?.success) {
-        dispatch(toggleProtectedNotes(selectedNotes));
-        webhook(webhook_updateNote, {
-          action: "note/updateNote",
-          extra: "multiple",
-          ids: selectedNotes.map((noteId) => noteId.split("|")[0]),
-          property: "locked",
-        });
-        setSelectedNotes([]);
-        setIsDeleteMode(false);
-      }
     });
   };
 

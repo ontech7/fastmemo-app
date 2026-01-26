@@ -11,22 +11,17 @@ import {
 import { Menu, MenuOption, MenuOptions, MenuTrigger } from "react-native-popup-menu";
 import { useDispatch, useSelector } from "react-redux";
 
-import { toggleWithSecret } from "@/utils/crypt";
-import { useRouter } from "@/hooks/useRouter";
 import ContextMenu from "@/components/renderers/ContextMenu";
 import { getNoteFilters, reorderNotes, setNoteFilters } from "@/slicers/notesSlice";
-import { selectorIsFingerprintEnabled } from "@/slicers/settingsSlice";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { useSecret } from "@/hooks/useSecret";
 
 export default function NoteFiltersButton({ filters }) {
   const { t } = useTranslation();
 
-  const router = useRouter();
-
   const dispatch = useDispatch();
-
-  const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
+  const { unlockWithSecret } = useSecret();
 
   const selectorNotesOrder = useSelector(getNoteFilters);
 
@@ -51,11 +46,7 @@ export default function NoteFiltersButton({ filters }) {
           style={styles.menuOption}
           onSelect={() => {
             if (!filters.showDeepSearch) {
-              toggleWithSecret({
-                router,
-                isFingerprintEnabled: selectorFingerprintEnabled,
-                callback: filters.toggleDeepSearch,
-              });
+              unlockWithSecret(filters.toggleDeepSearch);
             } else {
               filters.toggleDeepSearch();
             }
@@ -129,7 +120,7 @@ const menuOptionsCustomStyles = {
     backgroundColor: COLOR.blue,
     padding: PADDING_MARGIN.sm,
     borderRadius: BORDER.normal,
-    width: 220,
+    width: 230,
   },
   optionsWrapper: {
     backgroundColor: COLOR.blue,
@@ -137,11 +128,6 @@ const menuOptionsCustomStyles = {
 };
 
 const styles = StyleSheet.create({
-  menuViewWrapper: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
   menuOption: {
     padding: PADDING_MARGIN.sm,
     flexDirection: "row",
@@ -153,6 +139,7 @@ const styles = StyleSheet.create({
   },
   menuOptionIcon: {
     marginLeft: PADDING_MARGIN.lg,
+    flexShrink: 0,
   },
   menuOptionText: {
     color: COLOR.softWhite,

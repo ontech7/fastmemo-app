@@ -90,9 +90,6 @@ const zh = {
     repeatCode: "重复您的新密码。",
     savedCode: "您的新密码已保存！",
     unlockCode: "插入您的密码",
-    toggleProtectedNote: "插入您的密码",
-    toggleProtectedSelectedNotes: "插入您的密码",
-    toggleGeneric: "插入您的密码",
     error: "您输入的代码不匹配。再试一次。",
   },
   firstMemo: {
