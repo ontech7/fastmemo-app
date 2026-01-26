@@ -14,37 +14,42 @@ const en = {
   changelog: {
     title: "What's new?",
 
-    description_2_6_2: `• Added Kanban type note.
+    web: {
+      description_0_1_0: `• Initial release of Fast Memo Desktop (BETA) with all mobile features.`,
+    },
+
+    mobile: {
+      description_2_6_2: `• Added Kanban type note.
 • Redesigned Home action menu when pressing “+”.
 • Redesigned note type as a badge at the top.
 • Various fixes.`,
 
-    description_2_5_3: `• Various fixes.`,
+      description_2_5_3: `• Various fixes.`,
 
-    description_2_5_2: `• Added the ability to reorder notes by creation date and update date.
+      description_2_5_2: `• Added the ability to reorder notes by creation date and update date.
 • Added the ability to change language directly from settings.
 • Redesign of modals.
 • Various fixes.`,
 
-    description_2_4_2: `• Revised and improved the app’s internal structure to make it faster and more stable.
+      description_2_4_2: `• Revised and improved the app’s internal structure to make it faster and more stable.
 • Added voice recognition for note transcription (text and lists).
 • Added the ability to perform deep searches (text and lists).
 • Various fixes.`,
 
-    description_2_3_0: `• Added Japanese language.
+      description_2_3_0: `• Added Japanese language.
 • Updated webhooks to BETA version 2.0.
 • Miscellaneous fixes.`,
 
-    description_2_2_0: `• Added the ability to hide notes.
+      description_2_2_1: `• Added the ability to hide notes.
 • Added the ability to report an issue in Settings → Feedback and Assistance.
 • Miscellaneous fixes.`,
 
-    description_2_1_0: `• Added number of note letters and maximum note size.
+      description_2_1_0: `• Added number of note letters and maximum note size.
 • Added number of items in ToDo note.
 • Added maximum limit for cloud devices (3).
 • Miscellaneous fixes.`,
 
-    description_2_0_0: `• Added Cloud Sync with Google Firebase.
+      description_2_0_0: `• Added Cloud Sync with Google Firebase.
 • Added Webhooks management (for expert user).
 • Added left and center alignment options for text notes.
 • Added secret code for some options.
@@ -53,17 +58,18 @@ const en = {
 • Changed the style of the To-Do note.
 • Miscellaneous fixes.`,
 
-    description_1_4_0: `• Added To-Do type note.
+      description_1_4_0: `• Added To-Do type note.
 • Miscellaneous fixes.`,
 
-    description_1_3_0: `• Added translations for Italian, Spanish, French, German and Chinese.
+      description_1_3_0: `• Added translations for Italian, Spanish, French, German and Chinese.
 • Added new icons for categories.
 • Miscellaneous fixes.`,
 
-    description_1_2_1: `• Release in production.
+      description_1_2_1: `• Release in production.
 • Added notes, temporary notes, categories, etc.
 • Added secret code.
 • Miscellaneous fixes.`,
+    },
   },
   intro: {
     step1: "Add your notes with one click.",

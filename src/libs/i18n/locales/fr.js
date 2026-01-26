@@ -14,37 +14,42 @@ const fr = {
   changelog: {
     title: "Quoi de neuf?",
 
-    description_2_6_2: `• Ajout d’une note de type Kanban.
+    web: {
+      description_0_1_0: `• Première version de Fast Memo Desktop (BETA) avec toutes les fonctionnalités mobiles.`,
+    },
+
+    mobile: {
+      description_2_6_2: `• Ajout d’une note de type Kanban.
 • Refonte de l’écran d’accueil lors de l’appui sur « + ».
 • Le type de note est désormais affiché comme un badge en haut.
 • Corrections diverses.`,
 
-    description_2_5_3: `• Corrections diverses.`,
+      description_2_5_3: `• Corrections diverses.`,
 
-    description_2_5_2: `• Ajout de la possibilité de réorganiser les notes par date de création et date de mise à jour.
+      description_2_5_2: `• Ajout de la possibilité de réorganiser les notes par date de création et date de mise à jour.
 • Ajout de la possibilité de changer de langue directement depuis les paramètres.
 • Refonte des modales.
 • Corrections diverses.`,
 
-    description_2_4_2: `• Structure interne de l’application revue et améliorée pour plus de rapidité et de stabilité.
+      description_2_4_2: `• Structure interne de l’application revue et améliorée pour plus de rapidité et de stabilité.
 • Ajout de la reconnaissance vocale pour la transcription des notes (texte et listes).
 • Ajout de la fonctionnalité de recherche approfondie (texte et listes).
 • Corrections diverses.`,
 
-    description_2_3_0: `• Ajout de la langue japonaise.
+      description_2_3_0: `• Ajout de la langue japonaise.
 • Mise à jour des webhooks à la version BETA 2.0.
 • Corrections diverses.`,
 
-    description_2_2_0: `• Ajout de la possibilité de masquer les notes.
+      description_2_2_1: `• Ajout de la possibilité de masquer les notes.
 • Ajout de la possibilité de signaler un problème dans Paramètres → Commentaires et Assistance.
 • Corrections diverses.`,
 
-    description_2_1_0: `• Ajout du nombre de lettres de note et de la taille maximale des notes.
+      description_2_1_0: `• Ajout du nombre de lettres de note et de la taille maximale des notes.
 • Ajout du nombre d'éléments dans la note ToDo.
 • Ajout d'une limite maximale pour les appareils cloud (3).
 • Corrections diverses.`,
 
-    description_2_0_0: `• Ajout de Cloud Sync avec Google Firebase.
+      description_2_0_0: `• Ajout de Cloud Sync avec Google Firebase.
 • Ajout de la gestion des Webhooks (pour utilisateur expert).
 • Ajout d'options d'alignement à gauche et au centre pour les notes textuelles.
 • Ajout d'un code secret pour certaines options.
@@ -53,17 +58,18 @@ const fr = {
 • Modification du style de la note To-Do.
 • Corrections diverses.`,
 
-    description_1_4_0: `• Ajout d'une note de type To-Do.
+      description_1_4_0: `• Ajout d'une note de type To-Do.
 • Corrections diverses.`,
 
-    description_1_3_0: `• Ajout de traductions pour l'italien, l'espagnol, le français, l'allemand et le chinois.
+      description_1_3_0: `• Ajout de traductions pour l'italien, l'espagnol, le français, l'allemand et le chinois.
 • Ajout de nouvelles icônes pour les catégories.
 • Corrections diverses.`,
 
-    description_1_2_1: `• Sortie en production.
+      description_1_2_1: `• Sortie en production.
 • Notes ajoutées, notes temporaires, catégories, etc.
 • Code secret ajouté.
 • Corrections diverses.`,
+    },
   },
   intro: {
     step1: "Ajoutez vos notes en un clic.",

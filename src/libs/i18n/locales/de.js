@@ -14,37 +14,42 @@ const de = {
   changelog: {
     title: "Was gibt's Neues?",
 
-    description_2_6_2: `• Notiztyp Kanban hinzugefügt.
+    web: {
+      description_0_1_0: `• Erste Veröffentlichung von Fast Memo Desktop (BETA) mit allen mobilen Funktionen.`,
+    },
+
+    mobile: {
+      description_2_6_2: `• Notiztyp Kanban hinzugefügt.
 • Startseite beim Drücken von „+“ überarbeitet.
 • Notiztyp als Abzeichen oben neu gestaltet.
 • Verschiedene Korrekturen.`,
 
-    description_2_5_3: `• Verschiedene Korrekturen.`,
+      description_2_5_3: `• Verschiedene Korrekturen.`,
 
-    description_2_5_2: `• Möglichkeit hinzugefügt, Notizen nach Erstellungsdatum und Aktualisierungsdatum neu anzuordnen.
+      description_2_5_2: `• Möglichkeit hinzugefügt, Notizen nach Erstellungsdatum und Aktualisierungsdatum neu anzuordnen.
 • Möglichkeit hinzugefügt, die Sprache direkt in den Einstellungen zu ändern.
 • Überarbeitung der Modals.
 • Verschiedene Korrekturen.`,
 
-    description_2_4_2: `• Überarbeitete und verbesserte interne Struktur der App für mehr Geschwindigkeit und Stabilität.
+      description_2_4_2: `• Überarbeitete und verbesserte interne Struktur der App für mehr Geschwindigkeit und Stabilität.
 • Sprach­erkennung zur Transkription von Notizen (Text und Listen) hinzugefügt.
 • Hinzugefügt: Möglichkeit zur Durchführung von Tiefensuchen (Text und Listen).
 • Verschiedene Fehlerbehebungen.`,
 
-    description_2_3_0: `• Japanische Sprache hinzugefügt.
+      description_2_3_0: `• Japanische Sprache hinzugefügt.
 • Webhooks auf BETA-Version 2.0 aktualisiert.
 • Verschiedene Korrekturen.`,
 
-    description_2_2_0: `• Hinzugefügt die Möglichkeit, Notizen zu verstecken.
+      description_2_2_1: `• Hinzugefügt die Möglichkeit, Notizen zu verstecken.
 • Hinzugefügt die Möglichkeit, ein Problem in den Einstellungen → Feedback und Unterstützung zu melden.
 • Verschiedene Korrekturen.`,
 
-    description_2_1_0: `• Anzahl der Notizbuchstaben und maximale Notizgröße hinzugefügt.
+      description_2_1_0: `• Anzahl der Notizbuchstaben und maximale Notizgröße hinzugefügt.
 • Anzahl der Elemente in ToDo-Notiz hinzugefügt.
 • Maximale Grenze für Cloud-Geräte hinzugefügt (3).
 • Verschiedene Korrekturen.`,
 
-    description_2_0_0: `• Cloud-Synchronisierung mit Google Firebase hinzugefügt.
+      description_2_0_0: `• Cloud-Synchronisierung mit Google Firebase hinzugefügt.
 • Webhooks-Verwaltung hinzugefügt (für erfahrene Benutzer).
 • Links- und Mittelausrichtungsoptionen für Textnotizen hinzugefügt.
 • Geheimcode für einige Optionen hinzugefügt.
@@ -53,17 +58,18 @@ const de = {
 • Der Stil der To-Do-Notiz wurde geändert.
 • Verschiedene Korrekturen.`,
 
-    description_1_4_0: `• Notiz vom Typ "Aufgaben" hinzugefügt.
+      description_1_4_0: `• Notiz vom Typ "Aufgaben" hinzugefügt.
 • Verschiedene Korrekturen.`,
 
-    description_1_3_0: `• Übersetzungen für Italienisch, Spanisch, Französisch, Deutsch und Chinesisch hinzugefügt.
+      description_1_3_0: `• Übersetzungen für Italienisch, Spanisch, Französisch, Deutsch und Chinesisch hinzugefügt.
 • Neue Symbole für Kategorien hinzugefügt.
 • Verschiedene Korrekturen.`,
 
-    description_1_2_1: `• Freigabe in Produktion.
+      description_1_2_1: `• Freigabe in Produktion.
 • Notizen, temporäre Notizen, Kategorien usw. hinzugefügt.
 • Geheimcode hinzugefügt.
 • Verschiedene Korrekturen.`,
+    },
   },
   intro: {
     step1: "Fügen Sie Ihre Notizen mit einem Klick hinzu.",
