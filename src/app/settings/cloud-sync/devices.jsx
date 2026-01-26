@@ -1,18 +1,16 @@
 import { configs } from "@/configs";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Animated,
-  Easing,
-  InteractionManager,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ComputerDesktopIcon, TrashIcon } from "react-native-heroicons/outline";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 
 import BackButton from "@/components/buttons/BackButton";
 import DeviceAndroidIcon from "@/components/icons/DeviceAndroidIcon";
@@ -36,31 +34,27 @@ export default function SyncedDevicesScreen() {
 
   const netInfo = useNetInfo();
 
-  // blink animation
+  const blinkOpacity = useSharedValue(0);
 
-  const blinkAnim = useRef(new Animated.Value(0)).current;
-
-  const blinkInterpolation = blinkAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, 1, 0],
-  });
-
-  const blinkLoop = Animated.loop(
-    Animated.timing(blinkAnim, {
-      toValue: 1,
-      duration: 2500,
-      easing: Easing.linear,
-      useNativeDriver: true,
-    })
-  );
+  const blinkStyle = useAnimatedStyle(() => ({
+    opacity: blinkOpacity.value,
+  }));
 
   useEffect(() => {
-    InteractionManager.runAfterInteractions(() => {
-      blinkLoop.start(() => blinkAnim.setValue(0));
-    });
+    blinkOpacity.value = withRepeat(
+      withTiming(1, {
+        duration: 1250,
+        easing: Easing.linear,
+      }),
+      -1,
+      true
+    );
 
-    return () => blinkLoop.reset();
-  }, []);
+    return () => {
+      cancelAnimation(blinkOpacity);
+      blinkOpacity.value = 0;
+    };
+  }, [blinkOpacity]);
 
   // retrieve devices
 
@@ -195,14 +189,16 @@ export default function SyncedDevicesScreen() {
                 <View>
                   {currentDeviceUuid == connectedDevice.uuid ? (
                     <Animated.View
-                      style={{
-                        backgroundColor: COLOR.yellow,
-                        width: 24,
-                        height: 24,
-                        borderRadius: BORDER.rounded,
-                        marginRight: PADDING_MARGIN.md,
-                        opacity: blinkInterpolation,
-                      }}
+                      style={[
+                        {
+                          backgroundColor: COLOR.yellow,
+                          width: 24,
+                          height: 24,
+                          borderRadius: BORDER.rounded,
+                          marginRight: PADDING_MARGIN.md,
+                        },
+                        blinkStyle,
+                      ]}
                     />
                   ) : (
                     <TouchableOpacity
