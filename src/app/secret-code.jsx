@@ -1,14 +1,14 @@
-import React, { useCallback, useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import i18n from "i18next";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
+import SafeAreaView from "@/components/SafeAreaView";
+import { useRouter } from "@/hooks/useRouter";
 import Haptics from "@/libs/haptics";
 import { retrieveSecretCodeCallback } from "@/libs/registry";
-import { useRouter } from "@/hooks/useRouter";
-import SafeAreaView from "@/components/SafeAreaView";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
@@ -89,17 +89,6 @@ export default function SecretCodeScreen() {
         router.replace(`/notes/${currentNote.id}`);
 
         break;
-      case "toggleProtectedNote":
-        if (code !== currentSecretCode) {
-          setError(true);
-          return;
-        }
-
-        dispatch(toggleProtectedNotes([`${currentNote.id}|${currentNote.locked}`]));
-
-        router.dismissTo(`/notes/${currentNote.id}`);
-
-        break;
       case "toggleProtectedSelectedNotes":
         if (code !== currentSecretCode) {
           setError(true);
@@ -107,7 +96,6 @@ export default function SecretCodeScreen() {
         }
 
         dispatch(toggleProtectedNotes(selectedNotes));
-
         router.dismissAll();
 
         break;
@@ -117,8 +105,8 @@ export default function SecretCodeScreen() {
           return;
         }
 
-        router.back();
         callback?.();
+        router.back();
 
         break;
       default:
