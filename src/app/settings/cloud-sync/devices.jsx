@@ -159,6 +159,7 @@ export default function SyncedDevicesScreen() {
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
+                    flexShrink: 0,
                   }}
                 >
                   {connectedDevice.brand !== "web" ? (
@@ -171,7 +172,7 @@ export default function SyncedDevicesScreen() {
                     <ComputerDesktopIcon size={32} color={COLOR.softWhite} />
                   )}
 
-                  <View style={{ marginLeft: PADDING_MARGIN.md, width: "80%" }}>
+                  <View style={{ marginLeft: PADDING_MARGIN.md, flex: 1 }}>
                     <Text
                       numberOfLines={1}
                       style={{
