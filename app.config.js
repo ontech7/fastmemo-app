@@ -1,4 +1,4 @@
-const { configs } = require("./configs");
+const { configs } = require("./src/configs");
 
 module.exports = {
   expo: {
@@ -26,7 +26,7 @@ module.exports = {
     },
     web: {
       bundler: "metro",
-      output: "static",
+      output: "single",
       favicon: configs.app.favicon,
     },
     plugins: [

@@ -1,9 +1,9 @@
 ![Fast Memo](https://i.imgur.com/dPRR6pJ.png)
 
-![version](https://badgen.net/badge/version/v2.6.2/blue) ![Android](https://badgen.net/badge/android/deployed/green)
-![iOS](https://badgen.net/badge/iOS/dismissed/grey) ![web](https://badgen.net/badge/web/coming%20soon/black)
+![Android](https://badgen.net/badge/android/v2.6.2/blue) ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
+![Desktop](https://badgen.net/badge/Desktop/v0.1.0/blue)
 
-Memo application for Mobile and Tablets, made in React Native using Expo.
+Memo application for Mobile, Tablet and Desktop, made in React Native using Expo.
 
 If you like it, kindly [buy me a coffee](https://www.buymeacoffee.com/ontech7) ☕
 
