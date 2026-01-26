@@ -1,5 +1,5 @@
-import React from "react";
 import * as LocalAuthentication from "expo-local-authentication";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
@@ -15,8 +15,8 @@ import {
 import { Menu, MenuOption, MenuOptions, MenuTrigger } from "react-native-popup-menu";
 import { useDispatch, useSelector } from "react-redux";
 
-import { webhook } from "@/utils/webhook";
 import { useRouter } from "@/hooks/useRouter";
+import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
@@ -143,11 +143,13 @@ export default function NoteSettingsButton({ note, setNote }) {
           <EyeSlashIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
         </MenuOption>
 
-        <MenuOption style={[styles.menuOption, !id && styles.menuOptionDisabled]} disabled={!id} onSelect={changeCategory}>
-          <Text style={styles.menuOptionText}>{t("note.settings.changecategory")}</Text>
+        {note.createdAt !== note.updatedAt && (
+          <MenuOption style={[styles.menuOption, !id && styles.menuOptionDisabled]} disabled={!id} onSelect={changeCategory}>
+            <Text style={styles.menuOptionText}>{t("note.settings.changecategory")}</Text>
 
-          <TagIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-        </MenuOption>
+            <TagIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
+          </MenuOption>
+        )}
       </MenuOptions>
     </Menu>
   );

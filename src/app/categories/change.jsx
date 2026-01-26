@@ -12,6 +12,7 @@ import { useRouter } from "@/hooks/useRouter";
 import { getCategories } from "@/slicers/categoriesSlice";
 import { changeNoteCategory, getNote } from "@/slicers/notesSlice";
 
+import { defaultCategory } from "@/configs/default";
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 export default function ChangeCategoryScreen() {
@@ -20,7 +21,7 @@ export default function ChangeCategoryScreen() {
   const { noteId } = useLocalSearchParams();
   const currentNote = useSelector(getNote(noteId));
 
-  const [selectedCategory, setSelectedCategory] = useState(currentNote?.category);
+  const [selectedCategory, setSelectedCategory] = useState(currentNote?.category || defaultCategory);
   const categories = useSelector(getCategories);
 
   const router = useRouter();

@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useRef } from "react";
 import { useLocalSearchParams } from "expo-router";
+import { useEffect, useMemo, useRef } from "react";
 import { useSelector } from "react-redux";
 import uuid from "react-uuid";
 
-import { formatDateTime } from "@/utils/date";
-import { useRouter } from "@/hooks/useRouter";
 import NoteKanbanEditor from "@/components/notes/NoteKanbanEditor";
 import NoteTextEditor from "@/components/notes/NoteTextEditor";
 import NoteTodoEditor from "@/components/notes/NoteTodoEditor";
+import { useRouter } from "@/hooks/useRouter";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { getNote } from "@/slicers/notesSlice";
+import { formatDateTime } from "@/utils/date";
 
 export default function NoteScreen() {
   const router = useRouter();
