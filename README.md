@@ -37,7 +37,11 @@ If you like it, kindly [buy me a coffee](https://www.buymeacoffee.com/ontech7) â
 - [x] Kanban note
 - [ ] ...
 
-[(check CHANGELOG.md)](/CHANGELOG.md)
+## Documentation
+
+- [**Changelog**](CHANGELOG.md) - Version history and updates
+- [**Self-Hosting Guide**](SELF_HOSTING.md) - Deploy FastMemo on your own web server
+- [**Tauri Setup**](TAURI_SETUP.md) - Build the desktop application (macOS, Windows, Linux)
 
 ## Cloud Sync with Google Firebase
 
