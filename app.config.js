@@ -5,7 +5,7 @@ module.exports = {
     owner: "dontrok1",
     name: configs.app.name,
     slug: configs.app.slug,
-    version: configs.app.version,
+    version: configs.app.version.mobile,
     orientation: "portrait",
     icon: configs.app.icon,
     scheme: configs.app.slug,

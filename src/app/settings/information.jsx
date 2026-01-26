@@ -21,6 +21,8 @@ const TAURI_VER = "1.6.3";
 export default function InformationScreen() {
   const { t } = useTranslation();
 
+  const currentAppVersion = Platform.OS === "web" ? configs.app.version.web : configs.app.version.mobile;
+
   const logoAnimRef = useRef(null);
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export default function InformationScreen() {
             <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
               <Text style={styles.sectionItemList_title}>{t("info.version")}</Text>
 
-              <Text style={styles.sectionItemList_text}>{configs.app.version}</Text>
+              <Text style={styles.sectionItemList_text}>{currentAppVersion}</Text>
             </View>
           </View>
         </View>

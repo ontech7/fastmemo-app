@@ -1,22 +1,22 @@
-import React, { useEffect, useRef, useState } from "react";
 import { configs } from "@/configs";
 import * as Sentry from "@sentry/react-native";
 import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CheckIcon, PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
 import { useDispatch, useStore } from "react-redux";
 
-import { formatDateTime } from "@/utils/date";
-import { useRouter } from "@/hooks/useRouter";
 import BackButton from "@/components/buttons/BackButton";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import LottieView from "@/components/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
+import { useRouter } from "@/hooks/useRouter";
 import { setReportDate } from "@/slicers/settingsSlice";
+import { formatDateTime } from "@/utils/date";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
@@ -187,6 +187,8 @@ export default function ReportScreen() {
     data.topics = [...topicsSelected];
     data.description = problemDescription;
 
+    const currentAppVersion = Platform.OS === "web" ? configs.app.version.web : configs.app.version.mobile;
+
     if (sendDeviceInfo) {
       data.deviceInfo = {
         brand: Device.brand,
@@ -194,11 +196,11 @@ export default function ReportScreen() {
         deviceType: Device.DeviceType[Device.deviceType],
         modelName: Device.modelName,
         osVersion: Device.osVersion,
-        appVersion: configs.app.version,
+        appVersion: currentAppVersion,
       };
     } else {
       data.deviceInfo = {
-        appVersion: configs.app.version,
+        appVersion: currentAppVersion,
       };
     }
 

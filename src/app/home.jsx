@@ -283,13 +283,15 @@ export default function HomeScreen() {
     const checkVersion = async () => {
       const lastAppVersion = await AsyncStorage.getItem("@appVersion");
 
-      if (lastAppVersion != null && lastAppVersion == configs.app.version) {
+      const currentAppVersion = Platform.OS === "web" ? configs.app.version.web : configs.app.version.mobile;
+
+      if (lastAppVersion != null && lastAppVersion == currentAppVersion) {
         return;
       }
 
       setTimeout(() => {
         router.push("/changelog");
-        AsyncStorage.setItem("@appVersion", configs.app.version);
+        AsyncStorage.setItem("@appVersion", currentAppVersion);
       }, 750);
     };
 

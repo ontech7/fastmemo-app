@@ -4,7 +4,10 @@ const configs = {
   apiUrl: process.env.EXPO_PUBLIC_API_URL || "",
 
   app: {
-    version: "2.6.2",
+    version: {
+      mobile: "2.6.2",
+      web: "0.1.0-beta",
+    },
     name: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "Fast Memo" : "Fast Memo Test",
     slug: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "FastMemoApp" : "fastmemoapptest",
     bundle: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "com.ontech7.FastMemoApp" : "com.ontech7.fastmemoapptest",
