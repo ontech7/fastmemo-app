@@ -3,7 +3,7 @@ body {
   background-color: #020e35;
 }
 
-textarea:focus input:focus {
+*:focus {
   outline: none;
   box-shadow: none;
 }

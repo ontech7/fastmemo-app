@@ -6,7 +6,7 @@ import { useTheme } from "@react-navigation/native";
 import * as Sentry from "@sentry/react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect } from "react";
+import React from "react";
 import { I18nextProvider } from "react-i18next";
 import { Platform } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -41,15 +41,6 @@ Sentry.init({
 export default Sentry.wrap(function RootLayout() {
   const { colors } = useTheme();
   colors.background = configs.app.backgroundColor;
-
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-
-    document.addEventListener("contextmenu", (event) => event.preventDefault());
-    return () => {
-      document.removeEventListener("contextmenu", (event) => event.preventDefault());
-    };
-  }, []);
 
   return (
     <I18nextProvider i18n={i18n}>
