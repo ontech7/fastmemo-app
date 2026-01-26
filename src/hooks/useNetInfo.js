@@ -1,5 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
+
+const isTauri = typeof window !== "undefined" && "__TAURI__" in window;
+
+const CHECK_INTERVAL = 30000; // 30 seconds
 
 const useNetInfo = () => {
   const [netInfo, setNetInfo] = useState({
@@ -7,20 +11,34 @@ const useNetInfo = () => {
     type: "unknown",
   });
 
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      const handleOnline = () => setNetInfo({ isConnected: true, type: "wifi" });
-      const handleOffline = () => setNetInfo({ isConnected: false, type: "none" });
-
-      setNetInfo({
-        isConnected: navigator.onLine,
-        type: navigator.onLine ? "wifi" : "none",
+  const checkConnectivity = useCallback(async () => {
+    try {
+      await fetch("https://www.gstatic.com/generate_204", {
+        method: "HEAD",
+        mode: "no-cors",
+        cache: "no-store",
       });
+
+      setNetInfo({ isConnected: true, type: "wifi" });
+    } catch {
+      setNetInfo({ isConnected: false, type: "none" });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isTauri || Platform.OS === "web") {
+      checkConnectivity();
+
+      const interval = setInterval(checkConnectivity, CHECK_INTERVAL);
+
+      const handleOnline = () => checkConnectivity();
+      const handleOffline = () => setNetInfo({ isConnected: false, type: "none" });
 
       window.addEventListener("online", handleOnline);
       window.addEventListener("offline", handleOffline);
 
       return () => {
+        clearInterval(interval);
         window.removeEventListener("online", handleOnline);
         window.removeEventListener("offline", handleOffline);
       };
@@ -36,7 +54,7 @@ const useNetInfo = () => {
 
       return () => unsubscribe();
     }
-  }, []);
+  }, [checkConnectivity]);
 
   return netInfo;
 };

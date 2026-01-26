@@ -13,6 +13,7 @@ export const toast = (text) => {
         padding: "12px 24px",
         backgroundColor: "#333",
         color: "#fff",
+        fontFamily: "Roboto, sans-serif",
       },
     });
     return;

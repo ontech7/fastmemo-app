@@ -85,7 +85,7 @@ export const useSyncOn = () => {
 
       const devicesData = await getAllElementsInCloud({
         collection: COLLECTIONS.various.connectedDevices,
-        queryConstraints: where("devicesToSync", "array-contains", deviceUuid),
+        queryConstraints: [where("devicesToSync", "array-contains", deviceUuid)],
       });
 
       // no pending changes
