@@ -1,6 +1,6 @@
 [package]
 name = "fastmemo"
-version = "0.1.0"
+version = "0.1.0-beta"
 description = "Fast Memo - Notes in one click"
 authors = ["ontech7"]
 license = "GNU Affero General Public License v3.0"
