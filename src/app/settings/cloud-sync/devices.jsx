@@ -1,4 +1,14 @@
+import BackButton from "@/components/buttons/BackButton";
+import DeviceAndroidIcon from "@/components/icons/DeviceAndroidIcon";
+import DeviceAppleIcon from "@/components/icons/DeviceAppleIcon";
+import NoCloudIcon from "@/components/icons/NoCloudIcon";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import SafeAreaView from "@/components/SafeAreaView";
 import { configs } from "@/configs";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import useNetInfo from "@/hooks/useNetInfo";
+import { useTimeoutTask } from "@/hooks/useTimeoutTask";
+import { getAllConnectedDevices, getDeviceUuid, removeDeviceFromCloud, removeDeviceFromDevicesToSync } from "@/libs/firebase";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -11,18 +21,6 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
-
-import BackButton from "@/components/buttons/BackButton";
-import DeviceAndroidIcon from "@/components/icons/DeviceAndroidIcon";
-import DeviceAppleIcon from "@/components/icons/DeviceAppleIcon";
-import NoCloudIcon from "@/components/icons/NoCloudIcon";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import SafeAreaView from "@/components/SafeAreaView";
-import { useTimeoutTask } from "@/hooks/useTimeoutTask";
-import { getAllConnectedDevices, getDeviceUuid, removeDeviceFromCloud, removeDeviceFromDevicesToSync } from "@/libs/firebase";
-
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
-import useNetInfo from "@/hooks/useNetInfo";
 
 export default function SyncedDevicesScreen() {
   const { t } = useTranslation();
@@ -149,41 +147,33 @@ export default function SyncedDevicesScreen() {
                   justifyContent: "space-between",
                 }}
               >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  {connectedDevice.brand !== "web" ? (
-                    connectedDevice.brand !== "Apple" ? (
-                      <DeviceAndroidIcon size={32} color={COLOR.softWhite} />
-                    ) : (
-                      <DeviceAppleIcon size={32} color={COLOR.softWhite} />
-                    )
+                {connectedDevice.brand !== "web" ? (
+                  connectedDevice.brand !== "Apple" ? (
+                    <DeviceAndroidIcon size={32} color={COLOR.softWhite} />
                   ) : (
-                    <ComputerDesktopIcon size={32} color={COLOR.softWhite} />
-                  )}
+                    <DeviceAppleIcon size={32} color={COLOR.softWhite} />
+                  )
+                ) : (
+                  <ComputerDesktopIcon size={32} color={COLOR.softWhite} />
+                )}
 
-                  <View style={{ marginLeft: PADDING_MARGIN.md, flex: 1 }}>
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        fontSize: FONTSIZE.subtitle,
-                        fontWeight: FONTWEIGHT.semiBold,
-                        color: COLOR.softWhite,
-                      }}
-                    >
-                      {connectedDevice.modelName}
-                    </Text>
+                <View style={{ marginLeft: PADDING_MARGIN.md, flex: 1 }}>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      fontSize: FONTSIZE.subtitle,
+                      fontWeight: FONTWEIGHT.semiBold,
+                      color: COLOR.softWhite,
+                    }}
+                  >
+                    {connectedDevice.modelName}
+                  </Text>
 
-                    <Text style={{ color: COLOR.softWhite, width: SIZE.full }}>
-                      {t("synceddevices.lastSync")}
+                  <Text style={{ color: COLOR.softWhite }}>
+                    {t("synceddevices.lastSync")}
 
-                      <Text style={{ color: COLOR.gray }}>{new Date(parseInt(connectedDevice.lastSync)).toLocaleString()}</Text>
-                    </Text>
-                  </View>
+                    <Text style={{ color: COLOR.gray }}>{new Date(parseInt(connectedDevice.lastSync)).toLocaleString()}</Text>
+                  </Text>
                 </View>
 
                 <View>

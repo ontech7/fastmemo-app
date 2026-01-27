@@ -1,12 +1,11 @@
-import { useKanbanDrag } from "@/contexts/KanbanDragContext";
+import DragIcon from "@/components/icons/DragIcon";
+import Haptics from "@/libs/haptics";
+import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import React, { useRef, useState } from "react";
 import { Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { XCircleIcon } from "react-native-heroicons/outline";
 import Animated, { runOnJS, useAnimatedStyle } from "react-native-reanimated";
-
-import DragIcon from "@/components/icons/DragIcon";
-import Haptics from "@/libs/haptics";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 

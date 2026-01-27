@@ -1,11 +1,9 @@
-import { useKanbanDrag } from "@/contexts/KanbanDragContext";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
+import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import React, { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { PlusIcon, TrashIcon } from "react-native-heroicons/outline";
-
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
-
 import KanbanCard from "./KanbanCard";
 
 export default function KanbanColumn({
@@ -23,7 +21,7 @@ export default function KanbanColumn({
   const { t } = useTranslation();
 
   const columnRef = useRef(null);
-  const { registerColumnPosition, isDragging, draggedItem, sourceColumnId } = useKanbanDrag();
+  const { registerColumnPosition, isDragging, targetColumnId, sourceColumnId } = useKanbanDrag();
 
   // register column position for drop detection
   useEffect(() => {
@@ -40,7 +38,7 @@ export default function KanbanColumn({
     setColumnColor(column.id, KANBAN_COLUMN_COLORS[nextIndex]);
   }, [column.id, column.color, setColumnColor]);
 
-  const isDropTarget = isDragging && sourceColumnId !== column.id;
+  const isDropTarget = isDragging && targetColumnId === column.id && sourceColumnId !== column.id;
 
   return (
     <View ref={columnRef} style={[styles.container, { width: columnWidth }, isDropTarget && styles.dropTarget]}>

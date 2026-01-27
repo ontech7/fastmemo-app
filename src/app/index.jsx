@@ -1,3 +1,9 @@
+import LottieView from "@/components/lottie/LottieAnimation";
+import { COLOR } from "@/constants/styles";
+import { useRouter } from "@/hooks/useRouter";
+import { initFirebase } from "@/libs/firebase";
+import { isObjectEmpty } from "@/utils/string";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
 import * as Localization from "expo-localization";
 import * as SplashScreen from "expo-splash-screen";
@@ -5,15 +11,6 @@ import i18n from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-
-import LottieView from "@/components/lottie/LottieAnimation";
-import { useRouter } from "@/hooks/useRouter";
-import { initFirebase } from "@/libs/firebase";
-import { AsyncStorage } from "@/libs/storage";
-import { isObjectEmpty } from "@/utils/string";
-
-import { COLOR } from "@/constants/styles";
-
 import lottieJson from "../assets/lottie/Logo_with_Text.json";
 
 export default function LoadingScreen() {

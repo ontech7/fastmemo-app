@@ -19,6 +19,10 @@ const it = {
     },
 
     mobile: {
+      description_2_7_0: `• Sistemato il trascinamento Kanban su mobile, tablet e desktop.
+    • Allineata l'app tra Mobile e Desktop.
+    • Rilascio ufficiale dell'app Desktop.`,
+
       description_2_6_2: `• Aggiunta nota di tipo Kanban.
 • Rivisitato il design della Home quando si clicca “+”.
 • Rivisitato il tipo di nota: ora è un badge in alto.

@@ -1,17 +1,9 @@
-import { KanbanDragProvider } from "@/contexts/KanbanDragContext";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { BackHandler, Keyboard, Platform, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
-import { useDispatch, useSelector } from "react-redux";
-import uuid from "react-uuid";
-
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import SafeAreaView from "@/components/SafeAreaView";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { storeDirtyNoteId } from "@/libs/registry";
+import KanbanDragProvider from "@/providers/KanbanDragProvider";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
   selectorWebhook_addKanbanNote,
@@ -22,9 +14,14 @@ import {
 import { formatDateTime } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
-
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
-
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { BackHandler, Keyboard, Platform, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
+import { useDispatch, useSelector } from "react-redux";
+import uuid from "react-uuid";
 import KanbanBoard from "../kanban/KanbanBoard";
 
 const COLUMN_PEEK = 40;

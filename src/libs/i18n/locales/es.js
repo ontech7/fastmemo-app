@@ -19,6 +19,10 @@ const es = {
     },
 
     mobile: {
+      description_2_7_0: `• Corregido el arrastrar y soltar de Kanban en móvil, tablet y escritorio.
+    • Alineada la aplicación entre móvil y escritorio.
+    • Lanzamiento oficial de la aplicación de escritorio.`,
+
       description_2_6_2: `• Se agregó nota de tipo Kanban.
 • Rediseño de la Home al presionar “+”.
 • El tipo de nota ahora es una insignia en la parte superior.

@@ -1,4 +1,6 @@
 import { configs } from "@/configs";
+import { defaultCategory } from "@/configs/default";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { deleteApp, getApp, getApps, initializeApp } from "firebase/app";
 import {
   collection as collectionFirestore,
@@ -13,9 +15,6 @@ import {
 } from "firebase/firestore";
 import { Platform } from "react-native";
 import uuid from "react-uuid";
-
-import { defaultCategory } from "@/configs/default";
-import { AsyncStorage } from "@/libs/storage";
 
 const getDeviceInfo = () => {
   if (Platform.OS === "web") {

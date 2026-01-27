@@ -3,9 +3,18 @@ import { useSharedValue } from "react-native-reanimated";
 
 const KanbanDragContext = createContext(null);
 
-export function KanbanDragProvider({ children, columns, onMoveCard, onReorderCards, scrollViewRef, columnWidth, columnGap }) {
+export default function KanbanDragProvider({
+  children,
+  columns,
+  onMoveCard,
+  onReorderCards,
+  scrollViewRef,
+  columnWidth,
+  columnGap,
+}) {
   const [draggedItem, setDraggedItem] = useState(null);
   const [sourceColumnId, setSourceColumnId] = useState(null);
+  const [targetColumnId, setTargetColumnId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const dragX = useSharedValue(0);
@@ -24,6 +33,7 @@ export function KanbanDragProvider({ children, columns, onMoveCard, onReorderCar
   const startCardY = useSharedValue(0);
 
   const columnPositionsRef = useRef([]);
+  const lastTargetColumnRef = useRef(null);
 
   const scrollOffsetRef = useRef(0);
 
@@ -65,6 +75,23 @@ export function KanbanDragProvider({ children, columns, onMoveCard, onReorderCar
 
     fingerX.value = absoluteX;
     fingerY.value = absoluteY;
+
+    // calculate target column based on finger position
+    const contentX = absoluteX + scrollOffsetRef.current;
+    let newTargetColumnId = null;
+
+    for (const col of columnPositionsRef.current) {
+      if (contentX >= col.x && contentX <= col.x + col.width) {
+        newTargetColumnId = col.id;
+        break;
+      }
+    }
+
+    // only update state if target changed to avoid unnecessary re-renders
+    if (newTargetColumnId !== lastTargetColumnRef.current) {
+      lastTargetColumnRef.current = newTargetColumnId;
+      setTargetColumnId(newTargetColumnId);
+    }
   }, []);
 
   const getTargetColumn = useCallback(
@@ -115,6 +142,8 @@ export function KanbanDragProvider({ children, columns, onMoveCard, onReorderCar
         setIsDragging(false);
         setDraggedItem(null);
         setSourceColumnId(null);
+        setTargetColumnId(null);
+        lastTargetColumnRef.current = null;
         return;
       }
 
@@ -143,6 +172,8 @@ export function KanbanDragProvider({ children, columns, onMoveCard, onReorderCar
       setIsDragging(false);
       setDraggedItem(null);
       setSourceColumnId(null);
+      setTargetColumnId(null);
+      lastTargetColumnRef.current = null;
     },
     [draggedItem, sourceColumnId, columns, getTargetColumn, getDropIndex, onMoveCard, onReorderCards]
   );
@@ -151,6 +182,8 @@ export function KanbanDragProvider({ children, columns, onMoveCard, onReorderCar
     setIsDragging(false);
     setDraggedItem(null);
     setSourceColumnId(null);
+    setTargetColumnId(null);
+    lastTargetColumnRef.current = null;
   }, []);
 
   const setOverlayOffset = useCallback((x, y) => {
@@ -161,6 +194,7 @@ export function KanbanDragProvider({ children, columns, onMoveCard, onReorderCar
   const value = {
     draggedItem,
     sourceColumnId,
+    targetColumnId,
     isDragging,
     dragX,
     dragY,
@@ -195,5 +229,3 @@ export function useKanbanDrag() {
   }
   return context;
 }
-
-export default KanbanDragContext;

@@ -1,17 +1,16 @@
+import FSStorage from "@/libs/storage/fsStorage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import { Platform } from "react-native";
 import { persistReducer, persistStore } from "redux-persist";
 import getStoredState from "redux-persist/es/getStoredState";
-
-import { AsyncStorage, getNotesStorage } from "@/libs/storage";
-
 import categoriesReducer from "./categoriesSlice";
 import notesReducer from "./notesSlice";
 import settingsReducer from "./settingsSlice";
 
 const notesPersistConfig = {
   key: "root_notes",
-  storage: getNotesStorage(),
+  storage: FSStorage(),
   migrate: async (state) => {
     if (Platform.OS === "web") {
       return state;

@@ -1,19 +1,16 @@
-import React, { useCallback, useEffect, useState } from "react";
+import SafeAreaView from "@/components/SafeAreaView";
+import { defaultNote } from "@/configs/default";
+import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { useRouter } from "@/hooks/useRouter";
+import Haptics from "@/libs/haptics";
+import { addNote } from "@/slicers/notesSlice";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import i18n from "i18next";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowPathIcon } from "react-native-heroicons/outline";
 import { useDispatch } from "react-redux";
-
-import Haptics from "@/libs/haptics";
-import { AsyncStorage } from "@/libs/storage";
-import { useRouter } from "@/hooks/useRouter";
-import SafeAreaView from "@/components/SafeAreaView";
-import { addNote } from "@/slicers/notesSlice";
-import { defaultNote } from "@/configs/default";
-
-import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
-
 import CodeInput from "../../components/inputs/CodeInput";
 import { setSecretCode } from "../../slicers/settingsSlice";
 

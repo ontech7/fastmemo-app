@@ -1,8 +1,6 @@
-import { useKanbanDrag } from "@/contexts/KanbanDragContext";
-import Animated, { useAnimatedStyle } from "react-native-reanimated";
-
 import { PADDING_MARGIN } from "@/constants/styles";
-
+import { useKanbanDrag } from "@/providers/KanbanDragProvider";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { KanbanCardStatic } from "./KanbanCard";
 
 export default function KanbanDragOverlay({ columnWidth }) {

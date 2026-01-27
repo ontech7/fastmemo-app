@@ -1,6 +1,10 @@
 import "../styles/global.css";
 
 import { configs } from "@/configs";
+import { BORDER, COLOR } from "@/constants/styles";
+import i18n from "@/libs/i18n";
+import SyncOnProvider from "@/providers/SyncOnProvider";
+import { persistor, store } from "@/slicers/store";
 import { DialogProvider } from "@ontech7/react-native-dialog";
 import { useTheme } from "@react-navigation/native";
 import * as Sentry from "@sentry/react-native";
@@ -15,13 +19,6 @@ import { RootSiblingParent } from "react-native-root-siblings";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 
-import SyncOnProvider from "@/components/SyncOnProvider";
-import i18n from "@/libs/i18n";
-import { persistor, store } from "@/slicers/store";
-
-import { BORDER, COLOR } from "@/constants/styles";
-
-// Web toast provider
 const WebToaster = Platform.OS === "web" ? require("react-hot-toast").Toaster : null;
 
 export const unstable_settings = {

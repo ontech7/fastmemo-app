@@ -1,17 +1,12 @@
-import { useKanbanDrag } from "@/contexts/KanbanDragContext";
-import { useCallback, useEffect, useRef } from "react";
+import KanbanColumn from "@/components/kanban/KanbanColumn";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { useKanbanDrag } from "@/providers/KanbanDragProvider";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { PlusIcon } from "react-native-heroicons/outline";
 import uuid from "react-uuid";
-
-import KanbanColumn from "@/components/kanban/KanbanColumn";
-
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
-
 import KanbanDragOverlay from "./KanbanDragOverlay";
-
-export const COLUMN_PEEK = 40;
 
 export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInterval, scrollViewRef }) {
   const { t } = useTranslation();
@@ -20,6 +15,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
   const autoScrollRef = useRef(null);
   const scrollOffsetRef = useRef(0);
   const overlayRootRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   const handleScroll = useCallback(
     (event) => {
@@ -31,16 +27,22 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
   );
 
   // measure overlay root to register offset relative to window
-  const handleOverlayLayout = useCallback(() => {
-    if (!overlayRootRef.current) return;
-    overlayRootRef.current.measureInWindow((x, y) => {
-      setOverlayOffset(x, y);
-    });
-  }, [setOverlayOffset]);
+  const handleOverlayLayout = useCallback(
+    (event) => {
+      const { width } = event.nativeEvent.layout;
+      setContainerWidth(width);
+
+      if (!overlayRootRef.current) return;
+      overlayRootRef.current.measureInWindow((x, y) => {
+        setOverlayOffset(x, y);
+      });
+    },
+    [setOverlayOffset]
+  );
 
   // auto-scroll when dragging near edges
   useEffect(() => {
-    if (!isDragging) {
+    if (!isDragging || containerWidth === 0) {
       if (autoScrollRef.current) {
         clearInterval(autoScrollRef.current);
         autoScrollRef.current = null;
@@ -53,14 +55,13 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
 
     autoScrollRef.current = setInterval(() => {
       const x = fingerX.value - containerOffsetX.value;
-      const screenWidth = columnWidth + COLUMN_PEEK + PADDING_MARGIN.lg * 2;
 
       if (x < EDGE_THRESHOLD) {
         const newOffset = Math.max(0, scrollOffsetRef.current - SCROLL_SPEED);
         scrollOffsetRef.current = newOffset;
         updateScrollOffset(newOffset);
         scrollViewRef.current?.scrollTo({ x: newOffset, animated: false });
-      } else if (x > screenWidth - EDGE_THRESHOLD) {
+      } else if (x > containerWidth - EDGE_THRESHOLD) {
         const newOffset = scrollOffsetRef.current + SCROLL_SPEED;
         scrollOffsetRef.current = newOffset;
         updateScrollOffset(newOffset);
@@ -74,7 +75,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
         autoScrollRef.current = null;
       }
     };
-  }, [isDragging, fingerX, containerOffsetX, columnWidth, scrollViewRef]);
+  }, [isDragging, fingerX, containerOffsetX, containerWidth, scrollViewRef, updateScrollOffset]);
 
   /* Column operations */
 

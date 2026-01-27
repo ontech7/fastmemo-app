@@ -1,6 +1,5 @@
-import React from "react";
 import { useTranslation } from "react-i18next";
-import { Keyboard, Platform, StyleSheet, TextInput, TouchableWithoutFeedback, View } from "react-native";
+import { Keyboard, StyleSheet, TextInput, TouchableWithoutFeedback, View } from "react-native";
 import { DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, XMarkIcon } from "react-native-heroicons/outline";
 
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
@@ -56,7 +55,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLOR.gray,
     paddingHorizontal: PADDING_MARGIN.sm,
-    paddingVertical: Platform.OS === "web" ? PADDING_MARGIN.md : 0,
+    paddingVertical: PADDING_MARGIN.sm,
   },
   icon: {
     marginRight: PADDING_MARGIN.xs,

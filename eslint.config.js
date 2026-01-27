@@ -43,7 +43,7 @@ module.exports = defineConfig([
       "build/*",
       "dist/*",
       "node_modules/*",
-      "assets/*",
+      "src/assets/*",
       "*.mjs",
       "package-lock.json",
       "*.md",

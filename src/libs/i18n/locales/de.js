@@ -19,6 +19,10 @@ const de = {
     },
 
     mobile: {
+      description_2_7_0: `• Kanban-Drag-and-Drop auf Mobilgeräten, Tablets und am Desktop behoben.
+    • Mobile- und Desktop-App angeglichen.
+    • Offizielle Veröffentlichung der Desktop-App.`,
+
       description_2_6_2: `• Notiztyp Kanban hinzugefügt.
 • Startseite beim Drücken von „+“ überarbeitet.
 • Notiztyp als Abzeichen oben neu gestaltet.

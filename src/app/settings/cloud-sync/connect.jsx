@@ -1,5 +1,12 @@
+import BackButton from "@/components/buttons/BackButton";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import SafeAreaView from "@/components/SafeAreaView";
 import { configs } from "@/configs";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { useCloudSync } from "@/hooks/useCloudSync";
 import useNetInfo from "@/hooks/useNetInfo";
+import { useSecret } from "@/hooks/useSecret";
+import { toast } from "@/utils/toast";
 import { useTranslation } from "react-i18next";
 import { Linking, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import {
@@ -9,15 +16,6 @@ import {
   InformationCircleIcon,
   PencilIcon,
 } from "react-native-heroicons/outline";
-
-import BackButton from "@/components/buttons/BackButton";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import SafeAreaView from "@/components/SafeAreaView";
-import { useCloudSync } from "@/hooks/useCloudSync";
-import { toast } from "@/utils/toast";
-
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
-import { useSecret } from "@/hooks/useSecret";
 
 export default function CloudSyncScreen() {
   const { t } = useTranslation();
@@ -336,6 +334,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLOR.softWhite,
     paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: PADDING_MARGIN.sm,
     fontSize: FONTSIZE.medium,
   },
   textInput_disabled: {

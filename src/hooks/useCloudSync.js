@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
 import { configs } from "@/configs";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
+import { defaultCategory } from "@/configs/default";
 import {
   addDeviceToCloud,
   COLLECTIONS,
@@ -18,11 +19,10 @@ import {
   setElementInCloud,
   updateLastSyncInCloud,
 } from "@/libs/firebase";
-import { AsyncStorage } from "@/libs/storage";
 import { CryptNote } from "@/utils/crypt";
 import { getReversedDateTime } from "@/utils/date";
 import { toast } from "@/utils/toast";
-import { defaultCategory } from "@/configs/default";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { getCategories, resetCloudCategories, setCategories } from "../slicers/categoriesSlice";
 import { getAllNotes, getNoteFilters, resetCloudNotes, setNotes } from "../slicers/notesSlice";

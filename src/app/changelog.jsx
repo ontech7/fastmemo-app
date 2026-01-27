@@ -1,20 +1,18 @@
-import React, { useEffect, useMemo, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
-
 import CloseButton from "@/components/buttons/CloseButton";
 import ChangelogItem from "@/components/changelog/ChangelogItem";
 import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
-
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
-
+import { useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import lottieJson from "../assets/lottie/Logo.json";
 
 function getVersionChangelogs(t) {
   return Platform.OS === "web"
     ? [{ version: "v0.1.0-beta", text: t("changelog.web.description_0_1_0") }]
     : [
+        { version: "v2.7.0", text: t("changelog.mobile.description_2_7_0") },
         { version: "v2.6.2", text: t("changelog.mobile.description_2_6_2") },
         { version: "v2.5.3", text: t("changelog.mobile.description_2_5_3") },
         { version: "v2.5.2", text: t("changelog.mobile.description_2_5_2") },
@@ -23,9 +21,6 @@ function getVersionChangelogs(t) {
         { version: "v2.2.1", text: t("changelog.mobile.description_2_2_1") },
         { version: "v2.1.0", text: t("changelog.mobile.description_2_1_0") },
         { version: "v2.0.0", text: t("changelog.mobile.description_2_0_0") },
-        { version: "v1.4.0", text: t("changelog.mobile.description_1_4_0") },
-        { version: "v1.3.0", text: t("changelog.mobile.description_1_3_0") },
-        { version: "v1.2.1", text: t("changelog.mobile.description_1_2_1") },
       ];
 }
 

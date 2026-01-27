@@ -1,9 +1,8 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createSlice } from "@reduxjs/toolkit";
 import * as Localization from "expo-localization";
 import i18n from "i18next";
 import { Platform } from "react-native";
-
-import { AsyncStorage } from "@/libs/storage";
 
 const initialState = {
   language: "system",

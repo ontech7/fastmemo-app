@@ -1,13 +1,3 @@
-import { configs } from "@/configs";
-import { useNavigation } from "@react-navigation/native";
-import { FlashList } from "@shopify/flash-list";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { BackHandler, Platform, StyleSheet, Text, View } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { useDispatch, useSelector, useStore } from "react-redux";
-
 import AddNoteOverlayButton from "@/components/buttons/AddNoteOverlayButton";
 import DeleteNotesButton from "@/components/buttons/DeleteNotesButton";
 import FavoriteNotesButton from "@/components/buttons/FavoriteNotesButton";
@@ -20,9 +10,11 @@ import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import SearchNotesInput from "@/components/inputs/SearchNotesInput";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
+import { configs } from "@/configs";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
+import { useSecret } from "@/hooks/useSecret";
 import Haptics from "@/libs/haptics";
-import { AsyncStorage } from "@/libs/storage";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import {
   deleteNote,
@@ -41,9 +33,15 @@ import {
 } from "@/slicers/settingsSlice";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
-
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
-import { useSecret } from "@/hooks/useSecret";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
+import { FlashList } from "@shopify/flash-list";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { BackHandler, Platform, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { useDispatch, useSelector, useStore } from "react-redux";
 
 export default function HomeScreen() {
   const { t } = useTranslation();

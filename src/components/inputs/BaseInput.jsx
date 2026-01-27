@@ -1,9 +1,8 @@
-import React from "react";
-import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import { BORDER, COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
-export default function BaseInput({ label, style = {}, ...props }) {
+export default function BaseInput({ label = null, style = {}, ...props }) {
   return (
     <>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -36,7 +35,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLOR.gray,
     paddingHorizontal: PADDING_MARGIN.sm,
-    paddingVertical: Platform.OS === "web" ? PADDING_MARGIN.md : 0,
+    paddingVertical: PADDING_MARGIN.sm,
   },
   label: {
     color: COLOR.softWhite,

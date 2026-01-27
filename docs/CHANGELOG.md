@@ -1,3 +1,9 @@
+## v2.7.0
+
+- Fixed Kanban Drag and Drop on mobile, tablet and desktop
+- Aligned Mobile and Desktop application
+- Official release for Desktop application
+
 ## v2.6.2
 
 - Fixed sync when using new note type Kanban
