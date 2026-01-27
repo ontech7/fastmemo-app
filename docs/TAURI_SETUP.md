@@ -65,16 +65,10 @@ Copy the public key to `tauri.conf.json`:
 yarn tauridev
 ```
 
-### Production build (without signing)
+### Production build (with signing)
 
 ```bash
 yarn tauri:build
-```
-
-### Production build (with signing for updater)
-
-```bash
-TAURI_PRIVATE_KEY=$(cat ~/.tauri/fastmemo.key) TAURI_KEY_PASSWORD="your_ password" yarn tauri:build
 ```
 
 ### Build output
@@ -217,7 +211,7 @@ cargo install tauri-cli
 ### "A public key has been found, but no private key"
 
 ```bash
-export TAURI_PRIVATE_KEY=$(cat ~/.tauri/fastmemo.key)
+export TAURI_PRIVATE_KEY="your-private-key"
 ```
 
 ### "The configured updater endpoint must use the `https` protocol"
@@ -240,9 +234,9 @@ You must regenerate keys and release a new version. Users with old versions will
 
 For the automated workflow, configure these secrets in the repository:
 
-| Secret               | Value                               |
-| -------------------- | ----------------------------------- |
-| `TAURI_PRIVATE_KEY`  | Contents of `~/.tauri/fastmemo.key` |
-| `TAURI_KEY_PASSWORD` | Key password (if set)               |
+| Secret               | Value                      |
+| -------------------- | -------------------------- |
+| `TAURI_PRIVATE_KEY`  | Contents of `fastmemo.key` |
+| `TAURI_KEY_PASSWORD` | Key password (if set)      |
 
 **Path:** Repository → Settings → Secrets and variables → Actions → New repository secret
