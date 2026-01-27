@@ -1,4 +1,4 @@
-name: "publish-desktop"
+name: "publish"
 
 on: workflow_dispatch
 
@@ -44,6 +44,11 @@ jobs:
       - name: install frontend dependencies
         run: yarn install
 
+      - name: get version from package.json
+        id: pkg_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        shell: bash
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -56,9 +61,9 @@ jobs:
           # Sentry
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         with:
-          tagName: desktop-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
-          releaseName: "Desktop v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
-          releaseDraft: true
+          tagName: v${{ steps.pkg_version.outputs.version }}
+          releaseName: "v${{ steps.pkg_version.outputs.version }} (+ Desktop)"
+          releaseBody: "See the assets to download the Desktop version."
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
