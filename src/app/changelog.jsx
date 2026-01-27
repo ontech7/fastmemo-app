@@ -10,7 +10,7 @@ import lottieJson from "../assets/lottie/Logo.json";
 
 function getVersionChangelogs(t) {
   return Platform.OS === "web"
-    ? [{ version: "v0.1.0-beta", text: t("changelog.web.description_0_1_0") }]
+    ? [{ version: "v0.1.0", text: t("changelog.web.description_0_1_0") }]
     : [
         { version: "v2.7.0", text: t("changelog.mobile.description_2_7_0") },
         { version: "v2.6.2", text: t("changelog.mobile.description_2_6_2") },

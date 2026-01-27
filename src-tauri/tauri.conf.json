@@ -7,8 +7,8 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "Fast Memo",
-    "version": "0.1.0-beta"
+    "productName": "Fast_Memo",
+    "version": "0.1.0"
   },
   "tauri": {
     "allowlist": {
