@@ -63,7 +63,7 @@ jobs:
         with:
           tagName: v${{ steps.pkg_version.outputs.version }}
           releaseName: "v${{ steps.pkg_version.outputs.version }} (+ Desktop)"
-          releaseBody: "See the assets to download the Desktop version."
+          releaseBody: "Checkout GitHub latest release for more details."
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
