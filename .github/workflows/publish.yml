@@ -49,6 +49,46 @@ jobs:
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
         shell: bash
 
+      - name: compose release body
+        id: release_body
+        shell: bash
+        run: |
+          set -eo pipefail
+
+          mobile_file="docs/CHANGELOG_MOBILE.md"
+          desktop_file="docs/CHANGELOG_DESKTOP.md"
+
+          mobile_section=""
+          desktop_section=""
+
+          if [ -s "$mobile_file" ]; then
+            mobile_content=$(cat "$mobile_file")
+            mobile_section="## Mobile"$'\n'"$mobile_content"
+          fi
+
+          if [ -s "$desktop_file" ]; then
+            desktop_content=$(cat "$desktop_file")
+            desktop_section="## Desktop"$'\n'"$desktop_content"
+          fi
+
+          if [ -n "$mobile_section" ] && [ -n "$desktop_section" ]; then
+            body="$mobile_section"$'\n\n'"$desktop_section"
+          elif [ -n "$mobile_section" ]; then
+            body="$mobile_section"
+          elif [ -n "$desktop_section" ]; then
+            body="$desktop_section"
+          elif [ -s "CHANGELOG.md" ]; then
+            body=$(cat CHANGELOG.md)
+          else
+            body="Checkout GitHub latest release for more details."
+          fi
+
+          body="${body//'%'/'%25'}"
+          body="${body//$'\n'/'%0A'}"
+          body="${body//$'\r'/'%0D'}"
+
+          echo "content=$body" >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -63,7 +103,7 @@ jobs:
         with:
           tagName: v${{ steps.pkg_version.outputs.version }}
           releaseName: "v${{ steps.pkg_version.outputs.version }} (+ Desktop)"
-          releaseBody: "Checkout GitHub latest release for more details."
+          releaseBody: ${{ steps.release_body.outputs.content }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
