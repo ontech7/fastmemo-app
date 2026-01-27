@@ -3,8 +3,8 @@ import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import LottieView from "@/components/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
+import LottieView from "@/components/lottie/LottieAnimation";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 

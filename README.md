@@ -39,9 +39,9 @@ If you like it, kindly [buy me a coffee](https://www.buymeacoffee.com/ontech7) â
 
 ## Documentation
 
-- [**Changelog**](CHANGELOG.md) - Version history and updates
-- [**Self-Hosting Guide**](SELF_HOSTING.md) - Deploy FastMemo on your own web server
-- [**Tauri Setup**](TAURI_SETUP.md) - Build the desktop application (macOS, Windows, Linux)
+- [**Changelog**](docs/CHANGELOG.md) - Version history and updates
+- [**Self-Hosting Guide**](docs/SELF_HOSTING.md) - Deploy FastMemo on your own web server
+- [**Tauri Setup**](docs/TAURI_SETUP.md) - Build the desktop application (macOS, Windows, Linux)
 
 ## Cloud Sync with Google Firebase
 

@@ -4,7 +4,7 @@ import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import CloseButton from "@/components/buttons/CloseButton";
 import ChangelogItem from "@/components/changelog/ChangelogItem";
-import LottieView from "@/components/LottieAnimation";
+import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";

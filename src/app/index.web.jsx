@@ -3,7 +3,7 @@ import i18n from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import LottieView from "@/components/LottieAnimation";
+import LottieView from "@/components/lottie/LottieAnimation";
 import { useRouter } from "@/hooks/useRouter";
 import { initFirebase } from "@/libs/firebase";
 import { getLocales } from "@/libs/localization";

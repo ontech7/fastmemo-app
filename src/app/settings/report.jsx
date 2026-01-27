@@ -12,7 +12,7 @@ import { useDispatch, useStore } from "react-redux";
 import BackButton from "@/components/buttons/BackButton";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import LottieView from "@/components/LottieAnimation";
+import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
 import { useRouter } from "@/hooks/useRouter";
 import { setReportDate } from "@/slicers/settingsSlice";
