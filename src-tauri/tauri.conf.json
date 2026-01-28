@@ -7,7 +7,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "Fast_Memo",
+    "productName": "Fast Memo",
     "version": "0.1.0"
   },
   "tauri": {
