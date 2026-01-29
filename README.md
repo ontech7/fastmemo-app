@@ -21,7 +21,7 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 - [Features](#features)
 - [Screenshots](#screenshots)
 - [Documentation](#documentation)
-- [Cloud Sync](#cloud-sync)
+- [Desktop Installation](#desktop-installation)
 - [Tech Stack](#tech-stack)
 - [Contributing](#contributing)
 - [Credits](#credits)
@@ -67,10 +67,53 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 | ------------------------------------------------ | --------------------------------------------- |
 | [Roadmap](docs/ROADMAP.md)                       | Upcoming features and development plans       |
 | [Cloud Sync](docs/CLOUD_SYNC.md)                 | How online sync works                         |
-| [Changelog (Desktop)](docs/CHANGELOG_DESKTOP.md) | Version history for Android                   |
+| [Changelog (Mobile)](docs/CHANGELOG_MOBILE.md)   | Version history for Android                   |
 | [Changelog (Desktop)](docs/CHANGELOG_DESKTOP.md) | Version history for Desktop                   |
 | [Self-Hosting Guide](docs/SELF_HOSTING.md)       | Deploy Fast Memo on your own server           |
 | [Tauri Setup](docs/TAURI_SETUP.md)               | Build the desktop app (macOS, Windows, Linux) |
+
+## Desktop Installation
+
+Since Fast Memo is an open-source app distributed outside official app stores, your operating system may show a security warning. Here's how to proceed:
+
+<details>
+<summary><strong>macOS</strong></summary>
+
+macOS Gatekeeper will block the app because it's not notarized by Apple.
+
+**Option 1: System Settings**
+1. Try to open the app (it will be blocked)
+2. Go to **System Settings → Privacy & Security**
+3. Scroll down and click **"Open Anyway"**
+
+**Option 2: Terminal**
+```bash
+xattr -cr /Applications/Fast\ Memo.app
+```
+
+</details>
+
+<details>
+<summary><strong>Windows</strong></summary>
+
+Windows SmartScreen may show a warning because the app is not signed with an EV certificate.
+
+1. Click **"More info"**
+2. Click **"Run anyway"**
+
+</details>
+
+<details>
+<summary><strong>Linux</strong></summary>
+
+If the AppImage doesn't run, make sure it's executable:
+
+```bash
+chmod +x Fast_Memo_*.AppImage
+./Fast_Memo_*.AppImage
+```
+
+</details>
 
 ## Tech Stack
 
