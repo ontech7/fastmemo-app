@@ -3,10 +3,12 @@ import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARG
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { PlusIcon } from "react-native-heroicons/outline";
 import uuid from "react-uuid";
 import KanbanDragOverlay from "./KanbanDragOverlay";
+
+const isWeb = Platform.OS === "web";
 
 export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInterval, scrollViewRef }) {
   const { t } = useTranslation();
@@ -16,6 +18,11 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
   const scrollOffsetRef = useRef(0);
   const overlayRootRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
+
+  // Drag-to-scroll state for web/desktop
+  const [isDraggingScroll, setIsDraggingScroll] = useState(false);
+  const dragStartX = useRef(0);
+  const dragScrollLeft = useRef(0);
 
   const handleScroll = useCallback(
     (event) => {
@@ -39,6 +46,47 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
     },
     [setOverlayOffset]
   );
+
+  // Drag-to-scroll handlers for web/desktop
+  const handleMouseDown = useCallback(
+    (event) => {
+      if (!isWeb || isDragging) return;
+
+      // Only start drag on left mouse button
+      if (event.nativeEvent.button !== 0) return;
+
+      setIsDraggingScroll(true);
+      dragStartX.current = event.nativeEvent.pageX;
+      dragScrollLeft.current = scrollOffsetRef.current;
+    },
+    [isDragging]
+  );
+
+  const handleMouseMove = useCallback(
+    (event) => {
+      if (!isWeb || !isDraggingScroll || isDragging) return;
+
+      event.preventDefault();
+      const x = event.nativeEvent.pageX;
+      const walk = dragStartX.current - x;
+      const newOffset = dragScrollLeft.current + walk;
+
+      scrollOffsetRef.current = newOffset;
+      updateScrollOffset(newOffset);
+      scrollViewRef.current?.scrollTo({ x: newOffset, animated: false });
+    },
+    [isDraggingScroll, isDragging, scrollViewRef, updateScrollOffset]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    if (!isWeb) return;
+    setIsDraggingScroll(false);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (!isWeb) return;
+    setIsDraggingScroll(false);
+  }, []);
 
   // auto-scroll when dragging near edges
   useEffect(() => {
@@ -186,6 +234,12 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
           scrollEnabled={!isDragging}
           onScroll={handleScroll}
           scrollEventThrottle={16}
+          {...(isWeb && {
+            onMouseDown: handleMouseDown,
+            onMouseMove: handleMouseMove,
+            onMouseUp: handleMouseUp,
+            onMouseLeave: handleMouseLeave,
+          })}
         >
           {note.columns.map((column, index) => (
             <KanbanColumn
