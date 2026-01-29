@@ -47,7 +47,7 @@ export default Sentry.wrap(function RootLayout() {
             container: {
               borderRadius: BORDER.small,
               maxWidth: "90%",
-              width: Platform.OS === "web" ? 450 : "auto",
+              width: Platform.OS === "web" ? 450 : "100%",
             },
             action: {
               color: COLOR.boldBlue,

@@ -20,8 +20,8 @@ const fr = {
 
     mobile: {
       description_2_7_0: `• Correction du glisser-déposer Kanban sur mobile, tablette et bureau.
-    • Alignement des applications mobile et bureau.
-    • Lancement officiel de l'application de bureau.`,
+• Alignement des applications mobile et bureau.
+• Lancement officiel de l'application de bureau.`,
 
       description_2_6_2: `• Ajout d’une note de type Kanban.
 • Refonte de l’écran d’accueil lors de l’appui sur « + ».

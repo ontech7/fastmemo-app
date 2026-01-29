@@ -20,8 +20,8 @@ const de = {
 
     mobile: {
       description_2_7_0: `• Kanban-Drag-and-Drop auf Mobilgeräten, Tablets und am Desktop behoben.
-    • Mobile- und Desktop-App angeglichen.
-    • Offizielle Veröffentlichung der Desktop-App.`,
+• Mobile- und Desktop-App angeglichen.
+• Offizielle Veröffentlichung der Desktop-App.`,
 
       description_2_6_2: `• Notiztyp Kanban hinzugefügt.
 • Startseite beim Drücken von „+“ überarbeitet.
@@ -289,7 +289,8 @@ const de = {
       text_1_0: "Sie können eine Kanban-Notiz erstellen, indem Sie auf die Schaltfläche",
       text_1_1: "unten rechts auf der Startseite klicken und 'Kanban' auswählen.",
       text_2_0: "Eine neue Seite wird mit einer bereits erstellten Spalte angezeigt.",
-      text_3_0: "• Um eine Spalte hinzuzufügen: Klicken Sie auf die Schaltfläche 'Spalte hinzufügen' rechts (maximal 5 Spalten).",
+      text_3_0:
+        "• Um eine Spalte hinzuzufügen: Klicken Sie auf die Schaltfläche 'Spalte hinzufügen' rechts (maximal 5 Spalten).",
       text_4_0: "• Um eine Spalte umzubenennen: Bearbeiten Sie den Text in der Spaltenüberschrift.",
       text_5_0: "• Um die Farbe einer Spalte zu ändern: Klicken Sie auf das farbige Quadrat in der Überschrift.",
       text_6_0: "• Um eine Karte hinzuzufügen: Klicken Sie unten in der Spalte auf 'Karte hinzufügen'.",

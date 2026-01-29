@@ -20,8 +20,8 @@ const en = {
 
     mobile: {
       description_2_7_0: `• Fixed Kanban drag and drop on mobile, tablet and desktop.
-    • Aligned the mobile and desktop apps.
-    • Official release of the desktop app.`,
+• Aligned the mobile and desktop apps.
+• Official release of the desktop app.`,
 
       description_2_6_2: `• Added Kanban type note.
 • Redesigned Home action menu when pressing “+”.

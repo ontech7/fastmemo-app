@@ -1,4 +1,3 @@
-import React from "react";
 import { configs } from "@/configs";
 import { useTranslation } from "react-i18next";
 import { Linking, Platform } from "react-native";
@@ -16,7 +15,7 @@ export default function SectionItem_CheckUpdates({ isLast }) {
         onPress={() =>
           Linking.openURL(
             Platform.OS === "web"
-              ? configs.app.websiteUrl
+              ? `${configs.app.websiteUrl}/download#latest`
               : Platform.OS === "android"
                 ? configs.app.playStoreUrl
                 : configs.app.appStoreUrl
