@@ -7,30 +7,5 @@
   "arrowParens": "always",
   "endOfLine": "lf",
   "singleQuote": false,
-  "proseWrap": "always",
-  "importOrder": [
-    "^(react/(.*)$)|^(react$)",
-    "^(next/(.*)$)|^(next$)",
-    "<THIRD_PARTY_MODULES>",
-    "",
-    "^@/libs/(.*)$",
-    "^@/utils/(.*)$",
-    "^@/hooks/(.*)$",
-    "^@/components/(.*)$",
-    "^@/styles/(.*)$",
-    "^@/app/(.*)$",
-    "^@/slicers/(.*)$",
-    "^@/configs/(.*)$",
-    "^@/plugins/(.*)$",
-    "",
-    "^@/constants/(.*)$",
-    "^@/assets/(.*)$",
-    "",
-    "^@/types/(.*)$",
-    "<TYPES>",
-    "",
-    "^[./]"
-  ],
-  "importOrderParserPlugins": ["typescript", "jsx", "decorators-legacy"],
-  "plugins": ["@ianvs/prettier-plugin-sort-imports"]
+  "proseWrap": "always"
 }

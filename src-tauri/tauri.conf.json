@@ -1,0 +1,113 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "build": {
+    "beforeBuildCommand": "npx expo export --platform web",
+    "beforeDevCommand": "npx expo start --web --port 19006",
+    "devPath": "http://localhost:19006",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "Fast Memo",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "all": false,
+        "open": true
+      },
+      "dialog": {
+        "all": true,
+        "open": true,
+        "save": true
+      },
+      "fs": {
+        "all": true,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": true,
+        "copyFile": true,
+        "createDir": true,
+        "removeDir": true,
+        "removeFile": true,
+        "renameFile": true,
+        "exists": true,
+        "scope": [
+          "$APP/**",
+          "$DOCUMENT/**",
+          "$DOWNLOAD/**"
+        ]
+      },
+      "path": {
+        "all": true
+      },
+      "notification": {
+        "all": true
+      },
+      "clipboard": {
+        "all": true,
+        "writeText": true,
+        "readText": true
+      },
+      "process": {
+        "relaunch": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "category": "Productivity",
+      "copyright": "2026 ontech7",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": [],
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "identifier": "com.ontech7.fastmemo",
+      "longDescription": "Fast Memo - Your personal notes app with cloud sync, rich text editing, and more.",
+      "macOS": {
+        "entitlements": null,
+        "exceptionDomain": "",
+        "frameworks": [],
+        "providerShortName": null,
+        "signingIdentity": null
+      },
+      "resources": [],
+      "shortDescription": "Notes in one click",
+      "targets": "all",
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJGMDRGNTgyOERGMEVFODgKUldTSTd2Q05ndlVFdjZSOU9ZMTNYenZkT1d3RTBSR05rbXJJRU5LbFVqRUhjZldtMkpjczBRck0K",
+      "endpoints": [
+        "https://github.com/ontech7/fastmemo-app/releases/latest/download/latest.json"
+      ]
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 800,
+        "resizable": true,
+        "title": "Fast Memo",
+        "width": 900,
+        "minWidth": 500,
+        "minHeight": 700
+      }
+    ]
+  }
+}

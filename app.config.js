@@ -1,11 +1,11 @@
-const { configs } = require("./configs");
+const { configs } = require("./src/configs");
 
 module.exports = {
   expo: {
     owner: "dontrok1",
     name: configs.app.name,
     slug: configs.app.slug,
-    version: configs.app.version,
+    version: configs.app.version.mobile,
     orientation: "portrait",
     icon: configs.app.icon,
     scheme: configs.app.slug,
@@ -26,7 +26,7 @@ module.exports = {
     },
     web: {
       bundler: "metro",
-      output: "static",
+      output: "single",
       favicon: configs.app.favicon,
     },
     plugins: [
@@ -45,7 +45,7 @@ module.exports = {
       [
         "expo-splash-screen",
         {
-          image: "./assets/images/splash-icon.png",
+          image: "./src/assets/images/splash-icon.png",
           imageWidth: 150,
           backgroundColor: configs.app.backgroundColor,
         },

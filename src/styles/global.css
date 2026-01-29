@@ -1,0 +1,9 @@
+html,
+body {
+  background-color: #020e35;
+}
+
+*:focus {
+  outline: none;
+  box-shadow: none;
+}
