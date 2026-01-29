@@ -8,7 +8,8 @@ import useNetInfo from "@/hooks/useNetInfo";
 import { useSecret } from "@/hooks/useSecret";
 import { toast } from "@/utils/toast";
 import { useTranslation } from "react-i18next";
-import { Linking, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { openUrl } from "@/utils/openUrl";
 import {
   ArrowPathIcon,
   CheckIcon,
@@ -47,7 +48,7 @@ export default function CloudSyncScreen() {
 
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => Linking.openURL(`${configs.app.websiteUrl}/${t("languageCode")}/guides/google-firebase`)}
+            onPress={() => openUrl(`${configs.app.websiteUrl}/${t("languageCode")}/guides/google-firebase`)}
           >
             <InformationCircleIcon size={28} color={COLOR.softWhite} />
           </TouchableOpacity>

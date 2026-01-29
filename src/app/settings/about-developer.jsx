@@ -3,7 +3,8 @@ import SafeAreaView from "@/components/SafeAreaView";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { openUrl } from "@/utils/openUrl";
 import { ArrowTopRightOnSquareIcon } from "react-native-heroicons/outline";
 import authorImage from "../../assets/images/author.png";
 
@@ -45,7 +46,7 @@ export default function AboutDeveloperScreen() {
             </View>
 
             <View style={styles.sectionItemList}>
-              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => Linking.openURL(WEBSITE_URL)}>
+              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => openUrl(WEBSITE_URL)}>
                 <Text style={styles.sectionItemList_title}>{t("aboutdeveloper.website")}</Text>
 
                 <View style={styles.sectionItemList_textWrapper}>
@@ -58,7 +59,7 @@ export default function AboutDeveloperScreen() {
             </View>
 
             <View style={styles.sectionItemList}>
-              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => Linking.openURL(LINKEDIN_URL)}>
+              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => openUrl(LINKEDIN_URL)}>
                 <Text style={styles.sectionItemList_title}>LinkedIn</Text>
 
                 <View style={styles.sectionItemList_textWrapper}>
@@ -71,7 +72,7 @@ export default function AboutDeveloperScreen() {
             </View>
 
             <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
-              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => Linking.openURL(GITHUB_URL)}>
+              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => openUrl(GITHUB_URL)}>
                 <Text style={styles.sectionItemList_title}>GitHub</Text>
 
                 <View style={styles.sectionItemList_textWrapper}>
