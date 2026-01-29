@@ -40,7 +40,8 @@ If you like it, kindly [buy me a coffee](https://www.buymeacoffee.com/ontech7) â
 ## Documentation
 
 - [**Roadmap**](docs/ROADMAP.md) - What to do next
-- [**Changelog**](docs/CHANGELOG.md) - Version history and updates
+- [**Changelog (Mobile)**](docs/CHANGELOG_MOBILE.md) - Version history and updates for Mobile
+- [**Changelog (Desktop)**](docs/CHANGELOG_DESKTOP.md) - Version history and updates for Desktop
 - [**Self-Hosting Guide**](docs/SELF_HOSTING.md) - Deploy FastMemo on your own web server
 - [**Tauri Setup**](docs/TAURI_SETUP.md) - Build the desktop application (macOS, Windows, Linux)
 

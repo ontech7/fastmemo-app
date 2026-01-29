@@ -63,6 +63,31 @@ export default function HelpScreen() {
           <Text style={styles.sectionItemList_text}>{t("help.how_to_create_todo_note.text_9_0")}</Text>
         </Accordion>
 
+        <Accordion title={t("help.how_to_create_kanban_note.title")}>
+          <Text style={styles.sectionItemList_text}>
+            {t("help.how_to_create_kanban_note.text_1_0")} <PlusIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_to_create_kanban_note.text_1_1")}
+          </Text>
+
+          <Text style={styles.sectionItemList_text}>{t("help.how_to_create_kanban_note.text_2_0")}</Text>
+
+          <Text style={styles.sectionItemList_text}>{t("help.how_to_create_kanban_note.text_3_0")}</Text>
+
+          <Text style={styles.sectionItemList_text}>{t("help.how_to_create_kanban_note.text_4_0")}</Text>
+
+          <Text style={styles.sectionItemList_text}>{t("help.how_to_create_kanban_note.text_5_0")}</Text>
+
+          <Text style={styles.sectionItemList_text}>{t("help.how_to_create_kanban_note.text_6_0")}</Text>
+
+          <Text style={styles.sectionItemList_text}>{t("help.how_to_create_kanban_note.text_7_0")}</Text>
+
+          <Text style={styles.sectionItemList_text}>{t("help.how_to_create_kanban_note.text_8_0")}</Text>
+
+          <Text style={styles.sectionItemList_text}>{t("help.how_to_create_kanban_note.text_9_0")}</Text>
+
+          <Text style={styles.sectionItemList_text}>{t("help.how_to_create_kanban_note.text_10_0")}</Text>
+        </Accordion>
+
         <Accordion title={t("help.how_to_edit_note.title")}>
           <Text style={styles.sectionItemList_text}>{t("help.how_to_edit_note.text_1_0")}</Text>
         </Accordion>
