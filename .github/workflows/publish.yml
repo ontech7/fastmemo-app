@@ -102,8 +102,6 @@ jobs:
           # Tauri signing
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          # macOS ad-hoc signing (no Apple Developer account required)
-          APPLE_SIGNING_IDENTITY: ${{ startsWith(matrix.platform, 'macos') && '-' || '' }}
           # App config
           EXPO_PUBLIC_ENV: ${{ env.EXPO_PUBLIC_ENV }}
           EXPO_PUBLIC_API_URL: ${{ env.EXPO_PUBLIC_API_URL }}
