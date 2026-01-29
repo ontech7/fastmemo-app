@@ -1,137 +1,102 @@
+<div align="center">
+
 ![Fast Memo](https://i.imgur.com/dPRR6pJ.png)
 
-![Android](https://badgen.net/badge/android/v2.7.0/blue) ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
-![Desktop](https://badgen.net/badge/Desktop/v0.1.0/blue)
+**A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, cloud sync, etc.**
 
-Memo application for Mobile, Tablet and Desktop, made in React Native using Expo.
+![Android](https://badgen.net/badge/Android/v2.7.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v0.1.0/blue)
+![iOS](https://badgen.net/badge/iOS/dismissed/grey)
 
-If you like it, kindly [buy me a coffee](https://www.buymeacoffee.com/ontech7) ☕
+[Download](https://github.com/ontech7/fastmemo-app/releases) | [Documentation](docs/) |
+[Report Bug](https://github.com/ontech7/fastmemo-app/issues)
 
-(original release: **14/11/2022** - migration _newArch_: **11/08/2025**)
+---
 
-## Screenshots / Previews
+If you find this project useful, consider [buying me a coffee](https://www.buymeacoffee.com/ontech7)! ☕
 
-![Build](https://i.imgur.com/YO8xtam.png)
+</div>
+
+## Table of Contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Documentation](#documentation)
+- [Cloud Sync](#cloud-sync)
+- [Tech Stack](#tech-stack)
+- [Contributing](#contributing)
+- [Credits](#credits)
 
 ## Features
 
-- [x] Notes creation
-- [x] Categories creation (title + icon)
-- [x] Category update (title + icon)
-- [x] Filter notes
-- [x] Important notes (on top of Normal notes)
-- [x] Protected notes (with biometric)
-- [x] Read-only notes
-- [x] Multiple delete notes, toggle important notes, protected notes and read-only notes
-- [x] Temporary trash (delete notes after 7 days)
-- [x] Reorganize categories order
-- [x] Rich Text
-- [x] Share notes
-- [x] Import/Export notes with generated passphrase
-- [x] Internalization (i18n) for Italian, English, French, German, Spanish and Chinese
-- [x] Cloud Sync with encryption
-- [x] Hidden notes
-- [x] Deep search
-- [x] Reorder notes by createdAt and updatedAt dates
-- [x] Voice recognition on text and todo notes
-- [x] Kanban note
-- [ ] ...
+| Feature                  | Description                                                         |
+| ------------------------ | ------------------------------------------------------------------- |
+| **Rich Text Editor**     | Create beautifully formatted notes with full rich text support      |
+| **To-Do List**           | Organize your checklist                                             |
+| **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                     |
+| **Cloud Sync**           | Encrypted synchronization across all devices (no centralized)       |
+| **Biometric Protection** | Secure sensitive notes with fingerprint or secret code              |
+| **Webhooks**             | Explore new stuff with Internet of Things                           |
+| **Voice Recognition**    | Dictate notes using speech-to-text on text and todo notes           |
+| **Multi-language**       | Available in English, Italian, French, German, Spanish, and Chinese |
+
+<details>
+<summary><strong>View all features</strong></summary>
+
+- Notes and categories creation with custom icons
+- Sort notes by creation or update date
+- Filter and deep search across all notes
+- Important notes (pinned to top)
+- Protected notes (biometric authentication)
+- Read-only notes
+- Hidden notes
+- Bulk actions (delete, toggle important/protected/read-only)
+- Temporary trash (auto-delete after 7 days)
+- Category management and reordering
+- Share notes
+- Import/Export with encrypted passphrase
+
+</details>
+
+## Screenshots
+
+![App Preview](https://i.imgur.com/YO8xtam.png)
 
 ## Documentation
 
-- [**Roadmap**](docs/ROADMAP.md) - What to do next
-- [**Changelog (Mobile)**](docs/CHANGELOG_MOBILE.md) - Version history and updates for Mobile
-- [**Changelog (Desktop)**](docs/CHANGELOG_DESKTOP.md) - Version history and updates for Desktop
-- [**Self-Hosting Guide**](docs/SELF_HOSTING.md) - Deploy FastMemo on your own web server
-- [**Tauri Setup**](docs/TAURI_SETUP.md) - Build the desktop application (macOS, Windows, Linux)
+| Document                                         | Description                                   |
+| ------------------------------------------------ | --------------------------------------------- |
+| [Roadmap](docs/ROADMAP.md)                       | Upcoming features and development plans       |
+| [Cloud Sync](docs/CLOUD_SYNC.md)                 | How online sync works                         |
+| [Changelog (Desktop)](docs/CHANGELOG_DESKTOP.md) | Version history for Android                   |
+| [Changelog (Desktop)](docs/CHANGELOG_DESKTOP.md) | Version history for Desktop                   |
+| [Self-Hosting Guide](docs/SELF_HOSTING.md)       | Deploy Fast Memo on your own server           |
+| [Tauri Setup](docs/TAURI_SETUP.md)               | Build the desktop app (macOS, Windows, Linux) |
 
-## Cloud Sync with Google Firebase
+## Tech Stack
 
-![Firebase](https://i.imgur.com/W9Uyfp7.png)
+| Technology                                                                                     | Purpose                                               |
+| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| [Expo](https://expo.dev/)                                                                      | React Native framework for cross-platform development |
+| [React Native](https://reactnative.dev/)                                                       | Core framework for iOS and Android                    |
+| [Tauri](https://tauri.app/)                                                                    | Desktop application framework                         |
+| [Google Firebase](https://firebase.google.com/)                                                | Cloud sync and data storage                           |
+| [Redux](https://react-redux.js.org/) + [Redux Persist](https://github.com/rt2zz/redux-persist) | State management and persistence                      |
+| [Heroicons](https://heroicons.com/)                                                            | Icon library                                          |
 
-This section provides an overview of the cloud synchronization process using **Google Firebase** to enable data sharing across
-devices.  
-The main goal is to ensure seamless and reliable synchronization between a local app and a Firestore app, using the API key,
-project ID, and app ID provided by Google Firebase.
+## Contributing
 
-### Requirements
+Contributions are welcome! If you'd like to help improve Fast Memo:
 
-Before getting started, you need a Google account to create a Firestore app and obtain the necessary credentials for connection.
-
-Make sure you have the following information:
-
-- **API key**: a unique key that identifies the Firebase project.
-- **Project ID**: the unique identifier of the Firebase project.
-- **App ID**: the identifier of the app within the Firebase project.
-
-### Functionality
-
-Cloud synchronization with Google Firebase is designed to be completely autonomous and on-demand.  
-It does not rely on a centralized database or real-time solution but allows for data upload and download between the local app
-and Firestore.
-
-Here's how it works:
-
-1. **Connection Handshake**: A connection is established between the local app and the Firestore app using the provided
-   credentials. If the connection is successful, the synchronization process can begin.
-
-2. **Uploading Local Data**: Once the connection is established, the data present in the local app is uploaded to the Firestore
-   app. This ensures that the data is up-to-date and synchronized at the start of the process.
-
-3. **Downloading Cloud Data**: Subsequently, the data present in the Firestore app is downloaded to the local app. This ensures
-   that any changes or updates made by other devices are reflected in the local app, ensuring 100% synchronization.
-
-4. **Encryption of Sent Data**: Every change made in the local app is sent to the Firestore app in an encrypted manner, ensuring
-   data security during synchronization.
-
-5. **Managing Multiple Devices**: The cloud synchronization solution allows for the connection of multiple devices. These
-   devices can be managed in the cloud settings, particularly in the "Manage Devices" section.
-
-6. **Periodic Checking of Firestore App**: Every 20 seconds, the Firestore app is checked to see if there are any pending
-   changes from other devices. If there are changes to be downloaded, they are retrieved and applied to the local app.
-
-7. **Offline Synchronization**: If the device is offline during the synchronization process, the pending changes are
-   accumulated. Once the device is back online, the accumulated changes are sent to the Firestore app to ensure complete
-   synchronization.
-
-Cloud synchronization with Google Firebase offers a reliable and secure way to share and synchronize data across devices.  
-Leveraging the features of Firestore and the Firebase APIs, you can ensure seamless synchronization.  
-It's worth noting that Google Firebase is a **free service**, making it an accessible choice for everyone.
-
-## Bugs / Contribution
-
-If you encounter any bugs or experience issues while using **Fast Memo**, we kindly ask you to report the problem by opening an
-issue on this repository. Follow the steps below to report a bug:
-
-1. Click on the "Issues" tab at the top of the page.
-2. Click on "New Issue" to open a new issue.
-3. Describe the bug in as much detail as possible. Providing information such as the operating system, app version, the actions
-   you took before the issue occurred, and any error messages will help us better understand the problem.
-4. Click "Submit new issue" to create your report.
-
-I will take care of the bugs and improve the Fast Memo experience. Please be patient and keep an eye on your issue for any
-updates or clarification requests from me.
-
-**I apprecciate if people will contribute to this project by doing pull requests!**
-
-## Libraries used
-
-- [**Expo**](https://expo.dev/): Open-source wrapper framework for building React Native apps, for iOS, Android and eventually
-  web.
-- [**React Native**](https://reactnative.dev/): Open-source framework for building apps for iOS and Android.
-- [**Heroicons**](https://heroicons.com/): A React Native library for icons
-- [**Google Firebase**](https://firebase.google.com/): A serverless platform for save and syncing elaborated data, in a scalable
-  solutions.
-- [**React Redux**](https://react-redux.js.org/): A state-management library for React and React Native.
-- [**Redux Persist**](https://github.com/rt2zz/redux-persist): An add-on for React Redux to have an easy persistance of the data
-  inside the app.
+1. **Report bugs** - Open an [issue](https://github.com/ontech7/fastmemo-app/issues) with details about the problem, your OS,
+   app version, and steps to reproduce.
+2. **Submit PRs** - Fork the repo, make your changes, and submit a pull request.
 
 ## Credits
 
-Written by [Andrea Losavio](https://www.linkedin.com/in/andrea-losavio/).
+Created by Andrea Losavio • [LinkedIn](https://www.linkedin.com/in/andrea-losavio/) - [Website](https://andrealosavio.com)
 
-## APPlogies
+---
 
-_Disclaimer: when I started making this app, I was on another repo with Expo SDK 48 and React Navigation, using JavaScript
-instead of TypeScript. Now there is a new repo, migrated on Expo SDK 53 and using Expo Router and New Architecture. I'm sorry if
-it's still in JavaScript. Don't have time to convert it to TS._
+<div align="center">
+<sub>Originally released: November 14, 2022 | Migrated to New Architecture: August 11, 2025</sub>
+</div>
