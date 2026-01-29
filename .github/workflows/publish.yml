@@ -55,6 +55,11 @@ jobs:
         run: |
           set -eo pipefail
 
+          # Extract latest version section (from first ## to next ## or EOF)
+          extract_latest() {
+            awk '/^## /{if(found) exit; found=1; next} found' "$1"
+          }
+
           mobile_file="docs/CHANGELOG_MOBILE.md"
           desktop_file="docs/CHANGELOG_DESKTOP.md"
 
@@ -62,13 +67,17 @@ jobs:
           desktop_section=""
 
           if [ -s "$mobile_file" ]; then
-            mobile_content=$(cat "$mobile_file")
-            mobile_section="## Mobile"$'\n'"$mobile_content"
+            mobile_content=$(extract_latest "$mobile_file")
+            if [ -n "$mobile_content" ]; then
+              mobile_section="📱 Mobile"$'\n\n'"$mobile_content"
+            fi
           fi
 
           if [ -s "$desktop_file" ]; then
-            desktop_content=$(cat "$desktop_file")
-            desktop_section="## Desktop"$'\n'"$desktop_content"
+            desktop_content=$(extract_latest "$desktop_file")
+            if [ -n "$desktop_content" ]; then
+              desktop_section="🖥 Desktop"$'\n\n'"$desktop_content"
+            fi
           fi
 
           if [ -n "$mobile_section" ] && [ -n "$desktop_section" ]; then
@@ -77,17 +86,15 @@ jobs:
             body="$mobile_section"
           elif [ -n "$desktop_section" ]; then
             body="$desktop_section"
-          elif [ -s "CHANGELOG.md" ]; then
-            body=$(cat CHANGELOG.md)
           else
             body="Checkout GitHub latest release for more details."
           fi
 
-          body="${body//'%'/'%25'}"
-          body="${body//$'\n'/'%0A'}"
-          body="${body//$'\r'/'%0D'}"
-
-          echo "content=$body" >> "$GITHUB_OUTPUT"
+          {
+            echo "content<<EOF"
+            echo "$body"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -95,6 +102,8 @@ jobs:
           # Tauri signing
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          # macOS ad-hoc signing (no Apple Developer account required)
+          APPLE_SIGNING_IDENTITY: ${{ startsWith(matrix.platform, 'macos') && '-' || '' }}
           # App config
           EXPO_PUBLIC_ENV: ${{ env.EXPO_PUBLIC_ENV }}
           EXPO_PUBLIC_API_URL: ${{ env.EXPO_PUBLIC_API_URL }}
