@@ -16,7 +16,7 @@
 
 | Done | In Progress | Planned | Total |
 | :--: | :---------: | :-----: | :---: |
-|  1   |      1      |    4    |   6   |
+|  2   |      1      |    4    |   7   |
 
 ---
 
@@ -43,7 +43,7 @@
 
 |                 |                                                              |
 | --------------- | ------------------------------------------------------------ |
-| **Status**      | In Progress                                                  |
+| **Status**      | Done                                                         |
 | **Description** | Native desktop app for Windows, macOS and Linux using Tauri. |
 | **Goals**       | Multi-platform builds, auto-updates, offline access.         |
 
@@ -53,9 +53,19 @@
 
 |                 |                                                                                                    |
 | --------------- | -------------------------------------------------------------------------------------------------- |
-| **Status**      | Planned                                                                                            |
+| **Status**      | In Progress                                                                                        |
 | **Description** | Full migration to TypeScript and component reorganization for better code quality and performance. |
 | **Goals**       | Type safety, cleaner architecture, improved maintainability.                                       |
+
+---
+
+### Optimization
+
+|                 |                                                                                           |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| **Status**      | Planned                                                                                   |
+| **Description** | Performance optimizations across the entire app for better speed and resource efficiency. |
+| **Goals**       | Reduced bundle size, faster load times, optimized re-renders, memory improvements.        |
 
 ---
 
