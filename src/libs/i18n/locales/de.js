@@ -15,10 +15,16 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_0_1_1: `• Cloud-Synchronisierung beim Start der App behoben.
+• Notizen werden nach jeder Synchronisierung nun korrekt sortiert.`,
+
       description_0_1_0: `• Erste Veröffentlichung von Fast Memo Desktop (BETA) mit allen mobilen Funktionen.`,
     },
 
     mobile: {
+      description_2_7_1: `• Cloud-Synchronisierung beim Start der App behoben.
+• Notizen werden nach jeder Synchronisierung nun korrekt sortiert.`,
+
       description_2_7_0: `• Kanban-Drag-and-Drop auf Mobilgeräten, Tablets und am Desktop behoben.
 • Mobile- und Desktop-App angeglichen.
 • Offizielle Veröffentlichung der Desktop-App.`,

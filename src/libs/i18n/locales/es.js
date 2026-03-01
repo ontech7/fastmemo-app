@@ -15,10 +15,16 @@ const es = {
     title: "¿Qué hay de nuevo?",
 
     web: {
+      description_0_1_1: `• Corregida la sincronización en la nube al iniciar la aplicación.
+• Las notas ahora se ordenan correctamente después de cada sincronización.`,
+
       description_0_1_0: `• Lanzamiento inicial de Fast Memo Desktop (BETA) con todas las funciones móviles.`,
     },
 
     mobile: {
+      description_2_7_1: `• Corregida la sincronización en la nube al iniciar la aplicación.
+• Las notas ahora se ordenan correctamente después de cada sincronización.`,
+
       description_2_7_0: `• Corregido el arrastrar y soltar de Kanban en móvil, tablet y escritorio.
 • Alineada la aplicación entre móvil y escritorio.
 • Lanzamiento oficial de la aplicación de escritorio.`,

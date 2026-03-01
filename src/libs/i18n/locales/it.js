@@ -15,10 +15,16 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
+      description_0_1_1: `• Sistemata sincronizzazione Cloud all'avvio dell'app.
+• Ora le note vengono ordinate correttamente dopo ogni sincronizzazione.`,
+
       description_0_1_0: `• Prima versione di Fast Memo Desktop (BETA) con tutte le funzionalità disponibili finora.`,
     },
 
     mobile: {
+      description_2_7_1: `• Sistemata sincronizzazione Cloud all'avvio dell'app.
+• Ora le note vengono ordinate correttamente dopo ogni sincronizzazione.`,
+
       description_2_7_0: `• Sistemato il trascinamento Kanban su mobile, tablet e desktop.
 • Allineata l'app tra Mobile e Desktop.
 • Rilascio ufficiale dell'app Desktop.`,

@@ -5,8 +5,8 @@ const configs = {
 
   app: {
     version: {
-      mobile: "2.7.0",
-      web: "0.1.0",
+      mobile: "2.7.1",
+      web: "0.1.1",
     },
     name: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "Fast Memo" : "Fast Memo Test",
     slug: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "FastMemoApp" : "fastmemoapptest",

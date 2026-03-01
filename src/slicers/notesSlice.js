@@ -408,6 +408,19 @@ const notesSlice = createSlice({
             state.items[idx] = note;
           }
         });
+
+      // reorder after sync
+      state.items.sort((a, b) => {
+        const field = state.filters?.sortBy || "createdAt";
+        const order = state.filters?.order || "desc";
+
+        if (!a[field] || !b[field]) {
+          return 0;
+        }
+
+        if (a[field] < b[field]) return order === "asc" ? -1 : 1;
+        if (a[field] > b[field]) return order === "asc" ? 1 : -1;
+      });
     },
 
     deleteLocalNotes: (state, action) => {

@@ -15,10 +15,16 @@ const en = {
     title: "What's new?",
 
     web: {
+      description_0_1_1: `• Fixed Cloud synchronization at app startup.
+• Notes are now correctly sorted after each synchronization.`,
+
       description_0_1_0: `• Initial release of Fast Memo Desktop (BETA) with all mobile features.`,
     },
 
     mobile: {
+      description_2_7_1: `• Fixed Cloud synchronization at app startup.
+• Notes are now correctly sorted after each synchronization.`,
+
       description_2_7_0: `• Fixed Kanban drag and drop on mobile, tablet and desktop.
 • Aligned the mobile and desktop apps.
 • Official release of the desktop app.`,

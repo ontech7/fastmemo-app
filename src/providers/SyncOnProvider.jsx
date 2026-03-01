@@ -1,8 +1,9 @@
 import useNetInfo from "@/hooks/useNetInfo";
 import { isEmpty, isObjectEmpty } from "@/utils/string";
 import { where } from "firebase/firestore";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { AppState, Platform } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { COLLECTIONS, getAllDeviceUuids, getAllElementsInCloud, getDeviceUuid, setElementInCloud } from "../libs/firebase";
 import { addLocalCategories, deleteLocalCategories, getCloudCategories } from "../slicers/categoriesSlice";
@@ -12,51 +13,41 @@ import { addCloudCategoriesAsync, deleteCloudCategoriesAsync } from "../slicers/
 import { addCloudNotesAsync, deleteCloudNotesAsync } from "../slicers/thunks/notes";
 import { toast } from "../utils/toast";
 
-const PENDING_CHANGES_DELAY = 15000;
+const PENDING_CHANGES_DELAY = 10000;
 const DEBOUNCE_NOTES_DELAY = 200;
 
-let tDebounceNotes = null;
-const debounce = (callback) => {
-  return (...args) => {
-    clearTimeout(tDebounceNotes);
-    tDebounceNotes = setTimeout(() => {
-      callback(...args);
-    }, DEBOUNCE_NOTES_DELAY);
-  };
-};
-
-export function useSyncOn() {
+export default function SyncOnProvider() {
   const { t } = useTranslation();
 
   const dispatch = useDispatch();
 
   const tPendingChanges = useRef(null);
+  const tDebounceNotes = useRef(null);
+  const syncToLocalRef = useRef(null);
+  const isSyncingRef = useRef(false);
 
   const isCloudConnected = useSelector(getCloudConnected);
   const netInfo = useNetInfo();
 
   const cloudCategories = useSelector(getCloudCategories);
-  const cloudCategories_add = Object.values(cloudCategories.add);
-  const cloudCategories_delete = Object.values(cloudCategories.delete);
+  const cloudCategories_add = useMemo(() => Object.values(cloudCategories.add), [cloudCategories.add]);
+  const cloudCategories_delete = useMemo(() => Object.values(cloudCategories.delete), [cloudCategories.delete]);
 
   const cloudNotes = useSelector(getCloudNotes);
-  const cloudNotes_add = Object.values(cloudNotes.add);
-  const cloudNotes_delete = Object.values(cloudNotes.delete);
+  const cloudNotes_add = useMemo(() => Object.values(cloudNotes.add), [cloudNotes.add]);
+  const cloudNotes_delete = useMemo(() => Object.values(cloudNotes.delete), [cloudNotes.delete]);
 
   ///////////////////////////////////
   // Pending cloud changes checker
   // syncToLocal - notes & categories
   ///////////////////////////////////
 
-  useEffect(() => {
-    clearInterval(tPendingChanges.current);
+  const syncToLocal = useCallback(async () => {
+    // prevent concurrent syncs
+    if (isSyncingRef.current) return;
+    isSyncingRef.current = true;
 
-    // if not connected correctly or if internet connectivity is lost (offline sync)
-    if (!isCloudConnected || !netInfo?.isConnected) {
-      return;
-    }
-
-    const syncToLocal = async () => {
+    try {
       const devices = await getAllDeviceUuids();
       const deviceUuid = await getDeviceUuid();
 
@@ -115,7 +106,7 @@ export function useSyncOn() {
 
         const devicesExceptMe = deviceData.devicesToSync.filter((otherDeviceUuid) => otherDeviceUuid != deviceUuid);
 
-        setElementInCloud({
+        await setElementInCloud({
           collection: COLLECTIONS.various.connectedDevices,
           identifier: deviceData.uuid,
           payload: {
@@ -134,11 +125,65 @@ export function useSyncOn() {
       }
 
       toast(t("dataSynced"));
-    };
+    } finally {
+      isSyncingRef.current = false;
+    }
+  }, [dispatch, t]);
+
+  // keep ref in sync for AppState listener
+  useEffect(() => {
+    syncToLocalRef.current = syncToLocal;
+  }, [syncToLocal]);
+
+  ///////////////////////////////////
+  // Pending cloud changes checker
+  // syncToLocal - notes & categories
+  ///////////////////////////////////
+
+  useEffect(() => {
+    clearInterval(tPendingChanges.current);
+
+    // if not connected correctly or if internet connectivity is lost (offline sync)
+    if (!isCloudConnected || !netInfo?.isConnected) {
+      return;
+    }
 
     syncToLocal();
     tPendingChanges.current = setInterval(syncToLocal, PENDING_CHANGES_DELAY);
-  }, [isCloudConnected, netInfo]);
+
+    return () => {
+      clearInterval(tPendingChanges.current);
+    };
+  }, [isCloudConnected, netInfo, syncToLocal]);
+
+  ///////////////////////////////////
+  // AppState listener - sync immediately on foreground resume
+  ///////////////////////////////////
+
+  useEffect(() => {
+    // on web/tauri, use visibilitychange instead
+    if (Platform.OS === "web") {
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          syncToLocalRef.current?.();
+        }
+      };
+
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }
+
+    const appStateSubscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        // app came back to foreground, sync immediately
+        syncToLocalRef.current?.();
+      }
+    });
+
+    return () => {
+      appStateSubscription?.remove();
+    };
+  }, []);
 
   ///////////////////////////////////
   // Pending local changes checker
@@ -157,38 +202,42 @@ export function useSyncOn() {
     }
 
     const syncCategoriesToCloud = async () => {
-      const devices = await getAllDeviceUuids();
-      const deviceUuid = await getDeviceUuid();
+      try {
+        const devices = await getAllDeviceUuids();
+        const deviceUuid = await getDeviceUuid();
 
-      // if no internet connectivity, return
-      if (devices == null) {
-        return;
-      }
+        // if no internet connectivity, return
+        if (devices == null) {
+          return;
+        }
 
-      const devicesExceptMe = devices.filter((otherDeviceUuid) => otherDeviceUuid != deviceUuid);
+        const devicesExceptMe = devices.filter((otherDeviceUuid) => otherDeviceUuid != deviceUuid);
 
-      if (!isEmpty(cloudCategories_add)) {
-        await dispatch(
-          // @ts-ignore
-          addCloudCategoriesAsync({
-            deviceUuid,
-            devicesToSync: devicesExceptMe,
-            areMoreThanOneDevice: devicesExceptMe.length > 0,
-          })
-          // @ts-ignore
-        ).unwrap();
-      }
+        if (!isEmpty(cloudCategories_add)) {
+          await dispatch(
+            // @ts-ignore
+            addCloudCategoriesAsync({
+              deviceUuid,
+              devicesToSync: devicesExceptMe,
+              areMoreThanOneDevice: devicesExceptMe.length > 0,
+            })
+            // @ts-ignore
+          ).unwrap();
+        }
 
-      if (!isEmpty(cloudCategories_delete)) {
-        await dispatch(
-          // @ts-ignore
-          deleteCloudCategoriesAsync({
-            deviceUuid,
-            devicesToSync: devicesExceptMe,
-            areMoreThanOneDevice: devicesExceptMe.length > 0,
-          })
-          // @ts-ignore
-        ).unwrap();
+        if (!isEmpty(cloudCategories_delete)) {
+          await dispatch(
+            // @ts-ignore
+            deleteCloudCategoriesAsync({
+              deviceUuid,
+              devicesToSync: devicesExceptMe,
+              areMoreThanOneDevice: devicesExceptMe.length > 0,
+            })
+            // @ts-ignore
+          ).unwrap();
+        }
+      } catch (e) {
+        console.log("syncCategoriesToCloud error:", e);
       }
     };
 
@@ -212,47 +261,52 @@ export function useSyncOn() {
     }
 
     const syncNotesToCloud = async () => {
-      const devices = await getAllDeviceUuids();
-      const deviceUuid = await getDeviceUuid();
+      try {
+        const devices = await getAllDeviceUuids();
+        const deviceUuid = await getDeviceUuid();
 
-      // if no internet connectivity, return
-      if (devices == null) {
-        return;
-      }
+        // if no internet connectivity, return
+        if (devices == null) {
+          return;
+        }
 
-      const devicesExceptMe = devices.filter((otherDeviceUuid) => otherDeviceUuid != deviceUuid);
+        const devicesExceptMe = devices.filter((otherDeviceUuid) => otherDeviceUuid != deviceUuid);
 
-      if (!isEmpty(cloudNotes_add)) {
-        await dispatch(
-          // @ts-ignore
-          addCloudNotesAsync({
-            deviceUuid,
-            devicesToSync: devicesExceptMe,
-            areMoreThanOneDevice: devicesExceptMe.length > 0,
-          })
-          // @ts-ignore
-        ).unwrap();
-      }
+        if (!isEmpty(cloudNotes_add)) {
+          await dispatch(
+            // @ts-ignore
+            addCloudNotesAsync({
+              deviceUuid,
+              devicesToSync: devicesExceptMe,
+              areMoreThanOneDevice: devicesExceptMe.length > 0,
+            })
+            // @ts-ignore
+          ).unwrap();
+        }
 
-      if (!isEmpty(cloudNotes_delete)) {
-        await dispatch(
-          // @ts-ignore
-          deleteCloudNotesAsync({
-            deviceUuid,
-            devicesToSync: devicesExceptMe,
-            areMoreThanOneDevice: devicesExceptMe.length > 0,
-          })
-          // @ts-ignore
-        ).unwrap();
+        if (!isEmpty(cloudNotes_delete)) {
+          await dispatch(
+            // @ts-ignore
+            deleteCloudNotesAsync({
+              deviceUuid,
+              devicesToSync: devicesExceptMe,
+              areMoreThanOneDevice: devicesExceptMe.length > 0,
+            })
+            // @ts-ignore
+          ).unwrap();
+        }
+      } catch (e) {
+        console.log("syncNotesToCloud error:", e);
       }
     };
 
-    debounce(syncNotesToCloud)();
-  }, [isCloudConnected, netInfo, cloudNotes_add, cloudNotes_delete]);
-}
+    clearTimeout(tDebounceNotes.current);
+    tDebounceNotes.current = setTimeout(syncNotesToCloud, DEBOUNCE_NOTES_DELAY);
 
-export default function SyncOnProvider() {
-  useSyncOn();
+    return () => {
+      clearTimeout(tDebounceNotes.current);
+    };
+  }, [isCloudConnected, netInfo, cloudNotes_add, cloudNotes_delete]);
 
   return null;
 }

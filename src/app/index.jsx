@@ -14,41 +14,22 @@ import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming
 import lottieJson from "../assets/lottie/Logo_with_Text.json";
 
 export default function LoadingScreen() {
-  // lottie splash animation
+  const router = useRouter();
   const logoAnimRef = useRef(null);
 
-  const progress = useSharedValue(0);
+  const [showLottie, setShowLottie] = useState(null);
+
+  const progress = useSharedValue(1);
 
   const splashAnimStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
   }));
 
-  useEffect(() => {
-    const playLottie = () => {
-      SplashScreen.hideAsync().catch(() => {});
-      setTimeout(() => {
-        logoAnimRef.current?.play();
-      }, 10);
-    };
-
-    progress.value = withTiming(1, { duration: 120, easing: Easing.linear }, (finished) => {
-      if (finished) {
-        runOnJS(playLottie)();
-      }
-    });
-  }, []);
-
   const handleLottieFinish = () => {
     progress.value = withTiming(0, { duration: 120, easing: Easing.linear }, (finished) => {
-      if (finished && initialRoute) {
-        runOnJS(router.replace)(initialRoute);
-      }
+      if (finished) runOnJS(router.replace)("/intro");
     });
   };
-
-  // set initial route
-  const router = useRouter();
-  const [initialRoute, setInitialRoute] = useState(null);
 
   useEffect(() => {
     const runInitialActions = async () => {
@@ -64,29 +45,46 @@ export default function LoadingScreen() {
           initFirebase(cloudSyncConfig);
         }
 
-        // if the app has just been downloaded, show intro screen
         const firstScreen = await AsyncStorage.getItem("@firstScreen");
-        setInitialRoute(!firstScreen ? "/intro" : "/home");
+        SplashScreen.hideAsync().catch(() => {});
+
+        if (!firstScreen) {
+          // first launch
+          setShowLottie(true);
+        } else {
+          // already configured
+          router.replace("/home");
+        }
       } catch (error) {
-        setInitialRoute("/home");
+        SplashScreen.hideAsync().catch(() => {});
+        router.replace("/home");
         Sentry.captureException(error);
       }
     };
 
     runInitialActions();
-  }, [router]);
+  }, []);
+
+  useEffect(() => {
+    if (showLottie) {
+      logoAnimRef.current?.play();
+    }
+  }, [showLottie]);
 
   return (
     <Animated.View style={[styles.splashContainer, splashAnimStyle]}>
-      <LottieView
-        ref={logoAnimRef}
-        style={styles.lottieLogo}
-        source={lottieJson}
-        loop={false}
-        resizeMode="contain"
-        onAnimationFinish={handleLottieFinish}
-        speed={1.32}
-      />
+      {showLottie && (
+        <LottieView
+          ref={logoAnimRef}
+          style={styles.lottieLogo}
+          source={lottieJson}
+          loop={false}
+          autoPlay={false}
+          resizeMode="contain"
+          onAnimationFinish={handleLottieFinish}
+          speed={1.32}
+        />
+      )}
     </Animated.View>
   );
 }

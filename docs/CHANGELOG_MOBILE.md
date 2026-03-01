@@ -1,3 +1,16 @@
+## v2.7.1
+
+- Fixed cloud sync not updating on app resume: added AppState listener to trigger an immediate sync when the app returns to
+  foreground.
+- Fixed notes not being sorted after a cloud sync: notes received from other devices are now sorted according to the user's
+  configured order.
+- Fixed sync interval being unnecessarily restarted on network events that didn't change connectivity state.
+- Fixed acknowledgement write to Firebase (devicesToSync) not being awaited after applying synced changes, which could cause
+  duplicate syncs.
+- Fixed unhandled promise rejections in cloud upload functions that could silently break the sync queue.
+- Fixed splash screen (Lottie) appearing briefly on standard app launch: the animation now only plays on first install, while
+  returning users go directly to the home screen.
+
 ## v2.7.0
 
 - Fixed Kanban Drag and Drop on mobile, tablet and desktop

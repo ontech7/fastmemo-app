@@ -19,9 +19,9 @@ const useNetInfo = () => {
         cache: "no-store",
       });
 
-      setNetInfo({ isConnected: true, type: "wifi" });
+      setNetInfo((prev) => (prev.isConnected && prev.type === "wifi" ? prev : { isConnected: true, type: "wifi" }));
     } catch {
-      setNetInfo({ isConnected: false, type: "none" });
+      setNetInfo((prev) => (!prev.isConnected && prev.type === "none" ? prev : { isConnected: false, type: "none" }));
     }
   }, []);
 
@@ -46,10 +46,11 @@ const useNetInfo = () => {
       const NetInfo = require("@react-native-community/netinfo");
 
       const unsubscribe = NetInfo.addEventListener((state) => {
-        setNetInfo({
-          isConnected: state.isConnected,
-          type: state.type,
-        });
+        setNetInfo((prev) =>
+          prev.isConnected === state.isConnected && prev.type === state.type
+            ? prev
+            : { isConnected: state.isConnected, type: state.type }
+        );
       });
 
       return () => unsubscribe();

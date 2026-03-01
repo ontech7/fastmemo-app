@@ -14,31 +14,14 @@ import lottieJson from "../assets/lottie/Logo_with_Text.json";
 export default function LoadingScreen() {
   const logoAnimRef = useRef(null);
   const router = useRouter();
-  const [initialRoute, setInitialRoute] = useState(null);
-  const [opacity, setOpacity] = useState(0);
-  const [animationFinished, setAnimationFinished] = useState(false);
+
+  const [showLottie, setShowLottie] = useState(null);
 
   const handleLottieFinish = () => {
-    setAnimationFinished(true);
-  };
-
-  useEffect(() => {
-    if (animationFinished && initialRoute) {
-      setOpacity(0);
-      setTimeout(() => {
-        router.replace(initialRoute);
-      }, 150);
-    }
-  }, [animationFinished, initialRoute, router]);
-
-  useEffect(() => {
     setTimeout(() => {
-      setOpacity(1);
-      setTimeout(() => {
-        logoAnimRef.current?.play();
-      }, 150);
-    }, 10);
-  }, []);
+      router.replace("/intro");
+    }, 150);
+  };
 
   useEffect(() => {
     const runInitialActions = async () => {
@@ -55,11 +38,17 @@ export default function LoadingScreen() {
           initFirebase(cloudSyncConfig);
         }
 
-        // if the app has just been downloaded, show intro screen
         const firstScreen = await AsyncStorage.getItem("@firstScreen");
-        setInitialRoute(!firstScreen ? "/intro" : "/home");
+
+        if (!firstScreen) {
+          // first launch
+          setShowLottie(true);
+        } else {
+          // already configured
+          router.replace("/home");
+        }
       } catch (error) {
-        setInitialRoute("/home");
+        router.replace("/home");
         Sentry.captureException(error);
       }
     };
@@ -67,21 +56,27 @@ export default function LoadingScreen() {
     runInitialActions();
   }, []);
 
+  useEffect(() => {
+    if (showLottie) {
+      setTimeout(() => {
+        logoAnimRef.current?.play();
+      }, 150);
+    }
+  }, [showLottie]);
+
   return (
-    <View
-      style={[
-        styles.splashContainer,
-        { opacity, transitionProperty: "opacity", transitionDuration: "0.12s", transitionTimingFunction: "ease-in-out" },
-      ]}
-    >
-      <LottieView
-        ref={logoAnimRef}
-        style={styles.lottieLogo}
-        source={lottieJson}
-        loop={false}
-        onAnimationFinish={handleLottieFinish}
-        speed={1.32}
-      />
+    <View style={styles.splashContainer}>
+      {showLottie && (
+        <LottieView
+          ref={logoAnimRef}
+          style={styles.lottieLogo}
+          source={lottieJson}
+          loop={false}
+          autoPlay={false}
+          onAnimationFinish={handleLottieFinish}
+          speed={1.32}
+        />
+      )}
     </View>
   );
 }

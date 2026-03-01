@@ -4,7 +4,7 @@
 
 **A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, cloud sync, etc.**
 
-![Android](https://badgen.net/badge/Android/v2.7.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v0.1.0/blue)
+![Android](https://badgen.net/badge/Android/v2.7.1/blue) ![Desktop](https://badgen.net/badge/Desktop/v0.1.1/blue)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
 
 [Download](https://github.com/ontech7/fastmemo-app/releases) | [Documentation](docs/) |
@@ -74,7 +74,8 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 
 ## Desktop Installation
 
-Since Fast Memo is an open-source app distributed outside official app stores, your operating system may show a security warning. Here's how to proceed:
+Since Fast Memo is an open-source app distributed outside official app stores, your operating system may show a security
+warning. Here's how to proceed:
 
 <details>
 <summary><strong>macOS</strong></summary>
@@ -82,11 +83,13 @@ Since Fast Memo is an open-source app distributed outside official app stores, y
 macOS Gatekeeper will block the app because it's not notarized by Apple.
 
 **Option 1: System Settings**
+
 1. Try to open the app (it will be blocked)
 2. Go to **System Settings → Privacy & Security**
 3. Scroll down and click **"Open Anyway"**
 
 **Option 2: Terminal**
+
 ```bash
 xattr -cr /Applications/Fast\ Memo.app
 ```

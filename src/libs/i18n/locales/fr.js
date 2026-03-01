@@ -15,10 +15,16 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
+      description_0_1_1: `• Synchronisation Cloud corrigée au démarrage de l’application.
+• Les notes sont désormais correctement triées après chaque synchronisation.`,
+
       description_0_1_0: `• Première version de Fast Memo Desktop (BETA) avec toutes les fonctionnalités mobiles.`,
     },
 
     mobile: {
+      description_2_7_1: `• Synchronisation Cloud corrigée au démarrage de l’application.
+• Les notes sont désormais correctement triées après chaque synchronisation.`,
+
       description_2_7_0: `• Correction du glisser-déposer Kanban sur mobile, tablette et bureau.
 • Alignement des applications mobile et bureau.
 • Lancement officiel de l'application de bureau.`,
