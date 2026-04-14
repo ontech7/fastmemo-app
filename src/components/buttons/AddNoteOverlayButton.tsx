@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
+import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
+import { PlusIcon } from "react-native-heroicons/outline";
+import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 import { useRouter } from "@/hooks/useRouter";
 import type { Href } from "expo-router";
@@ -9,9 +18,57 @@ import type { Href } from "expo-router";
 import { NOTE_TYPES } from "@/constants/note-types";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const ANIMATION_DURATION_OPEN = 300;
+const ANIMATION_DURATION_CLOSE = 180;
+
 interface Props {
   isDeleteMode: boolean;
   toggleDeleteMode: () => void;
+}
+
+interface MenuItemProps {
+  noteType: (typeof NOTE_TYPES)[number];
+  index: number;
+  totalItems: number;
+  menuProgress: SharedValue<number>;
+  onPress: () => void;
+  label: string;
+}
+
+function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, label }: MenuItemProps) {
+  const reverseIndex = totalItems - 1 - index;
+  const Icon = noteType.icon;
+
+  const animatedStyle = useAnimatedStyle((): ViewStyle => {
+    const staggerOffset = reverseIndex * 0.15;
+    const itemProgress = interpolate(
+      menuProgress.value,
+      [staggerOffset, Math.min(staggerOffset + 0.6, 1)],
+      [0, 1],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      opacity: itemProgress,
+      transform: [
+        { translateY: interpolate(itemProgress, [0, 1], [20, 0]) },
+        { scale: interpolate(itemProgress, [0, 1], [0.8, 1]) },
+      ],
+    };
+  });
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <TouchableOpacity style={styles.noteTypeButton} activeOpacity={0.7} onPress={onPress}>
+        <Text style={styles.noteTypeLabel}>{label}</Text>
+        <View style={styles.noteTypeIconContainer}>
+          <Icon size={28} color={COLOR.darkBlue} />
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
 }
 
 export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }: Props) {
@@ -19,6 +76,9 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
   const router = useRouter();
 
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+
+  const iconRotation = useSharedValue(0);
+  const menuProgress = useSharedValue(0);
 
   const toggleOverlay = () => {
     if (isDeleteMode) {
@@ -53,33 +113,54 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
 
   const showCloseIcon = isOverlayOpen || isDeleteMode;
 
+  useEffect(() => {
+    iconRotation.value = withTiming(showCloseIcon ? 1 : 0, {
+      duration: showCloseIcon ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [showCloseIcon]);
+
+  useEffect(() => {
+    menuProgress.value = withTiming(isOverlayOpen ? 1 : 0, {
+      duration: isOverlayOpen ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
+      easing: isOverlayOpen ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+    });
+  }, [isOverlayOpen]);
+
+  const iconAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${iconRotation.value * 45}deg` }],
+  }));
+
+  const backdropAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: menuProgress.value,
+  }));
+
   return (
     <>
-      {isOverlayOpen && (
-        <Pressable style={styles.fullscreenOverlay} onPress={closeOverlay}>
-          <View style={styles.overlayContainer}>
-            {NOTE_TYPES.map((noteType) => {
-              const Icon = noteType.icon;
-              return (
-                <TouchableOpacity
-                  key={noteType.key}
-                  style={styles.noteTypeButton}
-                  activeOpacity={0.7}
-                  onPress={() => handleNoteTypePress(noteType.route as Href)}
-                >
-                  <Text style={styles.noteTypeLabel}>{t(noteType.labelKey)}</Text>
-                  <View style={styles.noteTypeIconContainer}>
-                    <Icon size={28} color={COLOR.darkBlue} />
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </Pressable>
-      )}
+      <AnimatedPressable
+        style={[styles.fullscreenOverlay, backdropAnimatedStyle]}
+        pointerEvents={isOverlayOpen ? "auto" : "none"}
+        onPress={closeOverlay}
+      >
+        <View style={styles.overlayContainer}>
+          {NOTE_TYPES.map((noteType, index) => (
+            <AnimatedMenuItem
+              key={noteType.key}
+              noteType={noteType}
+              index={index}
+              totalItems={NOTE_TYPES.length}
+              menuProgress={menuProgress}
+              onPress={() => handleNoteTypePress(noteType.route as Href)}
+              label={t(noteType.labelKey)}
+            />
+          ))}
+        </View>
+      </AnimatedPressable>
 
       <TouchableOpacity style={styles.fab} activeOpacity={0.7} onPress={toggleOverlay}>
-        {showCloseIcon ? <XMarkIcon size={28} color={COLOR.darkBlue} /> : <PlusIcon size={28} color={COLOR.darkBlue} />}
+        <Animated.View style={iconAnimatedStyle}>
+          <PlusIcon size={28} color={COLOR.darkBlue} />
+        </Animated.View>
       </TouchableOpacity>
     </>
   );
@@ -106,7 +187,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     justifyContent: "flex-end",
     alignItems: "flex-end",
     paddingBottom: 130,
