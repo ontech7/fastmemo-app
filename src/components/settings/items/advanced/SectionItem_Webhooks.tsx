@@ -1,6 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
+import type { TextStyle } from "react-native";
+
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 import SectionItemList_Navigation from "../../components/item/SectionItemList_Navigation";
@@ -19,7 +21,7 @@ export default function SectionItem_Webhooks({ isLast }: Props) {
   );
 }
 
-const betaStyle: Record<string, any> = {
+const betaStyle: TextStyle = {
   marginLeft: PADDING_MARGIN.sm,
   paddingLeft: PADDING_MARGIN.sm,
   paddingTop: 1,

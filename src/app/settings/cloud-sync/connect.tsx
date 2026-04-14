@@ -218,7 +218,7 @@ export default function CloudSyncScreen() {
                                 styles.saveButton_disabled,
                             ]}
                             onPress={() =>
-                              unlockWithSecret((router: any, isFingerprint: boolean) => {
+                              unlockWithSecret((router, isFingerprint: boolean) => {
                                 if (isFingerprint) {
                                   router.push("/settings/cloud-sync/devices");
                                 } else {

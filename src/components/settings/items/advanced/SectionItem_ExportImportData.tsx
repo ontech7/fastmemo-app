@@ -108,9 +108,9 @@ export default function SectionItem_ExportImportData({ isLast }: Props) {
         webhook(webhook_exportData, { action: "generic/export" });
         setShowSuccessDialog(true);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error);
-      setErrorMessage(error.message);
+      setErrorMessage(error instanceof Error ? error.message : String(error));
       setShowErrorDialog(true);
     }
 
@@ -158,8 +158,8 @@ export default function SectionItem_ExportImportData({ isLast }: Props) {
         input.type = "file";
         input.accept = ".txt";
 
-        input.onchange = async (e: any) => {
-          const file = e.target.files?.[0];
+        input.onchange = async (e: Event) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
           if (!file) return;
 
           const content = await file.text();
@@ -168,9 +168,9 @@ export default function SectionItem_ExportImportData({ isLast }: Props) {
 
         input.click();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error);
-      setErrorMessage(error.message);
+      setErrorMessage(error instanceof Error ? error.message : String(error));
       setShowErrorDialog(true);
     }
 
@@ -202,9 +202,9 @@ export default function SectionItem_ExportImportData({ isLast }: Props) {
       webhook(webhook_exportData, { action: "generic/export" });
 
       setShowSuccessDialog(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error);
-      setErrorMessage(error.message);
+      setErrorMessage(error instanceof Error ? error.message : String(error));
       setShowErrorDialog(true);
     }
 
@@ -240,9 +240,9 @@ export default function SectionItem_ExportImportData({ isLast }: Props) {
       webhook(webhook_exportData, { action: "generic/export" });
 
       setShowSuccessDialog(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error);
-      setErrorMessage(error.message);
+      setErrorMessage(error instanceof Error ? error.message : String(error));
       setShowErrorDialog(true);
     }
 
@@ -287,9 +287,9 @@ export default function SectionItem_ExportImportData({ isLast }: Props) {
       webhook(webhook_importData, { action: "generic/import" });
 
       setShowSuccessDialog(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error);
-      setErrorMessage(error.message);
+      setErrorMessage(error instanceof Error ? error.message : String(error));
       setShowErrorDialog(true);
     }
 

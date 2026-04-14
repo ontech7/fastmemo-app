@@ -1,7 +1,7 @@
 import useEmblaCarousel from "embla-carousel-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Dimensions, Image, type ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon } from "react-native-heroicons/outline";
 
 import SafeAreaView from "@/components/SafeAreaView";
@@ -163,7 +163,7 @@ export default function IntroScreen() {
 }
 
 interface CarouselItemProps {
-  item: { image: any; description: string };
+  item: { image: ImageSourcePropType; description: string };
   width: number;
   height: number;
   isDesktop: boolean;

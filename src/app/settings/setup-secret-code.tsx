@@ -4,6 +4,7 @@ import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles"
 import { useRouter } from "@/hooks/useRouter";
 import Haptics from "@/libs/haptics";
 import { addNote } from "@/slicers/notesSlice";
+import type { Note } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import i18n from "i18next";
 import React, { useCallback, useEffect, useState } from "react";
@@ -48,7 +49,7 @@ export default function SetupSecretCodeScreen() {
         AsyncStorage.setItem("@firstScreen", "/home");
 
         dispatch(setSecretCode(code));
-        dispatch(addNote(defaultNote()));
+        dispatch(addNote(defaultNote() as Note));
 
         setPhase("savedCode");
         setTimeout(() => {

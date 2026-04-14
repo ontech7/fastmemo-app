@@ -1,6 +1,7 @@
 import FSStorage from "@/libs/storage/fsStorage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
+import { useDispatch } from "react-redux";
 import { Platform } from "react-native";
 import { persistReducer, persistStore } from "redux-persist";
 import type { PersistConfig } from "redux-persist";
@@ -68,3 +69,5 @@ export const persistor = persistStore(store);
 
 export type AppDispatch = typeof store.dispatch;
 export type AppRootState = ReturnType<typeof store.getState>;
+
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>();

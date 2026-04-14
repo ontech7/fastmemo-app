@@ -5,6 +5,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CheckIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
 
+import type { Category } from "@/types";
 import BackButton from "@/components/buttons/BackButton";
 import OrderedCategoryCard from "@/components/cards/OrderedCategoryCard";
 import SafeAreaView from "@/components/SafeAreaView";
@@ -18,7 +19,7 @@ import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/s
 export default function ChangeCategoryScreen() {
   const { t } = useTranslation();
 
-  const { noteId } = useLocalSearchParams();
+  const { noteId } = useLocalSearchParams<{ noteId: string }>();
   const currentNote = useSelector(getNote(noteId));
 
   const [selectedCategory, setSelectedCategory] = useState(currentNote?.category || defaultCategory);
@@ -34,8 +35,8 @@ export default function ChangeCategoryScreen() {
     }
   }, [currentNote, router]);
 
-  const toggleCategory = useCallback((_selectedCategory: any) => {
-    setSelectedCategory((prevCategory: any) => {
+  const toggleCategory = useCallback((_selectedCategory: Category) => {
+    setSelectedCategory((prevCategory: Category) => {
       if (prevCategory.icon == "" || prevCategory.icon != _selectedCategory.icon) {
         return _selectedCategory;
       } else {

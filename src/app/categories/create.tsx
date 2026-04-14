@@ -22,7 +22,13 @@ import { selectorWebhook_createCategory, selectorWebhook_updateCategory } from "
 export default function CreateCategoryScreen() {
   const { t } = useTranslation();
 
-  const { index, name, icon, selected, isUpdateCategory } = useLocalSearchParams();
+  const { index, name, icon, selected, isUpdateCategory } = useLocalSearchParams<{
+    index: string;
+    name: string;
+    icon: string;
+    selected: string;
+    isUpdateCategory: string;
+  }>();
 
   const webhook_createCategory = useSelector(selectorWebhook_createCategory);
   const webhook_updateCategory = useSelector(selectorWebhook_updateCategory);
@@ -79,8 +85,12 @@ export default function CreateCategoryScreen() {
         },
         prevCategory: {
           icon: icon,
-          name: name,
+          name: name ?? "",
+          order: 0,
+          index: index === "true",
+          selected: selected === "true",
         },
+        index: index === "true",
       })
     );
     webhook(webhook_updateCategory, {

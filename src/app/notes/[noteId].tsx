@@ -11,10 +11,12 @@ import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { getNote } from "@/slicers/notesSlice";
 import { formatDateTime } from "@/utils/date";
 
+import type { KanbanNote, TextNote, TodoNote } from "@/types";
+
 export default function NoteScreen() {
   const router = useRouter();
 
-  const { noteId } = useLocalSearchParams();
+  const { noteId } = useLocalSearchParams<{ noteId: string }>();
   const currentNote = useSelector(getNote(noteId));
   const currentCategory = useSelector(getCurrentCategory);
 
@@ -22,7 +24,7 @@ export default function NoteScreen() {
 
   const note = useMemo(() => {
     if (noteId === "new-text" || noteId === "new-todo" || noteId === "new-kanban") {
-      const noteType = noteId === "new-text" ? "text" : noteId === "new-todo" ? "todo" : "kanban";
+      const noteType: "text" | "todo" | "kanban" = noteId === "new-text" ? "text" : noteId === "new-todo" ? "todo" : "kanban";
 
       const baseNote = {
         id: uuid(),
@@ -69,11 +71,11 @@ export default function NoteScreen() {
 
   switch (noteType) {
     case "kanban":
-      return <NoteKanbanEditor key={note.id} initialNote={note} />;
+      return <NoteKanbanEditor key={note.id} initialNote={note as KanbanNote} />;
     case "todo":
-      return <NoteTodoEditor key={note.id} initialNote={note} />;
+      return <NoteTodoEditor key={note.id} initialNote={note as TodoNote} />;
     case "text":
-      return <NoteTextEditor key={note.id} initialNote={note} />;
+      return <NoteTextEditor key={note.id} initialNote={note as TextNote} />;
     default:
       return null;
   }

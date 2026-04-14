@@ -22,6 +22,12 @@ import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/con
 
 import lottieJson from "../../assets/lottie/Logo.json";
 
+interface Attachment {
+  filename: string;
+  content: string;
+  encoding: string;
+}
+
 const topicList = [
   "crash",
   "notes",
@@ -55,7 +61,7 @@ export default function ReportScreen() {
   const lockReportForOneDay = () => {
     const now = new Date();
     now.setDate(now.getDate() + 1);
-    dispatch(setReportDate(now));
+    dispatch(setReportDate(now.toISOString()));
   };
 
   const store = useStore();
@@ -99,7 +105,7 @@ export default function ReportScreen() {
    * Attachments
    */
 
-  const [attachments, setAttachments] = useState<any[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const pickImageOrVideo = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -168,7 +174,7 @@ export default function ReportScreen() {
   };
 
   const removeAttachment = (fileName: string) => {
-    setAttachments((prev: any[]) => prev.filter((attachment: any) => attachment.filename != fileName));
+    setAttachments((prev: Attachment[]) => prev.filter((attachment: Attachment) => attachment.filename != fileName));
   };
 
   /**
@@ -176,7 +182,7 @@ export default function ReportScreen() {
    */
 
   const sendReport = async () => {
-    const data = {};
+    const data: Record<string, any> = {};
 
     if (!topicsSelected.length || !problemDescription) {
       setReportMessage({

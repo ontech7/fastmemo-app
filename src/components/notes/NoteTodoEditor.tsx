@@ -38,7 +38,7 @@ import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import type { TodoNote } from "@/types";
+import type { TodoItem as TodoItemType, TodoNote } from "@/types";
 
 interface Props {
   initialNote: TodoNote;
@@ -162,7 +162,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
       }
 
       let mutableList = Object.assign([], note.list);
-      const index = mutableList.findIndex((todoItem: any) => todoItem.id === id);
+      const index = mutableList.findIndex((todoItem: TodoItemType) => todoItem.id === id);
       mutableList[index] = {
         ...mutableList[index],
         checked: !mutableList[index].checked,
@@ -281,7 +281,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     setTimeout(() => setAutoFocus(true), 20);
   }, []);
 
-  const renderTodoItem = ({ item, drag, isActive }: { item: any; drag: () => void; isActive: boolean }) => (
+  const renderTodoItem = ({ item, drag, isActive }: { item: TodoItemType; drag: () => void; isActive: boolean }) => (
     <TodoItem
       item={item}
       setText={setTextListItem}

@@ -26,7 +26,7 @@ import KanbanBoard from "../kanban/KanbanBoard";
 
 const COLUMN_PEEK = 40;
 
-import type { KanbanNote } from "@/types";
+import type { KanbanItem, KanbanNote } from "@/types";
 
 interface Props {
   initialNote: KanbanNote;
@@ -171,7 +171,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
   );
 
   const reorderCards = useCallback(
-    (columnId: string, newItems: any[]) => {
+    (columnId: string, newItems: KanbanItem[]) => {
       const columns = note.columns.map((col) => {
         if (col.id !== columnId) return col;
         return { ...col, items: newItems };

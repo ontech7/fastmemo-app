@@ -4,7 +4,7 @@ import { useRouter } from "@/hooks/useRouter";
 import Carousel, { Pagination } from "@ontech7/react-native-snap-carousel";
 import React, { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Dimensions, Image, type ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowRightIcon } from "react-native-heroicons/outline";
 
 const { width: WINDOW_WIDTH, height: WINDOW_HEIGHT } = Dimensions.get("window");
@@ -63,7 +63,7 @@ export default function IntroScreen() {
           disableIntervalMomentum={true}
           ref={carouselRef}
           data={carouselSteps}
-          renderItem={({ item }: { item: { image: any; description: string } }) => (
+          renderItem={({ item }: { item: { image: ImageSourcePropType; description: string } }) => (
             <CarouselItem item={item} width={ITEM_WIDTH} height={ITEM_HEIGHT} />
           )}
           sliderWidth={WINDOW_WIDTH}
@@ -97,7 +97,7 @@ export default function IntroScreen() {
 }
 
 interface CarouselItemProps {
-  item: { image: any; description: string };
+  item: { image: ImageSourcePropType; description: string };
   width: number;
   height: number;
 }

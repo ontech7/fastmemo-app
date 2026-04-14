@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { BackHandler, StyleSheet, Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
+import type { Note } from "@/types";
 import Haptics from "@/libs/haptics";
 import { webhook } from "@/utils/webhook";
 import SafeAreaView from "@/components/SafeAreaView";
@@ -59,7 +60,7 @@ export default function TemporaryTrashScreen() {
       return trashedNotes;
     }
 
-    return trashedNotes.filter((note: any) => note.title?.toLowerCase().includes(filterText.toLowerCase()));
+    return trashedNotes.filter((note: Note) => note.title?.toLowerCase().includes(filterText.toLowerCase()));
   }, [filterText, trashedNotes]);
 
   // hardware back for resetting deleteMode
@@ -86,7 +87,7 @@ export default function TemporaryTrashScreen() {
 
   // delete note if the time has passed
   useEffect(() => {
-    trashedNotes.forEach((note: any) => {
+    trashedNotes.forEach((note: Note) => {
       const currentDate = new Date().getTime();
 
       if (currentDate > note.deleteDate) {

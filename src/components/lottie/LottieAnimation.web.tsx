@@ -5,7 +5,7 @@ import { View } from "react-native";
 import type { ViewStyle } from "react-native";
 
 interface Props {
-  source: any;
+  source: Record<string, unknown>;
   loop?: boolean;
   autoPlay?: boolean;
   speed?: number;

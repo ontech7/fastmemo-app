@@ -12,6 +12,7 @@ import { StyleSheet, View } from "react-native";
 import lottieJson from "../assets/lottie/Logo_with_Text.json";
 
 export default function LoadingScreen() {
+  const router = useRouter();
   const logoAnimRef = useRef<any>(null);
 
   const [showLottie, setShowLottie] = useState<boolean | null>(null);

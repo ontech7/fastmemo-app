@@ -20,19 +20,20 @@ interface Props {
 
 export default function VoiceRecognitionButton({ setTranscript, style = {} }: Props) {
   const [recognizing, setRecognizing] = useState(false);
-  const recognitionRef = useRef(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [barHeights, setBarHeights] = useState(Array(20).fill(6));
 
   const selectors = useSelector(selectorVoiceRecognition);
 
   const isSpeechAvailable =
-    typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
+    typeof window !== "undefined" &&
+    (typeof SpeechRecognition !== "undefined" || typeof webkitSpeechRecognition !== "undefined");
 
   useEffect(() => {
     if (!isSpeechAvailable) return;
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
+    const SpeechRecognitionCtor = typeof SpeechRecognition !== "undefined" ? SpeechRecognition : webkitSpeechRecognition;
+    recognitionRef.current = new SpeechRecognitionCtor();
     recognitionRef.current.continuous = selectors.continuous || false;
     recognitionRef.current.interimResults = selectors.interimResults || true;
     recognitionRef.current.maxAlternatives = 1;

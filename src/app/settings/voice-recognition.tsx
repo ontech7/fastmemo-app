@@ -17,7 +17,7 @@ export default function VoiceRecognitionScreen() {
 
   const allValues = useSelector(selectorVoiceRecognition);
 
-  const setValue = async (key: string, value: any) => {
+  const setValue = async (key: string, value: boolean | string) => {
     dispatch(
       setVoiceRecognition({
         ...allValues,

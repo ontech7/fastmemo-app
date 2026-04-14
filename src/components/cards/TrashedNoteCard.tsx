@@ -123,12 +123,16 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
 
           <Text style={[styles.date, important && styles.dateImportant]} numberOfLines={1} ellipsizeMode="tail">
             {t("note.updated")}
-            <Text style={{ fontWeight: "600" }}>{formatDateTime(updatedAt || reverseDate(date))}</Text>
+            <Text style={{ fontWeight: "600" }}>
+              {formatDateTime(Number(updatedAt) || Number(new Date(reverseDate(date))))}
+            </Text>
           </Text>
 
           <Text style={[styles.date, important && styles.dateImportant]} numberOfLines={1} ellipsizeMode="tail">
             {t("note.created")}
-            <Text style={{ fontWeight: "600" }}>{formatDateTime(createdAt || reverseDate(date))}</Text>
+            <Text style={{ fontWeight: "600" }}>
+              {formatDateTime(Number(createdAt) || Number(new Date(reverseDate(date))))}
+            </Text>
           </Text>
 
           <CountdownDate deleteDate={deleteDate} important={important} />
@@ -172,7 +176,7 @@ function CountdownDate({ deleteDate, important }: CountdownDateProps) {
 
   const now = new Date().getTime();
 
-  var distance = deleteDate - now;
+  var distance = (deleteDate ?? 0) - now;
 
   var days = Math.floor(distance / (1000 * 60 * 60 * 24));
   var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));

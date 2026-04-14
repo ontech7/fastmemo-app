@@ -31,6 +31,7 @@ import {
   selectorWebhook_temporaryDeleteNote,
   selectorWebhook_updateNote,
 } from "@/slicers/settingsSlice";
+import type { Note, TextNote, TodoItem, TodoNote } from "@/types";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -166,15 +167,15 @@ export default function HomeScreen() {
     const text = !showDeepSearch ? filterText.trim().toLowerCase() : deepFilterText.trim().toLowerCase();
 
     if (!showDeepSearch) {
-      return !text ? notes : notes.filter((note: any) => note.title?.toLowerCase().includes(filterText.toLowerCase()));
+      return !text ? notes : notes.filter((note: Note) => note.title?.toLowerCase().includes(filterText.toLowerCase()));
     } else {
       return !text
         ? notes
-        : notes.filter((note: any) => {
+        : notes.filter((note: Note) => {
             if ((note.type || "text") === "text") {
-              return formatToPlainText(note.text?.toLowerCase()).includes(text);
+              return formatToPlainText((note as TextNote).text?.toLowerCase()).includes(text);
             } else {
-              return note.list.find((item: any) => item.text?.toLowerCase().includes(text));
+              return (note as TodoNote).list.find((item: TodoItem) => item.text?.toLowerCase().includes(text));
             }
           });
     }
@@ -204,10 +205,10 @@ export default function HomeScreen() {
 
   // check trashed notes data and delete
   useEffect(() => {
-    trashedNotes.forEach((note: any) => {
-      const currentDate = new Date();
+    trashedNotes.forEach((note: Note) => {
+      const currentDate = new Date().getTime();
 
-      if (currentDate > note.deleteDate) {
+      if (note.deleteDate != null && currentDate > note.deleteDate) {
         dispatch(deleteNote(note.id));
         webhook(webhook_deleteNote, {
           action: "note/deleteNote",

@@ -4,6 +4,8 @@ import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
+import type { LayoutChangeEvent, MouseEvent, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { PlusIcon } from "react-native-heroicons/outline";
 import uuid from "react-uuid";
 import KanbanDragOverlay from "./KanbanDragOverlay";
@@ -37,7 +39,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
   const dragScrollLeft = useRef(0);
 
   const handleScroll = useCallback(
-    (event: any) => {
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const offset = event.nativeEvent.contentOffset.x;
       scrollOffsetRef.current = offset;
       updateScrollOffset(offset);
@@ -47,7 +49,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
 
   // measure overlay root to register offset relative to window
   const handleOverlayLayout = useCallback(
-    (event: any) => {
+    (event: LayoutChangeEvent) => {
       const { width } = event.nativeEvent.layout;
       setContainerWidth(width);
 
@@ -61,7 +63,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
 
   // Drag-to-scroll handlers for web/desktop
   const handleMouseDown = useCallback(
-    (event: any) => {
+    (event: MouseEvent) => {
       if (!isWeb || isDragging) return;
 
       // Only start drag on left mouse button
@@ -75,7 +77,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
   );
 
   const handleMouseMove = useCallback(
-    (event: any) => {
+    (event: MouseEvent) => {
       if (!isWeb || !isDraggingScroll || isDragging) return;
 
       event.preventDefault();

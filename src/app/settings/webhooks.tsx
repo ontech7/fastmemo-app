@@ -7,6 +7,7 @@ import { openUrl } from "@/utils/openUrl";
 import { InformationCircleIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
 
+import type { WebhookPayload } from "@/types";
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import WebhookItem from "@/components/webhook/WebhookItem";
@@ -21,7 +22,7 @@ export default function WebhooksScreen() {
 
   const allWebhooks = useSelector(selectorWebhooks);
   const webhooks_keys = Object.keys(allWebhooks);
-  const webhooks_values = Object.values(allWebhooks);
+  const webhooks_values: WebhookPayload[] = Object.values(allWebhooks);
 
   const toggleWebhook = (key: string) => () => {
     const webhook = allWebhooks[key];
@@ -66,14 +67,14 @@ export default function WebhooksScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlashList
+      <FlashList<WebhookPayload>
         maintainVisibleContentPosition={{
           disabled: true,
         }}
         showsVerticalScrollIndicator={false}
         data={webhooks_values}
         extraData={{ toggleWebhook, setWebhookUrl, t }}
-        renderItem={({ item, index }: { item: any; index: number }) => (
+        renderItem={({ item, index }) => (
           <WebhookItem
             title={t("webhooks." + webhooks_keys[index])}
             webhook={item}
@@ -81,7 +82,7 @@ export default function WebhooksScreen() {
             setWebhookUrl={setWebhookUrl(webhooks_keys[index])}
           />
         )}
-        keyExtractor={(_: any, index: number) => webhooks_keys[index]}
+        keyExtractor={(_: WebhookPayload, index: number) => webhooks_keys[index]}
       />
     </SafeAreaView>
   );

@@ -30,7 +30,7 @@ export default function SecretCodeScreen() {
 
   const callback = retrieveSecretCodeCallback();
 
-  const { startPhase, noteId } = useLocalSearchParams();
+  const { startPhase, noteId } = useLocalSearchParams<{ startPhase: string; noteId: string }>();
   const currentNote = useSelector(getNote(noteId));
 
   const [phase, setPhase] = useState(startPhase);
@@ -128,7 +128,7 @@ export default function SecretCodeScreen() {
 
       <View style={styles.codeInputWrapper}>
         {!error ? (
-          <Text style={styles.codeTextSuggestion}>{CODE_PHASE[phase]}</Text>
+          <Text style={styles.codeTextSuggestion}>{CODE_PHASE[phase as keyof typeof CODE_PHASE]}</Text>
         ) : (
           <Text style={[styles.codeTextSuggestion, { color: COLOR.important, marginBottom: PADDING_MARGIN.xl }]}>
             {t("secretcode.error")}

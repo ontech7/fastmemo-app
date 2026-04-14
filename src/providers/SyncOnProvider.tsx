@@ -5,7 +5,9 @@ import { where } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AppState, Platform } from "react-native";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
+
+import { useAppDispatch } from "@/slicers/store";
 import { COLLECTIONS, getAllDeviceUuids, getAllElementsInCloud, getDeviceUuid, setElementInCloud } from "../libs/firebase";
 import { addLocalCategories, deleteLocalCategories, getCloudCategories } from "../slicers/categoriesSlice";
 import { addLocalNotes, deleteLocalNotes, getCloudNotes } from "../slicers/notesSlice";
@@ -20,7 +22,7 @@ const DEBOUNCE_NOTES_DELAY = 200;
 export default function SyncOnProvider(): null {
   const { t } = useTranslation();
 
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const tPendingChanges = useRef<ReturnType<typeof setInterval> | null>(null);
   const tDebounceNotes = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -215,7 +217,7 @@ export default function SyncOnProvider(): null {
         const devicesExceptMe = devices.filter((otherDeviceUuid) => otherDeviceUuid != deviceUuid);
 
         if (!isEmpty(cloudCategories_add)) {
-          await (dispatch as any)(
+          await dispatch(
             addCloudCategoriesAsync({
               deviceUuid: deviceUuid!,
               devicesToSync: devicesExceptMe,
@@ -225,7 +227,7 @@ export default function SyncOnProvider(): null {
         }
 
         if (!isEmpty(cloudCategories_delete)) {
-          await (dispatch as any)(
+          await dispatch(
             deleteCloudCategoriesAsync({
               deviceUuid: deviceUuid!,
               devicesToSync: devicesExceptMe,
@@ -270,7 +272,7 @@ export default function SyncOnProvider(): null {
         const devicesExceptMe = devices.filter((otherDeviceUuid) => otherDeviceUuid != deviceUuid);
 
         if (!isEmpty(cloudNotes_add)) {
-          await (dispatch as any)(
+          await dispatch(
             addCloudNotesAsync({
               deviceUuid: deviceUuid!,
               devicesToSync: devicesExceptMe,
@@ -280,7 +282,7 @@ export default function SyncOnProvider(): null {
         }
 
         if (!isEmpty(cloudNotes_delete)) {
-          await (dispatch as any)(
+          await dispatch(
             deleteCloudNotesAsync({
               deviceUuid: deviceUuid!,
               devicesToSync: devicesExceptMe,

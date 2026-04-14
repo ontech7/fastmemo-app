@@ -4,6 +4,7 @@ import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View } from
 import { PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
 
 import { useRouter } from "@/hooks/useRouter";
+import type { Href } from "expo-router";
 
 import { NOTE_TYPES } from "@/constants/note-types";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
@@ -32,7 +33,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
     setIsOverlayOpen(false);
   };
 
-  const handleNoteTypePress = (route: any) => {
+  const handleNoteTypePress = (route: Href) => {
     closeOverlay();
     router.push(route);
   };
@@ -64,7 +65,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
                   key={noteType.key}
                   style={styles.noteTypeButton}
                   activeOpacity={0.7}
-                  onPress={() => handleNoteTypePress(noteType.route)}
+                  onPress={() => handleNoteTypePress(noteType.route as Href)}
                 >
                   <Text style={styles.noteTypeLabel}>{t(noteType.labelKey)}</Text>
                   <View style={styles.noteTypeIconContainer}>

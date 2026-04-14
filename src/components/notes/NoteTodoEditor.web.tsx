@@ -1,4 +1,12 @@
-import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,7 +35,7 @@ import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/con
 
 import TodoItem from "../todo/TodoItem.web";
 
-import type { TodoNote } from "@/types";
+import type { TodoItem as TodoItemType, TodoNote } from "@/types";
 
 interface Props {
   initialNote: TodoNote;
@@ -154,7 +162,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
       }
 
       let mutableList = Object.assign([], note.list);
-      const index = mutableList.findIndex((todoItem: any) => todoItem.id === id);
+      const index = mutableList.findIndex((todoItem: TodoItemType) => todoItem.id === id);
       mutableList[index] = {
         ...mutableList[index],
         checked: !mutableList[index].checked,
@@ -253,7 +261,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     setTimeout(() => setAutoFocus(true), 20);
   }, []);
 
-  const handleDragEnd = (event: any) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (active.id !== over?.id) {

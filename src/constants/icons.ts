@@ -1,5 +1,5 @@
-import { Fragment } from "react";
 import type { ComponentType } from "react";
+import { Fragment } from "react";
 import * as Hero from "react-native-heroicons/outline";
 
 export interface CategoryMapEntry {

@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
-import type { Note, RootState } from "@/types";
+import type { Note } from "@/types";
+import type { AppRootState } from "@/slicers/store";
 
 import { COLLECTIONS, deleteElementInCloud, setElementInCloud } from "@/libs/firebase";
 
@@ -74,7 +75,7 @@ const processNotes = async ({
   return results;
 };
 
-export const addCloudNotesAsync = createAsyncThunk<Record<string, Note>, CloudSyncParams, { state: RootState }>(
+export const addCloudNotesAsync = createAsyncThunk<Record<string, Note>, CloudSyncParams, { state: AppRootState }>(
   "notes/addCloudNotesAsync",
   async ({ deviceUuid, devicesToSync, areMoreThanOneDevice }, thunkAPI) => {
     const { cloud } = thunkAPI.getState().notes;
@@ -90,7 +91,7 @@ export const addCloudNotesAsync = createAsyncThunk<Record<string, Note>, CloudSy
   }
 );
 
-export const deleteCloudNotesAsync = createAsyncThunk<Record<string, Note>, CloudSyncParams, { state: RootState }>(
+export const deleteCloudNotesAsync = createAsyncThunk<Record<string, Note>, CloudSyncParams, { state: AppRootState }>(
   "notes/deleteCloudNotesAsync",
   async ({ deviceUuid, devicesToSync, areMoreThanOneDevice }, thunkAPI) => {
     const { cloud } = thunkAPI.getState().notes;

@@ -4,6 +4,7 @@ import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from "react-nat
 import { CheckIcon, PencilSquareIcon, XMarkIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
 
+import type { Category } from "@/types";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import SafeAreaView from "@/components/SafeAreaView";
 
@@ -23,8 +24,8 @@ export default function OrganizeCategoriesScreen() {
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedCategories, setOrderedCategories] = useState<{
-    reorganizedCategoryList: any[];
-    notNumberedCategoryList: any[];
+    reorganizedCategoryList: Category[];
+    notNumberedCategoryList: Category[];
   }>({
     reorganizedCategoryList: categories,
     notNumberedCategoryList: [],

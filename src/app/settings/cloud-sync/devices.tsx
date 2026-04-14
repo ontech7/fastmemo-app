@@ -8,7 +8,13 @@ import { configs } from "@/configs";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useTimeoutTask } from "@/hooks/useTimeoutTask";
-import { getAllConnectedDevices, getDeviceUuid, removeDeviceFromCloud, removeDeviceFromDevicesToSync } from "@/libs/firebase";
+import {
+  getAllConnectedDevices,
+  getDeviceUuid,
+  removeDeviceFromCloud,
+  removeDeviceFromDevicesToSync,
+  type ConnectedDevice,
+} from "@/libs/firebase";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -25,7 +31,7 @@ import Animated, {
 export default function SyncedDevicesScreen() {
   const { t } = useTranslation();
 
-  const [connectedDevices, setConnectedDevices] = useState<any[]>([]);
+  const [connectedDevices, setConnectedDevices] = useState<ConnectedDevice[]>([]);
   const numberOfDevices = connectedDevices.length;
   const [currentDeviceUuid, setCurrentDeviceUuid] = useState("");
   const { timeoutStates, setTimeoutTask } = useTimeoutTask();
@@ -64,8 +70,8 @@ export default function SyncedDevicesScreen() {
       return;
     }
 
-    setConnectedDevices((prevConnectedDevices: any[]) =>
-      prevConnectedDevices.filter((prevConnectedDevice: any) => prevConnectedDevice.uuid != uuid)
+    setConnectedDevices((prevConnectedDevices: ConnectedDevice[]) =>
+      prevConnectedDevices.filter((prevConnectedDevice: ConnectedDevice) => prevConnectedDevice.uuid != uuid)
     );
   };
 

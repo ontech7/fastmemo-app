@@ -26,7 +26,7 @@ interface DeviceInfo {
   brand: string;
 }
 
-interface ConnectedDevice {
+export interface ConnectedDevice {
   uuid: string;
   modelName: string;
   brand: string;

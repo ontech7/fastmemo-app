@@ -43,7 +43,7 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
   const webhook_deleteCategory = useSelector(selectorWebhook_deleteCategory);
 
   const swapFavoriteCategory = () => {
-    dispatch(swapCategory({ name, index, icon, selected }));
+    dispatch(swapCategory({ icon }));
   };
 
   /* animation */
@@ -82,7 +82,7 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
         confirm={{
           label: t("delete_and_move"),
           handler: () => {
-            dispatch(deleteCategory({ name, index, icon, selected }));
+            dispatch(deleteCategory({ name, index, icon, selected, order: 0 }));
             dispatch(resetNotesCategory(icon));
             webhook(webhook_deleteCategory, {
               action: "note/deleteCategory",
@@ -95,7 +95,7 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
         cancel={{
           label: t("delete_with_notes"),
           handler: () => {
-            dispatch(deleteCategory({ name, index, icon, selected }));
+            dispatch(deleteCategory({ name, index, icon, selected, order: 0 }));
             dispatch(deleteNotesCategory(icon));
             webhook(webhook_deleteCategory, {
               action: "category/deleteCategory",

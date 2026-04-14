@@ -109,12 +109,12 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
 
         <Text style={[styles.date, important && styles.dateImportant]} numberOfLines={1} ellipsizeMode="tail">
           {t("note.updated")}
-          <Text style={{ fontWeight: "600" }}>{formatDateTime(updatedAt || reverseDate(date))}</Text>
+          <Text style={{ fontWeight: "600" }}>{formatDateTime(Number(updatedAt) || Number(new Date(reverseDate(date))))}</Text>
         </Text>
 
         <Text style={[styles.date, important && styles.dateImportant]} numberOfLines={1} ellipsizeMode="tail">
           {t("note.created")}
-          <Text style={{ fontWeight: "600" }}>{formatDateTime(createdAt || reverseDate(date))}</Text>
+          <Text style={{ fontWeight: "600" }}>{formatDateTime(Number(createdAt) || Number(new Date(reverseDate(date))))}</Text>
         </Text>
       </View>
 

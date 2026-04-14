@@ -25,7 +25,7 @@ export const unstable_settings = {
   initialRouteName: "index",
 };
 
-ErrorUtils.setGlobalHandler((error: any, isFatal: boolean) => {
+ErrorUtils.setGlobalHandler((error: Error, isFatal: boolean) => {
   Sentry.captureException(error, { data: { isFatal } });
 });
 

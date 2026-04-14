@@ -10,7 +10,13 @@ import it from "./locales/it";
 import ja from "./locales/ja";
 import zh from "./locales/zh";
 
-export const supportedLanguages = {
+interface SupportedLanguage {
+  tag: string;
+  code: string;
+  name: string;
+}
+
+export const supportedLanguages: Record<string, SupportedLanguage> = {
   de: {
     tag: "de-DE",
     code: "de",

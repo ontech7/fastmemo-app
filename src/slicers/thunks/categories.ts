@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
-import type { Category, RootState } from "@/types";
+import type { Category } from "@/types";
+import type { AppRootState } from "@/slicers/store";
 
 import { COLLECTIONS, deleteElementInCloud, setElementInCloud } from "@/libs/firebase";
 
@@ -44,7 +45,7 @@ const syncWithDevices = async ({
   });
 };
 
-export const addCloudCategoriesAsync = createAsyncThunk<Record<string, Category>, CloudSyncParams, { state: RootState }>(
+export const addCloudCategoriesAsync = createAsyncThunk<Record<string, Category>, CloudSyncParams, { state: AppRootState }>(
   "categories/addCloudCategoriesAsync",
   async ({ deviceUuid, devicesToSync, areMoreThanOneDevice }, { getState }) => {
     const state = getState().categories;
@@ -80,7 +81,7 @@ export const addCloudCategoriesAsync = createAsyncThunk<Record<string, Category>
   }
 );
 
-export const deleteCloudCategoriesAsync = createAsyncThunk<Record<string, Category>, CloudSyncParams, { state: RootState }>(
+export const deleteCloudCategoriesAsync = createAsyncThunk<Record<string, Category>, CloudSyncParams, { state: AppRootState }>(
   "categories/deleteCloudCategoriesAsync",
   async ({ deviceUuid, devicesToSync, areMoreThanOneDevice }, { getState }) => {
     const state = getState().categories;
