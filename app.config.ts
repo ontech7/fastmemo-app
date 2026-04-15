@@ -60,6 +60,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         backgroundColor,
       },
     ],
+    "llama.rn",
     [
       "@sentry/react-native/expo",
       {

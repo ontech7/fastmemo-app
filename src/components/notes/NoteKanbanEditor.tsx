@@ -11,6 +11,7 @@ import {
   selectorWebhook_temporaryDeleteNote,
   selectorWebhook_updateNote,
 } from "@/slicers/settingsSlice";
+import type { KanbanItem, KanbanNote } from "@/types";
 import { formatDateTime } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
@@ -25,8 +26,6 @@ import uuid from "react-uuid";
 import KanbanBoard from "../kanban/KanbanBoard";
 
 const COLUMN_PEEK = 40;
-
-import type { KanbanItem, KanbanNote } from "@/types";
 
 interface Props {
   initialNote: KanbanNote;

@@ -147,6 +147,10 @@ export default Sentry.wrap(function RootLayout() {
                       name="settings/voice-recognition"
                       options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
                     />
+                    <Stack.Screen
+                      name="settings/ai-assistant"
+                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
+                    />
                     <Stack.Screen name="+not-found" />
                   </Stack>
                 </RootSiblingParent>

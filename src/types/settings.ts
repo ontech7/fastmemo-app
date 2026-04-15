@@ -35,6 +35,13 @@ export interface CloudSettings {
   appId: string;
 }
 
+export interface AIAssistantSettings {
+  enabled: boolean;
+  modelDownloaded: boolean;
+  selectedModel: "qwen-0.5b" | "qwen-1.5b" | "qwen-3b";
+  voiceOnly: boolean;
+}
+
 export interface SettingsState {
   language: string;
   isIntroFinished: boolean;
@@ -46,5 +53,6 @@ export interface SettingsState {
   cloud: CloudSettings;
   webhooks: Webhooks;
   voiceRecognition: VoiceRecognitionSettings;
+  aiAssistant: AIAssistantSettings;
   reportDate: string | null;
 }

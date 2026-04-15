@@ -68,6 +68,7 @@
     "firebase": "9.22.1",
     "html-to-formatted-text": "^2.7.0",
     "i18next": "^25.3.2",
+    "llama.rn": "^0.12.0-rc.8",
     "localforage": "^1.10.0",
     "lottie-react-native": "7.2.2",
     "lottie-web": "^5.13.0",

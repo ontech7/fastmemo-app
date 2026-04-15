@@ -5,7 +5,7 @@ import * as Localization from "expo-localization";
 import i18n from "i18next";
 import { Platform } from "react-native";
 
-import type { CloudSettings, RootState, SettingsState, VoiceRecognitionSettings, Webhooks } from "@/types";
+import type { AIAssistantSettings, CloudSettings, RootState, SettingsState, VoiceRecognitionSettings, Webhooks } from "@/types";
 
 const initialState: SettingsState = {
   language: "system",
@@ -43,6 +43,12 @@ const initialState: SettingsState = {
     interimResults: true,
     continuous: true,
     language: "system",
+  },
+  aiAssistant: {
+    enabled: false,
+    modelDownloaded: false,
+    selectedModel: "qwen-0.5b",
+    voiceOnly: false,
   },
   reportDate: null,
 };
@@ -86,6 +92,9 @@ const settingsSlice = createSlice({
     setVoiceRecognition: (state, action: PayloadAction<VoiceRecognitionSettings>) => {
       state.voiceRecognition = action.payload;
     },
+    setAIAssistant: (state, action: PayloadAction<AIAssistantSettings>) => {
+      state.aiAssistant = action.payload;
+    },
   },
 });
 
@@ -101,6 +110,7 @@ export const {
   setCloudConnected,
   setWebhooks,
   setVoiceRecognition,
+  setAIAssistant,
 } = settingsSlice.actions;
 
 export const getAllSettings = (state: RootState): SettingsState => state.settings;
@@ -127,6 +137,13 @@ export const selectorWebhook_updateCategory = (state: RootState) => state.settin
 export const selectorWebhook_exportData = (state: RootState) => state.settings.webhooks.exportData;
 export const selectorWebhook_importData = (state: RootState) => state.settings.webhooks.importData;
 export const selectorWebhook_wipeData = (state: RootState) => state.settings.webhooks.wipeData;
+const defaultAIAssistant: AIAssistantSettings = {
+  enabled: false,
+  modelDownloaded: false,
+  selectedModel: "qwen-0.5b",
+  voiceOnly: false,
+};
+export const selectorAIAssistant = (state: RootState): AIAssistantSettings => state.settings.aiAssistant || defaultAIAssistant;
 export const selectorVoiceRecognition = (state: RootState): VoiceRecognitionSettings =>
   Platform.OS === "web"
     ? {

@@ -1,20 +1,23 @@
 import KanbanColumn from "@/components/kanban/KanbanColumn";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
+import type { KanbanNote } from "@/types";
+import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type {
+  LayoutChangeEvent,
+  MouseEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView as ScrollViewType,
+} from "react-native";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
-import type { LayoutChangeEvent, MouseEvent, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { PlusIcon } from "react-native-heroicons/outline";
 import uuid from "react-uuid";
 import KanbanDragOverlay from "./KanbanDragOverlay";
 
 const isWeb = Platform.OS === "web";
-
-import type { KanbanNote } from "@/types";
-import type { RefObject } from "react";
-import type { ScrollView as ScrollViewType } from "react-native";
 
 interface Props {
   note: KanbanNote;

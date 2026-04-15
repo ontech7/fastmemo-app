@@ -5,6 +5,7 @@ import SectionItem_ExportImportData from "./items/advanced/SectionItem_ExportImp
 import SectionItem_ShowHidden from "./items/advanced/SectionItem_ShowHidden";
 import SectionItem_VoiceRecognition from "./items/advanced/SectionItem_VoiceRecognition";
 import SectionItem_Webhooks from "./items/advanced/SectionItem_Webhooks";
+import SectionItem_AIAssistant from "./items/advanced/SectionItem_AIAssistant";
 import SectionItem_WipeData from "./items/advanced/SectionItem_WipeData";
 import SectionItem_AppLanguage from "./items/basic/SectionItem_AppLanguage";
 import SectionItem_ChangeSecretCode from "./items/basic/SectionItem_ChangeSecretCode";
@@ -36,6 +37,7 @@ export const SECTION_ADVANCED: SectionItemComponent[] = [
   SectionItem_ExportImportData,
   SectionItem_Webhooks,
   !isWeb && SectionItem_VoiceRecognition,
+  !isWeb && SectionItem_AIAssistant,
   SectionItem_WipeData,
 ].filter(Boolean) as SectionItemComponent[];
 
