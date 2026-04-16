@@ -1,6 +1,6 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
-const isDev = process.env.EXPO_PUBLIC_ENV === "DEV" || !process.env.EXPO_PUBLIC_ENV;
+const isDev = process.env.EXPO_PUBLIC_ENV === "DEV";
 
 const appName = isDev ? "Fast Memo Test" : "Fast Memo";
 const appSlug = isDev ? "fastmemoapptest" : "FastMemoApp";
@@ -76,7 +76,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      projectId: "1080a020-2103-4429-8f79-d517d79559cb", // DEV
+      projectId: "44c5f162-d9f8-40db-ae28-269fe48982ca", // DEV
     },
   },
 });
