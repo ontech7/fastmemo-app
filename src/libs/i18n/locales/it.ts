@@ -15,6 +15,10 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
+      description_0_2_0: `• Aggiunta possibilita' di spostare le colonne kanban.
+• Migliorate animazioni.
+• Fix varie.`,
+
       description_0_1_1: `• Sistemata sincronizzazione Cloud all'avvio dell'app.
 • Ora le note vengono ordinate correttamente dopo ogni sincronizzazione.`,
 
@@ -22,6 +26,11 @@ const it = {
     },
 
     mobile: {
+      description_2_8_0: `• Aggiunta AI Assistant self-hosted nel cellulare (Qwen 2.5) con funzionalita' smart per le note. Configuralo in Impostazioni -> Assistente AI.
+• Aggiunta possibilita' di spostare le colonne kanban.
+• Migliorate animazioni.
+• Fix varie.`,
+
       description_2_7_1: `• Sistemata sincronizzazione Cloud all'avvio dell'app.
 • Ora le note vengono ordinate correttamente dopo ogni sincronizzazione.`,
 
@@ -507,6 +516,15 @@ const it = {
       text_1_0: "Puoi cancellare tutte le note e le categorie.",
       text_2_0: "Apparirà un popup per chiederti se sei sicuro di questa azione.",
       text_3_0: "Verranno eliminati definitivamente.",
+    },
+    what_ai_assistant: {
+      title: "Cos'e' l'Assistente AI?",
+      text_1_0:
+        "Fast Memo include un Assistente AI self-hosted che funziona interamente sul tuo dispositivo. Nessun dato viene inviato a server esterni.",
+      text_2_0: "Per configurarlo, vai in Impostazioni -> Assistente AI, scegli un modello e scaricalo.",
+      text_3_0:
+        "Una volta attivato, un bottone a forma di stella appare dentro ogni editor. Toccalo per accedere ad azioni smart come: genera titolo, riassumi, continua a scrivere, formatta testo, suggerisci elementi checklist o suggerisci categoria.",
+      text_4_0: "L'AI funziona offline e supporta piu' lingue.",
     },
   },
   report: {

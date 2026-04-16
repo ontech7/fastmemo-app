@@ -15,6 +15,10 @@ const en = {
     title: "What's new?",
 
     web: {
+      description_0_2_0: `• Added the ability to reorder kanban columns.
+• Improved animations.
+• Various fixes.`,
+
       description_0_1_1: `• Fixed Cloud synchronization at app startup.
 • Notes are now correctly sorted after each synchronization.`,
 
@@ -22,6 +26,11 @@ const en = {
     },
 
     mobile: {
+      description_2_8_0: `• Added self-hosted AI Assistant (Qwen 2.5) with smart features for notes. Set it up in Settings -> AI Assistant.
+• Added the ability to reorder kanban columns.
+• Improved animations.
+• Various fixes.`,
+
       description_2_7_1: `• Fixed Cloud synchronization at app startup.
 • Notes are now correctly sorted after each synchronization.`,
 
@@ -505,6 +514,15 @@ const en = {
       text_1_0: "You can wipe all the notes and categories.",
       text_2_0: "A popup will appear in order to ask you if you are sure about this action.",
       text_3_0: "They will be deleted permanently.",
+    },
+    what_ai_assistant: {
+      title: "What is the AI Assistant?",
+      text_1_0:
+        "Fast Memo includes a self-hosted AI Assistant that runs entirely on your device. No data is sent to external servers.",
+      text_2_0: "To set it up, go to Settings -> AI Assistant, choose a model and download it.",
+      text_3_0:
+        "Once enabled, a sparkle button appears inside each note editor. Tap it to access smart actions like: generate a title, summarize, continue writing, format text, suggest checklist items, or suggest a category.",
+      text_4_0: "The AI works offline and supports multiple languages.",
     },
   },
   report: {

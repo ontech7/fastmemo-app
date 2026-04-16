@@ -26,6 +26,7 @@ import {
   toggleReadOnlyNotes,
 } from "@/slicers/notesSlice";
 import {
+  selectorAIAssistant,
   selectorShowHidden,
   selectorWebhook_deleteNote,
   selectorWebhook_temporaryDeleteNote,
@@ -39,7 +40,8 @@ import { useNavigation } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
+import { BackHandler, Keyboard, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SparklesIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useDispatch, useSelector, useStore } from "react-redux";
@@ -50,6 +52,8 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const store = useStore();
+
+  const aiSettings = useSelector(selectorAIAssistant);
 
   const currentCategory = useSelector(getCurrentCategory);
   const showHidden = useSelector(selectorShowHidden);
@@ -344,12 +348,23 @@ export default function HomeScreen() {
                 {isDeleteMode ? (
                   <DeleteNotesButton onPressDelete={() => setShowDeleteNotesDialog(true)} />
                 ) : (
-                  <NoteFiltersButton
-                    filters={{
-                      showDeepSearch,
-                      toggleDeepSearch,
-                    }}
-                  />
+                  <>
+                    {Platform.OS !== "web" && !aiSettings.enabled && (
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => router.push("/settings/ai-assistant")}
+                        style={styles.aiButton}
+                      >
+                        <SparklesIcon color={COLOR.softWhite} size={28} />
+                      </TouchableOpacity>
+                    )}
+                    <NoteFiltersButton
+                      filters={{
+                        showDeepSearch,
+                        toggleDeepSearch,
+                      }}
+                    />
+                  </>
                 )}
               </View>
             </View>
@@ -408,7 +423,7 @@ const styles = StyleSheet.create({
   },
   topContainer: {
     flexDirection: "row",
-    gap: PADDING_MARGIN.md,
+    gap: PADDING_MARGIN.lg,
   },
   saveNoteButton: {
     marginBottom: PADDING_MARGIN.sm,
@@ -452,5 +467,13 @@ const styles = StyleSheet.create({
     color: COLOR.softWhite,
     fontSize: FONTSIZE.paragraph,
     fontWeight: FONTWEIGHT.semiBold,
+  },
+  aiButton: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  aiButtonIcon: {
+    width: 40,
+    height: 40,
   },
 });

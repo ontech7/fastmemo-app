@@ -15,14 +15,23 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
-      description_0_1_1: `• Synchronisation Cloud corrigée au démarrage de l’application.
+      description_0_2_0: `• Possibilite de deplacer les colonnes kanban.
+• Animations ameliorees.
+• Corrections diverses.`,
+
+      description_0_1_1: `• Synchronisation Cloud corrigée au démarrage de l'application.
 • Les notes sont désormais correctement triées après chaque synchronisation.`,
 
       description_0_1_0: `• Première version de Fast Memo Desktop (BETA) avec toutes les fonctionnalités mobiles.`,
     },
 
     mobile: {
-      description_2_7_1: `• Synchronisation Cloud corrigée au démarrage de l’application.
+      description_2_8_0: `• Assistant IA self-hosted (Qwen 2.5) avec des fonctions intelligentes pour les notes. Configurez-le dans Parametres -> Assistant IA.
+• Possibilite de deplacer les colonnes kanban.
+• Animations ameliorees.
+• Corrections diverses.`,
+
+      description_2_7_1: `• Synchronisation Cloud corrigée au démarrage de l'application.
 • Les notes sont désormais correctement triées après chaque synchronisation.`,
 
       description_2_7_0: `• Correction du glisser-déposer Kanban sur mobile, tablette et bureau.
@@ -512,6 +521,15 @@ const fr = {
       text_1_0: "Vous pouvez effacer toutes les notes et catégories.",
       text_2_0: "Une popup apparaîtra afin de vous demander si vous êtes sûr de cette action.",
       text_3_0: "Ils seront définitivement supprimés.",
+    },
+    what_ai_assistant: {
+      title: "Qu'est-ce que l'Assistant IA?",
+      text_1_0:
+        "Fast Memo inclut un Assistant IA self-hosted qui fonctionne entierement sur votre appareil. Aucune donnee n'est envoyee a des serveurs externes.",
+      text_2_0: "Pour le configurer, allez dans Parametres -> Assistant IA, choisissez un modele et telechargez-le.",
+      text_3_0:
+        "Une fois active, un bouton etoile apparait dans chaque editeur. Appuyez dessus pour acceder a des actions intelligentes comme: generer un titre, resumer, continuer a ecrire, formater le texte, suggerer des elements ou suggerer une categorie.",
+      text_4_0: "L'IA fonctionne hors ligne et prend en charge plusieurs langues.",
     },
   },
   report: {

@@ -1,3 +1,9 @@
+## v0.2.0
+
+- Added the ability to reorder kanban columns with left/right arrows in the column header.
+- Improved animations.
+- Various fixes.
+
 ## v0.1.1
 
 - Fixed cloud sync not updating when the app window regains focus: added visibilitychange listener to trigger an immediate sync.

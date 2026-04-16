@@ -6,15 +6,18 @@ import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles"
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import aiLottieJson from "../assets/lottie/AI_Loader.json";
 import lottieJson from "../assets/lottie/Logo.json";
 
 function getVersionChangelogs(t: (key: string) => string) {
   return Platform.OS === "web"
     ? [
+        { version: "v0.2.0", text: t("changelog.web.description_0_2_0") },
         { version: "v0.1.1", text: t("changelog.web.description_0_1_1") },
         { version: "v0.1.0", text: t("changelog.web.description_0_1_0") },
       ]
     : [
+        { version: "v2.8.0", text: t("changelog.mobile.description_2_8_0") },
         { version: "v2.7.1", text: t("changelog.mobile.description_2_7_1") },
         { version: "v2.7.0", text: t("changelog.mobile.description_2_7_0") },
         { version: "v2.6.2", text: t("changelog.mobile.description_2_6_2") },
@@ -34,9 +37,11 @@ export default function ChangelogScreen() {
   const changelogs = useMemo(() => getVersionChangelogs(t), [t]);
 
   const logoAnimRef = useRef<any>(null);
+  const aiAnimRef = useRef<any>(null);
 
   useEffect(() => {
     logoAnimRef.current?.play();
+    aiAnimRef.current?.play();
   }, []);
 
   return (
@@ -50,6 +55,12 @@ export default function ChangelogScreen() {
       <ScrollView>
         <View style={styles.iconWrapper}>
           <LottieView ref={logoAnimRef} style={styles.icon} source={lottieJson} loop={false} />
+          {Platform.OS !== "web" && (
+            <>
+              <Text style={styles.plusSign}>+</Text>
+              <LottieView ref={aiAnimRef} style={styles.icon} source={aiLottieJson} loop />
+            </>
+          )}
         </View>
 
         {changelogs.map((changelog, index) => (
@@ -87,11 +98,19 @@ const styles = StyleSheet.create({
     color: COLOR.softWhite,
   },
   iconWrapper: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: PADDING_MARGIN.xl,
   },
   icon: {
     height: 75,
     width: 75,
+  },
+  plusSign: {
+    fontSize: FONTSIZE.intro,
+    fontWeight: FONTWEIGHT.semiBold,
+    color: COLOR.softWhite,
+    marginHorizontal: PADDING_MARGIN.sm,
   },
 });

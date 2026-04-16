@@ -1,3 +1,17 @@
+## v2.8.0
+
+- Added self-hosted AI Assistant (Qwen 2.5) with smart features for notes. Runs entirely on-device, no data sent to external
+  servers. Set it up in Settings -> AI Assistant. Available actions inside the note editor: generate title, summarize, continue
+  writing, format text, suggest checklist items, suggest category.
+- Added the ability to reorder kanban columns with left/right arrows in the column header.
+- Redesigned voice recognition button: removed horizontal expansion, added pulse animation and stop button. The screen now stays
+  awake during voice recognition.
+- Removed the old AI command bar from the home screen in favor of contextual AI actions inside each editor.
+- Added AI Lottie shortcut in the home header to quickly access AI Assistant settings.
+- Added AI Assistant section in Help page.
+- Improved animations.
+- Various fixes.
+
 ## v2.7.1
 
 - Fixed cloud sync not updating on app resume: added AppState listener to trigger an immediate sync when the app returns to

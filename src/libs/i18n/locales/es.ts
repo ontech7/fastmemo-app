@@ -15,6 +15,10 @@ const es = {
     title: "¿Qué hay de nuevo?",
 
     web: {
+      description_0_2_0: `• Posibilidad de mover columnas kanban.
+• Animaciones mejoradas.
+• Correcciones varias.`,
+
       description_0_1_1: `• Corregida la sincronización en la nube al iniciar la aplicación.
 • Las notas ahora se ordenan correctamente después de cada sincronización.`,
 
@@ -22,6 +26,11 @@ const es = {
     },
 
     mobile: {
+      description_2_8_0: `• Asistente IA self-hosted (Qwen 2.5) con funciones inteligentes para notas. Configuralo en Ajustes -> Asistente IA.
+• Posibilidad de mover columnas kanban.
+• Animaciones mejoradas.
+• Correcciones varias.`,
+
       description_2_7_1: `• Corregida la sincronización en la nube al iniciar la aplicación.
 • Las notas ahora se ordenan correctamente después de cada sincronización.`,
 
@@ -508,6 +517,15 @@ const es = {
       text_1_0: "Puedes borrar todas las notas y categorías.",
       text_2_0: "Aparecerá una ventana emergente para preguntarte si estás seguro de esta acción.",
       text_3_0: "Se eliminarán de forma permanente.",
+    },
+    what_ai_assistant: {
+      title: "Que es el Asistente IA?",
+      text_1_0:
+        "Fast Memo incluye un Asistente IA self-hosted que funciona completamente en tu dispositivo. Ningun dato se envia a servidores externos.",
+      text_2_0: "Para configurarlo, ve a Ajustes -> Asistente IA, elige un modelo y descargalo.",
+      text_3_0:
+        "Una vez activado, un boton de estrella aparece dentro de cada editor. Tocalo para acceder a acciones inteligentes como: generar titulo, resumir, continuar escribiendo, formatear texto, sugerir elementos o sugerir categoria.",
+      text_4_0: "La IA funciona sin conexion y soporta varios idiomas.",
     },
   },
   report: {

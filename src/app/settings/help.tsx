@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Animated, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -279,6 +279,18 @@ export default function HelpScreen() {
 
           <Text style={styles.sectionItemList_text}>{t("help.what_wipe_data.text_3_0")}</Text>
         </Accordion>
+
+        {Platform.OS !== "web" && (
+          <Accordion title={t("help.what_ai_assistant.title")}>
+            <Text style={styles.sectionItemList_text}>{t("help.what_ai_assistant.text_1_0")}</Text>
+
+            <Text style={styles.sectionItemList_text}>{t("help.what_ai_assistant.text_2_0")}</Text>
+
+            <Text style={styles.sectionItemList_text}>{t("help.what_ai_assistant.text_3_0")}</Text>
+
+            <Text style={styles.sectionItemList_text}>{t("help.what_ai_assistant.text_4_0")}</Text>
+          </Accordion>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

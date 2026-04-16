@@ -15,6 +15,10 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_0_2_0: `• Kanban-Spalten koennen jetzt verschoben werden.
+• Animationen verbessert.
+• Verschiedene Korrekturen.`,
+
       description_0_1_1: `• Cloud-Synchronisierung beim Start der App behoben.
 • Notizen werden nach jeder Synchronisierung nun korrekt sortiert.`,
 
@@ -22,6 +26,11 @@ const de = {
     },
 
     mobile: {
+      description_2_8_0: `• Self-hosted KI-Assistent (Qwen 2.5) mit smarten Funktionen fuer Notizen hinzugefuegt. Einrichtung unter Einstellungen -> KI-Assistent.
+• Kanban-Spalten koennen jetzt verschoben werden.
+• Animationen verbessert.
+• Verschiedene Korrekturen.`,
+
       description_2_7_1: `• Cloud-Synchronisierung beim Start der App behoben.
 • Notizen werden nach jeder Synchronisierung nun korrekt sortiert.`,
 
@@ -512,6 +521,15 @@ const de = {
       text_1_0: "Sie können alle Notizen und Kategorien löschen.",
       text_2_0: "Es erscheint ein Popup, in dem Sie gefragt werden, ob Sie sich bei dieser Aktion sicher sind.",
       text_3_0: "Sie werden dauerhaft gelöscht.",
+    },
+    what_ai_assistant: {
+      title: "Was ist der KI-Assistent?",
+      text_1_0:
+        "Fast Memo enthaelt einen selbst gehosteten KI-Assistenten, der vollstaendig auf deinem Geraet laeuft. Keine Daten werden an externe Server gesendet.",
+      text_2_0: "Zum Einrichten gehe zu Einstellungen -> KI-Assistent, waehle ein Modell und lade es herunter.",
+      text_3_0:
+        "Nach der Aktivierung erscheint ein Sparkle-Button in jedem Notiz-Editor. Tippe darauf fuer smarte Aktionen wie: Titel generieren, zusammenfassen, weiterschreiben, Text formatieren, Checklisten-Elemente vorschlagen oder Kategorie vorschlagen.",
+      text_4_0: "Die KI funktioniert offline und unterstuetzt mehrere Sprachen.",
     },
   },
   report: {
