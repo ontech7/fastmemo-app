@@ -1,20 +1,27 @@
-import { useEffect, useRef, useState } from "react";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import * as Localization from "expo-localization";
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
-import { Dimensions, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Keyboard, StyleSheet, TouchableOpacity, View } from "react-native";
 import { MicrophoneIcon } from "react-native-heroicons/outline";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
-import { toast } from "@/utils/toast";
 import { selectorVoiceRecognition } from "@/slicers/settingsSlice";
+import { toast } from "@/utils/toast";
 
-import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR } from "@/constants/styles";
 
 import type { ViewStyle } from "react-native";
-import type { SharedValue } from "react-native-reanimated";
 
-const { width: WIDTH_SCREEN } = Dimensions.get("window");
+const KEEP_AWAKE_TAG = "voice-recognition";
 
 interface Props {
   setTranscript: (transcript: string, isFinal: boolean) => void;
@@ -26,7 +33,8 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }: Pr
 
   const selectors = useSelector(selectorVoiceRecognition);
 
-  const barsRef = useRef(Array.from({ length: 20 }, () => useSharedValue(6)));
+  const pulseScale = useSharedValue(1);
+  const pulseOpacity = useSharedValue(0);
 
   useSpeechRecognitionEvent("start", () => {
     if (selectors.enabled && !selectors.continuous) {
@@ -51,25 +59,35 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }: Pr
     setRecognizing(false);
   });
 
-  const panelWidth = useSharedValue(52);
-
+  // Pulse animation + keep-awake
   useEffect(() => {
-    let interval;
-
     if (recognizing) {
-      interval = setInterval(() => {
-        barsRef.current.forEach((bar) => {
-          const newHeight = 6 + Math.random() * 25;
-
-          bar.value = withTiming(newHeight, {
-            duration: 150,
-            easing: Easing.inOut(Easing.ease),
-          });
-        });
-      }, 150);
+      pulseScale.value = withRepeat(
+        withSequence(
+          withTiming(1.25, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
+      pulseOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.5, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: 800, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
+      activateKeepAwakeAsync(KEEP_AWAKE_TAG);
+    } else {
+      pulseScale.value = withTiming(1, { duration: 200 });
+      pulseOpacity.value = withTiming(0, { duration: 200 });
+      deactivateKeepAwake(KEEP_AWAKE_TAG);
     }
 
-    return () => clearInterval(interval);
+    return () => {
+      deactivateKeepAwake(KEEP_AWAKE_TAG);
+    };
   }, [recognizing]);
 
   const handleStart = async () => {
@@ -97,6 +115,7 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }: Pr
         return;
       }
 
+      Keyboard.dismiss();
       setRecognizing(true);
 
       ExpoSpeechRecognitionModule.start({
@@ -111,85 +130,73 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }: Pr
     }
   };
 
-  const handleStop = async () => {
+  const handleStop = () => {
     setRecognizing(false);
-
     ExpoSpeechRecognitionModule.stop();
   };
 
-  useEffect(() => {
-    if (!recognizing) {
-      panelWidth.value = withSpring(52, { damping: 15 });
-    } else {
-      panelWidth.value = withSpring(WIDTH_SCREEN * 0.9 - 32, { damping: 15 });
-    }
-  }, [recognizing]);
-
-  const containerAnimatedStyle = useAnimatedStyle(() => ({
-    width: panelWidth.value,
+  const pulseRingStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: pulseOpacity.value,
   }));
 
-  return selectors.enabled ? (
-    <Animated.View style={[styles.container, style, containerAnimatedStyle]}>
-      {recognizing && (
-        <View style={styles.waveContainer}>
-          {barsRef.current.map((bar, i) => (
-            <AnimatedBar key={i} sharedValue={bar} />
-          ))}
-        </View>
-      )}
+  if (!selectors.enabled) return null;
 
-      <TouchableOpacity activeOpacity={0.7} style={styles.registerButton} onPress={recognizing ? handleStop : handleStart}>
-        <MicrophoneIcon size={28} color={COLOR.darkBlue} />
+  return (
+    <View style={[styles.wrapper, style]}>
+      <Animated.View style={[styles.pulseRing, pulseRingStyle]} />
+
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={[styles.button, recognizing && styles.buttonActive]}
+        onPress={recognizing ? handleStop : handleStart}
+      >
+        {recognizing ? <View style={styles.stopIcon} /> : <MicrophoneIcon size={24} color={COLOR.darkBlue} />}
       </TouchableOpacity>
-    </Animated.View>
-  ) : null;
+    </View>
+  );
 }
 
-interface AnimatedBarProps {
-  sharedValue: SharedValue<number>;
-}
-
-function AnimatedBar({ sharedValue }: AnimatedBarProps) {
-  const animatedStyle = useAnimatedStyle(() => ({
-    height: sharedValue.value,
-  }));
-
-  return <Animated.View style={[styles.bar, animatedStyle]} />;
-}
+const BUTTON_SIZE = 40;
 
 const styles = StyleSheet.create({
-  container: {
-    height: 52,
+  wrapper: {
     position: "absolute",
     bottom: 100,
-    right: 40,
-    flexDirection: "row",
+    right: 46,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  pulseRing: {
+    position: "absolute",
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    borderRadius: BORDER.normal,
+    backgroundColor: COLOR.important,
+  },
+  button: {
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
     borderRadius: BORDER.normal,
     backgroundColor: COLOR.lightBlue,
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: COLOR.black,
     shadowOffset: { width: 0, height: 7 },
     shadowOpacity: 0.5,
     shadowRadius: 7,
     elevation: 7,
-    overflow: "hidden",
   },
-  waveContainer: {
-    flexDirection: "row",
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 2,
+  buttonActive: {
+    backgroundColor: COLOR.important,
   },
-  bar: {
-    width: 4,
-    borderRadius: 2,
-    backgroundColor: COLOR.darkBlue,
-    marginHorizontal: 1,
-  },
-  registerButton: {
-    padding: PADDING_MARGIN.md,
+  stopIcon: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+    backgroundColor: COLOR.softWhite,
   },
 });
