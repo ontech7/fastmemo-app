@@ -19,11 +19,13 @@ import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
 
+import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.native";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem.native";
+import { findCategoryByName } from "@/libs/ai";
 import { storeDirtyNoteId } from "@/libs/registry";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
@@ -402,6 +404,34 @@ export default function NoteTodoEditor({ initialNote }: Props) {
             style={{
               bottom: 135,
             }}
+          />
+        )}
+
+        {!note.readOnly && (
+          <AIEditorActions
+            noteType="todo"
+            getContent={() =>
+              note.list
+                .map((item) => item.text)
+                .filter(Boolean)
+                .join(", ")
+            }
+            noteTitle={note.title}
+            onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+            onItemsSuggested={(items) => {
+              const newItems = items.map((text) => ({
+                id: uuid(),
+                text: capitalize(text),
+                checked: false,
+              }));
+              setNoteAsync({ ...note, list: [...note.list, ...newItems] });
+            }}
+            onCategorySuggested={(name) => {
+              const cat = findCategoryByName(name);
+              if (cat) setNoteAsync({ ...note, category: cat });
+            }}
+            style={{ bottom: 135 }}
+            menuBottomOffset={200}
           />
         )}
       </SafeAreaView>

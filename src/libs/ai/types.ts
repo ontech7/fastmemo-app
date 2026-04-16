@@ -11,14 +11,17 @@ export interface AIModelInfo {
   description: string;
 }
 
-export interface AIToolCall {
-  action: string;
-  params: Record<string, unknown>;
-}
+export type EditorAction =
+  | "generate_title"
+  | "summarize"
+  | "continue_writing"
+  | "suggest_items"
+  | "suggest_category"
+  | "format_text";
 
-export interface AIResponse {
+export interface EditorActionResult {
   success: boolean;
-  toolCall?: AIToolCall;
-  message?: string;
+  text?: string;
+  items?: string[];
   error?: string;
 }

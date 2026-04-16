@@ -230,29 +230,13 @@ export default function AIAssistantScreen() {
             </View>
 
             <View style={styles.sectionList}>
-              <View style={styles.sectionItemList}>
+              <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
                 <Text style={styles.sectionItemList_title}>{t("ai.enabled")}</Text>
                 <Switch
                   trackColor={{ false: COLOR.lightGray, true: COLOR.darkOceanBreeze + "60" }}
                   thumbColor={aiSettings.enabled ? COLOR.oceanBreeze : COLOR.softWhite}
                   onValueChange={toggleEnabled}
                   value={aiSettings.enabled}
-                  style={{ height: 25 }}
-                />
-              </View>
-
-              <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionItemList_title}>{t("ai.voice_only")}</Text>
-                  <Text style={styles.voiceOnlyHint}>{t("ai.voice_only_hint")}</Text>
-                </View>
-                <Switch
-                  trackColor={{ false: COLOR.lightGray, true: COLOR.darkOceanBreeze + "60" }}
-                  thumbColor={aiSettings.voiceOnly ? COLOR.oceanBreeze : COLOR.softWhite}
-                  onValueChange={(value) => {
-                    dispatch(setAIAssistant({ ...aiSettings, voiceOnly: value }));
-                  }}
-                  value={aiSettings.voiceOnly || false}
                   style={{ height: 25 }}
                 />
               </View>
@@ -268,20 +252,12 @@ export default function AIAssistantScreen() {
 
           <View style={styles.sectionList}>
             {[
-              "ai.cap.create_note",
-              "ai.cap.create_todo",
-              "ai.cap.create_kanban",
-              "ai.cap.delete_note",
-              "ai.cap.toggle_property",
-              "ai.cap.change_category",
-              "ai.cap.rename_note",
-              "ai.cap.add_todo_items",
-              "ai.cap.convert_note",
-              "ai.cap.merge_notes",
-              "ai.cap.create_category",
-              "ai.cap.restore_note",
-              "ai.cap.switch_category",
-              "ai.cap.change_setting",
+              "ai.cap.generate_title",
+              "ai.cap.summarize",
+              "ai.cap.continue_writing",
+              "ai.cap.format_text",
+              "ai.cap.suggest_items",
+              "ai.cap.suggest_category",
             ].map((key, index, arr) => (
               <View key={key} style={[styles.capabilityItem, index === arr.length - 1 && styles.sectionItemList_last]}>
                 <Text style={styles.capabilityText}>{t(key)}</Text>

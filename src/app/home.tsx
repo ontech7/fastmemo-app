@@ -1,4 +1,3 @@
-import AICommandBar from "@/components/ai/AICommandBar";
 import AddNoteOverlayButton from "@/components/buttons/AddNoteOverlayButton";
 import DeleteNotesButton from "@/components/buttons/DeleteNotesButton";
 import FavoriteNotesButton from "@/components/buttons/FavoriteNotesButton";
@@ -75,7 +74,6 @@ export default function HomeScreen() {
   const isNoteProtected = selectedNotes.some((id: string) => id.split("|")[1] == "true");
 
   const [showDeleteNotesDialog, setShowDeleteNotesDialog] = useState(false);
-  const [isAIBarVisible, setIsAIBarVisible] = useState(false);
 
   const { unlockWithSecret } = useSecret();
 
@@ -392,9 +390,7 @@ export default function HomeScreen() {
           <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
         </Animated.View>
 
-        <AICommandBar onVisibilityChange={setIsAIBarVisible} />
-
-        {!isAIBarVisible && <AddNoteOverlayButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />}
+        <AddNoteOverlayButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
       </KeyboardAvoidingView>
     </>
   );

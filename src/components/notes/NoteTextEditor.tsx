@@ -9,11 +9,13 @@ import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
 import { useDispatch, useSelector } from "react-redux";
 
+import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.native";
 import SafeAreaView from "@/components/SafeAreaView";
+import { findCategoryByName, stripHtml } from "@/libs/ai";
 import { storeDirtyNoteId } from "@/libs/registry";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
@@ -336,6 +338,33 @@ export default function NoteTextEditor({ initialNote }: Props) {
             setTranscript={(transcript, isFinal) => {
               richTextEditor.current?.setContentHTML(note.text + " " + transcript);
               if (isFinal) setText(note.text + " " + transcript);
+            }}
+            style={{ right: 40 }}
+          />
+        )}
+
+        {!note.readOnly && (
+          <AIEditorActions
+            noteType="text"
+            getContent={() => stripHtml(note.text)}
+            noteTitle={note.title}
+            onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+            onSummaryGenerated={(summary) => {
+              richTextEditor.current?.setContentHTML(summary);
+              setText(summary);
+            }}
+            onContinueGenerated={(continuation) => {
+              const newText = note.text + " " + continuation;
+              richTextEditor.current?.setContentHTML(newText);
+              setText(newText);
+            }}
+            onTextFormatted={(html) => {
+              richTextEditor.current?.setContentHTML(html);
+              setText(html);
+            }}
+            onCategorySuggested={(name) => {
+              const cat = findCategoryByName(name);
+              if (cat) setNoteAsync({ ...note, category: cat });
             }}
           />
         )}

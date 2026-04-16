@@ -1,13 +1,22 @@
 import * as FileSystem from "expo-file-system";
+import * as Localization from "expo-localization";
 import { initLlama, type LlamaContext } from "llama.rn";
 import { NativeModules } from "react-native";
 
-import { AI_MODELS, DEFAULT_MODEL_ID, JSON_GRAMMAR, getSystemPrompt } from "./constants";
-import { tryParseJSON } from "./helpers";
+import { AI_MODELS, DEFAULT_MODEL_ID, JSON_ARRAY_GRAMMAR, getEditorSystemPrompt } from "./constants";
 import { store } from "@/slicers/store";
-import type { AIModelId, AIModelInfo, AIModelStatus, AIResponse, AIToolCall } from "./types";
+import type { AIModelId, AIModelInfo, AIModelStatus, EditorAction, EditorActionResult } from "./types";
 
 type StatusListener = (status: AIModelStatus, progress?: number) => void;
+
+/** Resolve the effective language code, handling the "system" default. */
+function resolveLanguage(): string {
+  const lang = store.getState().settings.language;
+  if (!lang || lang === "system") {
+    return Localization.getLocales()[0]?.languageCode || "en";
+  }
+  return lang;
+}
 
 let _context: LlamaContext | null = null;
 let _status: AIModelStatus = "idle";
@@ -243,68 +252,78 @@ export async function releaseContext(): Promise<void> {
   }
 }
 
-const HELP_PATTERNS = [
-  /\b(cosa (sai|puoi) fare)\b/i,
-  /\b(che cosa (sai|puoi) fare)\b/i,
-  /\b(what can you do)\b/i,
-  /\b(what do you do)\b/i,
-  /\bhelp\b/i,
-  /\baiut[oa]\b/i,
-  /\bhilfe\b/i,
-  /\bayuda\b/i,
-  /\baide\b/i,
+const STOP_WORDS = [
+  "</s>",
+  "<|end|>",
+  "<|eot_id|>",
+  "<|end_of_text|>",
+  "<|im_end|>",
+  "<|EOT|>",
+  "<|END_OF_TURN_TOKEN|>",
+  "<|end_of_turn|>",
+  "<|endoftext|>",
 ];
 
-function isHelpRequest(message: string): boolean {
-  const trimmed = message.trim().toLowerCase();
-  // Short messages that are clearly help requests
-  if (trimmed.length < 40) {
-    return HELP_PATTERNS.some((p) => p.test(trimmed));
-  }
-  return false;
-}
-
-export async function processCommand(userMessage: string, onToken?: (token: string) => void): Promise<AIResponse> {
-  // Intercept help requests client-side (more reliable than LLM classification)
-  if (isHelpRequest(userMessage)) {
-    return { success: true, toolCall: { action: "show_help", params: {} } };
-  }
-
+/**
+ * Generate content for in-editor AI actions (title, summary, continuation, formatting,
+ * category suggestion, item suggestions).
+ */
+export async function generateEditorContent(
+  action: EditorAction,
+  content: string,
+  onToken?: (token: string) => void
+): Promise<EditorActionResult> {
   if (!_context) {
-    const initialized = await initContext();
+    const settingsState = store.getState().settings;
+    const modelId = (settingsState.aiAssistant?.selectedModel as AIModelId) || DEFAULT_MODEL_ID;
+    const initialized = await initContext(modelId);
     if (!initialized) {
       return { success: false, error: "Model not ready" };
     }
   }
 
+  const langCode = resolveLanguage();
+  const isJsonOutput = action === "suggest_items";
+
+  // Build the user message — for suggest_category, inject category list
+  let userContent = content;
+  let categoryNames: string[] = [];
+  if (action === "suggest_category") {
+    const categories = store.getState().categories.items;
+    categoryNames = categories.map((c: { name: string }) => c.name);
+    userContent =
+      `Categories: ${categoryNames.join(", ")}\n` +
+      `If the note is NOT clearly about one of these categories, answer: none\n\n` +
+      `Note: ${content}`;
+  }
+
+  const nPredict =
+    action === "generate_title" || action === "suggest_category"
+      ? 30
+      : action === "suggest_items"
+        ? 100
+        : action === "format_text"
+          ? 500
+          : 200;
+
+  const temperature =
+    action === "generate_title" || action === "suggest_category" ? 0.05 : action === "continue_writing" ? 0.4 : 0.15;
+
   try {
-    const stopWords = [
-      "</s>",
-      "<|end|>",
-      "<|eot_id|>",
-      "<|end_of_text|>",
-      "<|im_end|>",
-      "<|EOT|>",
-      "<|END_OF_TURN_TOKEN|>",
-      "<|end_of_turn|>",
-      "<|endoftext|>",
-    ];
+    const systemPrompt = getEditorSystemPrompt(action, langCode);
 
     const result = await _context!.completion(
       {
         messages: [
-          { role: "system", content: getSystemPrompt(store.getState().settings.language || "en") },
-          { role: "user", content: userMessage },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
         ],
-        n_predict: 300,
-        stop: stopWords,
-        temperature: 0.05,
-        top_p: 0.85,
-        penalty_repeat: 1.3,
-        dry_multiplier: 0.8,
-        dry_base: 1.75,
-        dry_allowed_length: 2,
-        grammar: JSON_GRAMMAR,
+        n_predict: nPredict,
+        stop: STOP_WORDS,
+        temperature,
+        top_p: 0.9,
+        penalty_repeat: 1.2,
+        ...(isJsonOutput ? { grammar: JSON_ARRAY_GRAMMAR } : {}),
       },
       (data) => {
         if (data.token && onToken) {
@@ -313,33 +332,78 @@ export async function processCommand(userMessage: string, onToken?: (token: stri
       }
     );
 
-    console.log("[AI] Raw result:", JSON.stringify(result, null, 2));
-
     const text = result.text?.trim();
+    if (!text) return { success: false, error: "No response" };
 
-    if (!text) {
-      return { success: false, error: "No response from model" };
+    if (isJsonOutput) {
+      try {
+        const items = JSON.parse(text);
+        if (Array.isArray(items)) {
+          return { success: true, items: items.map(String) };
+        }
+      } catch {
+        // Fallback: extract quoted strings
+        const matches = text.match(/"([^"]+)"/g);
+        if (matches) {
+          return { success: true, items: matches.map((m) => m.replace(/"/g, "")) };
+        }
+      }
+      return { success: false, error: "Invalid response format" };
     }
 
-    const parsed = tryParseJSON(text);
-
-    if (!parsed) {
-      console.error("[AI] Failed to parse response:", text);
-      return { success: false, error: "Invalid JSON response" };
+    // For format_text, clean HTML wrappers and return as-is
+    if (action === "format_text") {
+      const html = text
+        .replace(/^```html\s*/i, "")
+        .replace(/```\s*$/g, "")
+        .replace(/<\/?html[^>]*>/gi, "")
+        .replace(/<\/?body[^>]*>/gi, "")
+        .replace(/<\/?head[^>]*>/gi, "")
+        .trim();
+      return { success: true, text: html };
     }
 
-    console.log("[AI] Parsed JSON:", parsed);
+    // Clean common artifacts from free-text output (multilingual prefixes)
+    const cleaned = text
+      .replace(/^["']|["']$/g, "")
+      .replace(/^\*\*|\*\*$/g, "")
+      .replace(/^(Title|Titolo|Titel|Titulo|Titre|タイトル|标题)\s*:\s*/i, "")
+      .replace(/^(Summary|Riassunto|Zusammenfassung|Resumen|Resume|要約|摘要)\s*:\s*/i, "")
+      .replace(/^(Continuation|Continuazione|Fortsetzung|Continuacion|Suite|続き|续写)\s*:\s*/i, "")
+      .replace(/^(Category|Categoria|Kategorie|Categoría|Catégorie|カテゴリ|类别)\s*:\s*/i, "")
+      .trim();
 
-    if (!parsed.action) {
-      return { success: false, error: "Missing action in response" };
+    // For suggest_category, fuzzy-match against available categories
+    if (action === "suggest_category") {
+      const lowerCleaned = cleaned.toLowerCase();
+
+      // Detect "none" variants the model might output
+      const isNone =
+        lowerCleaned === "none" ||
+        lowerCleaned === "nessuna" ||
+        lowerCleaned === "keine" ||
+        lowerCleaned === "ninguna" ||
+        lowerCleaned === "aucune" ||
+        lowerCleaned.startsWith("none") ||
+        lowerCleaned.includes("no category") ||
+        lowerCleaned.includes("no match");
+      if (isNone) {
+        return { success: false, error: "no_category_match" };
+      }
+
+      // Strict match first, then partial
+      const matched =
+        categoryNames.find((name) => name.toLowerCase() === lowerCleaned) ||
+        categoryNames.find((name) => lowerCleaned.includes(name.toLowerCase()));
+      if (matched) {
+        return { success: true, text: matched };
+      }
+      return { success: false, error: "no_category_match" };
     }
 
-    const { action, ...params } = parsed;
-
-    const toolCall: AIToolCall = { action: action as string, params };
-    return { success: true, toolCall };
+    return { success: true, text: cleaned };
   } catch (error) {
-    console.error("[AI] Completion failed:", error);
+    console.error("[AI] Editor content generation failed:", error);
     return { success: false, error: String(error) };
   }
 }

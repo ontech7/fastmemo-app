@@ -1,6 +1,6 @@
 export {
-  processCommand,
   cancelCommand,
+  generateEditorContent,
   initContext,
   releaseContext,
   downloadModel,
@@ -12,6 +12,6 @@ export {
   addAIStatusListener,
   getModelPath,
 } from "./context";
-export { executeToolCall } from "./executor";
+export { findCategoryByName, stripHtml } from "./helpers";
 export { AI_MODELS, DEFAULT_MODEL_ID } from "./constants";
-export type { AIModelStatus, AIModelId, AIModelInfo, AIResponse, AIToolCall } from "./types";
+export type { AIModelStatus, AIModelId, AIModelInfo, EditorAction, EditorActionResult } from "./types";

@@ -1,6 +1,8 @@
+import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import SafeAreaView from "@/components/SafeAreaView";
+import { findCategoryByName } from "@/libs/ai";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { storeDirtyNoteId } from "@/libs/registry";
 import KanbanDragProvider from "@/providers/KanbanDragProvider";
@@ -276,6 +278,32 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
               />
             </KanbanDragProvider>
           </GestureHandlerRootView>
+
+          {!note.readOnly && (
+            <AIEditorActions
+              noteType="kanban"
+              getContent={() =>
+                note.columns
+                  .map((col) => {
+                    const cards = col.items
+                      .map((item) => item.text)
+                      .filter(Boolean)
+                      .join(", ");
+                    return cards ? `${col.name}: ${cards}` : col.name;
+                  })
+                  .filter(Boolean)
+                  .join(". ")
+              }
+              noteTitle={note.title}
+              onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+              onCategorySuggested={(name) => {
+                const cat = findCategoryByName(name);
+                if (cat) setNoteAsync({ ...note, category: cat });
+              }}
+              style={{ bottom: 20 }}
+              menuBottomOffset={85}
+            />
+          )}
         </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
