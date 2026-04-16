@@ -3,8 +3,8 @@ import * as Localization from "expo-localization";
 import { initLlama, type LlamaContext } from "llama.rn";
 import { NativeModules } from "react-native";
 
-import { AI_MODELS, DEFAULT_MODEL_ID, JSON_ARRAY_GRAMMAR, getEditorSystemPrompt } from "./constants";
 import { store } from "@/slicers/store";
+import { AI_MODELS, DEFAULT_MODEL_ID, JSON_ARRAY_GRAMMAR, getEditorSystemPrompt } from "./constants";
 import type { AIModelId, AIModelInfo, AIModelStatus, EditorAction, EditorActionResult } from "./types";
 
 type StatusListener = (status: AIModelStatus, progress?: number) => void;
@@ -285,16 +285,12 @@ export async function generateEditorContent(
   const langCode = resolveLanguage();
   const isJsonOutput = action === "suggest_items";
 
-  // Build the user message — for suggest_category, inject category list
-  let userContent = content;
+  // For suggest_category, build a user message with category list
   let categoryNames: string[] = [];
   if (action === "suggest_category") {
     const categories = store.getState().categories.items;
     categoryNames = categories.map((c: { name: string }) => c.name);
-    userContent =
-      `Categories: ${categoryNames.join(", ")}\n` +
-      `If the note is NOT clearly about one of these categories, answer: none\n\n` +
-      `Note: ${content}`;
+    content = `Categories: ${categoryNames.join(", ")}\n\nNote title: ${content}`;
   }
 
   const nPredict =
@@ -306,8 +302,7 @@ export async function generateEditorContent(
           ? 500
           : 200;
 
-  const temperature =
-    action === "generate_title" || action === "suggest_category" ? 0.05 : action === "continue_writing" ? 0.4 : 0.15;
+  const temperature = action === "generate_title" ? 0.05 : action === "continue_writing" ? 0.4 : 0.15;
 
   try {
     const systemPrompt = getEditorSystemPrompt(action, langCode);
@@ -316,7 +311,7 @@ export async function generateEditorContent(
       {
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
+          { role: "user", content },
         ],
         n_predict: nPredict,
         stop: STOP_WORDS,
@@ -370,34 +365,25 @@ export async function generateEditorContent(
       .replace(/^(Title|Titolo|Titel|Titulo|Titre|タイトル|标题)\s*:\s*/i, "")
       .replace(/^(Summary|Riassunto|Zusammenfassung|Resumen|Resume|要約|摘要)\s*:\s*/i, "")
       .replace(/^(Continuation|Continuazione|Fortsetzung|Continuacion|Suite|続き|续写)\s*:\s*/i, "")
-      .replace(/^(Category|Categoria|Kategorie|Categoría|Catégorie|カテゴリ|类别)\s*:\s*/i, "")
       .trim();
 
-    // For suggest_category, fuzzy-match against available categories
+    // For suggest_category, match model output to a real category name
     if (action === "suggest_category") {
       const lowerCleaned = cleaned.toLowerCase();
 
-      // Detect "none" variants the model might output
-      const isNone =
-        lowerCleaned === "none" ||
-        lowerCleaned === "nessuna" ||
-        lowerCleaned === "keine" ||
-        lowerCleaned === "ninguna" ||
-        lowerCleaned === "aucune" ||
-        lowerCleaned.startsWith("none") ||
-        lowerCleaned.includes("no category") ||
-        lowerCleaned.includes("no match");
-      if (isNone) {
+      if (lowerCleaned === "none" || lowerCleaned.startsWith("none")) {
         return { success: false, error: "no_category_match" };
       }
 
-      // Strict match first, then partial
+      // Exact match, then includes match
       const matched =
-        categoryNames.find((name) => name.toLowerCase() === lowerCleaned) ||
-        categoryNames.find((name) => lowerCleaned.includes(name.toLowerCase()));
+        categoryNames.find((n) => n.toLowerCase() === lowerCleaned) ||
+        categoryNames.find((n) => lowerCleaned.includes(n.toLowerCase())) ||
+        categoryNames.find((n) => n.toLowerCase().includes(lowerCleaned));
       if (matched) {
         return { success: true, text: matched };
       }
+
       return { success: false, error: "no_category_match" };
     }
 

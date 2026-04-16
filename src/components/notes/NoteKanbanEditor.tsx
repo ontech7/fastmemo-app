@@ -2,8 +2,8 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import SafeAreaView from "@/components/SafeAreaView";
-import { findCategoryByName } from "@/libs/ai";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { findCategoryByName } from "@/libs/ai";
 import { storeDirtyNoteId } from "@/libs/registry";
 import KanbanDragProvider from "@/providers/KanbanDragProvider";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
@@ -301,7 +301,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
                 if (cat) setNoteAsync({ ...note, category: cat });
               }}
               style={{ bottom: 20 }}
-              menuBottomOffset={85}
+              menuBottomOffset={120}
             />
           )}
         </View>

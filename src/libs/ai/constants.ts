@@ -62,7 +62,7 @@ const EDITOR_SYSTEM_PROMPTS: Record<EditorAction, string> = {
   suggest_items:
     'You suggest checklist items. Given existing items, output ONLY a JSON array with 3 new related items in {{LANG}}. Format: ["item1","item2","item3"]',
   suggest_category:
-    "You categorize notes. Given a note and a list of categories, decide if the note CLEARLY belongs to one. Rules: output ONLY the exact category name if the match is obvious. If the note does NOT clearly fit any category, output ONLY: none. When in doubt, always output: none",
+    "You assign notes to categories. Output ONLY the exact category name that matches. If none fits, output: none",
   format_text:
     "You add HTML formatting to text. CRITICAL: you must keep EVERY word of the original text EXACTLY as-is. Do NOT rewrite, remove, summarize, or add any word. ONLY wrap existing text with tags: <h1> for titles, <b> for important words, <i> for emphasis, <ul><li> for lists, <ol><li> for numbered items. Output the original text with HTML tags added.",
 };

@@ -216,6 +216,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
   useFocusEffect(
     useCallback(() => {
       return () => {
+        richTextEditor.current?.dismissKeyboard();
         KeyboardController.dismiss();
         Keyboard.dismiss();
       };

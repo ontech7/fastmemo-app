@@ -1,6 +1,7 @@
 import KanbanColumn from "@/components/kanban/KanbanColumn";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
+import { selectorAIAssistant } from "@/slicers/settingsSlice";
 import type { KanbanNote } from "@/types";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,6 +15,7 @@ import type {
 } from "react-native";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { PlusIcon } from "react-native-heroicons/outline";
+import { useSelector } from "react-redux";
 import uuid from "react-uuid";
 import KanbanDragOverlay from "./KanbanDragOverlay";
 
@@ -30,7 +32,10 @@ interface Props {
 export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInterval, scrollViewRef }: Props) {
   const { t } = useTranslation();
 
+  const aiSettings = useSelector(selectorAIAssistant);
+
   const { isDragging, updateScrollOffset, setOverlayOffset, fingerX, containerOffsetX } = useKanbanDrag();
+
   const autoScrollRef = useRef(null);
   const scrollOffsetRef = useRef(0);
   const overlayRootRef = useRef(null);
@@ -237,6 +242,22 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
     [note, setNoteAsync]
   );
 
+  const moveColumn = useCallback(
+    (columnId: string, direction: "left" | "right") => {
+      if (note.readOnly) return;
+
+      const colIndex = note.columns.findIndex((col) => col.id === columnId);
+      const targetIndex = direction === "left" ? colIndex - 1 : colIndex + 1;
+      if (targetIndex < 0 || targetIndex >= note.columns.length) return;
+
+      const columns = [...note.columns];
+      const [moved] = columns.splice(colIndex, 1);
+      columns.splice(targetIndex, 0, moved);
+      setNoteAsync({ ...note, columns });
+    },
+    [note, setNoteAsync]
+  );
+
   return (
     <View style={{ flex: 1 }} ref={overlayRootRef} onLayout={handleOverlayLayout}>
       {note.columns.length > 0 ? (
@@ -244,7 +265,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
           ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.columnsScrollView}
+          contentContainerStyle={[styles.columnsScrollView, aiSettings.enabled && { paddingBottom: 100 }]}
           snapToInterval={snapInterval}
           snapToAlignment="start"
           decelerationRate="fast"
@@ -263,6 +284,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
               key={column.id}
               column={column}
               columnIndex={index}
+              totalColumns={note.columns.length}
               columnWidth={columnWidth}
               setColumnName={setColumnName}
               setColumnColor={setColumnColor}
@@ -270,6 +292,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
               setCardText={setCardText}
               deleteCard={deleteCard}
               addCard={addCard}
+              moveColumn={moveColumn}
               disabled={note.readOnly}
             />
           ))}

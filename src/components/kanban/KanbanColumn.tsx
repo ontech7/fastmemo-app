@@ -3,7 +3,7 @@ import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import React, { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { PlusIcon, TrashIcon } from "react-native-heroicons/outline";
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
 import KanbanCard from "./KanbanCard";
 
 import type { KanbanColumn as KanbanColumnType } from "@/types";
@@ -11,6 +11,7 @@ import type { KanbanColumn as KanbanColumnType } from "@/types";
 interface Props {
   column: KanbanColumnType;
   columnIndex: number;
+  totalColumns: number;
   columnWidth: number;
   setColumnName: (columnId: string, name: string) => void;
   setColumnColor: (columnId: string, color: string) => void;
@@ -18,12 +19,14 @@ interface Props {
   setCardText: (columnId: string, cardId: string, text: string) => void;
   deleteCard: (columnId: string, cardId: string) => void;
   addCard: (columnId: string) => void;
+  moveColumn: (columnId: string, direction: "left" | "right") => void;
   disabled: boolean;
 }
 
 export default function KanbanColumn({
   column,
   columnIndex,
+  totalColumns,
   columnWidth,
   setColumnName,
   setColumnColor,
@@ -31,6 +34,7 @@ export default function KanbanColumn({
   setCardText,
   deleteCard,
   addCard,
+  moveColumn,
   disabled,
 }: Props) {
   const { t } = useTranslation();
@@ -78,9 +82,30 @@ export default function KanbanColumn({
 
         <TouchableOpacity
           activeOpacity={0.7}
+          disabled={disabled || columnIndex === 0}
+          onPress={() => moveColumn(column.id, "left")}
+          style={styles.headerButton}
+        >
+          <ChevronLeftIcon size={18} color={!disabled && columnIndex > 0 ? COLOR.softWhite : COLOR.softenGray} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
+          disabled={disabled || columnIndex === totalColumns - 1}
+          onPress={() => moveColumn(column.id, "right")}
+          style={[styles.headerButton, { marginRight: PADDING_MARGIN.md }]}
+        >
+          <ChevronRightIcon
+            size={18}
+            color={!disabled && columnIndex < totalColumns - 1 ? COLOR.softWhite : COLOR.softenGray}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
           disabled={disabled}
           onPress={() => deleteColumn(column.id)}
-          style={styles.deleteColumnButton}
+          style={styles.headerButton}
         >
           <TrashIcon size={18} color={COLOR.softWhite} />
         </TouchableOpacity>
@@ -157,7 +182,7 @@ const styles = StyleSheet.create({
     color: COLOR.softWhite,
     paddingVertical: 2,
   },
-  deleteColumnButton: {
+  headerButton: {
     padding: PADDING_MARGIN.xs,
     marginLeft: PADDING_MARGIN.xs,
   },

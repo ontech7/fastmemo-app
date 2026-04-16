@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Keyboard, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
   DocumentTextIcon,
   FolderIcon,
@@ -62,7 +62,10 @@ const TODO_ACTIONS: ActionDef[] = [
   { id: "suggest_items", labelKey: "ai.editor.suggest_items", icon: ListBulletIcon },
 ];
 
-const KANBAN_ACTIONS: ActionDef[] = [];
+const KANBAN_ACTIONS: ActionDef[] = [
+  { id: "generate_title", labelKey: "ai.editor.generate_title", icon: TagIcon },
+  { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
+];
 
 function getActionsForType(noteType: Note["type"]): ActionDef[] {
   switch (noteType) {
@@ -126,6 +129,7 @@ export default function AIEditorActions({
 
   const toggleMenu = useCallback(() => {
     if (feedback === "processing") return;
+    Keyboard.dismiss();
     setIsMenuOpen((prev) => !prev);
   }, [feedback]);
 
@@ -151,11 +155,15 @@ export default function AIEditorActions({
     async (action: EditorAction) => {
       closeMenu();
 
-      const content = getContent();
-      if (!content.trim()) {
+      const rawContent = getContent();
+      if (!rawContent.trim()) {
         toast(t("ai.editor.no_content"));
         return;
       }
+
+      // Include the note title as context for actions that benefit from it
+      const needsTitle = action !== "generate_title" && action !== "format_text";
+      const content = needsTitle && noteTitle.trim() ? `${noteTitle}\n${rawContent}` : rawContent;
 
       setFeedback("processing");
       cancelledRef.current = false;
@@ -322,7 +330,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
     justifyContent: "flex-end",
     alignItems: "flex-start",
     paddingLeft: 40,
@@ -363,7 +371,7 @@ const styles = StyleSheet.create({
     shadowColor: AI_COLOR,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowRadius: 3,
+    elevation: 3,
   },
 });

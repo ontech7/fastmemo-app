@@ -39,7 +39,7 @@ import { useNavigation } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Platform, StyleSheet, Text, View } from "react-native";
+import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useDispatch, useSelector, useStore } from "react-redux";
@@ -223,6 +223,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const resetStates = navigation.addListener("focus", () => {
+      Keyboard.dismiss();
       setSelectedNotes([]);
       setIsDeleteMode(false);
       setFilterText("");
