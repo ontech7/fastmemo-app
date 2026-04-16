@@ -1,3 +1,18 @@
+import BackButton from "@/components/buttons/BackButton";
+import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.web";
+import SafeAreaView from "@/components/SafeAreaView";
+import { storeDirtyNoteId } from "@/libs/registry";
+import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
+import {
+  selectorWebhook_addTodoNote,
+  selectorWebhook_deleteNote,
+  selectorWebhook_temporaryDeleteNote,
+  selectorWebhook_updateNote,
+} from "@/slicers/settingsSlice";
+import { formatDateTime } from "@/utils/date";
+import { capitalize, isStringEmpty } from "@/utils/string";
+import { webhook } from "@/utils/webhook";
 import {
   closestCenter,
   DndContext,
@@ -14,22 +29,6 @@ import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 
 import { EyeIcon, EyeSlashIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
-
-import BackButton from "@/components/buttons/BackButton";
-import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
-import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.web";
-import SafeAreaView from "@/components/SafeAreaView";
-import { storeDirtyNoteId } from "@/libs/registry";
-import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
-import {
-  selectorWebhook_addTodoNote,
-  selectorWebhook_deleteNote,
-  selectorWebhook_temporaryDeleteNote,
-  selectorWebhook_updateNote,
-} from "@/slicers/settingsSlice";
-import { formatDateTime } from "@/utils/date";
-import { capitalize, isStringEmpty } from "@/utils/string";
-import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 

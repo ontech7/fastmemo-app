@@ -1,3 +1,7 @@
+## v0.2.1
+
+- Fix causing note not to be loaded
+
 ## v0.2.0
 
 - Added the ability to reorder kanban columns with left/right arrows in the column header.

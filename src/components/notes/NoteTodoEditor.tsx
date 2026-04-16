@@ -22,7 +22,7 @@ import uuid from "react-uuid";
 import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
-import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.native";
+import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem.native";
 import { findCategoryByName } from "@/libs/ai";

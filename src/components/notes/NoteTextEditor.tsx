@@ -1,20 +1,10 @@
-import { configs } from "@/configs";
-import { useFocusEffect } from "@react-navigation/native";
-import * as ImageManipulator from "expo-image-manipulator";
-import * as ImagePicker from "expo-image-picker";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { BackHandler, Keyboard, Platform, StyleSheet, Text, TextInput, View } from "react-native";
-import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
-import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
-import { useDispatch, useSelector } from "react-redux";
-
 import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
-import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.native";
+import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import SafeAreaView from "@/components/SafeAreaView";
+import { configs } from "@/configs";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
 import { storeDirtyNoteId } from "@/libs/registry";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
@@ -28,6 +18,15 @@ import { formatDateTime } from "@/utils/date";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
 import { toast } from "@/utils/toast";
 import { webhook } from "@/utils/webhook";
+import { useFocusEffect } from "@react-navigation/native";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { BackHandler, Keyboard, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
+import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
+import { useDispatch, useSelector } from "react-redux";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
