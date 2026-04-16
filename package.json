@@ -1,7 +1,7 @@
 {
   "name": "fastmemo-app-new-arch",
   "main": "expo-router/entry",
-  "version": "2.7.1",
+  "version": "2.8.0",
   "scripts": {
     "start": "expo start",
     "start:clear-cache": "expo start -c",
@@ -68,6 +68,7 @@
     "firebase": "9.22.1",
     "html-to-formatted-text": "^2.7.0",
     "i18next": "^25.3.2",
+    "llama.rn": "^0.12.0-rc.8",
     "localforage": "^1.10.0",
     "lottie-react-native": "7.2.2",
     "lottie-web": "^5.13.0",
@@ -105,7 +106,10 @@
     "@babel/core": "^7.25.2",
     "@tauri-apps/api": "^1.6.0",
     "@tauri-apps/cli": "^1.6.3",
+    "@types/dom-speech-recognition": "^0.0.9",
+    "@types/node": "^25.6.0",
     "@types/react": "~19.0.10",
+    "@types/react-native-crypto-js": "^1.0.3",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
     "dotenv-cli": "^11.0.0",
