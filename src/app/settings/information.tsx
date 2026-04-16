@@ -17,6 +17,7 @@ const FIREBASE_VER = "9.22.1";
 const EXPO_SDK_VER = "53.0.20";
 const HEROICONS_VER = "4.0.0";
 const TAURI_VER = "1.6.3";
+const LLAMA_RN_VER = "0.12.0-rc.8";
 
 export default function InformationScreen() {
   const { t } = useTranslation();
@@ -103,6 +104,14 @@ export default function InformationScreen() {
                 <Text style={styles.sectionItemList_title}>Expo SDK</Text>
 
                 <Text style={styles.sectionItemList_text}>{EXPO_SDK_VER}</Text>
+              </View>
+            )}
+
+            {Platform.OS !== "web" && (
+              <View style={styles.sectionItemList}>
+                <Text style={styles.sectionItemList_title}>llama.rn</Text>
+
+                <Text style={styles.sectionItemList_text}>{LLAMA_RN_VER}</Text>
               </View>
             )}
 

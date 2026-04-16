@@ -128,6 +128,7 @@ chmod +x Fast_Memo_*.AppImage
 | [Expo](https://expo.dev/)                                                                      | React Native framework for cross-platform development |
 | [React Native](https://reactnative.dev/)                                                       | Core framework for iOS and Android                    |
 | [Tauri](https://tauri.app/)                                                                    | Desktop application framework                         |
+| [llama.rn](https://github.com/a-ghorbani/llama.rn)                                             | On-device LLM inference (Qwen 2.5 GGUF)               |
 | [Google Firebase](https://firebase.google.com/)                                                | Cloud sync and data storage                           |
 | [Redux](https://react-redux.js.org/) + [Redux Persist](https://github.com/rt2zz/redux-persist) | State management and persistence                      |
 | [Heroicons](https://heroicons.com/)                                                            | Icon library                                          |
