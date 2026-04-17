@@ -3,6 +3,7 @@ import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
+import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import { configs } from "@/configs";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
@@ -23,7 +24,8 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Keyboard, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { BackHandler, Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
 import { useDispatch, useSelector } from "react-redux";
@@ -124,6 +126,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
   );
 
   const richTextEditor = useRef(null);
+
+  const [showFindReplace, setShowFindReplace] = useState(false);
 
   const pickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -255,6 +259,13 @@ export default function NoteTextEditor({ initialNote }: Props) {
             />
           </View>
 
+          <TouchableOpacity
+            style={{ padding: PADDING_MARGIN.sm, marginRight: PADDING_MARGIN.xs }}
+            onPress={() => setShowFindReplace((prev) => !prev)}
+          >
+            <MagnifyingGlassIcon size={22} color={showFindReplace ? COLOR.oceanBreeze : COLOR.softWhite} />
+          </TouchableOpacity>
+
           <NoteSettingsButton note={note} setNote={setNoteAsync} />
         </View>
 
@@ -279,6 +290,14 @@ export default function NoteTextEditor({ initialNote }: Props) {
           paddingVertical: Platform.OS === "web" ? PADDING_MARGIN.lg : 0,
         }}
       >
+        <FindReplaceBar
+          visible={showFindReplace}
+          onClose={() => setShowFindReplace(false)}
+          editorRef={richTextEditor}
+          plainText={stripHtml(note.text)}
+          style={{ marginTop: PADDING_MARGIN.md }}
+        />
+
         <RichEditor
           containerStyle={styles.richTextContainer}
           androidLayerType="hardware"
