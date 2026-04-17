@@ -154,6 +154,16 @@ const en = {
       hide: "Hide",
       changecategory: "Change Category",
       share: "Share",
+      export: "Export",
+      export_description: "Choose the export format",
+      export_txt: "Plain Text (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "Search...",
+      replace_placeholder: "Replace with...",
+      replace_short: "Replace",
+      replace_one: "Replace",
+      replace_all: "All",
     },
   },
   kanban: {

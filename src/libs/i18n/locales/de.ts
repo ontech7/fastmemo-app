@@ -154,6 +154,16 @@ const de = {
       hide: "Verstecken",
       changecategory: "Kategorie ändern",
       share: "Aktie",
+      export: "Exportieren",
+      export_description: "Wählen Sie das Exportformat",
+      export_txt: "Klartext (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "Suchen...",
+      replace_placeholder: "Ersetzen durch...",
+      replace_short: "Ersetz.",
+      replace_one: "Ersetzen",
+      replace_all: "Alle",
     },
   },
   kanban: {

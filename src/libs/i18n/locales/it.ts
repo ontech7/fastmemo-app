@@ -155,6 +155,16 @@ const it = {
       hide: "Nascondi",
       changecategory: "Cambia Categoria",
       share: "Condividi",
+      export: "Esporta",
+      export_description: "Scegli il formato di esportazione",
+      export_txt: "Testo semplice (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "Cerca...",
+      replace_placeholder: "Sostituisci con...",
+      replace_short: "Sost.",
+      replace_one: "Sostituisci",
+      replace_all: "Tutti",
     },
   },
   kanban: {

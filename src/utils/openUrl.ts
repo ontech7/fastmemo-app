@@ -1,7 +1,5 @@
+import { isTauri } from "@/utils/platform";
 import { Linking } from "react-native";
-
-// @ts-ignore - __TAURI__ is injected by Tauri runtime
-const isTauri = (): boolean => typeof window !== "undefined" && "__TAURI__" in window;
 
 /**
  * Opens a URL in the default browser.

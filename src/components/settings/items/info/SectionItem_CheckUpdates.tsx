@@ -1,14 +1,12 @@
 import { configs } from "@/configs";
 import { openUrl } from "@/utils/openUrl";
+import { isTauri } from "@/utils/platform";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform } from "react-native";
 
 import SectionItemList_Navigation from "../../components/item/SectionItemList_Navigation";
 import SectionItemList from "../../components/list/SectionItemList";
-
-// @ts-ignore - __TAURI__ is injected by Tauri runtime
-const isTauri = () => typeof window !== "undefined" && "__TAURI__" in window;
 
 interface Props {
   isLast: boolean;

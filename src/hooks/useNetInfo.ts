@@ -1,7 +1,6 @@
+import { isTauri } from "@/utils/platform";
 import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
-
-const isTauri = typeof window !== "undefined" && "__TAURI__" in window;
 
 const CHECK_INTERVAL = 30000; // 30 seconds
 
@@ -31,7 +30,7 @@ const useNetInfo = (): NetInfoState => {
   }, []);
 
   useEffect(() => {
-    if (isTauri || Platform.OS === "web") {
+    if (isTauri() || Platform.OS === "web") {
       checkConnectivity();
 
       const interval = setInterval(checkConnectivity, CHECK_INTERVAL);

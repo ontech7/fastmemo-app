@@ -154,6 +154,16 @@ const fr = {
       hide: "Cacher",
       changecategory: "Changer de catégorie",
       share: "Partager",
+      export: "Exporter",
+      export_description: "Choisissez le format d'exportation",
+      export_txt: "Texte brut (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "Rechercher...",
+      replace_placeholder: "Remplacer par...",
+      replace_short: "Rempl.",
+      replace_one: "Remplacer",
+      replace_all: "Tout",
     },
   },
   kanban: {

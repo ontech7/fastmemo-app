@@ -154,6 +154,16 @@ const es = {
       hide: "Esconder",
       changecategory: "Cambiar categoría",
       share: "Compartir",
+      export: "Exportar",
+      export_description: "Elige el formato de exportación",
+      export_txt: "Texto plano (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "Buscar...",
+      replace_placeholder: "Reemplazar con...",
+      replace_short: "Reemp.",
+      replace_one: "Reemplazar",
+      replace_all: "Todo",
     },
   },
   kanban: {

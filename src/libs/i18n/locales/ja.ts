@@ -154,6 +154,16 @@ const ja = {
       hide: "非表示",
       changecategory: "カテゴリを変更",
       share: "共有",
+      export: "エクスポート",
+      export_description: "エクスポート形式を選択してください",
+      export_txt: "プレーンテキスト (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "検索...",
+      replace_placeholder: "置換...",
+      replace_short: "置換",
+      replace_one: "置換",
+      replace_all: "全て",
     },
   },
   kanban: {

@@ -1,4 +1,5 @@
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
+import { isTauri } from "@/utils/platform";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import SecretPassphraseDialog from "@/components/dialogs/SecretPassphraseDialog";
 import { useSecret } from "@/hooks/useSecret";
@@ -30,9 +31,6 @@ const getFileSystemModules = () => {
 };
 
 const { DocumentPicker, FileSystem, StorageAccessFramework, Sharing, KeyboardController } = getFileSystemModules();
-
-// @ts-ignore - __TAURI__ is injected by Tauri runtime
-const isTauri = () => typeof window !== "undefined" && "__TAURI__" in window;
 
 interface Props {
   isLast: boolean;

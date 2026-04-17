@@ -154,6 +154,16 @@ const zh = {
       hide: "隐藏",
       changecategory: "更改类别",
       share: "分享",
+      export: "导出",
+      export_description: "选择导出格式",
+      export_txt: "纯文本 (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "搜索...",
+      replace_placeholder: "替换为...",
+      replace_short: "替换",
+      replace_one: "替换",
+      replace_all: "全部",
     },
   },
   kanban: {

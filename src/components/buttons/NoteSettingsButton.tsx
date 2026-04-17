@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
+  ArrowUpTrayIcon,
   BookOpenIcon,
   CheckIcon,
   EllipsisVerticalIcon,
@@ -14,17 +15,21 @@ import {
 import { Menu, MenuOption, MenuOptions, MenuTrigger } from "react-native-popup-menu";
 import { useDispatch, useSelector } from "react-redux";
 
+import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import { useRouter } from "@/hooks/useRouter";
+import { stripHtml } from "@/libs/ai";
+import { exportAsPdf, exportAsTextFile, htmlToMarkdown } from "@/utils/export";
+import { toast } from "@/utils/toast";
 import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
 import { useSecret } from "@/hooks/useSecret";
 import { temporaryDeleteNote } from "../../slicers/notesSlice";
-import { selectorIsFingerprintEnabled, selectorWebhook_temporaryDeleteNote } from "../../slicers/settingsSlice";
+import { selectorWebhook_temporaryDeleteNote } from "../../slicers/settingsSlice";
 import ContextMenu from "../renderers/ContextMenu";
 
-import type { Note } from "@/types";
+import type { Note, TextNote } from "@/types";
 
 interface Props {
   note: Note;
@@ -40,10 +45,54 @@ export default function NoteSettingsButton({ note, setNote }: Props) {
 
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
 
-  const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
-
   const dispatch = useDispatch();
   const { unlockWithSecret } = useSecret();
+
+  const [showExportDialog, setShowExportDialog] = useState(false);
+
+  const sanitizeFilename = (name: string) => (name || "note").replace(/[^a-zA-Z0-9-_ ]/g, "").substring(0, 50);
+
+  const handleExportPdf = useCallback(async () => {
+    setShowExportDialog(false);
+    try {
+      if (type !== "text") return;
+      const textNote = note as TextNote;
+      const result = await exportAsPdf(title, textNote.text);
+      if (result?.uri) {
+        const { shareFile } = await import("@/utils/export");
+        await shareFile(result.uri, `${sanitizeFilename(title)}.pdf`);
+      }
+    } catch (e: any) {
+      console.log("Export PDF error:", e);
+      toast(e?.message || t("error"));
+    }
+  }, [note, title, type, t]);
+
+  const handleExportMarkdown = useCallback(async () => {
+    setShowExportDialog(false);
+    try {
+      if (type !== "text") return;
+      const textNote = note as TextNote;
+      const md = (title ? `# ${title}\n\n` : "") + htmlToMarkdown(textNote.text);
+      await exportAsTextFile(md, `${sanitizeFilename(title)}.md`);
+    } catch (e) {
+      console.log("Export MD error:", e);
+      toast(t("error"));
+    }
+  }, [note, title, type, t]);
+
+  const handleExportTxt = useCallback(async () => {
+    setShowExportDialog(false);
+    try {
+      if (type !== "text") return;
+      const textNote = note as TextNote;
+      const txt = (title ? `${title}\n\n` : "") + stripHtml(textNote.text);
+      await exportAsTextFile(txt, `${sanitizeFilename(title)}.txt`);
+    } catch (e) {
+      console.log("Export TXT error:", e);
+      toast(t("error"));
+    }
+  }, [note, title, type, t]);
 
   const deleteNoteFromItems = () => {
     dispatch(temporaryDeleteNote(id));
@@ -145,7 +194,28 @@ export default function NoteSettingsButton({ note, setNote }: Props) {
             <TagIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
           </MenuOption>
         )}
+
+        {type === "text" && note.createdAt !== note.updatedAt && (
+          <MenuOption
+            style={[styles.menuOption, !id && styles.menuOptionDisabled]}
+            disabled={!id}
+            onSelect={() => setShowExportDialog(true)}
+          >
+            <Text style={styles.menuOptionText}>{t("note.settings.export")}</Text>
+            <ArrowUpTrayIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
+          </MenuOption>
+        )}
       </MenuOptions>
+
+      <ComplexDialog
+        open={showExportDialog}
+        title={t("note.settings.export")}
+        description={t("note.settings.export_description")}
+        confirm={{ label: "PDF", handler: handleExportPdf }}
+        alternative={{ label: "Markdown", handler: handleExportMarkdown }}
+        cancel={{ label: t("note.settings.export_txt"), handler: handleExportTxt }}
+        actionsColumn
+      />
     </Menu>
   );
 }
