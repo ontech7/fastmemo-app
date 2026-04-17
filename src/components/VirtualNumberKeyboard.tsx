@@ -1,10 +1,10 @@
-import React, { memo } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { memo, useCallback } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { BackspaceIcon } from "react-native-heroicons/outline";
 
 import { BORDER, COLOR, FONTWEIGHT, SIZE } from "@/constants/styles";
 
-const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, "backspace"];
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, "backspace"] as const;
 
 interface Props {
   onAdd: (num: number | string) => void;
@@ -12,40 +12,66 @@ interface Props {
   disabled: boolean;
 }
 
+const NumberKey = memo(function NumberKey({
+  value,
+  onPress,
+  disabled,
+}: {
+  value: number;
+  onPress: (num: number) => void;
+  disabled: boolean;
+}) {
+  const handlePress = useCallback(() => {
+    onPress(value);
+  }, [value, onPress]);
+
+  return (
+    <View style={styles.keyboard_input_wrapper}>
+      <Pressable
+        style={({ pressed }) => [styles.keyboard_input, pressed && styles.keyboard_input_pressed]}
+        onPress={handlePress}
+        disabled={disabled}
+      >
+        <Text style={styles.keyboard_text}>{value}</Text>
+      </Pressable>
+    </View>
+  );
+});
+
+const BackspaceKey = memo(function BackspaceKey({ onPress, disabled }: { onPress: () => void; disabled: boolean }) {
+  return (
+    <View style={styles.keyboard_input_wrapper}>
+      <Pressable
+        style={({ pressed }) => [styles.keyboard_input, pressed && styles.keyboard_input_pressed]}
+        onPress={onPress}
+        disabled={disabled}
+      >
+        <BackspaceIcon size={38} color={COLOR.softWhite} />
+      </Pressable>
+    </View>
+  );
+});
+
+const EmptyKey = memo(function EmptyKey() {
+  return (
+    <View style={styles.keyboard_input_wrapper}>
+      <View style={styles.keyboard_input} />
+    </View>
+  );
+});
+
 function VirtualNumberKeyboard({ onAdd, onRemove, disabled }: Props) {
   return (
     <View style={styles.keyboard_wrapper}>
-      {numbers.map((num, index) => (
-        <View key={index} style={styles.keyboard_input_wrapper}>
-          {num === "backspace" ? (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              delayPressIn={0}
-              delayPressOut={0}
-              style={styles.keyboard_input}
-              onPress={onRemove}
-              disabled={disabled}
-            >
-              <BackspaceIcon size={38} color={COLOR.softWhite} />
-            </TouchableOpacity>
-          ) : num === "" ? (
-            <TouchableOpacity activeOpacity={0.7} delayPressIn={0} delayPressOut={0} style={styles.keyboard_input} disabled>
-              <Text style={styles.keyboard_text} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              delayPressIn={0}
-              delayPressOut={0}
-              style={styles.keyboard_input}
-              onPress={() => onAdd(num)}
-              disabled={disabled}
-            >
-              <Text style={styles.keyboard_text}>{num}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      ))}
+      {numbers.map((num, index) =>
+        num === "backspace" ? (
+          <BackspaceKey key={index} onPress={onRemove} disabled={disabled} />
+        ) : num === "" ? (
+          <EmptyKey key={index} />
+        ) : (
+          <NumberKey key={index} value={num} onPress={onAdd} disabled={disabled} />
+        )
+      )}
     </View>
   );
 }
@@ -69,6 +95,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: COLOR.blue,
+  },
+  keyboard_input_pressed: {
+    opacity: 0.7,
   },
   keyboard_text: {
     color: COLOR.softWhite,
