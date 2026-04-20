@@ -255,6 +255,7 @@ const en = {
     voice_recognition: "Voice recognition",
     ai_assistant: "AI Assistant",
     wipe_data: "Wipe data",
+    developer_options: "Developer options",
     about: "About",
     about_the_app: "About the app",
     about_the_developer: "About the developer",
@@ -389,7 +390,7 @@ const en = {
       text_1_0: "You can create a Kanban note by clicking the",
       text_1_1: "button on bottom-right corner of Home page and selecting 'Kanban'.",
       text_2_0: "A new page will appear with one column already created.",
-      text_3_0: "• To add a column: click the 'Add column' button on the right (maximum 5 columns).",
+      text_3_0: "• To add a column: click the 'Add column' button on the right (maximum 10 columns).",
       text_4_0: "• To rename a column: edit the text in the column header.",
       text_5_0: "• To change a column's color: click the colored square in the header.",
       text_6_0: "• To add a card: click 'Add card' at the bottom of the column.",
@@ -615,12 +616,28 @@ const en = {
   wipeWithCloud: "Wipe + Cloud",
   loading: "Loading...",
 
+  developeroptions: {
+    title: "Developer Options",
+    warning: "These options may compromise Cloud Sync for specific notes or affect app performance.",
+    unlimited_text_space: "Unlimited text space",
+    unlimited_text_space_desc: "Current limit: 1 MB",
+    unlimited_kanban_columns: "Unlimited Kanban columns",
+    unlimited_kanban_columns_desc: "Current limit: 10 columns",
+    unlimited_trash_time: "Unlimited trash time",
+    unlimited_trash_time_desc: "Current limit: 30 days",
+    change_app_icon: "Change app icon",
+    change_app_icon_desc: "Coming soon",
+  },
+
   /* toast */
   disconnected: "You have been disconnected from Cloud",
   dataSynced: "Data synced",
   noInternetConnection: "No internet connection",
   devicesLimitReached: "Devices limit exceeded",
   noteLimitReached: "Note limit reached",
+  developerModeActivated: "Developer mode activated!",
+  developerModeAlready: "Developer mode is already active",
+  developerModeTaps: "{{remaining}} tap(s) to enable developer mode",
 
   empty_title: "(No title)",
 };

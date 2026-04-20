@@ -19,6 +19,7 @@ import SectionItem_AppInfo from "./items/info/SectionItem_AppInfo";
 import SectionItem_Changelog from "./items/info/SectionItem_Changelog";
 import SectionItem_CheckUpdates from "./items/info/SectionItem_CheckUpdates";
 import SectionItem_DeveloperInfo from "./items/info/SectionItem_DeveloperInfo";
+import SectionItem_DeveloperOptions from "./items/info/SectionItem_DeveloperOptions";
 
 export type SectionItemComponent = React.ComponentType<{ isLast: boolean }>;
 
@@ -46,6 +47,7 @@ export const SECTION_INFO: SectionItemComponent[] = [
   SectionItem_DeveloperInfo,
   SectionItem_Changelog,
   SectionItem_CheckUpdates,
+  SectionItem_DeveloperOptions,
 ];
 
 export const SECTION_FEEDBACK: SectionItemComponent[] = [SectionItem_Help, SectionItem_Suggest, SectionItem_Report];

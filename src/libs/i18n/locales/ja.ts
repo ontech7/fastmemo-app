@@ -254,6 +254,7 @@ const ja = {
     voice_recognition: "音声認識",
     ai_assistant: "AIアシスタント",
     wipe_data: "データを削除",
+    developer_options: "開発者オプション",
     about: "について",
     about_the_app: "アプリについて",
     about_the_developer: "開発者について",
@@ -611,12 +612,29 @@ const ja = {
   wipeWithCloud: "消去 + クラウド",
   loading: "読み込み中...",
 
+  developeroptions: {
+    title: "開発者オプション",
+    warning:
+      "これらのオプションは、特定のノートのクラウド同期に影響を与えたり、アプリのパフォーマンスに影響する可能性があります。",
+    unlimited_text_space: "無制限のテキストスペース",
+    unlimited_text_space_desc: "現在の制限：1 MB",
+    unlimited_kanban_columns: "無制限のカンバン列",
+    unlimited_kanban_columns_desc: "現在の制限：10 列",
+    unlimited_trash_time: "無制限のゴミ箱期間",
+    unlimited_trash_time_desc: "現在の制限：30 日",
+    change_app_icon: "アプリアイコンを変更",
+    change_app_icon_desc: "近日公開",
+  },
+
   /* toast */
   disconnected: "クラウドから切断されました",
   dataSynced: "データが同期されました",
   noInternetConnection: "インターネットに接続していません",
   devicesLimitReached: "デバイスの制限に達しました",
   noteLimitReached: "ノートの制限に達しました",
+  developerModeActivated: "開発者モードが有効になりました！",
+  developerModeAlready: "開発者モードは既に有効です",
+  developerModeTaps: "開発者モードを有効にするにはあと {{remaining}} 回タップしてください",
 
   empty_title: "(タイトルなし)",
 };

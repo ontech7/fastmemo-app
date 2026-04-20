@@ -20,6 +20,7 @@ export interface AppConfigs {
   notes: {
     daysToDelete: number;
     sizeLimit: number;
+    maxKanbanColumns: number;
   };
   cloud: {
     deviceLimit: number;

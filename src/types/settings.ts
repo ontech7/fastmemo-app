@@ -42,6 +42,14 @@ export interface AIAssistantSettings {
   voiceOnly: boolean;
 }
 
+export interface DeveloperModeSettings {
+  enabled: boolean;
+  unlimitedTextSpace: boolean;
+  unlimitedKanbanColumns: boolean;
+  unlimitedTrashTime: boolean;
+  customAppIcon: string | null;
+}
+
 export interface SettingsState {
   language: string;
   isIntroFinished: boolean;
@@ -55,4 +63,5 @@ export interface SettingsState {
   voiceRecognition: VoiceRecognitionSettings;
   aiAssistant: AIAssistantSettings;
   reportDate: string | null;
+  developerMode: DeveloperModeSettings;
 }

@@ -29,6 +29,7 @@ export const configs: AppConfigs = {
   notes: {
     daysToDelete: 30,
     sizeLimit: 1 * 1024 * 1024, // 1 MB
+    maxKanbanColumns: 10,
   },
 
   cloud: {

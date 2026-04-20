@@ -256,6 +256,7 @@ const it = {
     voice_recognition: "Riconoscimento vocale",
     ai_assistant: "Assistente AI",
     wipe_data: "Cancella dati",
+    developer_options: "Opzioni sviluppatore",
     about: "Info",
     about_the_app: "Informazioni sull'app",
     about_the_developer: "Informazioni sullo sviluppatore",
@@ -390,7 +391,7 @@ const it = {
       text_1_0: "Puoi creare una nota Kanban facendo clic sul pulsante",
       text_1_1: "nell'angolo in basso a destra della Home page e selezionando 'Kanban'.",
       text_2_0: "Apparirà una nuova pagina con una colonna già creata.",
-      text_3_0: "• Per aggiungere una colonna: fai clic sul pulsante 'Aggiungi colonna' sulla destra (massimo 5 colonne).",
+      text_3_0: "• Per aggiungere una colonna: fai clic sul pulsante 'Aggiungi colonna' sulla destra (massimo 10 colonne).",
       text_4_0: "• Per rinominare una colonna: modifica il testo nell'intestazione della colonna.",
       text_5_0: "• Per cambiare il colore di una colonna: fai clic sul quadratino colorato nell'intestazione.",
       text_6_0: "• Per aggiungere una card: fai clic su 'Aggiungi card' in fondo alla colonna.",
@@ -616,12 +617,28 @@ const it = {
   wipeWithCloud: "Cancella + Cloud",
   loading: "Caricamento in corso...",
 
+  developeroptions: {
+    title: "Opzioni Sviluppatore",
+    warning: "Queste opzioni potrebbero compromettere il Cloud Sync di note specifiche o influire sulle performance dell'app.",
+    unlimited_text_space: "Spazio illimitato per testo",
+    unlimited_text_space_desc: "Limite attuale: 1 MB",
+    unlimited_kanban_columns: "Colonne Kanban illimitate",
+    unlimited_kanban_columns_desc: "Limite attuale: 10 colonne",
+    unlimited_trash_time: "Tempo cestino illimitato",
+    unlimited_trash_time_desc: "Limite attuale: 30 giorni",
+    change_app_icon: "Cambia icona app",
+    change_app_icon_desc: "Prossimamente",
+  },
+
   /* toast */
   disconnected: "Sei stato disconnesso dal Cloud",
   dataSynced: "Dati sincronizzati",
   noInternetConnection: "Nessuna connessione a internet",
   devicesLimitReached: "Limite dispositivi superato",
   noteLimitReached: "Limite nota raggiunto",
+  developerModeActivated: "Modalita' sviluppatore attivata!",
+  developerModeAlready: "La modalita' sviluppatore e' gia' attiva",
+  developerModeTaps: "{{remaining}} tap per attivare la modalita' sviluppatore",
 
   empty_title: "(Senza titolo)",
 };

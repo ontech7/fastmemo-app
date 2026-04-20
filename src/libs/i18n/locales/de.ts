@@ -255,6 +255,7 @@ const de = {
     voice_recognition: "Spracherkennung",
     ai_assistant: "KI-Assistent",
     wipe_data: "Daten löschen",
+    developer_options: "Entwickleroptionen",
     about: "Um",
     about_the_app: "Über die App",
     about_the_developer: "Über den Entwickler",
@@ -623,12 +624,29 @@ const de = {
   wipeWithCloud: "Abwischen + Cloud",
   loading: "Wird geladen...",
 
+  developeroptions: {
+    title: "Entwickleroptionen",
+    warning:
+      "Diese Optionen können die Cloud-Synchronisierung bestimmter Notizen beeinträchtigen oder die App-Leistung beeinflussen.",
+    unlimited_text_space: "Unbegrenzter Textspeicher",
+    unlimited_text_space_desc: "Aktuelles Limit: 1 MB",
+    unlimited_kanban_columns: "Unbegrenzte Kanban-Spalten",
+    unlimited_kanban_columns_desc: "Aktuelles Limit: 10 Spalten",
+    unlimited_trash_time: "Unbegrenzte Papierkorb-Zeit",
+    unlimited_trash_time_desc: "Aktuelles Limit: 30 Tage",
+    change_app_icon: "App-Symbol ändern",
+    change_app_icon_desc: "Demnächst",
+  },
+
   /* toast */
   disconnected: "Ihre Verbindung zur Cloud wurde getrennt",
   dataSynced: "Daten synchronisiert",
   noInternetConnection: "Keine Internetverbindung",
   devicesLimitReached: "Gerätelimit überschritten",
   noteLimitReached: "Notizlimit erreicht",
+  developerModeActivated: "Entwicklermodus aktiviert!",
+  developerModeAlready: "Entwicklermodus ist bereits aktiv",
+  developerModeTaps: "Noch {{remaining}} Tippen, um den Entwicklermodus zu aktivieren",
 
   empty_title: "(Kein Titel)",
 };

@@ -1,15 +1,16 @@
-import { configs } from "@/configs";
-import React, { useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
-
 import SafeAreaView from "@/components/SafeAreaView";
 import LottieView from "@/components/lottie/LottieAnimation";
-
+import { configs } from "@/configs";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { selectorDeveloperMode, setDeveloperMode } from "@/slicers/settingsSlice";
+import { toast } from "@/utils/toast";
+import React, { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import BackButton from "../../components/buttons/BackButton";
 
 import lottieJson from "../../assets/lottie/Logo.json";
-import BackButton from "../../components/buttons/BackButton";
 
 const REACT_VER = "19.0.0";
 const REACT_NATIVE_VER = "0.79.5";
@@ -19,12 +20,47 @@ const HEROICONS_VER = "4.0.0";
 const TAURI_VER = "1.6.3";
 const LLAMA_RN_VER = "0.12.0-rc.8";
 
+const DEV_MODE_TAPS_REQUIRED = 7;
+const DEV_MODE_COUNTDOWN_START = 4;
+
 export default function InformationScreen() {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+
+  const developerMode = useSelector(selectorDeveloperMode);
 
   const currentAppVersion = Platform.OS === "web" ? configs.app.version.web : configs.app.version.mobile;
 
   const logoAnimRef = useRef<any>(null);
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleVersionTap = useCallback(() => {
+    if (developerMode.enabled) {
+      toast(t("developerModeAlready"));
+      return;
+    }
+
+    tapCountRef.current += 1;
+
+    // Reset tap count after 2 seconds of inactivity
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    tapTimerRef.current = setTimeout(() => {
+      tapCountRef.current = 0;
+    }, 2000);
+
+    const currentTaps = tapCountRef.current;
+
+    if (currentTaps >= DEV_MODE_TAPS_REQUIRED) {
+      tapCountRef.current = 0;
+      if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+      dispatch(setDeveloperMode({ ...developerMode, enabled: true }));
+      toast(t("developerModeActivated"));
+    } else if (currentTaps >= DEV_MODE_COUNTDOWN_START) {
+      const remaining = DEV_MODE_TAPS_REQUIRED - currentTaps;
+      toast(t("developerModeTaps", { remaining }));
+    }
+  }, [developerMode, dispatch, t]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -57,11 +93,15 @@ export default function InformationScreen() {
           </View>
 
           <View style={styles.sectionList}>
-            <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[styles.sectionItemList, styles.sectionItemList_last]}
+              onPress={handleVersionTap}
+            >
               <Text style={styles.sectionItemList_title}>{t("info.version")}</Text>
 
               <Text style={styles.sectionItemList_text}>{currentAppVersion}</Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 

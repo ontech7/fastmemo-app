@@ -254,6 +254,7 @@ const zh = {
     voice_recognition: "语音识别",
     ai_assistant: "AI助手",
     wipe_data: "抹掉数据",
+    developer_options: "开发者选项",
     about: "关于",
     about_the_app: "关于应用程序",
     about_the_developer: "关于开发商",
@@ -605,12 +606,28 @@ const zh = {
   wipeWithCloud: "擦除所有+云",
   loading: "加载中...",
 
+  developeroptions: {
+    title: "开发者选项",
+    warning: "这些选项可能会影响特定笔记的云同步或应用性能。",
+    unlimited_text_space: "无限文本空间",
+    unlimited_text_space_desc: "当前限制：1 MB",
+    unlimited_kanban_columns: "无限看板列",
+    unlimited_kanban_columns_desc: "当前限制：10 列",
+    unlimited_trash_time: "无限回收站时间",
+    unlimited_trash_time_desc: "当前限制：30 天",
+    change_app_icon: "更改应用图标",
+    change_app_icon_desc: "即将推出",
+  },
+
   /* toast */
   disconnected: "您已与 Cloud 断开连接",
   dataSynced: "数据已同步",
   noInternetConnection: "没有网络连接",
   devicesLimitReached: "超出设备限制",
   noteLimitReached: "已达到备注限制",
+  developerModeActivated: "开发者模式已激活！",
+  developerModeAlready: "开发者模式已处于活动状态",
+  developerModeTaps: "还需点击 {{remaining}} 次以启用开发者模式",
 
   empty_title: "（无题）",
 };

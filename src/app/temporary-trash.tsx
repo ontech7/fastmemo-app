@@ -17,7 +17,12 @@ import TrashedNotesSettingsButton from "../components/buttons/TrashedNotesSettin
 import TrashedNoteCard from "../components/cards/TrashedNoteCard";
 import SearchNotesInput from "../components/inputs/SearchNotesInput";
 import { deleteNote, getTrashedNotesFilteredPerCategory } from "../slicers/notesSlice";
-import { selectorIsFingerprintEnabled, selectorShowHidden, selectorWebhook_deleteNote } from "../slicers/settingsSlice";
+import {
+  selectorDeveloperMode,
+  selectorIsFingerprintEnabled,
+  selectorShowHidden,
+  selectorWebhook_deleteNote,
+} from "../slicers/settingsSlice";
 
 export default function TemporaryTrashScreen() {
   const { t } = useTranslation();
@@ -32,6 +37,7 @@ export default function TemporaryTrashScreen() {
   const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
 
   const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
+  const devMode = useSelector(selectorDeveloperMode);
 
   const dispatch = useDispatch();
 
@@ -87,6 +93,9 @@ export default function TemporaryTrashScreen() {
 
   // delete note if the time has passed
   useEffect(() => {
+    const isUnlimitedTrash = devMode.enabled && devMode.unlimitedTrashTime;
+    if (isUnlimitedTrash) return;
+
     trashedNotes.forEach((note: Note) => {
       const currentDate = new Date().getTime();
 

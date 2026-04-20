@@ -27,6 +27,7 @@ import {
 } from "@/slicers/notesSlice";
 import {
   selectorAIAssistant,
+  selectorDeveloperMode,
   selectorShowHidden,
   selectorWebhook_deleteNote,
   selectorWebhook_temporaryDeleteNote,
@@ -65,6 +66,7 @@ export default function HomeScreen() {
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
   const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
   const webhook_updateNote = useSelector(selectorWebhook_updateNote);
+  const devMode = useSelector(selectorDeveloperMode);
 
   const dispatch = useDispatch();
 
@@ -209,6 +211,9 @@ export default function HomeScreen() {
 
   // check trashed notes data and delete
   useEffect(() => {
+    const isUnlimitedTrash = devMode.enabled && devMode.unlimitedTrashTime;
+    if (isUnlimitedTrash) return;
+
     trashedNotes.forEach((note: Note) => {
       const currentDate = new Date().getTime();
 

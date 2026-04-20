@@ -255,6 +255,7 @@ const fr = {
     voice_recognition: "Reconnaissance vocale",
     ai_assistant: "Assistant IA",
     wipe_data: "Effacer les données",
+    developer_options: "Options développeur",
     about: "À propos",
     about_the_app: "À propos de l'application",
     about_the_developer: "À propos du développeur",
@@ -621,6 +622,20 @@ const fr = {
   wipe: "Essuyez tout",
   wipeWithCloud: "Essuyez + Cloud",
 
+  developeroptions: {
+    title: "Options développeur",
+    warning:
+      "Ces options peuvent compromettre la synchronisation Cloud de certaines notes ou affecter les performances de l'app.",
+    unlimited_text_space: "Espace texte illimité",
+    unlimited_text_space_desc: "Limite actuelle : 1 Mo",
+    unlimited_kanban_columns: "Colonnes Kanban illimitées",
+    unlimited_kanban_columns_desc: "Limite actuelle : 10 colonnes",
+    unlimited_trash_time: "Durée de corbeille illimitée",
+    unlimited_trash_time_desc: "Limite actuelle : 30 jours",
+    change_app_icon: "Changer l'icône de l'app",
+    change_app_icon_desc: "Bientôt disponible",
+  },
+
   /* toast */
   disconnected: "Vous avez été déconnecté du Cloud",
   loading: "Chargement...",
@@ -628,6 +643,9 @@ const fr = {
   noInternetConnection: "Pas de connexion Internet",
   devicesLimitReached: "Limite de périphériques dépassée",
   noteLimitReached: "Limite de notes atteinte",
+  developerModeActivated: "Mode développeur activé !",
+  developerModeAlready: "Le mode développeur est déjà actif",
+  developerModeTaps: "Encore {{remaining}} appui(s) pour activer le mode développeur",
 
   empty_title: "(Pas de titre)",
 };

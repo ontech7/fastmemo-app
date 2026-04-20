@@ -10,6 +10,7 @@ import { findCategoryByName, stripHtml } from "@/libs/ai";
 import { storeDirtyNoteId } from "@/libs/registry";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
+  selectorDeveloperMode,
   selectorWebhook_addTextNote,
   selectorWebhook_deleteNote,
   selectorWebhook_temporaryDeleteNote,
@@ -45,6 +46,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const webhook_updateNote = useSelector(selectorWebhook_updateNote);
   const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
+  const devMode = useSelector(selectorDeveloperMode);
 
   const dispatch = useDispatch();
 
@@ -160,7 +162,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
     (textVal: string) => {
       const textSize = getTextSize(textVal);
 
-      if (textSize > configs.notes.sizeLimit) {
+      const isUnlimited = devMode.enabled && devMode.unlimitedTextSpace;
+      if (!isUnlimited && textSize > configs.notes.sizeLimit) {
         toast(t("noteLimitReached"));
         richTextEditor.current?.setContentHTML(note.text); // revert
         return;
@@ -171,7 +174,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
       setNoteAsync({ ...note, text: textVal });
     },
-    [note, setNoteAsync, t]
+    [note, setNoteAsync, t, devMode]
   );
 
   const updateNoteWebhook = useCallback(async () => {
@@ -274,7 +277,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
             {noteTextLength} {t("note.characters")}
           </Text>
           <Text style={[styles.subtitle, { flexGrow: 1 }]}>
-            {convertToMB(configs.notes.sizeLimit)} MB / {convertToMB(noteTextSize)} MB
+            {devMode.enabled && devMode.unlimitedTextSpace ? "∞" : `${convertToMB(configs.notes.sizeLimit)} MB`} /{" "}
+            {convertToMB(noteTextSize)} MB
           </Text>
         </View>
       </View>

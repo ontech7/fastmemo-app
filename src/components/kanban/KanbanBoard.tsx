@@ -1,7 +1,8 @@
 import KanbanColumn from "@/components/kanban/KanbanColumn";
+import { configs } from "@/configs";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
-import { selectorAIAssistant } from "@/slicers/settingsSlice";
+import { selectorAIAssistant, selectorDeveloperMode } from "@/slicers/settingsSlice";
 import type { KanbanNote } from "@/types";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -33,6 +34,10 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
   const { t } = useTranslation();
 
   const aiSettings = useSelector(selectorAIAssistant);
+  const devMode = useSelector(selectorDeveloperMode);
+
+  const maxColumns =
+    devMode.enabled && devMode.unlimitedKanbanColumns ? Number.MAX_SAFE_INTEGER : configs.notes.maxKanbanColumns;
 
   const { isDragging, updateScrollOffset, setOverlayOffset, fingerX, containerOffsetX } = useKanbanDrag();
 
@@ -151,7 +156,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
 
   const addColumn = useCallback(() => {
     if (note.readOnly) return;
-    if (note.columns.length >= 5) return;
+    if (note.columns.length >= maxColumns) return;
 
     const colorIndex = note.columns.length % KANBAN_COLUMN_COLORS.length;
     setNoteAsync({
@@ -166,7 +171,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
         },
       ],
     });
-  }, [note, setNoteAsync]);
+  }, [note, setNoteAsync, maxColumns]);
 
   const setColumnName = useCallback(
     (columnId: string, name: string) => {
@@ -297,7 +302,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
             />
           ))}
 
-          {!note.readOnly && note.columns.length < 5 && (
+          {!note.readOnly && note.columns.length < maxColumns && (
             <TouchableOpacity activeOpacity={0.7} style={styles.addColumnButton} onPress={addColumn}>
               <PlusIcon size={32} color={COLOR.lightBlue} />
               <Text style={styles.addColumnText}>{t("kanban.add_column")}</Text>

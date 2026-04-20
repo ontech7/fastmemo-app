@@ -6,6 +6,7 @@ export type {
   VoiceRecognitionSettings,
   CloudSettings,
   AIAssistantSettings,
+  DeveloperModeSettings,
   SettingsState,
 } from "./settings";
 export type { NoteFilters, NotesState, CategoriesState, RootState } from "./store";
