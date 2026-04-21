@@ -1,4 +1,4 @@
-## v0.3.0
+## v0.3.1
 
 - Added new note type: Code note with built-in code editor (CodeMirror), syntax highlighting, multiple tabs (up to 6), language
   selector with auto-detection from file extension, and drag-to-reorder tabs.

@@ -4,7 +4,7 @@
 
 **A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, cloud sync, etc.**
 
-![Android](https://badgen.net/badge/Android/v2.9.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v0.3.0/blue)
+![Android](https://badgen.net/badge/Android/v2.9.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v0.3.1/blue)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
 
 [Download](https://github.com/ontech7/fastmemo-app/releases) | [Documentation](docs/) |

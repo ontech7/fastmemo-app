@@ -1,7 +1,9 @@
 import { CODEMIRROR_HTML } from "@/generated/codemirror-html";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
+
+const isWeb = Platform.OS === "web";
 
 const EDITOR_BG = "#282c34";
 
@@ -26,13 +28,26 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(({ initialCode
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  const sendMessage = useCallback((msg: string) => {
-    if (isReady.current) {
-      webViewRef.current?.injectJavaScript(`window.handleMessage(${JSON.stringify(msg)});true;`);
+  // Platform-aware transport: injectJavaScript on native, postMessage on web/Tauri
+  const sendToEditor = useCallback((msg: string) => {
+    if (isWeb) {
+      // react-native-web-webview exposes postMessage(message, origin) on its ref
+      (webViewRef.current as any)?.postMessage?.(msg, "*");
     } else {
-      pendingMessages.current.push(msg);
+      webViewRef.current?.injectJavaScript(`window.handleMessage(${JSON.stringify(msg)});true;`);
     }
   }, []);
+
+  const sendMessage = useCallback(
+    (msg: string) => {
+      if (isReady.current) {
+        sendToEditor(msg);
+      } else {
+        pendingMessages.current.push(msg);
+      }
+    },
+    [sendToEditor]
+  );
 
   useImperativeHandle(ref, () => ({
     setCode: (code: string) => sendMessage(JSON.stringify({ type: "setCode", code })),
@@ -40,20 +55,23 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(({ initialCode
     setReadOnly: (ro: boolean) => sendMessage(JSON.stringify({ type: "setReadOnly", readOnly: ro })),
   }));
 
-  const handleMessage = useCallback((event: WebViewMessageEvent) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === "ready") {
-        isReady.current = true;
-        for (const msg of pendingMessages.current) {
-          webViewRef.current?.injectJavaScript(`window.handleMessage(${JSON.stringify(msg)});true;`);
+  const handleMessage = useCallback(
+    (event: WebViewMessageEvent) => {
+      try {
+        const data = JSON.parse(event.nativeEvent.data);
+        if (data.type === "ready") {
+          isReady.current = true;
+          for (const msg of pendingMessages.current) {
+            sendToEditor(msg);
+          }
+          pendingMessages.current = [];
+        } else if (data.type === "change") {
+          onChangeRef.current(data.code);
         }
-        pendingMessages.current = [];
-      } else if (data.type === "change") {
-        onChangeRef.current(data.code);
-      }
-    } catch {}
-  }, []);
+      } catch {}
+    },
+    [sendToEditor]
+  );
 
   useEffect(() => {
     if (isReady.current) {

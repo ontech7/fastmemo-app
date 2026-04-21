@@ -81,9 +81,26 @@ let currentReadOnly = config.readOnly || false;
 let view;
 let suppressChange = false;
 
+// Helper: send messages back to React on both native and web/Tauri
+function sendToReact(data) {
+  if (typeof window.ReactNativeWebView !== "undefined" && typeof window.ReactNativeWebView.postMessage === "function") {
+    window.ReactNativeWebView.postMessage(data);
+  } else if (window.parent && window.parent !== window) {
+    window.parent.postMessage(data, "*");
+  }
+}
+
+// Listen for messages from parent window (web/Tauri uses postMessage instead of injectJavaScript)
+window.addEventListener("message", function (event) {
+  if (event.source !== window.parent) return;
+  if (typeof event.data === "string" && typeof window.handleMessage === "function") {
+    window.handleMessage(event.data);
+  }
+});
+
 const changeListener = EditorView.updateListener.of((update) => {
   if (update.docChanged && !suppressChange) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "change", code: update.state.doc.toString() }));
+    sendToReact(JSON.stringify({ type: "change", code: update.state.doc.toString() }));
   }
 });
 
@@ -126,4 +143,4 @@ window.handleMessage = function (msgStr) {
   } catch (e) {}
 };
 
-window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ready" }));
+sendToReact(JSON.stringify({ type: "ready" }));
