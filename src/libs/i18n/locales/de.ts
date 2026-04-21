@@ -15,6 +15,11 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_0_3_0: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
+• Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
+• Notiz-Export hinzugefugt.
+• Verschiedene Fehlerbehebungen.`,
+
       description_0_2_0: `• Kanban-Spalten koennen jetzt verschoben werden.
 • Animationen verbessert.
 • Verschiedene Korrekturen.`,
@@ -26,6 +31,12 @@ const de = {
     },
 
     mobile: {
+      description_2_9_0: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
+• Qwen 2.5 7B Modell mit Gerate-RAM-Erkennung hinzugefugt. Neue AI-Aktionen fur Code: Code erklaren und Kommentare hinzufugen.
+• Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
+• Notiz-Export hinzugefugt.
+• Verschiedene Fehlerbehebungen.`,
+
       description_2_8_0: `• Self-hosted KI-Assistent (Qwen 2.5) mit smarten Funktionen fuer Notizen hinzugefuegt. Einrichtung unter Einstellungen -> KI-Assistent.
 • Kanban-Spalten koennen jetzt verschoben werden.
 • Animationen verbessert.
@@ -182,7 +193,7 @@ const de = {
     add_tab: "Tab hinzufugen",
     tab_title_placeholder: "Dateiname",
     code_placeholder: "Schreiben Sie Ihren Code hier...",
-    max_tabs_reached: "Maximum von 5 Tabs erreicht",
+    max_tabs_reached: "Maximum von 6 Tabs erreicht",
     delete_tab: "Tab loschen",
     language: "Sprache",
   },

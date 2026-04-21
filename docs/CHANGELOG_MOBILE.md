@@ -1,3 +1,20 @@
+## v2.9.0
+
+- Added new note type: Code note with built-in code editor (CodeMirror), syntax highlighting, multiple tabs (up to 5), language
+  selector with auto-detection from file extension, and drag-to-reorder tabs.
+- Added Qwen 2.5 7B model for AI Assistant. Requires 8GB+ RAM. Automatically disabled on unsupported devices.
+- Added new AI actions for Code notes: "Explain code" and "Add comments" (requires 7B model).
+- Added per-action minimum model requirements: actions that need a larger model are shown as disabled with "Minimum XB" label.
+- Added device RAM detection to disable AI models that the device cannot run.
+- Added AI output panel for code explanations: scrollable, selectable, dismissible panel next to the AI button.
+- Added dynamic context window per AI model (2K for 0.5B, 4K for 1.5B, 8K for 3B, 16K for 7B).
+- Added multi-part model download support for split GGUF files.
+- Added find and replace functionality in text notes.
+- Added note export.
+- Added developer mode.
+- Improved format_text AI prompt for better structure detection without altering content.
+- Various fixes.
+
 ## v2.8.0
 
 - Added self-hosted AI Assistant (Qwen 2.5) with smart features for notes. Runs entirely on-device, no data sent to external

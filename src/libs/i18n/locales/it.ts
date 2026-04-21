@@ -15,6 +15,11 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
+      description_0_3_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
+• Aggiunta funzione trova e sostituisci nelle note di testo.
+• Aggiunta esportazione note.
+• Fix varie.`,
+
       description_0_2_0: `• Aggiunta possibilita' di spostare le colonne kanban.
 • Migliorate animazioni.
 • Fix varie.`,
@@ -26,6 +31,12 @@ const it = {
     },
 
     mobile: {
+      description_2_9_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
+• Aggiunto modello Qwen 2.5 7B con rilevamento RAM del dispositivo. Nuove azioni AI per il codice: Spiega il codice e Aggiungi commenti.
+• Aggiunta funzione trova e sostituisci nelle note di testo.
+• Aggiunta esportazione note.
+• Fix varie.`,
+
       description_2_8_0: `• Aggiunta AI Assistant self-hosted nel cellulare (Qwen 2.5) con funzionalita' smart per le note. Configuralo in Impostazioni -> Assistente AI.
 • Aggiunta possibilita' di spostare le colonne kanban.
 • Migliorate animazioni.
@@ -183,7 +194,7 @@ const it = {
     add_tab: "Aggiungi tab",
     tab_title_placeholder: "Nome file",
     code_placeholder: "Scrivi il tuo codice qui...",
-    max_tabs_reached: "Massimo 5 tab raggiunto",
+    max_tabs_reached: "Massimo 6 tab raggiunto",
     delete_tab: "Elimina tab",
     language: "Linguaggio",
   },

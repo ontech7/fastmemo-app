@@ -15,6 +15,11 @@ const en = {
     title: "What's new?",
 
     web: {
+      description_0_3_0: `• Added new note type: Code note with built-in code editor, syntax highlighting, multiple tabs, and language auto-detection.
+• Added find and replace in text notes.
+• Added note export.
+• Various fixes.`,
+
       description_0_2_0: `• Added the ability to reorder kanban columns.
 • Improved animations.
 • Various fixes.`,
@@ -26,6 +31,12 @@ const en = {
     },
 
     mobile: {
+      description_2_9_0: `• Added new note type: Code note with built-in code editor, syntax highlighting, multiple tabs, and language auto-detection.
+• Added Qwen 2.5 7B model with device RAM detection. New AI actions for code: Explain code and Add comments.
+• Added find and replace in text notes.
+• Added note export.
+• Various fixes.`,
+
       description_2_8_0: `• Added self-hosted AI Assistant (Qwen 2.5) with smart features for notes. Set it up in Settings -> AI Assistant.
 • Added the ability to reorder kanban columns.
 • Improved animations.
@@ -182,7 +193,7 @@ const en = {
     add_tab: "Add tab",
     tab_title_placeholder: "Filename",
     code_placeholder: "Write your code here...",
-    max_tabs_reached: "Maximum 5 tabs reached",
+    max_tabs_reached: "Maximum 6 tabs reached",
     delete_tab: "Delete tab",
     language: "Language",
   },

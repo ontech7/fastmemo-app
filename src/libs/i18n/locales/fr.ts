@@ -15,6 +15,11 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
+      description_0_3_0: `• Ajout d'un nouveau type de note : Code, avec editeur integre, coloration syntaxique, onglets multiples et detection automatique du langage.
+• Ajout de la fonction rechercher et remplacer dans les notes texte.
+• Ajout de l'exportation de notes.
+• Corrections diverses.`,
+
       description_0_2_0: `• Possibilite de deplacer les colonnes kanban.
 • Animations ameliorees.
 • Corrections diverses.`,
@@ -26,6 +31,12 @@ const fr = {
     },
 
     mobile: {
+      description_2_9_0: `• Ajout d'un nouveau type de note : Code, avec editeur integre, coloration syntaxique, onglets multiples et detection automatique du langage.
+• Ajout du modele Qwen 2.5 7B avec detection de la RAM de l'appareil. Nouvelles actions AI pour le code : Expliquer le code et Ajouter des commentaires.
+• Ajout de la fonction rechercher et remplacer dans les notes texte.
+• Ajout de l'exportation de notes.
+• Corrections diverses.`,
+
       description_2_8_0: `• Assistant IA self-hosted (Qwen 2.5) avec des fonctions intelligentes pour les notes. Configurez-le dans Parametres -> Assistant IA.
 • Possibilite de deplacer les colonnes kanban.
 • Animations ameliorees.
@@ -182,7 +193,7 @@ const fr = {
     add_tab: "Ajouter un onglet",
     tab_title_placeholder: "Nom du fichier",
     code_placeholder: "Ecrivez votre code ici...",
-    max_tabs_reached: "Maximum de 5 onglets atteint",
+    max_tabs_reached: "Maximum de 6 onglets atteint",
     delete_tab: "Supprimer l'onglet",
     language: "Langage",
   },
