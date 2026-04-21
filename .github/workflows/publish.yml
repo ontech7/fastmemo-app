@@ -114,3 +114,54 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+  patch-update-notes:
+    needs: publish-tauri
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: get version from package.json
+        id: pkg_version
+        run: echo "version=$(jq -r '.version' package.json)" >> $GITHUB_OUTPUT
+
+      - name: extract desktop-only changelog
+        id: desktop_notes
+        run: |
+          set -eo pipefail
+
+          extract_latest() {
+            awk '/^## /{if(found) exit; found=1; next} found' "$1"
+          }
+
+          desktop_file="docs/CHANGELOG_DESKTOP.md"
+          notes=""
+
+          if [ -s "$desktop_file" ]; then
+            notes=$(extract_latest "$desktop_file")
+          fi
+
+          if [ -z "$notes" ]; then
+            notes="Checkout GitHub latest release for more details."
+          fi
+
+          {
+            echo "content<<EOF"
+            echo "$notes"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: patch latest.json notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DESKTOP_NOTES: ${{ steps.desktop_notes.outputs.content }}
+        run: |
+          set -eo pipefail
+          tag="v${{ steps.pkg_version.outputs.version }}"
+
+          gh release download "$tag" -p "latest.json" -D /tmp
+          jq --arg notes "$DESKTOP_NOTES" '.notes = $notes' /tmp/latest.json > /tmp/latest_patched.json
+          mv /tmp/latest_patched.json /tmp/latest.json
+          gh release upload "$tag" /tmp/latest.json --clobber
