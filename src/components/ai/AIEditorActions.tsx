@@ -1,7 +1,26 @@
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import type { AIModelId, EditorAction } from "@/libs/ai";
+import { cancelCommand, generateEditorContent, initContext, isModelSufficient, MODEL_SHORT_LABEL } from "@/libs/ai";
+import { selectorAIAssistant } from "@/slicers/settingsSlice";
+import type { NoteType } from "@/types/note";
+import { toast } from "@/utils/toast";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Keyboard, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import type { ViewStyle } from "react-native";
 import {
+  ActivityIndicator,
+  Keyboard,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import {
+  ChatBubbleLeftRightIcon,
+  CodeBracketIcon,
   DocumentTextIcon,
   FolderIcon,
   ListBulletIcon,
@@ -9,8 +28,10 @@ import {
   PencilSquareIcon,
   SparklesIcon,
   TagIcon,
+  XMarkIcon,
 } from "react-native-heroicons/outline";
 import { CheckCircleIcon, ExclamationCircleIcon } from "react-native-heroicons/solid";
+import type { SharedValue } from "react-native-reanimated";
 import Animated, {
   Easing,
   Extrapolation,
@@ -20,17 +41,6 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSelector } from "react-redux";
-
-import { cancelCommand, generateEditorContent, initContext } from "@/libs/ai";
-import { selectorAIAssistant } from "@/slicers/settingsSlice";
-import { toast } from "@/utils/toast";
-
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
-
-import type { EditorAction } from "@/libs/ai";
-import { Note } from "@/types";
-import type { ViewStyle } from "react-native";
-import type { SharedValue } from "react-native-reanimated";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -46,14 +56,16 @@ interface ActionDef {
   id: EditorAction;
   labelKey: string;
   icon: React.ComponentType<{ size: number; color: string }>;
+  /** Minimum model required. If undefined, works with any model. */
+  minModelId?: AIModelId;
 }
 
 const TEXT_ACTIONS: ActionDef[] = [
   { id: "generate_title", labelKey: "ai.editor.generate_title", icon: TagIcon },
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
-  { id: "summarize", labelKey: "ai.editor.summarize", icon: DocumentTextIcon },
-  { id: "format_text", labelKey: "ai.editor.format_text", icon: PaintBrushIcon },
-  { id: "continue_writing", labelKey: "ai.editor.continue_writing", icon: PencilSquareIcon },
+  { id: "summarize", labelKey: "ai.editor.summarize", icon: DocumentTextIcon, minModelId: "qwen-1.5b" },
+  { id: "format_text", labelKey: "ai.editor.format_text", icon: PaintBrushIcon, minModelId: "qwen-3b" },
+  { id: "continue_writing", labelKey: "ai.editor.continue_writing", icon: PencilSquareIcon, minModelId: "qwen-1.5b" },
 ];
 
 const TODO_ACTIONS: ActionDef[] = [
@@ -67,7 +79,14 @@ const KANBAN_ACTIONS: ActionDef[] = [
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
 ];
 
-function getActionsForType(noteType: Note["type"]): ActionDef[] {
+const CODE_ACTIONS: ActionDef[] = [
+  { id: "generate_title", labelKey: "ai.editor.generate_title", icon: TagIcon },
+  { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
+  { id: "explain_code", labelKey: "ai.editor.explain_code", icon: ChatBubbleLeftRightIcon, minModelId: "qwen-7b" },
+  { id: "add_comments", labelKey: "ai.editor.add_comments", icon: CodeBracketIcon, minModelId: "qwen-7b" },
+];
+
+function getActionsForType(noteType: NoteType): ActionDef[] {
   switch (noteType) {
     case "text":
       return TEXT_ACTIONS;
@@ -75,11 +94,13 @@ function getActionsForType(noteType: Note["type"]): ActionDef[] {
       return TODO_ACTIONS;
     case "kanban":
       return KANBAN_ACTIONS;
+    case "code":
+      return CODE_ACTIONS;
   }
 }
 
 interface Props {
-  noteType: Note["type"];
+  noteType: NoteType;
   /** Returns the plain-text content of the note (HTML already stripped for text notes). */
   getContent: () => string;
   noteTitle: string;
@@ -91,6 +112,10 @@ interface Props {
   onTextFormatted?: (formattedHtml: string) => void;
   /** Called with the matched category name when suggest_category succeeds. */
   onCategorySuggested?: (categoryName: string) => void;
+  /** Called with explanation text when explain_code succeeds. */
+  onCodeExplained?: (explanation: string) => void;
+  /** Called with commented code when add_comments succeeds. */
+  onCodeCommented?: (commentedCode: string) => void;
   disabled?: boolean;
   /** Override the floating button position. Default: { bottom: 165, right: 42 } */
   style?: ViewStyle;
@@ -108,6 +133,8 @@ export default function AIEditorActions({
   onItemsSuggested,
   onTextFormatted,
   onCategorySuggested,
+  onCodeExplained,
+  onCodeCommented,
   disabled = false,
   style,
   menuBottomOffset = 200,
@@ -118,6 +145,7 @@ export default function AIEditorActions({
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>("idle");
+  const [outputText, setOutputText] = useState<string | null>(null);
 
   const menuProgress = useSharedValue(0);
   const cancelledRef = useRef(false);
@@ -162,7 +190,8 @@ export default function AIEditorActions({
       }
 
       // Include the note title as context for actions that benefit from it
-      const needsTitle = action !== "generate_title" && action !== "format_text";
+      const needsTitle =
+        action !== "generate_title" && action !== "format_text" && action !== "add_comments" && action !== "explain_code";
       const content = needsTitle && noteTitle.trim() ? `${noteTitle}\n${rawContent}` : rawContent;
 
       setFeedback("processing");
@@ -197,6 +226,12 @@ export default function AIEditorActions({
             case "suggest_category":
               if (result.text) onCategorySuggested?.(result.text);
               break;
+            case "explain_code":
+              if (result.text) setOutputText(result.text);
+              break;
+            case "add_comments":
+              if (result.text) onCodeCommented?.(result.text);
+              break;
           }
         } else {
           setFeedback("error");
@@ -221,6 +256,8 @@ export default function AIEditorActions({
       onItemsSuggested,
       onTextFormatted,
       onCategorySuggested,
+      onCodeExplained,
+      onCodeCommented,
       t,
       closeMenu,
     ]
@@ -243,17 +280,24 @@ export default function AIEditorActions({
       <Modal visible={isMenuOpen} transparent animationType="none" statusBarTranslucent onRequestClose={closeMenu}>
         <AnimatedPressable style={[styles.overlay, backdropStyle, { paddingBottom: menuBottomOffset }]} onPress={closeMenu}>
           <View style={styles.menuContainer}>
-            {actionItems.map((actionItem, index) => (
-              <AnimatedActionItem
-                key={actionItem.id}
-                action={actionItem}
-                index={index}
-                totalItems={actionItems.length}
-                menuProgress={menuProgress}
-                onPress={() => handleAction(actionItem.id)}
-                label={t(actionItem.labelKey)}
-              />
-            ))}
+            {actionItems.map((actionItem, index) => {
+              const canRun =
+                !actionItem.minModelId || isModelSufficient(aiSettings.selectedModel as AIModelId, actionItem.minModelId);
+              const minLabel = actionItem.minModelId ? MODEL_SHORT_LABEL[actionItem.minModelId] : "";
+              return (
+                <AnimatedActionItem
+                  key={actionItem.id}
+                  action={actionItem}
+                  index={index}
+                  totalItems={actionItems.length}
+                  menuProgress={menuProgress}
+                  onPress={canRun ? () => handleAction(actionItem.id) : undefined}
+                  label={t(actionItem.labelKey)}
+                  disabled={!canRun}
+                  minModelLabel={!canRun ? `${t("ai.editor.min_model")} ${minLabel}` : undefined}
+                />
+              );
+            })}
           </View>
         </AnimatedPressable>
       </Modal>
@@ -274,6 +318,25 @@ export default function AIEditorActions({
           <SparklesIcon size={22} color={COLOR.softWhite} />
         )}
       </TouchableOpacity>
+
+      {outputText && (
+        <View style={[styles.outputPanel, style && { bottom: (style as { bottom?: number }).bottom }]}>
+          <View style={styles.outputHeader}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <SparklesIcon size={16} color={styles.outputTitle.color} />
+              <Text style={styles.outputTitle}>AI Result</Text>
+            </View>
+            <TouchableOpacity onPress={() => setOutputText(null)} activeOpacity={0.7}>
+              <XMarkIcon size={18} color={COLOR.lightBlue} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.outputScroll} showsVerticalScrollIndicator>
+            <Text style={styles.outputText} selectable>
+              {outputText}
+            </Text>
+          </ScrollView>
+        </View>
+      )}
     </>
   );
 }
@@ -283,11 +346,22 @@ interface AnimatedItemProps {
   index: number;
   totalItems: number;
   menuProgress: SharedValue<number>;
-  onPress: () => void;
+  onPress?: () => void;
   label: string;
+  disabled?: boolean;
+  minModelLabel?: string;
 }
 
-function AnimatedActionItem({ action, index, totalItems, menuProgress, onPress, label }: AnimatedItemProps) {
+function AnimatedActionItem({
+  action,
+  index,
+  totalItems,
+  menuProgress,
+  onPress,
+  label,
+  disabled,
+  minModelLabel,
+}: AnimatedItemProps) {
   const reverseIndex = totalItems - 1 - index;
   const Icon = action.icon;
 
@@ -311,11 +385,19 @@ function AnimatedActionItem({ action, index, totalItems, menuProgress, onPress, 
 
   return (
     <Animated.View style={animatedStyle}>
-      <TouchableOpacity style={styles.actionButton} activeOpacity={0.7} onPress={onPress}>
-        <View style={styles.actionIconContainer}>
+      <TouchableOpacity
+        style={[styles.actionButton, disabled && { opacity: 0.4 }]}
+        activeOpacity={disabled ? 1 : 0.7}
+        onPress={disabled ? undefined : onPress}
+        disabled={disabled}
+      >
+        <View style={[styles.actionIconContainer, disabled && { backgroundColor: COLOR.lightBlue, opacity: 0.5 }]}>
           <Icon size={20} color={COLOR.darkBlue} />
         </View>
-        <Text style={styles.actionLabel}>{label}</Text>
+        <View>
+          <Text style={styles.actionLabel}>{label}</Text>
+          {minModelLabel && <Text style={styles.actionMinModel}>{minModelLabel}</Text>}
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -350,6 +432,11 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.medium,
     fontWeight: FONTWEIGHT.semiBold,
   },
+  actionMinModel: {
+    color: COLOR.placeholder,
+    fontSize: FONTSIZE.small,
+    marginTop: 2,
+  },
   actionIconContainer: {
     padding: PADDING_MARGIN.sm + 2,
     borderRadius: BORDER.normal,
@@ -373,5 +460,46 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 3,
     elevation: 3,
+  },
+  outputPanel: {
+    position: "absolute",
+    bottom: 100,
+    left: 115,
+    right: PADDING_MARGIN.xxl,
+    maxHeight: 300,
+    backgroundColor: COLOR.boldBlue,
+    borderRadius: BORDER.normal,
+    borderWidth: 1,
+    borderColor: COLOR.blue,
+    zIndex: 7,
+    shadowColor: COLOR.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  outputHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: PADDING_MARGIN.md,
+    paddingVertical: PADDING_MARGIN.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: COLOR.blue,
+  },
+  outputTitle: {
+    color: COLOR.lightBlue,
+    fontSize: FONTSIZE.small,
+    fontWeight: FONTWEIGHT.semiBold,
+  },
+  outputScroll: {
+    flex: 1,
+    paddingHorizontal: PADDING_MARGIN.md,
+    paddingVertical: PADDING_MARGIN.sm,
+  },
+  outputText: {
+    color: COLOR.softWhite,
+    fontSize: FONTSIZE.medium,
+    lineHeight: 22,
   },
 });
