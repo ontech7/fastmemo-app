@@ -115,7 +115,7 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-  patch-update-notes:
+  reconstruct-latest-json:
     needs: publish-tauri
     runs-on: ubuntu-latest
     permissions:
@@ -123,9 +123,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: get version from package.json
+      - name: get tag from package.json
         id: pkg_version
         run: echo "version=$(jq -r '.version' package.json)" >> $GITHUB_OUTPUT
+
+      - name: get updater version from tauri.conf.json
+        id: tauri_version
+        run: echo "version=$(jq -r '.package.version' src-tauri/tauri.conf.json)" >> $GITHUB_OUTPUT
 
       - name: extract desktop-only changelog
         id: desktop_notes
@@ -153,15 +157,100 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: patch latest.json notes
+      - name: reconstruct latest.json from release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DESKTOP_NOTES: ${{ steps.desktop_notes.outputs.content }}
         run: |
           set -eo pipefail
           tag="v${{ steps.pkg_version.outputs.version }}"
+          version="${{ steps.tauri_version.outputs.version }}"
 
-          gh release download "$tag" -p "latest.json" -D /tmp
-          jq --arg notes "$DESKTOP_NOTES" '.notes = $notes' /tmp/latest.json > /tmp/latest_patched.json
-          mv /tmp/latest_patched.json /tmp/latest.json
+          # Fetch release metadata and assets
+          pub_date=$(gh release view "$tag" --json publishedAt -q '.publishedAt')
+          assets_json=$(gh release view "$tag" --json assets -q '.assets')
+
+          # Download all updater signature files
+          mkdir -p /tmp/sigs
+          gh release download "$tag" -p "*.sig" -D /tmp/sigs 2>/dev/null || true
+
+          # Identify updater artifacts per platform
+          mac_arm_name=$(echo "$assets_json" | jq -r '
+            [.[] | select(.name | endswith(".app.tar.gz"))
+                 | select(.name | contains("x64") | not)]
+            | .[0].name // empty')
+          mac_arm_url=$(echo "$assets_json" | jq -r '
+            [.[] | select(.name | endswith(".app.tar.gz"))
+                 | select(.name | contains("x64") | not)]
+            | .[0].url // empty')
+
+          mac_intel_name=$(echo "$assets_json" | jq -r '
+            [.[] | select(.name | endswith(".app.tar.gz"))
+                 | select(.name | contains("x64"))]
+            | .[0].name // empty')
+          mac_intel_url=$(echo "$assets_json" | jq -r '
+            [.[] | select(.name | endswith(".app.tar.gz"))
+                 | select(.name | contains("x64"))]
+            | .[0].url // empty')
+
+          linux_name=$(echo "$assets_json" | jq -r '
+            [.[] | select(.name | endswith(".AppImage.tar.gz"))]
+            | .[0].name // empty')
+          linux_url=$(echo "$assets_json" | jq -r '
+            [.[] | select(.name | endswith(".AppImage.tar.gz"))]
+            | .[0].url // empty')
+
+          windows_msi_name=$(echo "$assets_json" | jq -r '
+            [.[] | select(.name | endswith(".msi.zip"))]
+            | .[0].name // empty')
+          windows_msi_url=$(echo "$assets_json" | jq -r '
+            [.[] | select(.name | endswith(".msi.zip"))]
+            | .[0].url // empty')
+
+          windows_nsis_name=$(echo "$assets_json" | jq -r '
+            [.[] | select(.name | endswith(".nsis.zip"))]
+            | .[0].name // empty')
+          windows_nsis_url=$(echo "$assets_json" | jq -r '
+            [.[] | select(.name | endswith(".nsis.zip"))]
+            | .[0].url // empty')
+
+          # Build platforms JSON object
+          platforms="{}"
+
+          add_platform() {
+            local key="$1" name="$2" url="$3"
+            [ -z "$name" ] && return
+            [ -z "$url" ] && return
+            local sig_file="/tmp/sigs/${name}.sig"
+            [ -f "$sig_file" ] || return
+            local sig
+            sig=$(cat "$sig_file")
+            platforms=$(echo "$platforms" | jq \
+              --arg key "$key" --arg sig "$sig" --arg url "$url" \
+              '.[$key] = {signature: $sig, url: $url}')
+          }
+
+          add_platform "darwin-aarch64"          "$mac_arm_name"      "$mac_arm_url"
+          add_platform "darwin-aarch64-app"      "$mac_arm_name"      "$mac_arm_url"
+          add_platform "darwin-x86_64"           "$mac_intel_name"    "$mac_intel_url"
+          add_platform "darwin-x86_64-app"       "$mac_intel_name"    "$mac_intel_url"
+          add_platform "linux-x86_64"            "$linux_name"        "$linux_url"
+          add_platform "linux-x86_64-appimage"   "$linux_name"        "$linux_url"
+          add_platform "windows-x86_64"          "$windows_msi_name"  "$windows_msi_url"
+          add_platform "windows-x86_64-msi"      "$windows_msi_name"  "$windows_msi_url"
+          add_platform "windows-x86_64-nsis"     "$windows_nsis_name" "$windows_nsis_url"
+
+          # Construct the complete latest.json
+          jq -n \
+            --arg version "$version" \
+            --arg notes "$DESKTOP_NOTES" \
+            --arg pub_date "$pub_date" \
+            --argjson platforms "$platforms" \
+            '{version: $version, notes: $notes, pub_date: $pub_date, platforms: $platforms}' \
+            > /tmp/latest.json
+
+          echo "::group::Reconstructed latest.json"
+          jq . /tmp/latest.json
+          echo "::endgroup::"
+
           gh release upload "$tag" /tmp/latest.json --clobber
