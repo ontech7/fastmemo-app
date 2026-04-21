@@ -18,9 +18,18 @@ export interface KanbanColumn {
   items: KanbanItem[];
 }
 
+export interface CodeTab {
+  id: string;
+  title: string;
+  code: string;
+  language: string;
+}
+
+export type NoteType = "text" | "todo" | "kanban" | "code";
+
 export interface NoteBase {
   id: string;
-  type: "text" | "todo" | "kanban";
+  type: NoteType;
   title: string;
   category: Category;
   date: string;
@@ -48,4 +57,10 @@ export interface KanbanNote extends NoteBase {
   columns: KanbanColumn[];
 }
 
-export type Note = TextNote | TodoNote | KanbanNote;
+export interface CodeNote extends NoteBase {
+  type: "code";
+  tabs: CodeTab[];
+  activeTabId: string;
+}
+
+export type Note = TextNote | TodoNote | KanbanNote | CodeNote;

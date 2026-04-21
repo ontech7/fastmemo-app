@@ -1,10 +1,11 @@
 // AI editor features are not available on web/desktop.
 // llama.rn requires native platform (Android/iOS).
 
+import type { NoteType } from "@/types/note";
 import type { ViewStyle } from "react-native";
 
 interface Props {
-  noteType: "text" | "todo" | "kanban";
+  noteType: NoteType;
   getContent: () => string;
   noteTitle: string;
   onTitleGenerated: (title: string) => void;

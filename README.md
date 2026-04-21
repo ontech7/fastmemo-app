@@ -4,7 +4,7 @@
 
 **A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, cloud sync, etc.**
 
-![Android](https://badgen.net/badge/Android/v2.8.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v0.2.1/blue)
+![Android](https://badgen.net/badge/Android/v2.9.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v0.3.0/blue)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
 
 [Download](https://github.com/ontech7/fastmemo-app/releases) | [Documentation](docs/) |
@@ -28,23 +28,24 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 
 ## Features
 
-| Feature                  | Description                                                            |
-| ------------------------ | ---------------------------------------------------------------------- |
-| **AI Assistant (BETA)**  | On-device AI with Qwen 2.5 (0.5B, 1.5B, 3B). No data leaves your phone |
-| **Rich Text Editor**     | Create beautifully formatted notes with full rich text support         |
-| **To-Do List**           | Organize your checklist                                                |
-| **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                        |
-| **Cloud Sync**           | Encrypted synchronization across all devices (no centralized)          |
-| **Biometric Protection** | Secure sensitive notes with fingerprint or secret code                 |
-| **Webhooks**             | Explore new stuff with Internet of Things                              |
-| **Voice Recognition**    | Dictate notes using speech-to-text on text and todo notes              |
-| **Multi-language**       | Available in English, Italian, French, German, Spanish, and Chinese    |
+| Feature                  | Description                                                         |
+| ------------------------ | ------------------------------------------------------------------- |
+| **AI Assistant (BETA)**  | On-device AI with Qwen 2.5 (0.5B-7B). No data leaves your phone     |
+| **Rich Text Editor**     | Create beautifully formatted notes with full rich text support      |
+| **To-Do List**           | Organize your checklist                                             |
+| **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                     |
+| **Code Editor**          | Write code with syntax highlighting, tabs, and language detection   |
+| **Cloud Sync**           | Encrypted synchronization across all devices (no centralized)       |
+| **Biometric Protection** | Secure sensitive notes with fingerprint or secret code              |
+| **Webhooks**             | Explore new stuff with Internet of Things                           |
+| **Voice Recognition**    | Dictate notes using speech-to-text on text and todo notes           |
+| **Multi-language**       | Available in English, Italian, French, German, Spanish, and Chinese |
 
 <details>
 <summary><strong>View all features</strong></summary>
 
 - AI-powered actions inside note editors: generate title, summarize, continue writing, format text, suggest checklist items,
-  suggest category
+  suggest category, explain code (7B), add comments (7B)
 - Notes and categories creation with custom icons
 - Sort notes by creation or update date
 - Filter and deep search across all notes
@@ -129,6 +130,7 @@ chmod +x Fast_Memo_*.AppImage
 | [React Native](https://reactnative.dev/)                                                       | Core framework for iOS and Android                    |
 | [Tauri](https://tauri.app/)                                                                    | Desktop application framework                         |
 | [llama.rn](https://github.com/a-ghorbani/llama.rn)                                             | On-device LLM inference (Qwen 2.5 GGUF)               |
+| [CodeMirror 6](https://codemirror.net/)                                                        | Code editor engine (bundled via esbuild)              |
 | [Google Firebase](https://firebase.google.com/)                                                | Cloud sync and data storage                           |
 | [Redux](https://react-redux.js.org/) + [Redux Persist](https://github.com/rt2zz/redux-persist) | State management and persistence                      |
 | [Heroicons](https://heroicons.com/)                                                            | Icon library                                          |

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
 import Haptics from "@/libs/haptics";
@@ -7,7 +7,6 @@ import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants
 
 import VirtualNumberKeyboard from "../VirtualNumberKeyboard";
 
-const unify = (array: string[]) => array.join("");
 const separate = (string: string) => string.split("");
 
 interface Props {
@@ -20,34 +19,27 @@ interface Props {
 export default function CodeInput({ value, onChangeCode, onSubmit, disabled }: Props) {
   const code = separate(value);
 
-  const isCodeEmpty = code.length == 0;
   const isCodeSet = code.length == 4;
 
-  const addNumberWithVibration = useCallback(
-    (number: string) => {
-      if (isCodeSet) {
-        return;
-      }
+  // Refs to keep callbacks stable across renders
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const onChangeCodeRef = useRef(onChangeCode);
+  onChangeCodeRef.current = onChangeCode;
 
-      const codeUpdated = [...code, number];
-
-      onChangeCode(unify(codeUpdated));
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    },
-    [code]
-  );
+  const addNumberWithVibration = useCallback((number: number | string) => {
+    const currentValue = valueRef.current;
+    if (currentValue.length >= 4) return;
+    onChangeCodeRef.current(currentValue + String(number));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
 
   const removeNumberWithVibration = useCallback(() => {
-    if (isCodeEmpty) {
-      return;
-    }
-
-    let codeUpdated = [...code];
-    codeUpdated.pop();
-
-    onChangeCode(unify(codeUpdated));
+    const currentValue = valueRef.current;
+    if (currentValue.length === 0) return;
+    onChangeCodeRef.current(currentValue.slice(0, -1));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [code]);
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== "web" || disabled) return;
@@ -65,11 +57,9 @@ export default function CodeInput({ value, onChangeCode, onSubmit, disabled }: P
   }, [addNumberWithVibration, removeNumberWithVibration, disabled]);
 
   useEffect(() => {
-    if (!isCodeSet) {
-      return;
-    }
-    onSubmit && onSubmit(value);
-  }, [code]);
+    if (value.length !== 4) return;
+    onSubmit?.(value);
+  }, [value]);
 
   return (
     <View

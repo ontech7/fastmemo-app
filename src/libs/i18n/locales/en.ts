@@ -15,6 +15,11 @@ const en = {
     title: "What's new?",
 
     web: {
+      description_0_3_0: `• Added new note type: Code note with built-in code editor, syntax highlighting, multiple tabs, and language auto-detection.
+• Added find and replace in text notes.
+• Added note export.
+• Various fixes.`,
+
       description_0_2_0: `• Added the ability to reorder kanban columns.
 • Improved animations.
 • Various fixes.`,
@@ -26,6 +31,12 @@ const en = {
     },
 
     mobile: {
+      description_2_9_0: `• Added new note type: Code note with built-in code editor, syntax highlighting, multiple tabs, and language auto-detection.
+• Added Qwen 2.5 7B model with device RAM detection. New AI actions for code: Explain code and Add comments.
+• Added find and replace in text notes.
+• Added note export.
+• Various fixes.`,
+
       description_2_8_0: `• Added self-hosted AI Assistant (Qwen 2.5) with smart features for notes. Set it up in Settings -> AI Assistant.
 • Added the ability to reorder kanban columns.
 • Improved animations.
@@ -145,6 +156,7 @@ const en = {
       todo: "To-Do",
       kanban: "Kanban",
       text: "Text",
+      code: "Code",
     },
     settings: {
       delete: "Delete",
@@ -154,6 +166,16 @@ const en = {
       hide: "Hide",
       changecategory: "Change Category",
       share: "Share",
+      export: "Export",
+      export_description: "Choose the export format",
+      export_txt: "Plain Text (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "Search...",
+      replace_placeholder: "Replace with...",
+      replace_short: "Replace",
+      replace_one: "Replace",
+      replace_all: "All",
     },
   },
   kanban: {
@@ -166,6 +188,14 @@ const en = {
     no_cards: "No cards",
     columns_count: "columns",
     cards_count: "cards",
+  },
+  code: {
+    add_tab: "Add tab",
+    tab_title_placeholder: "Filename",
+    code_placeholder: "Write your code here...",
+    max_tabs_reached: "Maximum 6 tabs reached",
+    delete_tab: "Delete tab",
+    language: "Language",
   },
   changecategory: {
     title: "Change Category",
@@ -213,6 +243,7 @@ const en = {
     addTextNote: "Add Text Note",
     addTodoNote: "Add Todo Note",
     addKanbanNote: "Add Kanban Note",
+    addCodeNote: "Add Code Note",
     updateNote: "Update Note",
     temporaryDeleteNote: "Temporary Delete Note",
     deleteNote: "Delete Note",
@@ -245,6 +276,7 @@ const en = {
     voice_recognition: "Voice recognition",
     ai_assistant: "AI Assistant",
     wipe_data: "Wipe data",
+    developer_options: "Developer options",
     about: "About",
     about_the_app: "About the app",
     about_the_developer: "About the developer",
@@ -286,9 +318,11 @@ const en = {
     cancel: "Cancel",
     delete_model: "Delete model",
     info: "The AI assistant runs entirely on your device. No data is sent to external servers. The model needs to be downloaded once (~400 MB) and will be stored locally.",
-    model_light: "Lightweight, fast. Recommended for most devices.",
-    model_powerful: "More accurate and capable. Requires more storage and RAM.",
-    model_advanced: "Best quality. For devices with 8GB+ RAM.",
+    model_light: "Fast, basic quality. 3GB+ RAM required.",
+    model_powerful: "Good balance of speed and quality. 4GB+ RAM required.",
+    model_advanced: "High quality results. 6GB+ RAM required.",
+    model_pro: "Best quality, near-desktop performance. 8GB+ RAM required.",
+    model_unavailable: "Not enough RAM on this device",
     capabilities_title: "What can I do?",
     cap: {
       generate_title: "Generate a title from note content",
@@ -297,6 +331,8 @@ const en = {
       format_text: "Format text with headings, bold, lists, etc.",
       suggest_items: "Suggest new items for a checklist",
       suggest_category: "Suggest the best category for a note",
+      explain_code: "Explain what code does",
+      add_comments: "Add inline comments to code",
     },
     unavailable_web: "AI Assistant is only available on mobile devices.",
     native_rebuild_needed: "AI Assistant requires a native rebuild.\nRun: npx expo run:android",
@@ -339,6 +375,9 @@ const en = {
       suggest_items: "Suggest items",
       format_text: "Format text",
       suggest_category: "Suggest category",
+      explain_code: "Explain code",
+      add_comments: "Add comments",
+      min_model: "Minimum",
       no_content: "Write something first",
       no_category_match: "No matching category found",
       error: "Could not generate, try again",
@@ -379,7 +418,7 @@ const en = {
       text_1_0: "You can create a Kanban note by clicking the",
       text_1_1: "button on bottom-right corner of Home page and selecting 'Kanban'.",
       text_2_0: "A new page will appear with one column already created.",
-      text_3_0: "• To add a column: click the 'Add column' button on the right (maximum 5 columns).",
+      text_3_0: "• To add a column: click the 'Add column' button on the right (maximum 10 columns).",
       text_4_0: "• To rename a column: edit the text in the column header.",
       text_5_0: "• To change a column's color: click the colored square in the header.",
       text_6_0: "• To add a card: click 'Add card' at the bottom of the column.",
@@ -605,12 +644,28 @@ const en = {
   wipeWithCloud: "Wipe + Cloud",
   loading: "Loading...",
 
+  developeroptions: {
+    title: "Developer Options",
+    warning: "These options may compromise Cloud Sync for specific notes or affect app performance.",
+    unlimited_text_space: "Unlimited text space",
+    unlimited_text_space_desc: "Current limit: 1 MB",
+    unlimited_kanban_columns: "Unlimited Kanban columns",
+    unlimited_kanban_columns_desc: "Current limit: 10 columns",
+    unlimited_trash_time: "Unlimited trash time",
+    unlimited_trash_time_desc: "Current limit: 30 days",
+    change_app_icon: "Change app icon",
+    change_app_icon_desc: "Coming soon",
+  },
+
   /* toast */
   disconnected: "You have been disconnected from Cloud",
   dataSynced: "Data synced",
   noInternetConnection: "No internet connection",
   devicesLimitReached: "Devices limit exceeded",
   noteLimitReached: "Note limit reached",
+  developerModeActivated: "Developer mode activated!",
+  developerModeAlready: "Developer mode is already active",
+  developerModeTaps: "{{remaining}} tap(s) to enable developer mode",
 
   empty_title: "(No title)",
 };

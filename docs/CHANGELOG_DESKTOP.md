@@ -1,3 +1,12 @@
+## v0.3.0
+
+- Added new note type: Code note with built-in code editor (CodeMirror), syntax highlighting, multiple tabs (up to 6), language
+  selector with auto-detection from file extension, and drag-to-reorder tabs.
+- Added find and replace functionality in text notes.
+- Added note export.
+- Added developer mode.
+- Various fixes.
+
 ## v0.2.1
 
 - Fix causing note not to be loaded

@@ -1,4 +1,5 @@
 import { configs } from "@/configs";
+import { isTauri } from "@/utils/platform";
 import { defaultCategory } from "@/configs/default";
 import type { CloudSettings } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -77,10 +78,7 @@ const getDeviceInfo = (): DeviceInfo => {
   if (Platform.OS === "web") {
     const ua = navigator.userAgent;
 
-    // @ts-ignore - __TAURI__ is injected by Tauri runtime
-    const isTauri = typeof window !== "undefined" && "__TAURI__" in window;
-
-    if (isTauri) {
+    if (isTauri()) {
       let modelName = "Desktop";
 
       if (ua.includes("Macintosh") || ua.includes("Mac OS X")) {

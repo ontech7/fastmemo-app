@@ -7,6 +7,7 @@ export interface Webhooks {
   addTextNote: WebhookPayload;
   addTodoNote: WebhookPayload;
   addKanbanNote: WebhookPayload;
+  addCodeNote: WebhookPayload;
   updateNote: WebhookPayload;
   temporaryDeleteNote: WebhookPayload;
   deleteNote: WebhookPayload;
@@ -38,8 +39,16 @@ export interface CloudSettings {
 export interface AIAssistantSettings {
   enabled: boolean;
   modelDownloaded: boolean;
-  selectedModel: "qwen-0.5b" | "qwen-1.5b" | "qwen-3b";
+  selectedModel: "qwen-0.5b" | "qwen-1.5b" | "qwen-3b" | "qwen-7b";
   voiceOnly: boolean;
+}
+
+export interface DeveloperModeSettings {
+  enabled: boolean;
+  unlimitedTextSpace: boolean;
+  unlimitedKanbanColumns: boolean;
+  unlimitedTrashTime: boolean;
+  customAppIcon: string | null;
 }
 
 export interface SettingsState {
@@ -55,4 +64,5 @@ export interface SettingsState {
   voiceRecognition: VoiceRecognitionSettings;
   aiAssistant: AIAssistantSettings;
   reportDate: string | null;
+  developerMode: DeveloperModeSettings;
 }

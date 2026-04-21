@@ -15,6 +15,11 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_0_3_0: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
+• Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
+• Notiz-Export hinzugefugt.
+• Verschiedene Fehlerbehebungen.`,
+
       description_0_2_0: `• Kanban-Spalten koennen jetzt verschoben werden.
 • Animationen verbessert.
 • Verschiedene Korrekturen.`,
@@ -26,6 +31,12 @@ const de = {
     },
 
     mobile: {
+      description_2_9_0: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
+• Qwen 2.5 7B Modell mit Gerate-RAM-Erkennung hinzugefugt. Neue AI-Aktionen fur Code: Code erklaren und Kommentare hinzufugen.
+• Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
+• Notiz-Export hinzugefugt.
+• Verschiedene Fehlerbehebungen.`,
+
       description_2_8_0: `• Self-hosted KI-Assistent (Qwen 2.5) mit smarten Funktionen fuer Notizen hinzugefuegt. Einrichtung unter Einstellungen -> KI-Assistent.
 • Kanban-Spalten koennen jetzt verschoben werden.
 • Animationen verbessert.
@@ -145,6 +156,7 @@ const de = {
       todo: "Liste",
       kanban: "Kanban",
       text: "Text",
+      code: "Code",
     },
     settings: {
       delete: "Löschen",
@@ -154,6 +166,16 @@ const de = {
       hide: "Verstecken",
       changecategory: "Kategorie ändern",
       share: "Aktie",
+      export: "Exportieren",
+      export_description: "Wählen Sie das Exportformat",
+      export_txt: "Klartext (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "Suchen...",
+      replace_placeholder: "Ersetzen durch...",
+      replace_short: "Ersetz.",
+      replace_one: "Ersetzen",
+      replace_all: "Alle",
     },
   },
   kanban: {
@@ -166,6 +188,14 @@ const de = {
     no_cards: "Keine Karten",
     columns_count: "Spalten",
     cards_count: "Karten",
+  },
+  code: {
+    add_tab: "Tab hinzufugen",
+    tab_title_placeholder: "Dateiname",
+    code_placeholder: "Schreiben Sie Ihren Code hier...",
+    max_tabs_reached: "Maximum von 6 Tabs erreicht",
+    delete_tab: "Tab loschen",
+    language: "Sprache",
   },
   changecategory: {
     title: "Kategorie ändern",
@@ -213,6 +243,7 @@ const de = {
     addTextNote: "Textnotiz hinzufügen",
     addTodoNote: "Todo-Notiz hinzufügen",
     addKanbanNote: "Kanban-Notiz hinzufügen",
+    addCodeNote: "Code-Notiz hinzufugen",
     updateNote: "Nota de actualización",
     temporaryDeleteNote: "Notiz vorübergehend löschen",
     deleteNote: "Notiz löschen",
@@ -245,6 +276,7 @@ const de = {
     voice_recognition: "Spracherkennung",
     ai_assistant: "KI-Assistent",
     wipe_data: "Daten löschen",
+    developer_options: "Entwickleroptionen",
     about: "Um",
     about_the_app: "Über die App",
     about_the_developer: "Über den Entwickler",
@@ -286,9 +318,11 @@ const de = {
     cancel: "Abbrechen",
     delete_model: "Modell loeschen",
     info: "Der KI-Assistent laeuft vollstaendig auf Ihrem Geraet. Es werden keine Daten an externe Server gesendet. Das Modell muss einmal heruntergeladen werden (~400 MB) und wird lokal gespeichert.",
-    model_light: "Leicht und schnell. Empfohlen fuer die meisten Geraete.",
-    model_powerful: "Genauer und leistungsfaehiger. Benoetigt mehr Speicher und RAM.",
-    model_advanced: "Beste Qualitaet. Fuer Geraete mit 8GB+ RAM.",
+    model_light: "Schnell, Basisqualitat. 3GB+ RAM erforderlich.",
+    model_powerful: "Gute Balance zwischen Geschwindigkeit und Qualitat. 4GB+ RAM erforderlich.",
+    model_advanced: "Hohe Qualitat. 6GB+ RAM erforderlich.",
+    model_pro: "Beste Qualitat, Desktop-nahe Leistung. 8GB+ RAM erforderlich.",
+    model_unavailable: "Nicht genug RAM auf diesem Gerat",
     capabilities_title: "Was kann ich?",
     cap: {
       generate_title: "Titel aus dem Notizinhalt generieren",
@@ -297,6 +331,8 @@ const de = {
       format_text: "Text mit Ueberschriften, Fettdruck, Listen usw. formatieren",
       suggest_items: "Neue Elemente fuer eine Checkliste vorschlagen",
       suggest_category: "Die beste Kategorie fuer eine Notiz vorschlagen",
+      explain_code: "Erklaren was der Code macht",
+      add_comments: "Kommentare zum Code hinzufugen",
     },
     unavailable_web: "KI-Assistent ist nur auf Mobilgeraeten verfuegbar.",
     native_rebuild_needed: "KI-Assistent erfordert einen nativen Rebuild.\nFuehre aus: npx expo run:android",
@@ -339,6 +375,9 @@ const de = {
       suggest_items: "Elemente vorschlagen",
       format_text: "Text formatieren",
       suggest_category: "Kategorie vorschlagen",
+      explain_code: "Code erklaren",
+      add_comments: "Kommentare hinzufugen",
+      min_model: "Minimum",
       no_content: "Schreibe zuerst etwas",
       no_category_match: "Keine passende Kategorie gefunden",
       error: "Konnte nicht generieren, versuche es erneut",
@@ -613,12 +652,29 @@ const de = {
   wipeWithCloud: "Abwischen + Cloud",
   loading: "Wird geladen...",
 
+  developeroptions: {
+    title: "Entwickleroptionen",
+    warning:
+      "Diese Optionen können die Cloud-Synchronisierung bestimmter Notizen beeinträchtigen oder die App-Leistung beeinflussen.",
+    unlimited_text_space: "Unbegrenzter Textspeicher",
+    unlimited_text_space_desc: "Aktuelles Limit: 1 MB",
+    unlimited_kanban_columns: "Unbegrenzte Kanban-Spalten",
+    unlimited_kanban_columns_desc: "Aktuelles Limit: 10 Spalten",
+    unlimited_trash_time: "Unbegrenzte Papierkorb-Zeit",
+    unlimited_trash_time_desc: "Aktuelles Limit: 30 Tage",
+    change_app_icon: "App-Symbol ändern",
+    change_app_icon_desc: "Demnächst",
+  },
+
   /* toast */
   disconnected: "Ihre Verbindung zur Cloud wurde getrennt",
   dataSynced: "Daten synchronisiert",
   noInternetConnection: "Keine Internetverbindung",
   devicesLimitReached: "Gerätelimit überschritten",
   noteLimitReached: "Notizlimit erreicht",
+  developerModeActivated: "Entwicklermodus aktiviert!",
+  developerModeAlready: "Entwicklermodus ist bereits aktiv",
+  developerModeTaps: "Noch {{remaining}} Tippen, um den Entwicklermodus zu aktivieren",
 
   empty_title: "(Kein Titel)",
 };

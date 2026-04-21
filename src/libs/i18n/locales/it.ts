@@ -15,6 +15,11 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
+      description_0_3_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
+• Aggiunta funzione trova e sostituisci nelle note di testo.
+• Aggiunta esportazione note.
+• Fix varie.`,
+
       description_0_2_0: `• Aggiunta possibilita' di spostare le colonne kanban.
 • Migliorate animazioni.
 • Fix varie.`,
@@ -26,6 +31,12 @@ const it = {
     },
 
     mobile: {
+      description_2_9_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
+• Aggiunto modello Qwen 2.5 7B con rilevamento RAM del dispositivo. Nuove azioni AI per il codice: Spiega il codice e Aggiungi commenti.
+• Aggiunta funzione trova e sostituisci nelle note di testo.
+• Aggiunta esportazione note.
+• Fix varie.`,
+
       description_2_8_0: `• Aggiunta AI Assistant self-hosted nel cellulare (Qwen 2.5) con funzionalita' smart per le note. Configuralo in Impostazioni -> Assistente AI.
 • Aggiunta possibilita' di spostare le colonne kanban.
 • Migliorate animazioni.
@@ -146,6 +157,7 @@ const it = {
       todo: "Lista",
       kanban: "Kanban",
       text: "Testo",
+      code: "Codice",
     },
     settings: {
       delete: "Cancella",
@@ -155,6 +167,16 @@ const it = {
       hide: "Nascondi",
       changecategory: "Cambia Categoria",
       share: "Condividi",
+      export: "Esporta",
+      export_description: "Scegli il formato di esportazione",
+      export_txt: "Testo semplice (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "Cerca...",
+      replace_placeholder: "Sostituisci con...",
+      replace_short: "Sost.",
+      replace_one: "Sostituisci",
+      replace_all: "Tutti",
     },
   },
   kanban: {
@@ -167,6 +189,14 @@ const it = {
     no_cards: "Nessuna card",
     columns_count: "colonne",
     cards_count: "card",
+  },
+  code: {
+    add_tab: "Aggiungi tab",
+    tab_title_placeholder: "Nome file",
+    code_placeholder: "Scrivi il tuo codice qui...",
+    max_tabs_reached: "Massimo 6 tab raggiunto",
+    delete_tab: "Elimina tab",
+    language: "Linguaggio",
   },
   changecategory: {
     title: "Cambia Categoria",
@@ -214,6 +244,7 @@ const it = {
     addTextNote: "Aggiungi nota di testo",
     addTodoNote: "Aggiungi nota To-Do",
     addKanbanNote: "Aggiungi nota Kanban",
+    addCodeNote: "Aggiungi nota Codice",
     updateNote: "Aggiorna nota",
     temporaryDeleteNote: "Elimina nota (temporanea)",
     deleteNote: "Elimina nota (definitiva)",
@@ -246,6 +277,7 @@ const it = {
     voice_recognition: "Riconoscimento vocale",
     ai_assistant: "Assistente AI",
     wipe_data: "Cancella dati",
+    developer_options: "Opzioni sviluppatore",
     about: "Info",
     about_the_app: "Informazioni sull'app",
     about_the_developer: "Informazioni sullo sviluppatore",
@@ -287,9 +319,11 @@ const it = {
     cancel: "Annulla",
     delete_model: "Elimina modello",
     info: "L'assistente AI funziona interamente sul tuo dispositivo. Nessun dato viene inviato a server esterni. Il modello deve essere scaricato una volta (~400 MB) e verra' salvato localmente.",
-    model_light: "Leggero e veloce. Consigliato per la maggior parte dei dispositivi.",
-    model_powerful: "Piu' preciso e capace. Richiede piu' spazio e RAM.",
-    model_advanced: "Qualita' migliore. Per dispositivi con 8GB+ di RAM.",
+    model_light: "Veloce, qualita' base. 3GB+ RAM richiesti.",
+    model_powerful: "Buon equilibrio tra velocita' e qualita'. 4GB+ RAM richiesti.",
+    model_advanced: "Alta qualita'. 6GB+ RAM richiesti.",
+    model_pro: "Qualita' massima, vicino a un desktop. 8GB+ RAM richiesti.",
+    model_unavailable: "RAM insufficiente su questo dispositivo",
     capabilities_title: "Cosa posso fare?",
     cap: {
       generate_title: "Genera un titolo dal contenuto della nota",
@@ -298,6 +332,8 @@ const it = {
       format_text: "Formatta il testo con titoli, grassetto, elenchi, ecc.",
       suggest_items: "Suggerisci nuovi elementi per una checklist",
       suggest_category: "Suggerisci la categoria migliore per una nota",
+      explain_code: "Spiega cosa fa il codice",
+      add_comments: "Aggiungi commenti inline al codice",
     },
     unavailable_web: "L'Assistente AI e' disponibile solo su dispositivi mobili.",
     native_rebuild_needed: "L'Assistente AI richiede una rebuild nativa.\nEsegui: npx expo run:android",
@@ -340,6 +376,9 @@ const it = {
       suggest_items: "Suggerisci elementi",
       format_text: "Formatta testo",
       suggest_category: "Suggerisci categoria",
+      explain_code: "Spiega il codice",
+      add_comments: "Aggiungi commenti",
+      min_model: "Minimo",
       no_content: "Scrivi qualcosa prima",
       no_category_match: "Nessuna categoria corrispondente",
       error: "Impossibile generare, riprova",
@@ -380,7 +419,7 @@ const it = {
       text_1_0: "Puoi creare una nota Kanban facendo clic sul pulsante",
       text_1_1: "nell'angolo in basso a destra della Home page e selezionando 'Kanban'.",
       text_2_0: "Apparirà una nuova pagina con una colonna già creata.",
-      text_3_0: "• Per aggiungere una colonna: fai clic sul pulsante 'Aggiungi colonna' sulla destra (massimo 5 colonne).",
+      text_3_0: "• Per aggiungere una colonna: fai clic sul pulsante 'Aggiungi colonna' sulla destra (massimo 10 colonne).",
       text_4_0: "• Per rinominare una colonna: modifica il testo nell'intestazione della colonna.",
       text_5_0: "• Per cambiare il colore di una colonna: fai clic sul quadratino colorato nell'intestazione.",
       text_6_0: "• Per aggiungere una card: fai clic su 'Aggiungi card' in fondo alla colonna.",
@@ -606,12 +645,28 @@ const it = {
   wipeWithCloud: "Cancella + Cloud",
   loading: "Caricamento in corso...",
 
+  developeroptions: {
+    title: "Opzioni Sviluppatore",
+    warning: "Queste opzioni potrebbero compromettere il Cloud Sync di note specifiche o influire sulle performance dell'app.",
+    unlimited_text_space: "Spazio illimitato per testo",
+    unlimited_text_space_desc: "Limite attuale: 1 MB",
+    unlimited_kanban_columns: "Colonne Kanban illimitate",
+    unlimited_kanban_columns_desc: "Limite attuale: 10 colonne",
+    unlimited_trash_time: "Tempo cestino illimitato",
+    unlimited_trash_time_desc: "Limite attuale: 30 giorni",
+    change_app_icon: "Cambia icona app",
+    change_app_icon_desc: "Prossimamente",
+  },
+
   /* toast */
   disconnected: "Sei stato disconnesso dal Cloud",
   dataSynced: "Dati sincronizzati",
   noInternetConnection: "Nessuna connessione a internet",
   devicesLimitReached: "Limite dispositivi superato",
   noteLimitReached: "Limite nota raggiunto",
+  developerModeActivated: "Modalita' sviluppatore attivata!",
+  developerModeAlready: "La modalita' sviluppatore e' gia' attiva",
+  developerModeTaps: "{{remaining}} tap per attivare la modalita' sviluppatore",
 
   empty_title: "(Senza titolo)",
 };

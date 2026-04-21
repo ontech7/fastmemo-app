@@ -15,6 +15,11 @@ const ja = {
     title: "新着情報",
 
     web: {
+      description_0_3_0: `• 新しいノートタイプ「コード」を追加。エディタ内蔵、シンタックスハイライト、複数タブ、言語自動検出に対応。
+• テキストノートに検索と置換機能を追加。
+• ノートのエクスポート機能を追加。
+• 各種修正。`,
+
       description_0_2_0: `• カンバンの列を移動できるようになりました。
 • アニメーションを改善しました。
 • 各種修正。`,
@@ -26,6 +31,12 @@ const ja = {
     },
 
     mobile: {
+      description_2_9_0: `• 新しいノートタイプ「コード」を追加。エディタ内蔵、シンタックスハイライト、複数タブ、言語自動検出に対応。
+• Qwen 2.5 7BモデルとデバイスRAM検出を追加。コード向け新AIアクション：コードの説明とコメント追加。
+• テキストノートに検索と置換機能を追加。
+• ノートのエクスポート機能を追加。
+• 各種修正。`,
+
       description_2_8_0: `• セルフホスト型AIアシスタント（Qwen 2.5）を追加。ノート向けスマート機能搭載。設定 -> AIアシスタントから設定できます。
 • カンバンの列を移動できるようになりました。
 • アニメーションを改善しました。
@@ -145,6 +156,7 @@ const ja = {
       todo: "リスト",
       kanban: "カンバン",
       text: "テキスト",
+      code: "コード",
     },
     settings: {
       delete: "削除",
@@ -154,6 +166,16 @@ const ja = {
       hide: "非表示",
       changecategory: "カテゴリを変更",
       share: "共有",
+      export: "エクスポート",
+      export_description: "エクスポート形式を選択してください",
+      export_txt: "プレーンテキスト (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "検索...",
+      replace_placeholder: "置換...",
+      replace_short: "置換",
+      replace_one: "置換",
+      replace_all: "全て",
     },
   },
   kanban: {
@@ -166,6 +188,14 @@ const ja = {
     no_cards: "カードがありません",
     columns_count: "列",
     cards_count: "カード",
+  },
+  code: {
+    add_tab: "タブを追加",
+    tab_title_placeholder: "ファイル名",
+    code_placeholder: "ここにコードを入力...",
+    max_tabs_reached: "タブは最大6つまでです",
+    delete_tab: "タブを削除",
+    language: "言語",
   },
   changecategory: {
     title: "カテゴリーの変更",
@@ -212,7 +242,8 @@ const ja = {
     title: "Webhooks",
     addTextNote: "テキストノートを追加",
     addTodoNote: "ToDoノートを追加",
-    addKanbanNote: "カンバンノートを追加",
+    addKanbanNote: "カンバンノー��を追加",
+    addCodeNote: "コードノートを追加",
     updateNote: "ノートを更新",
     temporaryDeleteNote: "一時的にノートを削除",
     deleteNote: "ノートを削除",
@@ -244,6 +275,7 @@ const ja = {
     voice_recognition: "音声認識",
     ai_assistant: "AIアシスタント",
     wipe_data: "データを削除",
+    developer_options: "開発者オプション",
     about: "について",
     about_the_app: "アプリについて",
     about_the_developer: "開発者について",
@@ -285,9 +317,11 @@ const ja = {
     cancel: "キャンセル",
     delete_model: "モデルを削除",
     info: "AIアシスタントはデバイス上で完全に動作します。外部サーバーにデータは送信されません。モデルは一度ダウンロードする必要があり（約400 MB）、ローカルに保存されます。",
-    model_light: "軽量で高速。ほとんどのデバイスに推奨。",
-    model_powerful: "より正確で高性能。より多くのストレージとRAMが必要。",
-    model_advanced: "最高品質。8GB以上のRAMを搭載したデバイス向け。",
+    model_light: "高速、基本品質。3GB以上のRAMが必要。",
+    model_powerful: "速度と品質のバランス。4GB以上のRAMが必要。",
+    model_advanced: "高品質。6GB以上のRAMが必要。",
+    model_pro: "最高品質、デスクトップ級の性能。8GB以上のRAMが必要。",
+    model_unavailable: "このデバイスのRAMが不足しています",
     capabilities_title: "何ができますか？",
     cap: {
       generate_title: "ノート内容からタイトルを生成",
@@ -296,6 +330,8 @@ const ja = {
       format_text: "見出し、太字、リストなどでテキストを整形",
       suggest_items: "チェックリストの新しい項目を提案",
       suggest_category: "ノートに最適なカテゴリを提案",
+      explain_code: "コードの動作を説明",
+      add_comments: "コードにコメントを追加",
     },
     unavailable_web: "AIアシスタントはモバイルデバイスでのみ利用可能です。",
     native_rebuild_needed: "AIアシスタントにはネイティブリビルドが必要です。\n実行: npx expo run:android",
@@ -338,6 +374,9 @@ const ja = {
       suggest_items: "項目を提案",
       format_text: "テキストを整形",
       suggest_category: "カテゴリを提案",
+      explain_code: "コードを説明",
+      add_comments: "コメントを追加",
+      min_model: "最低",
       no_content: "まず何か書いてください",
       no_category_match: "該当するカテゴリが見つかりません",
       error: "生成できませんでした。もう一度お試しください",
@@ -601,12 +640,29 @@ const ja = {
   wipeWithCloud: "消去 + クラウド",
   loading: "読み込み中...",
 
+  developeroptions: {
+    title: "開発者オプション",
+    warning:
+      "これらのオプションは、特定のノートのクラウド同期に影響を与えたり、アプリのパフォーマンスに影響する可能性があります。",
+    unlimited_text_space: "無制限のテキストスペース",
+    unlimited_text_space_desc: "現在の制限：1 MB",
+    unlimited_kanban_columns: "無制限のカンバン列",
+    unlimited_kanban_columns_desc: "現在の制限：10 列",
+    unlimited_trash_time: "無制限のゴミ箱期間",
+    unlimited_trash_time_desc: "現在の制限：30 日",
+    change_app_icon: "アプリアイコンを変更",
+    change_app_icon_desc: "近日公開",
+  },
+
   /* toast */
   disconnected: "クラウドから切断されました",
   dataSynced: "データが同期されました",
   noInternetConnection: "インターネットに接続していません",
   devicesLimitReached: "デバイスの制限に達しました",
   noteLimitReached: "ノートの制限に達しました",
+  developerModeActivated: "開発者モードが有効になりました！",
+  developerModeAlready: "開発者モードは既に有効です",
+  developerModeTaps: "開発者モードを有効にするにはあと {{remaining}} 回タップしてください",
 
   empty_title: "(タイトルなし)",
 };

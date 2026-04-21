@@ -15,6 +15,11 @@ const es = {
     title: "¿Qué hay de nuevo?",
 
     web: {
+      description_0_3_0: `• Agregado nuevo tipo de nota: Codigo, con editor integrado, resaltado de sintaxis, pestanas multiples y deteccion automatica del lenguaje.
+• Agregada funcion buscar y reemplazar en notas de texto.
+• Agregada exportacion de notas.
+• Correcciones varias.`,
+
       description_0_2_0: `• Posibilidad de mover columnas kanban.
 • Animaciones mejoradas.
 • Correcciones varias.`,
@@ -26,6 +31,12 @@ const es = {
     },
 
     mobile: {
+      description_2_9_0: `• Agregado nuevo tipo de nota: Codigo, con editor integrado, resaltado de sintaxis, pestanas multiples y deteccion automatica del lenguaje.
+• Agregado modelo Qwen 2.5 7B con deteccion de RAM del dispositivo. Nuevas acciones AI para codigo: Explicar codigo y Agregar comentarios.
+• Agregada funcion buscar y reemplazar en notas de texto.
+• Agregada exportacion de notas.
+• Correcciones varias.`,
+
       description_2_8_0: `• Asistente IA self-hosted (Qwen 2.5) con funciones inteligentes para notas. Configuralo en Ajustes -> Asistente IA.
 • Posibilidad de mover columnas kanban.
 • Animaciones mejoradas.
@@ -145,6 +156,7 @@ const es = {
       todo: "Lista",
       kanban: "Kanban",
       text: "Texto",
+      code: "Codigo",
     },
     settings: {
       delete: "Borrar",
@@ -154,6 +166,16 @@ const es = {
       hide: "Esconder",
       changecategory: "Cambiar categoría",
       share: "Compartir",
+      export: "Exportar",
+      export_description: "Elige el formato de exportación",
+      export_txt: "Texto plano (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "Buscar...",
+      replace_placeholder: "Reemplazar con...",
+      replace_short: "Reemp.",
+      replace_one: "Reemplazar",
+      replace_all: "Todo",
     },
   },
   kanban: {
@@ -166,6 +188,14 @@ const es = {
     no_cards: "Sin tarjetas",
     columns_count: "columnas",
     cards_count: "tarjetas",
+  },
+  code: {
+    add_tab: "Agregar pestaña",
+    tab_title_placeholder: "Nombre del archivo",
+    code_placeholder: "Escribe tu codigo aqui...",
+    max_tabs_reached: "Maximo de 6 pestañas alcanzado",
+    delete_tab: "Eliminar pestaña",
+    language: "Lenguaje",
   },
   changecategory: {
     title: "Cambiar Categoría",
@@ -213,6 +243,7 @@ const es = {
     addTextNote: "Agregar nota de texto",
     addTodoNote: "Agregar Nota Todo",
     addKanbanNote: "Agregar Nota Kanban",
+    addCodeNote: "Agregar Nota de Codigo",
     updateNote: "Nota de actualización",
     temporaryDeleteNote: "Nota de borrado temporal",
     deleteNote: "Borrar nota",
@@ -245,6 +276,7 @@ const es = {
     voice_recognition: "Reconocimiento de voz",
     ai_assistant: "Asistente IA",
     wipe_data: "Borrar información",
+    developer_options: "Opciones de desarrollador",
     about: "Acerca de",
     about_the_app: "Acerca de la aplicación",
     about_the_developer: "Sobre el desarrollador",
@@ -286,9 +318,11 @@ const es = {
     cancel: "Cancelar",
     delete_model: "Eliminar modelo",
     info: "El asistente de IA funciona completamente en tu dispositivo. No se envian datos a servidores externos. El modelo debe descargarse una vez (~400 MB) y se almacenara localmente.",
-    model_light: "Ligero y rapido. Recomendado para la mayoria de dispositivos.",
-    model_powerful: "Mas preciso y capaz. Requiere mas almacenamiento y RAM.",
-    model_advanced: "Mejor calidad. Para dispositivos con 8GB+ de RAM.",
+    model_light: "Rapido, calidad basica. 3GB+ RAM requeridos.",
+    model_powerful: "Buen equilibrio entre velocidad y calidad. 4GB+ RAM requeridos.",
+    model_advanced: "Alta calidad. 6GB+ RAM requeridos.",
+    model_pro: "Maxima calidad, rendimiento cercano a desktop. 8GB+ RAM requeridos.",
+    model_unavailable: "RAM insuficiente en este dispositivo",
     capabilities_title: "Que puedo hacer?",
     cap: {
       generate_title: "Generar un titulo a partir del contenido",
@@ -297,6 +331,8 @@ const es = {
       format_text: "Formatear texto con titulos, negrita, listas, etc.",
       suggest_items: "Sugerir nuevos elementos para una lista",
       suggest_category: "Sugerir la mejor categoria para una nota",
+      explain_code: "Explicar que hace el codigo",
+      add_comments: "Agregar comentarios al codigo",
     },
     unavailable_web: "El Asistente IA solo esta disponible en dispositivos moviles.",
     native_rebuild_needed: "El Asistente IA requiere una reconstruccion nativa.\nEjecuta: npx expo run:android",
@@ -339,6 +375,9 @@ const es = {
       suggest_items: "Sugerir elementos",
       format_text: "Formatear texto",
       suggest_category: "Sugerir categoria",
+      explain_code: "Explicar codigo",
+      add_comments: "Agregar comentarios",
+      min_model: "Minimo",
       no_content: "Escribe algo primero",
       no_category_match: "No se encontro una categoria",
       error: "No se pudo generar, intenta de nuevo",
@@ -608,12 +647,29 @@ const es = {
   wipeWithCloud: "Borrar + Cloud",
   loading: "Cargando...",
 
+  developeroptions: {
+    title: "Opciones de desarrollador",
+    warning:
+      "Estas opciones pueden comprometer la sincronización en la nube de notas específicas o afectar el rendimiento de la app.",
+    unlimited_text_space: "Espacio de texto ilimitado",
+    unlimited_text_space_desc: "Límite actual: 1 MB",
+    unlimited_kanban_columns: "Columnas Kanban ilimitadas",
+    unlimited_kanban_columns_desc: "Límite actual: 10 columnas",
+    unlimited_trash_time: "Tiempo de papelera ilimitado",
+    unlimited_trash_time_desc: "Límite actual: 30 días",
+    change_app_icon: "Cambiar icono de la app",
+    change_app_icon_desc: "Próximamente",
+  },
+
   /* toast */
   disconnected: "Te han desconectado de la nube",
   dataSynced: "Datos sincronizados",
   noInternetConnection: "Sin conexión a Internet",
   devicesLimitReached: "Límite de dispositivos excedido",
   noteLimitReached: "Límite de notas alcanzado",
+  developerModeActivated: "Modo desarrollador activado!",
+  developerModeAlready: "El modo desarrollador ya está activo",
+  developerModeTaps: "{{remaining}} toque(s) para activar el modo desarrollador",
 
   empty_title: "(Sin título)",
 };

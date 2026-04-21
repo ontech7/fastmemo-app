@@ -1,11 +1,18 @@
+import type {
+  AIAssistantSettings,
+  CloudSettings,
+  DeveloperModeSettings,
+  RootState,
+  SettingsState,
+  VoiceRecognitionSettings,
+  Webhooks,
+} from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 import * as Localization from "expo-localization";
 import i18n from "i18next";
 import { Platform } from "react-native";
-
-import type { AIAssistantSettings, CloudSettings, RootState, SettingsState, VoiceRecognitionSettings, Webhooks } from "@/types";
 
 const initialState: SettingsState = {
   language: "system",
@@ -27,6 +34,7 @@ const initialState: SettingsState = {
     addTextNote: { url: "", enabled: false },
     addTodoNote: { url: "", enabled: false },
     addKanbanNote: { url: "", enabled: false },
+    addCodeNote: { url: "", enabled: false },
     updateNote: { url: "", enabled: false },
     temporaryDeleteNote: { url: "", enabled: false },
     deleteNote: { url: "", enabled: false },
@@ -51,6 +59,13 @@ const initialState: SettingsState = {
     voiceOnly: false,
   },
   reportDate: null,
+  developerMode: {
+    enabled: false,
+    unlimitedTextSpace: false,
+    unlimitedKanbanColumns: false,
+    unlimitedTrashTime: false,
+    customAppIcon: null,
+  },
 };
 
 const settingsSlice = createSlice({
@@ -95,6 +110,9 @@ const settingsSlice = createSlice({
     setAIAssistant: (state, action: PayloadAction<AIAssistantSettings>) => {
       state.aiAssistant = action.payload;
     },
+    setDeveloperMode: (state, action: PayloadAction<DeveloperModeSettings>) => {
+      state.developerMode = action.payload;
+    },
   },
 });
 
@@ -111,6 +129,7 @@ export const {
   setWebhooks,
   setVoiceRecognition,
   setAIAssistant,
+  setDeveloperMode,
 } = settingsSlice.actions;
 
 export const getAllSettings = (state: RootState): SettingsState => state.settings;
@@ -127,6 +146,7 @@ export const selectorWebhooks = (state: RootState): Webhooks => state.settings.w
 export const selectorWebhook_addTextNote = (state: RootState) => state.settings.webhooks.addTextNote;
 export const selectorWebhook_addTodoNote = (state: RootState) => state.settings.webhooks.addTodoNote;
 export const selectorWebhook_addKanbanNote = (state: RootState) => state.settings.webhooks.addKanbanNote;
+export const selectorWebhook_addCodeNote = (state: RootState) => state.settings.webhooks.addCodeNote;
 export const selectorWebhook_updateNote = (state: RootState) => state.settings.webhooks.updateNote;
 export const selectorWebhook_temporaryDeleteNote = (state: RootState) => state.settings.webhooks.temporaryDeleteNote;
 export const selectorWebhook_deleteNote = (state: RootState) => state.settings.webhooks.deleteNote;
@@ -137,13 +157,21 @@ export const selectorWebhook_updateCategory = (state: RootState) => state.settin
 export const selectorWebhook_exportData = (state: RootState) => state.settings.webhooks.exportData;
 export const selectorWebhook_importData = (state: RootState) => state.settings.webhooks.importData;
 export const selectorWebhook_wipeData = (state: RootState) => state.settings.webhooks.wipeData;
-const defaultAIAssistant: AIAssistantSettings = {
-  enabled: false,
-  modelDownloaded: false,
-  selectedModel: "qwen-0.5b",
-  voiceOnly: false,
-};
-export const selectorAIAssistant = (state: RootState): AIAssistantSettings => state.settings.aiAssistant || defaultAIAssistant;
+export const selectorAIAssistant = (state: RootState): AIAssistantSettings =>
+  state.settings.aiAssistant || {
+    enabled: false,
+    modelDownloaded: false,
+    selectedModel: "qwen-0.5b",
+    voiceOnly: false,
+  };
+export const selectorDeveloperMode = (state: RootState): DeveloperModeSettings =>
+  state.settings.developerMode || {
+    enabled: false,
+    unlimitedTextSpace: false,
+    unlimitedKanbanColumns: false,
+    unlimitedTrashTime: false,
+    customAppIcon: null,
+  };
 export const selectorVoiceRecognition = (state: RootState): VoiceRecognitionSettings =>
   Platform.OS === "web"
     ? {

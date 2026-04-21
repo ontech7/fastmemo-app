@@ -128,6 +128,10 @@ export default Sentry.wrap(function RootLayout() {
                       options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
                     />
                     <Stack.Screen
+                      name="settings/developer-options"
+                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
+                    />
+                    <Stack.Screen
                       name="settings/help"
                       options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
                     />

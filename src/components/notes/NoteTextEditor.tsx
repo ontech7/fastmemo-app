@@ -3,12 +3,14 @@ import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
+import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import { configs } from "@/configs";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
 import { storeDirtyNoteId } from "@/libs/registry";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
+  selectorDeveloperMode,
   selectorWebhook_addTextNote,
   selectorWebhook_deleteNote,
   selectorWebhook_temporaryDeleteNote,
@@ -23,7 +25,8 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Keyboard, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { BackHandler, Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
 import { useDispatch, useSelector } from "react-redux";
@@ -43,6 +46,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const webhook_updateNote = useSelector(selectorWebhook_updateNote);
   const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
+  const devMode = useSelector(selectorDeveloperMode);
 
   const dispatch = useDispatch();
 
@@ -125,6 +129,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const richTextEditor = useRef(null);
 
+  const [showFindReplace, setShowFindReplace] = useState(false);
+
   const pickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
@@ -156,7 +162,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
     (textVal: string) => {
       const textSize = getTextSize(textVal);
 
-      if (textSize > configs.notes.sizeLimit) {
+      const isUnlimited = devMode.enabled && devMode.unlimitedTextSpace;
+      if (!isUnlimited && textSize > configs.notes.sizeLimit) {
         toast(t("noteLimitReached"));
         richTextEditor.current?.setContentHTML(note.text); // revert
         return;
@@ -167,7 +174,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
       setNoteAsync({ ...note, text: textVal });
     },
-    [note, setNoteAsync, t]
+    [note, setNoteAsync, t, devMode]
   );
 
   const updateNoteWebhook = useCallback(async () => {
@@ -204,6 +211,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
       updateNoteWebhook();
+      KeyboardController.dismiss();
+      Keyboard.dismiss();
       return false;
     });
 
@@ -255,6 +264,13 @@ export default function NoteTextEditor({ initialNote }: Props) {
             />
           </View>
 
+          <TouchableOpacity
+            style={{ padding: PADDING_MARGIN.sm, marginRight: PADDING_MARGIN.xs }}
+            onPress={() => setShowFindReplace((prev) => !prev)}
+          >
+            <MagnifyingGlassIcon size={22} color={showFindReplace ? COLOR.oceanBreeze : COLOR.softWhite} />
+          </TouchableOpacity>
+
           <NoteSettingsButton note={note} setNote={setNoteAsync} />
         </View>
 
@@ -263,7 +279,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
             {noteTextLength} {t("note.characters")}
           </Text>
           <Text style={[styles.subtitle, { flexGrow: 1 }]}>
-            {convertToMB(configs.notes.sizeLimit)} MB / {convertToMB(noteTextSize)} MB
+            {devMode.enabled && devMode.unlimitedTextSpace ? "∞" : `${convertToMB(configs.notes.sizeLimit)} MB`} /{" "}
+            {convertToMB(noteTextSize)} MB
           </Text>
         </View>
       </View>
@@ -279,6 +296,14 @@ export default function NoteTextEditor({ initialNote }: Props) {
           paddingVertical: Platform.OS === "web" ? PADDING_MARGIN.lg : 0,
         }}
       >
+        <FindReplaceBar
+          visible={showFindReplace}
+          onClose={() => setShowFindReplace(false)}
+          editorRef={richTextEditor}
+          plainText={stripHtml(note.text)}
+          style={{ marginTop: PADDING_MARGIN.md }}
+        />
+
         <RichEditor
           containerStyle={styles.richTextContainer}
           androidLayerType="hardware"

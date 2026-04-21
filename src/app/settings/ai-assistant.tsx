@@ -1,3 +1,4 @@
+import * as Device from "expo-device";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
@@ -32,7 +33,7 @@ export default function AIAssistantScreen() {
   const [nativeAvailable, setNativeAvailable] = useState(true);
 
   const models = aiLib ? (Object.values(aiLib.AI_MODELS) as AIModelInfo[]) : [];
-  const selectedModel = aiLib ? aiLib.AI_MODELS[selectedModelId] : null;
+  const deviceRam = Device.totalMemory ?? 0;
 
   useEffect(() => {
     if (!aiLib) return;
@@ -150,21 +151,38 @@ export default function AIAssistantScreen() {
             {models.map((model, index) => {
               const isSelected = model.id === selectedModelId;
               const isLast = index === models.length - 1;
+              const canRun = deviceRam >= model.minRamBytes;
               return (
                 <TouchableOpacity
                   key={model.id}
-                  style={[styles.modelItem, isLast && styles.sectionItemList_last, isSelected && styles.modelItemSelected]}
-                  onPress={() => selectModel(model.id)}
-                  activeOpacity={0.7}
+                  style={[
+                    styles.modelItem,
+                    isLast && styles.sectionItemList_last,
+                    isSelected && styles.modelItemSelected,
+                    !canRun && styles.modelItemDisabled,
+                  ]}
+                  onPress={() => canRun && selectModel(model.id)}
+                  activeOpacity={canRun ? 0.7 : 1}
+                  disabled={!canRun}
                 >
                   <View style={{ flex: 1 }}>
                     <View style={styles.modelHeader}>
-                      <Text style={[styles.sectionItemList_title, isSelected && styles.modelTextSelected]}>{model.name}</Text>
-                      <Text style={styles.modelSize}>{model.sizeLabel}</Text>
+                      <Text
+                        style={[
+                          styles.sectionItemList_title,
+                          isSelected && styles.modelTextSelected,
+                          !canRun && styles.modelTextDisabled,
+                        ]}
+                      >
+                        {model.name}
+                      </Text>
+                      <Text style={[styles.modelSize, !canRun && styles.modelTextDisabled]}>{model.sizeLabel}</Text>
                     </View>
-                    <Text style={styles.modelDescription}>{t(model.description)}</Text>
+                    <Text style={[styles.modelDescription, !canRun && styles.modelTextDisabled]}>
+                      {canRun ? t(model.description) : t("ai.model_unavailable")}
+                    </Text>
                   </View>
-                  {isSelected && <CheckCircleIcon size={20} color={COLOR.oceanBreeze} />}
+                  {isSelected && canRun && <CheckCircleIcon size={20} color={COLOR.oceanBreeze} />}
                 </TouchableOpacity>
               );
             })}
@@ -252,15 +270,22 @@ export default function AIAssistantScreen() {
 
           <View style={styles.sectionList}>
             {[
-              "ai.cap.generate_title",
-              "ai.cap.summarize",
-              "ai.cap.continue_writing",
-              "ai.cap.format_text",
-              "ai.cap.suggest_items",
-              "ai.cap.suggest_category",
-            ].map((key, index, arr) => (
-              <View key={key} style={[styles.capabilityItem, index === arr.length - 1 && styles.sectionItemList_last]}>
-                <Text style={styles.capabilityText}>{t(key)}</Text>
+              { key: "ai.cap.generate_title" },
+              { key: "ai.cap.summarize", min: "1.5B" },
+              { key: "ai.cap.continue_writing", min: "1.5B" },
+              { key: "ai.cap.format_text", min: "3B" },
+              { key: "ai.cap.suggest_items" },
+              { key: "ai.cap.suggest_category" },
+              { key: "ai.cap.explain_code", min: "7B" },
+              { key: "ai.cap.add_comments", min: "7B" },
+            ].map((item, index, arr) => (
+              <View key={item.key} style={[styles.capabilityItem, index === arr.length - 1 && styles.sectionItemList_last]}>
+                <Text style={styles.capabilityText}>{t(item.key)}</Text>
+                {item.min && (
+                  <Text style={styles.capabilityMin}>
+                    {t("ai.editor.min_model")} {item.min}
+                  </Text>
+                )}
               </View>
             ))}
           </View>
@@ -391,6 +416,12 @@ const styles = StyleSheet.create({
   modelItemSelected: {
     backgroundColor: COLOR.blue,
   },
+  modelItemDisabled: {
+    opacity: 0.4,
+  },
+  modelTextDisabled: {
+    color: COLOR.placeholder,
+  },
   modelHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -420,6 +451,11 @@ const styles = StyleSheet.create({
     color: COLOR.softWhite,
     fontSize: FONTSIZE.small,
     lineHeight: 20,
+  },
+  capabilityMin: {
+    color: COLOR.placeholder,
+    fontSize: FONTSIZE.small - 1,
+    marginTop: 2,
   },
   voiceOnlyHint: {
     color: COLOR.lightBlue,

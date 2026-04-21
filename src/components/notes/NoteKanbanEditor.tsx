@@ -222,6 +222,8 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
       updateNoteWebhook();
+      KeyboardController.dismiss();
+      Keyboard.dismiss();
       return false;
     });
 

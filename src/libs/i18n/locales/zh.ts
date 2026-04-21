@@ -15,6 +15,11 @@ const zh = {
     title: "什么是新的？",
 
     web: {
+      description_0_3_0: `• 新增代码笔记类型，内置代码编辑器，支持语法高亮、多标签页和语言自动检测。
+• 文本笔记新增查找和替换功能。
+• 新增笔记导出功能。
+• 其他修复。`,
+
       description_0_2_0: `• 看板列现在可以移动了。
 • 改进了动画效果。
 • 各种修复。`,
@@ -26,6 +31,12 @@ const zh = {
     },
 
     mobile: {
+      description_2_9_0: `• 新增代码笔记类型，内置代码编辑器，支持语法高亮、多标签页和语言自动检测。
+• 新增Qwen 2.5 7B模型，支持设备RAM检测。代码新AI功能：解释代码和添加注释。
+• 文本笔记新增查找和替换功能。
+• 新增笔记导出功能。
+• 其他修复。`,
+
       description_2_8_0: `• 新增自托管AI助手（Qwen 2.5），为笔记提供智能功能。请在设置 -> AI助手中配置。
 • 看板列现在可以移动了。
 • 改进了动画效果。
@@ -145,6 +156,7 @@ const zh = {
       todo: "列表",
       kanban: "看板",
       text: "文本",
+      code: "代码",
     },
     settings: {
       delete: "删除",
@@ -154,6 +166,16 @@ const zh = {
       hide: "隐藏",
       changecategory: "更改类别",
       share: "分享",
+      export: "导出",
+      export_description: "选择导出格式",
+      export_txt: "纯文本 (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "搜索...",
+      replace_placeholder: "替换为...",
+      replace_short: "替换",
+      replace_one: "替换",
+      replace_all: "全部",
     },
   },
   kanban: {
@@ -166,6 +188,14 @@ const zh = {
     no_cards: "没有卡片",
     columns_count: "列",
     cards_count: "卡片",
+  },
+  code: {
+    add_tab: "添加标签",
+    tab_title_placeholder: "文件名",
+    code_placeholder: "在此输入代码...",
+    max_tabs_reached: "最多6个标签",
+    delete_tab: "删除标签",
+    language: "语言",
   },
   changecategory: {
     title: "更改类别",
@@ -212,7 +242,8 @@ const zh = {
     title: "网络钩子",
     addTextNote: "添加文本注释",
     addTodoNote: "添加待办事项",
-    addKanbanNote: "添加看板笔记",
+    addKanbanNote: "添加看板���记",
+    addCodeNote: "添加代码笔记",
     updateNote: "更新说明",
     temporaryDeleteNote: "临时删除笔记",
     deleteNote: "删除笔记",
@@ -244,6 +275,7 @@ const zh = {
     voice_recognition: "语音识别",
     ai_assistant: "AI助手",
     wipe_data: "抹掉数据",
+    developer_options: "开发者选项",
     about: "关于",
     about_the_app: "关于应用程序",
     about_the_developer: "关于开发商",
@@ -285,9 +317,11 @@ const zh = {
     cancel: "取消",
     delete_model: "删除模型",
     info: "AI助手完全在您的设备上运行。不会向外部服务器发送任何数据。模型需要下载一次（约400 MB）并将存储在本地。",
-    model_light: "轻量快速。推荐大多数设备使用。",
-    model_powerful: "更精确、更强大。需要更多存储和内存。",
-    model_advanced: "最佳质量。适用于8GB以上内存的设备。",
+    model_light: "快速，基础质量。需要3GB以上RAM。",
+    model_powerful: "速度与质量的平衡。需要4GB以上RAM。",
+    model_advanced: "高质量。需要6GB以上RAM。",
+    model_pro: "最高质量，接近桌面性能。需要8GB以上RAM。",
+    model_unavailable: "此设备RAM不足",
     capabilities_title: "我能做什么？",
     cap: {
       generate_title: "根据笔记内容生成标题",
@@ -296,6 +330,8 @@ const zh = {
       format_text: "用标题、粗体、列表等格式化文本",
       suggest_items: "为清单建议新项目",
       suggest_category: "为笔记建议最佳类别",
+      explain_code: "解释代码的作用",
+      add_comments: "为代码添加注释",
     },
     unavailable_web: "AI助手仅在移动设备上可用。",
     native_rebuild_needed: "AI助手需要原生重建。\n运行: npx expo run:android",
@@ -338,6 +374,9 @@ const zh = {
       suggest_items: "建议项目",
       format_text: "格式化文本",
       suggest_category: "建议类别",
+      explain_code: "解释代码",
+      add_comments: "添加注释",
+      min_model: "最低",
       no_content: "请先写点内容",
       no_category_match: "未找到匹配的类别",
       error: "无法生成，请重试",
@@ -595,12 +634,28 @@ const zh = {
   wipeWithCloud: "擦除所有+云",
   loading: "加载中...",
 
+  developeroptions: {
+    title: "开发者选项",
+    warning: "这些选项可能会影响特定笔记的云同步或应用性能。",
+    unlimited_text_space: "无限文本空间",
+    unlimited_text_space_desc: "当前限制：1 MB",
+    unlimited_kanban_columns: "无限看板列",
+    unlimited_kanban_columns_desc: "当前限制：10 列",
+    unlimited_trash_time: "无限回收站时间",
+    unlimited_trash_time_desc: "当前限制：30 天",
+    change_app_icon: "更改应用图标",
+    change_app_icon_desc: "即将推出",
+  },
+
   /* toast */
   disconnected: "您已与 Cloud 断开连接",
   dataSynced: "数据已同步",
   noInternetConnection: "没有网络连接",
   devicesLimitReached: "超出设备限制",
   noteLimitReached: "已达到备注限制",
+  developerModeActivated: "开发者模式已激活！",
+  developerModeAlready: "开发者模式已处于活动状态",
+  developerModeTaps: "还需点击 {{remaining}} 次以启用开发者模式",
 
   empty_title: "（无题）",
 };

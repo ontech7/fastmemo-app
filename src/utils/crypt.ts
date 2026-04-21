@@ -1,5 +1,5 @@
 import { configs } from "@/configs";
-import type { KanbanColumn, KanbanItem, Note, TodoItem } from "@/types";
+import type { CodeTab, KanbanColumn, KanbanItem, Note, TodoItem } from "@/types";
 import CryptoJS from "react-native-crypto-js";
 
 export const isSecretPassphraseCorrect = (bytes: CryptoJS.lib.WordArray): boolean => {
@@ -43,6 +43,15 @@ export const CryptNote = {
       return { ...note, columns };
     }
 
+    if (type === "code" && "tabs" in note) {
+      const tabs: CodeTab[] = (note.tabs || []).map((tab: CodeTab) => ({
+        ...tab,
+        code: tab.code ? CryptoJS.AES.encrypt(tab.code, configs.cloud.secretKey).toString() : tab.code,
+        title: tab.title ? CryptoJS.AES.encrypt(tab.title, configs.cloud.secretKey).toString() : tab.title,
+      }));
+      return { ...note, tabs };
+    }
+
     return { ...note } as Note;
   },
 
@@ -77,6 +86,17 @@ export const CryptNote = {
         }),
       }));
       return { ...note, columns };
+    }
+
+    if (type === "code" && "tabs" in note) {
+      const tabs: CodeTab[] = (note.tabs || []).map((tab: CodeTab) => {
+        const code = tab.code ? CryptoJS.AES.decrypt(tab.code, configs.cloud.secretKey).toString(CryptoJS.enc.Utf8) : tab.code;
+        const title = tab.title
+          ? CryptoJS.AES.decrypt(tab.title, configs.cloud.secretKey).toString(CryptoJS.enc.Utf8)
+          : tab.title;
+        return { ...tab, code, title };
+      });
+      return { ...note, tabs };
     }
 
     return { ...note } as Note;

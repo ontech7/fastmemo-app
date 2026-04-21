@@ -15,6 +15,11 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
+      description_0_3_0: `• Ajout d'un nouveau type de note : Code, avec editeur integre, coloration syntaxique, onglets multiples et detection automatique du langage.
+• Ajout de la fonction rechercher et remplacer dans les notes texte.
+• Ajout de l'exportation de notes.
+• Corrections diverses.`,
+
       description_0_2_0: `• Possibilite de deplacer les colonnes kanban.
 • Animations ameliorees.
 • Corrections diverses.`,
@@ -26,6 +31,12 @@ const fr = {
     },
 
     mobile: {
+      description_2_9_0: `• Ajout d'un nouveau type de note : Code, avec editeur integre, coloration syntaxique, onglets multiples et detection automatique du langage.
+• Ajout du modele Qwen 2.5 7B avec detection de la RAM de l'appareil. Nouvelles actions AI pour le code : Expliquer le code et Ajouter des commentaires.
+• Ajout de la fonction rechercher et remplacer dans les notes texte.
+• Ajout de l'exportation de notes.
+• Corrections diverses.`,
+
       description_2_8_0: `• Assistant IA self-hosted (Qwen 2.5) avec des fonctions intelligentes pour les notes. Configurez-le dans Parametres -> Assistant IA.
 • Possibilite de deplacer les colonnes kanban.
 • Animations ameliorees.
@@ -145,6 +156,7 @@ const fr = {
       todo: "Liste",
       kanban: "Kanban",
       text: "Texte",
+      code: "Code",
     },
     settings: {
       delete: "Supprimer",
@@ -154,6 +166,16 @@ const fr = {
       hide: "Cacher",
       changecategory: "Changer de catégorie",
       share: "Partager",
+      export: "Exporter",
+      export_description: "Choisissez le format d'exportation",
+      export_txt: "Texte brut (.txt)",
+    },
+    find_replace: {
+      search_placeholder: "Rechercher...",
+      replace_placeholder: "Remplacer par...",
+      replace_short: "Rempl.",
+      replace_one: "Remplacer",
+      replace_all: "Tout",
     },
   },
   kanban: {
@@ -166,6 +188,14 @@ const fr = {
     no_cards: "Aucune carte",
     columns_count: "colonnes",
     cards_count: "cartes",
+  },
+  code: {
+    add_tab: "Ajouter un onglet",
+    tab_title_placeholder: "Nom du fichier",
+    code_placeholder: "Ecrivez votre code ici...",
+    max_tabs_reached: "Maximum de 6 onglets atteint",
+    delete_tab: "Supprimer l'onglet",
+    language: "Langage",
   },
   changecategory: {
     title: "Changer de Catégorie",
@@ -213,6 +243,7 @@ const fr = {
     addTextNote: "Ajouter une note textuelle",
     addTodoNote: "Ajouter une note de tâche",
     addKanbanNote: "Ajouter une note Kanban",
+    addCodeNote: "Ajouter une note Code",
     updateNote: "Note de mise à jour",
     temporaryDeleteNote: "Note de suppression temporaire",
     deleteNote: "Supprimer la note",
@@ -245,6 +276,7 @@ const fr = {
     voice_recognition: "Reconnaissance vocale",
     ai_assistant: "Assistant IA",
     wipe_data: "Effacer les données",
+    developer_options: "Options développeur",
     about: "À propos",
     about_the_app: "À propos de l'application",
     about_the_developer: "À propos du développeur",
@@ -286,9 +318,11 @@ const fr = {
     cancel: "Annuler",
     delete_model: "Supprimer le modele",
     info: "L'assistant IA fonctionne entierement sur votre appareil. Aucune donnee n'est envoyee a des serveurs externes. Le modele doit etre telecharge une fois (~400 Mo) et sera stocke localement.",
-    model_light: "Leger et rapide. Recommande pour la plupart des appareils.",
-    model_powerful: "Plus precis et performant. Necessite plus de stockage et de RAM.",
-    model_advanced: "Meilleure qualite. Pour les appareils avec 8Go+ de RAM.",
+    model_light: "Rapide, qualite de base. 3Go+ RAM requis.",
+    model_powerful: "Bon equilibre vitesse/qualite. 4Go+ RAM requis.",
+    model_advanced: "Haute qualite. 6Go+ RAM requis.",
+    model_pro: "Qualite maximale, performances proches d'un PC. 8Go+ RAM requis.",
+    model_unavailable: "RAM insuffisante sur cet appareil",
     capabilities_title: "Que puis-je faire?",
     cap: {
       generate_title: "Generer un titre a partir du contenu",
@@ -297,6 +331,8 @@ const fr = {
       format_text: "Formater le texte avec titres, gras, listes, etc.",
       suggest_items: "Suggerer de nouveaux elements pour une liste",
       suggest_category: "Suggerer la meilleure categorie pour une note",
+      explain_code: "Expliquer ce que fait le code",
+      add_comments: "Ajouter des commentaires au code",
     },
     unavailable_web: "L'Assistant IA n'est disponible que sur les appareils mobiles.",
     native_rebuild_needed: "L'Assistant IA necessite une reconstruction native.\nExecutez: npx expo run:android",
@@ -339,6 +375,9 @@ const fr = {
       suggest_items: "Suggerer des elements",
       format_text: "Formater le texte",
       suggest_category: "Suggerer une categorie",
+      explain_code: "Expliquer le code",
+      add_comments: "Ajouter des commentaires",
+      min_model: "Minimum",
       no_content: "Ecrivez quelque chose d'abord",
       no_category_match: "Aucune categorie correspondante",
       error: "Impossible de generer, reessayez",
@@ -611,6 +650,20 @@ const fr = {
   wipe: "Essuyez tout",
   wipeWithCloud: "Essuyez + Cloud",
 
+  developeroptions: {
+    title: "Options développeur",
+    warning:
+      "Ces options peuvent compromettre la synchronisation Cloud de certaines notes ou affecter les performances de l'app.",
+    unlimited_text_space: "Espace texte illimité",
+    unlimited_text_space_desc: "Limite actuelle : 1 Mo",
+    unlimited_kanban_columns: "Colonnes Kanban illimitées",
+    unlimited_kanban_columns_desc: "Limite actuelle : 10 colonnes",
+    unlimited_trash_time: "Durée de corbeille illimitée",
+    unlimited_trash_time_desc: "Limite actuelle : 30 jours",
+    change_app_icon: "Changer l'icône de l'app",
+    change_app_icon_desc: "Bientôt disponible",
+  },
+
   /* toast */
   disconnected: "Vous avez été déconnecté du Cloud",
   loading: "Chargement...",
@@ -618,6 +671,9 @@ const fr = {
   noInternetConnection: "Pas de connexion Internet",
   devicesLimitReached: "Limite de périphériques dépassée",
   noteLimitReached: "Limite de notes atteinte",
+  developerModeActivated: "Mode développeur activé !",
+  developerModeAlready: "Le mode développeur est déjà actif",
+  developerModeTaps: "Encore {{remaining}} appui(s) pour activer le mode développeur",
 
   empty_title: "(Pas de titre)",
 };

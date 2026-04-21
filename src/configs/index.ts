@@ -7,8 +7,8 @@ export const configs: AppConfigs = {
 
   app: {
     version: {
-      mobile: "2.8.0",
-      web: "0.2.1",
+      mobile: "2.9.0",
+      web: "0.3.0",
     },
     name: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "Fast Memo" : "Fast Memo Test",
     slug: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "FastMemoApp" : "fastmemoapptest",
@@ -29,6 +29,7 @@ export const configs: AppConfigs = {
   notes: {
     daysToDelete: 30,
     sizeLimit: 1 * 1024 * 1024, // 1 MB
+    maxKanbanColumns: 10,
   },
 
   cloud: {
