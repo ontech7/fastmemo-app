@@ -34,6 +34,7 @@ const initialState: SettingsState = {
     addTextNote: { url: "", enabled: false },
     addTodoNote: { url: "", enabled: false },
     addKanbanNote: { url: "", enabled: false },
+    addCodeNote: { url: "", enabled: false },
     updateNote: { url: "", enabled: false },
     temporaryDeleteNote: { url: "", enabled: false },
     deleteNote: { url: "", enabled: false },
@@ -145,6 +146,7 @@ export const selectorWebhooks = (state: RootState): Webhooks => state.settings.w
 export const selectorWebhook_addTextNote = (state: RootState) => state.settings.webhooks.addTextNote;
 export const selectorWebhook_addTodoNote = (state: RootState) => state.settings.webhooks.addTodoNote;
 export const selectorWebhook_addKanbanNote = (state: RootState) => state.settings.webhooks.addKanbanNote;
+export const selectorWebhook_addCodeNote = (state: RootState) => state.settings.webhooks.addCodeNote;
 export const selectorWebhook_updateNote = (state: RootState) => state.settings.webhooks.updateNote;
 export const selectorWebhook_temporaryDeleteNote = (state: RootState) => state.settings.webhooks.temporaryDeleteNote;
 export const selectorWebhook_deleteNote = (state: RootState) => state.settings.webhooks.deleteNote;

@@ -1,6 +1,12 @@
-import { DocumentTextIcon, ListBulletIcon, ViewColumnsIcon } from "react-native-heroicons/outline";
+import { CodeBracketIcon, DocumentTextIcon, ListBulletIcon, ViewColumnsIcon } from "react-native-heroicons/outline";
 
 export const NOTE_TYPES = [
+  {
+    key: "code",
+    icon: CodeBracketIcon,
+    route: "/notes/new-code",
+    labelKey: "note.type.code",
+  },
   {
     key: "kanban",
     icon: ViewColumnsIcon,

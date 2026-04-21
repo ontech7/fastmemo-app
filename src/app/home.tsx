@@ -33,7 +33,7 @@ import {
   selectorWebhook_temporaryDeleteNote,
   selectorWebhook_updateNote,
 } from "@/slicers/settingsSlice";
-import type { Note, TextNote, TodoItem, TodoNote } from "@/types";
+import type { CodeNote, Note, TextNote, TodoItem, TodoNote } from "@/types";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -178,10 +178,15 @@ export default function HomeScreen() {
       return !text
         ? notes
         : notes.filter((note: Note) => {
-            if ((note.type || "text") === "text") {
+            const noteType = note.type || "text";
+            if (noteType === "text") {
               return formatToPlainText((note as TextNote).text?.toLowerCase()).includes(text);
+            } else if (noteType === "code") {
+              return (note as CodeNote).tabs?.some((tab) => tab.code?.toLowerCase().includes(text));
+            } else if (noteType === "todo") {
+              return (note as TodoNote).list?.find((item: TodoItem) => item.text?.toLowerCase().includes(text));
             } else {
-              return (note as TodoNote).list.find((item: TodoItem) => item.text?.toLowerCase().includes(text));
+              return false;
             }
           });
     }

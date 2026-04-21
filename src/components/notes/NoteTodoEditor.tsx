@@ -262,6 +262,8 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
       updateNoteWebhook();
+      KeyboardController.dismiss();
+      Keyboard.dismiss();
       return false;
     });
 

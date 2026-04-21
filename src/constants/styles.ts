@@ -1,5 +1,11 @@
 import { Platform } from "react-native";
 
+export const MONOSPACE_FONT = Platform.select({
+  ios: "Menlo",
+  android: "monospace",
+  default: "monospace",
+});
+
 export const COLOR = {
   black: "#000",
   softWhite: "#f4f6fa",
@@ -18,6 +24,8 @@ export const COLOR = {
   darkYellow: "#D8D28B",
   oceanBreeze: "#A7C7F4",
   darkOceanBreeze: "#799EDC",
+  codeMint: "#A3D9C8",
+  darkCodeMint: "#7FBFAC",
 } as const;
 
 export const KANBAN_COLUMN_COLORS = ["#A7ABB9", "#799EDC", "#00c951", "#EEE78E", "#ff6900", "#A43D3F", "#DAD9DE"] as const;

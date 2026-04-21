@@ -56,20 +56,29 @@ export function getModelPath(modelId?: AIModelId): string {
   return `${FileSystem.documentDirectory}models/${getModel(modelId).fileName}`;
 }
 
+function getAllModelFiles(modelId?: AIModelId): { fileName: string; url: string }[] {
+  const model = getModel(modelId);
+  const files = [{ fileName: model.fileName, url: model.url }];
+  if (model.parts) files.push(...model.parts);
+  return files;
+}
+
 export async function isModelDownloaded(modelId?: AIModelId): Promise<boolean> {
-  const path = getModelPath(modelId);
-  const info = await FileSystem.getInfoAsync(path);
-  return info.exists;
+  const files = getAllModelFiles(modelId);
+  for (const file of files) {
+    const path = `${FileSystem.documentDirectory}models/${file.fileName}`;
+    const info = await FileSystem.getInfoAsync(path);
+    if (!info.exists) return false;
+  }
+  return true;
 }
 
 let _activeDownload: FileSystem.DownloadResumable | null = null;
 
 export async function downloadModel(modelId?: AIModelId, onProgress?: (progress: number) => void): Promise<boolean> {
   const targetId = modelId || DEFAULT_MODEL_ID;
-  const model = getModel(targetId);
 
   try {
-    // Cancel any existing download
     if (_activeDownload) {
       try {
         await _activeDownload.cancelAsync();
@@ -81,15 +90,17 @@ export async function downloadModel(modelId?: AIModelId, onProgress?: (progress:
 
     notifyListeners("downloading", 0);
 
-    // Delete other models to save space (only one model at a time)
     const allModelIds = Object.keys(AI_MODELS) as AIModelId[];
     for (const otherId of allModelIds) {
       if (otherId !== targetId) {
-        const otherPath = getModelPath(otherId);
-        const otherInfo = await FileSystem.getInfoAsync(otherPath);
-        if (otherInfo.exists) {
-          await releaseContext();
-          await FileSystem.deleteAsync(otherPath);
+        const otherFiles = getAllModelFiles(otherId);
+        for (const file of otherFiles) {
+          const p = `${FileSystem.documentDirectory}models/${file.fileName}`;
+          const info = await FileSystem.getInfoAsync(p);
+          if (info.exists) {
+            await releaseContext();
+            await FileSystem.deleteAsync(p);
+          }
         }
       }
     }
@@ -100,27 +111,31 @@ export async function downloadModel(modelId?: AIModelId, onProgress?: (progress:
       await FileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
     }
 
-    const modelPath = getModelPath(targetId);
+    const files = getAllModelFiles(targetId);
+    const totalFiles = files.length;
 
-    _activeDownload = FileSystem.createDownloadResumable(model.url, modelPath, {}, (downloadProgress) => {
-      const progress =
-        downloadProgress.totalBytesExpectedToWrite > 0
-          ? downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite
-          : 0;
-      notifyListeners("downloading", progress);
-      onProgress?.(progress);
-    });
+    for (let i = 0; i < totalFiles; i++) {
+      const file = files[i];
+      const filePath = `${FileSystem.documentDirectory}models/${file.fileName}`;
 
-    const result = await _activeDownload.downloadAsync();
-    _activeDownload = null;
+      _activeDownload = FileSystem.createDownloadResumable(file.url, filePath, {}, (dp) => {
+        const fileProgress = dp.totalBytesExpectedToWrite > 0 ? dp.totalBytesWritten / dp.totalBytesExpectedToWrite : 0;
+        const overall = (i + fileProgress) / totalFiles;
+        notifyListeners("downloading", overall);
+        onProgress?.(overall);
+      });
 
-    if (result?.uri) {
-      notifyListeners("idle");
-      return true;
+      const result = await _activeDownload.downloadAsync();
+      _activeDownload = null;
+
+      if (!result?.uri) {
+        notifyListeners("error");
+        return false;
+      }
     }
 
-    notifyListeners("error");
-    return false;
+    notifyListeners("idle");
+    return true;
   } catch (error) {
     _activeDownload = null;
     // Don't log cancellation as error
@@ -143,17 +158,16 @@ export async function cancelDownload(): Promise<void> {
     }
     _activeDownload = null;
 
-    // Clean up partial file for all models
     const allModelIds = Object.keys(AI_MODELS) as AIModelId[];
     for (const id of allModelIds) {
-      const modelPath = getModelPath(id);
-      const info = await FileSystem.getInfoAsync(modelPath);
-      if (info.exists && info.size && info.size < 1000000) {
-        // Partial file (less than 1MB) - remove it
-        await FileSystem.deleteAsync(modelPath);
+      for (const file of getAllModelFiles(id)) {
+        const p = `${FileSystem.documentDirectory}models/${file.fileName}`;
+        const info = await FileSystem.getInfoAsync(p);
+        if (info.exists && info.size && info.size < 1000000) {
+          await FileSystem.deleteAsync(p);
+        }
       }
     }
-
     notifyListeners("idle");
   }
 }
@@ -161,10 +175,10 @@ export async function cancelDownload(): Promise<void> {
 export async function deleteModel(modelId?: AIModelId): Promise<void> {
   try {
     await releaseContext();
-    const modelPath = getModelPath(modelId);
-    const info = await FileSystem.getInfoAsync(modelPath);
-    if (info.exists) {
-      await FileSystem.deleteAsync(modelPath);
+    for (const file of getAllModelFiles(modelId)) {
+      const p = `${FileSystem.documentDirectory}models/${file.fileName}`;
+      const info = await FileSystem.getInfoAsync(p);
+      if (info.exists) await FileSystem.deleteAsync(p);
     }
     notifyListeners("idle");
   } catch (error) {
@@ -205,9 +219,10 @@ export async function initContext(modelId?: AIModelId): Promise<boolean> {
         return false;
       }
 
+      const model = getModel(targetId);
       _context = await initLlama({
         model: modelPath,
-        n_ctx: 4096,
+        n_ctx: model.contextSize,
         n_gpu_layers: 99,
         use_mlock: true,
       });
@@ -298,11 +313,14 @@ export async function generateEditorContent(
       ? 30
       : action === "suggest_items"
         ? 100
-        : action === "format_text"
-          ? 500
-          : 200;
+        : action === "format_text" || action === "add_comments"
+          ? 1500
+          : action === "explain_code"
+            ? 300
+            : 200;
 
-  const temperature = action === "generate_title" ? 0.05 : action === "continue_writing" ? 0.4 : 0.15;
+  const temperature =
+    action === "generate_title" ? 0.05 : action === "continue_writing" ? 0.4 : action === "add_comments" ? 0.1 : 0.15;
 
   try {
     const systemPrompt = getEditorSystemPrompt(action, langCode);
@@ -356,6 +374,20 @@ export async function generateEditorContent(
         .replace(/<\/?head[^>]*>/gi, "")
         .trim();
       return { success: true, text: html };
+    }
+
+    // For add_comments, strip code fences and return code with comments
+    if (action === "add_comments") {
+      const code = text
+        .replace(/^```\w*\s*/i, "")
+        .replace(/```\s*$/g, "")
+        .trim();
+      return { success: true, text: code };
+    }
+
+    // For explain_code, return as plain text
+    if (action === "explain_code") {
+      return { success: true, text: text.trim() };
     }
 
     // Clean common artifacts from free-text output (multilingual prefixes)

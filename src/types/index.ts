@@ -1,5 +1,16 @@
 export type { Category } from "./category";
-export type { TodoItem, KanbanItem, KanbanColumn, NoteBase, TextNote, TodoNote, KanbanNote, Note } from "./note";
+export type {
+  TodoItem,
+  KanbanItem,
+  KanbanColumn,
+  CodeTab,
+  NoteBase,
+  TextNote,
+  TodoNote,
+  KanbanNote,
+  CodeNote,
+  Note,
+} from "./note";
 export type {
   WebhookPayload,
   Webhooks,

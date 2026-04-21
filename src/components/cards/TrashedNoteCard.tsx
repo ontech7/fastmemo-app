@@ -77,10 +77,12 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
           styles.container,
           type == "todo" && styles.containerTodo,
           type == "kanban" && styles.containerKanban,
+          type == "code" && styles.containerCode,
           important && styles.importantContainer,
           isSelected && styles.selectedContainer,
           isSelected && type == "todo" && styles.selectedContainerTodo,
           isSelected && type == "kanban" && styles.selectedContainerKanban,
+          isSelected && type == "code" && styles.selectedContainerCode,
           important && isSelected && styles.selectedImportantContainer,
           hidden && styles.hiddenContainer,
           isDeleteMode && styles.containerDeleteMode,
@@ -109,8 +111,10 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
                 styles.typeBadge,
                 type === "todo" && styles.typeBadgeTodo,
                 type === "kanban" && styles.typeBadgeKanban,
+                type === "code" && styles.typeBadgeCode,
                 isSelected && type === "todo" && styles.typeBadgeTodoSelected,
                 isSelected && type === "kanban" && styles.typeBadgeKanbanSelected,
+                isSelected && type === "code" && styles.typeBadgeCodeSelected,
                 important && styles.typeBadgeImportant,
               ]}
             >
@@ -210,6 +214,9 @@ const styles = StyleSheet.create({
   containerKanban: {
     backgroundColor: COLOR.oceanBreeze,
   },
+  containerCode: {
+    backgroundColor: COLOR.codeMint,
+  },
   selectedContainer: {
     backgroundColor: COLOR.lightBlue,
     opacity: 0.8,
@@ -220,6 +227,10 @@ const styles = StyleSheet.create({
   },
   selectedContainerKanban: {
     backgroundColor: COLOR.darkOceanBreeze,
+    opacity: 0.8,
+  },
+  selectedContainerCode: {
+    backgroundColor: COLOR.darkCodeMint,
     opacity: 0.8,
   },
   deleteMode: {
@@ -272,8 +283,14 @@ const styles = StyleSheet.create({
   typeBadgeKanban: {
     backgroundColor: COLOR.darkOceanBreeze,
   },
+  typeBadgeCode: {
+    backgroundColor: COLOR.darkCodeMint,
+  },
   typeBadgeKanbanSelected: {
     backgroundColor: COLOR.oceanBreeze,
+  },
+  typeBadgeCodeSelected: {
+    backgroundColor: COLOR.codeMint,
   },
   typeBadgeImportant: {
     backgroundColor: "rgba(255, 255, 255, 0.25)",
