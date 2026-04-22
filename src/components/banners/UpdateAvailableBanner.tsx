@@ -8,13 +8,13 @@ import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/con
 
 const SLIDE_DURATION_MS = 220;
 
-// Desaturated sand/amber palette, not part of the core COLOR constants
-// because it is intentionally off-theme: the banner needs to stand out
-// against the dark-blue home background to signal "something you should
-// act on" without using a destructive color (red) or a loud accent
-// (saturated yellow) that would feel like a warning.
-const BANNER_BG = "#E8C77A";
-const BANNER_BG_BORDER_TOP = "#C4A65C";
+// Soft lavender palette, not part of the core COLOR constants because it
+// is intentionally off-theme: the banner needs to stand out against the
+// dark-blue home background to signal "something you should act on"
+// without using a destructive color (red) or a warning accent (yellow).
+// Lavender is rare in the app, so it pops while staying delicate.
+const BANNER_BG = "#C7B8E8";
+const BANNER_BG_BORDER_TOP = "#9F8DC4";
 const BANNER_TEXT = "#1A1F3A";
 
 interface Props {
