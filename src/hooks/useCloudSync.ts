@@ -257,6 +257,7 @@ export const useCloudSync = () => {
     };
 
     asyncHandshake();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnecting]);
 
   return {

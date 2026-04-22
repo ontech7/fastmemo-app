@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/react-native";
 import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CheckIcon, PlusIcon, XMarkIcon } from "react-native-heroicons/outline";

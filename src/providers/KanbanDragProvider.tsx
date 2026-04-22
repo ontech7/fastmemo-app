@@ -1,5 +1,5 @@
 import type { KanbanColumn, KanbanItem } from "@/types";
-import React, { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import type { ScrollView } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
@@ -112,6 +112,7 @@ export default function KanbanDragProvider({
       dragX.value = cardX;
       dragY.value = cardY;
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
@@ -141,6 +142,7 @@ export default function KanbanDragProvider({
       lastTargetColumnRef.current = newTargetColumnId;
       setTargetColumnId(newTargetColumnId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getTargetColumn = useCallback(
@@ -238,6 +240,7 @@ export default function KanbanDragProvider({
   const setOverlayOffset = useCallback((x: number, y: number) => {
     containerOffsetX.value = x || 0;
     containerOffsetY.value = y || 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value: KanbanDragContextValue = {

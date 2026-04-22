@@ -52,6 +52,7 @@ export default function AIAssistantScreen() {
     };
 
     checkModel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedModelId]);
 
   const selectModel = useCallback(

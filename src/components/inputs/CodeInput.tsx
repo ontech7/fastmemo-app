@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
 import Haptics from "@/libs/haptics";

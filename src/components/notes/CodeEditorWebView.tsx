@@ -86,10 +86,11 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(({ initialCode
   }, [readOnly, sendMessage]);
 
   // Compute HTML ONCE on mount — never changes, never causes WebView reload
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   const html = useMemo(() => {
     const configScript = `window.__EDITOR_CONFIG__=${JSON.stringify({ code: initialCode, language, readOnly })};`;
     return CODEMIRROR_HTML.replace("window.__EDITOR_CONFIG__=window.__EDITOR_CONFIG__||{};", configScript);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

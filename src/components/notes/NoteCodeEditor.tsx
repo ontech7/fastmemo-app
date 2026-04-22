@@ -23,7 +23,7 @@ import { isStringEmpty } from "@/utils/string";
 
 import { webhook } from "@/utils/webhook";
 import { useFocusEffect } from "@react-navigation/native";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -90,6 +90,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
       locked: note.locked,
       category: { iconId: note.category.icon, name: note.category.name },
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNewlyCreated]);
 
   const updateNoteGlobal = useCallback(

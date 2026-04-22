@@ -48,6 +48,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
       setCurrentMatch(0);
       runInEditor(editorRef, `window.getSelection && window.getSelection().removeAllRanges(); true;`);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const countMatches = useCallback(
@@ -196,6 +197,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
       if (count === 0) setCurrentMatch(0);
       else if (currentMatch > count) setCurrentMatch(count);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plainText]);
 
   if (!visible) return null;

@@ -7,7 +7,7 @@ import { addNote } from "@/slicers/notesSlice";
 import type { Note } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import i18n from "i18next";
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowPathIcon } from "react-native-heroicons/outline";
@@ -67,6 +67,7 @@ export default function SetupSecretCodeScreen() {
     setCode(text);
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const onSubmit = useCallback((codeValue: string) => handleCodeChange(codeValue), [phase]);
 
   const redoInsert = () => {

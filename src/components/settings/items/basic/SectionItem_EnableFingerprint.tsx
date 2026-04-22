@@ -1,4 +1,3 @@
-import React from "react";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Switch, Text, View } from "react-native";

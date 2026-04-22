@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import i18n from "i18next";
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
@@ -99,6 +99,7 @@ export default function SecretCodeScreen() {
     (codeValue: string) => {
       handleCodeChange(codeValue);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [phase]
   );
 

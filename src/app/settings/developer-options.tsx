@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { ExclamationTriangleIcon } from "react-native-heroicons/outline";

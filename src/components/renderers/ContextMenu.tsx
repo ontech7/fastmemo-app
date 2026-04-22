@@ -17,7 +17,7 @@ const axisPosition = (oDim: number, wDim: number, tPos: number, tDim: number) =>
     return tPos + tDim - oDim;
   }
   // compute center position
-  let pos = Math.round(tPos + tDim / 2 - oDim / 2);
+  const pos = Math.round(tPos + tDim / 2 - oDim / 2);
   // check top boundary
   if (pos < 0) {
     return 0;

@@ -1,5 +1,4 @@
 import useNetInfo from "@/hooks/useNetInfo";
-import type { Category, Note } from "@/types";
 import { isEmpty, isObjectEmpty } from "@/utils/string";
 import { where } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -241,6 +240,7 @@ export default function SyncOnProvider(): null {
     };
 
     syncCategoriesToCloud();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCloudConnected, netInfo, cloudCategories_add, cloudCategories_delete]);
 
   ///////////////////////////////////
@@ -301,6 +301,7 @@ export default function SyncOnProvider(): null {
     return () => {
       if (tDebounceNotes.current) clearTimeout(tDebounceNotes.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCloudConnected, netInfo, cloudNotes_add, cloudNotes_delete]);
 
   return null;

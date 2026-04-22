@@ -1,4 +1,3 @@
-import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";

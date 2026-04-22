@@ -1,4 +1,3 @@
-import React from "react";
 import { Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { CheckIcon, XCircleIcon } from "react-native-heroicons/outline";
 

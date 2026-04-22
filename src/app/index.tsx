@@ -63,6 +63,7 @@ export default function LoadingScreen() {
     };
 
     runInitialActions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

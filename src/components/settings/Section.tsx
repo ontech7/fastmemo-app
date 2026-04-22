@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 
 import SectionList from "./components/list/SectionList";
 import SectionHeader from "./components/SectionHeader";

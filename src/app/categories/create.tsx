@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";

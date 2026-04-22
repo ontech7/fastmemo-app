@@ -62,6 +62,7 @@ export default function NoteScreen() {
     } else {
       return currentNote;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId, currentCategory]);
 
   useEffect(() => {

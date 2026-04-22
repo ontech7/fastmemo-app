@@ -1,4 +1,3 @@
-import React from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { StarIcon } from "react-native-heroicons/outline";
 

@@ -1,4 +1,3 @@
-import React from "react";
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CheckIcon } from "react-native-heroicons/outline";
 

@@ -166,6 +166,7 @@ export default function AIEditorActions({
       duration: isMenuOpen ? ANIM_OPEN : ANIM_CLOSE,
       easing: isMenuOpen ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMenuOpen]);
 
   // Back button handled by Modal's onRequestClose

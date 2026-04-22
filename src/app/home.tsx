@@ -204,6 +204,7 @@ export default function HomeScreen() {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
 
     return () => backHandler.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDeleteMode]);
 
   // vibration feedback when deleteMode
@@ -230,6 +231,7 @@ export default function HomeScreen() {
         });
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // reset states
@@ -290,6 +292,7 @@ export default function HomeScreen() {
         easing: Easing.inOut(Easing.ease),
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDeleteMode]);
 
   // changelog for new version
@@ -310,6 +313,7 @@ export default function HomeScreen() {
     };
 
     checkVersion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // filters

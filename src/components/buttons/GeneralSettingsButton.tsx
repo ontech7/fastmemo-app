@@ -1,4 +1,3 @@
-import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Cog8ToothIcon } from "react-native-heroicons/outline";
 

@@ -59,6 +59,7 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }: Pr
         recognitionRef.current.stop();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectors.continuous, selectors.interimResults]);
 
   useEffect(() => {

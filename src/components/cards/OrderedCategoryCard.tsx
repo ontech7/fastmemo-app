@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -21,7 +21,9 @@ function OrderedCategoryCard({ category, order, selected = false, toggleCategory
   const { index, name, icon } = category;
 
   const onPress = () => {
-    toggleCategory && toggleCategory(category);
+    if (toggleCategory) {
+      toggleCategory(category);
+    }
   };
 
   return (

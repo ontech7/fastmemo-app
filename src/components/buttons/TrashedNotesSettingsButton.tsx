@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { ArrowPathIcon, EllipsisVerticalIcon, TrashIcon } from "react-native-heroicons/outline";
