@@ -6,7 +6,7 @@ import type { Category, CategoriesState, RootState } from "@/types";
 import type { CategoryMapEntry } from "@/constants/icons";
 
 import { defaultCategory } from "@/configs/default";
-import { COLLECTIONS, deleteCollectionInCloud, only_if_cloudConnected } from "@/libs/firebase";
+import { only_if_cloudConnected } from "@/libs/firebase";
 import { order_asc_sort } from "@/utils/sort";
 
 import { CATEGORY_MAP } from "@/constants/icons";
@@ -110,11 +110,8 @@ const categoriesSlice = createSlice({
       }
     },
 
-    wipeCategories: (state, action: PayloadAction<boolean>) => {
+    wipeCategories: (state) => {
       state.items = [defaultCategory];
-      if (action.payload) {
-        deleteCollectionInCloud(COLLECTIONS.data.categories);
-      }
     },
 
     addLocalCategories: (state, action: PayloadAction<Record<string, Category>>) => {

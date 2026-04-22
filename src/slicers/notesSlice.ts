@@ -8,7 +8,7 @@ import { retrieveDirtyNoteId } from "@/libs/registry";
 
 import { configs } from "../configs";
 import { defaultCategory } from "../configs/default";
-import { COLLECTIONS, deleteCollectionInCloud, only_if_cloudConnected } from "../libs/firebase";
+import { only_if_cloudConnected } from "../libs/firebase";
 import { CryptNote } from "../utils/crypt";
 import { createdAt_asc_sort } from "../utils/sort";
 import { addCloudNotesAsync, deleteCloudNotesAsync } from "./thunks/notes";
@@ -341,12 +341,9 @@ const notesSlice = createSlice({
       });
     },
 
-    wipeNotes: (state, action: PayloadAction<boolean>) => {
+    wipeNotes: (state) => {
       state.items = [];
       state.temporaryItems = [];
-      if (action.payload) {
-        deleteCollectionInCloud(COLLECTIONS.data.notes);
-      }
     },
 
     addLocalNotes: (state, action: PayloadAction<Record<string, Note>>) => {

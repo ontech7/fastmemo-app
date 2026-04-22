@@ -3,7 +3,9 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { Category } from "@/types";
 import type { AppRootState } from "@/slicers/store";
 
-import { COLLECTIONS, deleteElementInCloud, setElementInCloud } from "@/libs/firebase";
+import { COLLECTIONS, deleteCollectionInCloud, deleteElementInCloud, setElementInCloud } from "@/libs/firebase";
+
+import { wipeCategories } from "@/slicers/categoriesSlice";
 
 interface CloudSyncParams {
   deviceUuid: string;
@@ -116,5 +118,22 @@ export const deleteCloudCategoriesAsync = createAsyncThunk<Record<string, Catego
     }
 
     return elementsDeleted;
+  }
+);
+
+/**
+ * Wipes all local categories (resetting to the default one) and, when
+ * requested, the corresponding cloud collection. Dispatches the pure
+ * `wipeCategories` action first so the local state is cleared immediately,
+ * then performs the async cloud deletion side effect outside of the reducer.
+ */
+export const wipeCategoriesThunk = createAsyncThunk<void, { wipeCloud: boolean }, { state: AppRootState }>(
+  "categories/wipeCategoriesThunk",
+  async ({ wipeCloud }, { dispatch }) => {
+    dispatch(wipeCategories());
+
+    if (wipeCloud) {
+      await deleteCollectionInCloud(COLLECTIONS.data.categories);
+    }
   }
 );

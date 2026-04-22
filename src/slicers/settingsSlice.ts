@@ -7,11 +7,8 @@ import type {
   VoiceRecognitionSettings,
   Webhooks,
 } from "@/types";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSlice } from "@reduxjs/toolkit";
-import * as Localization from "expo-localization";
-import i18n from "i18next";
 import { Platform } from "react-native";
 
 const initialState: SettingsState = {
@@ -74,8 +71,6 @@ const settingsSlice = createSlice({
   reducers: {
     setLanguage: (state, action: PayloadAction<string>) => {
       state.language = action.payload;
-      AsyncStorage.setItem("@appLanguage", action.payload);
-      i18n.changeLanguage(action.payload !== "system" ? action.payload : Localization.getLocales()[0].languageCode || "en");
     },
     setIsIntroFinished: (state, action: PayloadAction<boolean>) => {
       state.isIntroFinished = action.payload;

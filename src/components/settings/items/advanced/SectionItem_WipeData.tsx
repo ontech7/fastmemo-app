@@ -2,14 +2,15 @@ import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useSecret } from "@/hooks/useSecret";
-import { wipeCategories } from "@/slicers/categoriesSlice";
-import { wipeNotes } from "@/slicers/notesSlice";
 import { getCloudConnected, selectorWebhook_wipeData } from "@/slicers/settingsSlice";
+import { useAppDispatch } from "@/slicers/store";
+import { wipeCategoriesThunk } from "@/slicers/thunks/categories";
+import { wipeNotesThunk } from "@/slicers/thunks/notes";
 import { webhook } from "@/utils/webhook";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import SectionItemList_Text from "../../components/item/SectionItemList_Text";
 import SectionItemList from "../../components/list/SectionItemList";
 
@@ -20,7 +21,7 @@ interface Props {
 export default function SectionItem_WipeData({ isLast }: Props) {
   const { t } = useTranslation();
 
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const { unlockWithSecret } = useSecret();
 
   const netInfo = useNetInfo();
@@ -42,8 +43,8 @@ export default function SectionItem_WipeData({ isLast }: Props) {
         confirm={{
           label: t("wipe"),
           handler: () => {
-            dispatch(wipeNotes(false));
-            dispatch(wipeCategories(false));
+            dispatch(wipeNotesThunk({ wipeCloud: false }));
+            dispatch(wipeCategoriesThunk({ wipeCloud: false }));
             webhook(webhook_wipeData, {
               action: "generic/wipeData",
               cloud: false,
@@ -57,8 +58,8 @@ export default function SectionItem_WipeData({ isLast }: Props) {
             ? {
                 label: t("wipeWithCloud"),
                 handler: () => {
-                  dispatch(wipeNotes(true));
-                  dispatch(wipeCategories(true));
+                  dispatch(wipeNotesThunk({ wipeCloud: true }));
+                  dispatch(wipeCategoriesThunk({ wipeCloud: true }));
                   webhook(webhook_wipeData, {
                     action: "generic/wipeData",
                     cloud: true,
