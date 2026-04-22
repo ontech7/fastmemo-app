@@ -48,17 +48,8 @@ const rootReducer = combineReducers({
   settings: persistReducer(settingsPersistConfig, settingsReducer),
 });
 
-const persistedReducer = persistReducer(
-  {
-    key: "root",
-    storage: AsyncStorage,
-    blacklist: [] as string[],
-  },
-  rootReducer
-);
-
 export const store = configureStore({
-  reducer: persistedReducer,
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false,
@@ -66,6 +57,16 @@ export const store = configureStore({
 });
 
 export const persistor = persistStore(store);
+
+// One-time cleanup of the legacy root-level persisted blob.
+// Prior versions wrapped the already per-slice-persisted rootReducer in an
+// outer persistReducer (key "root", AsyncStorage). The outer layer has been
+// removed; the orphaned key is purged here so it doesn't linger on users'
+// devices. Per-slice keys (persist:root_notes, persist:root_categories,
+// persist:root_settings) are untouched, preserving user data.
+AsyncStorage.removeItem("persist:root").catch(() => {
+  // Swallow: the key may already be absent (fresh installs, web, etc.).
+});
 
 export type AppDispatch = typeof store.dispatch;
 export type AppRootState = ReturnType<typeof store.getState>;
