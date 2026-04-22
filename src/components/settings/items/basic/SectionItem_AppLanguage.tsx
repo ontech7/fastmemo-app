@@ -6,8 +6,8 @@ import { selectorLanguage } from "@/slicers/settingsSlice";
 import { setLanguageThunk } from "@/slicers/thunks/settings";
 import { useAppDispatch } from "@/slicers/store";
 
-import SectionItemList_Text from "../../components/item/SectionItemList_Text";
-import SectionItemList from "../../components/list/SectionItemList";
+import SectionItemList_Text from "@/components/settings/components/item/SectionItemList_Text";
+import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 interface Props {
   isLast: boolean;

@@ -25,7 +25,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
-import KanbanBoard from "../kanban/KanbanBoard";
+import KanbanBoard from "@/components/kanban/KanbanBoard";
 
 const COLUMN_PEEK = 40;
 

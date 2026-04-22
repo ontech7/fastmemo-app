@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 
-import { getTemporaryTrashTimespan, setTemporaryTrashTimespan } from "../../../../slicers/notesSlice";
-import SectionItemList_Text from "../../components/item/SectionItemList_Text";
-import SectionItemList from "../../components/list/SectionItemList";
+import { getTemporaryTrashTimespan, setTemporaryTrashTimespan } from "@/slicers/notesSlice";
+import SectionItemList_Text from "@/components/settings/components/item/SectionItemList_Text";
+import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 interface Props {
   isLast: boolean;

@@ -7,13 +7,13 @@ import { AppState, Platform } from "react-native";
 import { useSelector } from "react-redux";
 
 import { useAppDispatch } from "@/slicers/store";
-import { COLLECTIONS, getAllDeviceUuids, getAllElementsInCloud, getDeviceUuid, setElementInCloud } from "../libs/firebase";
-import { addLocalCategories, deleteLocalCategories, getCloudCategories } from "../slicers/categoriesSlice";
-import { addLocalNotes, deleteLocalNotes, getCloudNotes } from "../slicers/notesSlice";
-import { getCloudConnected, setCloudConnected, setIsCloudSyncEnabled } from "../slicers/settingsSlice";
-import { addCloudCategoriesAsync, deleteCloudCategoriesAsync } from "../slicers/thunks/categories";
-import { addCloudNotesAsync, deleteCloudNotesAsync } from "../slicers/thunks/notes";
-import { toast } from "../utils/toast";
+import { COLLECTIONS, getAllDeviceUuids, getAllElementsInCloud, getDeviceUuid, setElementInCloud } from "@/libs/firebase";
+import { addLocalCategories, deleteLocalCategories, getCloudCategories } from "@/slicers/categoriesSlice";
+import { addLocalNotes, deleteLocalNotes, getCloudNotes } from "@/slicers/notesSlice";
+import { getCloudConnected, setCloudConnected, setIsCloudSyncEnabled } from "@/slicers/settingsSlice";
+import { addCloudCategoriesAsync, deleteCloudCategoriesAsync } from "@/slicers/thunks/categories";
+import { addCloudNotesAsync, deleteCloudNotesAsync } from "@/slicers/thunks/notes";
+import { toast } from "@/utils/toast";
 
 const PENDING_CHANGES_DELAY = 10000;
 const DEBOUNCE_NOTES_DELAY = 200;

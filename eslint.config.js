@@ -70,6 +70,19 @@ module.exports = defineConfig([
           argsIgnorePattern: "^_",
         },
       ],
+      // Enforce @/ alias for cross-module imports.
+      // Same-folder relative imports (./file) are still allowed for co-located files.
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["../*"],
+              message: "Use the '@/' path alias for cross-module imports instead of '../' relative paths.",
+            },
+          ],
+        },
+      ],
     },
   },
   prettierRecommended,

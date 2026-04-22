@@ -4,7 +4,7 @@ import { BackHandler, StyleSheet } from "react-native";
 
 import Haptics from "@/libs/haptics";
 
-import CategoryFilterButton from "../buttons/CategoryFilterButton";
+import CategoryFilterButton from "@/components/buttons/CategoryFilterButton";
 
 import type { Category } from "@/types";
 

@@ -12,17 +12,17 @@ import SafeAreaView from "@/components/SafeAreaView";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
-import BackButton from "../components/buttons/BackButton";
-import TrashedNotesSettingsButton from "../components/buttons/TrashedNotesSettingsButton";
-import TrashedNoteCard from "../components/cards/TrashedNoteCard";
-import SearchNotesInput from "../components/inputs/SearchNotesInput";
-import { deleteNote, getTrashedNotesFilteredPerCategory } from "../slicers/notesSlice";
+import BackButton from "@/components/buttons/BackButton";
+import TrashedNotesSettingsButton from "@/components/buttons/TrashedNotesSettingsButton";
+import TrashedNoteCard from "@/components/cards/TrashedNoteCard";
+import SearchNotesInput from "@/components/inputs/SearchNotesInput";
+import { deleteNote, getTrashedNotesFilteredPerCategory } from "@/slicers/notesSlice";
 import {
   selectorDeveloperMode,
   selectorIsFingerprintEnabled,
   selectorShowHidden,
   selectorWebhook_deleteNote,
-} from "../slicers/settingsSlice";
+} from "@/slicers/settingsSlice";
 
 export default function TemporaryTrashScreen() {
   const { t } = useTranslation();

@@ -10,11 +10,11 @@ import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
-import { getCategories } from "../../slicers/categoriesSlice";
-import { restoreNote } from "../../slicers/notesSlice";
-import { selectorWebhook_restoreNote } from "../../slicers/settingsSlice";
-import CategoryIcon from "../CategoryIcon";
-import ConfirmOrCancelDialog from "../dialogs/ConfirmOrCancelDialog";
+import { getCategories } from "@/slicers/categoriesSlice";
+import { restoreNote } from "@/slicers/notesSlice";
+import { selectorWebhook_restoreNote } from "@/slicers/settingsSlice";
+import CategoryIcon from "@/components/CategoryIcon";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 
 import type { Note } from "@/types";
 

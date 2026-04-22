@@ -11,8 +11,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
 import { useSelector } from "react-redux";
-import SectionItemList_Text from "../../components/item/SectionItemList_Text";
-import SectionItemList from "../../components/list/SectionItemList";
+import SectionItemList_Text from "@/components/settings/components/item/SectionItemList_Text";
+import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 interface Props {
   isLast: boolean;

@@ -5,8 +5,8 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
-import { selectorIsFingerprintEnabled, setIsFingerprintEnabled } from "../../../../slicers/settingsSlice";
-import SectionItemList from "../../components/list/SectionItemList";
+import { selectorIsFingerprintEnabled, setIsFingerprintEnabled } from "@/slicers/settingsSlice";
+import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 interface Props {
   isLast: boolean;

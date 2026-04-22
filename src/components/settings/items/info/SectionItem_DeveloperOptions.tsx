@@ -4,8 +4,8 @@ import { useSelector } from "react-redux";
 import { useSecret } from "@/hooks/useSecret";
 import { selectorDeveloperMode } from "@/slicers/settingsSlice";
 
-import SectionItemList_Navigation from "../../components/item/SectionItemList_Navigation";
-import SectionItemList from "../../components/list/SectionItemList";
+import SectionItemList_Navigation from "@/components/settings/components/item/SectionItemList_Navigation";
+import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 interface Props {
   isLast: boolean;

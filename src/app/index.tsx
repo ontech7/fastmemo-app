@@ -11,7 +11,7 @@ import i18n from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import lottieJson from "../assets/lottie/Logo_with_Text.json";
+import lottieJson from "@/assets/lottie/Logo_with_Text.json";
 
 export default function LoadingScreen() {
   const router = useRouter();

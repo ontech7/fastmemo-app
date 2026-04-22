@@ -6,11 +6,11 @@ import type { Category, Note, NoteFilters, NotesState, RootState } from "@/types
 
 import { retrieveDirtyNoteId } from "@/libs/registry";
 
-import { configs } from "../configs";
-import { defaultCategory } from "../configs/default";
-import { only_if_cloudConnected } from "../libs/firebase";
-import { CryptNote } from "../utils/crypt";
-import { createdAt_asc_sort } from "../utils/sort";
+import { configs } from "@/configs";
+import { defaultCategory } from "@/configs/default";
+import { only_if_cloudConnected } from "@/libs/firebase";
+import { CryptNote } from "@/utils/crypt";
+import { createdAt_asc_sort } from "@/utils/sort";
 import { addCloudNotesAsync, deleteCloudNotesAsync, wipeNotes } from "./thunks/notes";
 
 const initialState: NotesState = {

@@ -6,8 +6,8 @@ import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles"
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
-import aiLottieJson from "../assets/lottie/AI_Loader.json";
-import lottieJson from "../assets/lottie/Logo.json";
+import aiLottieJson from "@/assets/lottie/AI_Loader.json";
+import lottieJson from "@/assets/lottie/Logo.json";
 
 function getVersionChangelogs(t: (key: string) => string) {
   return Platform.OS === "web"

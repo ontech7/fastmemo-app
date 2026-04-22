@@ -20,7 +20,7 @@ import { formatDateTime } from "@/utils/date";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import lottieJson from "../../assets/lottie/Logo.json";
+import lottieJson from "@/assets/lottie/Logo.json";
 
 interface Attachment {
   filename: string;

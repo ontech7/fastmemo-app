@@ -32,7 +32,7 @@ import uuid from "react-uuid";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import TodoItem from "../todo/TodoItem.web";
+import TodoItem from "@/components/todo/TodoItem.web";
 
 import type { TodoItem as TodoItemType, TodoNote } from "@/types";
 
