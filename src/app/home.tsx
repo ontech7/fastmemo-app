@@ -7,13 +7,16 @@ import ProtectNotesButton from "@/components/buttons/ProtectNotesButton";
 import ReadOnlyNotesButton from "@/components/buttons/ReadOnlyNotesButton";
 import NoteCard from "@/components/cards/NoteCard";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
+import UpdateAvailableDialog from "@/components/dialogs/UpdateAvailableDialog";
 import SearchNotesInput from "@/components/inputs/SearchNotesInput";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import useNetInfo from "@/hooks/useNetInfo";
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
+import { checkLatestAppVersion } from "@/libs/api/checkLatestVersion";
 import Haptics from "@/libs/haptics";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import {
@@ -34,7 +37,9 @@ import {
   selectorWebhook_updateNote,
 } from "@/slicers/settingsSlice";
 import type { CodeNote, Note, TextNote, TodoItem, TodoNote } from "@/types";
+import { openUrl } from "@/utils/openUrl";
 import { formatToPlainText } from "@/utils/string";
+import { getCurrentAppVersion, isDesktopOrWeb, isNewerVersion, pickUpdateUrl } from "@/utils/version";
 import { webhook } from "@/utils/webhook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
@@ -80,6 +85,10 @@ export default function HomeScreen() {
   const isNoteProtected = selectedNotes.some((id: string) => id.split("|")[1] == "true");
 
   const [showDeleteNotesDialog, setShowDeleteNotesDialog] = useState(false);
+
+  const [updateInfo, setUpdateInfo] = useState<{ latestVersion: string; releaseUrl: string } | null>(null);
+
+  const { isConnected } = useNetInfo();
 
   const { unlockWithSecret } = useSecret();
 
@@ -316,6 +325,36 @@ export default function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // check for a newer version on the remote API and prompt the user to update
+  useEffect(() => {
+    if (!isConnected) return;
+
+    let cancelled = false;
+
+    const checkLatest = async () => {
+      const data = await checkLatestAppVersion();
+      if (cancelled || !data) return;
+
+      const latest = isDesktopOrWeb() ? data.desktop.version : data.mobile.version;
+      const current = getCurrentAppVersion();
+
+      if (isNewerVersion(current, latest)) {
+        setUpdateInfo({ latestVersion: latest, releaseUrl: data.releaseUrl });
+      }
+    };
+
+    checkLatest();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isConnected]);
+
+  const onConfirmUpdate = useCallback(() => {
+    if (!updateInfo) return;
+    openUrl(pickUpdateUrl(updateInfo.releaseUrl));
+  }, [updateInfo]);
+
   // filters
 
   const toggleDeepSearch = () => {
@@ -326,6 +365,12 @@ export default function HomeScreen() {
 
   return (
     <>
+      <UpdateAvailableDialog
+        open={updateInfo != null}
+        latestVersion={updateInfo?.latestVersion ?? ""}
+        onConfirm={onConfirmUpdate}
+      />
+
       <ConfirmOrCancelDialog
         open={showDeleteNotesDialog}
         description={t("popup.delete_notes")}
