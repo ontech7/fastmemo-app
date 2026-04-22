@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CheckIcon, PencilSquareIcon, XMarkIcon } from "react-native-heroicons/outline";
@@ -43,8 +43,8 @@ export default function OrganizeCategoriesScreen() {
 
   const saveCategoryOrganization = () => {
     if (orderedCategories.notNumberedCategoryList.length == 0) {
-      let orderedList = [...orderedCategories.reorganizedCategoryList];
-      for (var i = 0; i < orderedList.length; i++) {
+      const orderedList = [...orderedCategories.reorganizedCategoryList];
+      for (let i = 0; i < orderedList.length; i++) {
         orderedList[i] = { ...orderedList[i], order: i };
       }
       dispatch(setCategories({ categories: orderedList, reorder: true }));

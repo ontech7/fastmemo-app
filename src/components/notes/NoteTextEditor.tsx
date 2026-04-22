@@ -82,6 +82,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
         name: note.category.name,
       },
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNewlyCreated]);
 
   const updateNoteGlobal = useCallback(

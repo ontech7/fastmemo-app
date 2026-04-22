@@ -1,4 +1,3 @@
-import React from "react";
 import { TouchableOpacity } from "react-native";
 import { TrashIcon } from "react-native-heroicons/outline";
 

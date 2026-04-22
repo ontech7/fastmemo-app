@@ -3,7 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { ViewProps } from "react-native";
 
-export interface SafeAreaViewProps extends ViewProps {}
+export type SafeAreaViewProps = ViewProps;
 
 export default function SafeAreaView({ children, ...props }: SafeAreaViewProps) {
   const { top, bottom } = useSafeAreaInsets();

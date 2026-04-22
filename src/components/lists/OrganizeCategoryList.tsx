@@ -1,4 +1,3 @@
-import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 
 import { PADDING_MARGIN, SIZE } from "@/constants/styles";

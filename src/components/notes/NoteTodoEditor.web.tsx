@@ -87,6 +87,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         name: note.category.name,
       },
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNewlyCreated]);
 
   const updateNoteGlobal = useCallback(
@@ -145,7 +146,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
   const setTextListItem = useCallback(
     (id: string, text: string) => {
-      let mutableList = Object.assign([], note.list);
+      const mutableList = Object.assign([], note.list);
       const index = mutableList.findIndex((todoItem) => todoItem.id === id);
       mutableList[index] = { ...mutableList[index], text: text };
 
@@ -160,7 +161,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         return;
       }
 
-      let mutableList = Object.assign([], note.list);
+      const mutableList = Object.assign([], note.list);
       const index = mutableList.findIndex((todoItem: TodoItemType) => todoItem.id === id);
       mutableList[index] = {
         ...mutableList[index],
@@ -362,7 +363,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
               }
 
               let lastItem = note.list[note.list.length - 1];
-              let mutableList = [...note.list];
+              const mutableList = [...note.list];
 
               if (!lastItem || lastItem.text.trim()) {
                 lastItem = {

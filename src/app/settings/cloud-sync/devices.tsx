@@ -98,6 +98,7 @@ export default function SyncedDevicesScreen() {
     } else {
       timeoutStates.error.set(true); // if connection is lost
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [netInfo]);
 
   return (

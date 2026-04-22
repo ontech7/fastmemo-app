@@ -215,7 +215,11 @@ export const handshakeFirebase = async (setterCallback: (state: HandshakeState) 
 
     clearTimeout(t);
 
-    isHandshakeSuccess ? ok() : ko();
+    if (isHandshakeSuccess) {
+      ok();
+    } else {
+      ko();
+    }
   } catch (e) {
     console.log(e);
 

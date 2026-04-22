@@ -10,7 +10,6 @@ import { useTheme } from "@react-navigation/native";
 import * as Sentry from "@sentry/react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
 import { I18nextProvider } from "react-i18next";
 import { Platform } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";

@@ -1,5 +1,4 @@
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
-import React from "react";
 import { useTranslation } from "react-i18next";
 import type { TextStyle } from "react-native";
 import { Text } from "react-native";

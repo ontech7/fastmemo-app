@@ -6,11 +6,11 @@
  * platform-agnostic and re-exported as-is.
  */
 
+import type { AIModelId, AIModelStatus, EditorActionResult } from "./types";
+
 export { findCategoryByName, stripHtml } from "./helpers";
 export { AI_MODELS, DEFAULT_MODEL_ID } from "./constants";
 export type { AIModelStatus, AIModelId, AIModelInfo, EditorAction, EditorActionResult } from "./types";
-
-import type { AIModelId, AIModelStatus, EditorActionResult } from "./types";
 
 // --- no-op stubs for context.ts functions (native-only) ---
 

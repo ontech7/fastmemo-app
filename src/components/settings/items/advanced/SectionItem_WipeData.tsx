@@ -6,7 +6,7 @@ import { wipeCategories } from "@/slicers/categoriesSlice";
 import { wipeNotes } from "@/slicers/notesSlice";
 import { getCloudConnected, selectorWebhook_wipeData } from "@/slicers/settingsSlice";
 import { webhook } from "@/utils/webhook";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";

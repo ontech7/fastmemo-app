@@ -88,6 +88,7 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }: Pr
     return () => {
       deactivateKeepAwake(KEEP_AWAKE_TAG);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recognizing]);
 
   const handleStart = async () => {

@@ -6,7 +6,7 @@ import { useSecret } from "@/hooks/useSecret";
 import { isSecretPassphraseCorrect } from "@/utils/crypt";
 import { webhook } from "@/utils/webhook";
 import * as Sentry from "@sentry/react-native";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Keyboard, Platform } from "react-native";
 import CryptoJS from "react-native-crypto-js";
@@ -225,7 +225,7 @@ export default function SectionItem_ExportImportData({ isLast }: Props) {
 
       const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(exportData), secretPassphrase).toString();
 
-      let fileUri = await StorageAccessFramework.createFileAsync(
+      const fileUri = await StorageAccessFramework.createFileAsync(
         permissions.directoryUri,
         `FastMemo_exportedData_${new Date().getTime()}.txt`,
         "text/plain"

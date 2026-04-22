@@ -1,4 +1,3 @@
-import React from "react";
 import { configs } from "@/configs";
 import { useTranslation } from "react-i18next";
 import { Platform, Share } from "react-native";
