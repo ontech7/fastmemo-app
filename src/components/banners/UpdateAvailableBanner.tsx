@@ -1,12 +1,20 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ArrowUpTrayIcon } from "react-native-heroicons/outline";
+import { ArrowRightIcon } from "react-native-heroicons/solid";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 const SLIDE_DURATION_MS = 220;
+
+// Warm amber palette, not part of the core COLOR constants because it is
+// intentionally off-theme: the banner needs to pop against the dark-blue
+// home background to signal "something you should act on" without using a
+// destructive color (red) that would imply an error.
+const BANNER_BG = "#FFC857";
+const BANNER_BG_BORDER_TOP = "#D9A53E";
+const BANNER_TEXT = "#1A1F3A";
 
 interface Props {
   visible: boolean;
@@ -37,16 +45,16 @@ export default function UpdateAvailableBanner({ visible, onPress }: Props) {
 
   return (
     <Animated.View style={[styles.container, animatedStyle]} pointerEvents="box-none">
-      <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={styles.inner}>
-        <View style={styles.iconContainer}>
-          <ArrowUpTrayIcon size={18} color={COLOR.darkBlue} />
-        </View>
+      <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={styles.inner}>
         <Text style={styles.label} numberOfLines={1}>
           {t("banner.update_available")}
         </Text>
-        <Text style={styles.cta} numberOfLines={1}>
-          {t("banner.update_available_cta")}
-        </Text>
+        <View style={styles.cta}>
+          <Text style={styles.ctaLabel} numberOfLines={1}>
+            {t("banner.update_available_cta")}
+          </Text>
+          <ArrowRightIcon size={14} color={COLOR.softWhite} />
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -55,38 +63,43 @@ export default function UpdateAvailableBanner({ visible, onPress }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 68,
-    left: PADDING_MARGIN.lg,
-    right: 130,
+    bottom: 0,
+    left: 0,
+    width: SIZE.full,
     zIndex: 8,
+    shadowColor: COLOR.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8,
   },
   inner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: PADDING_MARGIN.sm,
-    paddingVertical: PADDING_MARGIN.sm,
-    paddingHorizontal: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.blue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.4,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  iconContainer: {
-    padding: PADDING_MARGIN.xs,
-    borderRadius: BORDER.small,
-    backgroundColor: COLOR.lightBlue,
+    gap: PADDING_MARGIN.md,
+    paddingVertical: PADDING_MARGIN.md,
+    paddingHorizontal: PADDING_MARGIN.lg,
+    backgroundColor: BANNER_BG,
+    borderTopWidth: 1,
+    borderTopColor: BANNER_BG_BORDER_TOP,
   },
   label: {
     flex: 1,
-    color: COLOR.softWhite,
+    color: BANNER_TEXT,
     fontSize: FONTSIZE.medium,
     fontWeight: FONTWEIGHT.semiBold,
   },
   cta: {
-    color: COLOR.lightBlue,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+    paddingVertical: PADDING_MARGIN.xs + 2,
+    paddingHorizontal: PADDING_MARGIN.md,
+    borderRadius: BORDER.rounded,
+    backgroundColor: COLOR.darkBlue,
+  },
+  ctaLabel: {
+    color: COLOR.softWhite,
     fontSize: FONTSIZE.medium,
     fontWeight: FONTWEIGHT.semiBold,
   },
