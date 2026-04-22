@@ -624,6 +624,10 @@ const en = {
     are_you_sure_wipe: "Are you sure you want to wipe your data?\nYou will lose all notes and categories created.",
     finish_organize_categories: "Finish to organize categories or undo your changes.",
     generic_success_description: "The operation was successful.",
+    update_available_title: "Update available",
+    update_available_description:
+      "A new version ({{version}}) is available. Please update to get the latest fixes and improvements.",
+    update_available_confirm: "Update now",
   },
 
   /* generic */

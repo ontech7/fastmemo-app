@@ -614,6 +614,9 @@ const zh = {
     are_you_sure_wipe: "您确定要擦除数据吗？\n您将丢失所有创建的笔记和类别。",
     finish_organize_categories: "完成以组织类别或撤消更改。",
     generic_success_description: "操作成功。",
+    update_available_title: "有可用的更新",
+    update_available_description: "新版本（{{version}}）已发布。请更新以获取最新的修复和改进。",
+    update_available_confirm: "立即更新",
   },
 
   /* generic */

@@ -631,6 +631,10 @@ const fr = {
     are_you_sure_wipe: "Voulez-vous vraiment effacer vos données?\nVous perdrez toutes les notes et catégories créées.",
     finish_organize_categories: "Terminer pour organiser les catégories ou annuler vos modifications.",
     generic_success_description: "L'opération a réussi.",
+    update_available_title: "Mise à jour disponible",
+    update_available_description:
+      "Une nouvelle version ({{version}}) est disponible. Veuillez mettre à jour pour obtenir les derniers correctifs et améliorations.",
+    update_available_confirm: "Mettre à jour",
   },
 
   /* generic */

@@ -620,6 +620,10 @@ const ja = {
     are_you_sure_wipe: "データを消去してもよろしいですか？\n作成されたすべてのノートとカテゴリが失われます。",
     finish_organize_categories: "カテゴリの整理を完了するか、変更を元に戻します。",
     generic_success_description: "操作は成功しました。",
+    update_available_title: "アップデートがあります",
+    update_available_description:
+      "新しいバージョン（{{version}}）が利用可能です。最新の修正と改善を反映するため、アップデートしてください。",
+    update_available_confirm: "今すぐ更新",
   },
 
   /* generic */

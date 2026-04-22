@@ -627,6 +627,10 @@ const es = {
     are_you_sure_wipe: "¿Estás seguro de que quieres borrar tus datos?\nPerderás todas las notas y categorías creadas.",
     finish_organize_categories: "Finalice para organizar categorías o deshacer sus cambios.",
     generic_success_description: "La operación fue exitosa.",
+    update_available_title: "Actualización disponible",
+    update_available_description:
+      "Hay una nueva versión ({{version}}) disponible. Actualiza para obtener las últimas correcciones y mejoras.",
+    update_available_confirm: "Actualizar ahora",
   },
 
   /* generic */
