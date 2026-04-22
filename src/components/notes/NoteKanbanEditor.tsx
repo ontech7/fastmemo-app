@@ -3,27 +3,17 @@ import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
-import { storeDirtyNoteId } from "@/libs/registry";
 import KanbanDragProvider from "@/providers/KanbanDragProvider";
-import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
-import {
-  selectorWebhook_addKanbanNote,
-  selectorWebhook_deleteNote,
-  selectorWebhook_temporaryDeleteNote,
-  selectorWebhook_updateNote,
-} from "@/slicers/settingsSlice";
+import { selectorWebhook_addKanbanNote } from "@/slicers/settingsSlice";
 import type { KanbanItem, KanbanNote } from "@/types";
-import { formatDateTime } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
-import { webhook } from "@/utils/webhook";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Keyboard, Platform, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
+import { Platform, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
-import { useDispatch, useSelector } from "react-redux";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import uuid from "react-uuid";
 import KanbanBoard from "../kanban/KanbanBoard";
 
@@ -33,6 +23,13 @@ interface Props {
   initialNote: KanbanNote;
 }
 
+const isKanbanNoteEmpty = (n: KanbanNote) => {
+  const no_title = isStringEmpty(n.title);
+  const no_columns = !n.columns?.length;
+  const no_cards = n.columns?.every((col) => !col.items?.length);
+  return no_title && (no_columns || no_cards);
+};
+
 export default function NoteKanbanEditor({ initialNote }: Props) {
   const { t } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
@@ -40,97 +37,54 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
   const columnWidth = Math.min(screenWidth, 500) - PADDING_MARGIN.lg * 2 - COLUMN_PEEK;
   const snapInterval = columnWidth + PADDING_MARGIN.md;
 
-  const webhook_addKanbanNote = useSelector(selectorWebhook_addKanbanNote);
-  const webhook_updateNote = useSelector(selectorWebhook_updateNote);
-  const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
-  const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
-
-  const dispatch = useDispatch();
   const scrollViewRef = useRef(null);
 
-  const [note, setNote] = useState({
-    ...initialNote,
-    type: initialNote.type || "kanban",
-    columns:
-      initialNote.columns?.length > 0
-        ? initialNote.columns
-        : [{ id: uuid(), name: "", color: KANBAN_COLUMN_COLORS[0], items: [] }],
-  });
-
-  const isNewlyCreated = note.createdAt === note.updatedAt;
-
-  useEffect(() => {
-    if (!isNewlyCreated) {
-      return;
-    }
-
-    webhook(webhook_addKanbanNote, {
-      action: "note/addKanbanNote",
-      id: note.id,
+  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<KanbanNote>({
+    initialNote: {
+      ...initialNote,
+      type: initialNote.type || "kanban",
+      columns:
+        initialNote.columns?.length > 0
+          ? initialNote.columns
+          : [{ id: uuid(), name: "", color: KANBAN_COLUMN_COLORS[0], items: [] }],
+    },
+    defaultType: "kanban",
+    addWebhookSelector: selectorWebhook_addKanbanNote,
+    addAction: "note/addKanbanNote",
+    isEmpty: isKanbanNoteEmpty,
+    buildAddPayload: (n) => ({
+      id: n.id,
       type: "kanban",
-      title: note.title,
-      columns: note.columns,
-      createdAt: note.createdAt,
-      updatedAt: note.updatedAt,
-      important: note.important,
-      readOnly: note.readOnly,
-      hidden: note.hidden,
-      locked: note.locked,
+      title: n.title,
+      columns: n.columns,
+      createdAt: n.createdAt,
+      updatedAt: n.updatedAt,
+      important: n.important,
+      readOnly: n.readOnly,
+      hidden: n.hidden,
+      locked: n.locked,
       category: {
-        iconId: note.category.icon,
-        name: note.category.name,
+        iconId: n.category.icon,
+        name: n.category.name,
       },
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNewlyCreated]);
-
-  const updateNoteGlobal = useCallback(
-    (currNote) => {
-      const no_title = isStringEmpty(currNote.title);
-      const no_columns = !currNote.columns?.length;
-      const no_cards = currNote.columns?.every((col) => !col.items?.length);
-
-      if (no_title && (no_columns || no_cards)) {
-        dispatch(temporaryDeleteNote(currNote.id));
-        dispatch(deleteNote(currNote.id));
-        return;
-      }
-
-      dispatch(
-        addNote({
-          ...currNote,
-          type: currNote.type || "kanban",
-          updatedAt: Date.now(),
-          date: formatDateTime(),
-        })
-      );
-    },
-    [dispatch]
-  );
-
-  const dirtyRef = useRef(false);
-
-  useEffect(() => {
-    dirtyRef.current = false;
-  }, [note.id]);
-
-  useEffect(() => {
-    return () => {
-      dirtyRef.current = false;
-    };
-  }, []);
-
-  const setNoteAsync = useCallback(
-    (currNote) => {
-      if (!dirtyRef.current) {
-        storeDirtyNoteId(currNote.id);
-        dirtyRef.current = true;
-      }
-      setNote(currNote);
-      updateNoteGlobal(currNote);
-    },
-    [updateNoteGlobal]
-  );
+    }),
+    buildUpdatePayload: (n) => ({
+      id: n.id,
+      type: n.type || "kanban",
+      title: n.title,
+      columns: n.columns,
+      createdAt: n.createdAt,
+      updatedAt: n.updatedAt,
+      important: n.important,
+      readOnly: n.readOnly,
+      hidden: n.hidden,
+      locked: n.locked,
+      category: {
+        iconId: n.category.icon,
+        name: n.category.name,
+      },
+    }),
+  });
 
   /* Title */
 
@@ -181,63 +135,6 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
       setNoteAsync({ ...note, columns });
     },
     [note, setNoteAsync]
-  );
-
-  /* Webhook on back */
-
-  const updateNoteWebhook = useCallback(async () => {
-    const no_title = isStringEmpty(note.title);
-    const no_columns = !note.columns?.length;
-    const no_cards = note.columns?.every((col) => !col.items?.length);
-
-    if (no_title && (no_columns || no_cards)) {
-      await webhook(webhook_temporaryDeleteNote, {
-        action: "note/temporaryDeleteNote",
-        id: note.id,
-      });
-      await webhook(webhook_deleteNote, {
-        action: "note/deleteNote",
-        id: note.id,
-      });
-    } else {
-      await webhook(webhook_updateNote, {
-        action: "note/updateNote",
-        id: note.id,
-        type: note.type || "kanban",
-        title: note.title,
-        columns: note.columns,
-        createdAt: note.createdAt,
-        updatedAt: note.updatedAt,
-        important: note.important,
-        readOnly: note.readOnly,
-        hidden: note.hidden,
-        locked: note.locked,
-        category: {
-          iconId: note.category.icon,
-          name: note.category.name,
-        },
-      });
-    }
-  }, [webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, note]);
-
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-      updateNoteWebhook();
-      KeyboardController.dismiss();
-      Keyboard.dismiss();
-      return false;
-    });
-
-    return () => backHandler.remove();
-  }, [updateNoteWebhook]);
-
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        KeyboardController.dismiss();
-        Keyboard.dismiss();
-      };
-    }, [])
   );
 
   return (

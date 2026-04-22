@@ -4,6 +4,7 @@ export type {
   KanbanItem,
   KanbanColumn,
   CodeTab,
+  NoteType,
   NoteBase,
   TextNote,
   TodoNote,

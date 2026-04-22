@@ -6,30 +6,21 @@ import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton"
 import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import { configs } from "@/configs";
+import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
-import { storeDirtyNoteId } from "@/libs/registry";
-import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
-import {
-  selectorDeveloperMode,
-  selectorWebhook_addTextNote,
-  selectorWebhook_deleteNote,
-  selectorWebhook_temporaryDeleteNote,
-  selectorWebhook_updateNote,
-} from "@/slicers/settingsSlice";
-import { formatDateTime } from "@/utils/date";
+import { selectorDeveloperMode, selectorWebhook_addTextNote } from "@/slicers/settingsSlice";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
 import { toast } from "@/utils/toast";
-import { webhook } from "@/utils/webhook";
 import { useFocusEffect } from "@react-navigation/native";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
-import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
@@ -42,91 +33,53 @@ interface Props {
 export default function NoteTextEditor({ initialNote }: Props) {
   const { t } = useTranslation();
 
-  const webhook_addTextNote = useSelector(selectorWebhook_addTextNote);
-  const webhook_updateNote = useSelector(selectorWebhook_updateNote);
-  const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
-  const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
   const devMode = useSelector(selectorDeveloperMode);
 
-  const dispatch = useDispatch();
-
-  const [note, setNote] = useState({
-    ...initialNote,
-    type: initialNote.type || "text",
+  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TextNote>({
+    initialNote: {
+      ...initialNote,
+      type: initialNote.type || "text",
+    },
+    defaultType: "text",
+    addWebhookSelector: selectorWebhook_addTextNote,
+    addAction: "note/addTextNote",
+    isEmpty: (n) => isStringEmpty(n.title) && isStringEmpty(n.text),
+    buildAddPayload: (n) => ({
+      id: n.id,
+      type: n.type || "text",
+      title: n.title,
+      text: n.text,
+      createdAt: n.createdAt,
+      updatedAt: n.updatedAt,
+      important: n.important,
+      readOnly: n.readOnly,
+      hidden: n.hidden,
+      locked: n.locked,
+      category: {
+        iconId: n.category.icon,
+        name: n.category.name,
+      },
+    }),
+    buildUpdatePayload: (n) => ({
+      id: n.id,
+      type: n.type || "text",
+      title: n.title,
+      text: n.text,
+      createdAt: n.createdAt,
+      updatedAt: n.updatedAt,
+      important: n.important,
+      readOnly: n.readOnly,
+      hidden: n.hidden,
+      locked: n.locked,
+      category: {
+        iconId: n.category.icon,
+        name: n.category.name,
+      },
+    }),
   });
 
   const [noteTextLength, setNoteTextLength] = useState(getTextLength(note.text));
   const [noteTextSize, setNoteTextSize] = useState(getTextSize(note.text));
-
-  const isNewlyCreated = note.createdAt === note.updatedAt;
-
-  useEffect(() => {
-    if (!isNewlyCreated) {
-      return;
-    }
-
-    webhook(webhook_addTextNote, {
-      action: "note/addTextNote",
-      id: note.id,
-      type: note.type || "text",
-      title: note.title,
-      text: note.text,
-      createdAt: note.createdAt,
-      updatedAt: note.updatedAt,
-      important: note.important,
-      readOnly: note.readOnly,
-      hidden: note.hidden,
-      locked: note.locked,
-      category: {
-        iconId: note.category.icon,
-        name: note.category.name,
-      },
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNewlyCreated]);
-
-  const updateNoteGlobal = useCallback(
-    (currNote) => {
-      if (isStringEmpty(currNote.title) && isStringEmpty(currNote.text)) {
-        dispatch(temporaryDeleteNote(currNote.id));
-        dispatch(deleteNote(currNote.id));
-      } else {
-        dispatch(
-          addNote({
-            ...currNote,
-            type: currNote.type || "text",
-            updatedAt: Date.now(),
-            date: formatDateTime(),
-          })
-        );
-      }
-    },
-    [dispatch]
-  );
-
-  const dirtyRef = useRef(false);
-
-  useEffect(() => {
-    dirtyRef.current = false;
-  }, [note.id]);
-
-  useEffect(() => {
-    return () => {
-      dirtyRef.current = false;
-    };
-  }, []);
-
-  const setNoteAsync = useCallback(
-    (currNote) => {
-      if (!dirtyRef.current) {
-        storeDirtyNoteId(currNote.id);
-        dirtyRef.current = true;
-      }
-      setNote(currNote);
-      updateNoteGlobal(currNote);
-    },
-    [updateNoteGlobal]
-  );
 
   const richTextEditor = useRef(null);
 
@@ -178,56 +131,12 @@ export default function NoteTextEditor({ initialNote }: Props) {
     [note, setNoteAsync, t, devMode]
   );
 
-  const updateNoteWebhook = useCallback(async () => {
-    if (isStringEmpty(note.title) && isStringEmpty(note.text)) {
-      await webhook(webhook_temporaryDeleteNote, {
-        action: "note/temporaryDeleteNote",
-        id: note.id,
-      });
-      await webhook(webhook_deleteNote, {
-        action: "note/deleteNote",
-        id: note.id,
-      });
-    } else {
-      await webhook(webhook_updateNote, {
-        action: "note/updateNote",
-        id: note.id,
-        type: note.type || "text",
-        title: note.title,
-        text: note.text,
-        createdAt: note.createdAt,
-        updatedAt: note.updatedAt,
-        important: note.important,
-        readOnly: note.readOnly,
-        hidden: note.hidden,
-        locked: note.locked,
-        category: {
-          iconId: note.category.icon,
-          name: note.category.name,
-        },
-      });
-    }
-  }, [note, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote]);
-
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-      updateNoteWebhook();
-      KeyboardController.dismiss();
-      Keyboard.dismiss();
-      return false;
-    });
-
-    return () => backHandler.remove();
-  }, [updateNoteWebhook]);
-
   const [isKeyboardShown, setIsKeyboardShown] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       return () => {
         richTextEditor.current?.dismissKeyboard();
-        KeyboardController.dismiss();
-        Keyboard.dismiss();
       };
     }, [])
   );
