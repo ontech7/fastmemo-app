@@ -10,16 +10,11 @@ import { webhook } from "@/utils/webhook";
 import { BORDER, COLOR, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
 import { useSecret } from "@/hooks/useSecret";
-import { getCategories } from "../../slicers/categoriesSlice";
-import {
-  deleteAllNotes,
-  deleteSelectedNotes,
-  restoreAllTrashedNotes,
-  restoreSelectedTrashedNotes,
-} from "../../slicers/notesSlice";
-import { selectorWebhook_deleteNote, selectorWebhook_restoreNote } from "../../slicers/settingsSlice";
-import ConfirmOrCancelDialog from "../dialogs/ConfirmOrCancelDialog";
-import ContextMenu from "../renderers/ContextMenu";
+import { getCategories } from "@/slicers/categoriesSlice";
+import { deleteAllNotes, deleteSelectedNotes, restoreAllTrashedNotes, restoreSelectedTrashedNotes } from "@/slicers/notesSlice";
+import { selectorWebhook_deleteNote, selectorWebhook_restoreNote } from "@/slicers/settingsSlice";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
+import ContextMenu from "@/components/renderers/ContextMenu";
 
 interface Props {
   selectedNotes: string[];

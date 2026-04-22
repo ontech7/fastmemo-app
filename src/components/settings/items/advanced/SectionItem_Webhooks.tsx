@@ -4,8 +4,8 @@ import type { TextStyle } from "react-native";
 
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
 
-import SectionItemList_Navigation from "../../components/item/SectionItemList_Navigation";
-import SectionItemList from "../../components/list/SectionItemList";
+import SectionItemList_Navigation from "@/components/settings/components/item/SectionItemList_Navigation";
+import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 interface Props {
   isLast: boolean;

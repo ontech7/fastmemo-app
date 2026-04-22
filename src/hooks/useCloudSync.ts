@@ -26,8 +26,8 @@ import { getReversedDateTime } from "@/utils/date";
 import { toast } from "@/utils/toast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { getCategories, resetCloudCategories, setCategories } from "../slicers/categoriesSlice";
-import { getAllNotes, getNoteFilters, resetCloudNotes, setNotes } from "../slicers/notesSlice";
+import { getCategories, resetCloudCategories, setCategories } from "@/slicers/categoriesSlice";
+import { getAllNotes, getNoteFilters, resetCloudNotes, setNotes } from "@/slicers/notesSlice";
 import {
   getCloudConnected,
   getCloudSettings,
@@ -35,7 +35,7 @@ import {
   setCloudConnected,
   setCloudSettings,
   setIsCloudSyncEnabled,
-} from "../slicers/settingsSlice";
+} from "@/slicers/settingsSlice";
 
 interface ConnectingState {
   loading: boolean;

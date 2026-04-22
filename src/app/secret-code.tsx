@@ -12,10 +12,10 @@ import { retrieveSecretCodeCallback } from "@/libs/registry";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
-import BackButton from "../components/buttons/BackButton";
-import CodeInput from "../components/inputs/CodeInput";
-import { getNote } from "../slicers/notesSlice";
-import { selectorCurrentSecretCode, setSecretCode } from "../slicers/settingsSlice";
+import BackButton from "@/components/buttons/BackButton";
+import CodeInput from "@/components/inputs/CodeInput";
+import { getNote } from "@/slicers/notesSlice";
+import { selectorCurrentSecretCode, setSecretCode } from "@/slicers/settingsSlice";
 
 const CODE_PHASE = {
   oldCode: i18n.t("secretcode.oldCode"),

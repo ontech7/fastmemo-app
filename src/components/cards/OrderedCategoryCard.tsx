@@ -4,7 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import CategoryIcon from "../CategoryIcon";
+import CategoryIcon from "@/components/CategoryIcon";
 
 import type { Category } from "@/types";
 

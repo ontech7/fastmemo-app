@@ -12,10 +12,10 @@ import { Keyboard, Platform } from "react-native";
 import CryptoJS from "react-native-crypto-js";
 import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
 import { useDispatch, useStore } from "react-redux";
-import { setCategories } from "../../../../slicers/categoriesSlice";
-import { setNotes, setTrashedNotes } from "../../../../slicers/notesSlice";
-import SectionItemList_Text from "../../components/item/SectionItemList_Text";
-import SectionItemList from "../../components/list/SectionItemList";
+import { setCategories } from "@/slicers/categoriesSlice";
+import { setNotes, setTrashedNotes } from "@/slicers/notesSlice";
+import SectionItemList_Text from "@/components/settings/components/item/SectionItemList_Text";
+import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 const getFileSystemModules = () => {
   if (Platform.OS === "web") {

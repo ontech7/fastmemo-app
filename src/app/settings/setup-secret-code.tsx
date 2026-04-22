@@ -12,8 +12,8 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowPathIcon } from "react-native-heroicons/outline";
 import { useDispatch } from "react-redux";
-import CodeInput from "../../components/inputs/CodeInput";
-import { setSecretCode } from "../../slicers/settingsSlice";
+import CodeInput from "@/components/inputs/CodeInput";
+import { setSecretCode } from "@/slicers/settingsSlice";
 
 const CODE_PHASE = {
   firstCode: [i18n.t("setupcode.firstCode_1"), i18n.t("setupcode.firstCode_2")],

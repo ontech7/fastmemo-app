@@ -6,8 +6,8 @@ import { useRouter } from "@/hooks/useRouter";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import { getNotesSizePerCategory } from "../../slicers/notesSlice";
-import CategoryIcon from "../CategoryIcon";
+import { getNotesSizePerCategory } from "@/slicers/notesSlice";
+import CategoryIcon from "@/components/CategoryIcon";
 
 import type { Category } from "@/types";
 

@@ -10,10 +10,10 @@ import SafeAreaView from "@/components/SafeAreaView";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import AddCategoryButton from "../../components/buttons/AddCategoryButton";
-import BackButton from "../../components/buttons/BackButton";
-import OrganizeCategoryList from "../../components/lists/OrganizeCategoryList";
-import { getCategories, setCategories } from "../../slicers/categoriesSlice";
+import AddCategoryButton from "@/components/buttons/AddCategoryButton";
+import BackButton from "@/components/buttons/BackButton";
+import OrganizeCategoryList from "@/components/lists/OrganizeCategoryList";
+import { getCategories, setCategories } from "@/slicers/categoriesSlice";
 
 export default function OrganizeCategoriesScreen() {
   const { t } = useTranslation();

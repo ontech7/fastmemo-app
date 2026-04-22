@@ -2,7 +2,7 @@ import { Platform, StyleSheet, View } from "react-native";
 
 import { PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import OrganizeCategoryCard from "../cards/OrganizeCategoryCard";
+import OrganizeCategoryCard from "@/components/cards/OrganizeCategoryCard";
 
 import type { Category } from "@/types";
 

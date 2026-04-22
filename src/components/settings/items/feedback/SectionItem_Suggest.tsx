@@ -2,8 +2,8 @@ import { configs } from "@/configs";
 import { useTranslation } from "react-i18next";
 import { Platform, Share } from "react-native";
 
-import SectionItemList_Text from "../../components/item/SectionItemList_Text";
-import SectionItemList from "../../components/list/SectionItemList";
+import SectionItemList_Text from "@/components/settings/components/item/SectionItemList_Text";
+import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 interface Props {
   isLast: boolean;

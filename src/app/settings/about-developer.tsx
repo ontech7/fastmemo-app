@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { openUrl } from "@/utils/openUrl";
 import { ArrowTopRightOnSquareIcon } from "react-native-heroicons/outline";
-import authorImage from "../../assets/images/author.png";
+import authorImage from "@/assets/images/author.png";
 
 const DEVELOPER_NAME = "Andrea Losavio";
 const LINKEDIN_URL = "https://www.linkedin.com/in/andrea-losavio/";

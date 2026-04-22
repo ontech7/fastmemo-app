@@ -9,7 +9,7 @@ import * as Sentry from "@sentry/react-native";
 import i18n from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import lottieJson from "../assets/lottie/Logo_with_Text.json";
+import lottieJson from "@/assets/lottie/Logo_with_Text.json";
 
 export default function LoadingScreen() {
   const router = useRouter();

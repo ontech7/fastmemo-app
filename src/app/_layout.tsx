@@ -1,4 +1,4 @@
-import "../styles/global.css";
+import "@/styles/global.css";
 
 import { configs } from "@/configs";
 import { BORDER, COLOR } from "@/constants/styles";
