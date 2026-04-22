@@ -631,7 +631,7 @@ const es = {
 
   /* banner */
   banner: {
-    update_available: "Nueva versión disponible",
+    update_available: "Nueva versión disponible!",
     update_available_cta: "Actualizar",
   },
 

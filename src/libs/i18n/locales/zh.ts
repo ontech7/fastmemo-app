@@ -618,7 +618,7 @@ const zh = {
 
   /* banner */
   banner: {
-    update_available: "有新版本",
+    update_available: "有新版本!",
     update_available_cta: "更新",
   },
 

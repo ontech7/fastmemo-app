@@ -624,7 +624,7 @@ const ja = {
 
   /* banner */
   banner: {
-    update_available: "新しいバージョンがあります",
+    update_available: "新しいバージョンがあります！",
     update_available_cta: "更新",
   },
 

@@ -459,10 +459,10 @@ export default function HomeScreen() {
           <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
         </Animated.View>
 
-        <UpdateAvailableBanner visible={updateReleaseUrl != null} onPress={onPressUpdate} />
-
         <AddNoteOverlayButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
       </KeyboardAvoidingView>
+
+      <UpdateAvailableBanner visible={updateReleaseUrl != null} onPress={onPressUpdate} />
     </>
   );
 }
