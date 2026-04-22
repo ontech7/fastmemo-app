@@ -634,6 +634,12 @@ const de = {
     generic_success_description: "Der Vorgang war erfolgreich.",
   },
 
+  /* banner */
+  banner: {
+    update_available: "Neue Version verfügbar!",
+    update_available_cta: "Aktualisieren",
+  },
+
   /* generic */
   All: "Alle",
   delete_and_move: "Löschen und Verschieben",

@@ -622,6 +622,12 @@ const ja = {
     generic_success_description: "操作は成功しました。",
   },
 
+  /* banner */
+  banner: {
+    update_available: "新しいバージョンがあります！",
+    update_available_cta: "更新",
+  },
+
   /* generic */
   All: "すべて",
   delete_and_move: "削除して移動",
