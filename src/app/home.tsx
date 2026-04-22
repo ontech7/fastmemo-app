@@ -1,3 +1,4 @@
+import UpdateAvailableBanner from "@/components/banners/UpdateAvailableBanner";
 import AddNoteOverlayButton from "@/components/buttons/AddNoteOverlayButton";
 import DeleteNotesButton from "@/components/buttons/DeleteNotesButton";
 import FavoriteNotesButton from "@/components/buttons/FavoriteNotesButton";
@@ -7,7 +8,6 @@ import ProtectNotesButton from "@/components/buttons/ProtectNotesButton";
 import ReadOnlyNotesButton from "@/components/buttons/ReadOnlyNotesButton";
 import NoteCard from "@/components/cards/NoteCard";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
-import UpdateAvailableDialog from "@/components/dialogs/UpdateAvailableDialog";
 import SearchNotesInput from "@/components/inputs/SearchNotesInput";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
@@ -86,7 +86,7 @@ export default function HomeScreen() {
 
   const [showDeleteNotesDialog, setShowDeleteNotesDialog] = useState(false);
 
-  const [updateInfo, setUpdateInfo] = useState<{ latestVersion: string; releaseUrl: string } | null>(null);
+  const [updateReleaseUrl, setUpdateReleaseUrl] = useState<string | null>(null);
 
   const { isConnected } = useNetInfo();
 
@@ -339,7 +339,7 @@ export default function HomeScreen() {
       const current = getCurrentAppVersion();
 
       if (isNewerVersion(current, latest)) {
-        setUpdateInfo({ latestVersion: latest, releaseUrl: data.releaseUrl });
+        setUpdateReleaseUrl(data.releaseUrl);
       }
     };
 
@@ -350,10 +350,10 @@ export default function HomeScreen() {
     };
   }, [isConnected]);
 
-  const onConfirmUpdate = useCallback(() => {
-    if (!updateInfo) return;
-    openUrl(pickUpdateUrl(updateInfo.releaseUrl));
-  }, [updateInfo]);
+  const onPressUpdate = useCallback(() => {
+    if (!updateReleaseUrl) return;
+    openUrl(pickUpdateUrl(updateReleaseUrl));
+  }, [updateReleaseUrl]);
 
   // filters
 
@@ -365,12 +365,6 @@ export default function HomeScreen() {
 
   return (
     <>
-      <UpdateAvailableDialog
-        open={updateInfo != null}
-        latestVersion={updateInfo?.latestVersion ?? ""}
-        onConfirm={onConfirmUpdate}
-      />
-
       <ConfirmOrCancelDialog
         open={showDeleteNotesDialog}
         description={t("popup.delete_notes")}
@@ -464,6 +458,8 @@ export default function HomeScreen() {
 
           <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
         </Animated.View>
+
+        <UpdateAvailableBanner visible={updateReleaseUrl != null} onPress={onPressUpdate} />
 
         <AddNoteOverlayButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
       </KeyboardAvoidingView>
