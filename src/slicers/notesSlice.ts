@@ -52,7 +52,7 @@ const notesSlice = createSlice({
       const idx = state.items.findIndex((n) => n.id === action.payload.id);
 
       if (idx === -1) {
-        if (state.filters?.order || "desc") {
+        if ((state.filters?.order ?? "desc") === "desc") {
           state.items.unshift(action.payload);
         } else {
           state.items.push(action.payload);
