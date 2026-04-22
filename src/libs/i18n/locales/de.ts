@@ -632,10 +632,12 @@ const de = {
       "Sind Sie sicher, dass Sie Ihre Daten löschen möchten?\nSie verlieren alle erstellten Notizen und Kategorien.",
     finish_organize_categories: "Fertigstellen, um Kategorien zu organisieren oder Ihre Änderungen rückgängig zu machen.",
     generic_success_description: "Der Vorgang war erfolgreich.",
-    update_available_title: "Update verfügbar",
-    update_available_description:
-      "Eine neue Version ({{version}}) ist verfügbar. Bitte aktualisieren Sie, um die neuesten Korrekturen und Verbesserungen zu erhalten.",
-    update_available_confirm: "Jetzt aktualisieren",
+  },
+
+  /* banner */
+  banner: {
+    update_available: "Neue Version verfügbar",
+    update_available_cta: "Aktualisieren",
   },
 
   /* generic */

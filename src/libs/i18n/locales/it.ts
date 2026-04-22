@@ -625,10 +625,12 @@ const it = {
     are_you_sure_wipe: "Sei sicuro di voler cancellare i tuoi dati?\nPerderai tutte le note e le categorie create.",
     finish_organize_categories: "Finisci di organizzare le categorie o annulla le modifiche.",
     generic_success_description: "L'operazione è andata a buon fine.",
-    update_available_title: "Aggiornamento disponibile",
-    update_available_description:
-      "È disponibile una nuova versione ({{version}}). Ti chiediamo di aggiornare per ricevere le ultime correzioni e migliorie.",
-    update_available_confirm: "Aggiorna ora",
+  },
+
+  /* banner */
+  banner: {
+    update_available: "Nuova versione disponibile",
+    update_available_cta: "Aggiorna",
   },
 
   /* generic */
