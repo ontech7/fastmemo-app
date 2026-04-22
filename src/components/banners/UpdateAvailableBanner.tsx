@@ -8,12 +8,13 @@ import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/con
 
 const SLIDE_DURATION_MS = 220;
 
-// Warm amber palette, not part of the core COLOR constants because it is
-// intentionally off-theme: the banner needs to pop against the dark-blue
-// home background to signal "something you should act on" without using a
-// destructive color (red) that would imply an error.
-const BANNER_BG = "#FFC857";
-const BANNER_BG_BORDER_TOP = "#D9A53E";
+// Desaturated sand/amber palette, not part of the core COLOR constants
+// because it is intentionally off-theme: the banner needs to stand out
+// against the dark-blue home background to signal "something you should
+// act on" without using a destructive color (red) or a loud accent
+// (saturated yellow) that would feel like a warning.
+const BANNER_BG = "#E8C77A";
+const BANNER_BG_BORDER_TOP = "#C4A65C";
 const BANNER_TEXT = "#1A1F3A";
 
 interface Props {
