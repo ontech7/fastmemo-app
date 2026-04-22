@@ -46,33 +46,16 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
   const draggableListRef = useRef(null);
 
-  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TodoNote>({
-    initialNote: {
+  const memoInitialNote = useMemo<TodoNote>(
+    () => ({
       ...initialNote,
       type: initialNote.type || "todo",
       list: initialNote.list?.length > 0 ? initialNote.list : [{ id: uuid(), text: "", checked: false }],
-    },
-    defaultType: "todo",
-    addWebhookSelector: selectorWebhook_addTodoNote,
-    addAction: "note/addTodoNote",
-    isEmpty: isTodoNoteEmpty,
-    buildAddPayload: (n) => ({
-      id: n.id,
-      type: "todo",
-      title: n.title,
-      list: n.list,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      important: n.important,
-      readOnly: n.readOnly,
-      hidden: n.hidden,
-      locked: n.locked,
-      category: {
-        iconId: n.category.icon,
-        name: n.category.name,
-      },
     }),
-    buildUpdatePayload: (n) => ({
+    [initialNote]
+  );
+  const buildPayload = useCallback(
+    (n: TodoNote) => ({
       id: n.id,
       type: n.type || "todo",
       title: n.title,
@@ -88,6 +71,17 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         name: n.category.name,
       },
     }),
+    []
+  );
+
+  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TodoNote>({
+    initialNote: memoInitialNote,
+    defaultType: "todo",
+    addWebhookSelector: selectorWebhook_addTodoNote,
+    addAction: "note/addTodoNote",
+    isEmpty: isTodoNoteEmpty,
+    buildAddPayload: buildPayload,
+    buildUpdatePayload: buildPayload,
   });
 
   /* local */

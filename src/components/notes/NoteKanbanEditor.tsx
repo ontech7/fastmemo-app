@@ -9,7 +9,7 @@ import KanbanDragProvider from "@/providers/KanbanDragProvider";
 import { selectorWebhook_addKanbanNote } from "@/slicers/settingsSlice";
 import type { KanbanItem, KanbanNote } from "@/types";
 import { isStringEmpty } from "@/utils/string";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -39,36 +39,19 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
 
   const scrollViewRef = useRef(null);
 
-  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<KanbanNote>({
-    initialNote: {
+  const memoInitialNote = useMemo<KanbanNote>(
+    () => ({
       ...initialNote,
       type: initialNote.type || "kanban",
       columns:
         initialNote.columns?.length > 0
           ? initialNote.columns
           : [{ id: uuid(), name: "", color: KANBAN_COLUMN_COLORS[0], items: [] }],
-    },
-    defaultType: "kanban",
-    addWebhookSelector: selectorWebhook_addKanbanNote,
-    addAction: "note/addKanbanNote",
-    isEmpty: isKanbanNoteEmpty,
-    buildAddPayload: (n) => ({
-      id: n.id,
-      type: "kanban",
-      title: n.title,
-      columns: n.columns,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      important: n.important,
-      readOnly: n.readOnly,
-      hidden: n.hidden,
-      locked: n.locked,
-      category: {
-        iconId: n.category.icon,
-        name: n.category.name,
-      },
     }),
-    buildUpdatePayload: (n) => ({
+    [initialNote]
+  );
+  const buildPayload = useCallback(
+    (n: KanbanNote) => ({
       id: n.id,
       type: n.type || "kanban",
       title: n.title,
@@ -84,6 +67,17 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
         name: n.category.name,
       },
     }),
+    []
+  );
+
+  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<KanbanNote>({
+    initialNote: memoInitialNote,
+    defaultType: "kanban",
+    addWebhookSelector: selectorWebhook_addKanbanNote,
+    addAction: "note/addKanbanNote",
+    isEmpty: isKanbanNoteEmpty,
+    buildAddPayload: buildPayload,
+    buildUpdatePayload: buildPayload,
   });
 
   /* Title */

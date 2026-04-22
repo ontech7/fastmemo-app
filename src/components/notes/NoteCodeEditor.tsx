@@ -43,32 +43,17 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   const tabScrollRef = useRef<ScrollView>(null);
   const editorRef = useRef<CodeEditorWebViewRef>(null);
 
-  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<CodeNote>({
-    initialNote: {
+  const memoInitialNote = useMemo<CodeNote>(
+    () => ({
       ...initialNote,
       type: initialNote.type || "code",
       tabs: initialNote.tabs?.length > 0 ? initialNote.tabs : [{ id: uuid(), title: "", code: "", language: "javascript" }],
       activeTabId: initialNote.activeTabId || initialNote.tabs?.[0]?.id || "",
-    },
-    defaultType: "code",
-    addWebhookSelector: selectorWebhook_addCodeNote,
-    addAction: "note/addCodeNote",
-    isEmpty: isCodeNoteEmpty,
-    buildAddPayload: (n) => ({
-      id: n.id,
-      type: "code",
-      title: n.title,
-      tabs: n.tabs,
-      activeTabId: n.activeTabId,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      important: n.important,
-      readOnly: n.readOnly,
-      hidden: n.hidden,
-      locked: n.locked,
-      category: { iconId: n.category.icon, name: n.category.name },
     }),
-    buildUpdatePayload: (n) => ({
+    [initialNote]
+  );
+  const buildPayload = useCallback(
+    (n: CodeNote) => ({
       id: n.id,
       type: n.type || "code",
       title: n.title,
@@ -82,6 +67,17 @@ export default function NoteCodeEditor({ initialNote }: Props) {
       locked: n.locked,
       category: { iconId: n.category.icon, name: n.category.name },
     }),
+    []
+  );
+
+  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<CodeNote>({
+    initialNote: memoInitialNote,
+    defaultType: "code",
+    addWebhookSelector: selectorWebhook_addCodeNote,
+    addAction: "note/addCodeNote",
+    isEmpty: isCodeNoteEmpty,
+    buildAddPayload: buildPayload,
+    buildUpdatePayload: buildPayload,
   });
 
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);

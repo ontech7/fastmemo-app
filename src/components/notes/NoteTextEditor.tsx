@@ -14,7 +14,7 @@ import { toast } from "@/utils/toast";
 import { useFocusEffect } from "@react-navigation/native";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
@@ -35,47 +35,36 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const devMode = useSelector(selectorDeveloperMode);
 
+  const memoInitialNote = useMemo<TextNote>(() => ({ ...initialNote, type: initialNote.type || "text" }), [initialNote]);
+  const isEmpty = useCallback((n: TextNote) => isStringEmpty(n.title) && isStringEmpty(n.text), []);
+  const buildPayload = useCallback(
+    (n: TextNote) => ({
+      id: n.id,
+      type: n.type || "text",
+      title: n.title,
+      text: n.text,
+      createdAt: n.createdAt,
+      updatedAt: n.updatedAt,
+      important: n.important,
+      readOnly: n.readOnly,
+      hidden: n.hidden,
+      locked: n.locked,
+      category: {
+        iconId: n.category.icon,
+        name: n.category.name,
+      },
+    }),
+    []
+  );
+
   const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TextNote>({
-    initialNote: {
-      ...initialNote,
-      type: initialNote.type || "text",
-    },
+    initialNote: memoInitialNote,
     defaultType: "text",
     addWebhookSelector: selectorWebhook_addTextNote,
     addAction: "note/addTextNote",
-    isEmpty: (n) => isStringEmpty(n.title) && isStringEmpty(n.text),
-    buildAddPayload: (n) => ({
-      id: n.id,
-      type: n.type || "text",
-      title: n.title,
-      text: n.text,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      important: n.important,
-      readOnly: n.readOnly,
-      hidden: n.hidden,
-      locked: n.locked,
-      category: {
-        iconId: n.category.icon,
-        name: n.category.name,
-      },
-    }),
-    buildUpdatePayload: (n) => ({
-      id: n.id,
-      type: n.type || "text",
-      title: n.title,
-      text: n.text,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      important: n.important,
-      readOnly: n.readOnly,
-      hidden: n.hidden,
-      locked: n.locked,
-      category: {
-        iconId: n.category.icon,
-        name: n.category.name,
-      },
-    }),
+    isEmpty,
+    buildAddPayload: buildPayload,
+    buildUpdatePayload: buildPayload,
   });
 
   const [noteTextLength, setNoteTextLength] = useState(getTextLength(note.text));
