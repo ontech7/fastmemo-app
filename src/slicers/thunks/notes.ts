@@ -1,11 +1,17 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
+import { createAction, createAsyncThunk } from "@reduxjs/toolkit";
 
 import type { Note } from "@/types";
 import type { AppRootState } from "@/slicers/store";
 
 import { COLLECTIONS, deleteCollectionInCloud, deleteElementInCloud, setElementInCloud } from "@/libs/firebase";
 
-import { wipeNotes } from "@/slicers/notesSlice";
+/**
+ * Pure action that wipes all local notes (live + trash).
+ * Declared here (not in notesSlice) so that wipeNotesThunk can dispatch it
+ * without creating a require cycle between notesSlice and thunks/notes.
+ * The reducer logic lives in notesSlice's `extraReducers`.
+ */
+export const wipeNotes = createAction("notes/wipe");
 
 interface ProcessNotesParams {
   notes: Note[];

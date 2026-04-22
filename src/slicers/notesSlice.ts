@@ -11,7 +11,7 @@ import { defaultCategory } from "../configs/default";
 import { only_if_cloudConnected } from "../libs/firebase";
 import { CryptNote } from "../utils/crypt";
 import { createdAt_asc_sort } from "../utils/sort";
-import { addCloudNotesAsync, deleteCloudNotesAsync } from "./thunks/notes";
+import { addCloudNotesAsync, deleteCloudNotesAsync, wipeNotes } from "./thunks/notes";
 
 const initialState: NotesState = {
   items: [],
@@ -341,11 +341,6 @@ const notesSlice = createSlice({
       });
     },
 
-    wipeNotes: (state) => {
-      state.items = [];
-      state.temporaryItems = [];
-    },
-
     addLocalNotes: (state, action: PayloadAction<Record<string, Note>>) => {
       Object.values(action.payload)
         .sort(createdAt_asc_sort)
@@ -391,6 +386,10 @@ const notesSlice = createSlice({
         Object.keys(action.payload).forEach((id) => {
           delete state.cloud.items.delete[id];
         });
+      })
+      .addCase(wipeNotes, (state) => {
+        state.items = [];
+        state.temporaryItems = [];
       });
   },
 });
@@ -420,7 +419,6 @@ export const {
   toggleReadOnlyNotes,
   toggleHiddenNotes,
   toggleProtectedNotes,
-  wipeNotes,
   addLocalNotes,
   deleteLocalNotes,
   resetCloudNotes,

@@ -1,11 +1,18 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
+import { createAction, createAsyncThunk } from "@reduxjs/toolkit";
 
 import type { Category } from "@/types";
 import type { AppRootState } from "@/slicers/store";
 
 import { COLLECTIONS, deleteCollectionInCloud, deleteElementInCloud, setElementInCloud } from "@/libs/firebase";
 
-import { wipeCategories } from "@/slicers/categoriesSlice";
+/**
+ * Pure action that resets local categories back to the default one.
+ * Declared here (not in categoriesSlice) so that wipeCategoriesThunk can
+ * dispatch it without creating a require cycle between categoriesSlice and
+ * thunks/categories. The reducer logic lives in categoriesSlice's
+ * `extraReducers`.
+ */
+export const wipeCategories = createAction("categories/wipe");
 
 interface CloudSyncParams {
   deviceUuid: string;
