@@ -37,25 +37,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const memoInitialNote = useMemo<TextNote>(() => ({ ...initialNote, type: initialNote.type || "text" }), [initialNote]);
   const isEmpty = useCallback((n: TextNote) => isStringEmpty(n.title) && isStringEmpty(n.text), []);
-  const buildPayload = useCallback(
-    (n: TextNote) => ({
-      id: n.id,
-      type: n.type || "text",
-      title: n.title,
-      text: n.text,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      important: n.important,
-      readOnly: n.readOnly,
-      hidden: n.hidden,
-      locked: n.locked,
-      category: {
-        iconId: n.category.icon,
-        name: n.category.name,
-      },
-    }),
-    []
-  );
+  const buildPayloadExtras = useCallback((n: TextNote) => ({ text: n.text }), []);
 
   const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TextNote>({
     initialNote: memoInitialNote,
@@ -63,8 +45,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
     addWebhookSelector: selectorWebhook_addTextNote,
     addAction: "note/addTextNote",
     isEmpty,
-    buildAddPayload: buildPayload,
-    buildUpdatePayload: buildPayload,
+    buildPayloadExtras,
   });
 
   const [noteTextLength, setNoteTextLength] = useState(getTextLength(note.text));

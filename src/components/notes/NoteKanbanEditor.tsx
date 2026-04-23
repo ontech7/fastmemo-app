@@ -50,25 +50,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
     }),
     [initialNote]
   );
-  const buildPayload = useCallback(
-    (n: KanbanNote) => ({
-      id: n.id,
-      type: n.type || "kanban",
-      title: n.title,
-      columns: n.columns,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      important: n.important,
-      readOnly: n.readOnly,
-      hidden: n.hidden,
-      locked: n.locked,
-      category: {
-        iconId: n.category.icon,
-        name: n.category.name,
-      },
-    }),
-    []
-  );
+  const buildPayloadExtras = useCallback((n: KanbanNote) => ({ columns: n.columns }), []);
 
   const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<KanbanNote>({
     initialNote: memoInitialNote,
@@ -76,8 +58,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
     addWebhookSelector: selectorWebhook_addKanbanNote,
     addAction: "note/addKanbanNote",
     isEmpty: isKanbanNoteEmpty,
-    buildAddPayload: buildPayload,
-    buildUpdatePayload: buildPayload,
+    buildPayloadExtras,
   });
 
   /* Title */

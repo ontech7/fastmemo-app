@@ -52,23 +52,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
     }),
     [initialNote]
   );
-  const buildPayload = useCallback(
-    (n: CodeNote) => ({
-      id: n.id,
-      type: n.type || "code",
-      title: n.title,
-      tabs: n.tabs,
-      activeTabId: n.activeTabId,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      important: n.important,
-      readOnly: n.readOnly,
-      hidden: n.hidden,
-      locked: n.locked,
-      category: { iconId: n.category.icon, name: n.category.name },
-    }),
-    []
-  );
+  const buildPayloadExtras = useCallback((n: CodeNote) => ({ tabs: n.tabs, activeTabId: n.activeTabId }), []);
 
   const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<CodeNote>({
     initialNote: memoInitialNote,
@@ -76,8 +60,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
     addWebhookSelector: selectorWebhook_addCodeNote,
     addAction: "note/addCodeNote",
     isEmpty: isCodeNoteEmpty,
-    buildAddPayload: buildPayload,
-    buildUpdatePayload: buildPayload,
+    buildPayloadExtras,
   });
 
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);

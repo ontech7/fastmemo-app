@@ -22,16 +22,16 @@ interface UseNoteEditorOptions<T extends Note> {
   defaultType: NoteType;
   /** Selector returning the webhook configuration for the "add" action (add<Type>Note). */
   addWebhookSelector: (state: RootState) => WebhookPayload;
-  /** Predicate to determine whether the note is "empty" (triggers trash + delete flow). */
-  isEmpty: (note: T) => boolean;
-  /** Builder for the payload of the "add" webhook. */
-  buildAddPayload: (note: T) => Record<string, unknown>;
-  /** Builder for the payload of the "update" webhook. */
-  buildUpdatePayload: (note: T) => Record<string, unknown>;
   /** Action string for the "add" webhook (e.g. "note/addTextNote"). */
   addAction: string;
-  /** Optional hook invoked before set is applied. Normally not needed. */
-  onBeforeSet?: (note: T) => void;
+  /** Predicate to determine whether the note is "empty" (triggers trash + delete flow). */
+  isEmpty: (note: T) => boolean;
+  /**
+   * Type-specific fields merged into the common base payload (id, type, title, timestamps,
+   * flags, category). The base payload is composed by the hook — the editor only supplies
+   * what is unique to its note type (e.g. `text`, `list`, `columns`, `tabs`).
+   */
+  buildPayloadExtras: (note: T) => Record<string, unknown>;
 }
 
 interface UseNoteEditorResult<T extends Note> {
@@ -45,27 +45,30 @@ interface UseNoteEditorResult<T extends Note> {
 }
 
 /**
- * Shared behaviour for the four note editor screens (Text, Todo, Kanban, Code).
+ * Shared behaviour for the four note editor screens (Text, Todo, Kanban, Code) on native.
  *
  * Handles:
  * - common webhook selectors (update / delete / temporary delete)
  * - "newly created" add webhook fire-once effect
  * - dirty-id tracking via the registry
  * - local note state + `setNoteAsync` that also dispatches to Redux
- * - hardware back handler that triggers the update/delete webhook
- * - keyboard dismissal on focus loss
+ * - hardware back handler that triggers the update/delete webhook (native only)
+ * - keyboard dismissal on focus loss (native only)
  *
- * Each editor passes type-specific logic (initial defaults, emptiness rule, webhook payloads)
- * via options.
+ * A platform-split `useNoteEditor.web.ts` is picked automatically by Metro on web and
+ * omits the hardware back handler and the keyboard dismissal (both are no-ops / undesired
+ * dependencies on the browser).
+ *
+ * The common webhook payload (id, type, title, timestamps, flags, category) is composed
+ * by the hook; each editor only supplies type-specific fields through `buildPayloadExtras`.
  */
 export function useNoteEditor<T extends Note>({
   initialNote,
   defaultType,
   addWebhookSelector,
-  isEmpty,
-  buildAddPayload,
-  buildUpdatePayload,
   addAction,
+  isEmpty,
+  buildPayloadExtras,
 }: UseNoteEditorOptions<T>): UseNoteEditorResult<T> {
   const dispatch = useDispatch();
 
@@ -76,6 +79,28 @@ export function useNoteEditor<T extends Note>({
 
   const [note, setNote] = useState<T>(initialNote);
 
+  /* --- Common webhook payload composer --- */
+
+  const buildWebhookPayload = useCallback(
+    (n: T): Record<string, unknown> => ({
+      id: n.id,
+      type: n.type || defaultType,
+      title: n.title,
+      createdAt: n.createdAt,
+      updatedAt: n.updatedAt,
+      important: n.important,
+      readOnly: n.readOnly,
+      hidden: n.hidden,
+      locked: n.locked,
+      category: {
+        iconId: n.category.icon,
+        name: n.category.name,
+      },
+      ...buildPayloadExtras(n),
+    }),
+    [defaultType, buildPayloadExtras]
+  );
+
   /* --- Newly created: fire add webhook once --- */
 
   const isNewlyCreated = note.createdAt === note.updatedAt;
@@ -85,7 +110,7 @@ export function useNoteEditor<T extends Note>({
 
     webhook(webhook_add, {
       action: addAction,
-      ...buildAddPayload(note),
+      ...buildWebhookPayload(note),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNewlyCreated]);
@@ -148,9 +173,9 @@ export function useNoteEditor<T extends Note>({
 
     await webhook(webhook_updateNote, {
       action: "note/updateNote",
-      ...buildUpdatePayload(note),
+      ...buildWebhookPayload(note),
     });
-  }, [note, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, isEmpty, buildUpdatePayload]);
+  }, [note, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, isEmpty, buildWebhookPayload]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {

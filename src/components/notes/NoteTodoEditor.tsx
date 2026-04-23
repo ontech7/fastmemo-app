@@ -54,25 +54,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     }),
     [initialNote]
   );
-  const buildPayload = useCallback(
-    (n: TodoNote) => ({
-      id: n.id,
-      type: n.type || "todo",
-      title: n.title,
-      list: n.list,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      important: n.important,
-      readOnly: n.readOnly,
-      hidden: n.hidden,
-      locked: n.locked,
-      category: {
-        iconId: n.category.icon,
-        name: n.category.name,
-      },
-    }),
-    []
-  );
+  const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list }), []);
 
   const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
@@ -80,8 +62,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     addWebhookSelector: selectorWebhook_addTodoNote,
     addAction: "note/addTodoNote",
     isEmpty: isTodoNoteEmpty,
-    buildAddPayload: buildPayload,
-    buildUpdatePayload: buildPayload,
+    buildPayloadExtras,
   });
 
   /* local */
