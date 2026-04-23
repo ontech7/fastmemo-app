@@ -7,29 +7,19 @@ import CodeLanguagePickerModal from "@/components/notes/CodeLanguagePickerModal"
 import SafeAreaView from "@/components/SafeAreaView";
 import { inferLanguageFromTitle, LANGUAGE_LABELS } from "@/constants/code-languages";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, MONOSPACE_FONT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
-import { storeDirtyNoteId } from "@/libs/registry";
-import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
-import {
-  selectorAIAssistant,
-  selectorWebhook_addCodeNote,
-  selectorWebhook_deleteNote,
-  selectorWebhook_temporaryDeleteNote,
-  selectorWebhook_updateNote,
-} from "@/slicers/settingsSlice";
+import { selectorAIAssistant, selectorWebhook_addCodeNote } from "@/slicers/settingsSlice";
 import type { CodeNote, CodeTab } from "@/types";
-import { formatDateTime } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
 
-import { webhook } from "@/utils/webhook";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Keyboard, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PlusIcon } from "react-native-heroicons/outline";
-import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
-import { useDispatch, useSelector } from "react-redux";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { useSelector } from "react-redux";
 import uuid from "react-uuid";
 
 export const MAX_TABS = 6;
@@ -39,31 +29,43 @@ interface Props {
   initialNote: CodeNote;
 }
 
+const isCodeNoteEmpty = (n: CodeNote) => {
+  const noTitle = isStringEmpty(n.title);
+  const noCode = n.tabs.every((tab) => isStringEmpty(tab.code));
+  return noTitle && noCode;
+};
+
 export default function NoteCodeEditor({ initialNote }: Props) {
   const { t } = useTranslation();
 
   const aiSettings = useSelector(selectorAIAssistant);
 
-  const webhook_addCodeNote = useSelector(selectorWebhook_addCodeNote);
-  const webhook_updateNote = useSelector(selectorWebhook_updateNote);
-  const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
-  const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
-
-  const dispatch = useDispatch();
-
   const tabScrollRef = useRef<ScrollView>(null);
   const editorRef = useRef<CodeEditorWebViewRef>(null);
 
-  const [note, setNote] = useState<CodeNote>({
-    ...initialNote,
-    type: initialNote.type || "code",
-    tabs: initialNote.tabs?.length > 0 ? initialNote.tabs : [{ id: uuid(), title: "", code: "", language: "javascript" }],
-    activeTabId: initialNote.activeTabId || initialNote.tabs?.[0]?.id || "",
+  const memoInitialNote = useMemo<CodeNote>(
+    () => ({
+      ...initialNote,
+      type: initialNote.type || "code",
+      tabs: initialNote.tabs?.length > 0 ? initialNote.tabs : [{ id: uuid(), title: "", code: "", language: "javascript" }],
+      activeTabId: initialNote.activeTabId || initialNote.tabs?.[0]?.id || "",
+    }),
+    [initialNote]
+  );
+  const buildPayloadExtras = useCallback((n: CodeNote) => ({ tabs: n.tabs, activeTabId: n.activeTabId }), []);
+
+  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<CodeNote>({
+    initialNote: memoInitialNote,
+    defaultType: "code",
+    addWebhookSelector: selectorWebhook_addCodeNote,
+    addAction: "note/addCodeNote",
+    isEmpty: isCodeNoteEmpty,
+    buildPayloadExtras,
   });
+
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [editingTabTitle, setEditingTabTitle] = useState<string | null>(null);
 
-  const isNewlyCreated = note.createdAt === note.updatedAt;
   const activeTab = useMemo(
     () => note.tabs.find((tab) => tab.id === note.activeTabId) || note.tabs[0],
     [note.tabs, note.activeTabId]
@@ -71,65 +73,6 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   const activeTabIndex = useMemo(
     () => note.tabs.findIndex((tab) => tab.id === note.activeTabId),
     [note.tabs, note.activeTabId]
-  );
-
-  useEffect(() => {
-    if (!isNewlyCreated) return;
-    webhook(webhook_addCodeNote, {
-      action: "note/addCodeNote",
-      id: note.id,
-      type: "code",
-      title: note.title,
-      tabs: note.tabs,
-      activeTabId: note.activeTabId,
-      createdAt: note.createdAt,
-      updatedAt: note.updatedAt,
-      important: note.important,
-      readOnly: note.readOnly,
-      hidden: note.hidden,
-      locked: note.locked,
-      category: { iconId: note.category.icon, name: note.category.name },
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNewlyCreated]);
-
-  const updateNoteGlobal = useCallback(
-    (currNote: CodeNote) => {
-      const noTitle = isStringEmpty(currNote.title);
-      const noCode = currNote.tabs.every((tab) => isStringEmpty(tab.code));
-      if (noTitle && noCode) {
-        dispatch(temporaryDeleteNote(currNote.id));
-        dispatch(deleteNote(currNote.id));
-        return;
-      }
-      dispatch(addNote({ ...currNote, type: currNote.type || "code", updatedAt: Date.now(), date: formatDateTime() }));
-    },
-    [dispatch]
-  );
-
-  const dirtyRef = useRef(false);
-
-  useEffect(() => {
-    dirtyRef.current = false;
-  }, [note.id]);
-
-  useEffect(
-    () => () => {
-      dirtyRef.current = false;
-    },
-    []
-  );
-
-  const setNoteAsync = useCallback(
-    (currNote: CodeNote) => {
-      if (!dirtyRef.current) {
-        storeDirtyNoteId(currNote.id);
-        dirtyRef.current = true;
-      }
-      setNote(currNote);
-      updateNoteGlobal(currNote);
-    },
-    [updateNoteGlobal]
   );
 
   const setTitle = useCallback((v: string) => setNoteAsync({ ...note, title: v }), [note, setNoteAsync]);
@@ -210,52 +153,6 @@ export default function NoteCodeEditor({ initialNote }: Props) {
       setNoteAsync({ ...note, tabs: newTabs });
     },
     [note, setNoteAsync]
-  );
-
-  const updateNoteWebhook = useCallback(async () => {
-    const noTitle = isStringEmpty(note.title);
-    const noCode = note.tabs.every((tab) => isStringEmpty(tab.code));
-
-    if (noTitle && noCode) {
-      await webhook(webhook_temporaryDeleteNote, { action: "note/temporaryDeleteNote", id: note.id });
-      await webhook(webhook_deleteNote, { action: "note/deleteNote", id: note.id });
-    } else {
-      await webhook(webhook_updateNote, {
-        action: "note/updateNote",
-        id: note.id,
-        type: note.type || "code",
-        title: note.title,
-        tabs: note.tabs,
-        activeTabId: note.activeTabId,
-        createdAt: note.createdAt,
-        updatedAt: note.updatedAt,
-        important: note.important,
-        readOnly: note.readOnly,
-        hidden: note.hidden,
-        locked: note.locked,
-        category: { iconId: note.category.icon, name: note.category.name },
-      });
-    }
-  }, [webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, note]);
-
-  useEffect(() => {
-    const handler = BackHandler.addEventListener("hardwareBackPress", () => {
-      updateNoteWebhook();
-      KeyboardController.dismiss();
-      Keyboard.dismiss();
-      return false;
-    });
-    return () => handler.remove();
-  }, [updateNoteWebhook]);
-
-  useFocusEffect(
-    useCallback(
-      () => () => {
-        KeyboardController.dismiss();
-        Keyboard.dismiss();
-      },
-      []
-    )
   );
 
   return (
