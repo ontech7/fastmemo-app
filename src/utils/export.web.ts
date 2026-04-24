@@ -1,5 +1,5 @@
 import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 
 import { isTauri } from "@/utils/platform";
 import { wrapHtmlForPdf } from "@/utils/html";
@@ -99,7 +99,6 @@ export async function exportAsPdf(title: string, htmlContent: string): Promise<{
   return null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function shareFile(_uri: string, _filename: string): Promise<void> {
   // Web exports are handled by saveFileWeb via exportAsTextFile / exportAsPdf;
   // this is a no-op on web to keep the public API parity with the native
