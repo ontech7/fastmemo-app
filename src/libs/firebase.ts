@@ -1,6 +1,6 @@
 import { configs } from "@/configs";
-import { isTauri } from "@/utils/platform";
 import { defaultCategory } from "@/configs/default";
+import { getDeviceInfo } from "@/libs/device";
 import type { CloudSettings } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { FirebaseApp } from "firebase/app";
@@ -19,13 +19,7 @@ import {
   type Firestore,
   type QueryConstraint,
 } from "firebase/firestore";
-import { Platform } from "react-native";
 import uuid from "react-uuid";
-
-interface DeviceInfo {
-  modelName: string;
-  brand: string;
-}
 
 export interface ConnectedDevice {
   uuid: string;
@@ -73,48 +67,6 @@ interface GetElementParams {
   collection: string;
   identifier: string;
 }
-
-const getDeviceInfo = (): DeviceInfo => {
-  if (Platform.OS === "web") {
-    const ua = navigator.userAgent;
-
-    if (isTauri()) {
-      let modelName = "Desktop";
-
-      if (ua.includes("Macintosh") || ua.includes("Mac OS X")) {
-        modelName = "MacOS";
-      } else if (ua.includes("Windows")) {
-        modelName = "Windows";
-      }
-      if (ua.includes("Linux")) {
-        modelName = "Linux";
-      }
-
-      return {
-        modelName: `${modelName} (Desktop)`,
-        brand: "web",
-      };
-    }
-
-    let browserName = "Unknown Browser";
-    if (ua.includes("Chrome")) browserName = "Chrome";
-    else if (ua.includes("Firefox")) browserName = "Firefox";
-    else if (ua.includes("Safari")) browserName = "Safari";
-    else if (ua.includes("Edge")) browserName = "Edge";
-
-    return {
-      modelName: `${browserName} (Browser)`,
-      brand: "web",
-    };
-  }
-
-  const Device = require("expo-device");
-
-  return {
-    modelName: Device.modelName || "Unknown",
-    brand: Device.brand || "Unknown",
-  };
-};
 
 const { modelName, brand } = getDeviceInfo();
 
