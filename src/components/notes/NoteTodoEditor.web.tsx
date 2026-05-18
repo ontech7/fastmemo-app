@@ -2,17 +2,9 @@ import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.web";
 import SafeAreaView from "@/components/SafeAreaView";
-import { storeDirtyNoteId } from "@/libs/registry";
-import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
-import {
-  selectorWebhook_addTodoNote,
-  selectorWebhook_deleteNote,
-  selectorWebhook_temporaryDeleteNote,
-  selectorWebhook_updateNote,
-} from "@/slicers/settingsSlice";
-import { formatDateTime } from "@/utils/date";
+import { useNoteEditor } from "@/hooks/useNoteEditor";
+import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
 import { capitalize, isStringEmpty } from "@/utils/string";
-import { webhook } from "@/utils/webhook";
 import {
   closestCenter,
   DndContext,
@@ -23,11 +15,10 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { EyeIcon, EyeSlashIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
-import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
@@ -40,23 +31,14 @@ interface Props {
   initialNote: TodoNote;
 }
 
+const isTodoNoteEmpty = (n: TodoNote) => {
+  const no_title = isStringEmpty(n.title);
+  const no_list_items = !n.list?.length || (n.list?.length == 1 && isStringEmpty(n.list?.[0].text));
+  return no_title && no_list_items;
+};
+
 export default function NoteTodoEditor({ initialNote }: Props) {
   const { t } = useTranslation();
-
-  const webhook_addTodoNote = useSelector(selectorWebhook_addTodoNote);
-  const webhook_updateNote = useSelector(selectorWebhook_updateNote);
-  const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
-  const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
-
-  const dispatch = useDispatch();
-
-  const [note, setNote] = useState({
-    ...initialNote,
-    type: initialNote.type || "todo",
-    list: initialNote.list?.length > 0 ? initialNote.list : [{ id: uuid(), text: "", checked: false }],
-  });
-
-  const isNewlyCreated = note.createdAt === note.updatedAt;
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -65,77 +47,24 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     })
   );
 
-  useEffect(() => {
-    if (!isNewlyCreated) {
-      return;
-    }
-
-    webhook(webhook_addTodoNote, {
-      action: "note/addTodoNote",
-      id: note.id,
-      type: "todo",
-      title: note.title,
-      list: note.list,
-      createdAt: note.createdAt,
-      updatedAt: note.updatedAt,
-      important: note.important,
-      readOnly: note.readOnly,
-      hidden: note.hidden,
-      locked: note.locked,
-      category: {
-        iconId: note.category.icon,
-        name: note.category.name,
-      },
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNewlyCreated]);
-
-  const updateNoteGlobal = useCallback(
-    (currNote) => {
-      const no_title = isStringEmpty(currNote.title);
-      const no_list_items = !currNote.list?.length || (currNote.list?.length == 1 && isStringEmpty(currNote.list?.[0].text));
-
-      if (no_title && no_list_items) {
-        dispatch(temporaryDeleteNote(currNote.id));
-        dispatch(deleteNote(currNote.id));
-        return;
-      }
-
-      dispatch(
-        addNote({
-          ...currNote,
-          type: currNote.type || "todo",
-          updatedAt: Date.now(),
-          date: formatDateTime(),
-        })
-      );
-    },
-    [dispatch]
+  const memoInitialNote = useMemo<TodoNote>(
+    () => ({
+      ...initialNote,
+      type: initialNote.type || "todo",
+      list: initialNote.list?.length > 0 ? initialNote.list : [{ id: uuid(), text: "", checked: false }],
+    }),
+    [initialNote]
   );
+  const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list }), []);
 
-  const dirtyRef = useRef(false);
-
-  useEffect(() => {
-    dirtyRef.current = false;
-  }, [note.id]);
-
-  useEffect(() => {
-    return () => {
-      dirtyRef.current = false;
-    };
-  }, []);
-
-  const setNoteAsync = useCallback(
-    (currNote) => {
-      if (!dirtyRef.current) {
-        storeDirtyNoteId(currNote.id);
-        dirtyRef.current = true;
-      }
-      setNote(currNote);
-      updateNoteGlobal(currNote);
-    },
-    [updateNoteGlobal]
-  );
+  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TodoNote>({
+    initialNote: memoInitialNote,
+    defaultType: "todo",
+    addWebhookSelector: selectorWebhook_addTodoNote,
+    addAction: "note/addTodoNote",
+    isEmpty: isTodoNoteEmpty,
+    buildPayloadExtras,
+  });
 
   const setTitle = useCallback(
     (titleVal: string) => {
@@ -220,40 +149,6 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   const toggleHideDoneItems = useCallback(() => {
     setHideDoneItems((prev) => !prev);
   }, []);
-
-  const updateNoteWebhook = useCallback(async () => {
-    const no_title = isStringEmpty(note.title);
-    const no_list_items = !note.list?.length || (note.list?.length == 1 && isStringEmpty(note.list?.[0].text));
-
-    if (no_title && no_list_items) {
-      await webhook(webhook_temporaryDeleteNote, {
-        action: "note/temporaryDeleteNote",
-        id: note.id,
-      });
-      await webhook(webhook_deleteNote, {
-        action: "note/deleteNote",
-        id: note.id,
-      });
-    } else {
-      await webhook(webhook_updateNote, {
-        action: "note/updateNote",
-        id: note.id,
-        type: note.type || "todo",
-        title: note.title,
-        list: note.list,
-        createdAt: note.createdAt,
-        updatedAt: note.updatedAt,
-        important: note.important,
-        readOnly: note.readOnly,
-        hidden: note.hidden,
-        locked: note.locked,
-        category: {
-          iconId: note.category.icon,
-          name: note.category.name,
-        },
-      });
-    }
-  }, [webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, note]);
 
   const [autoFocus, setAutoFocus] = useState(false);
 
