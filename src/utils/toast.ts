@@ -1,25 +1,8 @@
-import { Platform } from "react-native";
+import Toast from "react-native-root-toast";
 
 import { PADDING_MARGIN } from "@/constants/styles";
 
 export const toast = (text: string): void => {
-  if (Platform.OS === "web") {
-    const hotToast = require("react-hot-toast").toast;
-    hotToast(text, {
-      duration: 2000,
-      position: "bottom-center",
-      style: {
-        borderRadius: "100px",
-        padding: "12px 24px",
-        backgroundColor: "#333",
-        color: "#fff",
-        fontFamily: "Roboto, sans-serif",
-      },
-    });
-    return;
-  }
-
-  const Toast = require("react-native-root-toast").default;
   Toast.show(text, {
     duration: Toast.durations.SHORT,
     position: Toast.positions.BOTTOM,

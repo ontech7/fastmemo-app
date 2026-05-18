@@ -1,6 +1,7 @@
 import "@/styles/global.css";
 
 import { configs } from "@/configs";
+import WebToaster from "@/components/WebToaster";
 import { BORDER, COLOR } from "@/constants/styles";
 import i18n from "@/libs/i18n";
 import SyncOnProvider from "@/providers/SyncOnProvider";
@@ -17,8 +18,6 @@ import { MenuProvider } from "react-native-popup-menu";
 import { RootSiblingParent } from "react-native-root-siblings";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
-
-const WebToaster = Platform.OS === "web" ? require("react-hot-toast").Toaster : null;
 
 export const unstable_settings = {
   initialRouteName: "index",
@@ -64,7 +63,7 @@ export default Sentry.wrap(function RootLayout() {
                 <SyncOnProvider />
                 <RootSiblingParent>
                   <StatusBar style="light" />
-                  {WebToaster && <WebToaster />}
+                  <WebToaster />
                   <Stack>
                     <Stack.Screen
                       name="index"

@@ -1,5 +1,3 @@
-import { getLocales as getExpoLocales } from "expo-localization";
-
 interface LocaleInfo {
   languageCode: string;
   regionCode: string;
@@ -7,11 +5,15 @@ interface LocaleInfo {
 }
 
 export const getLocales = (): LocaleInfo[] => {
-  return getExpoLocales().map((l) => ({
-    languageCode: l.languageCode ?? "en",
-    regionCode: l.regionCode ?? "",
-    languageTag: l.languageTag ?? "en-US",
-  }));
+  const languages = navigator.languages || [navigator.language || "en-US"];
+  return languages.map((tag) => {
+    const [languageCode, regionCode] = tag.split("-");
+    return {
+      languageCode,
+      regionCode: regionCode || "",
+      languageTag: tag,
+    };
+  });
 };
 
 export const locale: string = (() => {

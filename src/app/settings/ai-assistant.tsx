@@ -12,13 +12,16 @@ import { selectorAIAssistant, setAIAssistant } from "@/slicers/settingsSlice";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
 import type { AIModelId, AIModelInfo } from "@/libs/ai";
-import { DEFAULT_MODEL_ID } from "@/libs/ai";
-
-// Dynamic import to avoid web/Tauri crash
-let aiLib: typeof import("@/libs/ai") | null = null;
-if (Platform.OS !== "web") {
-  aiLib = require("@/libs/ai");
-}
+import {
+  AI_MODELS,
+  cancelDownload,
+  DEFAULT_MODEL_ID,
+  deleteModel,
+  downloadModel,
+  isModelDownloaded,
+  isNativeModuleAvailable,
+  releaseContext,
+} from "@/libs/ai";
 
 export default function AIAssistantScreen() {
   const { t } = useTranslation();
@@ -32,19 +35,19 @@ export default function AIAssistantScreen() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [nativeAvailable, setNativeAvailable] = useState(true);
 
-  const models = aiLib ? (Object.values(aiLib.AI_MODELS) as AIModelInfo[]) : [];
+  const models = Platform.OS === "web" ? [] : (Object.values(AI_MODELS) as AIModelInfo[]);
   const deviceRam = Device.totalMemory ?? 0;
 
   useEffect(() => {
-    if (!aiLib) return;
+    if (Platform.OS === "web") return;
 
-    if (!aiLib.isNativeModuleAvailable()) {
+    if (!isNativeModuleAvailable()) {
       setNativeAvailable(false);
       return;
     }
 
     const checkModel = async () => {
-      const downloaded = await aiLib!.isModelDownloaded(selectedModelId);
+      const downloaded = await isModelDownloaded(selectedModelId);
       setModelDownloaded(downloaded);
       if (downloaded !== aiSettings.modelDownloaded) {
         dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: downloaded }));
@@ -57,12 +60,12 @@ export default function AIAssistantScreen() {
 
   const selectModel = useCallback(
     async (modelId: AIModelId) => {
-      if (!aiLib || modelId === selectedModelId) return;
+      if (Platform.OS === "web" || modelId === selectedModelId) return;
 
       // Release current context when switching models
-      aiLib.releaseContext();
+      releaseContext();
 
-      const downloaded = await aiLib!.isModelDownloaded(modelId);
+      const downloaded = await isModelDownloaded(modelId);
       setModelDownloaded(downloaded);
       dispatch(
         setAIAssistant({
@@ -79,18 +82,18 @@ export default function AIAssistantScreen() {
   const toggleEnabled = useCallback(
     (value: boolean) => {
       dispatch(setAIAssistant({ ...aiSettings, enabled: value }));
-      if (!value && aiLib) aiLib.releaseContext();
+      if (!value && Platform.OS !== "web") releaseContext();
     },
     [aiSettings, dispatch]
   );
 
   const handleDownload = useCallback(async () => {
-    if (!aiLib) return;
+    if (Platform.OS === "web") return;
 
     setIsDownloading(true);
     setDownloadProgress(0);
 
-    const success = await aiLib.downloadModel(selectedModelId, (progress) => {
+    const success = await downloadModel(selectedModelId, (progress) => {
       setDownloadProgress(progress);
     });
 
@@ -100,18 +103,18 @@ export default function AIAssistantScreen() {
   }, [aiSettings, selectedModelId, dispatch]);
 
   const handleCancelDownload = useCallback(async () => {
-    if (!aiLib) return;
+    if (Platform.OS === "web") return;
 
-    await aiLib.cancelDownload();
+    await cancelDownload();
     setIsDownloading(false);
     setDownloadProgress(0);
     setModelDownloaded(false);
   }, []);
 
   const handleDelete = useCallback(async () => {
-    if (!aiLib) return;
+    if (Platform.OS === "web") return;
 
-    await aiLib.deleteModel(selectedModelId);
+    await deleteModel(selectedModelId);
     setModelDownloaded(false);
     dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: false, enabled: false }));
   }, [aiSettings, selectedModelId, dispatch]);
