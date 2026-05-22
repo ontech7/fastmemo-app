@@ -1,5 +1,4 @@
 import useNetInfo from "@/hooks/useNetInfo";
-import type { Category, Note } from "@/types";
 import { isEmpty, isObjectEmpty } from "@/utils/string";
 import { where } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -8,13 +7,13 @@ import { AppState, Platform } from "react-native";
 import { useSelector } from "react-redux";
 
 import { useAppDispatch } from "@/slicers/store";
-import { COLLECTIONS, getAllDeviceUuids, getAllElementsInCloud, getDeviceUuid, setElementInCloud } from "../libs/firebase";
-import { addLocalCategories, deleteLocalCategories, getCloudCategories } from "../slicers/categoriesSlice";
-import { addLocalNotes, deleteLocalNotes, getCloudNotes } from "../slicers/notesSlice";
-import { getCloudConnected, setCloudConnected, setIsCloudSyncEnabled } from "../slicers/settingsSlice";
-import { addCloudCategoriesAsync, deleteCloudCategoriesAsync } from "../slicers/thunks/categories";
-import { addCloudNotesAsync, deleteCloudNotesAsync } from "../slicers/thunks/notes";
-import { toast } from "../utils/toast";
+import { COLLECTIONS, getAllDeviceUuids, getAllElementsInCloud, getDeviceUuid, setElementInCloud } from "@/libs/firebase";
+import { addLocalCategories, deleteLocalCategories, getCloudCategories } from "@/slicers/categoriesSlice";
+import { addLocalNotes, deleteLocalNotes, getCloudNotes } from "@/slicers/notesSlice";
+import { getCloudConnected, setCloudConnected, setIsCloudSyncEnabled } from "@/slicers/settingsSlice";
+import { addCloudCategoriesAsync, deleteCloudCategoriesAsync } from "@/slicers/thunks/categories";
+import { addCloudNotesAsync, deleteCloudNotesAsync } from "@/slicers/thunks/notes";
+import { toast } from "@/utils/toast";
 
 const PENDING_CHANGES_DELAY = 10000;
 const DEBOUNCE_NOTES_DELAY = 200;
@@ -241,6 +240,7 @@ export default function SyncOnProvider(): null {
     };
 
     syncCategoriesToCloud();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCloudConnected, netInfo, cloudCategories_add, cloudCategories_delete]);
 
   ///////////////////////////////////
@@ -301,6 +301,7 @@ export default function SyncOnProvider(): null {
     return () => {
       if (tDebounceNotes.current) clearTimeout(tDebounceNotes.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCloudConnected, netInfo, cloudNotes_add, cloudNotes_delete]);
 
   return null;

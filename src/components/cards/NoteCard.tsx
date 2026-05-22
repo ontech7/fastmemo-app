@@ -10,7 +10,7 @@ import { isStringEmpty } from "@/utils/string";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
 import { useSecret } from "@/hooks/useSecret";
-import CategoryIcon from "../CategoryIcon";
+import CategoryIcon from "@/components/CategoryIcon";
 
 import type { Note } from "@/types";
 

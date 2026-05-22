@@ -1,5 +1,5 @@
 import lottie from "lottie-web";
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { View } from "react-native";
 
 import type { ViewStyle } from "react-native";
@@ -61,6 +61,7 @@ const LottieView = forwardRef(function LottieView(
         animationRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

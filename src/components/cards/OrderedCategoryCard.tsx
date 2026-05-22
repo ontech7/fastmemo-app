@@ -1,10 +1,10 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import CategoryIcon from "../CategoryIcon";
+import CategoryIcon from "@/components/CategoryIcon";
 
 import type { Category } from "@/types";
 
@@ -21,7 +21,9 @@ function OrderedCategoryCard({ category, order, selected = false, toggleCategory
   const { index, name, icon } = category;
 
   const onPress = () => {
-    toggleCategory && toggleCategory(category);
+    if (toggleCategory) {
+      toggleCategory(category);
+    }
   };
 
   return (

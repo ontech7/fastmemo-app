@@ -616,6 +616,12 @@ const zh = {
     generic_success_description: "操作成功。",
   },
 
+  /* banner */
+  banner: {
+    update_available: "有新版本!",
+    update_available_cta: "更新",
+  },
+
   /* generic */
   All: "全部",
   delete_and_move: "删除和移动",

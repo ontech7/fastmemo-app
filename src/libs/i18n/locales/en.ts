@@ -626,6 +626,12 @@ const en = {
     generic_success_description: "The operation was successful.",
   },
 
+  /* banner */
+  banner: {
+    update_available: "New version available!",
+    update_available_cta: "Update",
+  },
+
   /* generic */
   All: "All",
   delete_and_move: "Delete and Move",

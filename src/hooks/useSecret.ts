@@ -1,8 +1,9 @@
+import { authenticateAsync } from "expo-local-authentication";
+import { useSelector } from "react-redux";
+
+import { useRouter } from "@/hooks/useRouter";
 import { storeSecretCodeCallback } from "@/libs/registry";
 import { selectorIsFingerprintEnabled } from "@/slicers/settingsSlice";
-import { Platform } from "react-native";
-import { useSelector } from "react-redux";
-import { useRouter } from "./useRouter";
 
 type CallbackFn =
   | ((router: ReturnType<typeof useRouter>) => any | Promise<any>)
@@ -16,7 +17,7 @@ export const useSecret = () => {
   const isFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
 
   const unlockWithSecret = (callback: CallbackFn, doNext: DoNextType = "goBack") => {
-    const isFingerprint = Platform.OS !== "web" && isFingerprintEnabled;
+    const isFingerprint = isFingerprintEnabled;
 
     if (!isFingerprint) {
       storeSecretCodeCallback(() => {
@@ -42,8 +43,7 @@ export const useSecret = () => {
       return;
     }
 
-    const LocalAuthentication = require("expo-local-authentication");
-    LocalAuthentication.authenticateAsync().then((authResult) => {
+    authenticateAsync().then((authResult) => {
       if (authResult?.success) callback(router, isFingerprint);
     });
   };

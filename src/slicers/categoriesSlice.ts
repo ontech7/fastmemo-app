@@ -6,12 +6,12 @@ import type { Category, CategoriesState, RootState } from "@/types";
 import type { CategoryMapEntry } from "@/constants/icons";
 
 import { defaultCategory } from "@/configs/default";
-import { COLLECTIONS, deleteCollectionInCloud, only_if_cloudConnected } from "@/libs/firebase";
+import { only_if_cloudConnected } from "@/libs/firebase";
 import { order_asc_sort } from "@/utils/sort";
 
 import { CATEGORY_MAP } from "@/constants/icons";
 
-import { addCloudCategoriesAsync, deleteCloudCategoriesAsync } from "./thunks/categories";
+import { addCloudCategoriesAsync, deleteCloudCategoriesAsync, wipeCategories } from "./thunks/categories";
 
 const initialState: CategoriesState = {
   items: [defaultCategory],
@@ -110,13 +110,6 @@ const categoriesSlice = createSlice({
       }
     },
 
-    wipeCategories: (state, action: PayloadAction<boolean>) => {
-      state.items = [defaultCategory];
-      if (action.payload) {
-        deleteCollectionInCloud(COLLECTIONS.data.categories);
-      }
-    },
-
     addLocalCategories: (state, action: PayloadAction<Record<string, Category>>) => {
       Object.values(action.payload).forEach((cloudCategory) => {
         const idx = state.items.findIndex((localCategory) => localCategory.icon === cloudCategory.icon);
@@ -158,6 +151,9 @@ const categoriesSlice = createSlice({
         Object.keys(action.payload).forEach((id) => {
           delete state.cloud.items.delete[id];
         });
+      })
+      .addCase(wipeCategories, (state) => {
+        state.items = [defaultCategory];
       });
   },
 });
@@ -168,7 +164,6 @@ export const {
   setCategories,
   swapCategory,
   updateCategory,
-  wipeCategories,
   addLocalCategories,
   deleteLocalCategories,
   resetCloudCategories,

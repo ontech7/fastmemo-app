@@ -10,11 +10,11 @@ import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
-import { getCategories } from "../../slicers/categoriesSlice";
-import { restoreNote } from "../../slicers/notesSlice";
-import { selectorWebhook_restoreNote } from "../../slicers/settingsSlice";
-import CategoryIcon from "../CategoryIcon";
-import ConfirmOrCancelDialog from "../dialogs/ConfirmOrCancelDialog";
+import { getCategories } from "@/slicers/categoriesSlice";
+import { restoreNote } from "@/slicers/notesSlice";
+import { selectorWebhook_restoreNote } from "@/slicers/settingsSlice";
+import CategoryIcon from "@/components/CategoryIcon";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 
 import type { Note } from "@/types";
 
@@ -180,11 +180,11 @@ function CountdownDate({ deleteDate, important }: CountdownDateProps) {
 
   const now = new Date().getTime();
 
-  var distance = (deleteDate ?? 0) - now;
+  const distance = (deleteDate ?? 0) - now;
 
-  var days = Math.floor(distance / (1000 * 60 * 60 * 24));
-  var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+  const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
 
   return (
     <Text style={[styles.deleteDate, important && styles.deleteDateImportant]}>

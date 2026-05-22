@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FlashList } from "@shopify/flash-list";
 import { BackHandler, StyleSheet } from "react-native";
 
 import Haptics from "@/libs/haptics";
 
-import CategoryFilterButton from "../buttons/CategoryFilterButton";
+import CategoryFilterButton from "@/components/buttons/CategoryFilterButton";
 
 import type { Category } from "@/types";
 
@@ -31,6 +31,7 @@ export default function FavoriteCategoryList({ categories }: Props) {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
 
     return () => backHandler.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDeleteMode]);
 
   // vibration feedback when deleteMode

@@ -1,10 +1,9 @@
-import React from "react";
 import { Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { CheckIcon, XCircleIcon } from "react-native-heroicons/outline";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
-import DragIcon from "../icons/DragIcon";
+import DragIcon from "@/components/icons/DragIcon";
 
 interface TodoItemData {
   id: string;

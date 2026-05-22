@@ -1,10 +1,9 @@
-import React from "react";
 import { StyleSheet, View } from "react-native";
 import { useSelector } from "react-redux";
 
 import { BORDER, COLOR, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import { getCategories } from "../slicers/categoriesSlice";
+import { getCategories } from "@/slicers/categoriesSlice";
 import GeneralSettingsButton from "./buttons/GeneralSettingsButton";
 import ReorganizeButton from "./buttons/ReorganizeButton";
 import TemporaryTrashButton from "./buttons/TemporaryTrashButton";

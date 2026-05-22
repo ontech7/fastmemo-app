@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
@@ -25,9 +25,9 @@ import { webhook } from "@/utils/webhook";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
 import { useSecret } from "@/hooks/useSecret";
-import { temporaryDeleteNote } from "../../slicers/notesSlice";
-import { selectorWebhook_temporaryDeleteNote } from "../../slicers/settingsSlice";
-import ContextMenu from "../renderers/ContextMenu";
+import { temporaryDeleteNote } from "@/slicers/notesSlice";
+import { selectorWebhook_temporaryDeleteNote } from "@/slicers/settingsSlice";
+import ContextMenu from "@/components/renderers/ContextMenu";
 
 import type { Note, TextNote } from "@/types";
 

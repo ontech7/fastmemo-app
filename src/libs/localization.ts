@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { getLocales as getExpoLocales } from "expo-localization";
 
 interface LocaleInfo {
   languageCode: string;
@@ -7,19 +7,11 @@ interface LocaleInfo {
 }
 
 export const getLocales = (): LocaleInfo[] => {
-  if (Platform.OS === "web") {
-    const languages = navigator.languages || [navigator.language || "en-US"];
-    return languages.map((tag) => {
-      const [languageCode, regionCode] = tag.split("-");
-      return {
-        languageCode,
-        regionCode: regionCode || "",
-        languageTag: tag,
-      };
-    });
-  }
-
-  return require("expo-localization").getLocales();
+  return getExpoLocales().map((l) => ({
+    languageCode: l.languageCode ?? "en",
+    regionCode: l.regionCode ?? "",
+    languageTag: l.languageTag ?? "en-US",
+  }));
 };
 
 export const locale: string = (() => {

@@ -2,7 +2,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import Carousel, { Pagination } from "@ontech7/react-native-snap-carousel";
-import React, { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dimensions, Image, type ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowRightIcon } from "react-native-heroicons/outline";

@@ -1,4 +1,3 @@
-import React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Switch, Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
@@ -6,8 +5,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 import { useSecret } from "@/hooks/useSecret";
-import { selectorShowHidden, setShowHidden } from "../../../../slicers/settingsSlice";
-import SectionItemList from "../../components/list/SectionItemList";
+import { selectorShowHidden, setShowHidden } from "@/slicers/settingsSlice";
+import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 interface Props {
   isLast: boolean;

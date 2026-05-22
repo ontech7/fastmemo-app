@@ -16,15 +16,7 @@
 
 | Done | In Progress | Planned | Total |
 | :--: | :---------: | :-----: | :---: |
-|  2   |      1      |    4    |   7   |
-
----
-
-## Timeline
-
-<p align="center">
-  <img src="./assets/timeline.png" alt="Development Timeline" width="800">
-</p>
+|  4   |      1      |    2    |   7   |
 
 ---
 
@@ -53,19 +45,9 @@
 
 |                 |                                                                                                    |
 | --------------- | -------------------------------------------------------------------------------------------------- |
-| **Status**      | In Progress                                                                                        |
+| **Status**      | Done                                                                                               |
 | **Description** | Full migration to TypeScript and component reorganization for better code quality and performance. |
 | **Goals**       | Type safety, cleaner architecture, improved maintainability.                                       |
-
----
-
-### Optimization
-
-|                 |                                                                                           |
-| --------------- | ----------------------------------------------------------------------------------------- |
-| **Status**      | Planned                                                                                   |
-| **Description** | Performance optimizations across the entire app for better speed and resource efficiency. |
-| **Goals**       | Reduced bundle size, faster load times, optimized re-renders, memory improvements.        |
 
 ---
 
@@ -73,9 +55,19 @@
 
 |                 |                                                                   |
 | --------------- | ----------------------------------------------------------------- |
-| **Status**      | Planned                                                           |
+| **Status**      | Done                                                              |
 | **Description** | Notes with syntax highlighting and code snippets support.         |
 | **Goals**       | Multi-language highlighting, reusable snippets, Gist integration. |
+
+---
+
+### Optimization
+
+|                 |                                                                                           |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| **Status**      | In Progress                                                                               |
+| **Description** | Performance optimizations across the entire app for better speed and resource efficiency. |
+| **Goals**       | Reduced bundle size, faster load times, optimized re-renders, memory improvements.        |
 
 ---
 

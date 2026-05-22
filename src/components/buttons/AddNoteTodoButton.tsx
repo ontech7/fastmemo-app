@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, TouchableOpacity } from "react-native";
 import { ListBulletIcon } from "react-native-heroicons/outline";
 
@@ -34,6 +34,7 @@ export default function AddNoteTextButton({ isDeleteMode, toggleDeleteMode, styl
 
   useEffect(() => {
     scaleEventButton();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDeleteMode]);
 
   return (

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
 import { useTranslation } from "react-i18next";
@@ -12,17 +12,17 @@ import SafeAreaView from "@/components/SafeAreaView";
 
 import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
-import BackButton from "../components/buttons/BackButton";
-import TrashedNotesSettingsButton from "../components/buttons/TrashedNotesSettingsButton";
-import TrashedNoteCard from "../components/cards/TrashedNoteCard";
-import SearchNotesInput from "../components/inputs/SearchNotesInput";
-import { deleteNote, getTrashedNotesFilteredPerCategory } from "../slicers/notesSlice";
+import BackButton from "@/components/buttons/BackButton";
+import TrashedNotesSettingsButton from "@/components/buttons/TrashedNotesSettingsButton";
+import TrashedNoteCard from "@/components/cards/TrashedNoteCard";
+import SearchNotesInput from "@/components/inputs/SearchNotesInput";
+import { deleteNote, getTrashedNotesFilteredPerCategory } from "@/slicers/notesSlice";
 import {
   selectorDeveloperMode,
   selectorIsFingerprintEnabled,
   selectorShowHidden,
   selectorWebhook_deleteNote,
-} from "../slicers/settingsSlice";
+} from "@/slicers/settingsSlice";
 
 export default function TemporaryTrashScreen() {
   const { t } = useTranslation();
@@ -81,6 +81,7 @@ export default function TemporaryTrashScreen() {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
 
     return () => backHandler.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDeleteMode]);
 
   // vibration feedback when deleteMode
@@ -107,6 +108,7 @@ export default function TemporaryTrashScreen() {
         });
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // reset states

@@ -1,12 +1,13 @@
-import React from "react";
 import { useTranslation } from "react-i18next";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
 import { supportedLanguages } from "@/libs/i18n";
-import { selectorLanguage, setLanguage } from "@/slicers/settingsSlice";
+import { selectorLanguage } from "@/slicers/settingsSlice";
+import { setLanguageThunk } from "@/slicers/thunks/settings";
+import { useAppDispatch } from "@/slicers/store";
 
-import SectionItemList_Text from "../../components/item/SectionItemList_Text";
-import SectionItemList from "../../components/list/SectionItemList";
+import SectionItemList_Text from "@/components/settings/components/item/SectionItemList_Text";
+import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 interface Props {
   isLast: boolean;
@@ -15,7 +16,7 @@ interface Props {
 export default function SectionItem_AppLanguage({ isLast }: Props) {
   const { t } = useTranslation();
 
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const language = useSelector(selectorLanguage);
 
@@ -54,7 +55,7 @@ export default function SectionItem_AppLanguage({ isLast }: Props) {
         break;
     }
 
-    dispatch(setLanguage(nextLanguage));
+    dispatch(setLanguageThunk(nextLanguage));
   };
 
   return (

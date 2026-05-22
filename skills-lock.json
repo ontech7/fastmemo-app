@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "redux-toolkit": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "computedHash": "327cbba7959a273fc04111e8f86a0be912491152d393b5dc9b55dbb8acc20a8b"
+    },
+    "tauri-v2": {
+      "source": "nodnarbnitram/claude-code-extensions",
+      "sourceType": "github",
+      "computedHash": "377c61c46cf48c35b942042bc8abb9a039049a47f37d7f12b4f491d012777490"
+    },
+    "vercel-react-native-skills": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "2e9088a7333666d8c2833b8ff58bd51b955501c42b4c7244f72b4cbf22dafcc4"
+    }
+  }
+}

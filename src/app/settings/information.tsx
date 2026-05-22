@@ -4,13 +4,13 @@ import { configs } from "@/configs";
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 import { selectorDeveloperMode, setDeveloperMode } from "@/slicers/settingsSlice";
 import { toast } from "@/utils/toast";
-import React, { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import BackButton from "../../components/buttons/BackButton";
+import BackButton from "@/components/buttons/BackButton";
 
-import lottieJson from "../../assets/lottie/Logo.json";
+import lottieJson from "@/assets/lottie/Logo.json";
 
 const REACT_VER = "19.0.0";
 const REACT_NATIVE_VER = "0.79.5";

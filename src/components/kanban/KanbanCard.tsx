@@ -1,7 +1,7 @@
 import DragIcon from "@/components/icons/DragIcon";
 import Haptics from "@/libs/haptics";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { XCircleIcon } from "react-native-heroicons/outline";

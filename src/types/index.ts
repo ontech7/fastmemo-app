@@ -4,6 +4,7 @@ export type {
   KanbanItem,
   KanbanColumn,
   CodeTab,
+  NoteType,
   NoteBase,
   TextNote,
   TodoNote,
@@ -21,5 +22,5 @@ export type {
   SettingsState,
 } from "./settings";
 export type { NoteFilters, NotesState, CategoriesState, RootState } from "./store";
-export type { AppConfigs } from "./config";
+export type { AppConfigs, AppVersionResponse, AppVersionPlatformInfo } from "./config";
 export type { Timestamped, Ordered } from "./common";

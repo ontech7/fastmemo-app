@@ -1,4 +1,3 @@
-import React from "react";
 import { Keyboard, StyleSheet, TouchableOpacity } from "react-native";
 import { Path, Svg } from "react-native-svg";
 
@@ -17,7 +16,11 @@ export default function DismissKeyboardButton({ showKeyboardDismiss = false, onP
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={() => {
-        !onPress ? Keyboard.dismiss() : onPress();
+        if (onPress) {
+          onPress();
+        } else {
+          Keyboard.dismiss();
+        }
       }}
       style={[styles.dismissKeyboardButton, { display: !showKeyboardDismiss ? "none" : "flex" }, style]}
     >

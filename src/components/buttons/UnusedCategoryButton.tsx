@@ -1,9 +1,9 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
 
-import CategoryIcon from "../CategoryIcon";
+import CategoryIcon from "@/components/CategoryIcon";
 
 interface Props {
   name: string;

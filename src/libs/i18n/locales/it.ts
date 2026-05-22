@@ -627,6 +627,12 @@ const it = {
     generic_success_description: "L'operazione è andata a buon fine.",
   },
 
+  /* banner */
+  banner: {
+    update_available: "Nuova versione disponibile!",
+    update_available_cta: "Aggiorna",
+  },
+
   /* generic */
   All: "Tutte",
   delete_and_move: "Elimina e Sposta",

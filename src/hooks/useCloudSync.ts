@@ -1,7 +1,7 @@
 import { configs } from "@/configs";
 import type { Category, CloudSettings, Note } from "@/types";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import type { Firestore } from "firebase/firestore";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert } from "react-native";
@@ -26,8 +26,8 @@ import { getReversedDateTime } from "@/utils/date";
 import { toast } from "@/utils/toast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { getCategories, resetCloudCategories, setCategories } from "../slicers/categoriesSlice";
-import { getAllNotes, getNoteFilters, resetCloudNotes, setNotes } from "../slicers/notesSlice";
+import { getCategories, resetCloudCategories, setCategories } from "@/slicers/categoriesSlice";
+import { getAllNotes, resetCloudNotes, setNotes } from "@/slicers/notesSlice";
 import {
   getCloudConnected,
   getCloudSettings,
@@ -35,7 +35,7 @@ import {
   setCloudConnected,
   setCloudSettings,
   setIsCloudSyncEnabled,
-} from "../slicers/settingsSlice";
+} from "@/slicers/settingsSlice";
 
 interface ConnectingState {
   loading: boolean;
@@ -47,7 +47,6 @@ export const useCloudSync = () => {
 
   const allNotes = useSelector(getAllNotes);
   const allCategories = useSelector(getCategories);
-  const noteFilters = useSelector(getNoteFilters);
 
   const selectorCloudSyncEnabled = useSelector(selectorIsCloudSyncEnabled);
   const selectorCloudSettings = useSelector(getCloudSettings);
@@ -257,6 +256,7 @@ export const useCloudSync = () => {
     };
 
     asyncHandshake();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnecting]);
 
   return {

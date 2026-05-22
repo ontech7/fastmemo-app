@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ExclamationTriangleIcon, XMarkIcon } from "react-native-heroicons/outline";
@@ -16,11 +16,11 @@ import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
-import { deleteCategory, swapCategory } from "../../slicers/categoriesSlice";
-import { deleteNotesCategory, resetNotesCategory } from "../../slicers/notesSlice";
-import { selectorWebhook_deleteCategory } from "../../slicers/settingsSlice";
-import CategoryIcon from "../CategoryIcon";
-import ComplexDialog from "../dialogs/ComplexDialog";
+import { deleteCategory, swapCategory } from "@/slicers/categoriesSlice";
+import { deleteNotesCategory, resetNotesCategory } from "@/slicers/notesSlice";
+import { selectorWebhook_deleteCategory } from "@/slicers/settingsSlice";
+import CategoryIcon from "@/components/CategoryIcon";
+import ComplexDialog from "@/components/dialogs/ComplexDialog";
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -69,6 +69,7 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
     } else {
       rotate.value = withTiming(0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deleteMode]);
 
   return (

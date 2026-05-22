@@ -38,16 +38,20 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
 
   const searchInputRef = useRef<TextInput>(null);
 
+  const wasVisibleRef = useRef(false);
   useEffect(() => {
     if (visible) {
+      wasVisibleRef.current = true;
       setTimeout(() => searchInputRef.current?.focus(), 200);
-    } else {
+    } else if (wasVisibleRef.current) {
+      wasVisibleRef.current = false;
       setSearchText("");
       setReplaceText("");
       setMatchCount(0);
       setCurrentMatch(0);
       runInEditor(editorRef, `window.getSelection && window.getSelection().removeAllRanges(); true;`);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const countMatches = useCallback(
@@ -185,18 +189,21 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
   }, [editorRef, matchCount, searchText, replaceText]);
 
   useEffect(() => {
+    if (!visible) return;
     const timer = setTimeout(() => performSearch(searchText), 300);
     return () => clearTimeout(timer);
-  }, [searchText, performSearch]);
+  }, [visible, searchText, performSearch]);
 
   useEffect(() => {
+    if (!visible) return;
     if (searchText) {
       const count = countMatches(searchText);
       setMatchCount(count);
       if (count === 0) setCurrentMatch(0);
       else if (currentMatch > count) setCurrentMatch(count);
     }
-  }, [plainText]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, plainText]);
 
   if (!visible) return null;
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -11,13 +11,13 @@ import SafeAreaView from "@/components/SafeAreaView";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import BackButton from "../../components/buttons/BackButton";
-import SaveButton from "../../components/buttons/SaveButton";
-import UnusedCategoryButton from "../../components/buttons/UnusedCategoryButton";
-import BaseInput from "../../components/inputs/BaseInput";
-import { createCategory, getUnusedCategories, updateCategory } from "../../slicers/categoriesSlice";
-import { changeNotesCategory } from "../../slicers/notesSlice";
-import { selectorWebhook_createCategory, selectorWebhook_updateCategory } from "../../slicers/settingsSlice";
+import BackButton from "@/components/buttons/BackButton";
+import SaveButton from "@/components/buttons/SaveButton";
+import UnusedCategoryButton from "@/components/buttons/UnusedCategoryButton";
+import BaseInput from "@/components/inputs/BaseInput";
+import { createCategory, getUnusedCategories, updateCategory } from "@/slicers/categoriesSlice";
+import { changeNotesCategory } from "@/slicers/notesSlice";
+import { selectorWebhook_createCategory, selectorWebhook_updateCategory } from "@/slicers/settingsSlice";
 
 export default function CreateCategoryScreen() {
   const { t } = useTranslation();

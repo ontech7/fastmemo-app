@@ -15,7 +15,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   owner: "dontrok1",
   name: appName,
   slug: appSlug,
-  version: "2.9.0",
+  version: "2.9.1",
   orientation: "portrait",
   icon: appIcon,
   scheme: appSlug,
@@ -33,6 +33,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     edgeToEdgeEnabled: true,
     package: appBundle,
+    blockedPermissions: [
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.READ_MEDIA_AUDIO",
+    ],
   },
   web: {
     bundler: "metro",

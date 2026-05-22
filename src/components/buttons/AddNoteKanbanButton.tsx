@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, TouchableOpacity } from "react-native";
 import { ViewColumnsIcon } from "react-native-heroicons/outline";
 
@@ -34,6 +34,7 @@ export default function AddNoteKanbanButton({ isDeleteMode, toggleDeleteMode, st
 
   useEffect(() => {
     scaleEventButton();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDeleteMode]);
 
   return (

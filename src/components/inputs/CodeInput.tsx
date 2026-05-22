@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
 import Haptics from "@/libs/haptics";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
 
-import VirtualNumberKeyboard from "../VirtualNumberKeyboard";
+import VirtualNumberKeyboard from "@/components/VirtualNumberKeyboard";
 
 const separate = (string: string) => string.split("");
 

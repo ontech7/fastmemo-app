@@ -629,6 +629,12 @@ const es = {
     generic_success_description: "La operación fue exitosa.",
   },
 
+  /* banner */
+  banner: {
+    update_available: "Nueva versión disponible!",
+    update_available_cta: "Actualizar",
+  },
+
   /* generic */
   All: "Todo",
   delete_and_move: "Eliminar y Mover",

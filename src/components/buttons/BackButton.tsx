@@ -1,6 +1,5 @@
 import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
-import React from "react";
 import type { ViewStyle } from "react-native";
 import { Keyboard, TouchableOpacity } from "react-native";
 import { ChevronLeftIcon } from "react-native-heroicons/outline";

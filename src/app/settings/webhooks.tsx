@@ -1,4 +1,3 @@
-import React from "react";
 import { configs } from "@/configs";
 import { FlashList } from "@shopify/flash-list";
 import { useTranslation } from "react-i18next";

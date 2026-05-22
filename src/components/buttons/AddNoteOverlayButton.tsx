@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
 import { PlusIcon } from "react-native-heroicons/outline";
@@ -118,6 +118,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
       duration: showCloseIcon ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
       easing: Easing.out(Easing.cubic),
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCloseIcon]);
 
   useEffect(() => {
@@ -125,6 +126,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
       duration: isOverlayOpen ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
       easing: isOverlayOpen ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOverlayOpen]);
 
   const iconAnimatedStyle = useAnimatedStyle(() => ({

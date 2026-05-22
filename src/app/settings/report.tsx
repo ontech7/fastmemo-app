@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/react-native";
 import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CheckIcon, PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
@@ -20,7 +20,7 @@ import { formatDateTime } from "@/utils/date";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import lottieJson from "../../assets/lottie/Logo.json";
+import lottieJson from "@/assets/lottie/Logo.json";
 
 interface Attachment {
   filename: string;
@@ -108,17 +108,6 @@ export default function ReportScreen() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const pickImageOrVideo = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (status !== "granted") {
-      setReportMessage({
-        title: null,
-        description: t("report.messages.permissionDenied"),
-      });
-      setShowReportMessageDialog(true);
-      return;
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images",
       base64: true,
