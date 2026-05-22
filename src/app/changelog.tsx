@@ -1,3 +1,5 @@
+import aiLottieJson from "@/assets/lottie/AI_Loader.json";
+import lottieJson from "@/assets/lottie/Logo.json";
 import CloseButton from "@/components/buttons/CloseButton";
 import ChangelogItem from "@/components/changelog/ChangelogItem";
 import LottieView from "@/components/lottie/LottieAnimation";
@@ -6,8 +8,6 @@ import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles"
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
-import aiLottieJson from "@/assets/lottie/AI_Loader.json";
-import lottieJson from "@/assets/lottie/Logo.json";
 
 function getVersionChangelogs(t: (key: string) => string) {
   return Platform.OS === "web"
@@ -18,7 +18,7 @@ function getVersionChangelogs(t: (key: string) => string) {
         { version: "v0.1.0", text: t("changelog.web.description_0_1_0") },
       ]
     : [
-        { version: "v2.9.0", text: t("changelog.mobile.description_2_9_0") },
+        { version: "v2.9.1", text: t("changelog.mobile.description_2_9_0") },
         { version: "v2.8.0", text: t("changelog.mobile.description_2_8_0") },
         { version: "v2.7.1", text: t("changelog.mobile.description_2_7_1") },
         { version: "v2.7.0", text: t("changelog.mobile.description_2_7_0") },

@@ -1,3 +1,9 @@
+## v2.9.1
+
+- Fixed losing focus when writing in NoteTextEditor
+- Migrated all dynamic require() platform gates to file-based splits
+- Extracted shared editor boilerplate into useNoteEditor hook
+
 ## v2.9.0
 
 - Added new note type: Code note with built-in code editor (CodeMirror), syntax highlighting, multiple tabs (up to 5), language
