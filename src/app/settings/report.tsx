@@ -108,17 +108,6 @@ export default function ReportScreen() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const pickImageOrVideo = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (status !== "granted") {
-      setReportMessage({
-        title: null,
-        description: t("report.messages.permissionDenied"),
-      });
-      setShowReportMessageDialog(true);
-      return;
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images",
       base64: true,
