@@ -6,9 +6,11 @@ import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton"
 import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import { configs } from "@/configs";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
 import { selectorDeveloperMode, selectorWebhook_addTextNote } from "@/slicers/settingsSlice";
+import type { TextNote } from "@/types";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
 import { toast } from "@/utils/toast";
 import { useFocusEffect } from "@react-navigation/native";
@@ -21,10 +23,6 @@ import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
 import { useSelector } from "react-redux";
-
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
-
-import type { TextNote } from "@/types";
 
 interface Props {
   initialNote: TextNote;
@@ -55,6 +53,16 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const [showFindReplace, setShowFindReplace] = useState(false);
 
+  const noteRef = useRef(note);
+  useEffect(() => {
+    noteRef.current = note;
+  }, [note]);
+
+  const devModeRef = useRef(devMode);
+  useEffect(() => {
+    devModeRef.current = devMode;
+  }, [devMode]);
+
   const pickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
@@ -77,28 +85,30 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const setTitle = useCallback(
     (titleVal: string) => {
-      setNoteAsync({ ...note, title: titleVal });
+      setNoteAsync({ ...noteRef.current, title: titleVal });
     },
-    [note, setNoteAsync]
+    [setNoteAsync]
   );
 
   const setText = useCallback(
     (textVal: string) => {
       const textSize = getTextSize(textVal);
 
-      const isUnlimited = devMode.enabled && devMode.unlimitedTextSpace;
+      const dm = devModeRef.current;
+      const isUnlimited = dm.enabled && dm.unlimitedTextSpace;
+
       if (!isUnlimited && textSize > configs.notes.sizeLimit) {
         toast(t("noteLimitReached"));
-        richTextEditor.current?.setContentHTML(note.text); // revert
+        richTextEditor.current?.setContentHTML(noteRef.current.text); // revert
         return;
       }
 
       setNoteTextLength(getTextLength(textVal));
       setNoteTextSize(textSize);
 
-      setNoteAsync({ ...note, text: textVal });
+      setNoteAsync({ ...noteRef.current, text: textVal });
     },
-    [note, setNoteAsync, t, devMode]
+    [setNoteAsync, t]
   );
 
   const [isKeyboardShown, setIsKeyboardShown] = useState(false);
@@ -124,6 +134,43 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
     return () => subs.forEach((s) => s.remove());
   }, []);
+
+  const editorStyle = useMemo(
+    () => ({
+      backgroundColor: COLOR.darkBlue,
+      color: COLOR.softWhite,
+      placeholderColor: COLOR.placeholder,
+      cssText: richTextSyle,
+    }),
+    []
+  );
+
+  const toolbarActions = useMemo(
+    () => [
+      actions.insertImage,
+      actions.heading1,
+      actions.setBold,
+      actions.setItalic,
+      actions.setUnderline,
+      actions.alignLeft,
+      actions.alignCenter,
+      actions.setSubscript,
+      actions.setSuperscript,
+      actions.insertBulletsList,
+      actions.insertOrderedList,
+      actions.code,
+    ],
+    []
+  );
+
+  const toolbarIconMap = useMemo(
+    () => ({
+      heading1: require("../../assets/actions/heading1.png"),
+    }),
+    []
+  );
+
+  const plainNoteText = useMemo(() => stripHtml(note.text), [note.text]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -180,7 +227,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
           visible={showFindReplace}
           onClose={() => setShowFindReplace(false)}
           editorRef={richTextEditor}
-          plainText={stripHtml(note.text)}
+          plainText={plainNoteText}
           style={{ marginTop: PADDING_MARGIN.md }}
         />
 
@@ -195,12 +242,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
           initialContentHTML={initialNote.text}
           placeholder={t("note.description_placeholder")}
           pasteAsPlainText
-          editorStyle={{
-            backgroundColor: COLOR.darkBlue,
-            color: COLOR.softWhite,
-            placeholderColor: COLOR.placeholder,
-            cssText: richTextSyle,
-          }}
+          editorStyle={editorStyle}
         />
 
         <DismissKeyboardButton
@@ -219,23 +261,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
           iconSize={20}
           iconTint={COLOR.softWhite}
           selectedIconTint={COLOR.lightBlue}
-          actions={[
-            actions.insertImage,
-            actions.heading1,
-            actions.setBold,
-            actions.setItalic,
-            actions.setUnderline,
-            actions.alignLeft,
-            actions.alignCenter,
-            actions.setSubscript,
-            actions.setSuperscript,
-            actions.insertBulletsList,
-            actions.insertOrderedList,
-            actions.code,
-          ]}
-          iconMap={{
-            heading1: require("../../assets/actions/heading1.png"),
-          }}
+          actions={toolbarActions}
+          iconMap={toolbarIconMap}
         />
 
         {!note.readOnly && (

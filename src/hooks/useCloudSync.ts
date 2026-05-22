@@ -1,7 +1,7 @@
 import { configs } from "@/configs";
 import type { Category, CloudSettings, Note } from "@/types";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import type { Firestore } from "firebase/firestore";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert } from "react-native";
@@ -27,7 +27,7 @@ import { toast } from "@/utils/toast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { getCategories, resetCloudCategories, setCategories } from "@/slicers/categoriesSlice";
-import { getAllNotes, getNoteFilters, resetCloudNotes, setNotes } from "@/slicers/notesSlice";
+import { getAllNotes, resetCloudNotes, setNotes } from "@/slicers/notesSlice";
 import {
   getCloudConnected,
   getCloudSettings,
@@ -47,7 +47,6 @@ export const useCloudSync = () => {
 
   const allNotes = useSelector(getAllNotes);
   const allCategories = useSelector(getCategories);
-  const noteFilters = useSelector(getNoteFilters);
 
   const selectorCloudSyncEnabled = useSelector(selectorIsCloudSyncEnabled);
   const selectorCloudSettings = useSelector(getCloudSettings);
