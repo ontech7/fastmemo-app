@@ -13,9 +13,9 @@ import { selectorAIAssistant, selectorWebhook_addCodeNote } from "@/slicers/sett
 import type { CodeNote, CodeTab } from "@/types";
 import { isStringEmpty } from "@/utils/string";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { InteractionManager, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PlusIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -42,6 +42,15 @@ export default function NoteCodeEditor({ initialNote }: Props) {
 
   const tabScrollRef = useRef<ScrollView>(null);
   const editorRef = useRef<CodeEditorWebViewRef>(null);
+
+  const [editorReady, setEditorReady] = useState(false);
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setEditorReady(true);
+    });
+    return () => task.cancel();
+  }, []);
 
   const memoInitialNote = useMemo<CodeNote>(
     () => ({
@@ -226,13 +235,17 @@ export default function NoteCodeEditor({ initialNote }: Props) {
         </View>
 
         <View style={[styles.editorContainer, aiSettings.enabled && { marginBottom: 100 }]}>
-          <CodeEditorWebView
-            ref={editorRef}
-            initialCode={activeTab?.code || ""}
-            language={activeTab?.language || "plaintext"}
-            readOnly={note.readOnly}
-            onChange={updateTabCode}
-          />
+          {editorReady ? (
+            <CodeEditorWebView
+              ref={editorRef}
+              initialCode={activeTab?.code || ""}
+              language={activeTab?.language || "plaintext"}
+              readOnly={note.readOnly}
+              onChange={updateTabCode}
+            />
+          ) : (
+            <Text style={styles.codePlaceholder}>{activeTab?.code || ""}</Text>
+          )}
         </View>
 
         {!note.readOnly && (
@@ -381,5 +394,11 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: BORDER.normal,
     borderBottomRightRadius: BORDER.normal,
     overflow: "hidden",
+  },
+  codePlaceholder: {
+    color: COLOR.softWhite,
+    fontFamily: MONOSPACE_FONT,
+    fontSize: FONTSIZE.small,
+    padding: PADDING_MARGIN.md,
   },
 });

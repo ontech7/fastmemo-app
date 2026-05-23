@@ -18,7 +18,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { InteractionManager, Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
@@ -52,6 +52,14 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const richTextEditor = useRef(null);
 
   const [showFindReplace, setShowFindReplace] = useState(false);
+  const [editorReady, setEditorReady] = useState(false);
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setEditorReady(true);
+    });
+    return () => task.cancel();
+  }, []);
 
   const noteRef = useRef(note);
   useEffect(() => {
@@ -231,41 +239,49 @@ export default function NoteTextEditor({ initialNote }: Props) {
           style={{ marginTop: PADDING_MARGIN.md }}
         />
 
-        <RichEditor
-          containerStyle={styles.richTextContainer}
-          androidLayerType="hardware"
-          useContainer={false}
-          disabled={note.readOnly}
-          ref={richTextEditor}
-          allowFileAccess={true}
-          onChange={setText}
-          initialContentHTML={initialNote.text}
-          placeholder={t("note.description_placeholder")}
-          pasteAsPlainText
-          editorStyle={editorStyle}
-        />
+        {editorReady ? (
+          <RichEditor
+            containerStyle={styles.richTextContainer}
+            androidLayerType="hardware"
+            useContainer={false}
+            disabled={note.readOnly}
+            ref={richTextEditor}
+            allowFileAccess={true}
+            onChange={setText}
+            initialContentHTML={initialNote.text}
+            placeholder={t("note.description_placeholder")}
+            pasteAsPlainText
+            editorStyle={editorStyle}
+          />
+        ) : (
+          <View style={styles.richTextContainer}>
+            <Text style={styles.placeholderText}>{plainNoteText}</Text>
+          </View>
+        )}
 
         <DismissKeyboardButton
           showKeyboardDismiss={isKeyboardShown}
           onPress={() => richTextEditor.current?.dismissKeyboard()}
         />
 
-        <RichToolbar
-          style={[
-            styles.richToolbarContainer,
-            Platform.OS === "web" && styles.richToolbarContainerDesktop,
-            { display: Platform.OS !== "web" && !isKeyboardShown ? "none" : "flex" },
-          ]}
-          editor={richTextEditor}
-          onPressAddImage={pickImage}
-          iconSize={20}
-          iconTint={COLOR.softWhite}
-          selectedIconTint={COLOR.lightBlue}
-          actions={toolbarActions}
-          iconMap={toolbarIconMap}
-        />
+        {editorReady && (
+          <RichToolbar
+            style={[
+              styles.richToolbarContainer,
+              Platform.OS === "web" && styles.richToolbarContainerDesktop,
+              { display: Platform.OS !== "web" && !isKeyboardShown ? "none" : "flex" },
+            ]}
+            editor={richTextEditor}
+            onPressAddImage={pickImage}
+            iconSize={20}
+            iconTint={COLOR.softWhite}
+            selectedIconTint={COLOR.lightBlue}
+            actions={toolbarActions}
+            iconMap={toolbarIconMap}
+          />
+        )}
 
-        {!note.readOnly && (
+        {editorReady && !note.readOnly && (
           <VoiceRecognitionButton
             setTranscript={(transcript, isFinal) => {
               richTextEditor.current?.setContentHTML(note.text + " " + transcript);
@@ -275,7 +291,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
           />
         )}
 
-        {!note.readOnly && (
+        {editorReady && !note.readOnly && (
           <AIEditorActions
             noteType="text"
             getContent={() => stripHtml(note.text)}
@@ -345,6 +361,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.lg,
     paddingTop: PADDING_MARGIN.lg,
     paddingBottom: PADDING_MARGIN.xs,
+  },
+  placeholderText: {
+    color: COLOR.softWhite,
+    fontSize: FONTSIZE.paragraph,
+    lineHeight: 22,
   },
   richToolbarContainer: {
     width: SIZE.full,
