@@ -1,12 +1,12 @@
 import * as Device from "expo-device";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
-import { CheckCircleIcon } from "react-native-heroicons/solid";
 import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
+import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import { selectorAIAssistant, setAIAssistant } from "@/slicers/settingsSlice";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
@@ -35,8 +35,22 @@ export default function AIAssistantScreen() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [nativeAvailable, setNativeAvailable] = useState(true);
 
-  const models = Platform.OS === "web" ? [] : (Object.values(AI_MODELS) as AIModelInfo[]);
   const deviceRam = Device.totalMemory ?? 0;
+
+  const modelCardItems = useMemo<SelectableCardItem<AIModelId>[]>(() => {
+    const models = Platform.OS === "web" ? [] : (Object.values(AI_MODELS) as AIModelInfo[]);
+    return models.map((model) => {
+      const canRun = deviceRam >= model.minRamBytes;
+      return {
+        id: model.id,
+        label: model.name,
+        description: t(model.description),
+        extra: <Text style={styles.modelSize}>{model.sizeLabel}</Text>,
+        disabled: !canRun,
+        disabledLabel: t("ai.model_unavailable"),
+      };
+    });
+  }, [deviceRam, t]);
 
   useEffect(() => {
     if (Platform.OS === "web") return;
@@ -151,46 +165,7 @@ export default function AIAssistantScreen() {
             <Text style={styles.sectionHeaderTitle}>{t("ai.model")}</Text>
           </View>
 
-          <View style={styles.sectionList}>
-            {models.map((model, index) => {
-              const isSelected = model.id === selectedModelId;
-              const isLast = index === models.length - 1;
-              const canRun = deviceRam >= model.minRamBytes;
-              return (
-                <TouchableOpacity
-                  key={model.id}
-                  style={[
-                    styles.modelItem,
-                    isLast && styles.sectionItemList_last,
-                    isSelected && styles.modelItemSelected,
-                    !canRun && styles.modelItemDisabled,
-                  ]}
-                  onPress={() => canRun && selectModel(model.id)}
-                  activeOpacity={canRun ? 0.7 : 1}
-                  disabled={!canRun}
-                >
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.modelHeader}>
-                      <Text
-                        style={[
-                          styles.sectionItemList_title,
-                          isSelected && styles.modelTextSelected,
-                          !canRun && styles.modelTextDisabled,
-                        ]}
-                      >
-                        {model.name}
-                      </Text>
-                      <Text style={[styles.modelSize, !canRun && styles.modelTextDisabled]}>{model.sizeLabel}</Text>
-                    </View>
-                    <Text style={[styles.modelDescription, !canRun && styles.modelTextDisabled]}>
-                      {canRun ? t(model.description) : t("ai.model_unavailable")}
-                    </Text>
-                  </View>
-                  {isSelected && canRun && <CheckCircleIcon size={20} color={COLOR.oceanBreeze} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <SelectableCardList<AIModelId> items={modelCardItems} selectedId={selectedModelId} onSelect={selectModel} />
         </View>
 
         {/* Status + Download/Delete */}
@@ -408,41 +383,9 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.paragraph,
     textAlign: "center",
   },
-  modelItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLOR.boldBlue,
-    padding: PADDING_MARGIN.lg,
-    borderBottomWidth: 1.5,
-    borderColor: COLOR.darkBlue,
-    gap: PADDING_MARGIN.md,
-  },
-  modelItemSelected: {
-    backgroundColor: COLOR.blue,
-  },
-  modelItemDisabled: {
-    opacity: 0.4,
-  },
-  modelTextDisabled: {
-    color: COLOR.placeholder,
-  },
-  modelHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  modelTextSelected: {
-    color: COLOR.oceanBreeze,
-  },
   modelSize: {
     color: COLOR.lightBlue,
     fontSize: FONTSIZE.small,
-  },
-  modelDescription: {
-    color: COLOR.lightBlue,
-    fontSize: FONTSIZE.small,
-    lineHeight: 16,
   },
   capabilityItem: {
     backgroundColor: COLOR.boldBlue,

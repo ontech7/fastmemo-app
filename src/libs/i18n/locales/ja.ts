@@ -135,6 +135,7 @@ const ja = {
     notes: "メモ",
     search: "何かを検索...",
     deepSearch: "詳細検索（テキスト、リストなど）",
+    selected_count: "{{count}}件選択",
 
     filters: {
       deepSearch: "詳細検索",
@@ -274,6 +275,7 @@ const ja = {
     webhooks: "Webhooks",
     voice_recognition: "音声認識",
     ai_assistant: "AIアシスタント",
+    note_creation: "ノート作成",
     wipe_data: "データを削除",
     developer_options: "開発者オプション",
     about: "について",
@@ -296,6 +298,19 @@ const ja = {
     app: "アプリ",
     version: "バージョン",
     libraries: "ライブラリ",
+  },
+  note_creation: {
+    title: "ノート作成",
+    mode_section: "モード",
+    default_type_section: "既定のノート種類",
+    mode: {
+      simple: "シンプル",
+      simple_description: "タップでテキストノートを作成。他の種類はメニューから。",
+      smart: "スマート",
+      smart_description: "タップで常に下で選んだ種類を作成。",
+      adaptive: "アダプティブ",
+      adaptive_description: "タップで前回と同じ種類のノートを作成。",
+    },
   },
   aboutdeveloper: {
     title: "私について",

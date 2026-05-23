@@ -135,6 +135,7 @@ const de = {
     notes: "Notiz",
     search: "Nach etwas suchen…",
     deepSearch: "Tiefensuche (Text, Listen…)",
+    selected_count: "{{count}} ausgewählt",
 
     filters: {
       deepSearch: "Tiefensuche",
@@ -275,6 +276,7 @@ const de = {
     webhooks: "Webhooks",
     voice_recognition: "Spracherkennung",
     ai_assistant: "KI-Assistent",
+    note_creation: "Notiz erstellen",
     wipe_data: "Daten löschen",
     developer_options: "Entwickleroptionen",
     about: "Um",
@@ -297,6 +299,19 @@ const de = {
     app: "App",
     version: "Ausführung",
     libraries: "Bibliotheken",
+  },
+  note_creation: {
+    title: "Notiz erstellen",
+    mode_section: "Modus",
+    default_type_section: "Standard-Notiztyp",
+    mode: {
+      simple: "Einfach",
+      simple_description: "Tippen erstellt eine Textnotiz. Verwende das Menü für andere Typen.",
+      smart: "Intelligent",
+      smart_description: "Tippen erstellt immer den unten gewählten Typ.",
+      adaptive: "Adaptiv",
+      adaptive_description: "Tippen erstellt denselben Typ wie deine letzte Notiz.",
+    },
   },
   aboutdeveloper: {
     title: "Über mich",

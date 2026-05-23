@@ -135,6 +135,7 @@ const en = {
     notes: "Notes",
     search: "Search something...",
     deepSearch: "Deep search (text, lists…)",
+    selected_count: "{{count}} selected",
 
     filters: {
       deepSearch: "Deep search",
@@ -275,6 +276,7 @@ const en = {
     webhooks: "Webhooks",
     voice_recognition: "Voice recognition",
     ai_assistant: "AI Assistant",
+    note_creation: "Note creation",
     wipe_data: "Wipe data",
     developer_options: "Developer options",
     about: "About",
@@ -297,6 +299,19 @@ const en = {
     app: "App",
     version: "Version",
     libraries: "Libraries",
+  },
+  note_creation: {
+    title: "Note creation",
+    mode_section: "Mode",
+    default_type_section: "Default note type",
+    mode: {
+      simple: "Simple",
+      simple_description: "Tap creates a text note. Use the dropdown for other types.",
+      smart: "Smart",
+      smart_description: "Tap always creates the type you choose below.",
+      adaptive: "Adaptive",
+      adaptive_description: "Tap creates the same type as your last note.",
+    },
   },
   aboutdeveloper: {
     title: "About me",

@@ -135,6 +135,7 @@ const fr = {
     notes: "Notes",
     search: "Chercher quelque chose...",
     deepSearch: "Recherche approfondie (texte, listes…)",
+    selected_count: "{{count}} sélectionnées",
 
     filters: {
       deepSearch: "Recherche approfondie",
@@ -275,6 +276,7 @@ const fr = {
     webhooks: "Webhooks",
     voice_recognition: "Reconnaissance vocale",
     ai_assistant: "Assistant IA",
+    note_creation: "Création de note",
     wipe_data: "Effacer les données",
     developer_options: "Options développeur",
     about: "À propos",
@@ -297,6 +299,19 @@ const fr = {
     app: "App",
     version: "Version",
     libraries: "Bibliothèques",
+  },
+  note_creation: {
+    title: "Création de note",
+    mode_section: "Mode",
+    default_type_section: "Type de note par défaut",
+    mode: {
+      simple: "Simple",
+      simple_description: "Appuyer crée une note texte. Utilisez le menu pour les autres types.",
+      smart: "Smart",
+      smart_description: "Appuyer crée toujours le type choisi ci-dessous.",
+      adaptive: "Adaptatif",
+      adaptive_description: "Appuyer crée le même type que votre dernière note.",
+    },
   },
   aboutdeveloper: {
     title: "Sur moi",

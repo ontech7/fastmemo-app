@@ -135,6 +135,7 @@ const zh = {
     notes: "笔记",
     search: "写一些东西...",
     deepSearch: "深度搜索（文本、列表等）",
+    selected_count: "已选 {{count}}",
 
     filters: {
       deepSearch: "深度搜索",
@@ -274,6 +275,7 @@ const zh = {
     webhooks: "网络钩子",
     voice_recognition: "语音识别",
     ai_assistant: "AI助手",
+    note_creation: "创建笔记",
     wipe_data: "抹掉数据",
     developer_options: "开发者选项",
     about: "关于",
@@ -296,6 +298,19 @@ const zh = {
     app: "应用程序",
     version: "版本",
     libraries: "图书馆",
+  },
+  note_creation: {
+    title: "创建笔记",
+    mode_section: "模式",
+    default_type_section: "默认笔记类型",
+    mode: {
+      simple: "简单",
+      simple_description: "点按创建文本笔记。使用菜单选择其他类型。",
+      smart: "智能",
+      smart_description: "点按始终创建下方所选类型。",
+      adaptive: "自适应",
+      adaptive_description: "点按创建与上一条笔记相同的类型。",
+    },
   },
   aboutdeveloper: {
     title: "关于我",

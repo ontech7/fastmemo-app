@@ -153,6 +153,10 @@ export default Sentry.wrap(function RootLayout() {
                       name="settings/ai-assistant"
                       options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
                     />
+                    <Stack.Screen
+                      name="settings/note-creation"
+                      options={{ headerShown: false, presentation: "transparentModal", animation: "ios_from_left" }}
+                    />
                     <Stack.Screen name="+not-found" />
                   </Stack>
                 </RootSiblingParent>

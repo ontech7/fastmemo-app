@@ -11,6 +11,7 @@ import SectionItem_AppLanguage from "./items/basic/SectionItem_AppLanguage";
 import SectionItem_ChangeSecretCode from "./items/basic/SectionItem_ChangeSecretCode";
 import SectionItem_CloudSync from "./items/basic/SectionItem_CloudSync";
 import SectionItem_EnableFingerprint from "./items/basic/SectionItem_EnableFingerprint";
+import SectionItem_NoteCreation from "./items/basic/SectionItem_NoteCreation";
 import SectionItem_TemporaryTrash from "./items/basic/SectionItem_TemporaryTrash";
 import SectionItem_Help from "./items/feedback/SectionItem_Help";
 import SectionItem_Report from "./items/feedback/SectionItem_Report";
@@ -31,6 +32,7 @@ export const SECTION_BASIC: SectionItemComponent[] = [
   SectionItem_ChangeSecretCode,
   !isWeb && SectionItem_EnableFingerprint,
   SectionItem_AppLanguage,
+  SectionItem_NoteCreation,
 ].filter(Boolean) as SectionItemComponent[];
 
 export const SECTION_ADVANCED: SectionItemComponent[] = [

@@ -136,6 +136,7 @@ const it = {
     notes: "Note",
     search: "Cerca qualcosa…",
     deepSearch: "Ricerca approfondita (testo, liste…)",
+    selected_count: "{{count}} selezionate",
 
     filters: {
       deepSearch: "Ricerca approfondita",
@@ -276,6 +277,7 @@ const it = {
     webhooks: "Webhooks",
     voice_recognition: "Riconoscimento vocale",
     ai_assistant: "Assistente AI",
+    note_creation: "Creazione nota",
     wipe_data: "Cancella dati",
     developer_options: "Opzioni sviluppatore",
     about: "Info",
@@ -298,6 +300,19 @@ const it = {
     app: "App",
     version: "Versione",
     libraries: "Librerie",
+  },
+  note_creation: {
+    title: "Creazione nota",
+    mode_section: "Modalità",
+    default_type_section: "Tipo di nota predefinito",
+    mode: {
+      simple: "Semplice",
+      simple_description: "Il tap crea una nota di testo. Usa il menù per gli altri tipi.",
+      smart: "Smart",
+      smart_description: "Il tap crea sempre il tipo che scegli qui sotto.",
+      adaptive: "Adattiva",
+      adaptive_description: "Il tap crea lo stesso tipo dell'ultima nota.",
+    },
   },
   aboutdeveloper: {
     title: "Su di me",
