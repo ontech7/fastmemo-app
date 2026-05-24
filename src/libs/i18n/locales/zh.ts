@@ -151,6 +151,9 @@ const zh = {
     characters: "文本字符",
     completed: "完全的",
     on: "上に",
+    mode_free: "自由顺序",
+    mode_steps: "逐步进行",
+    ongoing: "进行中",
     created: "创建: ",
     updated: "修改: ",
     type: {

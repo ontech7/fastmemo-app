@@ -151,6 +151,9 @@ const en = {
     characters: "characters",
     completed: "completed",
     on: "on",
+    mode_free: "Free order",
+    mode_steps: "Step by step",
+    ongoing: "Ongoing",
     created: "Created: ",
     updated: "Updated: ",
     type: {

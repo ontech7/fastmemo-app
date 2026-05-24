@@ -9,6 +9,8 @@ import Animated, {
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { useDispatch, useSelector } from "react-redux";
@@ -86,6 +88,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
   const closeRotation = useSharedValue(0);
   const menuProgress = useSharedValue(0);
   const secondaryVisible = useSharedValue(1);
+  const hintPop = useSharedValue(1);
 
   const directNoteType = useMemo<(typeof NOTE_TYPES)[number]>(() => {
     const targetKey: NoteCreationType =
@@ -147,6 +150,20 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
   }, [isOverlayOpen]);
 
   const showCloseIcon = isDeleteMode;
+
+  const showTypeHint = !isDeleteMode && (noteCreation.mode === "smart" || noteCreation.mode === "adaptive");
+  const HintIcon = directNoteType.icon;
+
+  // Pop the hint badge whenever the resolved note type changes. Driven by a
+  // shared value (not entering/exiting layout animations) so it stays safe
+  // while navigating away on press.
+  useEffect(() => {
+    hintPop.value = withSequence(withTiming(0.6, { duration: 0 }), withSpring(1, { damping: 9, stiffness: 220 }));
+  }, [directNoteType.key, hintPop]);
+
+  const hintAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: hintPop.value }],
+  }));
 
   useEffect(() => {
     closeRotation.value = withTiming(showCloseIcon ? 1 : 0, {
@@ -224,6 +241,12 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
           <Animated.View style={closeIconAnimatedStyle}>
             <PlusIcon size={28} color={COLOR.darkBlue} />
           </Animated.View>
+
+          {showTypeHint && (
+            <Animated.View style={[styles.fabHintBadge, hintAnimatedStyle]} pointerEvents="none">
+              <HintIcon size={14} color={COLOR.softWhite} />
+            </Animated.View>
+          )}
         </TouchableOpacity>
       </View>
     </>
@@ -249,6 +272,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 7,
     elevation: 7,
+  },
+  fabHintBadge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 24,
+    height: 24,
+    borderRadius: BORDER.rounded,
+    backgroundColor: COLOR.darkBlue,
+    borderWidth: 1.5,
+    borderColor: COLOR.lightBlue,
+    alignItems: "center",
+    justifyContent: "center",
   },
   fabSecondary: {
     padding: PADDING_MARGIN.sm,

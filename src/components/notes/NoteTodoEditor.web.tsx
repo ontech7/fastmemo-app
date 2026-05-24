@@ -18,7 +18,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { EyeIcon, EyeSlashIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
+import { ArrowsUpDownIcon, EyeIcon, EyeSlashIcon, ListBulletIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
 import uuid from "react-uuid";
 
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
@@ -55,7 +55,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     }),
     [initialNote]
   );
-  const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list }), []);
+  const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
 
   const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
@@ -84,6 +84,10 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     [note, setNoteAsync]
   );
 
+  const stepMode = note.mode === "steps";
+
+  const firstUncheckedIndex = useMemo(() => note.list.findIndex((todoItem) => !todoItem.checked), [note.list]);
+
   const checkListItem = useCallback(
     (id: string) => {
       if (note.readOnly) {
@@ -92,15 +96,30 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
       const mutableList = Object.assign([], note.list);
       const index = mutableList.findIndex((todoItem: TodoItemType) => todoItem.id === id);
+      if (index === -1) return;
+
+      const currentlyChecked = mutableList[index].checked;
+
+      if (stepMode && !currentlyChecked && index !== firstUncheckedIndex) {
+        return;
+      }
+
       mutableList[index] = {
         ...mutableList[index],
-        checked: !mutableList[index].checked,
+        checked: !currentlyChecked,
       };
 
       setNoteAsync({ ...note, list: mutableList });
     },
-    [note, setNoteAsync]
+    [note, setNoteAsync, stepMode, firstUncheckedIndex]
   );
+
+  const toggleMode = useCallback(() => {
+    if (note.readOnly) {
+      return;
+    }
+    setNoteAsync({ ...note, mode: stepMode ? "free" : "steps" });
+  }, [note, setNoteAsync, stepMode]);
 
   const deleteListItem = useCallback(
     (id: string) => {
@@ -217,18 +236,31 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           {note.list.length > 0 ? (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={note.list.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-                {note.list.map((item) => (
-                  <TodoItem
-                    key={item.id}
-                    item={item}
-                    setText={setTextListItem}
-                    checkItem={checkListItem}
-                    deleteItem={deleteListItem}
-                    disabled={note.readOnly}
-                    hidden={hideDoneItems}
-                    autoFocus={autoFocus}
-                  />
-                ))}
+                {note.list.map((item, index) => {
+                  const stepStatus: "done" | "ongoing" | "future" = item.checked
+                    ? "done"
+                    : index === firstUncheckedIndex
+                      ? "ongoing"
+                      : "future";
+
+                  return (
+                    <TodoItem
+                      key={item.id}
+                      item={item}
+                      setText={setTextListItem}
+                      checkItem={checkListItem}
+                      deleteItem={deleteListItem}
+                      disabled={note.readOnly}
+                      hidden={hideDoneItems}
+                      autoFocus={autoFocus}
+                      stepMode={stepMode}
+                      stepStatus={stepStatus}
+                      stepNumber={stepMode ? index + 1 : undefined}
+                      isFirst={index === 0}
+                      isLast={index === note.list.length - 1}
+                    />
+                  );
+                })}
               </SortableContext>
             </DndContext>
           ) : (
@@ -246,6 +278,19 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
         <TouchableOpacity activeOpacity={0.7} style={styles.deleteAllListButton} onPress={deleteAllList}>
           <TrashIcon size={24} color={COLOR.darkBlue} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={[styles.modeToggleButton, stepMode && styles.modeToggleButtonActive]}
+          onPress={toggleMode}
+          accessibilityLabel={t(stepMode ? "note.mode_steps" : "note.mode_free")}
+        >
+          {stepMode ? (
+            <ListBulletIcon size={24} color={COLOR.darkBlue} />
+          ) : (
+            <ArrowsUpDownIcon size={24} color={COLOR.darkBlue} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -371,6 +416,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 7,
     elevation: 7,
+  },
+  modeToggleButton: {
+    zIndex: 2,
+    position: "absolute",
+    bottom: 26,
+    left: 115,
+    padding: PADDING_MARGIN.sm,
+    borderRadius: BORDER.normal,
+    backgroundColor: COLOR.lightBlue,
+    shadowColor: COLOR.black,
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.5,
+    shadowRadius: 7,
+    elevation: 7,
+  },
+  modeToggleButtonActive: {
+    backgroundColor: COLOR.yellow,
   },
   noItems: {
     color: COLOR.softWhite,

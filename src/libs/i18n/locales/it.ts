@@ -152,6 +152,9 @@ const it = {
     characters: "caratteri",
     completed: "completati",
     on: "su",
+    mode_free: "Ordine libero",
+    mode_steps: "Passo per passo",
+    ongoing: "In corso",
     created: "Creato: ",
     updated: "Modificato: ",
     type: {

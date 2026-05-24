@@ -151,6 +151,9 @@ const ja = {
     characters: "文字",
     completed: "完了",
     on: "オン",
+    mode_free: "自由順",
+    mode_steps: "ステップごと",
+    ongoing: "進行中",
     created: "作成: ",
     updated: "更新: ",
     type: {

@@ -7,6 +7,7 @@ export type {
   NoteType,
   NoteBase,
   TextNote,
+  TodoMode,
   TodoNote,
   KanbanNote,
   CodeNote,

@@ -151,6 +151,9 @@ const de = {
     characters: "Textzeichen",
     completati: "vollendet",
     on: "von",
+    mode_free: "Freie Reihenfolge",
+    mode_steps: "Schritt für Schritt",
+    ongoing: "Laufend",
     created: "Erstellt: ",
     updated: "Geändert: ",
     type: {

@@ -151,6 +151,9 @@ const fr = {
     characters: "caractères",
     completed: "complété",
     on: "sur",
+    mode_free: "Ordre libre",
+    mode_steps: "Étape par étape",
+    ongoing: "En cours",
     created: "Créé: ",
     updated: "Modifié: ",
     type: {
