@@ -1,3 +1,4 @@
+import lottieJson from "@/assets/lottie/Logo_with_Text.json";
 import LottieView from "@/components/lottie/LottieAnimation";
 import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
@@ -10,7 +11,6 @@ import * as SplashScreen from "expo-splash-screen";
 import i18n from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
-import lottieJson from "@/assets/lottie/Logo_with_Text.json";
 
 export default function LoadingScreen() {
   const router = useRouter();

@@ -50,15 +50,6 @@ export const COLOR = {
 export const KANBAN_COLUMN_COLORS = ["#A7ABB9", "#799EDC", "#00c951", "#EEE78E", "#ff6900", "#A43D3F", "#DAD9DE"] as const;
 
 /**
- * Color-stop arrays for expo-linear-gradient (`colors` prop).
- * Use with a diagonal start/end for the "modern" look: start={{x:0,y:0}} end={{x:1,y:1}}.
- */
-export const GRADIENT = {
-  // Accent buttons: same-hue sheen (lit from top), not a multi-hue rainbow.
-  accent: ["#6B86FF", "#4F6BFF"],
-} as const;
-
-/**
  * Per-type accent for the NoteCard left border. Saturated enough to read as a
  * thin edge on the light (softWhite) card. `important` notes are handled apart
  * (solid red card), so they're not listed here.

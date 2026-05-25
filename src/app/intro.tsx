@@ -51,6 +51,14 @@ export default function IntroScreen() {
         image: require("../assets/intro/step6.png"),
         description: t("intro.step6"),
       },
+      {
+        image: require("../assets/intro/step7.png"),
+        description: t("intro.step7"),
+      },
+      {
+        image: require("../assets/intro/step8.png"),
+        description: t("intro.step8"),
+      },
     ],
     [t]
   );
