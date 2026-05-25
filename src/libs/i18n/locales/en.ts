@@ -15,6 +15,13 @@ const en = {
     title: "What's new?",
 
     web: {
+      description_1_0_0: `• First stable release of Fast Memo Desktop (out of BETA).
+• Brand-new modern design across the whole app, with the new Geist font, glass surfaces and gradients.
+• Redesigned onboarding with new intro steps.
+• Added note creation settings to customize the defaults for new notes.
+• Added step mode for To-Do notes.
+• Various fixes.`,
+
       description_0_3_0: `• Added new note type: Code note with built-in code editor, syntax highlighting, multiple tabs, and language auto-detection.
 • Added find and replace in text notes.
 • Added note export.
@@ -31,6 +38,13 @@ const en = {
     },
 
     mobile: {
+      description_3_0_0: `• Brand-new modern design across the whole app, with the new Geist font, glass surfaces and gradients.
+• Redesigned onboarding with new intro steps.
+• Added note creation settings to customize the defaults for new notes.
+• Added step mode for To-Do notes.
+• Refreshed app icon and splash screen.
+• Various fixes.`,
+
       description_2_9_0: `• Added new note type: Code note with built-in code editor, syntax highlighting, multiple tabs, and language auto-detection.
 • Added Qwen 2.5 7B model with device RAM detection. New AI actions for code: Explain code and Add comments.
 • Added find and replace in text notes.

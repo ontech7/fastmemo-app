@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "Fast Memo",
-    "version": "0.3.1"
+    "version": "1.0.0"
   },
   "tauri": {
     "allowlist": {
@@ -33,7 +33,11 @@
         "removeFile": true,
         "renameFile": true,
         "exists": true,
-        "scope": ["$APP/**", "$DOCUMENT/**", "$DOWNLOAD/**"]
+        "scope": [
+          "$APP/**",
+          "$DOCUMENT/**",
+          "$DOWNLOAD/**"
+        ]
       },
       "path": {
         "all": true
@@ -58,7 +62,13 @@
         "depends": []
       },
       "externalBin": [],
-      "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
       "identifier": "com.ontech7.fastmemo",
       "longDescription": "Fast Memo - Your personal notes app with cloud sync, rich text editing, and more.",
       "macOS": {
@@ -84,7 +94,9 @@
       "active": true,
       "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJGMDRGNTgyOERGMEVFODgKUldTSTd2Q05ndlVFdjZSOU9ZMTNYenZkT1d3RTBSR05rbXJJRU5LbFVqRUhjZldtMkpjczBRck0K",
-      "endpoints": ["https://github.com/ontech7/fastmemo-app/releases/latest/download/latest.json"]
+      "endpoints": [
+        "https://github.com/ontech7/fastmemo-app/releases/latest/download/latest.json"
+      ]
     },
     "windows": [
       {

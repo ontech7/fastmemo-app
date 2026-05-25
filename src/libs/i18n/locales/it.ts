@@ -15,6 +15,13 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
+      description_1_0_0: `• Prima versione stabile di Fast Memo Desktop (fuori dalla BETA).
+• Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.
+• Onboarding ridisegnato con nuovi step introduttivi.
+• Aggiunte impostazioni di creazione nota per personalizzare i valori predefiniti.
+• Aggiunta modalita' a step per le note To-Do.
+• Fix varie.`,
+
       description_0_3_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
 • Aggiunta funzione trova e sostituisci nelle note di testo.
 • Aggiunta esportazione note.
@@ -31,6 +38,13 @@ const it = {
     },
 
     mobile: {
+      description_3_0_0: `• Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.
+• Onboarding ridisegnato con nuovi step introduttivi.
+• Aggiunte impostazioni di creazione nota per personalizzare i valori predefiniti.
+• Aggiunta modalita' a step per le note To-Do.
+• Rinnovate icona dell'app e schermata di avvio.
+• Fix varie.`,
+
       description_2_9_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
 • Aggiunto modello Qwen 2.5 7B con rilevamento RAM del dispositivo. Nuove azioni AI per il codice: Spiega il codice e Aggiungi commenti.
 • Aggiunta funzione trova e sostituisci nelle note di testo.
