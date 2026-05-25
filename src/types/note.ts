@@ -47,9 +47,12 @@ export interface TextNote extends NoteBase {
   text: string;
 }
 
+export type TodoMode = "free" | "steps";
+
 export interface TodoNote extends NoteBase {
   type: "todo";
   list: TodoItem[];
+  mode?: TodoMode;
 }
 
 export interface KanbanNote extends NoteBase {

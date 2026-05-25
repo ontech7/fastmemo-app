@@ -8,14 +8,14 @@ const appBundle = isDev ? "com.ontech7.fastmemoapptest" : "com.ontech7.FastMemoA
 const appIcon = isDev ? "./src/assets/images/test/icon.png" : "./src/assets/images/icon.png";
 const adaptiveIcon = isDev ? "./src/assets/images/test/adaptive-icon.png" : "./src/assets/images/adaptive-icon.png";
 const favicon = isDev ? "./src/assets/images/test/favicon.png" : "./src/assets/images/favicon.png";
-const backgroundColor = "#020e35";
+const backgroundColor = "#05091A";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   owner: "dontrok1",
   name: appName,
   slug: appSlug,
-  version: "2.9.1",
+  version: "3.0.0",
   orientation: "portrait",
   icon: appIcon,
   scheme: appSlug,
@@ -29,6 +29,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: adaptiveIcon,
+      backgroundImage: "./src/assets/images/adaptive-icon-bg.png",
       backgroundColor,
     },
     edgeToEdgeEnabled: true,
@@ -60,7 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        image: "./src/assets/images/splash-icon.png",
+        image: "./src/assets/images/splash-logo.png",
         imageWidth: 150,
         backgroundColor,
       },

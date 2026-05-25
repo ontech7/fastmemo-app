@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import CategoryIcon from "@/components/CategoryIcon";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
   title: string;
@@ -13,7 +13,7 @@ export default function SectionHeader({ title, icon }: Props) {
   return (
     <View style={styles.sectionHeader}>
       <View style={styles.sectionHeaderIcon}>
-        <CategoryIcon name={icon} color={COLOR.softWhite} />
+        <CategoryIcon name={icon} color={COLOR.textPrimary} />
       </View>
 
       <Text style={styles.sectionHeaderTitle}>{title}</Text>
@@ -32,13 +32,15 @@ const styles = StyleSheet.create({
   sectionHeaderIcon: {
     marginRight: PADDING_MARGIN.sm,
     padding: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.blue,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     borderRadius: BORDER.normal,
   },
   sectionHeaderTitle: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
     paddingVertical: PADDING_MARGIN.sm,
   },
 });

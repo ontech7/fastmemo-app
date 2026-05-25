@@ -1,10 +1,10 @@
 <div align="center">
 
-![Fast Memo](https://i.imgur.com/dPRR6pJ.png)
+<img width="600" height="114" alt="GithubLogo" src="https://github.com/user-attachments/assets/2b91e421-2c6b-4739-bb16-1220bd591667" />
 
 **A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, cloud sync, etc.**
 
-![Android](https://badgen.net/badge/Android/v2.9.1/blue) ![Desktop](https://badgen.net/badge/Desktop/v0.3.1/blue)
+![Android](https://badgen.net/badge/Android/v3.0.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v1.0.0/blue)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
 
 [Download](https://github.com/ontech7/fastmemo-app/releases) | [Documentation](docs/) |
@@ -63,13 +63,12 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 
 ## Screenshots
 
-![App Preview](https://i.imgur.com/YO8xtam.png)
+<img width="2940" height="3126" alt="screenshots_app" src="https://github.com/user-attachments/assets/28ace577-7cb7-4fed-bd0b-a8eb836dba60" />
 
 ## Documentation
 
 | Document                                         | Description                                   |
 | ------------------------------------------------ | --------------------------------------------- |
-| [Roadmap](docs/ROADMAP.md)                       | Upcoming features and development plans       |
 | [Cloud Sync](docs/CLOUD_SYNC.md)                 | How online sync works                         |
 | [Changelog (Mobile)](docs/CHANGELOG_MOBILE.md)   | Version history for Android                   |
 | [Changelog (Desktop)](docs/CHANGELOG_DESKTOP.md) | Version history for Desktop                   |

@@ -2,7 +2,8 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import SafeAreaView from "@/components/SafeAreaView";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import AppBackground from "@/components/ui/AppBackground";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
 import KanbanDragProvider from "@/providers/KanbanDragProvider";
@@ -115,9 +116,11 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
+        <AppBackground style={StyleSheet.absoluteFill} />
+
         <View>
           <View style={styles.header}>
-            <BackButton callback={updateNoteWebhook} />
+            <BackButton chip callback={updateNoteWebhook} />
 
             <TextInput
               style={styles.titleInput}
@@ -126,7 +129,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
               editable={!note.readOnly}
               cursorColor={COLOR.softWhite}
               placeholder={t("note.title_placeholder")}
-              placeholderTextColor={COLOR.placeholder}
+              placeholderTextColor={COLOR.textMuted}
               maxLength={96}
             />
 
@@ -189,7 +192,6 @@ const styles = StyleSheet.create({
   container: {
     height: SIZE.full,
     paddingVertical: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     position: "relative",
@@ -202,11 +204,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.lg,
-    marginHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.blue,
+    marginHorizontal: PADDING_MARGIN.sm,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     fontSize: FONTSIZE.inputTitle,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
     borderRadius: BORDER.normal,
   },
   boardContainer: {

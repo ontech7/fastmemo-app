@@ -2,7 +2,7 @@ import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 import CategoryIcon from "@/components/CategoryIcon";
 
@@ -30,9 +30,9 @@ function OrderedCategoryCard({ category, order, selected = false, toggleCategory
     <View style={styles.buttonWrapper}>
       <TouchableOpacity activeOpacity={0.7} style={[styles.button, selected && styles.selectedButton]} onPress={onPress}>
         <View style={styles.categoryWrapper}>
-          {!index && <CategoryIcon name={icon} color={selected ? COLOR.darkBlue : COLOR.softWhite} />}
+          {!index && <CategoryIcon name={icon} color={selected ? COLOR.softWhite : COLOR.textPrimary} />}
 
-          <Text style={[styles.categoryName, selected && styles.selectedColor]}>{t(name)}</Text>
+          <Text style={[styles.categoryName, selected && styles.selectedName]}>{t(name)}</Text>
         </View>
       </TouchableOpacity>
 
@@ -56,32 +56,36 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     height: 50,
-    padding: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.md,
     marginBottom: PADDING_MARGIN.md,
-    marginRight: PADDING_MARGIN.md,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
   },
   selectedButton: {
-    backgroundColor: COLOR.lightBlue,
-  },
-  selectedColor: {
-    color: COLOR.darkBlue,
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.accentMutedBorder,
   },
   categoryPosition_wrapper: {
     position: "absolute",
-    top: -5,
-    left: -5,
+    top: -6,
+    left: -6,
     borderRadius: BORDER.rounded,
-    backgroundColor: COLOR.darkBlue,
-    borderColor: COLOR.blue,
-    borderWidth: 1,
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.bg,
+    borderWidth: 2,
+    minWidth: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: PADDING_MARGIN.xs,
   },
   categoryPosition: {
     color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.small,
     textAlign: "center",
-    minWidth: 10,
   },
   categoryWrapper: {
     flexDirection: "row",
@@ -89,34 +93,13 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     marginLeft: PADDING_MARGIN.md,
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.medium,
     fontSize: FONTSIZE.paragraph,
   },
-  numberOfNotesWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexGrow: 1,
-    justifyContent: "flex-end",
-  },
-  textNumberOfNotes: {
+  selectedName: {
     color: COLOR.softWhite,
-    marginRight: PADDING_MARGIN.sm,
-  },
-  numberOfNotes_wrapper: {
-    backgroundColor: COLOR.softWhite,
-    borderRadius: BORDER.rounded,
-    paddingHorizontal: PADDING_MARGIN.sm,
-    paddingVertical: PADDING_MARGIN.xs,
-  },
-  numberOfNotes: {
-    color: COLOR.blue,
-    fontWeight: FONTWEIGHT.semiBold,
-    minWidth: 10,
-    textAlign: "center",
-  },
-  selectedNumberOfNotes: {
-    color: COLOR.softWhite,
-    backgroundColor: COLOR.darkBlue,
+    fontFamily: FONT.semiBold,
   },
 });
 

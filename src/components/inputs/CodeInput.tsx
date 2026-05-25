@@ -3,7 +3,7 @@ import { Platform, StyleSheet, Text, View } from "react-native";
 
 import Haptics from "@/libs/haptics";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import VirtualNumberKeyboard from "@/components/VirtualNumberKeyboard";
 
@@ -93,9 +93,12 @@ export default function CodeInput({ value, onChangeCode, onSubmit, disabled }: P
 const styles = StyleSheet.create({
   numberInput: {
     marginHorizontal: PADDING_MARGIN.md,
-    backgroundColor: COLOR.softWhite,
+    backgroundColor: COLOR.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     padding: PADDING_MARGIN.md,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
     fontSize: FONTSIZE.title,
     borderRadius: BORDER.normal,
     overflow: "hidden",

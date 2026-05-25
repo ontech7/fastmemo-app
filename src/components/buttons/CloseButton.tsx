@@ -1,6 +1,7 @@
 import { TouchableOpacity } from "react-native";
 import { XMarkIcon } from "react-native-heroicons/outline";
 
+import IconChip from "@/components/ui/IconChip";
 import { useRouter } from "@/hooks/useRouter";
 
 import { COLOR } from "@/constants/styles";
@@ -10,9 +11,11 @@ import type { ViewStyle } from "react-native";
 interface Props {
   callback?: (() => void) | null;
   style?: ViewStyle;
+  /** Wrap the X in a glass chip (modernized header style). */
+  chip?: boolean;
 }
 
-export default function CloseButton({ callback = null, style = {} }: Props) {
+export default function CloseButton({ callback = null, style = {}, chip = false }: Props) {
   const router = useRouter();
 
   return (
@@ -24,7 +27,13 @@ export default function CloseButton({ callback = null, style = {} }: Props) {
         router.back();
       }}
     >
-      <XMarkIcon size={28} color={COLOR.softWhite} />
+      {chip ? (
+        <IconChip>
+          <XMarkIcon size={20} color={COLOR.softWhite} />
+        </IconChip>
+      ) : (
+        <XMarkIcon size={28} color={COLOR.softWhite} />
+      )}
     </TouchableOpacity>
   );
 }

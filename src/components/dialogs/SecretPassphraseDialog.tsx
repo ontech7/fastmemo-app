@@ -11,6 +11,8 @@ import {
 } from "@ontech7/react-native-dialog";
 import { useTranslation } from "react-i18next";
 
+import { BORDER, COLOR, GLASS } from "@/constants/styles";
+
 interface Props {
   open: boolean;
   title: string;
@@ -33,6 +35,9 @@ export default function SecretPassphraseDialog({ open, title, description = null
       <DialogBody>
         <DialogInput
           placeholder={t("generalsettings.export_import_placeholder_input")}
+          placeholderTextColor={COLOR.textMuted}
+          cursorColor={COLOR.textPrimary}
+          containerStyle={{ backgroundColor: COLOR.bg, borderColor: GLASS.border, borderRadius: BORDER.normal }}
           secureTextEntry
           autoCapitalize="none"
           onChangeText={(text) => (textInputRef.current = text)}

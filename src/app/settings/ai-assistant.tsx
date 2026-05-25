@@ -1,15 +1,16 @@
 import * as Device from "expo-device";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
-import { CheckCircleIcon } from "react-native-heroicons/solid";
 import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
+import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import { selectorAIAssistant, setAIAssistant } from "@/slicers/settingsSlice";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import type { AIModelId, AIModelInfo } from "@/libs/ai";
 import {
@@ -35,8 +36,22 @@ export default function AIAssistantScreen() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [nativeAvailable, setNativeAvailable] = useState(true);
 
-  const models = Platform.OS === "web" ? [] : (Object.values(AI_MODELS) as AIModelInfo[]);
   const deviceRam = Device.totalMemory ?? 0;
+
+  const modelCardItems = useMemo<SelectableCardItem<AIModelId>[]>(() => {
+    const models = Platform.OS === "web" ? [] : (Object.values(AI_MODELS) as AIModelInfo[]);
+    return models.map((model) => {
+      const canRun = deviceRam >= model.minRamBytes;
+      return {
+        id: model.id,
+        label: model.name,
+        description: t(model.description),
+        extra: <Text style={styles.modelSize}>{model.sizeLabel}</Text>,
+        disabled: !canRun,
+        disabledLabel: t("ai.model_unavailable"),
+      };
+    });
+  }, [deviceRam, t]);
 
   useEffect(() => {
     if (Platform.OS === "web") return;
@@ -122,10 +137,11 @@ export default function AIAssistantScreen() {
   if (Platform.OS === "web" || !nativeAvailable) {
     return (
       <SafeAreaView style={styles.container}>
+        <AppBackground style={StyleSheet.absoluteFill} />
         <View style={styles.header}>
-          <BackButton />
+          <BackButton chip />
           <Text style={styles.headerTitle}>{t("ai.title")}</Text>
-          <View style={{ padding: PADDING_MARGIN.md }} />
+          <View style={styles.headerSpacer} />
         </View>
         <View style={styles.unavailableContainer}>
           <Text style={styles.unavailableText}>
@@ -138,59 +154,22 @@ export default function AIAssistantScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
         <Text style={styles.headerTitle}>{t("ai.title")}</Text>
-        <View style={{ padding: PADDING_MARGIN.md }} />
+        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView>
+      <ScrollView style={styles.scroll}>
         {/* Model selection */}
         <View style={styles.sectionWrapper}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionHeaderTitle}>{t("ai.model")}</Text>
           </View>
 
-          <View style={styles.sectionList}>
-            {models.map((model, index) => {
-              const isSelected = model.id === selectedModelId;
-              const isLast = index === models.length - 1;
-              const canRun = deviceRam >= model.minRamBytes;
-              return (
-                <TouchableOpacity
-                  key={model.id}
-                  style={[
-                    styles.modelItem,
-                    isLast && styles.sectionItemList_last,
-                    isSelected && styles.modelItemSelected,
-                    !canRun && styles.modelItemDisabled,
-                  ]}
-                  onPress={() => canRun && selectModel(model.id)}
-                  activeOpacity={canRun ? 0.7 : 1}
-                  disabled={!canRun}
-                >
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.modelHeader}>
-                      <Text
-                        style={[
-                          styles.sectionItemList_title,
-                          isSelected && styles.modelTextSelected,
-                          !canRun && styles.modelTextDisabled,
-                        ]}
-                      >
-                        {model.name}
-                      </Text>
-                      <Text style={[styles.modelSize, !canRun && styles.modelTextDisabled]}>{model.sizeLabel}</Text>
-                    </View>
-                    <Text style={[styles.modelDescription, !canRun && styles.modelTextDisabled]}>
-                      {canRun ? t(model.description) : t("ai.model_unavailable")}
-                    </Text>
-                  </View>
-                  {isSelected && canRun && <CheckCircleIcon size={20} color={COLOR.oceanBreeze} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <SelectableCardList<AIModelId> items={modelCardItems} selectedId={selectedModelId} onSelect={selectModel} />
         </View>
 
         {/* Status + Download/Delete */}
@@ -255,8 +234,8 @@ export default function AIAssistantScreen() {
               <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
                 <Text style={styles.sectionItemList_title}>{t("ai.enabled")}</Text>
                 <Switch
-                  trackColor={{ false: COLOR.lightGray, true: COLOR.darkOceanBreeze + "60" }}
-                  thumbColor={aiSettings.enabled ? COLOR.oceanBreeze : COLOR.softWhite}
+                  trackColor={{ false: COLOR.surfaceMuted, true: COLOR.accentMuted }}
+                  thumbColor={COLOR.softWhite}
                   onValueChange={toggleEnabled}
                   value={aiSettings.enabled}
                   style={{ height: 25 }}
@@ -306,26 +285,33 @@ export default function AIAssistantScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
+  },
+  scroll: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.lg,
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: {
+    width: 42,
   },
   sectionWrapper: {
-    marginTop: PADDING_MARGIN.xl,
+    marginTop: PADDING_MARGIN.lg,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -333,45 +319,49 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.sm,
   },
   sectionHeaderTitle: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
     fontSize: FONTSIZE.paragraph,
     paddingVertical: PADDING_MARGIN.sm,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   sectionList: {
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     overflow: "hidden",
   },
   sectionItemList: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     padding: PADDING_MARGIN.lg,
-    borderBottomWidth: 1.5,
-    borderColor: COLOR.darkBlue,
+    borderBottomWidth: 1,
+    borderColor: GLASS.border,
   },
   sectionItemList_last: {
     borderBottomWidth: 0,
   },
   sectionItemList_title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
   sectionItemList_text: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.medium,
   },
   statusReady: {
-    color: "#4CAF50",
+    color: COLOR.codeMint,
   },
   actionButton: {
     justifyContent: "center",
     alignItems: "center",
   },
   actionText: {
-    color: COLOR.oceanBreeze,
-    fontWeight: FONTWEIGHT.semiBold,
+    color: COLOR.accentSoft,
+    fontFamily: FONT.semiBold,
   },
   deleteButton: {
     justifyContent: "center",
@@ -379,22 +369,23 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: COLOR.importantIcon,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   progressBarContainer: {
     height: 4,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surfaceMuted,
     borderRadius: 2,
     marginTop: PADDING_MARGIN.sm,
     overflow: "hidden",
   },
   progressBar: {
     height: "100%",
-    backgroundColor: COLOR.oceanBreeze,
+    backgroundColor: COLOR.accentMuted,
     borderRadius: 2,
   },
   infoText: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
     lineHeight: 18,
   },
@@ -404,66 +395,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   unavailableText: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
     textAlign: "center",
   },
-  modelItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLOR.boldBlue,
-    padding: PADDING_MARGIN.lg,
-    borderBottomWidth: 1.5,
-    borderColor: COLOR.darkBlue,
-    gap: PADDING_MARGIN.md,
-  },
-  modelItemSelected: {
-    backgroundColor: COLOR.blue,
-  },
-  modelItemDisabled: {
-    opacity: 0.4,
-  },
-  modelTextDisabled: {
-    color: COLOR.placeholder,
-  },
-  modelHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  modelTextSelected: {
-    color: COLOR.oceanBreeze,
-  },
   modelSize: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
-  },
-  modelDescription: {
-    color: COLOR.lightBlue,
-    fontSize: FONTSIZE.small,
-    lineHeight: 16,
   },
   capabilityItem: {
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     paddingHorizontal: PADDING_MARGIN.lg,
     paddingVertical: PADDING_MARGIN.md,
     borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
+    borderColor: GLASS.border,
   },
   capabilityText: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
     lineHeight: 20,
   },
   capabilityMin: {
-    color: COLOR.placeholder,
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.small - 1,
-    marginTop: 2,
-  },
-  voiceOnlyHint: {
-    color: COLOR.lightBlue,
-    fontSize: FONTSIZE.small,
     marginTop: 2,
   },
   downloadingRow: {
@@ -473,7 +431,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     color: COLOR.important,
+    fontFamily: FONT.semiBold,
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
   },
 });

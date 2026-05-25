@@ -15,6 +15,13 @@ const zh = {
     title: "什么是新的？",
 
     web: {
+      description_1_0_0: `• Fast Memo Desktop 首个稳定版本（已结束 BETA）。
+• 全新现代化设计，全应用焕新，采用全新 Geist 字体、玻璃质感界面和渐变效果。
+• 重新设计的引导流程，新增介绍步骤。
+• 新增笔记创建设置，可自定义新笔记的默认选项。
+• 为 To-Do 笔记新增分步模式。
+• 其他修复。`,
+
       description_0_3_0: `• 新增代码笔记类型，内置代码编辑器，支持语法高亮、多标签页和语言自动检测。
 • 文本笔记新增查找和替换功能。
 • 新增笔记导出功能。
@@ -31,6 +38,13 @@ const zh = {
     },
 
     mobile: {
+      description_3_0_0: `• 全新现代化设计，全应用焕新，采用全新 Geist 字体、玻璃质感界面和渐变效果。
+• 重新设计的引导流程，新增介绍步骤。
+• 新增笔记创建设置，可自定义新笔记的默认选项。
+• 为 To-Do 笔记新增分步模式。
+• 焕新应用图标和启动画面。
+• 其他修复。`,
+
       description_2_9_0: `• 新增代码笔记类型，内置代码编辑器，支持语法高亮、多标签页和语言自动检测。
 • 新增Qwen 2.5 7B模型，支持设备RAM检测。代码新AI功能：解释代码和添加注释。
 • 文本笔记新增查找和替换功能。
@@ -105,9 +119,11 @@ const zh = {
     step1: "一键添加笔记。",
     step2: "使用底部工具栏丰富您的文本。",
     step3: "创建待办事项列表来管理您的任务。",
-    step4: "根据您的需要创建您自己的类别。",
-    step5: "输入密码来隐藏你的笔记。",
-    step6: "在您的 Google Firebase 上同步您的笔记。",
+    step4: "使用看板视图可视化您的想法。",
+    step5: "记录您的代码片段。",
+    step6: "根据您的需要创建您自己的类别。",
+    step7: "输入密码来隐藏你的笔记。",
+    step8: "在您的 Google Firebase 上同步您的笔记。",
     title: "什么是 Fast Memo?",
     continue: "继续",
   },
@@ -135,6 +151,7 @@ const zh = {
     notes: "笔记",
     search: "写一些东西...",
     deepSearch: "深度搜索（文本、列表等）",
+    selected_count: "已选 {{count}}",
 
     filters: {
       deepSearch: "深度搜索",
@@ -150,6 +167,9 @@ const zh = {
     characters: "文本字符",
     completed: "完全的",
     on: "上に",
+    mode_free: "列表",
+    mode_steps: "步骤",
+    ongoing: "进行中",
     created: "创建: ",
     updated: "修改: ",
     type: {
@@ -195,6 +215,7 @@ const zh = {
     code_placeholder: "在此输入代码...",
     max_tabs_reached: "最多6个标签",
     delete_tab: "删除标签",
+    delete_tab_confirm: "确定要删除此标签吗？此操作无法撤销。",
     language: "语言",
   },
   changecategory: {
@@ -274,6 +295,7 @@ const zh = {
     webhooks: "网络钩子",
     voice_recognition: "语音识别",
     ai_assistant: "AI助手",
+    note_creation: "创建笔记",
     wipe_data: "抹掉数据",
     developer_options: "开发者选项",
     about: "关于",
@@ -296,6 +318,19 @@ const zh = {
     app: "应用程序",
     version: "版本",
     libraries: "图书馆",
+  },
+  note_creation: {
+    title: "创建笔记",
+    mode_section: "模式",
+    default_type_section: "默认笔记类型",
+    mode: {
+      simple: "简单",
+      simple_description: "点按创建文本笔记。使用菜单选择其他类型。",
+      smart: "智能",
+      smart_description: "点按始终创建下方所选类型。",
+      adaptive: "自适应",
+      adaptive_description: "点按创建与上一条笔记相同的类型。",
+    },
   },
   aboutdeveloper: {
     title: "关于我",

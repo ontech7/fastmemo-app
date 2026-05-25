@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
   version: string;
@@ -13,7 +13,7 @@ export default function ChangelogItem({ version, text, isFirst, isLast }: Props)
   return (
     <View style={styles.container}>
       <View style={styles.dotLine_wrapper}>
-        <View style={[styles.dot, isFirst && { backgroundColor: COLOR.darkYellow }]} />
+        <View style={[styles.dot, isFirst && styles.dotFirst]} />
 
         {!isLast && <View style={styles.line} />}
       </View>
@@ -44,8 +44,11 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: BORDER.rounded,
-    backgroundColor: COLOR.lightGray,
+    backgroundColor: COLOR.textMuted,
     marginTop: PADDING_MARGIN.md + 2,
+  },
+  dotFirst: {
+    backgroundColor: COLOR.accentSoft,
   },
   line: {
     marginTop: -1,
@@ -53,14 +56,16 @@ const styles = StyleSheet.create({
     marginBottom: -60,
     width: 2,
     flexGrow: 1,
-    backgroundColor: COLOR.lightGray,
+    backgroundColor: COLOR.surfaceMuted,
   },
   changelog_wrapper: {
     flex: 1,
     flexGrow: 1,
     position: "relative",
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     paddingTop: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.lg,
   },
@@ -73,21 +78,22 @@ const styles = StyleSheet.create({
     borderRightWidth: 10,
     borderBottomWidth: 10,
     borderLeftWidth: 0,
-    borderRightColor: COLOR.blue,
+    borderRightColor: COLOR.surface,
     borderTopColor: "transparent",
     borderBottomColor: "transparent",
     borderLeftColor: "transparent",
   },
   version: {
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
     fontSize: FONTSIZE.subtitle,
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
   },
   text: {
     paddingLeft: PADDING_MARGIN.md,
     marginVertical: PADDING_MARGIN.md,
     lineHeight: 30,
     fontSize: FONTSIZE.paragraph,
-    color: COLOR.softWhite,
+    fontFamily: FONT.regular,
+    color: COLOR.textSecondary,
   },
 });

@@ -19,7 +19,7 @@ function Section({ title, icon, sectionItems }: Props) {
 
       <SectionList>
         {sectionItems.map((SectionComp, i) => (
-          <SectionComp key={`section_${title}_${i}`} isLast={i == sectionItems.length - 1} />
+          <SectionComp key={`section_${title}_${i}`} isLast={i === sectionItems.length - 1} />
         ))}
       </SectionList>
     </SectionWrapper>

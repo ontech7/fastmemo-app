@@ -15,6 +15,13 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_1_0_0: `• Erste stabile Version von Fast Memo Desktop (kein BETA mehr).
+• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
+• Onboarding mit neuen Einfuhrungsschritten neu gestaltet.
+• Einstellungen zur Notizerstellung hinzugefugt, um Standardwerte anzupassen.
+• Schritt-Modus fur To-Do-Notizen hinzugefugt.
+• Verschiedene Fehlerbehebungen.`,
+
       description_0_3_0: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
 • Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
 • Notiz-Export hinzugefugt.
@@ -31,6 +38,13 @@ const de = {
     },
 
     mobile: {
+      description_3_0_0: `• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
+• Onboarding mit neuen Einfuhrungsschritten neu gestaltet.
+• Einstellungen zur Notizerstellung hinzugefugt, um Standardwerte anzupassen.
+• Schritt-Modus fur To-Do-Notizen hinzugefugt.
+• App-Icon und Startbildschirm aufgefrischt.
+• Verschiedene Fehlerbehebungen.`,
+
       description_2_9_0: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
 • Qwen 2.5 7B Modell mit Gerate-RAM-Erkennung hinzugefugt. Neue AI-Aktionen fur Code: Code erklaren und Kommentare hinzufugen.
 • Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
@@ -105,9 +119,11 @@ const de = {
     step1: "Fügen Sie Ihre Notizen mit einem Klick hinzu.",
     step2: "Bereichern Sie Ihren Text mithilfe der unteren Symbolleiste.",
     step3: "Erstellen Sie eine To-Do-Liste, um Ihre Aufgaben zu verwalten.",
-    step4: "Erstellen Sie Ihre eigene Kategorie entsprechend Ihren Anforderungen.",
-    step5: "Geben Sie einen Geheimcode ein, um Ihre Notizen zu verbergen.",
-    step6: "Synchronisieren Sie Ihre Notizen auf Ihrer Google Firebase.",
+    step4: "Visualisieren Sie Ihre Ideen mit Kanban-Boards.",
+    step5: "Halten Sie Ihre Snippets fest.",
+    step6: "Erstellen Sie Ihre eigene Kategorie entsprechend Ihren Anforderungen.",
+    step7: "Geben Sie einen Geheimcode ein, um Ihre Notizen zu verbergen.",
+    step8: "Synchronisieren Sie Ihre Notizen auf Google Firebase.",
     title: "Was ist Fast Memo?",
     continue: "Geht weiter",
   },
@@ -135,6 +151,7 @@ const de = {
     notes: "Notiz",
     search: "Nach etwas suchen…",
     deepSearch: "Tiefensuche (Text, Listen…)",
+    selected_count: "{{count}} ausgewählt",
 
     filters: {
       deepSearch: "Tiefensuche",
@@ -150,6 +167,9 @@ const de = {
     characters: "Textzeichen",
     completati: "vollendet",
     on: "von",
+    mode_free: "Liste",
+    mode_steps: "Schritte",
+    ongoing: "Laufend",
     created: "Erstellt: ",
     updated: "Geändert: ",
     type: {
@@ -195,6 +215,7 @@ const de = {
     code_placeholder: "Schreiben Sie Ihren Code hier...",
     max_tabs_reached: "Maximum von 6 Tabs erreicht",
     delete_tab: "Tab loschen",
+    delete_tab_confirm: "Möchtest du diesen Tab wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
     language: "Sprache",
   },
   changecategory: {
@@ -275,6 +296,7 @@ const de = {
     webhooks: "Webhooks",
     voice_recognition: "Spracherkennung",
     ai_assistant: "KI-Assistent",
+    note_creation: "Notiz erstellen",
     wipe_data: "Daten löschen",
     developer_options: "Entwickleroptionen",
     about: "Um",
@@ -297,6 +319,19 @@ const de = {
     app: "App",
     version: "Ausführung",
     libraries: "Bibliotheken",
+  },
+  note_creation: {
+    title: "Notiz erstellen",
+    mode_section: "Modus",
+    default_type_section: "Standard-Notiztyp",
+    mode: {
+      simple: "Einfach",
+      simple_description: "Tippen erstellt eine Textnotiz. Verwende das Menü für andere Typen.",
+      smart: "Intelligent",
+      smart_description: "Tippen erstellt immer den unten gewählten Typ.",
+      adaptive: "Adaptiv",
+      adaptive_description: "Tippen erstellt denselben Typ wie deine letzte Notiz.",
+    },
   },
   aboutdeveloper: {
     title: "Über mich",

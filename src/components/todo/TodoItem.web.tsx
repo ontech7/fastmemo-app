@@ -1,10 +1,11 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState } from "react";
-import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
-import { CheckIcon, XCircleIcon } from "react-native-heroicons/outline";
+import { useTranslation } from "react-i18next";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { CheckIcon, TrashIcon } from "react-native-heroicons/outline";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import DragIcon from "@/components/icons/DragIcon";
 
@@ -14,24 +15,58 @@ interface TodoItemData {
   checked: boolean;
 }
 
+type StepStatus = "done" | "ongoing" | "future";
+
 interface Props {
   item: TodoItemData;
   setText: (id: string, text: string) => void;
   checkItem: (id: string) => void;
   deleteItem: (id: string) => void;
   disabled: boolean;
-  hidden: boolean;
+  hidden?: boolean;
   autoFocus: boolean;
+  stepMode?: boolean;
+  stepStatus?: StepStatus;
+  stepNumber?: number;
+  isFirst?: boolean;
+  isLast?: boolean;
+  // Accepted for API parity with the native variant (no-op on web).
+  animationsReady?: boolean;
 }
 
-export default function TodoItem({ item, setText, checkItem, deleteItem, disabled, hidden, autoFocus }: Props) {
+const STEP_COLUMN_WIDTH = 50;
+const STEP_CIRCLE_SIZE = 34;
+
+export default function TodoItem({
+  item,
+  setText,
+  checkItem,
+  deleteItem,
+  disabled,
+  hidden = false,
+  autoFocus,
+  stepMode = false,
+  stepStatus = "future",
+  stepNumber,
+  isFirst = false,
+  isLast = false,
+}: Props) {
+  const { t } = useTranslation();
   const [height, setHeight] = useState(40);
+  const [pressing, setPressing] = useState(false);
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    disabled: stepMode,
+  });
 
-  const style = {
+  const isOngoing = stepMode && stepStatus === "ongoing";
+  const isFuture = stepMode && stepStatus === "future";
+  const isStepDone = stepMode && stepStatus === "done";
+
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: transition ?? "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease",
     opacity: isDragging ? 0.5 : 1,
   };
 
@@ -39,44 +74,129 @@ export default function TodoItem({ item, setText, checkItem, deleteItem, disable
     return null;
   }
 
+  /* FREE MODE -- drag + checkbox + text */
+
+  if (!stepMode) {
+    return (
+      <div ref={setNodeRef} style={style}>
+        <View style={[styles.todoItemContainer, { opacity: item.checked ? 0.55 : 1 }]}>
+          <div
+            {...attributes}
+            {...listeners}
+            style={{
+              cursor: disabled ? "default" : "grab",
+              padding: 8,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
+          </div>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => checkItem(item.id)}
+            onPressIn={() => setPressing(true)}
+            onPressOut={() => setPressing(false)}
+            disabled={disabled}
+            style={[
+              styles.checkboxFree,
+              item.checked && styles.checkboxFreeChecked,
+              pressing && { transform: [{ scale: 0.9 }] as any },
+            ]}
+          >
+            {item.checked && <CheckIcon size={24} color={COLOR.softWhite} />}
+          </TouchableOpacity>
+
+          <TextInput
+            style={[styles.listItemInputFree, { height }, item.checked && { textDecorationLine: "line-through", opacity: 0.5 }]}
+            textAlignVertical="top"
+            multiline
+            scrollEnabled={false}
+            value={item.text}
+            onChangeText={(text) => setText(item.id, text)}
+            editable={!disabled}
+            placeholderTextColor={COLOR.textMuted}
+            cursorColor={COLOR.softWhite}
+            autoFocus={autoFocus && !item.text}
+            onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
+          />
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => deleteItem(item.id)}
+            disabled={disabled}
+            style={styles.deleteButton}
+          >
+            <View style={styles.deleteChip}>
+              <TrashIcon size={16} color={COLOR.textMuted} />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </div>
+    );
+  }
+
+  /* STEP MODE */
+
+  const numberColor = isOngoing ? COLOR.softWhite : COLOR.textSecondary;
+  const circleBorderColor = isOngoing ? COLOR.accentSoft : isStepDone ? COLOR.accentMutedBorder : GLASS.border;
+  const circleFillBg = isOngoing ? COLOR.accent : isStepDone ? COLOR.accentMuted : COLOR.surface;
+
   return (
     <div ref={setNodeRef} style={style}>
-      <View style={styles.todoItemContainer}>
-        <div
-          {...attributes}
-          {...listeners}
-          style={{
-            cursor: disabled ? "default" : "grab",
-            padding: 8,
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <DragIcon
-            iconProps={{
-              color: COLOR.softWhite,
-              opacity: 0.75,
-            }}
+      <View style={styles.stepRow}>
+        <View style={styles.stepColumn} pointerEvents="box-none">
+          <View style={[styles.stepLine, isFirst && styles.stepLineHidden]} />
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => checkItem(item.id)}
+            onPressIn={() => setPressing(true)}
+            onPressOut={() => setPressing(false)}
+            disabled={disabled}
+            style={[
+              styles.stepCircle,
+              { borderColor: circleBorderColor, backgroundColor: circleFillBg },
+              pressing && { transform: [{ scale: 0.9 }] as any },
+            ]}
+          >
+            {isStepDone ? (
+              <CheckIcon size={18} color={COLOR.softWhite} />
+            ) : (
+              <Text style={[styles.stepCircleNumber, { color: numberColor }]}>{stepNumber}</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={[styles.stepLine, isLast && styles.stepLineHidden]} />
+
+          {isOngoing && (
+            <View style={styles.stepOngoingLabelWrap} pointerEvents="none">
+              <Text style={styles.stepOngoingLabel}>{t("note.ongoing")}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.stepTextWrap}>
+          <TextInput
+            style={[
+              styles.stepTextInput,
+              { height: Math.max(40, height) },
+              item.checked && styles.stepTextDone,
+              isFuture && styles.stepTextFuture,
+            ]}
+            textAlignVertical="top"
+            multiline
+            scrollEnabled={false}
+            value={item.text}
+            onChangeText={(text) => setText(item.id, text)}
+            editable={!disabled}
+            placeholderTextColor={COLOR.textMuted}
+            cursorColor={COLOR.softWhite}
+            autoFocus={autoFocus && isOngoing && !item.text}
+            onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
           />
-        </div>
-
-        <TouchableOpacity activeOpacity={0.7} onPress={() => checkItem(item.id)} disabled={disabled} style={styles.checkbox}>
-          {item.checked && <CheckIcon size={28} color={COLOR.softWhite} style={{ margin: 7 }} />}
-        </TouchableOpacity>
-
-        <TextInput
-          style={[styles.listItemInput, { height }, item.checked && { textDecorationLine: "line-through", opacity: 0.5 }]}
-          textAlignVertical="top"
-          multiline
-          scrollEnabled={false}
-          value={item.text}
-          onChangeText={(text) => setText(item.id, text)}
-          editable={!disabled}
-          placeholderTextColor={COLOR.placeholder}
-          cursorColor={COLOR.softWhite}
-          autoFocus={autoFocus && !item.text}
-          onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
-        />
+        </View>
 
         <TouchableOpacity
           activeOpacity={0.7}
@@ -84,7 +204,9 @@ export default function TodoItem({ item, setText, checkItem, deleteItem, disable
           disabled={disabled}
           style={styles.deleteButton}
         >
-          <XCircleIcon size={24} color={COLOR.softWhite} />
+          <View style={styles.deleteChip}>
+            <TrashIcon size={16} color={COLOR.textMuted} />
+          </View>
         </TouchableOpacity>
       </View>
     </div>
@@ -92,37 +214,128 @@ export default function TodoItem({ item, setText, checkItem, deleteItem, disable
 }
 
 const styles = StyleSheet.create({
+  /* free mode */
   todoItemContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: PADDING_MARGIN.sm,
     gap: PADDING_MARGIN.sm,
   },
-  listItemInput: {
+  listItemInputFree: {
     minHeight: 40,
     flex: 1,
     paddingVertical: PADDING_MARGIN.sm - 3,
-    paddingHorizontal: PADDING_MARGIN.lg - 4,
-    backgroundColor: COLOR.blue,
+    paddingHorizontal: PADDING_MARGIN.md,
+    backgroundColor: COLOR.surface,
     fontSize: FONTSIZE.inputTitle,
     lineHeight: FONTSIZE.inputTitle * 1.35,
-    fontWeight: FONTWEIGHT.regular,
-    color: COLOR.softWhite,
+    fontFamily: FONT.regular,
+    color: COLOR.textPrimary,
     borderRadius: BORDER.normal,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderColor: GLASS.border,
   },
-  checkbox: {
-    backgroundColor: COLOR.blue,
+  checkboxFree: {
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
     height: 40,
     width: 40,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderColor: GLASS.border,
     alignItems: "center",
     justifyContent: "center",
   },
+  checkboxFreeChecked: {
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.accentMutedBorder,
+  },
   deleteButton: {
-    padding: PADDING_MARGIN.sm,
+    alignSelf: "center",
+    padding: PADDING_MARGIN.xs,
+  },
+  deleteChip: {
+    width: 32,
+    height: 32,
+    borderRadius: BORDER.normal,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
+  },
+
+  /* step mode */
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    minHeight: 80,
+  },
+  stepColumn: {
+    width: STEP_COLUMN_WIDTH,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    position: "relative",
+  },
+  stepLine: {
+    width: 2,
+    flex: 1,
+    minHeight: 6,
+    backgroundColor: GLASS.border,
+  },
+  stepLineHidden: {
+    backgroundColor: "transparent",
+  },
+  stepCircle: {
+    width: STEP_CIRCLE_SIZE,
+    height: STEP_CIRCLE_SIZE,
+    borderRadius: STEP_CIRCLE_SIZE / 2,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepCircleNumber: {
+    fontSize: FONTSIZE.medium,
+    fontFamily: FONT.semiBold,
+  },
+  stepOngoingLabelWrap: {
+    position: "absolute",
+    top: STEP_CIRCLE_SIZE + 6 + 4,
+    left: -8,
+    right: -8,
+    alignItems: "center",
+  },
+  stepOngoingLabel: {
+    color: COLOR.accentSoft,
+    fontSize: FONTSIZE.small,
+    fontFamily: FONT.semiBold,
+    backgroundColor: COLOR.bg,
+    paddingHorizontal: 4,
+  },
+  stepTextWrap: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: PADDING_MARGIN.sm,
+  },
+  stepTextInput: {
+    minHeight: 38,
+    paddingVertical: 6,
+    paddingHorizontal: PADDING_MARGIN.sm,
+    backgroundColor: COLOR.surface,
+    borderRadius: BORDER.small,
+    borderWidth: 1,
+    borderColor: GLASS.border,
+    fontSize: FONTSIZE.inputTitle,
+    lineHeight: FONTSIZE.inputTitle * 1.35,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+  },
+  stepTextDone: {
+    color: COLOR.textMuted,
+    textDecorationLine: "line-through",
+  },
+  stepTextFuture: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    opacity: 0.95,
   },
 });

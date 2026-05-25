@@ -1,7 +1,8 @@
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
 import LottieView from "@/components/lottie/LottieAnimation";
 import { configs } from "@/configs";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { selectorDeveloperMode, setDeveloperMode } from "@/slicers/settingsSlice";
 import { toast } from "@/utils/toast";
 import { useCallback, useEffect, useRef } from "react";
@@ -70,17 +71,19 @@ export default function InformationScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
 
         <Text style={styles.headerTitle}>{t("info.title")}</Text>
 
-        <View style={{ padding: PADDING_MARGIN.md }}></View>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView>
+      <ScrollView style={styles.scroll}>
         <View style={styles.appWrapper}>
-          <View style={{ ...styles.appIcon, padding: PADDING_MARGIN.md }}>
+          <View style={styles.appIcon}>
             <LottieView ref={logoAnimRef} style={styles.lottieStyle} source={lottieJson} loop={false} />
           </View>
 
@@ -171,36 +174,47 @@ export default function InformationScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
+  },
+  scroll: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.lg,
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: {
+    width: 42,
   },
   appWrapper: {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: PADDING_MARGIN.xl,
+    marginTop: PADDING_MARGIN.lg,
   },
   appIcon: {
-    backgroundColor: COLOR.blue,
+    padding: PADDING_MARGIN.md,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
   },
   appName: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.medium,
     marginTop: PADDING_MARGIN.md,
   },
   lottieStyle: {
@@ -216,38 +230,37 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.sm,
   },
   sectionHeaderTitle: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
     fontSize: FONTSIZE.paragraph,
     paddingVertical: PADDING_MARGIN.sm,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   sectionList: {
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     overflow: "hidden",
   },
   sectionItemList: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     padding: PADDING_MARGIN.lg,
     borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
+    borderColor: GLASS.border,
   },
   sectionItemList_last: {
     borderBottomWidth: 0,
   },
-  sectionItemList_button: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   sectionItemList_title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
   sectionItemList_text: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.medium,
   },
 });

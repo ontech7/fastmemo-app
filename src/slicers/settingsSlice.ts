@@ -2,6 +2,7 @@ import type {
   AIAssistantSettings,
   CloudSettings,
   DeveloperModeSettings,
+  NoteCreationSettings,
   RootState,
   SettingsState,
   VoiceRecognitionSettings,
@@ -63,6 +64,11 @@ const initialState: SettingsState = {
     unlimitedTrashTime: false,
     customAppIcon: null,
   },
+  noteCreation: {
+    mode: "simple",
+    smartType: "text",
+    lastUsedType: "text",
+  },
 };
 
 const settingsSlice = createSlice({
@@ -108,6 +114,9 @@ const settingsSlice = createSlice({
     setDeveloperMode: (state, action: PayloadAction<DeveloperModeSettings>) => {
       state.developerMode = action.payload;
     },
+    setNoteCreation: (state, action: PayloadAction<NoteCreationSettings>) => {
+      state.noteCreation = action.payload;
+    },
   },
 });
 
@@ -125,6 +134,7 @@ export const {
   setVoiceRecognition,
   setAIAssistant,
   setDeveloperMode,
+  setNoteCreation,
 } = settingsSlice.actions;
 
 export const getAllSettings = (state: RootState): SettingsState => state.settings;
@@ -167,6 +177,13 @@ export const selectorDeveloperMode = (state: RootState): DeveloperModeSettings =
     unlimitedTrashTime: false,
     customAppIcon: null,
   };
+const DEFAULT_NOTE_CREATION: NoteCreationSettings = {
+  mode: "simple",
+  smartType: "text",
+  lastUsedType: "text",
+};
+export const selectorNoteCreation = (state: RootState): NoteCreationSettings =>
+  state.settings.noteCreation || DEFAULT_NOTE_CREATION;
 export const selectorVoiceRecognition = (state: RootState): VoiceRecognitionSettings =>
   Platform.OS === "web"
     ? {

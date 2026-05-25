@@ -17,7 +17,7 @@ export default function TemporaryTrashButton() {
           router.push("/temporary-trash");
         }}
       >
-        <ArchiveBoxXMarkIcon size={28} color={COLOR.softWhite} />
+        <ArchiveBoxXMarkIcon size={24} color={COLOR.softWhite} />
       </TouchableOpacity>
     </View>
   );
@@ -26,9 +26,6 @@ export default function TemporaryTrashButton() {
 /* STYLES */
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: PADDING_MARGIN.md,
-    paddingVertical: PADDING_MARGIN.lg,
-  },
+  container: { paddingHorizontal: PADDING_MARGIN.sm },
   button: { padding: PADDING_MARGIN.sm },
 });

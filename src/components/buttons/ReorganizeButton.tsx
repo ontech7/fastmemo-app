@@ -17,7 +17,7 @@ export default function ReorganizeButton() {
           router.push("/categories/organize");
         }}
       >
-        <RectangleGroupIcon size={28} color={COLOR.softWhite} />
+        <RectangleGroupIcon size={24} color={COLOR.softWhite} />
       </TouchableOpacity>
     </View>
   );
@@ -26,6 +26,6 @@ export default function ReorganizeButton() {
 /* STYLES */
 
 const styles = StyleSheet.create({
-  container: { paddingHorizontal: PADDING_MARGIN.md },
+  container: { paddingHorizontal: PADDING_MARGIN.sm },
   button: { padding: PADDING_MARGIN.sm },
 });

@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, Switch, Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
-import { COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE } from "@/constants/styles";
 
 import { useSecret } from "@/hooks/useSecret";
 import { selectorShowHidden, setShowHidden } from "@/slicers/settingsSlice";
@@ -32,10 +32,10 @@ export default function SectionItem_ShowHidden({ isLast }: Props) {
 
         <Switch
           trackColor={{
-            false: COLOR.lightGray,
-            true: COLOR.darkYellow + "60",
+            false: COLOR.surfaceMuted,
+            true: COLOR.accentMuted,
           }}
-          thumbColor={showHidden ? COLOR.yellow : COLOR.softWhite}
+          thumbColor={COLOR.softWhite}
           onValueChange={toggleShowHiddenWithSecret}
           value={showHidden}
           style={{ height: 25 }}
@@ -54,12 +54,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   sectionItemList_title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
-  },
-  sectionItemList_text: {
-    color: COLOR.lightBlue,
-    paddingHorizontal: PADDING_MARGIN.sm,
-    fontSize: FONTSIZE.medium,
   },
 });

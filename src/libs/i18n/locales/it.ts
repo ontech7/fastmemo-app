@@ -15,6 +15,13 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
+      description_1_0_0: `• Prima versione stabile di Fast Memo Desktop (fuori dalla BETA).
+• Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.
+• Onboarding ridisegnato con nuovi step introduttivi.
+• Aggiunte impostazioni di creazione nota per personalizzare i valori predefiniti.
+• Aggiunta modalita' a step per le note To-Do.
+• Fix varie.`,
+
       description_0_3_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
 • Aggiunta funzione trova e sostituisci nelle note di testo.
 • Aggiunta esportazione note.
@@ -31,6 +38,13 @@ const it = {
     },
 
     mobile: {
+      description_3_0_0: `• Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.
+• Onboarding ridisegnato con nuovi step introduttivi.
+• Aggiunte impostazioni di creazione nota per personalizzare i valori predefiniti.
+• Aggiunta modalita' a step per le note To-Do.
+• Rinnovate icona dell'app e schermata di avvio.
+• Fix varie.`,
+
       description_2_9_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
 • Aggiunto modello Qwen 2.5 7B con rilevamento RAM del dispositivo. Nuove azioni AI per il codice: Spiega il codice e Aggiungi commenti.
 • Aggiunta funzione trova e sostituisci nelle note di testo.
@@ -106,9 +120,11 @@ const it = {
     step1: "Aggiungi le tue note con un clic.",
     step2: "Arricchisci il tuo testo utilizzando la barra degli strumenti in basso.",
     step3: "Crea un elenco di cose da fare per gestire le tue attività.",
-    step4: "Crea la tua categoria in base alle tue esigenze.",
-    step5: "Inserisci un codice segreto per nascondere le tue note.",
-    step6: "Sincronizza le tue note su Google Firebase.",
+    step4: "Visualizza le tue idee con le bacheche Kanban.",
+    step5: "Prendi nota dei tuoi snippets.",
+    step6: "Crea la tua categoria in base alle tue esigenze.",
+    step7: "Inserisci un codice segreto per nascondere le tue note.",
+    step8: "Sincronizza le tue note su Google Firebase.",
     title: "Cos'è Fast Memo?",
     continue: "Continua",
   },
@@ -136,6 +152,7 @@ const it = {
     notes: "Note",
     search: "Cerca qualcosa…",
     deepSearch: "Ricerca approfondita (testo, liste…)",
+    selected_count: "{{count}} selezionate",
 
     filters: {
       deepSearch: "Ricerca approfondita",
@@ -151,6 +168,9 @@ const it = {
     characters: "caratteri",
     completed: "completati",
     on: "su",
+    mode_free: "Lista",
+    mode_steps: "Step",
+    ongoing: "In corso",
     created: "Creato: ",
     updated: "Modificato: ",
     type: {
@@ -196,6 +216,7 @@ const it = {
     code_placeholder: "Scrivi il tuo codice qui...",
     max_tabs_reached: "Massimo 6 tab raggiunto",
     delete_tab: "Elimina tab",
+    delete_tab_confirm: "Sei sicuro di voler eliminare questa tab? L'azione è irreversibile.",
     language: "Linguaggio",
   },
   changecategory: {
@@ -276,6 +297,7 @@ const it = {
     webhooks: "Webhooks",
     voice_recognition: "Riconoscimento vocale",
     ai_assistant: "Assistente AI",
+    note_creation: "Creazione nota",
     wipe_data: "Cancella dati",
     developer_options: "Opzioni sviluppatore",
     about: "Info",
@@ -298,6 +320,19 @@ const it = {
     app: "App",
     version: "Versione",
     libraries: "Librerie",
+  },
+  note_creation: {
+    title: "Creazione nota",
+    mode_section: "Modalità",
+    default_type_section: "Tipo di nota predefinito",
+    mode: {
+      simple: "Semplice",
+      simple_description: "Il tap crea una nota di testo. Usa il menù per gli altri tipi.",
+      smart: "Smart",
+      smart_description: "Il tap crea sempre il tipo che scegli qui sotto.",
+      adaptive: "Adattiva",
+      adaptive_description: "Il tap crea lo stesso tipo dell'ultima nota.",
+    },
   },
   aboutdeveloper: {
     title: "Su di me",

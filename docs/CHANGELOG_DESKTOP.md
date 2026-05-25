@@ -1,3 +1,13 @@
+## v1.0.0
+
+- First stable release of Fast Memo Desktop (out of BETA).
+- Brand-new modern design: the entire app has been redesigned with the new Geist font, glass surfaces, gradients and refreshed design tokens.
+- Redesigned onboarding with new intro steps and illustrations.
+- Added note creation settings to customize the default options for new notes.
+- Added step mode for To-Do notes.
+- Refreshed app icon and splash screen.
+- Various fixes and improvements.
+
 ## v0.3.1
 
 - Added new note type: Code note with built-in code editor (CodeMirror), syntax highlighting, multiple tabs (up to 6), language

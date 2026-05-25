@@ -1,5 +1,4 @@
 import { useLocalSearchParams } from "expo-router";
-import i18n from "i18next";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
@@ -10,28 +9,27 @@ import { useRouter } from "@/hooks/useRouter";
 import Haptics from "@/libs/haptics";
 import { retrieveSecretCodeCallback } from "@/libs/registry";
 
-import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 import BackButton from "@/components/buttons/BackButton";
 import CodeInput from "@/components/inputs/CodeInput";
-import { getNote } from "@/slicers/notesSlice";
+import AppBackground from "@/components/ui/AppBackground";
 import { selectorCurrentSecretCode, setSecretCode } from "@/slicers/settingsSlice";
 
-const CODE_PHASE = {
-  oldCode: i18n.t("secretcode.oldCode"),
-  newCode: i18n.t("secretcode.newCode"),
-  repeatCode: i18n.t("secretcode.repeatCode"),
-  savedCode: i18n.t("secretcode.savedCode"),
-  unlockCode: i18n.t("secretcode.unlockCode"),
-};
+const getCodePhase = (t: (key: string) => string) => ({
+  oldCode: t("secretcode.oldCode"),
+  newCode: t("secretcode.newCode"),
+  repeatCode: t("secretcode.repeatCode"),
+  savedCode: t("secretcode.savedCode"),
+  unlockCode: t("secretcode.unlockCode"),
+});
 
 export default function SecretCodeScreen() {
   const { t } = useTranslation();
 
   const callback = retrieveSecretCodeCallback();
 
-  const { startPhase, noteId } = useLocalSearchParams<{ startPhase: string; noteId: string }>();
-  const currentNote = useSelector(getNote(noteId));
+  const { startPhase } = useLocalSearchParams<{ startPhase: string; noteId: string }>();
 
   const [phase, setPhase] = useState(startPhase);
   const [code, setCode] = useState("");
@@ -117,19 +115,24 @@ export default function SecretCodeScreen() {
     }, 750);
   }, [error]);
 
+  const codePhase = getCodePhase(t);
+  const phaseText = codePhase[phase as keyof ReturnType<typeof getCodePhase>] || "";
+
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
 
         <Text style={styles.headerTitle}>{t("secretcode.title")}</Text>
 
-        <View style={{ padding: PADDING_MARGIN.md }}></View>
+        <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.codeInputWrapper}>
         {!error ? (
-          <Text style={styles.codeTextSuggestion}>{CODE_PHASE[phase as keyof typeof CODE_PHASE]}</Text>
+          <Text style={styles.codeTextSuggestion}>{phaseText}</Text>
         ) : (
           <Text style={[styles.codeTextSuggestion, { color: COLOR.important, marginBottom: PADDING_MARGIN.xl }]}>
             {t("secretcode.error")}
@@ -149,7 +152,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
@@ -161,17 +163,22 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: {
+    width: 42,
   },
   codeInputWrapper: {
     flex: 1,
     justifyContent: "flex-end",
   },
   codeTextSuggestion: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
     textAlign: "center",
     marginBottom: PADDING_MARGIN.xl,
+    fontFamily: FONT.medium,
     fontSize: FONTSIZE.paragraph,
   },
 });

@@ -2,7 +2,7 @@ import { memo, useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { BackspaceIcon } from "react-native-heroicons/outline";
 
-import { BORDER, COLOR, FONTWEIGHT, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, GLASS, SIZE } from "@/constants/styles";
 
 const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, "backspace"] as const;
 
@@ -87,21 +87,21 @@ const styles = StyleSheet.create({
   keyboard_input_wrapper: {
     width: SIZE.third,
     height: 80,
-    borderWidth: 0.5,
-    borderColor: COLOR.darkBlue,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
   },
   keyboard_input: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
   },
   keyboard_input_pressed: {
     opacity: 0.7,
   },
   keyboard_text: {
-    color: COLOR.softWhite,
-    fontWeight: FONTWEIGHT.semiBold,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.semiBold,
     fontSize: 42,
   },
 });

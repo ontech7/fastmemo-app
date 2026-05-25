@@ -1,20 +1,19 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { ArrowPathIcon, EllipsisVerticalIcon, TrashIcon } from "react-native-heroicons/outline";
-import { Menu, MenuOption, MenuOptions, MenuTrigger } from "react-native-popup-menu";
 import { useDispatch, useSelector } from "react-redux";
 
 import { webhook } from "@/utils/webhook";
 
-import { BORDER, COLOR, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR } from "@/constants/styles";
 
 import { useSecret } from "@/hooks/useSecret";
 import { getCategories } from "@/slicers/categoriesSlice";
 import { deleteAllNotes, deleteSelectedNotes, restoreAllTrashedNotes, restoreSelectedTrashedNotes } from "@/slicers/notesSlice";
 import { selectorWebhook_deleteNote, selectorWebhook_restoreNote } from "@/slicers/settingsSlice";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
-import ContextMenu from "@/components/renderers/ContextMenu";
+import IconChip from "@/components/ui/IconChip";
+import PopupMenu, { PopupMenuOption } from "@/components/ui/PopupMenu";
 
 interface Props {
   selectedNotes: string[];
@@ -119,29 +118,32 @@ export default function TrashedNotesSettingsButton({
         confirmLabel={t("delete")}
       />
 
-      <Menu renderer={ContextMenu}>
-        <MenuTrigger customStyles={{ TriggerTouchableComponent: TouchableOpacity }}>
-          <EllipsisVerticalIcon size={28} color={COLOR.softWhite} />
-        </MenuTrigger>
-
+      <PopupMenu
+        trigger={
+          <IconChip>
+            <EllipsisVerticalIcon size={20} color={COLOR.softWhite} />
+          </IconChip>
+        }
+      >
         {!isDeleteMode ? (
-          <MenuOptions customStyles={menuOptionsCustomStyles}>
-            <MenuOption style={[styles.menuOption]} onSelect={() => unlockWithSecret(() => setShowDeleteAllNotesDialog(true))}>
-              <Text style={styles.menuOptionText}>{t("trashednotes.settings.delete_all")}</Text>
+          <>
+            <PopupMenuOption
+              label={t("trashednotes.settings.delete_all")}
+              trailing={<TrashIcon size={16} color={COLOR.textSecondary} />}
+              onSelect={() => unlockWithSecret(() => setShowDeleteAllNotesDialog(true))}
+            />
 
-              <TrashIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-            </MenuOption>
-
-            <MenuOption style={[styles.menuOption]} onSelect={() => setShowRestoreAllNotesDialog(true)}>
-              <Text style={styles.menuOptionText}>{t("trashednotes.settings.restore_all")}</Text>
-
-              <ArrowPathIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-            </MenuOption>
-          </MenuOptions>
+            <PopupMenuOption
+              label={t("trashednotes.settings.restore_all")}
+              trailing={<ArrowPathIcon size={16} color={COLOR.textSecondary} />}
+              onSelect={() => setShowRestoreAllNotesDialog(true)}
+            />
+          </>
         ) : (
-          <MenuOptions customStyles={menuOptionsCustomStyles}>
-            <MenuOption
-              style={[styles.menuOption]}
+          <>
+            <PopupMenuOption
+              label={t("trashednotes.settings.delete_selected")}
+              trailing={<TrashIcon size={16} color={COLOR.textSecondary} />}
               onSelect={() => {
                 if (isNoteProtected) {
                   unlockWithSecret(() => setShowDeleteSelectedNotesDialog(true));
@@ -149,55 +151,16 @@ export default function TrashedNotesSettingsButton({
                   setShowDeleteSelectedNotesDialog(true);
                 }
               }}
-            >
-              <Text style={styles.menuOptionText}>{t("trashednotes.settings.delete_selected")}</Text>
+            />
 
-              <TrashIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-            </MenuOption>
-
-            <MenuOption style={[styles.menuOption]} onSelect={() => setShowRestoreSelectedNotesDialog(true)}>
-              <Text style={styles.menuOptionText}>{t("trashednotes.settings.restore_selected")}</Text>
-
-              <ArrowPathIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-            </MenuOption>
-          </MenuOptions>
+            <PopupMenuOption
+              label={t("trashednotes.settings.restore_selected")}
+              trailing={<ArrowPathIcon size={16} color={COLOR.textSecondary} />}
+              onSelect={() => setShowRestoreSelectedNotesDialog(true)}
+            />
+          </>
         )}
-      </Menu>
+      </PopupMenu>
     </>
   );
 }
-
-/* STYLES */
-
-const menuOptionsCustomStyles = {
-  optionsContainer: {
-    marginTop: 35,
-    marginRight: 5,
-    backgroundColor: COLOR.blue,
-    padding: PADDING_MARGIN.sm,
-    borderRadius: BORDER.normal,
-  },
-  optionsWrapper: {
-    backgroundColor: COLOR.blue,
-  },
-};
-
-const styles = StyleSheet.create({
-  menuViewWrapper: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  menuOption: {
-    padding: PADDING_MARGIN.sm,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  menuOptionDisabled: { opacity: 0.5 },
-  menuOptionIcon: { marginLeft: PADDING_MARGIN.lg },
-  menuOptionText: { color: COLOR.softWhite, fontSize: 14 },
-  menuOptionTextSelected: {
-    fontWeight: FONTWEIGHT.semiBold,
-  },
-});
