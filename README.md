@@ -1,6 +1,6 @@
 <div align="center">
 
-![Fast Memo](https://i.imgur.com/dPRR6pJ.png)
+<img width="600" height="114" alt="GithubLogo" src="https://github.com/user-attachments/assets/2b91e421-2c6b-4739-bb16-1220bd591667" />
 
 **A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, cloud sync, etc.**
 
@@ -63,7 +63,7 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 
 ## Screenshots
 
-![App Preview](https://i.imgur.com/YO8xtam.png)
+<img width="2940" height="3126" alt="screenshots_app" src="https://github.com/user-attachments/assets/28ace577-7cb7-4fed-bd0b-a8eb836dba60" />
 
 ## Documentation
 
