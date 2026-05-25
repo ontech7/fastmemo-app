@@ -8,7 +8,8 @@ import { formatDateTime, reverseDate } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { NOTE_TYPES } from "@/constants/note-types";
+import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 import { getCategories } from "@/slicers/categoriesSlice";
 import { restoreNote } from "@/slicers/notesSlice";
@@ -24,6 +25,22 @@ interface Props {
   selectNote: (id: string, locked: boolean) => void;
   isDeleteMode: boolean;
   toggleDeleteMode: () => void;
+}
+
+/** Color of the card's left border — the type signal (red kept for important). */
+function getCardAccent(type: Note["type"], important: boolean): string {
+  if (important) return COLOR.darkImportant;
+
+  switch (type) {
+    case "todo":
+      return CARD_TYPE_COLOR.todo;
+    case "kanban":
+      return CARD_TYPE_COLOR.kanban;
+    case "code":
+      return CARD_TYPE_COLOR.code;
+    default:
+      return CARD_TYPE_COLOR.text;
+  }
 }
 
 function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode }: Props) {
@@ -53,7 +70,15 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
     setShowRestoreNoteDialog(true);
   };
 
-  const importantColor = important ? COLOR.softWhite : COLOR.darkBlue;
+  const isImportant = !!important;
+  const accent = getCardAccent(type, isImportant);
+  const fg = isImportant ? COLOR.softWhite : COLOR.darkBlue;
+  const chipBg = isImportant ? "rgba(255, 255, 255, 0.18)" : "rgba(2, 14, 53, 0.06)";
+  const hasStatus = important || readOnly || locked || hidden;
+  const TypeIcon = type && type !== "text" ? NOTE_TYPES.find((nt) => nt.key === type)?.icon : undefined;
+
+  const updatedDate = formatDateTime(Number(updatedAt) || Number(new Date(reverseDate(date))));
+  const createdDate = formatDateTime(Number(createdAt) || Number(new Date(reverseDate(date))));
 
   return (
     <>
@@ -75,96 +100,68 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
         activeOpacity={0.7}
         style={[
           styles.container,
-          type == "todo" && styles.containerTodo,
-          type == "kanban" && styles.containerKanban,
-          type == "code" && styles.containerCode,
-          important && styles.importantContainer,
-          isSelected && styles.selectedContainer,
-          isSelected && type == "todo" && styles.selectedContainerTodo,
-          isSelected && type == "kanban" && styles.selectedContainerKanban,
-          isSelected && type == "code" && styles.selectedContainerCode,
-          important && isSelected && styles.selectedImportantContainer,
+          isImportant ? styles.containerImportant : styles.containerDefault,
+          isSelected && (isImportant ? styles.containerImportantSelected : styles.containerSelected),
+          { borderLeftColor: accent },
           hidden && styles.hiddenContainer,
-          isDeleteMode && styles.containerDeleteMode,
         ]}
         onPress={onPressHandler}
         onLongPress={onLongPressHandler}
       >
-        {hidden && (
-          <EyeSlashIcon
-            style={[styles.iconHidden, isDeleteMode && styles.iconTypeDeleteMode]}
-            size={14}
-            color={importantColor}
-          />
-        )}
-
-        {!category.index && (
-          <View style={styles.iconCategory}>
-            <CategoryIcon name={category.icon} color={importantColor} />
+        {isDeleteMode ? (
+          <View
+            style={[
+              styles.deleteCheckbox,
+              isImportant && styles.deleteCheckboxImportant,
+              isSelected && styles.deleteCheckboxSelected,
+            ]}
+          >
+            {isSelected && <CheckIcon size={14} color={COLOR.softWhite} />}
           </View>
-        )}
-
-        <View style={{ width: !isDeleteMode ? "85%" : "82%" }}>
-          {type && type !== "text" && (
-            <View
-              style={[
-                styles.typeBadge,
-                type === "todo" && styles.typeBadgeTodo,
-                type === "kanban" && styles.typeBadgeKanban,
-                type === "code" && styles.typeBadgeCode,
-                isSelected && type === "todo" && styles.typeBadgeTodoSelected,
-                isSelected && type === "kanban" && styles.typeBadgeKanbanSelected,
-                isSelected && type === "code" && styles.typeBadgeCodeSelected,
-                important && styles.typeBadgeImportant,
-              ]}
-            >
-              <Text style={[styles.typeBadgeText, important && styles.typeBadgeTextImportant]}>{t(`note.type.${type}`)}</Text>
+        ) : (
+          !category.index && (
+            <View style={[styles.avatar, { backgroundColor: chipBg }]}>
+              <CategoryIcon name={category.icon} size={22} color={fg} />
             </View>
-          )}
-          <Text style={[styles.title, important && styles.titleImportant]} numberOfLines={1} ellipsizeMode="tail">
-            {isStringEmpty(title) ? t("empty_title") : title}
-          </Text>
+          )
+        )}
 
-          <Text style={[styles.date, important && styles.dateImportant]} numberOfLines={1} ellipsizeMode="tail">
-            {t("note.updated")}
-            <Text style={{ fontWeight: "600" }}>
-              {formatDateTime(Number(updatedAt) || Number(new Date(reverseDate(date))))}
+        <View style={styles.main}>
+          <View style={styles.titleRow}>
+            {TypeIcon && (
+              <View style={[styles.typeChip, { backgroundColor: chipBg }]}>
+                <TypeIcon size={16} color={isImportant ? fg : accent} />
+              </View>
+            )}
+
+            <Text style={[styles.title, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
+              {isStringEmpty(title) ? t("empty_title") : title}
             </Text>
-          </Text>
 
-          <Text style={[styles.date, important && styles.dateImportant]} numberOfLines={1} ellipsizeMode="tail">
-            {t("note.created")}
-            <Text style={{ fontWeight: "600" }}>
-              {formatDateTime(Number(createdAt) || Number(new Date(reverseDate(date))))}
+            {hasStatus && (
+              <View style={styles.statusRow}>
+                {important && <StarIcon size={14} color={fg} />}
+                {locked && <KeyIcon size={14} color={fg} />}
+                {readOnly && <BookOpenIcon size={14} color={fg} />}
+                {hidden && <EyeSlashIcon size={14} color={fg} />}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.meta}>
+            <Text style={[styles.date, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
+              {t("note.updated")}
+              <Text style={styles.dateValue}>{updatedDate}</Text>
             </Text>
-          </Text>
 
-          <CountdownDate deleteDate={deleteDate} important={important} />
+            <Text style={[styles.date, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
+              {t("note.created")}
+              <Text style={styles.dateValue}>{createdDate}</Text>
+            </Text>
+          </View>
+
+          <CountdownDate deleteDate={deleteDate} fg={fg} chipBg={chipBg} />
         </View>
-
-        {important && (
-          <StarIcon style={[styles.iconFavorite, isDeleteMode && styles.iconDeleteMode]} size={14} color={COLOR.softWhite} />
-        )}
-
-        {readOnly && (
-          <BookOpenIcon style={[styles.iconReadOnly, isDeleteMode && styles.iconDeleteMode]} size={14} color={importantColor} />
-        )}
-
-        {locked && (
-          <KeyIcon style={[styles.iconLocked, isDeleteMode && styles.iconDeleteMode]} size={14} color={importantColor} />
-        )}
-
-        {!important && isDeleteMode && (
-          <View style={[styles.deleteMode, isSelected && styles.deleteModeSelected]}>
-            {isSelected && <CheckIcon size={14} color={COLOR.lightBlue} />}
-          </View>
-        )}
-
-        {important && isDeleteMode && (
-          <View style={[styles.deleteModeImportant, important && styles.deleteModeImportantSelected]}>
-            {isSelected && <CheckIcon size={14} color={COLOR.darkBlue} />}
-          </View>
-        )}
       </TouchableOpacity>
     </>
   );
@@ -172,10 +169,11 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
 
 interface CountdownDateProps {
   deleteDate: number | null;
-  important: boolean;
+  fg: string;
+  chipBg: string;
 }
 
-function CountdownDate({ deleteDate, important }: CountdownDateProps) {
+function CountdownDate({ deleteDate, fg, chipBg }: CountdownDateProps) {
   const { t } = useTranslation();
 
   const now = new Date().getTime();
@@ -187,9 +185,9 @@ function CountdownDate({ deleteDate, important }: CountdownDateProps) {
   const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
 
   return (
-    <Text style={[styles.deleteDate, important && styles.deleteDateImportant]}>
-      {t("trashednotes.countdown", { days, hours, minutes })}
-    </Text>
+    <View style={[styles.countdown, { backgroundColor: chipBg }]}>
+      <Text style={[styles.countdownText, { color: fg }]}>{t("trashednotes.countdown", { days, hours, minutes })}</Text>
+    </View>
   );
 }
 
@@ -197,134 +195,82 @@ function CountdownDate({ deleteDate, important }: CountdownDateProps) {
 
 const styles = StyleSheet.create({
   container: {
-    padding: PADDING_MARGIN.md + 2,
-    paddingRight: PADDING_MARGIN.xxl,
-    marginBottom: PADDING_MARGIN.lg,
+    padding: PADDING_MARGIN.lg - 2,
+    marginBottom: PADDING_MARGIN.md,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: PADDING_MARGIN.md,
+    borderRadius: BORDER.big,
+    overflow: "hidden",
+    borderLeftWidth: 5,
+    ...SHADOW.card,
+  },
+  containerDefault: { backgroundColor: COLOR.softWhite },
+  containerImportant: { backgroundColor: COLOR.important },
+  containerSelected: { backgroundColor: COLOR.gray },
+  containerImportantSelected: { backgroundColor: COLOR.darkImportant },
+  hiddenContainer: { opacity: 0.5 },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER.normal,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  typeChip: {
+    width: 22,
+    height: 22,
+    borderRadius: BORDER.small,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  main: { flex: 1, minWidth: 0, gap: PADDING_MARGIN.xs },
+  titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.softWhite,
+    gap: PADDING_MARGIN.sm,
   },
-  containerDeleteMode: {
-    paddingRight: PADDING_MARGIN.xxl + 30,
+  statusRow: {
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
   },
-  containerTodo: {
-    backgroundColor: COLOR.yellow,
-  },
-  containerKanban: {
-    backgroundColor: COLOR.oceanBreeze,
-  },
-  containerCode: {
-    backgroundColor: COLOR.codeMint,
-  },
-  selectedContainer: {
+  deleteCheckbox: {
+    alignSelf: "flex-start",
     backgroundColor: COLOR.lightBlue,
-    opacity: 0.8,
-  },
-  selectedContainerTodo: {
-    backgroundColor: COLOR.darkYellow,
-    opacity: 0.8,
-  },
-  selectedContainerKanban: {
-    backgroundColor: COLOR.darkOceanBreeze,
-    opacity: 0.8,
-  },
-  selectedContainerCode: {
-    backgroundColor: COLOR.darkCodeMint,
-    opacity: 0.8,
-  },
-  deleteMode: {
-    position: "absolute",
-    top: 13,
-    right: 10,
-    backgroundColor: COLOR.lightBlue,
-    borderRadius: BORDER.rounded,
+    borderRadius: BORDER.small,
     width: 22,
     height: 22,
     justifyContent: "center",
     alignItems: "center",
   },
-  deleteModeImportant: {
-    position: "absolute",
-    top: 13,
-    right: 10,
-    backgroundColor: COLOR.gray,
-    borderRadius: BORDER.rounded,
-    width: 22,
-    height: 22,
-    justifyContent: "center",
-    alignItems: "center",
+  deleteCheckboxImportant: { backgroundColor: "rgba(255, 255, 255, 0.25)" },
+  deleteCheckboxSelected: { backgroundColor: COLOR.accentMuted },
+  title: {
+    flex: 1,
+    fontSize: FONTSIZE.cardTitle,
+    fontFamily: FONT.bold,
+    letterSpacing: -0.3,
   },
-  deleteModeSelected: { backgroundColor: COLOR.blue },
-  deleteModeImportantSelected: { backgroundColor: COLOR.softWhite },
-  importantContainer: { backgroundColor: COLOR.important },
-  selectedImportantContainer: { backgroundColor: COLOR.darkImportant },
-  hiddenContainer: { opacity: 0.5 },
-  iconDeleteMode: { right: 40 },
-  iconTypeDeleteMode: { right: 60 },
-  iconCategory: { marginRight: PADDING_MARGIN.md },
-  iconFavorite: { position: "absolute", top: 10, right: 10 },
-  iconLocked: { position: "absolute", top: 27, right: 10 },
-  iconReadOnly: { position: "absolute", top: 44, right: 10 },
-  iconHidden: { position: "absolute", top: 61, right: 10 },
-  typeBadge: {
+  meta: { gap: 2 },
+  date: {
+    fontSize: FONTSIZE.small,
+    fontFamily: FONT.regular,
+    opacity: 0.6,
+  },
+  dateValue: { fontFamily: FONT.semiBold },
+  countdown: {
     alignSelf: "flex-start",
     paddingHorizontal: PADDING_MARGIN.sm,
     paddingVertical: 2,
-    borderRadius: BORDER.small,
-    marginBottom: PADDING_MARGIN.sm,
-  },
-  typeBadgeTodo: {
-    backgroundColor: COLOR.darkYellow,
-  },
-  typeBadgeTodoSelected: {
-    backgroundColor: COLOR.yellow,
-  },
-  typeBadgeKanban: {
-    backgroundColor: COLOR.darkOceanBreeze,
-  },
-  typeBadgeCode: {
-    backgroundColor: COLOR.darkCodeMint,
-  },
-  typeBadgeKanbanSelected: {
-    backgroundColor: COLOR.oceanBreeze,
-  },
-  typeBadgeCodeSelected: {
-    backgroundColor: COLOR.codeMint,
-  },
-  typeBadgeImportant: {
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
-  },
-  typeBadgeText: {
-    fontSize: 10,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.darkBlue,
-    textTransform: "uppercase",
-  },
-  typeBadgeTextImportant: {
-    color: COLOR.softWhite,
-  },
-  title: {
-    fontSize: FONTSIZE.cardTitle,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.darkBlue,
-    marginTop: -4,
-    marginBottom: 2,
-  },
-  titleImportant: { color: COLOR.softWhite },
-  date: {
-    fontSize: FONTSIZE.small,
-    color: COLOR.darkBlue,
-    opacity: 0.6,
-  },
-  dateImportant: { color: COLOR.softWhite },
-  deleteDate: {
-    fontSize: FONTSIZE.small,
-    fontWeight: FONTWEIGHT.semiBold,
-    opacity: 0.8,
+    borderRadius: BORDER.rounded,
     marginTop: PADDING_MARGIN.xs,
   },
-  deleteDateImportant: { color: COLOR.softWhite },
+  countdownText: {
+    fontSize: FONTSIZE.small,
+    fontFamily: FONT.semiBold,
+  },
 });
 
 export default memo(TrashedNoteCard);

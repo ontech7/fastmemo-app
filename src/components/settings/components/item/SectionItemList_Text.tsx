@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import { COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
   title: string;
@@ -33,11 +33,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   sectionItemList_title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
   sectionItemList_text: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     paddingHorizontal: PADDING_MARGIN.sm,
     fontSize: FONTSIZE.medium,
   },

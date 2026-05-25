@@ -151,8 +151,8 @@ const de = {
     characters: "Textzeichen",
     completati: "vollendet",
     on: "von",
-    mode_free: "Freie Reihenfolge",
-    mode_steps: "Schritt für Schritt",
+    mode_free: "Liste",
+    mode_steps: "Schritte",
     ongoing: "Laufend",
     created: "Erstellt: ",
     updated: "Geändert: ",
@@ -199,6 +199,7 @@ const de = {
     code_placeholder: "Schreiben Sie Ihren Code hier...",
     max_tabs_reached: "Maximum von 6 Tabs erreicht",
     delete_tab: "Tab loschen",
+    delete_tab_confirm: "Möchtest du diesen Tab wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
     language: "Sprache",
   },
   changecategory: {

@@ -151,8 +151,8 @@ const fr = {
     characters: "caractères",
     completed: "complété",
     on: "sur",
-    mode_free: "Ordre libre",
-    mode_steps: "Étape par étape",
+    mode_free: "Liste",
+    mode_steps: "Étapes",
     ongoing: "En cours",
     created: "Créé: ",
     updated: "Modifié: ",
@@ -199,6 +199,7 @@ const fr = {
     code_placeholder: "Ecrivez votre code ici...",
     max_tabs_reached: "Maximum de 6 onglets atteint",
     delete_tab: "Supprimer l'onglet",
+    delete_tab_confirm: "Voulez-vous vraiment supprimer cet onglet ? Cette action est irréversible.",
     language: "Langage",
   },
   changecategory: {

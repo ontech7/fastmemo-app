@@ -4,8 +4,9 @@ import DeviceAppleIcon from "@/components/icons/DeviceAppleIcon";
 import NoCloudIcon from "@/components/icons/NoCloudIcon";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
 import { configs } from "@/configs";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useTimeoutTask } from "@/hooks/useTimeoutTask";
 import {
@@ -103,11 +104,13 @@ export default function SyncedDevicesScreen() {
 
   return (
     <>
-      <LoadingSpinner visible={timeoutStates.loading.get()} color={COLOR.lightBlue} text={t("loading")} />
+      <LoadingSpinner visible={timeoutStates.loading.get()} color={COLOR.accentSoft} text={t("loading")} />
 
       <SafeAreaView style={styles.container}>
+        <AppBackground style={StyleSheet.absoluteFill} />
+
         <View style={styles.header}>
-          <BackButton />
+          <BackButton chip />
 
           <View style={{ flexGrow: 1 }}>
             <Text style={styles.headerTitle}>{t("synceddevices.title")}</Text>
@@ -115,7 +118,7 @@ export default function SyncedDevicesScreen() {
               style={[
                 styles.headerSubtitle,
                 {
-                  color: numberOfDevices != configs.cloud.deviceLimit ? COLOR.yellow : COLOR.important,
+                  color: numberOfDevices != configs.cloud.deviceLimit ? COLOR.accentSoft : COLOR.important,
                 },
               ]}
             >
@@ -123,87 +126,52 @@ export default function SyncedDevicesScreen() {
             </Text>
           </View>
 
-          <View style={{ padding: PADDING_MARGIN.md }}></View>
+          <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshDevices} />}>
+        <ScrollView
+          style={styles.scroll}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshDevices} tintColor={COLOR.accentSoft} />}
+        >
           {timeoutStates.error.get() ? (
-            <View
-              style={{
-                flexDirection: "row",
-                height: 200,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <NoCloudIcon size={32} color={COLOR.softWhite} />
+            <View style={styles.errorWrapper}>
+              <NoCloudIcon size={32} color={COLOR.textSecondary} />
 
               <Text style={styles.error_text}>{t("synceddevices.error_fetching")}</Text>
             </View>
           ) : (
             connectedDevices?.map((connectedDevice) => (
-              <View
-                key={connectedDevice.uuid}
-                style={{
-                  backgroundColor: COLOR.blue,
-                  borderRadius: BORDER.normal,
-                  padding: PADDING_MARGIN.md,
-                  marginBottom: PADDING_MARGIN.md,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
+              <View key={connectedDevice.uuid} style={styles.deviceCard}>
                 {connectedDevice.brand !== "web" ? (
                   connectedDevice.brand !== "Apple" ? (
-                    <DeviceAndroidIcon size={32} color={COLOR.softWhite} />
+                    <DeviceAndroidIcon size={32} color={COLOR.textPrimary} />
                   ) : (
-                    <DeviceAppleIcon size={32} color={COLOR.softWhite} />
+                    <DeviceAppleIcon size={32} color={COLOR.textPrimary} />
                   )
                 ) : (
-                  <ComputerDesktopIcon size={32} color={COLOR.softWhite} />
+                  <ComputerDesktopIcon size={32} color={COLOR.textPrimary} />
                 )}
 
-                <View style={{ marginLeft: PADDING_MARGIN.md, flex: 1 }}>
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      fontSize: FONTSIZE.subtitle,
-                      fontWeight: FONTWEIGHT.semiBold,
-                      color: COLOR.softWhite,
-                    }}
-                  >
+                <View style={styles.deviceInfo}>
+                  <Text numberOfLines={1} style={styles.deviceName}>
                     {connectedDevice.modelName}
                   </Text>
 
-                  <Text style={{ color: COLOR.softWhite }}>
+                  <Text style={styles.deviceSyncLabel}>
                     {t("synceddevices.lastSync")}
 
-                    <Text style={{ color: COLOR.gray }}>{new Date(parseInt(connectedDevice.lastSync)).toLocaleString()}</Text>
+                    <Text style={styles.deviceSyncDate}>{new Date(parseInt(connectedDevice.lastSync)).toLocaleString()}</Text>
                   </Text>
                 </View>
 
                 <View>
                   {currentDeviceUuid == connectedDevice.uuid ? (
-                    <Animated.View
-                      style={[
-                        {
-                          backgroundColor: COLOR.yellow,
-                          width: 24,
-                          height: 24,
-                          borderRadius: BORDER.rounded,
-                          marginRight: PADDING_MARGIN.md,
-                        },
-                        blinkStyle,
-                      ]}
-                    />
+                    <Animated.View style={[styles.currentDeviceDot, blinkStyle]} />
                   ) : (
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      style={{ marginRight: PADDING_MARGIN.sm }}
-                      onPress={() => deleteDeviceFromCloud(connectedDevice.uuid)}
-                    >
-                      <TrashIcon size={28} color={COLOR.softWhite} />
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => deleteDeviceFromCloud(connectedDevice.uuid)}>
+                      <View style={styles.deleteChip}>
+                        <TrashIcon size={16} color={COLOR.textMuted} />
+                      </View>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -223,141 +191,88 @@ const styles = StyleSheet.create({
     position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
+  },
+  scroll: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.lg,
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
     textAlign: "center",
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
     textAlign: "center",
   },
-  appWrapper: {
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: PADDING_MARGIN.xl,
+  headerSpacer: {
+    width: 42,
   },
-  appIcon: {
-    width: 180,
-    height: 220,
-    backgroundColor: COLOR.blue,
-    borderRadius: BORDER.big,
-  },
-  appName: {
-    color: COLOR.softWhite,
-    marginTop: PADDING_MARGIN.md,
-  },
-  sectionWrapper: {
-    marginTop: PADDING_MARGIN.lg,
-  },
-  sectionHeader: {
+  errorWrapper: {
     flexDirection: "row",
+    height: 200,
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: PADDING_MARGIN.xs,
   },
-  sectionHeaderTitle: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-    paddingVertical: PADDING_MARGIN.xs,
-    fontWeight: FONTWEIGHT.semiBold,
+  error_text: {
+    marginLeft: PADDING_MARGIN.md,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.subtitle,
+    textAlign: "center",
   },
-  sectionList: {
+  deviceCard: {
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
-    overflow: "hidden",
-  },
-  sectionItemList: {
-    backgroundColor: COLOR.boldBlue,
-    padding: PADDING_MARGIN.lg,
-    borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
-  },
-  sectionItemList_last: {
-    borderBottomWidth: 0,
-  },
-  sectionItemList_button: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
+    padding: PADDING_MARGIN.md,
+    marginBottom: PADDING_MARGIN.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  sectionItemList_title: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-  },
-  sectionItemList_text: {
-    color: COLOR.lightBlue,
-    fontSize: FONTSIZE.medium,
-    maxWidth: 200,
-  },
-  textInputContainer: {
-    flexDirection: "row",
-    paddingHorizontal: PADDING_MARGIN.sm,
-    paddingVertical: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.boldBlue,
-    borderRadius: BORDER.normal,
-    alignItems: "center",
-  },
-  textInput: {
-    flex: 1,
-    color: COLOR.softWhite,
-    paddingHorizontal: PADDING_MARGIN.sm,
-    fontSize: FONTSIZE.medium,
-  },
-  textInput_disabled: {
-    opacity: 0.5,
-  },
-  saveSettingsText: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-    paddingVertical: PADDING_MARGIN.md,
-    marginRight: PADDING_MARGIN.lg,
-    fontWeight: FONTWEIGHT.semiBold,
-  },
-  saveButton: {
-    padding: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
-  },
-  saveButton_disabled: {
-    opacity: 0.5,
-  },
-  loadingSpinner: {
-    position: "absolute",
-    zIndex: 2,
-    left: 0,
-    top: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#0008",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
-  },
-  error_text: {
+  deviceInfo: {
     marginLeft: PADDING_MARGIN.md,
-    color: COLOR.softWhite,
+    flex: 1,
+  },
+  deviceName: {
     fontSize: FONTSIZE.subtitle,
-    fontWeight: FONTWEIGHT.regular,
-    textAlign: "center",
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+  },
+  deviceSyncLabel: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+  },
+  deviceSyncDate: {
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+  },
+  currentDeviceDot: {
+    backgroundColor: COLOR.accentSoft,
+    width: 18,
+    height: 18,
+    borderRadius: BORDER.rounded,
+    marginRight: PADDING_MARGIN.sm,
+  },
+  deleteChip: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: BORDER.normal,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
   },
 });

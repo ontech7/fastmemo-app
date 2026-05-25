@@ -1,5 +1,5 @@
 import { CODE_LANGUAGES, LANGUAGE_LABELS } from "@/constants/code-languages";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, MONOSPACE_FONT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, MONOSPACE_FONT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { XMarkIcon } from "react-native-heroicons/outline";
 
@@ -19,7 +19,7 @@ export default function CodeLanguagePickerModal({ visible, selectedLanguage, onS
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
             <TouchableOpacity onPress={onClose}>
-              <XMarkIcon size={22} color={COLOR.softWhite} />
+              <XMarkIcon size={22} color={COLOR.textSecondary} />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalList} showsVerticalScrollIndicator>
@@ -50,16 +50,19 @@ export default function CodeLanguagePickerModal({ visible, selectedLanguage, onS
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalContent: {
     width: "80%",
     maxHeight: "60%",
-    backgroundColor: COLOR.darkBlue,
-    borderRadius: BORDER.normal,
+    backgroundColor: COLOR.surface,
+    borderRadius: BORDER.big,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     overflow: "hidden",
+    ...SHADOW.card,
   },
   modalHeader: {
     flexDirection: "row",
@@ -68,12 +71,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.lg,
     paddingVertical: PADDING_MARGIN.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLOR.blue,
+    borderBottomColor: GLASS.border,
   },
   modalTitle: {
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
   },
   modalList: {
     paddingVertical: PADDING_MARGIN.sm,
@@ -83,15 +86,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.lg,
   },
   languageItemSelected: {
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surfaceMuted,
   },
   languageItemText: {
     fontSize: FONTSIZE.paragraph,
     fontFamily: MONOSPACE_FONT,
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
   },
   languageItemTextSelected: {
-    color: COLOR.codeMint,
-    fontWeight: FONTWEIGHT.semiBold,
+    color: COLOR.accentSoft,
   },
 });

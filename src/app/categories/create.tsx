@@ -9,8 +9,9 @@ import { webhook } from "@/utils/webhook";
 import { useRouter } from "@/hooks/useRouter";
 import SafeAreaView from "@/components/SafeAreaView";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
+import AppBackground from "@/components/ui/AppBackground";
 import BackButton from "@/components/buttons/BackButton";
 import SaveButton from "@/components/buttons/SaveButton";
 import UnusedCategoryButton from "@/components/buttons/UnusedCategoryButton";
@@ -119,12 +120,14 @@ export default function CreateCategoryScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
+        <AppBackground style={StyleSheet.absoluteFill} />
+
         <View style={styles.header}>
-          <BackButton />
+          <BackButton chip />
 
           <Text style={styles.headerTitle}>{t(headerTitle)}</Text>
 
-          <View style={{ padding: PADDING_MARGIN.md }}></View>
+          <View style={styles.headerSpacer} />
         </View>
 
         <ScrollView>
@@ -163,7 +166,6 @@ export default function CreateCategoryScreen() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
     height: SIZE.full,
     flexDirection: "column",
     alignItems: "flex-start",
@@ -178,21 +180,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
     flexGrow: 1,
     textAlign: "center",
-    marginRight: 24,
   },
-  button: {
-    padding: PADDING_MARGIN.sm,
-    marginBottom: PADDING_MARGIN.md,
-    marginRight: PADDING_MARGIN.md,
-    backgroundColor: COLOR.blue,
-    borderRadius: BORDER.normal,
-  },
-  selectedButton: {
-    backgroundColor: COLOR.lightBlue,
+  headerSpacer: {
+    width: 42,
   },
   categoryList: {
     flexDirection: "row",
@@ -200,8 +195,10 @@ const styles = StyleSheet.create({
     marginRight: -PADDING_MARGIN.lg,
   },
   label: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
     marginBottom: PADDING_MARGIN.sm,
+    fontFamily: FONT.semiBold,
     fontSize: FONTSIZE.subtitle,
+    letterSpacing: -0.2,
   },
 });

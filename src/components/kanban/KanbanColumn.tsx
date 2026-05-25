@@ -1,4 +1,4 @@
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -75,7 +75,7 @@ export default function KanbanColumn({
           onChangeText={(text) => setColumnName(column.id, text)}
           editable={!disabled}
           placeholder={t ? t("kanban.column_name_placeholder") : "Column name"}
-          placeholderTextColor={COLOR.placeholder}
+          placeholderTextColor={COLOR.textMuted}
           cursorColor={COLOR.softWhite}
           maxLength={24}
         />
@@ -86,7 +86,7 @@ export default function KanbanColumn({
           onPress={() => moveColumn(column.id, "left")}
           style={styles.headerButton}
         >
-          <ChevronLeftIcon size={18} color={!disabled && columnIndex > 0 ? COLOR.softWhite : COLOR.softenGray} />
+          <ChevronLeftIcon size={18} color={!disabled && columnIndex > 0 ? COLOR.textPrimary : COLOR.textMuted} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -97,7 +97,7 @@ export default function KanbanColumn({
         >
           <ChevronRightIcon
             size={18}
-            color={!disabled && columnIndex < totalColumns - 1 ? COLOR.softWhite : COLOR.softenGray}
+            color={!disabled && columnIndex < totalColumns - 1 ? COLOR.textPrimary : COLOR.textMuted}
           />
         </TouchableOpacity>
 
@@ -107,7 +107,7 @@ export default function KanbanColumn({
           onPress={() => deleteColumn(column.id)}
           style={styles.headerButton}
         >
-          <TrashIcon size={18} color={COLOR.softWhite} />
+          <TrashIcon size={18} color={COLOR.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -141,7 +141,7 @@ export default function KanbanColumn({
 
       {!disabled && (
         <TouchableOpacity activeOpacity={0.7} style={styles.addCardButton} onPress={() => addCard(column.id)}>
-          <PlusIcon size={20} color={COLOR.darkBlue} />
+          <PlusIcon size={20} color={COLOR.softWhite} />
           <Text style={styles.addCardText}>{t ? t("kanban.add_card") : "Add card"}</Text>
         </TouchableOpacity>
       )}
@@ -152,22 +152,22 @@ export default function KanbanColumn({
 const styles = StyleSheet.create({
   container: {
     marginRight: PADDING_MARGIN.md,
-    backgroundColor: COLOR.darkBlue,
+    backgroundColor: "transparent",
     borderRadius: BORDER.normal,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderColor: GLASS.border,
     overflow: "hidden",
   },
   dropTarget: {
-    borderColor: COLOR.lightBlue,
-    borderWidth: 3,
+    borderColor: COLOR.accentSoft,
+    borderWidth: 2,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: PADDING_MARGIN.sm,
     paddingVertical: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.blue,
+    backgroundColor: GLASS.fill,
   },
   colorIndicator: {
     width: 20,
@@ -178,8 +178,8 @@ const styles = StyleSheet.create({
   columnName: {
     flex: 1,
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
     paddingVertical: 2,
   },
   headerButton: {
@@ -188,11 +188,12 @@ const styles = StyleSheet.create({
   },
   cardCount: {
     fontSize: FONTSIZE.small,
-    color: COLOR.lightBlue,
+    fontFamily: FONT.medium,
+    color: COLOR.textMuted,
     paddingHorizontal: PADDING_MARGIN.sm,
     paddingTop: PADDING_MARGIN.xs,
     paddingBottom: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.blue,
+    backgroundColor: GLASS.fill,
   },
   cardsContainer: {
     flex: 1,
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
   },
   noCards: {
     textAlign: "center",
-    color: COLOR.placeholder,
+    color: COLOR.textMuted,
     fontSize: FONTSIZE.medium,
     paddingVertical: PADDING_MARGIN.lg,
   },
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLOR.lightBlue,
+    backgroundColor: COLOR.accentMuted,
     paddingVertical: PADDING_MARGIN.sm,
     marginHorizontal: PADDING_MARGIN.sm,
     marginBottom: PADDING_MARGIN.sm,
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
   addCardText: {
     marginLeft: PADDING_MARGIN.xs,
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.darkBlue,
+    fontFamily: FONT.semiBold,
+    color: COLOR.softWhite,
   },
 });

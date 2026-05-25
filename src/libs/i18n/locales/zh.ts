@@ -151,8 +151,8 @@ const zh = {
     characters: "文本字符",
     completed: "完全的",
     on: "上に",
-    mode_free: "自由顺序",
-    mode_steps: "逐步进行",
+    mode_free: "列表",
+    mode_steps: "步骤",
     ongoing: "进行中",
     created: "创建: ",
     updated: "修改: ",
@@ -199,6 +199,7 @@ const zh = {
     code_placeholder: "在此输入代码...",
     max_tabs_reached: "最多6个标签",
     delete_tab: "删除标签",
+    delete_tab_confirm: "确定要删除此标签吗？此操作无法撤销。",
     language: "语言",
   },
   changecategory: {

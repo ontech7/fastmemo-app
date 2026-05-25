@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ExclamationTriangleIcon, XMarkIcon } from "react-native-heroicons/outline";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { ExclamationTriangleIcon, Squares2X2Icon, XMarkIcon } from "react-native-heroicons/outline";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -14,7 +14,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { webhook } from "@/utils/webhook";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 import { deleteCategory, swapCategory } from "@/slicers/categoriesSlice";
 import { deleteNotesCategory, resetNotesCategory } from "@/slicers/notesSlice";
@@ -77,7 +77,7 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
       <ComplexDialog
         open={showDeleteFavoriteCategoryDialog}
         actionsColumn
-        adornmentStart={<ExclamationTriangleIcon size={22} style={{ marginBottom: -3 }} />}
+        adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}
         title={t("warning")}
         description={t("popup.delete_category")}
         confirm={{
@@ -120,13 +120,11 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
           onLongPress={toggleDeleteMode}
         >
           {index ? (
-            <Text style={[styles.all, selected && styles.selectedAll]}>ALL</Text>
+            <Squares2X2Icon size={24} color={COLOR.softWhite} />
           ) : (
-            <CategoryIcon name={icon} color={selected ? COLOR.darkBlue : COLOR.softWhite} />
+            <CategoryIcon name={icon} size={24} color={COLOR.softWhite} />
           )}
         </AnimatedTouchableOpacity>
-
-        {selected && <View style={styles.selectedTriangle}></View>}
 
         {!index && deleteMode && (
           <TouchableOpacity
@@ -147,42 +145,21 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
 const styles = StyleSheet.create({
   container: {
     position: "relative",
-    paddingHorizontal: PADDING_MARGIN.md,
+    paddingHorizontal: PADDING_MARGIN.sm,
     paddingTop: PADDING_MARGIN.sm,
-  },
-  all: {
-    textAlign: "center",
-    height: 28,
-    paddingVertical: 4,
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
-  },
-  selectedAll: {
-    color: COLOR.darkBlue,
   },
   button: {
     padding: PADDING_MARGIN.sm,
     marginBottom: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.darkBlue,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     borderRadius: BORDER.normal,
   },
   selectedButton: {
-    backgroundColor: COLOR.lightBlue,
-  },
-  selectedTriangle: {
-    position: "absolute",
-    right: 0,
-    top: 23,
-    borderStyle: "solid",
-    borderTopWidth: 7,
-    borderRightWidth: 7,
-    borderBottomWidth: 7,
-    borderLeftWidth: 0,
-    borderRightColor: COLOR.darkBlue,
-    borderTopColor: "transparent",
-    borderBottomColor: "transparent",
-    borderLeftColor: "transparent",
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.accentMutedBorder,
+    ...SHADOW.glow,
   },
   deleteButton: {
     position: "absolute",

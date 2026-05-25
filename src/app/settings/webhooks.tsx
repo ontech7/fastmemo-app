@@ -9,10 +9,12 @@ import { useDispatch, useSelector } from "react-redux";
 import type { WebhookPayload } from "@/types";
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
+import IconChip from "@/components/ui/IconChip";
 import WebhookItem from "@/components/webhook/WebhookItem";
 import { selectorWebhooks, setWebhooks } from "@/slicers/settingsSlice";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 export default function WebhooksScreen() {
   const { t } = useTranslation();
@@ -53,8 +55,10 @@ export default function WebhooksScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
 
         <Text style={styles.headerTitle}>{t("webhooks.title")}</Text>
 
@@ -62,7 +66,9 @@ export default function WebhooksScreen() {
           activeOpacity={0.7}
           onPress={() => openUrl(`${configs.app.websiteUrl}/${t("languageCode")}/guides/webhooks`)}
         >
-          <InformationCircleIcon size={28} color={COLOR.softWhite} />
+          <IconChip>
+            <InformationCircleIcon size={20} color={COLOR.softWhite} />
+          </IconChip>
         </TouchableOpacity>
       </View>
 
@@ -91,11 +97,11 @@ export default function WebhooksScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
     paddingHorizontal: PADDING_MARGIN.lg,
     paddingBottom: PADDING_MARGIN.md,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
@@ -107,58 +113,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
-  },
-  sectionWrapper: {
-    marginBottom: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.boldBlue,
-    borderRadius: BORDER.normal,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: PADDING_MARGIN.lg,
-    paddingVertical: PADDING_MARGIN.md,
-    borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
-  },
-  sectionHeaderTitle: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
-  },
-  sectionList: {
-    height: 0,
-    borderRadius: BORDER.normal,
-    overflow: "hidden",
-    paddingHorizontal: PADDING_MARGIN.lg,
-    paddingVertical: 0,
-  },
-  accordionWrapper: { height: "100%" },
-  sectionItemList: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
-  },
-  sectionItemList_last: {
-    borderBottomWidth: 0,
-  },
-  sectionItemList_button: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionItemList_title: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-  },
-  sectionItemList_text: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.medium,
-    marginBottom: PADDING_MARGIN.sm,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
   },
 });

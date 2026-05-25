@@ -67,5 +67,5 @@ export default function FavoriteCategoryList({ categories }: Props) {
 }
 
 const styles = StyleSheet.create({
-  categoryList: { marginTop: 90, marginBottom: 70 },
+  categoryList: { flex: 1 },
 });

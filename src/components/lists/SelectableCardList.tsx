@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CheckCircleIcon } from "react-native-heroicons/solid";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 export interface SelectableCardItem<T extends string> {
   id: T;
@@ -50,7 +50,7 @@ export default function SelectableCardList<T extends string>({ items, selectedId
               </View>
               {description ? <Text style={[styles.description, disabled && styles.textDisabled]}>{description}</Text> : null}
             </View>
-            {isSelected && !disabled ? <CheckCircleIcon size={20} color={COLOR.oceanBreeze} /> : null}
+            {isSelected && !disabled ? <CheckCircleIcon size={20} color={COLOR.accentSoft} /> : null}
           </TouchableOpacity>
         );
       })}
@@ -61,22 +61,24 @@ export default function SelectableCardList<T extends string>({ items, selectedId
 const styles = StyleSheet.create({
   list: {
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     overflow: "hidden",
   },
   item: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     padding: PADDING_MARGIN.lg,
-    borderBottomWidth: 1.5,
-    borderColor: COLOR.darkBlue,
+    borderBottomWidth: 1,
+    borderColor: GLASS.border,
     gap: PADDING_MARGIN.md,
   },
   itemLast: {
     borderBottomWidth: 0,
   },
   itemSelected: {
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surfaceMuted,
   },
   itemDisabled: {
     opacity: 0.4,
@@ -88,19 +90,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
   titleSelected: {
-    color: COLOR.oceanBreeze,
-    fontWeight: FONTWEIGHT.semiBold,
+    color: COLOR.accentSoft,
+    fontFamily: FONT.semiBold,
   },
   description: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
     lineHeight: 16,
   },
   textDisabled: {
-    color: COLOR.placeholder,
+    color: COLOR.textMuted,
   },
 });

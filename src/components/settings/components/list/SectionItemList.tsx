@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 
-import { COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
   children: React.ReactNode;
@@ -16,10 +16,12 @@ export default function SectionItemList({ children, isLast }: Props) {
 
 const styles = StyleSheet.create({
   sectionItemList: {
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     padding: PADDING_MARGIN.lg,
-    borderBottomWidth: 1.5,
-    borderColor: COLOR.darkBlue,
+    // A fixed 1px line renders consistently across pixel densities; hairlineWidth
+    // lands on fractional pixels and visibly drops out on some rows.
+    borderBottomWidth: 1,
+    borderColor: GLASS.border,
   },
   sectionItemList_last: {
     borderBottomWidth: 0,

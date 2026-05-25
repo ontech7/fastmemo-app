@@ -1,6 +1,7 @@
 import { TouchableOpacity } from "react-native";
 import { TrashIcon } from "react-native-heroicons/outline";
 
+import IconChip from "@/components/ui/IconChip";
 import { COLOR } from "@/constants/styles";
 
 interface Props {
@@ -11,7 +12,9 @@ interface Props {
 export default function DeleteNotesButton({ onPressDelete, color = null }: Props) {
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={onPressDelete}>
-      <TrashIcon color={color || COLOR.softWhite} />
+      <IconChip>
+        <TrashIcon size={20} color={color || COLOR.softWhite} />
+      </IconChip>
     </TouchableOpacity>
   );
 }

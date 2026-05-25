@@ -20,7 +20,7 @@ import { selectorNoteCreation, setNoteCreation } from "@/slicers/settingsSlice";
 import type { Href } from "expo-router";
 
 import { NOTE_TYPES } from "@/constants/note-types";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import type { NoteCreationType } from "@/types";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -69,7 +69,7 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
       <TouchableOpacity style={styles.noteTypeButton} activeOpacity={0.7} onPress={onPress}>
         <Text style={styles.noteTypeLabel}>{label}</Text>
         <View style={styles.noteTypeIconContainer}>
-          <Icon size={28} color={COLOR.darkBlue} />
+          <Icon size={28} color={COLOR.softWhite} />
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -153,6 +153,9 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
 
   const showTypeHint = !isDeleteMode && (noteCreation.mode === "smart" || noteCreation.mode === "adaptive");
   const HintIcon = directNoteType.icon;
+  // Tint the hint badge with the resolved note type's color (same palette as the
+  // NoteCard left border), with a dark glyph — so it reads as part of the system.
+  const hintColor = CARD_TYPE_COLOR[directNoteType.key as keyof typeof CARD_TYPE_COLOR] ?? COLOR.accentSoft;
 
   // Pop the hint badge whenever the resolved note type changes. Driven by a
   // shared value (not entering/exiting layout animations) so it stays safe
@@ -232,19 +235,22 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
         <Animated.View style={secondaryFabAnimatedStyle} pointerEvents={isDeleteMode ? "none" : "auto"}>
           <TouchableOpacity style={styles.fabSecondary} activeOpacity={0.7} onPress={toggleOverlay}>
             <Animated.View style={chevronAnimatedStyle}>
-              <ChevronUpIcon size={20} color={COLOR.darkBlue} />
+              <ChevronUpIcon size={20} color={COLOR.softWhite} />
             </Animated.View>
           </TouchableOpacity>
         </Animated.View>
 
         <TouchableOpacity style={styles.fab} activeOpacity={0.7} onPress={createDirect}>
           <Animated.View style={closeIconAnimatedStyle}>
-            <PlusIcon size={28} color={COLOR.darkBlue} />
+            <PlusIcon size={28} color={COLOR.softWhite} />
           </Animated.View>
 
           {showTypeHint && (
-            <Animated.View style={[styles.fabHintBadge, hintAnimatedStyle]} pointerEvents="none">
-              <HintIcon size={14} color={COLOR.softWhite} />
+            <Animated.View
+              style={[styles.fabHintBadge, { backgroundColor: hintColor }, hintAnimatedStyle]}
+              pointerEvents="none"
+            >
+              <HintIcon size={13} color={COLOR.darkBlue} />
             </Animated.View>
           )}
         </TouchableOpacity>
@@ -265,36 +271,29 @@ const styles = StyleSheet.create({
   },
   fab: {
     padding: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    borderRadius: BORDER.big,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
   fabHintBadge: {
     position: "absolute",
-    top: -6,
-    right: -6,
-    width: 24,
-    height: 24,
+    top: -5,
+    right: -5,
+    width: 22,
+    height: 22,
     borderRadius: BORDER.rounded,
-    backgroundColor: COLOR.darkBlue,
-    borderWidth: 1.5,
-    borderColor: COLOR.lightBlue,
+    // A ring in the page background color "cuts out" the badge from the FAB
+    // for a clean float, instead of a hard white outline.
+    borderWidth: 2,
+    borderColor: COLOR.bg,
     alignItems: "center",
     justifyContent: "center",
   },
   fabSecondary: {
     padding: PADDING_MARGIN.sm,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    borderRadius: BORDER.big,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
   fullscreenOverlay: {
     position: "absolute",
@@ -322,16 +321,12 @@ const styles = StyleSheet.create({
   noteTypeLabel: {
     color: COLOR.softWhite,
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   noteTypeIconContainer: {
     padding: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    borderRadius: BORDER.big,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
 });

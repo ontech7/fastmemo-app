@@ -5,18 +5,21 @@ import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import { SECTION_ADVANCED, SECTION_BASIC, SECTION_FEEDBACK, SECTION_INFO } from "@/components/settings/data";
 import Section from "@/components/settings/Section";
+import AppBackground from "@/components/ui/AppBackground";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 export default function GeneralSettingsScreen() {
   const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
         <Text style={styles.headerTitle}>{t("generalsettings.title")}</Text>
-        <View style={{ padding: PADDING_MARGIN.md }}></View>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView style={{ paddingHorizontal: PADDING_MARGIN.lg }}>
@@ -36,7 +39,6 @@ const styles = StyleSheet.create({
     position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
@@ -49,54 +51,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
   },
-  sectionWrapper: {
-    marginBottom: PADDING_MARGIN.xl,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: PADDING_MARGIN.lg,
-  },
-  sectionHeaderIcon: {
-    marginRight: PADDING_MARGIN.sm,
-    padding: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.blue,
-    borderRadius: BORDER.normal,
-  },
-  sectionHeaderTitle: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-    paddingVertical: PADDING_MARGIN.sm,
-    fontWeight: FONTWEIGHT.semiBold,
-  },
-  sectionList: {
-    borderRadius: BORDER.normal,
-    overflow: "hidden",
-  },
-  sectionItemList: {
-    backgroundColor: COLOR.boldBlue,
-    padding: PADDING_MARGIN.lg,
-    borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
-  },
-  sectionItemList_last: {
-    borderBottomWidth: 0,
-  },
-  sectionItemList_button: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionItemList_title: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-  },
-  sectionItemList_text: {
-    color: COLOR.lightBlue,
-    paddingHorizontal: PADDING_MARGIN.sm,
-    fontSize: FONTSIZE.medium,
+  headerSpacer: {
+    width: 42,
   },
 });

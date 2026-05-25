@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { CheckIcon, XCircleIcon } from "react-native-heroicons/outline";
+import { CheckIcon, TrashIcon } from "react-native-heroicons/outline";
 import Animated, {
   Easing,
   FadeIn,
@@ -14,7 +14,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import DragIcon from "@/components/icons/DragIcon";
 
@@ -33,7 +33,7 @@ interface Props {
   deleteItem: (id: string) => void;
   drag: () => void;
   disabled: boolean;
-  hidden: boolean;
+  hidden?: boolean;
   autoFocus: boolean;
   stepMode?: boolean;
   stepStatus?: StepStatus;
@@ -53,7 +53,7 @@ export default function TodoItem({
   deleteItem,
   drag,
   disabled,
-  hidden,
+  hidden = false,
   autoFocus,
   stepMode = false,
   stepStatus = "future",
@@ -106,7 +106,7 @@ export default function TodoItem({
   const rowEntering = animationsReady ? FadeIn.duration(220) : undefined;
   const rowExiting = animationsReady ? FadeOut.duration(180) : undefined;
 
-  /* FREE MODE -- unchanged classic layout */
+  /* FREE MODE -- checkbox + text + drag handle */
 
   if (!stepMode) {
     return (
@@ -118,10 +118,10 @@ export default function TodoItem({
             style={{ marginRight: PADDING_MARGIN.sm }}
             onPress={handleCheck}
           >
-            <Animated.View style={[styles.checkboxFree, checkboxAnimatedStyle]}>
+            <Animated.View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked, checkboxAnimatedStyle]}>
               {item.checked && (
                 <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)}>
-                  <CheckIcon size={28} color={COLOR.softWhite} style={{ margin: 7 }} />
+                  <CheckIcon size={24} color={COLOR.softWhite} />
                 </Animated.View>
               )}
             </Animated.View>
@@ -139,17 +139,19 @@ export default function TodoItem({
           />
 
           <TouchableOpacity activeOpacity={0.7} disabled={disabled} style={styles.drag} onPressIn={drag}>
-            <DragIcon iconProps={{ color: COLOR.softWhite, opacity: 0.75 }} />
+            <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
           activeOpacity={0.7}
           disabled={disabled}
-          style={{ marginLeft: PADDING_MARGIN.sm }}
+          style={styles.deleteButton}
           onPress={() => deleteItem(item.id)}
         >
-          <XCircleIcon size={28} color={COLOR.softWhite} style={{ marginVertical: 8 }} />
+          <View style={styles.deleteChip}>
+            <TrashIcon size={16} color={COLOR.textMuted} />
+          </View>
         </TouchableOpacity>
       </Animated.View>
     );
@@ -157,21 +159,37 @@ export default function TodoItem({
 
   /* STEP MODE -- numbered circles + connector line + status on the right */
 
-  const numberColor = isOngoing ? COLOR.darkBlue : isStepDone ? COLOR.lightBlue : COLOR.softWhite;
-  const circleBorderColor = isOngoing ? COLOR.oceanBreeze : isStepDone ? COLOR.lightBlue : COLOR.softWhite;
+  const numberColor = isOngoing ? COLOR.softWhite : COLOR.textSecondary;
+  const circleBorderColor = isOngoing ? COLOR.accentSoft : isStepDone ? COLOR.accentMutedBorder : GLASS.border;
 
   return (
     <Animated.View layout={rowLayout} entering={rowEntering} exiting={rowExiting} style={styles.stepRow}>
-      {/* left rail: connector line + numbered circle + Ongoing label */}
+      {/* left rail: connector line + tappable numbered circle (checkbox) + Ongoing label */}
 
       <View style={styles.stepColumn} pointerEvents="box-none">
         <View style={[styles.stepLine, isFirst && styles.stepLineHidden]} />
 
-        <View style={[styles.stepCircle, { borderColor: circleBorderColor }]}>
-          <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.stepCircleFill, circleFillStyle]} />
+        <TouchableOpacity activeOpacity={0.7} disabled={disabled} onPress={handleCheck}>
+          <Animated.View
+            style={[
+              styles.stepCircle,
+              { borderColor: circleBorderColor },
+              isStepDone && styles.stepCircleDone,
+              checkboxAnimatedStyle,
+            ]}
+          >
+            <Animated.View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFillObject, styles.stepCircleFill, circleFillStyle]}
+            />
 
-          <Text style={[styles.stepCircleNumber, { color: numberColor }]}>{stepNumber}</Text>
-        </View>
+            {isStepDone ? (
+              <CheckIcon size={18} color={COLOR.softWhite} />
+            ) : (
+              <Text style={[styles.stepCircleNumber, { color: numberColor }]}>{stepNumber}</Text>
+            )}
+          </Animated.View>
+        </TouchableOpacity>
 
         <View style={[styles.stepLine, isLast && styles.stepLineHidden]} />
 
@@ -202,29 +220,12 @@ export default function TodoItem({
         />
       </View>
 
-      {/* status checkbox (right) */}
-
-      <TouchableOpacity activeOpacity={0.7} disabled={disabled || isFuture} onPress={handleCheck} style={styles.stepStatusWrap}>
-        <Animated.View
-          style={[
-            styles.stepStatusBox,
-            item.checked && styles.stepStatusBoxDone,
-            isOngoing && styles.stepStatusBoxOngoing,
-            checkboxAnimatedStyle,
-          ]}
-        >
-          {item.checked && (
-            <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)}>
-              <CheckIcon size={20} color={COLOR.softWhite} />
-            </Animated.View>
-          )}
-        </Animated.View>
-      </TouchableOpacity>
-
       {/* delete */}
 
       <TouchableOpacity activeOpacity={0.7} disabled={disabled} style={styles.stepDelete} onPress={() => deleteItem(item.id)}>
-        <XCircleIcon size={24} color={COLOR.softWhite} />
+        <View style={styles.deleteChip}>
+          <TrashIcon size={16} color={COLOR.textMuted} />
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -246,40 +247,40 @@ const styles = StyleSheet.create({
   listItemInputFree: {
     minHeight: 48,
     flex: 1,
-    paddingVertical: PADDING_MARGIN.sm - 4,
     paddingTop: Platform.OS === "ios" ? 10 : 8,
     paddingBottom: Platform.OS === "ios" ? 10 : 8,
-    paddingHorizontal: PADDING_MARGIN.lg - 4,
-    backgroundColor: COLOR.blue,
+    paddingHorizontal: PADDING_MARGIN.md,
+    backgroundColor: COLOR.surface,
     fontSize: FONTSIZE.inputTitle,
-    fontWeight: FONTWEIGHT.regular,
-    color: COLOR.softWhite,
+    fontFamily: FONT.regular,
+    color: COLOR.textPrimary,
     borderTopLeftRadius: BORDER.normal,
     borderBottomLeftRadius: BORDER.normal,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderColor: GLASS.border,
   },
   checkboxFree: {
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
     height: 48,
     width: 48,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderColor: GLASS.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxFreeChecked: {
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.accentMutedBorder,
   },
   drag: {
     alignItems: "center",
     justifyContent: "center",
-    borderRightWidth: 2,
-    borderRightColor: COLOR.boldBlue,
-    borderTopWidth: 2,
-    borderTopColor: COLOR.boldBlue,
-    borderBottomWidth: 2,
-    borderBottomColor: COLOR.boldBlue,
-    borderLeftWidth: 1,
-    borderLeftColor: COLOR.darkBlue,
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderColor: GLASS.border,
     paddingHorizontal: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderTopRightRadius: BORDER.normal,
     borderBottomRightRadius: BORDER.normal,
   },
@@ -300,7 +301,7 @@ const styles = StyleSheet.create({
     width: 2,
     flex: 1,
     minHeight: 6,
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: GLASS.border,
   },
   stepLineHidden: {
     backgroundColor: "transparent",
@@ -310,18 +311,21 @@ const styles = StyleSheet.create({
     height: STEP_CIRCLE_SIZE,
     borderRadius: STEP_CIRCLE_SIZE / 2,
     borderWidth: 2,
-    backgroundColor: COLOR.darkBlue,
+    backgroundColor: COLOR.surface,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
+  stepCircleDone: {
+    backgroundColor: COLOR.accentMuted,
+  },
   stepCircleFill: {
-    backgroundColor: COLOR.oceanBreeze,
+    backgroundColor: COLOR.accent,
     borderRadius: STEP_CIRCLE_SIZE / 2,
   },
   stepCircleNumber: {
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   stepOngoingLabelWrap: {
     position: "absolute",
@@ -331,10 +335,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   stepOngoingLabel: {
-    color: COLOR.oceanBreeze,
+    color: COLOR.accentSoft,
     fontSize: FONTSIZE.small,
-    fontWeight: FONTWEIGHT.semiBold,
-    backgroundColor: COLOR.darkBlue,
+    fontFamily: FONT.semiBold,
+    backgroundColor: COLOR.bg,
     paddingHorizontal: 4,
   },
   stepTextWrap: {
@@ -346,48 +350,39 @@ const styles = StyleSheet.create({
     minHeight: 38,
     paddingVertical: Platform.OS === "ios" ? 6 : 4,
     paddingHorizontal: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.small,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderColor: GLASS.border,
     fontSize: FONTSIZE.inputTitle,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
   },
   stepTextDone: {
-    color: COLOR.lightBlue,
+    color: COLOR.textMuted,
     textDecorationLine: "line-through",
   },
   stepTextFuture: {
-    color: COLOR.softWhite,
-    fontWeight: FONTWEIGHT.regular,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     opacity: 0.95,
   },
-  stepStatusWrap: {
-    width: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepStatusBox: {
-    width: 38,
-    height: 38,
-    borderRadius: BORDER.small,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
-    backgroundColor: COLOR.blue,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepStatusBoxOngoing: {
-    borderColor: COLOR.oceanBreeze,
-  },
-  stepStatusBoxDone: {
-    borderColor: COLOR.oceanBreeze,
-    backgroundColor: COLOR.darkOceanBreeze,
-  },
   stepDelete: {
+    alignSelf: "center",
+    marginLeft: PADDING_MARGIN.sm,
+  },
+  deleteButton: {
+    alignSelf: "center",
+    marginLeft: PADDING_MARGIN.sm,
+  },
+  deleteChip: {
     width: 32,
+    height: 32,
+    borderRadius: BORDER.normal,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
   },
 });

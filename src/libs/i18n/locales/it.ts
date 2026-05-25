@@ -152,8 +152,8 @@ const it = {
     characters: "caratteri",
     completed: "completati",
     on: "su",
-    mode_free: "Ordine libero",
-    mode_steps: "Passo per passo",
+    mode_free: "Lista",
+    mode_steps: "Step",
     ongoing: "In corso",
     created: "Creato: ",
     updated: "Modificato: ",
@@ -200,6 +200,7 @@ const it = {
     code_placeholder: "Scrivi il tuo codice qui...",
     max_tabs_reached: "Massimo 6 tab raggiunto",
     delete_tab: "Elimina tab",
+    delete_tab_confirm: "Sei sicuro di voler eliminare questa tab? L'azione è irreversibile.",
     language: "Linguaggio",
   },
   changecategory: {

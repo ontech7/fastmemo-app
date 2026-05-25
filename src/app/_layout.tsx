@@ -1,26 +1,32 @@
 import "@/styles/global.css";
 
-import { configs } from "@/configs";
 import WebToaster from "@/components/WebToaster";
-import { BORDER, COLOR } from "@/constants/styles";
+import AppBackground from "@/components/ui/AppBackground";
+import SplashScreenView from "@/components/ui/SplashScreenView";
+import { configs } from "@/configs";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import i18n from "@/libs/i18n";
 import SyncOnProvider from "@/providers/SyncOnProvider";
 import { persistor, store } from "@/slicers/store";
 import { DialogProvider } from "@ontech7/react-native-dialog";
 import { useTheme } from "@react-navigation/native";
 import * as Sentry from "@sentry/react-native";
+import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useState } from "react";
 import { I18nextProvider } from "react-i18next";
-import { Platform } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import { enableFreeze } from "react-native-screens";
-import { MenuProvider } from "react-native-popup-menu";
 import { RootSiblingParent } from "react-native-root-siblings";
+import { enableFreeze } from "react-native-screens";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 
 enableFreeze(true);
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export const unstable_settings = {
   initialRouteName: "index",
@@ -38,7 +44,36 @@ Sentry.init({
 
 export default Sentry.wrap(function RootLayout() {
   const { colors } = useTheme();
-  colors.background = configs.app.backgroundColor;
+  colors.background = "transparent";
+
+  const [fontsLoaded, fontError] = useFonts({
+    "Geist-Regular": require("@/assets/fonts/Geist-Regular.ttf"),
+    "Geist-Medium": require("@/assets/fonts/Geist-Medium.ttf"),
+    "Geist-SemiBold": require("@/assets/fonts/Geist-SemiBold.ttf"),
+    "Geist-Bold": require("@/assets/fonts/Geist-Bold.ttf"),
+  });
+
+  // Never get stuck on the splash if fonts fail or hang to load — e.g. on
+  // Tauri/web the font asset URLs can resolve differently in the webview.
+  // After a short grace period, proceed anyway (system-font fallback).
+  const [fontWaitElapsed, setFontWaitElapsed] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setFontWaitElapsed(true), 2500);
+    return () => clearTimeout(id);
+  }, []);
+
+  const ready = fontsLoaded || !!fontError || fontWaitElapsed;
+
+  // Hide the native splash only once a JS view (the gradient splash or the
+  // app shell) has laid out, so the gradient is already painted underneath —
+  // no flash of the flat native background.
+  const onLayoutRootView = useCallback(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
+  if (!ready) {
+    return <SplashScreenView onLayout={onLayoutRootView} />;
+  }
 
   return (
     <I18nextProvider i18n={i18n}>
@@ -46,28 +81,48 @@ export default Sentry.wrap(function RootLayout() {
         <DialogProvider
           customStyles={{
             container: {
-              borderRadius: BORDER.small,
+              backgroundColor: COLOR.surface,
+              borderRadius: BORDER.big,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: GLASS.border,
               maxWidth: "90%",
               width: Platform.OS === "web" ? 450 : "100%",
             },
+            title: {
+              color: COLOR.textPrimary,
+              fontFamily: FONT.semiBold,
+              fontSize: FONTSIZE.subtitle,
+            },
+            description: {
+              color: COLOR.textSecondary,
+              fontFamily: FONT.regular,
+              fontSize: FONTSIZE.medium,
+            },
+            input: {
+              color: COLOR.textPrimary,
+              fontFamily: FONT.regular,
+            },
+            footer: {
+              padding: PADDING_MARGIN.lg,
+              paddingTop: PADDING_MARGIN.md,
+              gap: PADDING_MARGIN.sm,
+            },
             action: {
-              color: COLOR.boldBlue,
-              fontWeight: "500",
+              color: COLOR.accentSoft,
+              fontSize: FONTSIZE.paragraph,
+              fontWeight: "600",
             },
           }}
         >
-          <MenuProvider
-            customStyles={{
-              backdrop: { opacity: 0.3, backgroundColor: COLOR.black },
-            }}
-          >
-            <Provider store={store}>
-              <PersistGate loading={null} persistor={persistor}>
-                <SyncOnProvider />
-                <RootSiblingParent>
-                  <StatusBar style="light" />
-                  <WebToaster />
-                  <Stack>
+          <Provider store={store}>
+            <PersistGate loading={null} persistor={persistor}>
+              <SyncOnProvider />
+              <RootSiblingParent>
+                <StatusBar style="light" />
+                <WebToaster />
+                <View style={styles.root} onLayout={onLayoutRootView}>
+                  <AppBackground style={StyleSheet.absoluteFill} />
+                  <Stack screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
                     <Stack.Screen name="index" options={{ headerShown: false, animation: "none" }} />
                     <Stack.Screen name="intro" options={{ headerShown: false, animation: "fade" }} />
                     <Stack.Screen name="home" options={{ headerShown: false, animation: "fade" }} />
@@ -111,12 +166,20 @@ export default Sentry.wrap(function RootLayout() {
                     <Stack.Screen name="settings/note-creation" options={{ headerShown: false, animation: "ios_from_left" }} />
                     <Stack.Screen name="+not-found" />
                   </Stack>
-                </RootSiblingParent>
-              </PersistGate>
-            </Provider>
-          </MenuProvider>
+                </View>
+              </RootSiblingParent>
+            </PersistGate>
+          </Provider>
         </DialogProvider>
       </KeyboardProvider>
     </I18nextProvider>
   );
+});
+
+/* STYLES */
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
 });

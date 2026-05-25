@@ -2,6 +2,7 @@ import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.web";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
 import { capitalize, isStringEmpty } from "@/utils/string";
@@ -18,11 +19,12 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { ArrowsUpDownIcon, EyeIcon, EyeSlashIcon, ListBulletIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
+import { PlusIcon } from "react-native-heroicons/outline";
 import uuid from "react-uuid";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
+import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import TodoItem from "@/components/todo/TodoItem.web";
 
 import type { TodoItem as TodoItemType, TodoNote } from "@/types";
@@ -94,32 +96,53 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         return;
       }
 
-      const mutableList = Object.assign([], note.list);
-      const index = mutableList.findIndex((todoItem: TodoItemType) => todoItem.id === id);
+      const index = note.list.findIndex((todoItem: TodoItemType) => todoItem.id === id);
       if (index === -1) return;
 
-      const currentlyChecked = mutableList[index].checked;
-
-      if (stepMode && !currentlyChecked && index !== firstUncheckedIndex) {
+      if (stepMode) {
+        // Stepper toggle: clicking an unchecked step completes it and every
+        // previous one; clicking an already-done step rolls back — it and every
+        // step after become "not done" (so it turns ongoing). Re-tapping the
+        // first step therefore returns to "nothing done / first ongoing".
+        const wasChecked = note.list[index].checked;
+        const mutableList = note.list.map((todoItem, i) => ({
+          ...todoItem,
+          checked: wasChecked ? i < index : i <= index,
+        }));
+        setNoteAsync({ ...note, list: mutableList });
         return;
       }
 
+      const mutableList = Object.assign([], note.list);
       mutableList[index] = {
         ...mutableList[index],
-        checked: !currentlyChecked,
+        checked: !mutableList[index].checked,
       };
 
       setNoteAsync({ ...note, list: mutableList });
     },
-    [note, setNoteAsync, stepMode, firstUncheckedIndex]
+    [note, setNoteAsync, stepMode]
   );
 
-  const toggleMode = useCallback(() => {
-    if (note.readOnly) {
-      return;
-    }
-    setNoteAsync({ ...note, mode: stepMode ? "free" : "steps" });
-  }, [note, setNoteAsync, stepMode]);
+  const [autoFocus, setAutoFocus] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => setAutoFocus(true), 20);
+  }, []);
+
+  const currentMode = stepMode ? "steps" : "free";
+
+  const setMode = useCallback(
+    (mode: TodoNote["mode"]) => {
+      if (note.readOnly) {
+        return;
+      }
+      // Switching mode remounts the rows; don't let their inputs grab focus.
+      setAutoFocus(false);
+      setNoteAsync({ ...note, mode });
+    },
+    [note, setNoteAsync]
+  );
 
   const deleteListItem = useCallback(
     (id: string) => {
@@ -155,26 +178,6 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     });
   }, [note, setNoteAsync]);
 
-  const deleteAllList = useCallback(() => {
-    if (note.readOnly) {
-      return;
-    }
-
-    setNoteAsync({ ...note, list: [] });
-  }, [note, setNoteAsync]);
-
-  const [hideDoneItems, setHideDoneItems] = useState(false);
-
-  const toggleHideDoneItems = useCallback(() => {
-    setHideDoneItems((prev) => !prev);
-  }, []);
-
-  const [autoFocus, setAutoFocus] = useState(false);
-
-  useEffect(() => {
-    setTimeout(() => setAutoFocus(true), 20);
-  }, []);
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -189,9 +192,11 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View>
         <View style={styles.header}>
-          <BackButton callback={updateNoteWebhook} />
+          <BackButton chip callback={updateNoteWebhook} />
 
           <TextInput
             style={styles.titleInput}
@@ -200,7 +205,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
             editable={!note.readOnly}
             cursorColor={COLOR.softWhite}
             placeholder={t("note.title_placeholder")}
-            placeholderTextColor={COLOR.placeholder}
+            placeholderTextColor={COLOR.textMuted}
             maxLength={96}
           />
 
@@ -251,7 +256,6 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                       checkItem={checkListItem}
                       deleteItem={deleteListItem}
                       disabled={note.readOnly}
-                      hidden={hideDoneItems}
                       autoFocus={autoFocus}
                       stepMode={stepMode}
                       stepStatus={stepStatus}
@@ -269,30 +273,11 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         </ScrollView>
 
         <TouchableOpacity activeOpacity={0.7} style={styles.addListItemButton} onPress={addListItem}>
-          <PlusIcon size={28} color={COLOR.darkBlue} />
-        </TouchableOpacity>
-
-        <TouchableOpacity activeOpacity={0.7} style={styles.hideDoneItemsButton} onPress={toggleHideDoneItems}>
-          {!hideDoneItems ? <EyeSlashIcon size={24} color={COLOR.darkBlue} /> : <EyeIcon size={24} color={COLOR.darkBlue} />}
-        </TouchableOpacity>
-
-        <TouchableOpacity activeOpacity={0.7} style={styles.deleteAllListButton} onPress={deleteAllList}>
-          <TrashIcon size={24} color={COLOR.darkBlue} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={[styles.modeToggleButton, stepMode && styles.modeToggleButtonActive]}
-          onPress={toggleMode}
-          accessibilityLabel={t(stepMode ? "note.mode_steps" : "note.mode_free")}
-        >
-          {stepMode ? (
-            <ListBulletIcon size={24} color={COLOR.darkBlue} />
-          ) : (
-            <ArrowsUpDownIcon size={24} color={COLOR.darkBlue} />
-          )}
+          <PlusIcon size={28} color={COLOR.softWhite} />
         </TouchableOpacity>
       </View>
+
+      <TodoModeMenuButton currentMode={currentMode} onSelectMode={setMode} disabled={note.readOnly} />
 
       {!note.readOnly && (
         <VoiceRecognitionButton
@@ -336,7 +321,6 @@ const styles = StyleSheet.create({
   container: {
     height: SIZE.full,
     paddingVertical: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     position: "relative",
@@ -349,11 +333,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.lg,
-    marginHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.blue,
+    marginHorizontal: PADDING_MARGIN.sm,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     fontSize: FONTSIZE.inputTitle,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
     borderRadius: BORDER.normal,
   },
   subtitleWrapper: {
@@ -366,8 +352,8 @@ const styles = StyleSheet.create({
     marginTop: PADDING_MARGIN.xs,
     textAlign: "center",
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.lightBlue,
+    fontFamily: FONT.medium,
+    color: COLOR.textSecondary,
   },
   draggableList: {
     flex: 1,
@@ -382,60 +368,11 @@ const styles = StyleSheet.create({
     right: 40,
     padding: PADDING_MARGIN.md,
     borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
-  },
-  hideDoneItemsButton: {
-    zIndex: 2,
-    position: "absolute",
-    bottom: 26,
-    right: 115,
-    padding: PADDING_MARGIN.sm,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
-  },
-  deleteAllListButton: {
-    zIndex: 2,
-    position: "absolute",
-    bottom: 26,
-    left: 40,
-    padding: PADDING_MARGIN.sm,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
-  },
-  modeToggleButton: {
-    zIndex: 2,
-    position: "absolute",
-    bottom: 26,
-    left: 115,
-    padding: PADDING_MARGIN.sm,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
-  },
-  modeToggleButtonActive: {
-    backgroundColor: COLOR.yellow,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
   noItems: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
     fontSize: FONTSIZE.cardTitle,
     textAlign: "center",
     marginTop: PADDING_MARGIN.xl,

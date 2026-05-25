@@ -1,7 +1,7 @@
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { CheckIcon } from "react-native-heroicons/outline";
 
-import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 interface Props {
   onPress: () => void;
@@ -11,7 +11,7 @@ interface Props {
 export default function SaveButton({ onPress, color = null }: Props) {
   return (
     <TouchableOpacity activeOpacity={0.7} style={styles.addBtn} onPress={onPress}>
-      <CheckIcon size={28} color={color || COLOR.black} />
+      <CheckIcon size={28} color={color || COLOR.softWhite} />
     </TouchableOpacity>
   );
 }
@@ -24,12 +24,8 @@ const styles = StyleSheet.create({
     bottom: 60,
     right: 40,
     padding: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    borderRadius: BORDER.big,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
 });

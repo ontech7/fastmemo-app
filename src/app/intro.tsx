@@ -1,5 +1,6 @@
 import SafeAreaView from "@/components/SafeAreaView";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import AppBackground from "@/components/ui/AppBackground";
+import { BORDER, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import Carousel, { Pagination } from "@ontech7/react-native-snap-carousel";
 import { useMemo, useRef, useState } from "react";
@@ -56,6 +57,8 @@ export default function IntroScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <Text style={styles.introTitle}>{t("intro.title")}</Text>
 
       <View style={styles.carouselWrapper}>
@@ -90,7 +93,7 @@ export default function IntroScreen() {
         activeOpacity={0.7}
       >
         <Text style={styles.continueButton_text}>{t("intro.continue")}</Text>
-        <ArrowRightIcon size={22} color={COLOR.softWhite} />
+        <ArrowRightIcon size={20} color={COLOR.softWhite} />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -113,16 +116,17 @@ function CarouselItem({ item, width, height }: CarouselItemProps) {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     justifyContent: "space-between",
-    backgroundColor: COLOR.darkBlue,
     paddingHorizontal: PADDING_MARGIN.md,
   },
   introTitle: {
     width: "100%",
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
+    letterSpacing: -0.3,
     marginTop: PADDING_MARGIN.md,
     textAlign: "center",
   },
@@ -135,7 +139,8 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.lg,
   },
   carouselDescription: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
     textAlign: "center",
   },
@@ -146,24 +151,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   carouselDot: {
-    backgroundColor: COLOR.softWhite,
+    backgroundColor: COLOR.accentSoft,
     width: 12,
     height: 12,
     borderRadius: BORDER.rounded,
   },
   inactiveCarouselDot: {
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surfaceMuted,
   },
   continueButton: {
-    paddingBottom: PADDING_MARGIN.xl,
-    paddingHorizontal: PADDING_MARGIN.lg + PADDING_MARGIN.sm,
+    alignSelf: "flex-end",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
+    gap: PADDING_MARGIN.sm,
+    backgroundColor: COLOR.accentMuted,
+    paddingVertical: PADDING_MARGIN.md,
+    paddingHorizontal: PADDING_MARGIN.lg,
+    borderRadius: BORDER.rounded,
+    marginBottom: PADDING_MARGIN.xl,
+    marginRight: PADDING_MARGIN.md,
+    ...SHADOW.fab,
   },
   continueButton_text: {
     color: COLOR.softWhite,
+    fontFamily: FONT.medium,
     fontSize: FONTSIZE.paragraph,
-    marginRight: PADDING_MARGIN.sm,
   },
 });

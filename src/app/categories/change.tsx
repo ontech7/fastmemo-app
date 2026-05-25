@@ -9,12 +9,14 @@ import type { Category } from "@/types";
 import BackButton from "@/components/buttons/BackButton";
 import OrderedCategoryCard from "@/components/cards/OrderedCategoryCard";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
+import IconChip from "@/components/ui/IconChip";
 import { useRouter } from "@/hooks/useRouter";
 import { getCategories } from "@/slicers/categoriesSlice";
 import { changeNoteCategory, getNote } from "@/slicers/notesSlice";
 
 import { defaultCategory } from "@/configs/default";
-import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 export default function ChangeCategoryScreen() {
   const { t } = useTranslation();
@@ -60,15 +62,21 @@ export default function ChangeCategoryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
 
         <Text style={styles.headerTitle}>{t("changecategory.title")}</Text>
 
-        {selectedCategory && (
+        {selectedCategory ? (
           <TouchableOpacity activeOpacity={0.7} onPress={updateExistentCategory}>
-            <CheckIcon size={28} color={COLOR.softWhite} />
+            <IconChip>
+              <CheckIcon size={20} color={COLOR.softWhite} />
+            </IconChip>
           </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
         )}
       </View>
 
@@ -92,7 +100,6 @@ export default function ChangeCategoryScreen() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
     height: SIZE.full,
     flexDirection: "column",
     alignItems: "flex-start",
@@ -107,15 +114,18 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
     flexGrow: 1,
     textAlign: "center",
+  },
+  headerSpacer: {
+    width: 42,
   },
   categoryList: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginRight: -PADDING_MARGIN.lg,
     width: SIZE.full,
   },
 });

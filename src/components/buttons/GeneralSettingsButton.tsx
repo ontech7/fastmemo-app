@@ -17,7 +17,7 @@ export default function GeneralSettingsButton() {
           router.push("/settings/general");
         }}
       >
-        <Cog8ToothIcon size={28} color={COLOR.softWhite} />
+        <Cog8ToothIcon size={24} color={COLOR.softWhite} />
       </TouchableOpacity>
     </View>
   );
@@ -26,9 +26,6 @@ export default function GeneralSettingsButton() {
 /* STYLES */
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: PADDING_MARGIN.md,
-    paddingBottom: PADDING_MARGIN.xl,
-  },
+  container: { paddingHorizontal: PADDING_MARGIN.sm },
   button: { padding: PADDING_MARGIN.sm },
 });

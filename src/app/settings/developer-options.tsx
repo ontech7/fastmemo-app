@@ -6,7 +6,8 @@ import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import AppBackground from "@/components/ui/AppBackground";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { selectorDeveloperMode, setDeveloperMode } from "@/slicers/settingsSlice";
 import type { DeveloperModeSettings } from "@/types";
 
@@ -26,15 +27,17 @@ export default function DeveloperOptionsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
 
         <Text style={styles.headerTitle}>{t("developeroptions.title")}</Text>
 
-        <View style={{ padding: PADDING_MARGIN.md }}></View>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView>
+      <ScrollView style={styles.scroll}>
         {/* Warning Banner */}
         <View style={styles.warningBanner}>
           <ExclamationTriangleIcon size={20} color={COLOR.yellow} />
@@ -51,8 +54,8 @@ export default function DeveloperOptionsScreen() {
               </View>
 
               <Switch
-                trackColor={{ false: COLOR.lightGray, true: COLOR.darkYellow + "60" }}
-                thumbColor={developerMode.unlimitedTextSpace ? COLOR.yellow : COLOR.softWhite}
+                trackColor={{ false: COLOR.surfaceMuted, true: COLOR.accentMuted }}
+                thumbColor={COLOR.softWhite}
                 onValueChange={(value: boolean) => updateSetting("unlimitedTextSpace", value)}
                 value={developerMode.unlimitedTextSpace}
                 style={{ height: 25 }}
@@ -66,8 +69,8 @@ export default function DeveloperOptionsScreen() {
               </View>
 
               <Switch
-                trackColor={{ false: COLOR.lightGray, true: COLOR.darkYellow + "60" }}
-                thumbColor={developerMode.unlimitedKanbanColumns ? COLOR.yellow : COLOR.softWhite}
+                trackColor={{ false: COLOR.surfaceMuted, true: COLOR.accentMuted }}
+                thumbColor={COLOR.softWhite}
                 onValueChange={(value: boolean) => updateSetting("unlimitedKanbanColumns", value)}
                 value={developerMode.unlimitedKanbanColumns}
                 style={{ height: 25 }}
@@ -81,8 +84,8 @@ export default function DeveloperOptionsScreen() {
               </View>
 
               <Switch
-                trackColor={{ false: COLOR.lightGray, true: COLOR.darkYellow + "60" }}
-                thumbColor={developerMode.unlimitedTrashTime ? COLOR.yellow : COLOR.softWhite}
+                trackColor={{ false: COLOR.surfaceMuted, true: COLOR.accentMuted }}
+                thumbColor={COLOR.softWhite}
                 onValueChange={(value: boolean) => updateSetting("unlimitedTrashTime", value)}
                 value={developerMode.unlimitedTrashTime}
                 style={{ height: 25 }}
@@ -107,23 +110,30 @@ export default function DeveloperOptionsScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
+  },
+  scroll: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.lg,
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: {
+    width: 42,
   },
   warningBanner: {
     flexDirection: "row",
@@ -138,6 +148,7 @@ const styles = StyleSheet.create({
   warningText: {
     flex: 1,
     color: COLOR.yellow,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.medium,
     lineHeight: 20,
   },
@@ -146,16 +157,18 @@ const styles = StyleSheet.create({
   },
   sectionList: {
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     overflow: "hidden",
   },
   sectionItemList: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     padding: PADDING_MARGIN.lg,
-    borderBottomWidth: 1.5,
-    borderColor: COLOR.darkBlue,
+    borderBottomWidth: 1,
+    borderColor: GLASS.border,
   },
   sectionItemList_last: {
     borderBottomWidth: 0,
@@ -165,11 +178,13 @@ const styles = StyleSheet.create({
     marginRight: PADDING_MARGIN.md,
   },
   sectionItemList_title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
   sectionItemList_desc: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
     marginTop: PADDING_MARGIN.xs,
   },

@@ -151,8 +151,8 @@ const en = {
     characters: "characters",
     completed: "completed",
     on: "on",
-    mode_free: "Free order",
-    mode_steps: "Step by step",
+    mode_free: "List",
+    mode_steps: "Step",
     ongoing: "Ongoing",
     created: "Created: ",
     updated: "Updated: ",
@@ -199,6 +199,7 @@ const en = {
     code_placeholder: "Write your code here...",
     max_tabs_reached: "Maximum 6 tabs reached",
     delete_tab: "Delete tab",
+    delete_tab_confirm: "Are you sure you want to delete this tab? This can't be undone.",
     language: "Language",
   },
   changecategory: {

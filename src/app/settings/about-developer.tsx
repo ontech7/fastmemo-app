@@ -1,6 +1,7 @@
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import AppBackground from "@/components/ui/AppBackground";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useTranslation } from "react-i18next";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { openUrl } from "@/utils/openUrl";
@@ -17,15 +18,17 @@ export default function AboutDeveloperScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
 
         <Text style={styles.headerTitle}>{t("aboutdeveloper.title")} 🚀</Text>
 
-        <View style={{ padding: PADDING_MARGIN.md }}></View>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView>
+      <ScrollView style={styles.scroll}>
         <View style={styles.appWrapper}>
           <Image style={styles.appIcon} source={authorImage} />
 
@@ -52,7 +55,7 @@ export default function AboutDeveloperScreen() {
                   <Text style={styles.sectionItemList_text} numberOfLines={1}>
                     Go to website
                   </Text>
-                  <ArrowTopRightOnSquareIcon color={COLOR.softWhite} size={18} />
+                  <ArrowTopRightOnSquareIcon color={COLOR.textSecondary} size={18} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -65,7 +68,7 @@ export default function AboutDeveloperScreen() {
                   <Text style={styles.sectionItemList_text} numberOfLines={1}>
                     Go to website
                   </Text>
-                  <ArrowTopRightOnSquareIcon color={COLOR.softWhite} size={18} />
+                  <ArrowTopRightOnSquareIcon color={COLOR.textSecondary} size={18} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -78,7 +81,7 @@ export default function AboutDeveloperScreen() {
                   <Text style={styles.sectionItemList_text} numberOfLines={1}>
                     Go to website
                   </Text>
-                  <ArrowTopRightOnSquareIcon color={COLOR.softWhite} size={18} />
+                  <ArrowTopRightOnSquareIcon color={COLOR.textSecondary} size={18} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -93,38 +96,46 @@ export default function AboutDeveloperScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
+  },
+  scroll: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.lg,
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: {
+    width: 42,
   },
   appWrapper: {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: PADDING_MARGIN.xl,
+    marginTop: PADDING_MARGIN.lg,
   },
   appIcon: {
     width: 180,
     height: 220,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.big,
   },
   appName: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     marginTop: PADDING_MARGIN.md,
   },
   sectionWrapper: {
@@ -136,34 +147,32 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.sm,
   },
   sectionHeaderTitle: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
     fontSize: FONTSIZE.paragraph,
     paddingVertical: PADDING_MARGIN.sm,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   sectionList: {
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     overflow: "hidden",
   },
   sectionItemList: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     padding: PADDING_MARGIN.lg,
     borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
+    borderColor: GLASS.border,
   },
   sectionItemList_last: {
     borderBottomWidth: 0,
   },
-  sectionItemList_button: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   sectionItemList_title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
   sectionItemList_textWrapper: {
@@ -172,7 +181,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionItemList_text: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.medium,
     maxWidth: 200,
   },

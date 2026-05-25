@@ -151,8 +151,8 @@ const ja = {
     characters: "文字",
     completed: "完了",
     on: "オン",
-    mode_free: "自由順",
-    mode_steps: "ステップごと",
+    mode_free: "リスト",
+    mode_steps: "ステップ",
     ongoing: "進行中",
     created: "作成: ",
     updated: "更新: ",
@@ -199,6 +199,7 @@ const ja = {
     code_placeholder: "ここにコードを入力...",
     max_tabs_reached: "タブは最大6つまでです",
     delete_tab: "タブを削除",
+    delete_tab_confirm: "このタブを削除してもよろしいですか？この操作は取り消せません。",
     language: "言語",
   },
   changecategory: {

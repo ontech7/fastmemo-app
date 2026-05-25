@@ -5,9 +5,10 @@ import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import { NOTE_TYPES } from "@/constants/note-types";
-import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 import { selectorNoteCreation, setNoteCreation } from "@/slicers/settingsSlice";
 import type { NoteCreationMode, NoteCreationType } from "@/types";
 
@@ -62,13 +63,15 @@ export default function NoteCreationScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
         <Text style={styles.headerTitle}>{t("note_creation.title")}</Text>
-        <View style={{ padding: PADDING_MARGIN.md }} />
+        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView>
+      <ScrollView style={styles.scroll}>
         <View style={styles.sectionWrapper}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionHeaderTitle}>{t("note_creation.mode_section")}</Text>
@@ -95,26 +98,33 @@ export default function NoteCreationScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
+  },
+  scroll: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.lg,
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: {
+    width: 42,
   },
   sectionWrapper: {
-    marginTop: PADDING_MARGIN.xl,
+    marginTop: PADDING_MARGIN.lg,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -122,9 +132,9 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.sm,
   },
   sectionHeaderTitle: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
     fontSize: FONTSIZE.paragraph,
     paddingVertical: PADDING_MARGIN.sm,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
 });

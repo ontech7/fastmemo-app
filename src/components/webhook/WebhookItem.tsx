@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CheckIcon } from "react-native-heroicons/outline";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import type { WebhookPayload } from "@/types";
 
@@ -12,31 +13,24 @@ interface Props {
   toggleWebhook: () => void;
 }
 
-export default function WebhookItem({ title, webhook, setWebhookUrl, toggleWebhook }: Props) {
+function WebhookItem({ title, webhook, setWebhookUrl, toggleWebhook }: Props) {
   return (
     <>
       <Text style={styles.titleText}>{title}</Text>
 
-      <View
-        style={{
-          alignItems: "center",
-          flexDirection: "row",
-          marginBottom: PADDING_MARGIN.md,
-          opacity: webhook.enabled ? 1 : 0.5,
-        }}
-      >
+      <View style={[styles.row, { opacity: webhook.enabled ? 1 : 0.5 }]}>
         {/* checkbox */}
 
-        <TouchableOpacity activeOpacity={0.7} style={{ marginRight: PADDING_MARGIN.sm }} onPress={toggleWebhook}>
-          <View style={styles.checkbox}>
-            {webhook.enabled && <CheckIcon size={28} color={COLOR.softWhite} style={{ margin: 7 }} />}
+        <TouchableOpacity activeOpacity={0.7} style={styles.checkboxWrapper} onPress={toggleWebhook}>
+          <View style={[styles.checkbox, webhook.enabled && styles.checkboxChecked]}>
+            {webhook.enabled && <CheckIcon size={26} color={COLOR.softWhite} style={{ margin: 8 }} />}
           </View>
         </TouchableOpacity>
 
         {/* request type */}
 
         <View style={styles.requestType}>
-          <Text style={styles.titleText}>POST</Text>
+          <Text style={styles.requestTypeText}>POST</Text>
         </View>
 
         {/* url */}
@@ -46,21 +40,33 @@ export default function WebhookItem({ title, webhook, setWebhookUrl, toggleWebho
           textAlignVertical="center"
           onChangeText={setWebhookUrl}
           value={webhook.url}
-          cursorColor={COLOR.softWhite}
+          placeholder="https://"
+          placeholderTextColor={COLOR.textMuted}
+          cursorColor={COLOR.textPrimary}
         />
       </View>
     </>
   );
 }
 
+export default memo(WebhookItem);
+
 /* STYLES */
 
 const styles = StyleSheet.create({
   titleText: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
     fontSize: FONTSIZE.inputTitle,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
     lineHeight: 40,
+  },
+  row: {
+    alignItems: "center",
+    flexDirection: "row",
+    marginBottom: PADDING_MARGIN.md,
+  },
+  checkboxWrapper: {
+    marginRight: PADDING_MARGIN.sm,
   },
   requestType: {
     paddingVertical: Platform.OS === "ios" ? 2 : 1,
@@ -70,35 +76,40 @@ const styles = StyleSheet.create({
     height: 48,
     borderTopLeftRadius: BORDER.normal,
     borderBottomLeftRadius: BORDER.normal,
-    borderWidth: 2,
-    borderLeftColor: COLOR.boldBlue,
-    borderTopColor: COLOR.boldBlue,
-    borderBottomColor: COLOR.boldBlue,
-    borderRightColor: COLOR.darkBlue,
-    backgroundColor: COLOR.blue,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: 0,
+    borderColor: GLASS.border,
+    backgroundColor: COLOR.surfaceMuted,
+  },
+  requestTypeText: {
+    color: COLOR.textSecondary,
+    fontSize: FONTSIZE.medium,
+    fontFamily: FONT.semiBold,
   },
   listItemInput: {
     minHeight: 48,
     flex: 1,
-    paddingVertical: PADDING_MARGIN.sm - 4,
-    paddingTop: Platform.OS === "ios" ? 10 : 8,
-    paddingBottom: Platform.OS === "ios" ? 10 : 8,
-    paddingHorizontal: PADDING_MARGIN.lg - 4,
-    backgroundColor: COLOR.blue,
-    fontSize: FONTSIZE.inputTitle,
-    fontWeight: FONTWEIGHT.regular,
-    color: COLOR.softWhite,
+    paddingVertical: Platform.OS === "ios" ? 10 : 8,
+    paddingHorizontal: PADDING_MARGIN.md,
+    backgroundColor: COLOR.surface,
+    fontSize: FONTSIZE.medium,
+    fontFamily: FONT.regular,
+    color: COLOR.textPrimary,
     borderTopRightRadius: BORDER.normal,
     borderBottomRightRadius: BORDER.normal,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
   },
   checkbox: {
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
     height: 48,
     width: 48,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
+  },
+  checkboxChecked: {
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.accentMutedBorder,
   },
 });

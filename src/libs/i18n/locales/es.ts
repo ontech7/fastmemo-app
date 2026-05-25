@@ -151,8 +151,8 @@ const es = {
     characters: "caracteres",
     completati: "terminado",
     on: "de",
-    mode_free: "Orden libre",
-    mode_steps: "Paso a paso",
+    mode_free: "Lista",
+    mode_steps: "Pasos",
     ongoing: "En curso",
     created: "Creado: ",
     updated: "Modificado: ",
@@ -199,6 +199,7 @@ const es = {
     code_placeholder: "Escribe tu codigo aqui...",
     max_tabs_reached: "Maximo de 6 pestañas alcanzado",
     delete_tab: "Eliminar pestaña",
+    delete_tab_confirm: "¿Seguro que quieres eliminar esta pestaña? No se puede deshacer.",
     language: "Lenguaje",
   },
   changecategory: {

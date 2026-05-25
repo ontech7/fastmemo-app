@@ -12,7 +12,7 @@ import SearchNotesInput from "@/components/inputs/SearchNotesInput";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
 import { configs } from "@/configs";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
@@ -29,7 +29,6 @@ import {
   toggleReadOnlyNotes,
 } from "@/slicers/notesSlice";
 import {
-  selectorAIAssistant,
   selectorDeveloperMode,
   selectorShowHidden,
   selectorWebhook_deleteNote,
@@ -46,8 +45,7 @@ import { useNavigation } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Keyboard, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SparklesIcon } from "react-native-heroicons/outline";
+import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useDispatch, useSelector, useStore } from "react-redux";
@@ -58,8 +56,6 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const store = useStore();
-
-  const aiSettings = useSelector(selectorAIAssistant);
 
   const currentCategory = useSelector(getCurrentCategory);
   const showHidden = useSelector(selectorShowHidden);
@@ -379,74 +375,66 @@ export default function HomeScreen() {
       />
 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
-        <Sidebar />
-        <SafeAreaView style={{ flex: 1 }}>
-          <Animated.View
-            style={[
-              {
-                flex: 1,
-                overflow: "hidden",
-              },
-              animatedMaxHeight,
-            ]}
-          >
-            <View style={styles.header}>
-              <View>
-                <Text style={styles.headerTitle}>{t("home.notes")}</Text>
+        <SafeAreaView style={styles.safe}>
+          <View style={styles.row}>
+            <Sidebar />
+            <Animated.View style={[styles.main, animatedMaxHeight]}>
+              <View style={styles.header}>
+                <View style={styles.titleBlock}>
+                  <Text style={styles.headerTitle}>{t("home.notes")}</Text>
 
-                <Text style={styles.categoryName}>{currentCategory.name != "All" ? currentCategory.name : t("All")}</Text>
-              </View>
+                  <View style={styles.headerMeta}>
+                    <Text style={styles.categoryName} numberOfLines={1}>
+                      {currentCategory.name != "All" ? currentCategory.name : t("All")}
+                    </Text>
+                    <View style={styles.countBadge}>
+                      <Text style={styles.countText}>{filteredNotes.length}</Text>
+                    </View>
+                  </View>
+                </View>
 
-              <View style={styles.topContainer}>
-                {isDeleteMode ? (
-                  <DeleteNotesButton onPressDelete={() => setShowDeleteNotesDialog(true)} />
-                ) : (
-                  <>
-                    {Platform.OS !== "web" && !aiSettings.enabled && (
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        onPress={() => router.push("/settings/ai-assistant")}
-                        style={styles.aiButton}
-                      >
-                        <SparklesIcon color={COLOR.softWhite} size={28} />
-                      </TouchableOpacity>
-                    )}
+                <View style={styles.topContainer}>
+                  {isDeleteMode ? (
+                    <DeleteNotesButton onPressDelete={() => setShowDeleteNotesDialog(true)} />
+                  ) : (
                     <NoteFiltersButton
                       filters={{
                         showDeepSearch,
                         toggleDeepSearch,
                       }}
                     />
-                  </>
-                )}
+                  )}
+                </View>
               </View>
-            </View>
 
-            <SearchNotesInput
-              text={!showDeepSearch ? filterText : deepFilterText}
-              onChangeText={!showDeepSearch ? setFilterText : setDeepFilterText}
-              showDeepSearch={showDeepSearch}
-            />
+              <SearchNotesInput
+                text={!showDeepSearch ? filterText : deepFilterText}
+                onChangeText={!showDeepSearch ? setFilterText : setDeepFilterText}
+                showDeepSearch={showDeepSearch}
+              />
 
-            <FlashList
-              maintainVisibleContentPosition={{
-                disabled: true,
-              }}
-              showsVerticalScrollIndicator={false}
-              data={filteredNotes}
-              extraData={{ isDeleteMode }}
-              renderItem={({ item }) => (
-                <NoteCard
-                  content={item}
-                  isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
-                  selectNote={selectNote}
-                  isDeleteMode={isDeleteMode}
-                  toggleDeleteMode={toggleDeleteMode}
-                />
-              )}
-              keyExtractor={(item) => item.id}
-            />
-          </Animated.View>
+              <FlashList
+                maintainVisibleContentPosition={{
+                  disabled: true,
+                }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                data={filteredNotes}
+                extraData={{ isDeleteMode }}
+                renderItem={({ item }) => (
+                  <NoteCard
+                    content={item}
+                    isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
+                    selectNote={selectNote}
+                    isDeleteMode={isDeleteMode}
+                    toggleDeleteMode={toggleDeleteMode}
+                  />
+                )}
+                keyExtractor={(item) => item.id}
+              />
+            </Animated.View>
+          </View>
         </SafeAreaView>
 
         <Animated.View style={[styles.editModeToolbar, animatedTranslate, animatedOpacity]}>
@@ -471,10 +459,19 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
+    flex: 1,
+    paddingHorizontal: PADDING_MARGIN.md,
+  },
+  safe: {
+    flex: 1,
+  },
+  row: {
+    flex: 1,
     flexDirection: "row",
-    height: SIZE.full,
+  },
+  main: {
+    flex: 1,
+    overflow: "hidden",
   },
   topContainer: {
     flexDirection: "row",
@@ -490,26 +487,58 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     paddingTop: PADDING_MARGIN.sm,
     marginBottom: PADDING_MARGIN.lg,
   },
+  titleBlock: {
+    flexShrink: 1,
+    marginRight: PADDING_MARGIN.md,
+  },
   headerTitle: {
     fontSize: FONTSIZE.title,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.bold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.5,
+  },
+  headerMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+    marginTop: PADDING_MARGIN.xs,
   },
   categoryName: {
-    color: COLOR.lightBlue,
-    fontWeight: FONTWEIGHT.semiBold,
+    flexShrink: 1,
+    paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER.rounded,
+    backgroundColor: GLASS.fill,
+    overflow: "hidden",
+    color: COLOR.textSecondary,
+    fontFamily: FONT.medium,
+    fontSize: FONTSIZE.small,
+  },
+  countBadge: {
+    paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER.rounded,
+    backgroundColor: GLASS.fillStrong,
+    overflow: "hidden",
+  },
+  countText: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.small,
   },
   editModeToolbar: {
     position: "absolute",
     flexDirection: "row",
     justifyContent: "center",
     paddingHorizontal: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.blue,
-    borderRadius: BORDER.normal,
+    backgroundColor: COLOR.surfaceMuted,
+    borderRadius: BORDER.big,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     bottom: -58,
     right: 110,
     shadowColor: COLOR.black,
@@ -522,13 +551,5 @@ const styles = StyleSheet.create({
     color: COLOR.softWhite,
     fontSize: FONTSIZE.paragraph,
     fontWeight: FONTWEIGHT.semiBold,
-  },
-  aiButton: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  aiButtonIcon: {
-    width: 40,
-    height: 40,
   },
 });

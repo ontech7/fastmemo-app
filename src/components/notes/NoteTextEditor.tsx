@@ -5,8 +5,10 @@ import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
+import IconChip from "@/components/ui/IconChip";
 import { configs } from "@/configs";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
 import { selectorDeveloperMode, selectorWebhook_addTextNote } from "@/slicers/settingsSlice";
@@ -145,9 +147,9 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const editorStyle = useMemo(
     () => ({
-      backgroundColor: COLOR.darkBlue,
+      backgroundColor: "transparent",
       color: COLOR.softWhite,
-      placeholderColor: COLOR.placeholder,
+      placeholderColor: COLOR.textMuted,
       cssText: richTextSyle,
     }),
     []
@@ -182,9 +184,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View>
         <View style={styles.header}>
-          <BackButton callback={updateNoteWebhook} />
+          <BackButton chip callback={updateNoteWebhook} />
 
           <View style={{ flexGrow: 1 }}>
             <TextInput
@@ -194,16 +198,15 @@ export default function NoteTextEditor({ initialNote }: Props) {
               editable={!note.readOnly}
               cursorColor={COLOR.softWhite}
               placeholder={t("note.title_placeholder")}
-              placeholderTextColor={COLOR.placeholder}
+              placeholderTextColor={COLOR.textMuted}
               maxLength={96}
             />
           </View>
 
-          <TouchableOpacity
-            style={{ padding: PADDING_MARGIN.sm, marginRight: PADDING_MARGIN.xs }}
-            onPress={() => setShowFindReplace((prev) => !prev)}
-          >
-            <MagnifyingGlassIcon size={22} color={showFindReplace ? COLOR.oceanBreeze : COLOR.softWhite} />
+          <TouchableOpacity style={styles.searchToggle} onPress={() => setShowFindReplace((prev) => !prev)}>
+            <IconChip>
+              <MagnifyingGlassIcon size={20} color={showFindReplace ? COLOR.accentSoft : COLOR.softWhite} />
+            </IconChip>
           </TouchableOpacity>
 
           <NoteSettingsButton note={note} setNote={setNoteAsync} />
@@ -239,7 +242,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
           style={{ marginTop: PADDING_MARGIN.md }}
         />
 
-        {editorReady ? (
+        {editorReady && (
           <RichEditor
             containerStyle={styles.richTextContainer}
             androidLayerType="hardware"
@@ -253,10 +256,6 @@ export default function NoteTextEditor({ initialNote }: Props) {
             pasteAsPlainText
             editorStyle={editorStyle}
           />
-        ) : (
-          <View style={styles.richTextContainer}>
-            <Text style={styles.placeholderText}>{plainNoteText}</Text>
-          </View>
         )}
 
         <DismissKeyboardButton
@@ -275,7 +274,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
             onPressAddImage={pickImage}
             iconSize={20}
             iconTint={COLOR.softWhite}
-            selectedIconTint={COLOR.lightBlue}
+            selectedIconTint={COLOR.accentSoft}
             actions={toolbarActions}
             iconMap={toolbarIconMap}
           />
@@ -325,7 +324,6 @@ const styles = StyleSheet.create({
   container: {
     height: SIZE.full,
     paddingVertical: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     position: "relative",
@@ -337,12 +335,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.lg,
-    marginHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.blue,
+    marginHorizontal: PADDING_MARGIN.sm,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     fontSize: FONTSIZE.inputTitle,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
     borderRadius: BORDER.normal,
+  },
+  searchToggle: {
+    marginRight: PADDING_MARGIN.sm,
   },
   subtitleWrapper: {
     flexGrow: 1,
@@ -354,23 +357,23 @@ const styles = StyleSheet.create({
     marginTop: PADDING_MARGIN.xs,
     textAlign: "center",
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.lightBlue,
+    fontFamily: FONT.medium,
+    color: COLOR.textSecondary,
   },
   richTextContainer: {
     paddingHorizontal: PADDING_MARGIN.lg,
     paddingTop: PADDING_MARGIN.lg,
     paddingBottom: PADDING_MARGIN.xs,
   },
-  placeholderText: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-    lineHeight: 22,
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   richToolbarContainer: {
     width: SIZE.full,
     height: 38,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderTopLeftRadius: BORDER.normal,
   },
   richToolbarContainerDesktop: {
@@ -382,7 +385,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: FONTSIZE.paragraph,
     lineHeight: 24,
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
     paddingBottom: PADDING_MARGIN.lg,
   },
 });
@@ -391,7 +394,7 @@ const styles = StyleSheet.create({
 
 const richTextSyle = `
   pre {
-    background-color: ${COLOR.blue};
+    background-color: ${COLOR.surfaceMuted};
   }
   img {
     width: auto;

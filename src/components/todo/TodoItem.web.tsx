@@ -3,9 +3,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { CheckIcon, XCircleIcon } from "react-native-heroicons/outline";
+import { CheckIcon, TrashIcon } from "react-native-heroicons/outline";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import DragIcon from "@/components/icons/DragIcon";
 
@@ -23,7 +23,7 @@ interface Props {
   checkItem: (id: string) => void;
   deleteItem: (id: string) => void;
   disabled: boolean;
-  hidden: boolean;
+  hidden?: boolean;
   autoFocus: boolean;
   stepMode?: boolean;
   stepStatus?: StepStatus;
@@ -43,7 +43,7 @@ export default function TodoItem({
   checkItem,
   deleteItem,
   disabled,
-  hidden,
+  hidden = false,
   autoFocus,
   stepMode = false,
   stepStatus = "future",
@@ -74,7 +74,7 @@ export default function TodoItem({
     return null;
   }
 
-  /* FREE MODE -- unchanged */
+  /* FREE MODE -- drag + checkbox + text */
 
   if (!stepMode) {
     return (
@@ -90,7 +90,7 @@ export default function TodoItem({
               alignItems: "center",
             }}
           >
-            <DragIcon iconProps={{ color: COLOR.softWhite, opacity: 0.75 }} />
+            <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
           </div>
 
           <TouchableOpacity
@@ -99,9 +99,13 @@ export default function TodoItem({
             onPressIn={() => setPressing(true)}
             onPressOut={() => setPressing(false)}
             disabled={disabled}
-            style={[styles.checkboxFree, pressing && { transform: [{ scale: 0.9 }] as any }]}
+            style={[
+              styles.checkboxFree,
+              item.checked && styles.checkboxFreeChecked,
+              pressing && { transform: [{ scale: 0.9 }] as any },
+            ]}
           >
-            {item.checked && <CheckIcon size={28} color={COLOR.softWhite} style={{ margin: 5 }} />}
+            {item.checked && <CheckIcon size={24} color={COLOR.softWhite} />}
           </TouchableOpacity>
 
           <TextInput
@@ -112,7 +116,7 @@ export default function TodoItem({
             value={item.text}
             onChangeText={(text) => setText(item.id, text)}
             editable={!disabled}
-            placeholderTextColor={COLOR.placeholder}
+            placeholderTextColor={COLOR.textMuted}
             cursorColor={COLOR.softWhite}
             autoFocus={autoFocus && !item.text}
             onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
@@ -124,7 +128,9 @@ export default function TodoItem({
             disabled={disabled}
             style={styles.deleteButton}
           >
-            <XCircleIcon size={24} color={COLOR.softWhite} />
+            <View style={styles.deleteChip}>
+              <TrashIcon size={16} color={COLOR.textMuted} />
+            </View>
           </TouchableOpacity>
         </View>
       </div>
@@ -133,9 +139,9 @@ export default function TodoItem({
 
   /* STEP MODE */
 
-  const numberColor = isOngoing ? COLOR.darkBlue : isStepDone ? COLOR.lightBlue : COLOR.softWhite;
-  const circleBorderColor = isOngoing ? COLOR.oceanBreeze : isStepDone ? COLOR.lightBlue : COLOR.softWhite;
-  const circleFillBg = isOngoing ? COLOR.oceanBreeze : "transparent";
+  const numberColor = isOngoing ? COLOR.softWhite : COLOR.textSecondary;
+  const circleBorderColor = isOngoing ? COLOR.accentSoft : isStepDone ? COLOR.accentMutedBorder : GLASS.border;
+  const circleFillBg = isOngoing ? COLOR.accent : isStepDone ? COLOR.accentMuted : COLOR.surface;
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -143,9 +149,24 @@ export default function TodoItem({
         <View style={styles.stepColumn} pointerEvents="box-none">
           <View style={[styles.stepLine, isFirst && styles.stepLineHidden]} />
 
-          <View style={[styles.stepCircle, { borderColor: circleBorderColor, backgroundColor: circleFillBg }]}>
-            <Text style={[styles.stepCircleNumber, { color: numberColor }]}>{stepNumber}</Text>
-          </View>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => checkItem(item.id)}
+            onPressIn={() => setPressing(true)}
+            onPressOut={() => setPressing(false)}
+            disabled={disabled}
+            style={[
+              styles.stepCircle,
+              { borderColor: circleBorderColor, backgroundColor: circleFillBg },
+              pressing && { transform: [{ scale: 0.9 }] as any },
+            ]}
+          >
+            {isStepDone ? (
+              <CheckIcon size={18} color={COLOR.softWhite} />
+            ) : (
+              <Text style={[styles.stepCircleNumber, { color: numberColor }]}>{stepNumber}</Text>
+            )}
+          </TouchableOpacity>
 
           <View style={[styles.stepLine, isLast && styles.stepLineHidden]} />
 
@@ -170,7 +191,7 @@ export default function TodoItem({
             value={item.text}
             onChangeText={(text) => setText(item.id, text)}
             editable={!disabled}
-            placeholderTextColor={COLOR.placeholder}
+            placeholderTextColor={COLOR.textMuted}
             cursorColor={COLOR.softWhite}
             autoFocus={autoFocus && isOngoing && !item.text}
             onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
@@ -179,27 +200,13 @@ export default function TodoItem({
 
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => checkItem(item.id)}
-          onPressIn={() => setPressing(true)}
-          onPressOut={() => setPressing(false)}
-          disabled={disabled || isFuture}
-          style={[
-            styles.stepStatusBox,
-            isOngoing && styles.stepStatusBoxOngoing,
-            item.checked && styles.stepStatusBoxDone,
-            pressing && !isFuture && { transform: [{ scale: 0.88 }] as any },
-          ]}
-        >
-          {item.checked && <CheckIcon size={20} color={COLOR.softWhite} />}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          activeOpacity={0.7}
           onPress={() => deleteItem(item.id)}
           disabled={disabled}
           style={styles.deleteButton}
         >
-          <XCircleIcon size={22} color={COLOR.softWhite} />
+          <View style={styles.deleteChip}>
+            <TrashIcon size={16} color={COLOR.textMuted} />
+          </View>
         </TouchableOpacity>
       </View>
     </div>
@@ -218,28 +225,43 @@ const styles = StyleSheet.create({
     minHeight: 40,
     flex: 1,
     paddingVertical: PADDING_MARGIN.sm - 3,
-    paddingHorizontal: PADDING_MARGIN.lg - 4,
-    backgroundColor: COLOR.blue,
+    paddingHorizontal: PADDING_MARGIN.md,
+    backgroundColor: COLOR.surface,
     fontSize: FONTSIZE.inputTitle,
     lineHeight: FONTSIZE.inputTitle * 1.35,
-    fontWeight: FONTWEIGHT.regular,
-    color: COLOR.softWhite,
+    fontFamily: FONT.regular,
+    color: COLOR.textPrimary,
     borderRadius: BORDER.normal,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderColor: GLASS.border,
   },
   checkboxFree: {
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
     height: 40,
     width: 40,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderColor: GLASS.border,
     alignItems: "center",
     justifyContent: "center",
   },
+  checkboxFreeChecked: {
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.accentMutedBorder,
+  },
   deleteButton: {
-    padding: PADDING_MARGIN.sm,
+    alignSelf: "center",
+    padding: PADDING_MARGIN.xs,
+  },
+  deleteChip: {
+    width: 32,
+    height: 32,
+    borderRadius: BORDER.normal,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
   },
 
   /* step mode */
@@ -258,7 +280,7 @@ const styles = StyleSheet.create({
     width: 2,
     flex: 1,
     minHeight: 6,
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: GLASS.border,
   },
   stepLineHidden: {
     backgroundColor: "transparent",
@@ -273,7 +295,7 @@ const styles = StyleSheet.create({
   },
   stepCircleNumber: {
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   stepOngoingLabelWrap: {
     position: "absolute",
@@ -283,10 +305,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   stepOngoingLabel: {
-    color: COLOR.oceanBreeze,
+    color: COLOR.accentSoft,
     fontSize: FONTSIZE.small,
-    fontWeight: FONTWEIGHT.semiBold,
-    backgroundColor: COLOR.darkBlue,
+    fontFamily: FONT.semiBold,
+    backgroundColor: COLOR.bg,
     paddingHorizontal: 4,
   },
   stepTextWrap: {
@@ -298,40 +320,22 @@ const styles = StyleSheet.create({
     minHeight: 38,
     paddingVertical: 6,
     paddingHorizontal: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.small,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderColor: GLASS.border,
     fontSize: FONTSIZE.inputTitle,
     lineHeight: FONTSIZE.inputTitle * 1.35,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
   },
   stepTextDone: {
-    color: COLOR.lightBlue,
+    color: COLOR.textMuted,
     textDecorationLine: "line-through",
   },
   stepTextFuture: {
-    color: COLOR.softWhite,
-    fontWeight: FONTWEIGHT.regular,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     opacity: 0.95,
-  },
-  stepStatusBox: {
-    width: 38,
-    height: 38,
-    borderRadius: BORDER.small,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
-    backgroundColor: COLOR.blue,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-  },
-  stepStatusBoxOngoing: {
-    borderColor: COLOR.oceanBreeze,
-  },
-  stepStatusBoxDone: {
-    borderColor: COLOR.oceanBreeze,
-    backgroundColor: COLOR.darkOceanBreeze,
   },
 });

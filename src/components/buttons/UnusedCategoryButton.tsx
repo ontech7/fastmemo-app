@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
-import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import CategoryIcon from "@/components/CategoryIcon";
 
@@ -18,7 +18,7 @@ function UnusedCategoryButton({ name, selected, toggleCategoryIcon }: Props) {
       style={[styles.button, selected && styles.selectedButton]}
       onPress={() => toggleCategoryIcon(name)}
     >
-      <CategoryIcon name={name} color={selected ? COLOR.darkBlue : COLOR.softWhite} />
+      <CategoryIcon name={name} color={selected ? COLOR.softWhite : COLOR.textPrimary} />
     </TouchableOpacity>
   );
 }
@@ -27,14 +27,17 @@ function UnusedCategoryButton({ name, selected, toggleCategoryIcon }: Props) {
 
 const styles = StyleSheet.create({
   button: {
-    padding: PADDING_MARGIN.sm,
+    padding: PADDING_MARGIN.md,
     marginBottom: PADDING_MARGIN.md,
     marginRight: PADDING_MARGIN.md,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
   },
   selectedButton: {
-    backgroundColor: COLOR.lightBlue,
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.accentMutedBorder,
   },
 });
 

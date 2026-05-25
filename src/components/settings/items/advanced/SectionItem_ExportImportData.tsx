@@ -12,6 +12,8 @@ import SectionItemList from "@/components/settings/components/list/SectionItemLi
 import { useExportImport } from "@/hooks/useExportImport";
 import { useSecret } from "@/hooks/useSecret";
 
+import { COLOR } from "@/constants/styles";
+
 interface Props {
   isLast: boolean;
 }
@@ -48,7 +50,7 @@ export default function SectionItem_ExportImportData({ isLast }: Props) {
 
       <ComplexDialog
         open={showImportExportDialog}
-        adornmentStart={<ExclamationTriangleIcon size={22} style={{ marginBottom: -3 }} />}
+        adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}
         title={t("warning")}
         description={t("popup.select_one_option")}
         confirm={{

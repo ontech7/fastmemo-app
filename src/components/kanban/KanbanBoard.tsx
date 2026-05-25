@@ -1,6 +1,6 @@
 import KanbanColumn from "@/components/kanban/KanbanColumn";
 import { configs } from "@/configs";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { selectorAIAssistant, selectorDeveloperMode } from "@/slicers/settingsSlice";
 import type { KanbanNote } from "@/types";
@@ -304,7 +304,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
 
           {!note.readOnly && note.columns.length < maxColumns && (
             <TouchableOpacity activeOpacity={0.7} style={styles.addColumnButton} onPress={addColumn}>
-              <PlusIcon size={32} color={COLOR.lightBlue} />
+              <PlusIcon size={32} color={COLOR.textSecondary} />
               <Text style={styles.addColumnText}>{t("kanban.add_column")}</Text>
             </TouchableOpacity>
           )}
@@ -314,7 +314,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
           <Text style={styles.emptyBoardText}>{t("kanban.no_columns")}</Text>
           {!note.readOnly && (
             <TouchableOpacity activeOpacity={0.7} style={styles.addFirstColumnButton} onPress={addColumn}>
-              <PlusIcon size={24} color={COLOR.darkBlue} />
+              <PlusIcon size={24} color={COLOR.softWhite} />
               <Text style={styles.addFirstColumnText}>{t("kanban.add_column")}</Text>
             </TouchableOpacity>
           )}
@@ -336,15 +336,16 @@ const styles = StyleSheet.create({
     height: SIZE.full,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderColor: GLASS.border,
     borderStyle: "dashed",
     borderRadius: BORDER.normal,
   },
   addColumnText: {
     marginTop: PADDING_MARGIN.sm,
     fontSize: FONTSIZE.small,
-    color: COLOR.lightBlue,
+    fontFamily: FONT.medium,
+    color: COLOR.textSecondary,
     textAlign: "center",
   },
   emptyBoard: {
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.xl,
   },
   emptyBoardText: {
-    color: COLOR.placeholder,
+    color: COLOR.textMuted,
     fontSize: FONTSIZE.cardTitle,
     textAlign: "center",
     lineHeight: 25,
@@ -365,13 +366,13 @@ const styles = StyleSheet.create({
     marginTop: PADDING_MARGIN.lg,
     paddingVertical: PADDING_MARGIN.md,
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.lightBlue,
+    backgroundColor: COLOR.accentMuted,
     borderRadius: BORDER.normal,
   },
   addFirstColumnText: {
     marginLeft: PADDING_MARGIN.sm,
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.darkBlue,
+    fontFamily: FONT.semiBold,
+    color: COLOR.softWhite,
   },
 });

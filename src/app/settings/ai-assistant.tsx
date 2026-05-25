@@ -6,10 +6,11 @@ import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import { selectorAIAssistant, setAIAssistant } from "@/slicers/settingsSlice";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import type { AIModelId, AIModelInfo } from "@/libs/ai";
 import {
@@ -136,10 +137,11 @@ export default function AIAssistantScreen() {
   if (Platform.OS === "web" || !nativeAvailable) {
     return (
       <SafeAreaView style={styles.container}>
+        <AppBackground style={StyleSheet.absoluteFill} />
         <View style={styles.header}>
-          <BackButton />
+          <BackButton chip />
           <Text style={styles.headerTitle}>{t("ai.title")}</Text>
-          <View style={{ padding: PADDING_MARGIN.md }} />
+          <View style={styles.headerSpacer} />
         </View>
         <View style={styles.unavailableContainer}>
           <Text style={styles.unavailableText}>
@@ -152,13 +154,15 @@ export default function AIAssistantScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
         <Text style={styles.headerTitle}>{t("ai.title")}</Text>
-        <View style={{ padding: PADDING_MARGIN.md }} />
+        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView>
+      <ScrollView style={styles.scroll}>
         {/* Model selection */}
         <View style={styles.sectionWrapper}>
           <View style={styles.sectionHeader}>
@@ -230,8 +234,8 @@ export default function AIAssistantScreen() {
               <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
                 <Text style={styles.sectionItemList_title}>{t("ai.enabled")}</Text>
                 <Switch
-                  trackColor={{ false: COLOR.lightGray, true: COLOR.darkOceanBreeze + "60" }}
-                  thumbColor={aiSettings.enabled ? COLOR.oceanBreeze : COLOR.softWhite}
+                  trackColor={{ false: COLOR.surfaceMuted, true: COLOR.accentMuted }}
+                  thumbColor={COLOR.softWhite}
                   onValueChange={toggleEnabled}
                   value={aiSettings.enabled}
                   style={{ height: 25 }}
@@ -281,26 +285,33 @@ export default function AIAssistantScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
+  },
+  scroll: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.lg,
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: {
+    width: 42,
   },
   sectionWrapper: {
-    marginTop: PADDING_MARGIN.xl,
+    marginTop: PADDING_MARGIN.lg,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -308,45 +319,49 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.sm,
   },
   sectionHeaderTitle: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
     fontSize: FONTSIZE.paragraph,
     paddingVertical: PADDING_MARGIN.sm,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   sectionList: {
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     overflow: "hidden",
   },
   sectionItemList: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     padding: PADDING_MARGIN.lg,
-    borderBottomWidth: 1.5,
-    borderColor: COLOR.darkBlue,
+    borderBottomWidth: 1,
+    borderColor: GLASS.border,
   },
   sectionItemList_last: {
     borderBottomWidth: 0,
   },
   sectionItemList_title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
   sectionItemList_text: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.medium,
   },
   statusReady: {
-    color: "#4CAF50",
+    color: COLOR.codeMint,
   },
   actionButton: {
     justifyContent: "center",
     alignItems: "center",
   },
   actionText: {
-    color: COLOR.oceanBreeze,
-    fontWeight: FONTWEIGHT.semiBold,
+    color: COLOR.accentSoft,
+    fontFamily: FONT.semiBold,
   },
   deleteButton: {
     justifyContent: "center",
@@ -354,22 +369,23 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: COLOR.importantIcon,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   progressBarContainer: {
     height: 4,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surfaceMuted,
     borderRadius: 2,
     marginTop: PADDING_MARGIN.sm,
     overflow: "hidden",
   },
   progressBar: {
     height: "100%",
-    backgroundColor: COLOR.oceanBreeze,
+    backgroundColor: COLOR.accentMuted,
     borderRadius: 2,
   },
   infoText: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
     lineHeight: 18,
   },
@@ -379,34 +395,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   unavailableText: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
     textAlign: "center",
   },
   modelSize: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
   },
   capabilityItem: {
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     paddingHorizontal: PADDING_MARGIN.lg,
     paddingVertical: PADDING_MARGIN.md,
     borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
+    borderColor: GLASS.border,
   },
   capabilityText: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
     lineHeight: 20,
   },
   capabilityMin: {
-    color: COLOR.placeholder,
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.small - 1,
-    marginTop: 2,
-  },
-  voiceOnlyHint: {
-    color: COLOR.lightBlue,
-    fontSize: FONTSIZE.small,
     marginTop: 2,
   },
   downloadingRow: {
@@ -416,7 +431,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     color: COLOR.important,
+    fontFamily: FONT.semiBold,
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
   },
 });

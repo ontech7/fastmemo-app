@@ -4,10 +4,10 @@ import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useRef, useState } from "react";
 import { Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { XCircleIcon } from "react-native-heroicons/outline";
+import { TrashIcon } from "react-native-heroicons/outline";
 import Animated, { runOnJS, useAnimatedStyle } from "react-native-reanimated";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import type { KanbanItem } from "@/types";
 
@@ -90,7 +90,7 @@ export default function KanbanCard({ item, columnId, setText, deleteItem, disabl
             onChangeText={(value) => setText(item.id, value)}
             value={item.text}
             editable={!disabled && !isBeingDragged}
-            placeholderTextColor={COLOR.placeholder}
+            placeholderTextColor={COLOR.textMuted}
             cursorColor={COLOR.softWhite}
             onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
           />
@@ -99,8 +99,8 @@ export default function KanbanCard({ item, columnId, setText, deleteItem, disabl
             <Animated.View style={styles.dragHandle}>
               <DragIcon
                 iconProps={{
-                  color: COLOR.softWhite,
-                  opacity: 0.75,
+                  color: COLOR.textSecondary,
+                  opacity: 0.9,
                 }}
               />
             </Animated.View>
@@ -113,7 +113,9 @@ export default function KanbanCard({ item, columnId, setText, deleteItem, disabl
           style={styles.deleteButton}
           onPress={() => deleteItem(item.id)}
         >
-          <XCircleIcon size={24} color={COLOR.softWhite} />
+          <View style={styles.deleteChip}>
+            <TrashIcon size={16} color={COLOR.textMuted} />
+          </View>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -138,14 +140,16 @@ export function KanbanCardStatic({ item }: KanbanCardStaticProps) {
           <View style={styles.dragHandle}>
             <DragIcon
               iconProps={{
-                color: COLOR.softWhite,
-                opacity: 0.75,
+                color: COLOR.textSecondary,
+                opacity: 0.9,
               }}
             />
           </View>
         </View>
         <View style={styles.deleteButton}>
-          <XCircleIcon size={24} color={COLOR.softWhite} />
+          <View style={styles.deleteChip}>
+            <TrashIcon size={16} color={COLOR.textMuted} />
+          </View>
         </View>
       </View>
     </View>
@@ -175,56 +179,61 @@ const styles = StyleSheet.create({
   textInput: {
     minHeight: 44,
     flex: 1,
-    paddingVertical: PADDING_MARGIN.sm - 2,
     paddingTop: Platform.OS === "ios" ? 10 : 8,
     paddingBottom: Platform.OS === "ios" ? 10 : 8,
     paddingHorizontal: PADDING_MARGIN.md,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.regular,
-    color: COLOR.softWhite,
+    fontFamily: FONT.regular,
+    color: COLOR.textPrimary,
     borderTopLeftRadius: BORDER.normal,
     borderBottomLeftRadius: BORDER.normal,
-    borderWidth: 2,
+    borderWidth: 1,
     borderRightWidth: 0,
-    borderColor: COLOR.boldBlue,
+    borderColor: GLASS.border,
   },
   textInputStatic: {
     minHeight: 44,
     flex: 1,
     justifyContent: "center",
-    paddingVertical: PADDING_MARGIN.sm - 2,
     paddingTop: Platform.OS === "ios" ? 10 : 8,
     paddingBottom: Platform.OS === "ios" ? 10 : 8,
     paddingHorizontal: PADDING_MARGIN.md,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderTopLeftRadius: BORDER.normal,
     borderBottomLeftRadius: BORDER.normal,
-    borderWidth: 2,
+    borderWidth: 1,
     borderRightWidth: 0,
-    borderColor: COLOR.boldBlue,
+    borderColor: GLASS.border,
   },
   textStatic: {
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.regular,
-    color: COLOR.softWhite,
+    fontFamily: FONT.regular,
+    color: COLOR.textPrimary,
   },
   dragHandle: {
     alignItems: "center",
     justifyContent: "center",
-    borderRightWidth: 2,
-    borderRightColor: COLOR.boldBlue,
-    borderTopWidth: 2,
-    borderTopColor: COLOR.boldBlue,
-    borderBottomWidth: 2,
-    borderBottomColor: COLOR.boldBlue,
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderColor: GLASS.border,
     paddingHorizontal: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderTopRightRadius: BORDER.normal,
     borderBottomRightRadius: BORDER.normal,
   },
   deleteButton: {
     marginLeft: PADDING_MARGIN.sm,
-    padding: PADDING_MARGIN.xs,
+    alignSelf: "center",
+  },
+  deleteChip: {
+    width: 32,
+    height: 32,
+    borderRadius: BORDER.normal,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
   },
 });

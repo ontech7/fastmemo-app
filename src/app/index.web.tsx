@@ -8,7 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
 import i18n from "i18next";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import lottieJson from "@/assets/lottie/Logo_with_Text.json";
 
 export default function LoadingScreen() {
@@ -17,11 +17,7 @@ export default function LoadingScreen() {
 
   const [showLottie, setShowLottie] = useState<boolean | null>(null);
 
-  const handleLottieFinish = () => {
-    setTimeout(() => {
-      router.replace("/intro");
-    }, 150);
-  };
+  const handleLottieFinish = () => router.replace("/intro");
 
   useEffect(() => {
     const runInitialActions = async () => {
@@ -67,7 +63,7 @@ export default function LoadingScreen() {
 
   return (
     <View style={styles.splashContainer}>
-      {showLottie && (
+      {showLottie ? (
         <LottieView
           ref={logoAnimRef}
           style={styles.lottieLogo}
@@ -77,6 +73,8 @@ export default function LoadingScreen() {
           onAnimationFinish={handleLottieFinish}
           speed={1.32}
         />
+      ) : (
+        <Image source={require("@/assets/images/splash-logo.png")} style={styles.staticLogo} resizeMode="contain" />
       )}
     </View>
   );
@@ -90,12 +88,16 @@ const styles = StyleSheet.create({
     top: 0,
     height: "100%",
     width: "100%",
-    backgroundColor: COLOR.darkBlue,
+    backgroundColor: COLOR.bg,
     alignItems: "center",
     justifyContent: "center",
   },
   lottieLogo: {
     width: 145,
     height: 145,
+  },
+  staticLogo: {
+    width: 150,
+    height: 150,
   },
 });

@@ -10,12 +10,13 @@ import Haptics from "@/libs/haptics";
 import { webhook } from "@/utils/webhook";
 import SafeAreaView from "@/components/SafeAreaView";
 
-import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 import BackButton from "@/components/buttons/BackButton";
 import TrashedNotesSettingsButton from "@/components/buttons/TrashedNotesSettingsButton";
 import TrashedNoteCard from "@/components/cards/TrashedNoteCard";
 import SearchNotesInput from "@/components/inputs/SearchNotesInput";
+import AppBackground from "@/components/ui/AppBackground";
 import { deleteNote, getTrashedNotesFilteredPerCategory } from "@/slicers/notesSlice";
 import {
   selectorDeveloperMode,
@@ -128,8 +129,10 @@ export default function TemporaryTrashScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
 
         <Text style={styles.headerTitle}>{t("trashednotes.title")}</Text>
 
@@ -173,9 +176,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
-  deleteModeContainer: { flexDirection: "row" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -186,11 +187,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
-  },
-  categoryName: {
-    color: COLOR.lightBlue,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
   },
 });
