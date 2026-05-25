@@ -61,8 +61,8 @@ export default function LoadingScreen() {
     }
   }, [showLottie]);
 
-  // Solid app-color splash + logo (matching the native splash and SplashScreenView)
-  // shown while init runs. On first launch we play the animated logo, otherwise we
+  // Solid app-color splash + logo (matching the native splash) shown while init
+  // runs. On first launch we play the animated logo, otherwise we
   // keep the static logo until we hand straight over to /home (no fade — the
   // destination would otherwise reveal the gradient backdrop mid-transition).
   return (

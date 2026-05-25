@@ -2,7 +2,6 @@ import "@/styles/global.css";
 
 import WebToaster from "@/components/WebToaster";
 import AppBackground from "@/components/ui/AppBackground";
-import SplashScreenView from "@/components/ui/SplashScreenView";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import i18n from "@/libs/i18n";
@@ -71,8 +70,11 @@ export default Sentry.wrap(function RootLayout() {
     SplashScreen.hideAsync().catch(() => {});
   }, []);
 
+  // While fonts load, render nothing and keep the native splash up (it's already
+  // COLOR.bg + the same centered logo, so there's no separate JS splash to keep
+  // in sync). hideAsync only fires from the app shell's onLayout below.
   if (!ready) {
-    return <SplashScreenView onLayout={onLayoutRootView} />;
+    return null;
   }
 
   return (

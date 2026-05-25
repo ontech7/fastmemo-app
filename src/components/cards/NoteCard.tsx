@@ -82,7 +82,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
   const isImportant = !!important;
   const accent = getCardAccent(type, isImportant);
   const fg = isImportant ? COLOR.softWhite : COLOR.darkBlue;
-  const chipBg = isImportant ? "rgba(255, 255, 255, 0.18)" : "rgba(2, 14, 53, 0.06)";
+  const chipBg = isImportant ? "rgba(255, 255, 255, 0.18)" : "rgba(2, 14, 53, 0.09)";
   const hasStatus = important || readOnly || locked || hidden;
   const TypeIcon = type && type !== "text" ? NOTE_TYPES.find((nt) => nt.key === type)?.icon : undefined;
 
