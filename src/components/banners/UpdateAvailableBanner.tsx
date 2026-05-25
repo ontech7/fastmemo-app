@@ -4,13 +4,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowRightIcon } from "react-native-heroicons/solid";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 const SLIDE_DURATION_MS = 220;
-
-const BANNER_BG = "#C7B8E8";
-const BANNER_BG_BORDER_TOP = "#9F8DC4";
-const BANNER_TEXT = "#1A1F3A";
 
 interface Props {
   visible: boolean;
@@ -56,6 +52,8 @@ export default function UpdateAvailableBanner({ visible, onPress }: Props) {
   );
 }
 
+/* STYLES */
+
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
@@ -65,25 +63,25 @@ const styles = StyleSheet.create({
     zIndex: 8,
     shadowColor: COLOR.black,
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
     elevation: 8,
   },
   inner: {
     flexDirection: "row",
     alignItems: "center",
     gap: PADDING_MARGIN.md,
-    paddingVertical: PADDING_MARGIN.sm,
+    paddingVertical: PADDING_MARGIN.md,
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: BANNER_BG,
-    borderTopWidth: 1,
-    borderTopColor: BANNER_BG_BORDER_TOP,
+    backgroundColor: COLOR.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: GLASS.border,
   },
   label: {
     flex: 1,
-    color: BANNER_TEXT,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.medium,
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
   },
   cta: {
     flexDirection: "row",
@@ -92,11 +90,13 @@ const styles = StyleSheet.create({
     paddingVertical: PADDING_MARGIN.xs + 2,
     paddingHorizontal: PADDING_MARGIN.md,
     borderRadius: BORDER.rounded,
-    backgroundColor: COLOR.darkBlue,
+    backgroundColor: COLOR.accentMuted,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLOR.accentMutedBorder,
   },
   ctaLabel: {
     color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
   },
 });

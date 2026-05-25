@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 
 import { useRouter } from "@/hooks/useRouter";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 import { getNotesSizePerCategory } from "@/slicers/notesSlice";
 import CategoryIcon from "@/components/CategoryIcon";
@@ -37,7 +37,7 @@ export default function OrganizeCategoryCard({
 
   const router = useRouter();
 
-  const { name, icon, selected } = category;
+  const { name, icon } = category;
 
   const notesSize = useSelector(getNotesSizePerCategory(category)); //TODO: memoize
 
@@ -102,7 +102,7 @@ export default function OrganizeCategoryCard({
         }}
       >
         <View style={styles.categoryWrapper}>
-          <CategoryIcon name={icon} color={COLOR.softWhite} />
+          <CategoryIcon name={icon} color={COLOR.textPrimary} />
 
           <Text style={styles.categoryName}>{t(name)}</Text>
         </View>
@@ -135,29 +135,33 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: "row",
     alignItems: "center",
-    padding: PADDING_MARGIN.sm,
+    paddingVertical: PADDING_MARGIN.md,
+    paddingHorizontal: PADDING_MARGIN.md,
     marginBottom: PADDING_MARGIN.md,
-    marginRight: PADDING_MARGIN.md,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
-  },
-  selectedButton: {
-    backgroundColor: COLOR.lightBlue,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
   },
   categoryPosition_wrapper: {
     position: "absolute",
-    top: -5,
-    left: -5,
+    top: -6,
+    left: -6,
     borderRadius: BORDER.rounded,
-    backgroundColor: COLOR.darkBlue,
-    borderColor: COLOR.blue,
-    borderWidth: 1,
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.bg,
+    borderWidth: 2,
+    minWidth: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: PADDING_MARGIN.xs,
   },
   categoryPosition: {
     color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.small,
     textAlign: "center",
-    minWidth: 10,
   },
   categoryWrapper: {
     flexDirection: "row",
@@ -165,7 +169,8 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     marginLeft: PADDING_MARGIN.md,
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.medium,
     fontSize: FONTSIZE.paragraph,
   },
   numberOfNotesWrapper: {
@@ -173,20 +178,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexGrow: 1,
     justifyContent: "flex-end",
+    gap: PADDING_MARGIN.sm,
   },
   textNumberOfNotes: {
-    color: COLOR.softWhite,
-    marginRight: PADDING_MARGIN.sm,
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
   },
   numberOfNotes_wrapper: {
-    backgroundColor: COLOR.softWhite,
+    backgroundColor: COLOR.bgElevated,
     borderRadius: BORDER.rounded,
     paddingHorizontal: PADDING_MARGIN.sm,
     paddingVertical: PADDING_MARGIN.xs,
   },
   numberOfNotes: {
-    color: COLOR.blue,
-    fontWeight: FONTWEIGHT.semiBold,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.small,
     minWidth: 10,
     textAlign: "center",
   },

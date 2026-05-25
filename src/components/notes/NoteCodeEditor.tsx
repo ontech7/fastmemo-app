@@ -5,17 +5,18 @@ import CodeDraggableTab from "@/components/notes/CodeDraggableTab";
 import CodeEditorWebView, { type CodeEditorWebViewRef } from "@/components/notes/CodeEditorWebView";
 import CodeLanguagePickerModal from "@/components/notes/CodeLanguagePickerModal";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
 import { inferLanguageFromTitle, LANGUAGE_LABELS } from "@/constants/code-languages";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, MONOSPACE_FONT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, MONOSPACE_FONT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
 import { selectorAIAssistant, selectorWebhook_addCodeNote } from "@/slicers/settingsSlice";
 import type { CodeNote, CodeTab } from "@/types";
 import { isStringEmpty } from "@/utils/string";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { InteractionManager, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PlusIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -42,6 +43,15 @@ export default function NoteCodeEditor({ initialNote }: Props) {
 
   const tabScrollRef = useRef<ScrollView>(null);
   const editorRef = useRef<CodeEditorWebViewRef>(null);
+
+  const [editorReady, setEditorReady] = useState(false);
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setEditorReady(true);
+    });
+    return () => task.cancel();
+  }, []);
 
   const memoInitialNote = useMemo<CodeNote>(
     () => ({
@@ -158,9 +168,11 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
+        <AppBackground style={StyleSheet.absoluteFill} />
+
         <View>
           <View style={styles.header}>
-            <BackButton callback={updateNoteWebhook} />
+            <BackButton chip callback={updateNoteWebhook} />
             <View style={{ flexGrow: 1 }}>
               <TextInput
                 style={styles.titleInput}
@@ -169,7 +181,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                 editable={!note.readOnly}
                 cursorColor={COLOR.softWhite}
                 placeholder={t("note.title_placeholder")}
-                placeholderTextColor={COLOR.placeholder}
+                placeholderTextColor={COLOR.textMuted}
                 maxLength={96}
               />
             </View>
@@ -205,7 +217,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
               ))}
               {note.tabs.length < MAX_TABS && !note.readOnly && (
                 <TouchableOpacity style={styles.addTabButton} onPress={addTab} activeOpacity={0.7}>
-                  <PlusIcon size={16} color={COLOR.lightBlue} />
+                  <PlusIcon size={16} color={COLOR.textSecondary} />
                 </TouchableOpacity>
               )}
             </ScrollView>
@@ -226,13 +238,17 @@ export default function NoteCodeEditor({ initialNote }: Props) {
         </View>
 
         <View style={[styles.editorContainer, aiSettings.enabled && { marginBottom: 100 }]}>
-          <CodeEditorWebView
-            ref={editorRef}
-            initialCode={activeTab?.code || ""}
-            language={activeTab?.language || "plaintext"}
-            readOnly={note.readOnly}
-            onChange={updateTabCode}
-          />
+          {editorReady ? (
+            <CodeEditorWebView
+              ref={editorRef}
+              initialCode={activeTab?.code || ""}
+              language={activeTab?.language || "plaintext"}
+              readOnly={note.readOnly}
+              onChange={updateTabCode}
+            />
+          ) : (
+            <Text style={styles.codePlaceholder}>{activeTab?.code || ""}</Text>
+          )}
         </View>
 
         {!note.readOnly && (
@@ -273,7 +289,6 @@ const styles = StyleSheet.create({
   container: {
     height: SIZE.full,
     paddingVertical: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     position: "relative",
@@ -285,11 +300,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.lg,
-    marginHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.blue,
+    marginHorizontal: PADDING_MARGIN.sm,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     fontSize: FONTSIZE.inputTitle,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
     borderRadius: BORDER.normal,
   },
   tabBarContainer: {
@@ -306,7 +323,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.md,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surfaceMuted,
     borderTopLeftRadius: BORDER.small,
     borderTopRightRadius: BORDER.small,
     maxWidth: 160,
@@ -319,7 +336,7 @@ const styles = StyleSheet.create({
   tabTitle: {
     fontSize: FONTSIZE.small,
     fontFamily: MONOSPACE_FONT,
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
     maxWidth: 100,
   },
   tabTitleActive: {
@@ -339,7 +356,7 @@ const styles = StyleSheet.create({
   addTabButton: {
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.md,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surfaceMuted,
     borderTopLeftRadius: BORDER.small,
     borderTopRightRadius: BORDER.small,
     justifyContent: "center",
@@ -372,7 +389,7 @@ const styles = StyleSheet.create({
   tabCounter: {
     fontSize: FONTSIZE.small,
     fontFamily: MONOSPACE_FONT,
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
   },
   editorContainer: {
     flex: 1,
@@ -381,5 +398,11 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: BORDER.normal,
     borderBottomRightRadius: BORDER.normal,
     overflow: "hidden",
+  },
+  codePlaceholder: {
+    color: COLOR.textPrimary,
+    fontFamily: MONOSPACE_FONT,
+    fontSize: FONTSIZE.small,
+    padding: PADDING_MARGIN.md,
   },
 });

@@ -14,11 +14,12 @@ import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
 import { useRouter } from "@/hooks/useRouter";
 import { setReportDate } from "@/slicers/settingsSlice";
 import { formatDateTime } from "@/utils/date";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
 import lottieJson from "@/assets/lottie/Logo.json";
 
@@ -264,15 +265,17 @@ export default function ReportScreen() {
       <LoadingSpinner visible={isLoading} text={t("report.loading")} />
 
       <SafeAreaView style={styles.container}>
+        <AppBackground style={StyleSheet.absoluteFill} />
+
         <View style={styles.header}>
-          <BackButton />
+          <BackButton chip />
 
           <Text style={styles.headerTitle}>{t("report.title")}</Text>
 
-          <View style={{ padding: PADDING_MARGIN.md }} />
+          <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView>
+        <ScrollView style={styles.scroll}>
           <View style={styles.appWrapper}>
             <LottieView ref={logoAnimRef} style={styles.logoStyle} source={lottieJson} loop={false} />
             <Text style={styles.text}>Fast Memo - Notes in one click</Text>
@@ -291,7 +294,9 @@ export default function ReportScreen() {
                     onPress={() => toggleTopic(topic)}
                     style={[styles.topicButton, topicsSelected.includes(topic) && styles.topicButtonSelected]}
                   >
-                    <Text style={{ color: COLOR.black }}>{t("report.topic." + topic)}</Text>
+                    <Text style={[styles.topicText, topicsSelected.includes(topic) && styles.topicTextSelected]}>
+                      {t("report.topic." + topic)}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -299,7 +304,8 @@ export default function ReportScreen() {
               {/* description */}
               <View style={styles.problemDescriptionWrapper}>
                 <TextInput
-                  placeholderTextColor={COLOR.blue}
+                  style={styles.problemDescriptionInput}
+                  placeholderTextColor={COLOR.textMuted}
                   onChangeText={(text: string) => setProblemDescription(text)}
                   value={problemDescription}
                   textAlignVertical="top"
@@ -308,21 +314,13 @@ export default function ReportScreen() {
                   placeholder={t("report.descriptionPlaceholder")}
                   maxLength={500}
                 />
-                <Text
-                  style={{
-                    textAlign: "right",
-                    color: COLOR.blue,
-                    marginTop: PADDING_MARGIN.sm,
-                  }}
-                >
-                  {problemDescription.length} / 500
-                </Text>
+                <Text style={styles.charCounter}>{problemDescription.length} / 500</Text>
               </View>
 
               {/* device info */}
               <TouchableOpacity activeOpacity={0.7} onPress={toggleSendDeviceInfo}>
-                <View style={[styles.sendDeviceInfoCheckbox, sendDeviceInfo && { backgroundColor: COLOR.gray }]}>
-                  <CheckIcon size={20} color={COLOR.darkBlue} style={{ opacity: sendDeviceInfo ? 1 : 0 }} />
+                <View style={[styles.sendDeviceInfoCheckbox, sendDeviceInfo && styles.sendDeviceInfoCheckboxChecked]}>
+                  <CheckIcon size={18} color={COLOR.softWhite} style={{ opacity: sendDeviceInfo ? 1 : 0 }} />
                 </View>
                 <Text style={styles.sendDeviceInfoText}>{t("report.deviceInfoCheckbox")}</Text>
               </TouchableOpacity>
@@ -405,30 +403,39 @@ export const isLessThan = (fileSize: number, megabyte: number) => {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
+  },
+  scroll: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.lg,
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: {
+    width: 42,
   },
   appWrapper: {
     flexDirection: "row",
     alignItems: "center",
     gap: PADDING_MARGIN.lg,
     borderRadius: BORDER.normal,
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     padding: PADDING_MARGIN.md,
     marginBottom: PADDING_MARGIN.md,
   },
@@ -439,12 +446,15 @@ const styles = StyleSheet.create({
   sectionWrapper: {
     gap: PADDING_MARGIN.md,
     borderRadius: BORDER.normal,
-    backgroundColor: COLOR.boldBlue,
-    padding: PADDING_MARGIN.md,
+    backgroundColor: COLOR.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
+    padding: PADDING_MARGIN.lg,
     marginBottom: PADDING_MARGIN.md,
   },
   text: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
   },
   topicWrapper: {
     rowGap: PADDING_MARGIN.sm,
@@ -453,31 +463,67 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   topicButton: {
-    backgroundColor: COLOR.softenGray,
-    paddingVertical: PADDING_MARGIN.xs,
-    paddingHorizontal: PADDING_MARGIN.sm,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
+    paddingVertical: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.md,
     borderRadius: BORDER.small,
   },
   topicButtonSelected: {
-    backgroundColor: COLOR.gray,
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.accentMutedBorder,
+  },
+  topicText: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.medium,
+    fontSize: FONTSIZE.medium,
+  },
+  topicTextSelected: {
+    color: COLOR.softWhite,
   },
   problemDescriptionWrapper: {
     marginTop: PADDING_MARGIN.sm,
     borderRadius: BORDER.normal,
-    backgroundColor: COLOR.softenGray,
+    backgroundColor: COLOR.bg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.md,
   },
+  problemDescriptionInput: {
+    minHeight: 120,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.paragraph,
+  },
+  charCounter: {
+    textAlign: "right",
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    marginTop: PADDING_MARGIN.sm,
+  },
   sendDeviceInfoText: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     paddingLeft: PADDING_MARGIN.xl,
   },
   sendDeviceInfoCheckbox: {
     position: "absolute",
-    backgroundColor: COLOR.softenGray,
+    width: 26,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     borderRadius: BORDER.small,
-    padding: PADDING_MARGIN.xs,
     alignSelf: "flex-start",
+  },
+  sendDeviceInfoCheckboxChecked: {
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.accentMutedBorder,
   },
   addImageOrVideo: {
     position: "relative",
@@ -487,7 +533,7 @@ const styles = StyleSheet.create({
     gap: PADDING_MARGIN.sm,
     alignSelf: "flex-start",
     padding: PADDING_MARGIN.md,
-    borderColor: COLOR.softWhite,
+    borderColor: GLASS.border,
     borderWidth: 1,
     borderRadius: BORDER.normal,
     borderStyle: "dashed",
@@ -496,7 +542,7 @@ const styles = StyleSheet.create({
   },
   imageOrVideoWrapper: {
     borderWidth: 0,
-    backgroundColor: COLOR.softenGray,
+    backgroundColor: COLOR.surfaceMuted,
   },
   imageOrVideo: {
     position: "absolute",
@@ -523,25 +569,9 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingVertical: PADDING_MARGIN.lg,
     paddingHorizontal: PADDING_MARGIN.md,
-    borderRadius: BORDER.rounded,
-    color: COLOR.darkBlue,
-    backgroundColor: COLOR.importantIcon,
+    borderRadius: BORDER.normal,
+    backgroundColor: COLOR.accentMuted,
     marginVertical: PADDING_MARGIN.xl,
-  },
-  loadingSpinner: {
-    position: "absolute",
-    zIndex: 2,
-    left: 0,
-    top: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#0008",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
+    ...SHADOW.fab,
   },
 });

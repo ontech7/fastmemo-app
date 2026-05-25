@@ -7,6 +7,7 @@ export type {
   NoteType,
   NoteBase,
   TextNote,
+  TodoMode,
   TodoNote,
   KanbanNote,
   CodeNote,
@@ -19,6 +20,9 @@ export type {
   CloudSettings,
   AIAssistantSettings,
   DeveloperModeSettings,
+  NoteCreationMode,
+  NoteCreationType,
+  NoteCreationSettings,
   SettingsState,
 } from "./settings";
 export type { NoteFilters, NotesState, CategoriesState, RootState } from "./store";

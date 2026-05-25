@@ -15,24 +15,28 @@ import {
 
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 export default function HelpScreen() {
   const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <BackButton />
+        <BackButton chip />
         <Text style={styles.headerTitle}>{t("help.title")}</Text>
-        <View style={{ padding: PADDING_MARGIN.md }}></View>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView style={{ paddingHorizontal: PADDING_MARGIN.lg }}>
         <Accordion title={t("help.how_to_create_note.title")}>
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_to_create_note.text_1_0")} <PlusIcon color={COLOR.softWhite} /> {t("help.how_to_create_note.text_1_1")}
+            {t("help.how_to_create_note.text_1_0")} <PlusIcon color={COLOR.textSecondary} />{" "}
+            {t("help.how_to_create_note.text_1_1")}
           </Text>
 
           <Text style={styles.sectionItemList_text}>{t("help.how_to_create_note.text_2_0")}</Text>
@@ -42,7 +46,7 @@ export default function HelpScreen() {
 
         <Accordion title={t("help.how_to_create_todo_note.title")}>
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_to_create_todo_note.text_1_0")} <ListBulletIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_to_create_todo_note.text_1_0")} <ListBulletIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_to_create_note.text_1_1")}
           </Text>
 
@@ -65,7 +69,7 @@ export default function HelpScreen() {
 
         <Accordion title={t("help.how_to_create_kanban_note.title")}>
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_to_create_kanban_note.text_1_0")} <PlusIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_to_create_kanban_note.text_1_0")} <PlusIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_to_create_kanban_note.text_1_1")}
           </Text>
 
@@ -94,7 +98,7 @@ export default function HelpScreen() {
 
         <Accordion title={t("help.how_to_delete_note.title")}>
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_to_delete_note.text_1_0")} <EllipsisVerticalIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_to_delete_note.text_1_0")} <EllipsisVerticalIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_to_delete_note.text_1_1")}
           </Text>
 
@@ -151,26 +155,26 @@ export default function HelpScreen() {
 
         <Accordion title={t("help.how_create_category.title")}>
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_create_category.text_1_0")} <RectangleGroupIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_create_category.text_1_0")} <RectangleGroupIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_create_category.text_1_1")}
           </Text>
 
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_create_category.text_2_0")} <FolderPlusIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_create_category.text_2_0")} <FolderPlusIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_create_category.text_2_1")}
           </Text>
 
           <Text style={styles.sectionItemList_text}>{t("help.how_create_category.text_3_0")}</Text>
 
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_create_category.text_4_0")} <CheckIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_create_category.text_4_0")} <CheckIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_create_category.text_4_1")}
           </Text>
         </Accordion>
 
         <Accordion title={t("help.how_edit_category.title")}>
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_create_category.text_1_0")} <RectangleGroupIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_create_category.text_1_0")} <RectangleGroupIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_create_category.text_1_1")}
           </Text>
 
@@ -179,24 +183,24 @@ export default function HelpScreen() {
 
         <Accordion title={t("help.how_organize_categories.title")}>
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_organize_categories.text_1_0")} <RectangleGroupIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_organize_categories.text_1_0")} <RectangleGroupIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_organize_categories.text_1_1")}
           </Text>
 
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_organize_categories.text_2_0")} <PencilSquareIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_organize_categories.text_2_0")} <PencilSquareIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_organize_categories.text_2_1")}
           </Text>
 
           <Text style={styles.sectionItemList_text}>{t("help.how_organize_categories.text_3_0")}</Text>
 
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_organize_categories.text_4_0")} <CheckIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_organize_categories.text_4_0")} <CheckIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_organize_categories.text_4_1")}
           </Text>
 
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_organize_categories.text_5_0")} <XMarkIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_organize_categories.text_5_0")} <XMarkIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_organize_categories.text_5_1")}
           </Text>
         </Accordion>
@@ -205,7 +209,7 @@ export default function HelpScreen() {
           <Text style={styles.sectionItemList_text}>{t("help.how_organize_categories.text_1_0")}</Text>
 
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_organize_categories.text_2_0")} <XMarkIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_organize_categories.text_2_0")} <XMarkIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_organize_categories.text_2_1")}
           </Text>
         </Accordion>
@@ -220,14 +224,14 @@ export default function HelpScreen() {
           <Text style={styles.sectionItemList_text}>{t("help.how_restore_trashed_notes.text_1_0")}</Text>
 
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_restore_trashed_notes.text_2_0")} <EllipsisVerticalIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_restore_trashed_notes.text_2_0")} <EllipsisVerticalIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_restore_trashed_notes.text_2_1")}
           </Text>
 
           <Text style={styles.sectionItemList_text}>{t("help.how_restore_trashed_notes.text_3_0")}</Text>
 
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_restore_trashed_notes.text_4_0")} <EllipsisVerticalIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_restore_trashed_notes.text_4_0")} <EllipsisVerticalIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_restore_trashed_notes.text_4_1")}
           </Text>
 
@@ -238,14 +242,14 @@ export default function HelpScreen() {
           <Text style={styles.sectionItemList_text}>{t("help.how_restore_delete_notes.text_1_0")}</Text>
 
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_restore_delete_notes.text_2_0")} <EllipsisVerticalIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_restore_delete_notes.text_2_0")} <EllipsisVerticalIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_restore_delete_notes.text_2_1")}
           </Text>
 
           <Text style={styles.sectionItemList_text}>{t("help.how_restore_delete_notes.text_3_0")}</Text>
 
           <Text style={styles.sectionItemList_text}>
-            {t("help.how_restore_delete_notes.text_4_0")} <EllipsisVerticalIcon color={COLOR.softWhite} />{" "}
+            {t("help.how_restore_delete_notes.text_4_0")} <EllipsisVerticalIcon color={COLOR.textSecondary} />{" "}
             {t("help.how_restore_delete_notes.text_4_1")}
           </Text>
 
@@ -319,7 +323,7 @@ const Accordion = ({ title, children }: AccordionProps) => {
               },
             ],
           }}
-          color={COLOR.lightBlue}
+          color={COLOR.textSecondary}
         />
       </TouchableOpacity>
 
@@ -342,9 +346,9 @@ const Accordion = ({ title, children }: AccordionProps) => {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
@@ -357,13 +361,20 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: {
+    width: 42,
   },
   sectionWrapper: {
     marginBottom: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
+    overflow: "hidden",
   },
   sectionHeader: {
     flexDirection: "row",
@@ -371,13 +382,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: PADDING_MARGIN.lg,
     paddingVertical: PADDING_MARGIN.md,
-    borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
   },
   sectionHeaderTitle: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   sectionList: {
     height: 0,
@@ -394,7 +403,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
+    borderColor: GLASS.border,
   },
   sectionItemList_last: {
     borderBottomWidth: 0,
@@ -405,11 +414,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   sectionItemList_title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
   sectionItemList_text: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.medium,
     marginBottom: PADDING_MARGIN.sm,
   },

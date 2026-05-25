@@ -5,9 +5,10 @@ import { Dimensions, Image, type ImageSourcePropType, StyleSheet, Text, Touchabl
 import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon } from "react-native-heroicons/outline";
 
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
 import { useRouter } from "@/hooks/useRouter";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 const { width: WINDOW_WIDTH } = Dimensions.get("window");
 
@@ -54,6 +55,14 @@ export default function IntroScreen() {
         image: require("../assets/intro/step6.png"),
         description: t("intro.step6"),
       },
+      {
+        image: require("../assets/intro/step7.png"),
+        description: t("intro.step7"),
+      },
+      {
+        image: require("../assets/intro/step8.png"),
+        description: t("intro.step8"),
+      },
     ],
     [t]
   );
@@ -86,6 +95,8 @@ export default function IntroScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <Text style={styles.introTitle}>{t("intro.title")}</Text>
 
       <View style={styles.carouselWrapper}>
@@ -96,7 +107,7 @@ export default function IntroScreen() {
               onPress={scrollPrev}
               disabled={!canScrollPrev}
             >
-              <ChevronLeftIcon size={28} color={canScrollPrev ? COLOR.softWhite : COLOR.boldBlue} />
+              <ChevronLeftIcon size={28} color={canScrollPrev ? COLOR.textPrimary : COLOR.textMuted} />
             </TouchableOpacity>
           )}
 
@@ -134,7 +145,7 @@ export default function IntroScreen() {
               onPress={scrollNext}
               disabled={!canScrollNext}
             >
-              <ChevronRightIcon size={28} color={canScrollNext ? COLOR.softWhite : COLOR.boldBlue} />
+              <ChevronRightIcon size={28} color={canScrollNext ? COLOR.textPrimary : COLOR.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -156,7 +167,7 @@ export default function IntroScreen() {
         activeOpacity={0.7}
       >
         <Text style={styles.continueButton_text}>{t("intro.continue")}</Text>
-        <ArrowRightIcon size={22} color={COLOR.softWhite} />
+        <ArrowRightIcon size={20} color={COLOR.softWhite} />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -180,16 +191,17 @@ function CarouselItem({ item, width, height, isDesktop }: CarouselItemProps) {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     justifyContent: "space-between",
-    backgroundColor: COLOR.darkBlue,
     paddingHorizontal: PADDING_MARGIN.md,
   },
   introTitle: {
     width: "100%",
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
+    letterSpacing: -0.3,
     marginTop: PADDING_MARGIN.md,
     textAlign: "center",
   },
@@ -211,7 +223,8 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.lg,
   },
   carouselDescription: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
     textAlign: "center",
     paddingHorizontal: PADDING_MARGIN.md,
@@ -231,7 +244,9 @@ const styles = StyleSheet.create({
   navButton: {
     padding: PADDING_MARGIN.md,
     borderRadius: BORDER.rounded,
-    backgroundColor: COLOR.blue,
+    backgroundColor: COLOR.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     marginHorizontal: PADDING_MARGIN.md,
   },
   navButtonLeft: {
@@ -251,25 +266,31 @@ const styles = StyleSheet.create({
     gap: PADDING_MARGIN.sm,
   },
   carouselDot: {
-    backgroundColor: COLOR.softWhite,
+    backgroundColor: COLOR.accentSoft,
     width: 12,
     height: 12,
     borderRadius: BORDER.rounded,
   },
   inactiveCarouselDot: {
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surfaceMuted,
     transform: [{ scale: 0.8 }],
   },
   continueButton: {
-    paddingBottom: PADDING_MARGIN.xl,
-    paddingHorizontal: PADDING_MARGIN.lg + PADDING_MARGIN.sm,
+    alignSelf: "flex-end",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
+    gap: PADDING_MARGIN.sm,
+    backgroundColor: COLOR.accentMuted,
+    paddingVertical: PADDING_MARGIN.md,
+    paddingHorizontal: PADDING_MARGIN.lg,
+    borderRadius: BORDER.rounded,
+    marginBottom: PADDING_MARGIN.xl,
+    marginRight: PADDING_MARGIN.md,
+    ...SHADOW.fab,
   },
   continueButton_text: {
     color: COLOR.softWhite,
+    fontFamily: FONT.medium,
     fontSize: FONTSIZE.paragraph,
-    marginRight: PADDING_MARGIN.sm,
   },
 });

@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import DraggableFlatList from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { EyeIcon, EyeSlashIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
+import { PlusIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import uuid from "react-uuid";
 
@@ -21,13 +21,15 @@ import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import SafeAreaView from "@/components/SafeAreaView";
+import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
+import AppBackground from "@/components/ui/AppBackground";
 import TodoItem from "@/components/todo/TodoItem.native";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
 import { capitalize, isStringEmpty } from "@/utils/string";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
 import type { TodoItem as TodoItemType, TodoNote } from "@/types";
 
@@ -54,7 +56,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     }),
     [initialNote]
   );
-  const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list }), []);
+  const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
 
   const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
@@ -85,20 +87,60 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     [note, setNoteAsync]
   );
 
+  const stepMode = note.mode === "steps";
+
+  const firstUncheckedIndex = useMemo(() => note.list.findIndex((todoItem) => !todoItem.checked), [note.list]);
+
   const checkListItem = useCallback(
     (id: string) => {
       if (note.readOnly) {
         return;
       }
 
+      const index = note.list.findIndex((todoItem: TodoItemType) => todoItem.id === id);
+      if (index === -1) return;
+
+      if (stepMode) {
+        // Stepper toggle: clicking an unchecked step completes it and every
+        // previous one; clicking an already-done step rolls back — it and every
+        // step after become "not done" (so it turns ongoing). Re-tapping the
+        // first step therefore returns to "nothing done / first ongoing".
+        const wasChecked = note.list[index].checked;
+        const mutableList = note.list.map((todoItem, i) => ({
+          ...todoItem,
+          checked: wasChecked ? i < index : i <= index,
+        }));
+        setNoteAsync({ ...note, list: mutableList });
+        return;
+      }
+
       const mutableList = Object.assign([], note.list);
-      const index = mutableList.findIndex((todoItem: TodoItemType) => todoItem.id === id);
       mutableList[index] = {
         ...mutableList[index],
         checked: !mutableList[index].checked,
       };
 
       setNoteAsync({ ...note, list: mutableList });
+    },
+    [note, setNoteAsync, stepMode]
+  );
+
+  const [autoFocus, setAutoFocus] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => setAutoFocus(true), 20);
+  }, []);
+
+  const currentMode = stepMode ? "steps" : "free";
+
+  const setMode = useCallback(
+    (mode: TodoNote["mode"]) => {
+      if (note.readOnly) {
+        return;
+      }
+      // Switching mode remounts the rows; don't let their inputs grab focus.
+      setAutoFocus(false);
+      setNoteAsync({ ...note, mode });
     },
     [note, setNoteAsync]
   );
@@ -139,45 +181,51 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     });
   }, [note, setNoteAsync]);
 
-  const deleteAllList = useCallback(() => {
-    if (note.readOnly) {
-      return;
-    }
-
-    setNoteAsync({ ...note, list: [] });
-  }, [note, setNoteAsync]);
-
-  const [hideDoneItems, setHideDoneItems] = useState(false);
-
-  const toggleHideDoneItems = useCallback(() => {
-    setHideDoneItems((prev) => !prev);
-  }, []);
-
-  const [autoFocus, setAutoFocus] = useState(false);
+  // Enable row layout/entering/exiting animations only after the navigation
+  // transition into this screen has finished, otherwise Reanimated crashes with
+  // "Unable to find viewState for tag" when the list mounts mid-transition.
+  const [animationsReady, setAnimationsReady] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => setAutoFocus(true), 20);
+    const id = setTimeout(() => setAnimationsReady(true), 400);
+    return () => clearTimeout(id);
   }, []);
 
-  const renderTodoItem = ({ item, drag, isActive }: { item: TodoItemType; drag: () => void; isActive: boolean }) => (
-    <TodoItem
-      item={item}
-      setText={setTextListItem}
-      checkItem={checkListItem}
-      deleteItem={deleteListItem}
-      drag={drag}
-      disabled={isActive || note.readOnly}
-      hidden={hideDoneItems}
-      autoFocus={autoFocus}
-    />
-  );
+  const renderTodoItem = ({ item, drag, isActive }: { item: TodoItemType; drag: () => void; isActive: boolean }) => {
+    const index = note.list.findIndex((todoItem) => todoItem.id === item.id);
+    const stepStatus: "done" | "ongoing" | "future" = item.checked
+      ? "done"
+      : index === firstUncheckedIndex
+        ? "ongoing"
+        : "future";
+
+    return (
+      <TodoItem
+        item={item}
+        setText={setTextListItem}
+        checkItem={checkListItem}
+        deleteItem={deleteListItem}
+        drag={drag}
+        disabled={isActive || note.readOnly}
+        autoFocus={autoFocus}
+        stepMode={stepMode}
+        stepStatus={stepStatus}
+        stepNumber={stepMode ? index + 1 : undefined}
+        isFirst={index === 0}
+        isLast={index === note.list.length - 1}
+        animationsReady={animationsReady}
+      />
+    );
+  };
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
+        <AppBackground style={StyleSheet.absoluteFill} />
+
         <View>
           <View style={styles.header}>
-            <BackButton callback={updateNoteWebhook} />
+            <BackButton chip callback={updateNoteWebhook} />
 
             <TextInput
               style={styles.titleInput}
@@ -186,7 +234,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
               editable={!note.readOnly}
               cursorColor={COLOR.softWhite}
               placeholder={t("note.title_placeholder")}
-              placeholderTextColor={COLOR.placeholder}
+              placeholderTextColor={COLOR.textMuted}
               maxLength={96}
             />
 
@@ -230,23 +278,13 @@ export default function NoteTodoEditor({ initialNote }: Props) {
               </GestureHandlerRootView>
 
               <TouchableOpacity activeOpacity={0.7} style={styles.addListItemButton} onPress={addListItem}>
-                <PlusIcon size={28} color={COLOR.darkBlue} />
-              </TouchableOpacity>
-
-              <TouchableOpacity activeOpacity={0.7} style={styles.hideDoneItemsButton} onPress={toggleHideDoneItems}>
-                {!hideDoneItems ? (
-                  <EyeSlashIcon size={24} color={COLOR.darkBlue} />
-                ) : (
-                  <EyeIcon size={24} color={COLOR.darkBlue} />
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity activeOpacity={0.7} style={styles.deleteAllListButton} onPress={deleteAllList}>
-                <TrashIcon size={24} color={COLOR.darkBlue} />
+                <PlusIcon size={28} color={COLOR.softWhite} />
               </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
         </View>
+
+        <TodoModeMenuButton currentMode={currentMode} onSelectMode={setMode} disabled={note.readOnly} />
 
         {!note.readOnly && (
           <VoiceRecognitionButton
@@ -321,7 +359,6 @@ const styles = StyleSheet.create({
   container: {
     height: SIZE.full,
     paddingVertical: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     position: "relative",
@@ -334,11 +371,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.lg,
-    marginHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.blue,
+    marginHorizontal: PADDING_MARGIN.sm,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     fontSize: FONTSIZE.inputTitle,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
     borderRadius: BORDER.normal,
   },
   subtitleWrapper: {
@@ -351,33 +390,13 @@ const styles = StyleSheet.create({
     marginTop: PADDING_MARGIN.xs,
     textAlign: "center",
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.lightBlue,
+    fontFamily: FONT.medium,
+    color: COLOR.textSecondary,
   },
   draggableList: {
     height: SIZE.full,
     paddingBottom: 200,
     marginTop: PADDING_MARGIN.xl,
-  },
-  listItemInput: {
-    flex: 1,
-    paddingVertical: PADDING_MARGIN.sm - 4,
-    paddingHorizontal: PADDING_MARGIN.lg - 4,
-    backgroundColor: COLOR.blue,
-    fontSize: FONTSIZE.inputTitle,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
-    borderRadius: BORDER.normal,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
-  },
-  checkbox: {
-    backgroundColor: COLOR.blue,
-    borderRadius: BORDER.normal,
-    height: 48,
-    width: 48,
-    borderWidth: 2,
-    borderColor: COLOR.boldBlue,
   },
   addListItemButton: {
     zIndex: 2,
@@ -386,43 +405,11 @@ const styles = StyleSheet.create({
     right: 40,
     padding: PADDING_MARGIN.md,
     borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
-  },
-  hideDoneItemsButton: {
-    zIndex: 2,
-    position: "absolute",
-    bottom: 26,
-    right: 115,
-    padding: PADDING_MARGIN.sm,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
-  },
-  deleteAllListButton: {
-    zIndex: 2,
-    position: "absolute",
-    bottom: 26,
-    left: 40,
-    padding: PADDING_MARGIN.sm,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
   noItems: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
     fontSize: FONTSIZE.cardTitle,
     textAlign: "center",
     marginTop: PADDING_MARGIN.xl,

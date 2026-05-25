@@ -17,7 +17,7 @@ import { useSelector } from "react-redux";
 import { selectorVoiceRecognition } from "@/slicers/settingsSlice";
 import { toast } from "@/utils/toast";
 
-import { BORDER, COLOR } from "@/constants/styles";
+import { BORDER, COLOR, SHADOW } from "@/constants/styles";
 
 import type { ViewStyle } from "react-native";
 
@@ -152,7 +152,7 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }: Pr
         style={[styles.button, recognizing && styles.buttonActive]}
         onPress={recognizing ? handleStop : handleStart}
       >
-        {recognizing ? <View style={styles.stopIcon} /> : <MicrophoneIcon size={24} color={COLOR.darkBlue} />}
+        {recognizing ? <View style={styles.stopIcon} /> : <MicrophoneIcon size={24} color={COLOR.softWhite} />}
       </TouchableOpacity>
     </View>
   );
@@ -182,14 +182,10 @@ const styles = StyleSheet.create({
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
     borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
+    backgroundColor: COLOR.accentMuted,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    ...SHADOW.fab,
   },
   buttonActive: {
     backgroundColor: COLOR.important,

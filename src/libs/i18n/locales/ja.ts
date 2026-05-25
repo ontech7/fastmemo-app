@@ -15,6 +15,13 @@ const ja = {
     title: "新着情報",
 
     web: {
+      description_1_0_0: `• Fast Memo Desktop の初の安定版をリリース（BETA を卒業）。
+• 全画面を刷新した新しいモダンデザイン。新フォント Geist、グラス調の表面、グラデーションを採用。
+• 紹介ステップを刷新したオンボーディング。
+• 新規ノートの初期設定をカスタマイズできるノート作成設定を追加。
+• To-Do ノートにステップモードを追加。
+• 各種修正。`,
+
       description_0_3_0: `• 新しいノートタイプ「コード」を追加。エディタ内蔵、シンタックスハイライト、複数タブ、言語自動検出に対応。
 • テキストノートに検索と置換機能を追加。
 • ノートのエクスポート機能を追加。
@@ -31,6 +38,13 @@ const ja = {
     },
 
     mobile: {
+      description_3_0_0: `• 全画面を刷新した新しいモダンデザイン。新フォント Geist、グラス調の表面、グラデーションを採用。
+• 紹介ステップを刷新したオンボーディング。
+• 新規ノートの初期設定をカスタマイズできるノート作成設定を追加。
+• To-Do ノートにステップモードを追加。
+• アプリアイコンとスプラッシュ画面を刷新。
+• 各種修正。`,
+
       description_2_9_0: `• 新しいノートタイプ「コード」を追加。エディタ内蔵、シンタックスハイライト、複数タブ、言語自動検出に対応。
 • Qwen 2.5 7BモデルとデバイスRAM検出を追加。コード向け新AIアクション：コードの説明とコメント追加。
 • テキストノートに検索と置換機能を追加。
@@ -105,9 +119,11 @@ const ja = {
     step1: "1クリックでメモを追加します。",
     step2: "下部ツールバーを使用してテキストを充実させます。",
     step3: "タスクを管理するためのToDoリストを作成します。",
-    step4: "必要に応じて独自のカテゴリを作成します。",
-    step5: "メモを非表示にするための秘密コードを挿入します。",
-    step6: "Google Firebaseでメモを同期します。",
+    step4: "カンバンボードでアイデアを視覚化します。",
+    step5: "スニペットをメモします。",
+    step6: "必要に応じて独自のカテゴリを作成します。",
+    step7: "メモを非表示にするための秘密コードを挿入します。",
+    step8: "Google Firebaseでメモを同期します。",
     title: "Fast Memoとは？",
     continue: "続行",
   },
@@ -135,6 +151,7 @@ const ja = {
     notes: "メモ",
     search: "何かを検索...",
     deepSearch: "詳細検索（テキスト、リストなど）",
+    selected_count: "{{count}}件選択",
 
     filters: {
       deepSearch: "詳細検索",
@@ -150,6 +167,9 @@ const ja = {
     characters: "文字",
     completed: "完了",
     on: "オン",
+    mode_free: "リスト",
+    mode_steps: "ステップ",
+    ongoing: "進行中",
     created: "作成: ",
     updated: "更新: ",
     type: {
@@ -195,6 +215,7 @@ const ja = {
     code_placeholder: "ここにコードを入力...",
     max_tabs_reached: "タブは最大6つまでです",
     delete_tab: "タブを削除",
+    delete_tab_confirm: "このタブを削除してもよろしいですか？この操作は取り消せません。",
     language: "言語",
   },
   changecategory: {
@@ -274,6 +295,7 @@ const ja = {
     webhooks: "Webhooks",
     voice_recognition: "音声認識",
     ai_assistant: "AIアシスタント",
+    note_creation: "ノート作成",
     wipe_data: "データを削除",
     developer_options: "開発者オプション",
     about: "について",
@@ -296,6 +318,19 @@ const ja = {
     app: "アプリ",
     version: "バージョン",
     libraries: "ライブラリ",
+  },
+  note_creation: {
+    title: "ノート作成",
+    mode_section: "モード",
+    default_type_section: "既定のノート種類",
+    mode: {
+      simple: "シンプル",
+      simple_description: "タップでテキストノートを作成。他の種類はメニューから。",
+      smart: "スマート",
+      smart_description: "タップで常に下で選んだ種類を作成。",
+      adaptive: "アダプティブ",
+      adaptive_description: "タップで前回と同じ種類のノートを作成。",
+    },
   },
   aboutdeveloper: {
     title: "私について",

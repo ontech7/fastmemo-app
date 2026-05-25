@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
   ArrowUpTrayIcon,
   BookOpenIcon,
@@ -12,22 +11,22 @@ import {
   TagIcon,
   TrashIcon,
 } from "react-native-heroicons/outline";
-import { Menu, MenuOption, MenuOptions, MenuTrigger } from "react-native-popup-menu";
 import { useDispatch, useSelector } from "react-redux";
 
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
+import IconChip from "@/components/ui/IconChip";
+import PopupMenu, { PopupMenuOption } from "@/components/ui/PopupMenu";
 import { useRouter } from "@/hooks/useRouter";
 import { stripHtml } from "@/libs/ai";
 import { exportAsPdf, exportAsTextFile, htmlToMarkdown } from "@/utils/export";
 import { toast } from "@/utils/toast";
 import { webhook } from "@/utils/webhook";
 
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR } from "@/constants/styles";
 
 import { useSecret } from "@/hooks/useSecret";
 import { temporaryDeleteNote } from "@/slicers/notesSlice";
 import { selectorWebhook_temporaryDeleteNote } from "@/slicers/settingsSlice";
-import ContextMenu from "@/components/renderers/ContextMenu";
 
 import type { Note, TextNote } from "@/types";
 
@@ -131,81 +130,71 @@ export default function NoteSettingsButton({ note, setNote }: Props) {
   };
 
   return (
-    <Menu renderer={ContextMenu}>
-      <MenuTrigger customStyles={{ TriggerTouchableComponent: TouchableOpacity }}>
-        <EllipsisVerticalIcon size={28} color={COLOR.softWhite} />
-      </MenuTrigger>
+    <>
+      <PopupMenu
+        trigger={
+          <IconChip>
+            <EllipsisVerticalIcon size={20} color={COLOR.softWhite} />
+          </IconChip>
+        }
+      >
+        <PopupMenuOption
+          label={t("note.settings.delete")}
+          disabled={!id}
+          trailing={<TrashIcon size={16} color={COLOR.textSecondary} />}
+          onSelect={deleteNoteFromItems}
+        />
 
-      <MenuOptions customStyles={menuOptionsCustomStyles}>
-        <MenuOption style={[styles.menuOption, !id && styles.menuOptionDisabled]} disabled={!id} onSelect={deleteNoteFromItems}>
-          <Text style={styles.menuOptionText}>{t("note.settings.delete")}</Text>
+        <PopupMenuOption
+          label={t("note.settings.important")}
+          selected={important}
+          leading={important ? <CheckIcon size={16} color={COLOR.accentSoft} /> : undefined}
+          trailing={<StarIcon size={16} color={COLOR.textSecondary} />}
+          onSelect={toggleImportantNoteFromItems}
+        />
 
-          <TrashIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-        </MenuOption>
+        <PopupMenuOption
+          label={t("note.settings.protect")}
+          selected={locked}
+          leading={locked ? <CheckIcon size={16} color={COLOR.accentSoft} /> : undefined}
+          trailing={<KeyIcon size={16} color={COLOR.textSecondary} />}
+          onSelect={toggleProtectedNoteFromItems}
+        />
 
-        <MenuOption style={styles.menuOption} onSelect={toggleImportantNoteFromItems}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            {important && <CheckIcon size={16} color={COLOR.softWhite} style={{ marginRight: 5 }} />}
+        <PopupMenuOption
+          label={t("note.settings.readonly")}
+          selected={readOnly}
+          leading={readOnly ? <CheckIcon size={16} color={COLOR.accentSoft} /> : undefined}
+          trailing={<BookOpenIcon size={16} color={COLOR.textSecondary} />}
+          onSelect={toggleReadOnlyNoteFromItems}
+        />
 
-            <Text style={[styles.menuOptionText, important && styles.menuOptionTextSelected]}>
-              {t("note.settings.important")}
-            </Text>
-          </View>
-
-          <StarIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-        </MenuOption>
-
-        <MenuOption style={styles.menuOption} onSelect={toggleProtectedNoteFromItems}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            {locked && <CheckIcon size={16} color={COLOR.softWhite} style={{ marginRight: 5 }} />}
-
-            <Text style={[styles.menuOptionText, locked && styles.menuOptionTextSelected]}>{t("note.settings.protect")}</Text>
-          </View>
-
-          <KeyIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-        </MenuOption>
-
-        <MenuOption style={styles.menuOption} onSelect={toggleReadOnlyNoteFromItems}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            {readOnly && <CheckIcon size={16} color={COLOR.softWhite} style={{ marginRight: 5 }} />}
-
-            <Text style={[styles.menuOptionText, readOnly && styles.menuOptionTextSelected]}>
-              {t("note.settings.readonly")}
-            </Text>
-          </View>
-
-          <BookOpenIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-        </MenuOption>
-
-        <MenuOption style={styles.menuOption} onSelect={toggleHiddenNoteFromItems}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            {hidden && <CheckIcon size={16} color={COLOR.softWhite} style={{ marginRight: 5 }} />}
-
-            <Text style={[styles.menuOptionText, hidden && styles.menuOptionTextSelected]}>{t("note.settings.hide")}</Text>
-          </View>
-
-          <EyeSlashIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-        </MenuOption>
+        <PopupMenuOption
+          label={t("note.settings.hide")}
+          selected={hidden}
+          leading={hidden ? <CheckIcon size={16} color={COLOR.accentSoft} /> : undefined}
+          trailing={<EyeSlashIcon size={16} color={COLOR.textSecondary} />}
+          onSelect={toggleHiddenNoteFromItems}
+        />
 
         {note.createdAt !== note.updatedAt && (
-          <MenuOption style={[styles.menuOption, !id && styles.menuOptionDisabled]} disabled={!id} onSelect={changeCategory}>
-            <Text style={styles.menuOptionText}>{t("note.settings.changecategory")}</Text>
-
-            <TagIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-          </MenuOption>
+          <PopupMenuOption
+            label={t("note.settings.changecategory")}
+            disabled={!id}
+            trailing={<TagIcon size={16} color={COLOR.textSecondary} />}
+            onSelect={changeCategory}
+          />
         )}
 
         {type === "text" && note.createdAt !== note.updatedAt && (
-          <MenuOption
-            style={[styles.menuOption, !id && styles.menuOptionDisabled]}
+          <PopupMenuOption
+            label={t("note.settings.export")}
             disabled={!id}
+            trailing={<ArrowUpTrayIcon size={16} color={COLOR.textSecondary} />}
             onSelect={() => setShowExportDialog(true)}
-          >
-            <Text style={styles.menuOptionText}>{t("note.settings.export")}</Text>
-            <ArrowUpTrayIcon style={styles.menuOptionIcon} size={16} color={COLOR.softWhite} />
-          </MenuOption>
+          />
         )}
-      </MenuOptions>
+      </PopupMenu>
 
       <ComplexDialog
         open={showExportDialog}
@@ -216,48 +205,6 @@ export default function NoteSettingsButton({ note, setNote }: Props) {
         cancel={{ label: t("note.settings.export_txt"), handler: handleExportTxt }}
         actionsColumn
       />
-    </Menu>
+    </>
   );
 }
-
-/* STYLES */
-
-const menuOptionsCustomStyles = {
-  optionsContainer: {
-    marginTop: 35,
-    marginRight: 5,
-    backgroundColor: COLOR.blue,
-    padding: PADDING_MARGIN.sm,
-    borderRadius: BORDER.normal,
-  },
-  optionsWrapper: {
-    backgroundColor: COLOR.blue,
-  },
-};
-
-const styles = StyleSheet.create({
-  menuViewWrapper: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  menuOption: {
-    padding: PADDING_MARGIN.sm,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  menuOptionDisabled: {
-    opacity: 0.5,
-  },
-  menuOptionIcon: {
-    marginLeft: PADDING_MARGIN.lg,
-  },
-  menuOptionText: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.medium,
-  },
-  menuOptionTextSelected: {
-    fontWeight: FONTWEIGHT.semiBold,
-  },
-});

@@ -1,3 +1,4 @@
+import lottieJson from "@/assets/lottie/Logo_with_Text.json";
 import LottieView from "@/components/lottie/LottieAnimation";
 import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
@@ -9,9 +10,7 @@ import * as Localization from "expo-localization";
 import * as SplashScreen from "expo-splash-screen";
 import i18n from "i18next";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet } from "react-native";
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import lottieJson from "@/assets/lottie/Logo_with_Text.json";
+import { Image, StyleSheet, View } from "react-native";
 
 export default function LoadingScreen() {
   const router = useRouter();
@@ -19,17 +18,7 @@ export default function LoadingScreen() {
 
   const [showLottie, setShowLottie] = useState<boolean | null>(null);
 
-  const progress = useSharedValue(1);
-
-  const splashAnimStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-  }));
-
-  const handleLottieFinish = () => {
-    progress.value = withTiming(0, { duration: 120, easing: Easing.linear }, (finished?: boolean) => {
-      if (finished) runOnJS(router.replace)("/intro");
-    });
-  };
+  const handleLottieFinish = () => router.replace("/intro");
 
   useEffect(() => {
     const runInitialActions = async () => {
@@ -72,9 +61,13 @@ export default function LoadingScreen() {
     }
   }, [showLottie]);
 
+  // Solid app-color splash + logo (matching the native splash) shown while init
+  // runs. On first launch we play the animated logo, otherwise we
+  // keep the static logo until we hand straight over to /home (no fade — the
+  // destination would otherwise reveal the gradient backdrop mid-transition).
   return (
-    <Animated.View style={[styles.splashContainer, splashAnimStyle]}>
-      {showLottie && (
+    <View style={styles.splashContainer}>
+      {showLottie ? (
         <LottieView
           ref={logoAnimRef}
           style={styles.lottieLogo}
@@ -85,8 +78,10 @@ export default function LoadingScreen() {
           onAnimationFinish={handleLottieFinish}
           speed={1.32}
         />
+      ) : (
+        <Image source={require("@/assets/images/splash-logo.png")} style={styles.staticLogo} resizeMode="contain" />
       )}
-    </Animated.View>
+    </View>
   );
 }
 
@@ -100,12 +95,16 @@ const styles = StyleSheet.create({
     top: 0,
     height: "100%",
     width: "100%",
-    backgroundColor: COLOR.darkBlue,
+    backgroundColor: COLOR.bg,
     alignItems: "center",
     justifyContent: "center",
   },
   lottieLogo: {
     width: 145,
     height: 145,
+  },
+  staticLogo: {
+    width: 150,
+    height: 150,
   },
 });

@@ -1,8 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { Keyboard, StyleSheet, TextInput, TouchableWithoutFeedback, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, TextInput } from "react-native";
 import { DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, XMarkIcon } from "react-native-heroicons/outline";
 
-import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, PADDING_MARGIN } from "@/constants/styles";
+import GlassSurface from "@/components/ui/GlassSurface";
 
 interface Props {
   text: string;
@@ -14,7 +15,7 @@ export default function SearchNotesInput({ text, onChangeText, showDeepSearch = 
   const { t } = useTranslation();
 
   return (
-    <View style={styles.container}>
+    <GlassSurface radius={BORDER.big} style={styles.container}>
       <TextInput
         value={text}
         onChangeText={onChangeText}
@@ -22,6 +23,8 @@ export default function SearchNotesInput({ text, onChangeText, showDeepSearch = 
         placeholder={!showDeepSearch ? t("home.search") : t("home.deepSearch")}
         placeholderTextColor={COLOR.placeholder}
         style={styles.searchInput}
+        returnKeyType="search"
+        onSubmitEditing={() => Keyboard.dismiss()}
       />
 
       {!text ? (
@@ -31,17 +34,18 @@ export default function SearchNotesInput({ text, onChangeText, showDeepSearch = 
           <DocumentMagnifyingGlassIcon style={styles.icon} size={18} color={COLOR.softWhite} />
         )
       ) : (
-        <TouchableWithoutFeedback
+        <Pressable
           style={styles.icon}
+          hitSlop={8}
           onPress={() => {
             onChangeText("");
             Keyboard.dismiss();
           }}
         >
           <XMarkIcon size={18} color={COLOR.softWhite} />
-        </TouchableWithoutFeedback>
+        </Pressable>
       )}
-    </View>
+    </GlassSurface>
   );
 }
 
@@ -53,13 +57,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.sm,
     paddingVertical: PADDING_MARGIN.xs,
     marginBottom: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.blue,
-    borderRadius: BORDER.normal,
     alignItems: "center",
   },
   searchInput: {
     flex: 1,
     color: COLOR.gray,
+    fontFamily: FONT.regular,
     paddingHorizontal: PADDING_MARGIN.sm,
     paddingVertical: PADDING_MARGIN.sm,
   },

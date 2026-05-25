@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
 
+import { COLOR } from "@/constants/styles";
+
 import ComplexDialog from "./ComplexDialog";
 
 interface Props {
@@ -27,7 +29,7 @@ export default function ConfirmOrCancelDialog({
   return (
     <ComplexDialog
       open={open}
-      adornmentStart={<ExclamationTriangleIcon size={22} style={{ marginBottom: -3 }} />}
+      adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}
       title={title || t("warning")}
       description={description}
       cancel={

@@ -14,6 +14,8 @@ import { useSelector } from "react-redux";
 import SectionItemList_Text from "@/components/settings/components/item/SectionItemList_Text";
 import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
+import { COLOR } from "@/constants/styles";
+
 interface Props {
   isLast: boolean;
 }
@@ -37,7 +39,7 @@ export default function SectionItem_WipeData({ isLast }: Props) {
       <ComplexDialog
         open={showWipeDataDialog}
         actionsColumn={isCloudConnected && netInfo?.isConnected}
-        adornmentStart={<ExclamationTriangleIcon size={22} style={{ marginBottom: -3 }} />}
+        adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}
         title={t("warning")}
         description={t("popup.are_you_sure_wipe")}
         confirm={{

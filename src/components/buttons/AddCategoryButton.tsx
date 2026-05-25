@@ -3,14 +3,14 @@ import { FolderPlusIcon } from "react-native-heroicons/outline";
 
 import { useRouter } from "@/hooks/useRouter";
 
-import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 export default function AddCategoryButton() {
   const router = useRouter();
 
   return (
     <TouchableOpacity activeOpacity={0.7} style={styles.addBtn} onPress={() => router.push("/categories/create")}>
-      <FolderPlusIcon size={28} color={COLOR.darkBlue} />
+      <FolderPlusIcon size={28} color={COLOR.softWhite} />
     </TouchableOpacity>
   );
 }
@@ -23,12 +23,8 @@ const styles = StyleSheet.create({
     bottom: 60,
     right: 40,
     padding: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    borderRadius: BORDER.big,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
 });

@@ -4,7 +4,7 @@ import { ChevronRightIcon } from "react-native-heroicons/outline";
 
 import { useRouter } from "@/hooks/useRouter";
 
-import { COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 import type { Href } from "expo-router";
 
@@ -26,7 +26,7 @@ export default function SectionItemList_Navigation({ title, extra = null, route 
         {extra}
       </View>
 
-      <ChevronRightIcon color={COLOR.lightBlue} />
+      <ChevronRightIcon color={COLOR.textMuted} />
     </TouchableOpacity>
   );
 }
@@ -40,11 +40,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   sectionItemList_title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
   sectionItemList_text: {
-    color: COLOR.lightBlue,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
     paddingHorizontal: PADDING_MARGIN.sm,
     fontSize: FONTSIZE.medium,
   },

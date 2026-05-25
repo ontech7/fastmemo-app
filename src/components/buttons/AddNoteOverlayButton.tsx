@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
-import { PlusIcon } from "react-native-heroicons/outline";
+import { ChevronUpIcon, PlusIcon } from "react-native-heroicons/outline";
 import Animated, {
   Easing,
   Extrapolation,
@@ -9,14 +9,19 @@ import Animated, {
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { useDispatch, useSelector } from "react-redux";
 
 import { useRouter } from "@/hooks/useRouter";
+import { selectorNoteCreation, setNoteCreation } from "@/slicers/settingsSlice";
 import type { Href } from "expo-router";
 
 import { NOTE_TYPES } from "@/constants/note-types";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import type { NoteCreationType } from "@/types";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -64,7 +69,7 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
       <TouchableOpacity style={styles.noteTypeButton} activeOpacity={0.7} onPress={onPress}>
         <Text style={styles.noteTypeLabel}>{label}</Text>
         <View style={styles.noteTypeIconContainer}>
-          <Icon size={28} color={COLOR.darkBlue} />
+          <Icon size={28} color={COLOR.softWhite} />
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -74,18 +79,50 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
 export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
+  const dispatch = useDispatch();
+  const noteCreation = useSelector(selectorNoteCreation);
 
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
 
-  const iconRotation = useSharedValue(0);
+  const chevronRotation = useSharedValue(0);
+  const closeRotation = useSharedValue(0);
   const menuProgress = useSharedValue(0);
+  const secondaryVisible = useSharedValue(1);
+  const hintPop = useSharedValue(1);
+
+  const directNoteType = useMemo<(typeof NOTE_TYPES)[number]>(() => {
+    const targetKey: NoteCreationType =
+      noteCreation.mode === "simple"
+        ? "text"
+        : noteCreation.mode === "smart"
+          ? noteCreation.smartType
+          : noteCreation.lastUsedType;
+    return NOTE_TYPES.find((nt) => nt.key === targetKey) ?? NOTE_TYPES[NOTE_TYPES.length - 1];
+  }, [noteCreation]);
+
+  const trackLastUsed = (key: string) => {
+    if (key === "text" || key === "todo" || key === "code" || key === "kanban") {
+      if (noteCreation.lastUsedType !== key) {
+        dispatch(setNoteCreation({ ...noteCreation, lastUsedType: key }));
+      }
+    }
+  };
+
+  const createDirect = () => {
+    if (isDeleteMode) {
+      toggleDeleteMode();
+      return;
+    }
+    if (isOverlayOpen) setIsOverlayOpen(false);
+    trackLastUsed(directNoteType.key);
+    router.push(directNoteType.route as Href);
+  };
 
   const toggleOverlay = () => {
     if (isDeleteMode) {
       toggleDeleteMode();
       return;
     }
-
     setIsOverlayOpen((p) => !p);
   };
 
@@ -93,9 +130,10 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
     setIsOverlayOpen(false);
   };
 
-  const handleNoteTypePress = (route: Href) => {
+  const handleNoteTypePress = (noteType: (typeof NOTE_TYPES)[number]) => {
     closeOverlay();
-    router.push(route);
+    trackLastUsed(noteType.key);
+    router.push(noteType.route as Href);
   };
 
   useEffect(() => {
@@ -111,17 +149,42 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
     return () => backHandler.remove();
   }, [isOverlayOpen]);
 
-  const showCloseIcon = isOverlayOpen || isDeleteMode;
+  const showCloseIcon = isDeleteMode;
+
+  const showTypeHint = !isDeleteMode && (noteCreation.mode === "smart" || noteCreation.mode === "adaptive");
+  const HintIcon = directNoteType.icon;
+  // Tint the hint badge with the resolved note type's color (same palette as the
+  // NoteCard left border), with a dark glyph — so it reads as part of the system.
+  const hintColor = CARD_TYPE_COLOR[directNoteType.key as keyof typeof CARD_TYPE_COLOR] ?? COLOR.accentSoft;
+
+  // Pop the hint badge whenever the resolved note type changes. Driven by a
+  // shared value (not entering/exiting layout animations) so it stays safe
+  // while navigating away on press.
+  useEffect(() => {
+    hintPop.value = withSequence(withTiming(0.6, { duration: 0 }), withSpring(1, { damping: 9, stiffness: 220 }));
+  }, [directNoteType.key, hintPop]);
+
+  const hintAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: hintPop.value }],
+  }));
 
   useEffect(() => {
-    iconRotation.value = withTiming(showCloseIcon ? 1 : 0, {
+    closeRotation.value = withTiming(showCloseIcon ? 1 : 0, {
       duration: showCloseIcon ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
       easing: Easing.out(Easing.cubic),
     });
+    secondaryVisible.value = withTiming(isDeleteMode ? 0 : 1, {
+      duration: isDeleteMode ? ANIMATION_DURATION_CLOSE : ANIMATION_DURATION_OPEN,
+      easing: Easing.out(Easing.cubic),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCloseIcon]);
+  }, [showCloseIcon, isDeleteMode]);
 
   useEffect(() => {
+    chevronRotation.value = withTiming(isOverlayOpen ? 1 : 0, {
+      duration: isOverlayOpen ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
+      easing: Easing.out(Easing.cubic),
+    });
     menuProgress.value = withTiming(isOverlayOpen ? 1 : 0, {
       duration: isOverlayOpen ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
       easing: isOverlayOpen ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
@@ -129,8 +192,17 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOverlayOpen]);
 
-  const iconAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${iconRotation.value * 45}deg` }],
+  const closeIconAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${closeRotation.value * 45}deg` }],
+  }));
+
+  const chevronAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${chevronRotation.value * 180}deg` }],
+  }));
+
+  const secondaryFabAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: secondaryVisible.value,
+    transform: [{ scale: interpolate(secondaryVisible.value, [0, 1], [0.6, 1]) }],
   }));
 
   const backdropAnimatedStyle = useAnimatedStyle(() => ({
@@ -152,36 +224,76 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
               index={index}
               totalItems={NOTE_TYPES.length}
               menuProgress={menuProgress}
-              onPress={() => handleNoteTypePress(noteType.route as Href)}
+              onPress={() => handleNoteTypePress(noteType)}
               label={t(noteType.labelKey)}
             />
           ))}
         </View>
       </AnimatedPressable>
 
-      <TouchableOpacity style={styles.fab} activeOpacity={0.7} onPress={toggleOverlay}>
-        <Animated.View style={iconAnimatedStyle}>
-          <PlusIcon size={28} color={COLOR.darkBlue} />
+      <View style={styles.fabGroup} pointerEvents="box-none">
+        <Animated.View style={secondaryFabAnimatedStyle} pointerEvents={isDeleteMode ? "none" : "auto"}>
+          <TouchableOpacity style={styles.fabSecondary} activeOpacity={0.7} onPress={toggleOverlay}>
+            <Animated.View style={chevronAnimatedStyle}>
+              <ChevronUpIcon size={20} color={COLOR.softWhite} />
+            </Animated.View>
+          </TouchableOpacity>
         </Animated.View>
-      </TouchableOpacity>
+
+        <TouchableOpacity style={styles.fab} activeOpacity={0.7} onPress={createDirect}>
+          <Animated.View style={closeIconAnimatedStyle}>
+            <PlusIcon size={28} color={COLOR.softWhite} />
+          </Animated.View>
+
+          {showTypeHint && (
+            <Animated.View
+              style={[styles.fabHintBadge, { backgroundColor: hintColor }, hintAnimatedStyle]}
+              pointerEvents="none"
+            >
+              <HintIcon size={13} color={COLOR.darkBlue} />
+            </Animated.View>
+          )}
+        </TouchableOpacity>
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  fab: {
+  fabGroup: {
     zIndex: 10,
     position: "absolute",
     bottom: 60,
     right: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.lg,
+  },
+  fab: {
     padding: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    borderRadius: BORDER.big,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
+  },
+  fabHintBadge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    width: 22,
+    height: 22,
+    borderRadius: BORDER.rounded,
+    // A ring in the page background color "cuts out" the badge from the FAB
+    // for a clean float, instead of a hard white outline.
+    borderWidth: 2,
+    borderColor: COLOR.bg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fabSecondary: {
+    padding: PADDING_MARGIN.sm,
+    borderRadius: BORDER.big,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
   fullscreenOverlay: {
     position: "absolute",
@@ -209,16 +321,12 @@ const styles = StyleSheet.create({
   noteTypeLabel: {
     color: COLOR.softWhite,
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   noteTypeIconContainer: {
     padding: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    borderRadius: BORDER.big,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
 });

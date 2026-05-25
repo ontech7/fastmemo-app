@@ -1,4 +1,4 @@
-import { BORDER, COLOR, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ViewStyle } from "react-native";
@@ -216,20 +216,20 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
           value={searchText}
           onChangeText={setSearchText}
           placeholder={t("note.find_replace.search_placeholder")}
-          placeholderTextColor={COLOR.placeholder}
+          placeholderTextColor={COLOR.textSecondary}
           cursorColor={COLOR.softWhite}
           returnKeyType="search"
           onSubmitEditing={() => navigateMatch("next")}
         />
         <Text style={styles.matchCount}>{matchCount > 0 ? `${currentMatch}/${matchCount}` : "0/0"}</Text>
         <TouchableOpacity style={styles.iconButton} onPress={() => navigateMatch("prev")} disabled={matchCount === 0}>
-          <ChevronUpIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.placeholder} />
+          <ChevronUpIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton} onPress={() => navigateMatch("next")} disabled={matchCount === 0}>
-          <ChevronDownIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.placeholder} />
+          <ChevronDownIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton} onPress={() => setShowReplace(!showReplace)}>
-          <Text style={[styles.toggleText, showReplace && { color: COLOR.oceanBreeze }]}>
+          <Text style={[styles.toggleText, showReplace && { color: COLOR.accentSoft }]}>
             {t("note.find_replace.replace_short")}
           </Text>
         </TouchableOpacity>
@@ -244,16 +244,16 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
             value={replaceText}
             onChangeText={setReplaceText}
             placeholder={t("note.find_replace.replace_placeholder")}
-            placeholderTextColor={COLOR.placeholder}
+            placeholderTextColor={COLOR.textSecondary}
             cursorColor={COLOR.softWhite}
           />
           <TouchableOpacity style={styles.actionButton} onPress={replaceCurrentMatch} disabled={matchCount === 0}>
-            <Text style={[styles.actionButtonText, matchCount === 0 && { color: COLOR.placeholder }]}>
+            <Text style={[styles.actionButtonText, matchCount === 0 && { color: COLOR.textMuted }]}>
               {t("note.find_replace.replace_one")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={replaceAll} disabled={matchCount === 0}>
-            <Text style={[styles.actionButtonText, matchCount === 0 && { color: COLOR.placeholder }]}>
+            <Text style={[styles.actionButtonText, matchCount === 0 && { color: COLOR.textMuted }]}>
               {t("note.find_replace.replace_all")}
             </Text>
           </TouchableOpacity>
@@ -265,31 +265,37 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLOR.blue,
-    borderRadius: BORDER.normal,
+    backgroundColor: COLOR.surface,
+    borderRadius: BORDER.big,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     marginHorizontal: PADDING_MARGIN.sm,
     marginBottom: PADDING_MARGIN.sm,
-    paddingVertical: PADDING_MARGIN.sm,
-    paddingHorizontal: PADDING_MARGIN.md,
+    padding: PADDING_MARGIN.sm,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 6, marginVertical: 2 },
   input: {
     flex: 1,
-    height: 34,
-    backgroundColor: COLOR.darkBlue,
-    borderRadius: BORDER.small,
-    paddingHorizontal: PADDING_MARGIN.sm,
-    color: COLOR.softWhite,
+    backgroundColor: COLOR.bg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
+    borderRadius: BORDER.rounded,
+    paddingHorizontal: PADDING_MARGIN.lg,
+    paddingVertical: PADDING_MARGIN.sm,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.medium,
   },
-  matchCount: { color: COLOR.lightBlue, fontSize: FONTSIZE.small, minWidth: 36, textAlign: "center" },
+  matchCount: { color: COLOR.textMuted, fontFamily: FONT.medium, fontSize: FONTSIZE.small, minWidth: 36, textAlign: "center" },
   iconButton: { padding: 6 },
-  toggleText: { color: COLOR.lightBlue, fontSize: FONTSIZE.small, fontWeight: "600" },
+  toggleText: { color: COLOR.textSecondary, fontSize: FONTSIZE.small, fontFamily: FONT.semiBold },
   actionButton: {
     paddingHorizontal: PADDING_MARGIN.sm,
     paddingVertical: 6,
-    backgroundColor: COLOR.boldBlue,
-    borderRadius: BORDER.small,
+    backgroundColor: GLASS.fillStrong,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
+    borderRadius: BORDER.rounded,
   },
-  actionButtonText: { color: COLOR.softWhite, fontSize: FONTSIZE.small },
+  actionButtonText: { color: COLOR.textPrimary, fontFamily: FONT.medium, fontSize: FONTSIZE.small },
 });

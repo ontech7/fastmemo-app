@@ -8,11 +8,13 @@ import type { Category } from "@/types";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import SafeAreaView from "@/components/SafeAreaView";
 
-import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 import AddCategoryButton from "@/components/buttons/AddCategoryButton";
 import BackButton from "@/components/buttons/BackButton";
 import OrganizeCategoryList from "@/components/lists/OrganizeCategoryList";
+import AppBackground from "@/components/ui/AppBackground";
+import IconChip from "@/components/ui/IconChip";
 import { getCategories, setCategories } from "@/slicers/categoriesSlice";
 
 export default function OrganizeCategoriesScreen() {
@@ -87,29 +89,33 @@ export default function OrganizeCategoriesScreen() {
       />
 
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <BackButton />
+        <AppBackground style={StyleSheet.absoluteFill} />
 
-          {isEditMode && <View style={{ padding: PADDING_MARGIN.lg }} />}
+        <View style={styles.header}>
+          <BackButton chip />
+
+          {isEditMode && <View style={styles.editSpacer} />}
 
           <Text style={styles.headerTitle}>{t("organizecategory.title")}</Text>
 
           {isEditMode ? (
-            <>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={{ marginRight: PADDING_MARGIN.sm }}
-                onPress={undoCategoryOrganization}
-              >
-                <XMarkIcon size={28} color={COLOR.softWhite} />
+            <View style={styles.headerActions}>
+              <TouchableOpacity activeOpacity={0.7} onPress={undoCategoryOrganization}>
+                <IconChip>
+                  <XMarkIcon size={20} color={COLOR.softWhite} />
+                </IconChip>
               </TouchableOpacity>
               <TouchableOpacity activeOpacity={0.7} onPress={saveCategoryOrganization}>
-                <CheckIcon size={28} color={COLOR.softWhite} />
+                <IconChip>
+                  <CheckIcon size={20} color={COLOR.softWhite} />
+                </IconChip>
               </TouchableOpacity>
-            </>
+            </View>
           ) : (
             <TouchableOpacity activeOpacity={0.7} onPress={() => setIsEditMode(true)}>
-              <PencilSquareIcon size={28} color={COLOR.softWhite} />
+              <IconChip>
+                <PencilSquareIcon size={20} color={COLOR.softWhite} />
+              </IconChip>
             </TouchableOpacity>
           )}
         </View>
@@ -131,7 +137,6 @@ export default function OrganizeCategoriesScreen() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
     height: SIZE.full,
     flexDirection: "column",
     alignItems: "flex-start",
@@ -144,10 +149,19 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.xl,
     width: SIZE.full,
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+  },
+  editSpacer: {
+    width: 50,
+  },
   headerTitle: {
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
     flexGrow: 1,
     textAlign: "center",
   },

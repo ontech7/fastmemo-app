@@ -1,8 +1,10 @@
 import BackButton from "@/components/buttons/BackButton";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
+import IconChip from "@/components/ui/IconChip";
 import { configs } from "@/configs";
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import { useCloudSync } from "@/hooks/useCloudSync";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useSecret } from "@/hooks/useSecret";
@@ -38,11 +40,13 @@ export default function CloudSyncScreen() {
 
   return (
     <>
-      <LoadingSpinner visible={state.isLoading} color={COLOR.lightBlue} text={t("cloudsync.syncing_1")} />
+      <LoadingSpinner visible={state.isLoading} color={COLOR.accentSoft} text={t("cloudsync.syncing_1")} />
 
       <SafeAreaView style={styles.container}>
+        <AppBackground style={StyleSheet.absoluteFill} />
+
         <View style={styles.header}>
-          <BackButton />
+          <BackButton chip />
 
           <Text style={styles.headerTitle}>{t("cloudsync.title")}</Text>
 
@@ -50,11 +54,13 @@ export default function CloudSyncScreen() {
             activeOpacity={0.7}
             onPress={() => openUrl(`${configs.app.websiteUrl}/${t("languageCode")}/guides/google-firebase`)}
           >
-            <InformationCircleIcon size={28} color={COLOR.softWhite} />
+            <IconChip>
+              <InformationCircleIcon size={20} color={COLOR.softWhite} />
+            </IconChip>
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
+        <ScrollView style={styles.scroll}>
           <View style={styles.sectionWrapper}>
             <View style={styles.sectionList}>
               <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
@@ -63,10 +69,10 @@ export default function CloudSyncScreen() {
 
                   <Switch
                     trackColor={{
-                      false: COLOR.lightGray,
-                      true: COLOR.darkYellow + "60",
+                      false: COLOR.surfaceMuted,
+                      true: COLOR.accentMuted,
                     }}
-                    thumbColor={state.isCloudSyncEnabled ? COLOR.yellow : COLOR.softWhite}
+                    thumbColor={COLOR.softWhite}
                     onValueChange={() => unlockWithSecret(toggleCloudSync)}
                     value={state.isCloudSyncEnabled}
                     style={{ height: 25 }}
@@ -82,18 +88,16 @@ export default function CloudSyncScreen() {
                     <Text style={styles.sectionHeaderTitle}>API Key</Text>
                   </View>
 
-                  <View style={styles.sectionList}>
-                    <View style={styles.textInputContainer}>
-                      <TextInput
-                        editable={state.isEditable}
-                        style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
-                        cursorColor={COLOR.softWhite}
-                        placeholderTextColor={COLOR.placeholder}
-                        placeholder="e.g.: AIzaF0Ba0wDdkde893DR9rkfAE03"
-                        onChangeText={(text: string) => methods.setCloudSetting("apiKey", text)}
-                        value={!state.isConnected ? cloudSettings.apiKey : "***********"}
-                      />
-                    </View>
+                  <View style={styles.textInputContainer}>
+                    <TextInput
+                      editable={state.isEditable}
+                      style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                      cursorColor={COLOR.textPrimary}
+                      placeholderTextColor={COLOR.textMuted}
+                      placeholder="e.g.: AIzaF0Ba0wDdkde893DR9rkfAE03"
+                      onChangeText={(text: string) => methods.setCloudSetting("apiKey", text)}
+                      value={!state.isConnected ? cloudSettings.apiKey : "***********"}
+                    />
                   </View>
                 </View>
 
@@ -102,18 +106,16 @@ export default function CloudSyncScreen() {
                     <Text style={styles.sectionHeaderTitle}>Project Id</Text>
                   </View>
 
-                  <View style={styles.sectionList}>
-                    <View style={styles.textInputContainer}>
-                      <TextInput
-                        editable={state.isEditable}
-                        style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
-                        cursorColor={COLOR.softWhite}
-                        placeholderTextColor={COLOR.placeholder}
-                        placeholder="e.g.: fastmemo-xyzw"
-                        onChangeText={(text: string) => methods.setCloudSetting("projectId", text)}
-                        value={!state.isConnected ? cloudSettings.projectId : "***********"}
-                      />
-                    </View>
+                  <View style={styles.textInputContainer}>
+                    <TextInput
+                      editable={state.isEditable}
+                      style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                      cursorColor={COLOR.textPrimary}
+                      placeholderTextColor={COLOR.textMuted}
+                      placeholder="e.g.: fastmemo-xyzw"
+                      onChangeText={(text: string) => methods.setCloudSetting("projectId", text)}
+                      value={!state.isConnected ? cloudSettings.projectId : "***********"}
+                    />
                   </View>
                 </View>
 
@@ -122,26 +124,44 @@ export default function CloudSyncScreen() {
                     <Text style={styles.sectionHeaderTitle}>App Id</Text>
                   </View>
 
-                  <View style={styles.sectionList}>
-                    <View style={styles.textInputContainer}>
-                      <TextInput
-                        editable={state.isEditable}
-                        style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
-                        cursorColor={COLOR.softWhite}
-                        placeholderTextColor={COLOR.placeholder}
-                        placeholder="e.g.: 1:2137892387:web:9g7a6s6f8gf8df878787s6"
-                        onChangeText={(text: string) => methods.setCloudSetting("appId", text)}
-                        value={!state.isConnected ? cloudSettings.appId : "***********"}
-                      />
-                    </View>
+                  <View style={styles.textInputContainer}>
+                    <TextInput
+                      editable={state.isEditable}
+                      style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                      cursorColor={COLOR.textPrimary}
+                      placeholderTextColor={COLOR.textMuted}
+                      placeholder="e.g.: 1:2137892387:web:9g7a6s6f8gf8df878787s6"
+                      onChangeText={(text: string) => methods.setCloudSetting("appId", text)}
+                      value={!state.isConnected ? cloudSettings.appId : "***********"}
+                    />
                   </View>
                 </View>
 
                 {state.isEditable && (
                   <View style={styles.sectionWrapper}>
-                    <View style={styles.sectionList}>
+                    <View style={styles.saveSettingsWrapper}>
+                      <Text style={styles.saveSettingsText}>{t("cloudsync.save")}</Text>
+
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
+                        style={[
+                          styles.saveButton,
+                          (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) && styles.saveButton_disabled,
+                        ]}
+                        onPress={() => unlockWithSecret(methods.saveCloudSettings)}
+                      >
+                        <CheckIcon size={24} color={COLOR.softWhite} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {state.isConnected && (
+                  <>
+                    <View style={styles.sectionWrapper}>
                       <View style={styles.saveSettingsWrapper}>
-                        <Text style={styles.saveSettingsText}>{t("cloudsync.save")}</Text>
+                        <Text style={styles.saveSettingsText}>{t("cloudsync.edit")}</Text>
 
                         <TouchableOpacity
                           activeOpacity={0.7}
@@ -151,85 +171,56 @@ export default function CloudSyncScreen() {
                             (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) &&
                               styles.saveButton_disabled,
                           ]}
-                          onPress={() => unlockWithSecret(methods.saveCloudSettings)}
+                          onPress={() => unlockWithSecret(methods.editCloudSettings)}
                         >
-                          <CheckIcon size={28} color={COLOR.blue} />
+                          <PencilIcon size={24} color={COLOR.softWhite} />
                         </TouchableOpacity>
                       </View>
                     </View>
-                  </View>
-                )}
 
-                {state.isConnected && (
-                  <>
                     <View style={styles.sectionWrapper}>
-                      <View style={styles.sectionList}>
-                        <View style={styles.saveSettingsWrapper}>
-                          <Text style={styles.saveSettingsText}>{t("cloudsync.edit")}</Text>
+                      <View style={styles.saveSettingsWrapper}>
+                        <Text style={styles.saveSettingsText}>{t("cloudsync.resync")}</Text>
 
-                          <TouchableOpacity
-                            activeOpacity={0.7}
-                            disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
-                            style={[
-                              styles.saveButton,
-                              (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) &&
-                                styles.saveButton_disabled,
-                            ]}
-                            onPress={() => unlockWithSecret(methods.editCloudSettings)}
-                          >
-                            <PencilIcon size={28} color={COLOR.blue} />
-                          </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
+                          style={[
+                            styles.saveButton,
+                            (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) &&
+                              styles.saveButton_disabled,
+                          ]}
+                          onPress={() => methods.syncCloudData(false)}
+                        >
+                          <ArrowPathIcon size={24} color={COLOR.softWhite} />
+                        </TouchableOpacity>
                       </View>
                     </View>
 
                     <View style={styles.sectionWrapper}>
-                      <View style={styles.sectionList}>
-                        <View style={styles.saveSettingsWrapper}>
-                          <Text style={styles.saveSettingsText}>{t("cloudsync.resync")}</Text>
+                      <View style={styles.saveSettingsWrapper}>
+                        <Text style={styles.saveSettingsText}>{t("cloudsync.deleteDevices")}</Text>
 
-                          <TouchableOpacity
-                            activeOpacity={0.7}
-                            disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
-                            style={[
-                              styles.saveButton,
-                              (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) &&
-                                styles.saveButton_disabled,
-                            ]}
-                            onPress={() => methods.syncCloudData(false)}
-                          >
-                            <ArrowPathIcon size={28} color={COLOR.blue} />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </View>
-
-                    <View style={styles.sectionWrapper}>
-                      <View style={styles.sectionList}>
-                        <View style={styles.saveSettingsWrapper}>
-                          <Text style={styles.saveSettingsText}>{t("cloudsync.deleteDevices")}</Text>
-
-                          <TouchableOpacity
-                            activeOpacity={0.7}
-                            disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
-                            style={[
-                              styles.saveButton,
-                              (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) &&
-                                styles.saveButton_disabled,
-                            ]}
-                            onPress={() =>
-                              unlockWithSecret((router, isFingerprint: boolean) => {
-                                if (isFingerprint) {
-                                  router.push("/settings/cloud-sync/devices");
-                                } else {
-                                  router.replace("/settings/cloud-sync/devices");
-                                }
-                              }, "none")
-                            }
-                          >
-                            <DevicePhoneMobileIcon size={28} color={COLOR.blue} />
-                          </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
+                          style={[
+                            styles.saveButton,
+                            (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) &&
+                              styles.saveButton_disabled,
+                          ]}
+                          onPress={() =>
+                            unlockWithSecret((router, isFingerprint: boolean) => {
+                              if (isFingerprint) {
+                                router.push("/settings/cloud-sync/devices");
+                              } else {
+                                router.replace("/settings/cloud-sync/devices");
+                              }
+                            }, "none")
+                          }
+                        >
+                          <DevicePhoneMobileIcon size={24} color={COLOR.softWhite} />
+                        </TouchableOpacity>
                       </View>
                     </View>
                   </>
@@ -250,37 +241,24 @@ const styles = StyleSheet.create({
     position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
+  },
+  scroll: {
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.lg,
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
-  },
-  appWrapper: {
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: PADDING_MARGIN.xl,
-  },
-  appIcon: {
-    width: 180,
-    height: 220,
-    backgroundColor: COLOR.blue,
-    borderRadius: BORDER.big,
-  },
-  appName: {
-    color: COLOR.softWhite,
-    marginTop: PADDING_MARGIN.md,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
   },
   sectionWrapper: {
     marginTop: PADDING_MARGIN.lg,
@@ -291,20 +269,22 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.xs,
   },
   sectionHeaderTitle: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
     fontSize: FONTSIZE.paragraph,
     paddingVertical: PADDING_MARGIN.xs,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   sectionList: {
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     overflow: "hidden",
   },
   sectionItemList: {
-    backgroundColor: COLOR.boldBlue,
+    backgroundColor: COLOR.surface,
     padding: PADDING_MARGIN.lg,
     borderBottomWidth: 1,
-    borderColor: COLOR.darkBlue,
+    borderColor: GLASS.border,
   },
   sectionItemList_last: {
     borderBottomWidth: 0,
@@ -315,27 +295,25 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   sectionItemList_title: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
-  },
-  sectionItemList_text: {
-    color: COLOR.lightBlue,
-    fontSize: FONTSIZE.medium,
-    maxWidth: 200,
   },
   textInputContainer: {
     flexDirection: "row",
-    paddingHorizontal: PADDING_MARGIN.sm,
-    paddingVertical: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.boldBlue,
+    paddingHorizontal: PADDING_MARGIN.md,
+    backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
     alignItems: "center",
   },
   textInput: {
     flex: 1,
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
     paddingHorizontal: PADDING_MARGIN.sm,
-    paddingVertical: PADDING_MARGIN.sm,
+    paddingVertical: PADDING_MARGIN.md,
     fontSize: FONTSIZE.medium,
   },
   textInput_disabled: {
@@ -347,38 +325,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveSettingsText: {
-    color: COLOR.softWhite,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.semiBold,
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
     marginRight: PADDING_MARGIN.lg,
   },
   saveButton: {
-    padding: PADDING_MARGIN.md,
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
   saveButton_disabled: {
     opacity: 0.5,
-  },
-  loadingSpinner: {
-    position: "absolute",
-    zIndex: 2,
-    left: 0,
-    top: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#0008",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
   },
 });

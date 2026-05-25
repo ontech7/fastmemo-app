@@ -1,6 +1,8 @@
 import SafeAreaView from "@/components/SafeAreaView";
+import AppBackground from "@/components/ui/AppBackground";
+import IconChip from "@/components/ui/IconChip";
 import { defaultNote } from "@/configs/default";
-import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import Haptics from "@/libs/haptics";
 import { addNote } from "@/slicers/notesSlice";
@@ -93,16 +95,18 @@ export default function SetupSecretCodeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <View style={styles.headerSide} />
+        <View style={styles.headerSpacer} />
 
         <Text style={styles.headerTitle}>{t("setupcode.title")}</Text>
 
         <TouchableOpacity activeOpacity={0.7} onPress={redoInsert}>
-          <ArrowPathIcon size={28} color={COLOR.softWhite} />
+          <IconChip>
+            <ArrowPathIcon size={20} color={COLOR.softWhite} />
+          </IconChip>
         </TouchableOpacity>
-
-        <View style={styles.headerSide} />
       </View>
 
       <View style={styles.codeInputWrapper}>
@@ -132,7 +136,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
     paddingHorizontal: PADDING_MARGIN.lg,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
@@ -140,23 +143,25 @@ const styles = StyleSheet.create({
     paddingTop: PADDING_MARGIN.sm,
     marginBottom: PADDING_MARGIN.xl,
   },
-  headerSide: {
-    padding: PADDING_MARGIN.md,
+  headerSpacer: {
+    width: 42,
   },
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
   },
   codeInputWrapper: {
     flex: 1,
     justifyContent: "flex-end",
   },
   codeTextSuggestion: {
-    color: COLOR.softWhite,
+    color: COLOR.textSecondary,
     textAlign: "center",
+    fontFamily: FONT.medium,
     fontSize: FONTSIZE.paragraph,
   },
   codeTextSuggestionLast: {

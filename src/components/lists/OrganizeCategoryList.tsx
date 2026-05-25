@@ -1,6 +1,6 @@
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { SIZE } from "@/constants/styles";
 
 import OrganizeCategoryCard from "@/components/cards/OrganizeCategoryCard";
 
@@ -58,7 +58,6 @@ const styles = StyleSheet.create({
   categoryList: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginRight: Platform.OS === "web" ? 0 : -PADDING_MARGIN.lg,
     width: SIZE.full,
   },
 });

@@ -7,7 +7,7 @@ import { getLocales } from "@/libs/localization";
 import { selectorVoiceRecognition } from "@/slicers/settingsSlice";
 import { toast } from "@/utils/toast";
 
-import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 import type { ViewStyle } from "react-native";
 
@@ -125,7 +125,7 @@ export default function VoiceRecognitionButton({ setTranscript, style = {} }: Pr
       )}
 
       <TouchableOpacity activeOpacity={0.7} style={styles.registerButton} onPress={recognizing ? handleStop : handleStart}>
-        <MicrophoneIcon size={28} color={COLOR.darkBlue} />
+        <MicrophoneIcon size={28} color={COLOR.softWhite} />
       </TouchableOpacity>
     </View>
   );
@@ -141,12 +141,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     borderRadius: BORDER.normal,
-    backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
     overflow: "hidden",
     transitionProperty: "width",
     transitionDuration: "0.3s",
@@ -162,7 +158,7 @@ const styles = StyleSheet.create({
   bar: {
     width: 4,
     borderRadius: 2,
-    backgroundColor: COLOR.darkBlue,
+    backgroundColor: COLOR.softWhite,
     marginHorizontal: 1,
   },
   registerButton: {

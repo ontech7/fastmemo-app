@@ -4,7 +4,8 @@ import CloseButton from "@/components/buttons/CloseButton";
 import ChangelogItem from "@/components/changelog/ChangelogItem";
 import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
-import { COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import AppBackground from "@/components/ui/AppBackground";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -12,12 +13,14 @@ import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 function getVersionChangelogs(t: (key: string) => string) {
   return Platform.OS === "web"
     ? [
+        { version: "v1.0.0", text: t("changelog.web.description_1_0_0") },
         { version: "v0.3.1", text: t("changelog.web.description_0_3_0") },
         { version: "v0.2.1", text: t("changelog.web.description_0_2_0") },
         { version: "v0.1.1", text: t("changelog.web.description_0_1_1") },
         { version: "v0.1.0", text: t("changelog.web.description_0_1_0") },
       ]
     : [
+        { version: "v3.0.0", text: t("changelog.mobile.description_3_0_0") },
         { version: "v2.9.1", text: t("changelog.mobile.description_2_9_0") },
         { version: "v2.8.0", text: t("changelog.mobile.description_2_8_0") },
         { version: "v2.7.1", text: t("changelog.mobile.description_2_7_1") },
@@ -48,10 +51,12 @@ export default function ChangelogScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppBackground style={StyleSheet.absoluteFill} />
+
       <View style={styles.header}>
-        <View style={{ padding: PADDING_MARGIN.md }} />
+        <View style={styles.headerSpacer} />
         <Text style={styles.headerTitle}>{t("changelog.title")}</Text>
-        <CloseButton style={{ marginRight: PADDING_MARGIN.sm }} />
+        <CloseButton chip />
       </View>
 
       <ScrollView>
@@ -81,23 +86,28 @@ export default function ChangelogScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,
     paddingHorizontal: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.darkBlue,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.sm,
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: {
+    width: 42,
   },
   iconWrapper: {
     flexDirection: "row",
@@ -111,8 +121,8 @@ const styles = StyleSheet.create({
   },
   plusSign: {
     fontSize: FONTSIZE.intro,
-    fontWeight: FONTWEIGHT.semiBold,
-    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    color: COLOR.textPrimary,
     marginHorizontal: PADDING_MARGIN.sm,
   },
 });

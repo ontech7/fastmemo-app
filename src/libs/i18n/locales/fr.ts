@@ -15,6 +15,13 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
+      description_1_0_0: `• Premiere version stable de Fast Memo Desktop (hors BETA).
+• Nouveau design moderne dans toute l'app, avec la nouvelle police Geist, des surfaces glass et des degrades.
+• Onboarding repense avec de nouvelles etapes d'introduction.
+• Ajout des parametres de creation de note pour personnaliser les valeurs par defaut.
+• Ajout du mode par etapes pour les notes To-Do.
+• Corrections diverses.`,
+
       description_0_3_0: `• Ajout d'un nouveau type de note : Code, avec editeur integre, coloration syntaxique, onglets multiples et detection automatique du langage.
 • Ajout de la fonction rechercher et remplacer dans les notes texte.
 • Ajout de l'exportation de notes.
@@ -31,6 +38,13 @@ const fr = {
     },
 
     mobile: {
+      description_3_0_0: `• Nouveau design moderne dans toute l'app, avec la nouvelle police Geist, des surfaces glass et des degrades.
+• Onboarding repense avec de nouvelles etapes d'introduction.
+• Ajout des parametres de creation de note pour personnaliser les valeurs par defaut.
+• Ajout du mode par etapes pour les notes To-Do.
+• Icone de l'app et ecran de demarrage renouveles.
+• Corrections diverses.`,
+
       description_2_9_0: `• Ajout d'un nouveau type de note : Code, avec editeur integre, coloration syntaxique, onglets multiples et detection automatique du langage.
 • Ajout du modele Qwen 2.5 7B avec detection de la RAM de l'appareil. Nouvelles actions AI pour le code : Expliquer le code et Ajouter des commentaires.
 • Ajout de la fonction rechercher et remplacer dans les notes texte.
@@ -105,9 +119,11 @@ const fr = {
     step1: "Ajoutez vos notes en un clic.",
     step2: "Enrichissez votre texte en utilisant la barre d'outils du bas.",
     step3: "Créer une liste de tâches pour gérer vos tâches.",
-    step4: "Créez votre propre catégorie selon vos besoins.",
-    step5: "Insérez un code secret pour masquer vos notes.",
-    step6: "Synchronisez vos notes sur votre Google Firebase.",
+    step4: "Visualisez vos idées avec des tableaux Kanban.",
+    step5: "Prenez note de vos snippets.",
+    step6: "Créez votre propre catégorie selon vos besoins.",
+    step7: "Insérez un code secret pour masquer vos notes.",
+    step8: "Synchronisez vos notes sur Google Firebase.",
     title: "Qu'est-ce que Fast Memo?",
     continue: "Continue",
   },
@@ -135,6 +151,7 @@ const fr = {
     notes: "Notes",
     search: "Chercher quelque chose...",
     deepSearch: "Recherche approfondie (texte, listes…)",
+    selected_count: "{{count}} sélectionnées",
 
     filters: {
       deepSearch: "Recherche approfondie",
@@ -150,6 +167,9 @@ const fr = {
     characters: "caractères",
     completed: "complété",
     on: "sur",
+    mode_free: "Liste",
+    mode_steps: "Étapes",
+    ongoing: "En cours",
     created: "Créé: ",
     updated: "Modifié: ",
     type: {
@@ -195,6 +215,7 @@ const fr = {
     code_placeholder: "Ecrivez votre code ici...",
     max_tabs_reached: "Maximum de 6 onglets atteint",
     delete_tab: "Supprimer l'onglet",
+    delete_tab_confirm: "Voulez-vous vraiment supprimer cet onglet ? Cette action est irréversible.",
     language: "Langage",
   },
   changecategory: {
@@ -275,6 +296,7 @@ const fr = {
     webhooks: "Webhooks",
     voice_recognition: "Reconnaissance vocale",
     ai_assistant: "Assistant IA",
+    note_creation: "Création de note",
     wipe_data: "Effacer les données",
     developer_options: "Options développeur",
     about: "À propos",
@@ -297,6 +319,19 @@ const fr = {
     app: "App",
     version: "Version",
     libraries: "Bibliothèques",
+  },
+  note_creation: {
+    title: "Création de note",
+    mode_section: "Mode",
+    default_type_section: "Type de note par défaut",
+    mode: {
+      simple: "Simple",
+      simple_description: "Appuyer crée une note texte. Utilisez le menu pour les autres types.",
+      smart: "Smart",
+      smart_description: "Appuyer crée toujours le type choisi ci-dessous.",
+      adaptive: "Adaptatif",
+      adaptive_description: "Appuyer crée le même type que votre dernière note.",
+    },
   },
   aboutdeveloper: {
     title: "Sur moi",

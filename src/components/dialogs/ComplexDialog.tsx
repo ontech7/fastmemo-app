@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
 import { Dialog, DialogAction, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@ontech7/react-native-dialog";
+import { ReactNode } from "react";
 
 interface DialogActionConfig {
   label: string;

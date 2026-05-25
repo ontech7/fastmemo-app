@@ -43,6 +43,15 @@ export interface AIAssistantSettings {
   voiceOnly: boolean;
 }
 
+export type NoteCreationMode = "simple" | "smart" | "adaptive";
+export type NoteCreationType = "text" | "todo" | "code" | "kanban";
+
+export interface NoteCreationSettings {
+  mode: NoteCreationMode;
+  smartType: NoteCreationType;
+  lastUsedType: NoteCreationType;
+}
+
 export interface DeveloperModeSettings {
   enabled: boolean;
   unlimitedTextSpace: boolean;
@@ -65,4 +74,5 @@ export interface SettingsState {
   aiAssistant: AIAssistantSettings;
   reportDate: string | null;
   developerMode: DeveloperModeSettings;
+  noteCreation: NoteCreationSettings;
 }

@@ -15,6 +15,13 @@ const es = {
     title: "¿Qué hay de nuevo?",
 
     web: {
+      description_1_0_0: `• Primera version estable de Fast Memo Desktop (fuera de BETA).
+• Nuevo diseno moderno en toda la app, con la nueva fuente Geist, superficies glass y degradados.
+• Rediseno del onboarding con nuevos pasos introductorios.
+• Agregados ajustes de creacion de notas para personalizar los valores predeterminados.
+• Agregado modo por pasos para las notas To-Do.
+• Correcciones varias.`,
+
       description_0_3_0: `• Agregado nuevo tipo de nota: Codigo, con editor integrado, resaltado de sintaxis, pestanas multiples y deteccion automatica del lenguaje.
 • Agregada funcion buscar y reemplazar en notas de texto.
 • Agregada exportacion de notas.
@@ -31,6 +38,13 @@ const es = {
     },
 
     mobile: {
+      description_3_0_0: `• Nuevo diseno moderno en toda la app, con la nueva fuente Geist, superficies glass y degradados.
+• Rediseno del onboarding con nuevos pasos introductorios.
+• Agregados ajustes de creacion de notas para personalizar los valores predeterminados.
+• Agregado modo por pasos para las notas To-Do.
+• Icono de la app y pantalla de inicio renovados.
+• Correcciones varias.`,
+
       description_2_9_0: `• Agregado nuevo tipo de nota: Codigo, con editor integrado, resaltado de sintaxis, pestanas multiples y deteccion automatica del lenguaje.
 • Agregado modelo Qwen 2.5 7B con deteccion de RAM del dispositivo. Nuevas acciones AI para codigo: Explicar codigo y Agregar comentarios.
 • Agregada funcion buscar y reemplazar en notas de texto.
@@ -105,9 +119,11 @@ const es = {
     step1: "Agrega tus notas con un clic.",
     step2: "Mejora tu texto usando la barra de herramientas inferior.",
     step3: "Crea una lista de tareas pendientes para administrar tus tareas.",
-    step4: "Crea tu propia categoría según tus necesidades.",
-    step5: "Inserta un código secreto para ocultar tus notas.",
-    step6: "Sincroniza tus notas en tu Google Firebase.",
+    step4: "Visualiza tus ideas con tableros Kanban.",
+    step5: "Toma nota de tus snippets.",
+    step6: "Crea tu propia categoría según tus necesidades.",
+    step7: "Inserta un código secreto para ocultar tus notas.",
+    step8: "Sincroniza tus notas en Google Firebase.",
     title: "¿Qué es Fast Memo?",
     continue: "Continúa",
   },
@@ -135,6 +151,7 @@ const es = {
     notes: "Notas",
     search: "Buscar algo...",
     deepSearch: "Búsqueda profunda (texto, listas…)",
+    selected_count: "{{count}} seleccionadas",
 
     filters: {
       deepSearch: "Búsqueda profunda",
@@ -150,6 +167,9 @@ const es = {
     characters: "caracteres",
     completati: "terminado",
     on: "de",
+    mode_free: "Lista",
+    mode_steps: "Pasos",
+    ongoing: "En curso",
     created: "Creado: ",
     updated: "Modificado: ",
     type: {
@@ -195,6 +215,7 @@ const es = {
     code_placeholder: "Escribe tu codigo aqui...",
     max_tabs_reached: "Maximo de 6 pestañas alcanzado",
     delete_tab: "Eliminar pestaña",
+    delete_tab_confirm: "¿Seguro que quieres eliminar esta pestaña? No se puede deshacer.",
     language: "Lenguaje",
   },
   changecategory: {
@@ -275,6 +296,7 @@ const es = {
     webhooks: "Webhooks",
     voice_recognition: "Reconocimiento de voz",
     ai_assistant: "Asistente IA",
+    note_creation: "Creación de nota",
     wipe_data: "Borrar información",
     developer_options: "Opciones de desarrollador",
     about: "Acerca de",
@@ -297,6 +319,19 @@ const es = {
     app: "App",
     version: "Versión",
     libraries: "Bibliotecas",
+  },
+  note_creation: {
+    title: "Creación de nota",
+    mode_section: "Modo",
+    default_type_section: "Tipo de nota predeterminado",
+    mode: {
+      simple: "Simple",
+      simple_description: "Tocar crea una nota de texto. Usa el menú para otros tipos.",
+      smart: "Smart",
+      smart_description: "Tocar siempre crea el tipo que elijas abajo.",
+      adaptive: "Adaptativa",
+      adaptive_description: "Tocar crea el mismo tipo que tu última nota.",
+    },
   },
   aboutdeveloper: {
     title: "Acerca de mí",
