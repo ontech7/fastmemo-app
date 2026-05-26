@@ -170,10 +170,13 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const toolbarActions = useMemo(
     () => [
+      actions.undo,
+      actions.redo,
       actions.insertImage,
       actions.heading1,
       actions.setBold,
       actions.setItalic,
+      actions.setStrikethrough,
       actions.setUnderline,
       actions.alignLeft,
       actions.alignCenter,
@@ -399,7 +402,6 @@ const styles = StyleSheet.create({
     width: SIZE.full,
     height: 38,
     backgroundColor: COLOR.surface,
-    borderTopLeftRadius: BORDER.normal,
   },
   richToolbarContainerDesktop: {
     borderRadius: BORDER.normal,
