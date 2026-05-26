@@ -128,6 +128,9 @@ export const useCloudSync = () => {
     for (let i = 0; i < allNotes.length; i++) {
       const note = allNotes[i];
 
+      // offline notes are device-only and must never be uploaded
+      if (note.local) continue;
+
       await setElementInCloud({
         collection: COLLECTIONS.data.notes,
         identifier: note.id,

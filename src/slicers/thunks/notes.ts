@@ -18,7 +18,7 @@ interface ProcessNotesParams {
   deviceUuid: string;
   devicesToSync: string[];
   areMoreThanOneDevice: boolean;
-  operation: "add" | "delete";
+  operation: "add" | "delete" | "detach";
 }
 
 interface CloudSyncParams {
@@ -54,7 +54,10 @@ const processNotes = async ({
         identifier: note.id,
         payload,
       });
-    } else if (operation === "delete") {
+    } else if (operation === "delete" || operation === "detach") {
+      // detach also removes the note from the cloud; the difference is the
+      // fan-out bucket below ("detachNotes"), which tells other devices to keep
+      // their copy but mark it offline instead of trashing it
       primaryDone = await deleteElementInCloud({
         collection: COLLECTIONS.data.notes,
         identifier: note.id,
@@ -111,6 +114,22 @@ export const deleteCloudNotesAsync = createAsyncThunk<Record<string, Note>, Clou
       devicesToSync,
       areMoreThanOneDevice,
       operation: "delete",
+    });
+  }
+);
+
+export const detachCloudNotesAsync = createAsyncThunk<Record<string, Note>, CloudSyncParams, { state: AppRootState }>(
+  "notes/detachCloudNotesAsync",
+  async ({ deviceUuid, devicesToSync, areMoreThanOneDevice }, thunkAPI) => {
+    const { cloud } = thunkAPI.getState().notes;
+    const notesToDetach = Object.values(cloud.items.detach);
+
+    return await processNotes({
+      notes: notesToDetach,
+      deviceUuid,
+      devicesToSync,
+      areMoreThanOneDevice,
+      operation: "detach",
     });
   }
 );

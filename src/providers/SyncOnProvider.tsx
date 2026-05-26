@@ -9,10 +9,10 @@ import { useSelector } from "react-redux";
 import { useAppDispatch } from "@/slicers/store";
 import { COLLECTIONS, getAllDeviceUuids, getAllElementsInCloud, getDeviceUuid, setElementInCloud } from "@/libs/firebase";
 import { addLocalCategories, deleteLocalCategories, getCloudCategories } from "@/slicers/categoriesSlice";
-import { addLocalNotes, deleteLocalNotes, getCloudNotes } from "@/slicers/notesSlice";
+import { addLocalNotes, deleteLocalNotes, detachLocalNotes, getCloudNotes } from "@/slicers/notesSlice";
 import { getCloudConnected, setCloudConnected, setIsCloudSyncEnabled } from "@/slicers/settingsSlice";
 import { addCloudCategoriesAsync, deleteCloudCategoriesAsync } from "@/slicers/thunks/categories";
-import { addCloudNotesAsync, deleteCloudNotesAsync } from "@/slicers/thunks/notes";
+import { addCloudNotesAsync, deleteCloudNotesAsync, detachCloudNotesAsync } from "@/slicers/thunks/notes";
 import { toast } from "@/utils/toast";
 
 const PENDING_CHANGES_DELAY = 10000;
@@ -38,6 +38,7 @@ export default function SyncOnProvider(): null {
   const cloudNotes = useSelector(getCloudNotes);
   const cloudNotes_add = useMemo(() => Object.values(cloudNotes.add), [cloudNotes.add]);
   const cloudNotes_delete = useMemo(() => Object.values(cloudNotes.delete), [cloudNotes.delete]);
+  const cloudNotes_detach = useMemo(() => Object.values(cloudNotes.detach ?? {}), [cloudNotes.detach]);
 
   ///////////////////////////////////
   // Pending cloud changes checker
@@ -101,6 +102,12 @@ export default function SyncOnProvider(): null {
           dispatch(deleteLocalNotes(deviceData.deleteNotes));
         }
 
+        // if there is some "detach notes" data, mark those notes as offline locally
+        // (guarded: device docs created before this feature have no detachNotes field)
+        if (deviceData.detachNotes && !isObjectEmpty(deviceData.detachNotes)) {
+          dispatch(detachLocalNotes(deviceData.detachNotes));
+        }
+
         // if there is some "delete categories" data, put it in the local "delete" object
         if (!isObjectEmpty(deviceData.deleteCategories)) {
           dispatch(deleteLocalCategories(deviceData.deleteCategories));
@@ -119,6 +126,7 @@ export default function SyncOnProvider(): null {
                   deleteCategories: {},
                   addNotes: {},
                   deleteNotes: {},
+                  detachNotes: {},
                 }
               : {}),
           },
@@ -254,8 +262,8 @@ export default function SyncOnProvider(): null {
       return;
     }
 
-    // if both groups are empty, don't call syncToCloud method
-    if (isEmpty(cloudNotes_add) && isEmpty(cloudNotes_delete)) {
+    // if all groups are empty, don't call syncToCloud method
+    if (isEmpty(cloudNotes_add) && isEmpty(cloudNotes_delete) && isEmpty(cloudNotes_detach)) {
       return;
     }
 
@@ -290,6 +298,16 @@ export default function SyncOnProvider(): null {
             })
           ).unwrap();
         }
+
+        if (!isEmpty(cloudNotes_detach)) {
+          await dispatch(
+            detachCloudNotesAsync({
+              deviceUuid: deviceUuid!,
+              devicesToSync: devicesExceptMe,
+              areMoreThanOneDevice: devicesExceptMe.length > 0,
+            })
+          ).unwrap();
+        }
       } catch (e) {
         console.log("syncNotesToCloud error:", e);
       }
@@ -302,7 +320,7 @@ export default function SyncOnProvider(): null {
       if (tDebounceNotes.current) clearTimeout(tDebounceNotes.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCloudConnected, netInfo, cloudNotes_add, cloudNotes_delete]);
+  }, [isCloudConnected, netInfo, cloudNotes_add, cloudNotes_delete, cloudNotes_detach]);
 
   return null;
 }

@@ -271,6 +271,7 @@ export const addDeviceToCloud = async (): Promise<boolean> => {
         deleteCategories: {},
         addNotes: {},
         deleteNotes: {},
+        detachNotes: {},
         devicesToSync: [],
       },
     });
@@ -336,6 +337,7 @@ export const removeDeviceFromDevicesToSync = async (deviceUuid: string): Promise
                 deleteCategories: {},
                 addNotes: {},
                 deleteNotes: {},
+                detachNotes: {},
               }
             : {}),
         },
