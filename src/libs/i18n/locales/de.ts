@@ -15,6 +15,15 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_1_1_0: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
+• Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
+• Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
+• Ein Infofenster zur Notiz hinzugefugt.
+• Ruckgangig/Wiederholen und Durchstreichen im Texteditor hinzugefugt.
+• Die Cloud-Synchronisierung zeigt jetzt den Status jedes verbundenen Gerats an.
+• Schnellerer App-Start.
+• Verschiedene Fehlerbehebungen.`,
+
       description_1_0_0: `• Erste stabile Version von Fast Memo Desktop (kein BETA mehr).
 • Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
 • Onboarding mit neuen Einfuhrungsschritten neu gestaltet.
@@ -38,6 +47,14 @@ const de = {
     },
 
     mobile: {
+      description_3_1_0: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
+• Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
+• Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
+• Ein Infofenster zur Notiz hinzugefugt.
+• Ruckgangig/Wiederholen und Durchstreichen im Texteditor hinzugefugt.
+• Die Cloud-Synchronisierung zeigt jetzt den Status jedes verbundenen Gerats an.
+• Verschiedene Fehlerbehebungen.`,
+
       description_3_0_0: `• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
 • Onboarding mit neuen Einfuhrungsschritten neu gestaltet.
 • Einstellungen zur Notizerstellung hinzugefugt, um Standardwerte anzupassen.
@@ -45,7 +62,7 @@ const de = {
 • App-Icon und Startbildschirm aufgefrischt.
 • Verschiedene Fehlerbehebungen.`,
 
-      description_2_9_0: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
+      description_2_9_1: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
 • Qwen 2.5 7B Modell mit Gerate-RAM-Erkennung hinzugefugt. Neue AI-Aktionen fur Code: Code erklaren und Kommentare hinzufugen.
 • Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
 • Notiz-Export hinzugefugt.

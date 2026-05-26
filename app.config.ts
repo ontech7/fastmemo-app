@@ -15,7 +15,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   owner: "dontrok1",
   name: appName,
   slug: appSlug,
-  version: "3.0.0",
+  version: "3.1.0",
   orientation: "portrait",
   icon: appIcon,
   scheme: appSlug,

@@ -15,6 +15,15 @@ const en = {
     title: "What's new?",
 
     web: {
+      description_1_1_0: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
+• Voice Recognition 2.0: improved voice dictation with automatic AI cleanup.
+• The AI Assistant can now suggest a category from the note title.
+• Added a note info panel.
+• Added undo/redo and strikethrough to the text editor.
+• Cloud Sync now shows the status of each connected device.
+• Faster app startup.
+• Various fixes.`,
+
       description_1_0_0: `• First stable release of Fast Memo Desktop (out of BETA).
 • Brand-new modern design across the whole app, with the new Geist font, glass surfaces and gradients.
 • Redesigned onboarding with new intro steps.
@@ -38,6 +47,14 @@ const en = {
     },
 
     mobile: {
+      description_3_1_0: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
+• Voice Recognition 2.0: improved voice dictation with automatic AI cleanup.
+• The AI Assistant can now suggest a category from the note title.
+• Added a note info panel.
+• Added undo/redo and strikethrough to the text editor.
+• Cloud Sync now shows the status of each connected device.
+• Various fixes.`,
+
       description_3_0_0: `• Brand-new modern design across the whole app, with the new Geist font, glass surfaces and gradients.
 • Redesigned onboarding with new intro steps.
 • Added note creation settings to customize the defaults for new notes.
@@ -45,7 +62,7 @@ const en = {
 • Refreshed app icon and splash screen.
 • Various fixes.`,
 
-      description_2_9_0: `• Added new note type: Code note with built-in code editor, syntax highlighting, multiple tabs, and language auto-detection.
+      description_2_9_1: `• Added new note type: Code note with built-in code editor, syntax highlighting, multiple tabs, and language auto-detection.
 • Added Qwen 2.5 7B model with device RAM detection. New AI actions for code: Explain code and Add comments.
 • Added find and replace in text notes.
 • Added note export.

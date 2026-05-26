@@ -15,6 +15,15 @@ const es = {
     title: "¿Qué hay de nuevo?",
 
     web: {
+      description_1_1_0: `• Agregadas las notas sin conexion: manten una nota solo en este dispositivo, sin sincronizarla en la nube.
+• Reconocimiento de voz 2.0: dictado por voz mejorado con limpieza automatica mediante IA.
+• El Asistente IA ahora puede sugerir una categoria a partir del titulo de la nota.
+• Agregado un panel con la informacion de la nota.
+• Agregados deshacer/rehacer y tachado en el editor de texto.
+• La sincronizacion en la nube ahora muestra el estado de cada dispositivo conectado.
+• Inicio de la app mas rapido.
+• Correcciones varias.`,
+
       description_1_0_0: `• Primera version estable de Fast Memo Desktop (fuera de BETA).
 • Nuevo diseno moderno en toda la app, con la nueva fuente Geist, superficies glass y degradados.
 • Rediseno del onboarding con nuevos pasos introductorios.
@@ -38,6 +47,14 @@ const es = {
     },
 
     mobile: {
+      description_3_1_0: `• Agregadas las notas sin conexion: manten una nota solo en este dispositivo, sin sincronizarla en la nube.
+• Reconocimiento de voz 2.0: dictado por voz mejorado con limpieza automatica mediante IA.
+• El Asistente IA ahora puede sugerir una categoria a partir del titulo de la nota.
+• Agregado un panel con la informacion de la nota.
+• Agregados deshacer/rehacer y tachado en el editor de texto.
+• La sincronizacion en la nube ahora muestra el estado de cada dispositivo conectado.
+• Correcciones varias.`,
+
       description_3_0_0: `• Nuevo diseno moderno en toda la app, con la nueva fuente Geist, superficies glass y degradados.
 • Rediseno del onboarding con nuevos pasos introductorios.
 • Agregados ajustes de creacion de notas para personalizar los valores predeterminados.
@@ -45,7 +62,7 @@ const es = {
 • Icono de la app y pantalla de inicio renovados.
 • Correcciones varias.`,
 
-      description_2_9_0: `• Agregado nuevo tipo de nota: Codigo, con editor integrado, resaltado de sintaxis, pestanas multiples y deteccion automatica del lenguaje.
+      description_2_9_1: `• Agregado nuevo tipo de nota: Codigo, con editor integrado, resaltado de sintaxis, pestanas multiples y deteccion automatica del lenguaje.
 • Agregado modelo Qwen 2.5 7B con deteccion de RAM del dispositivo. Nuevas acciones AI para codigo: Explicar codigo y Agregar comentarios.
 • Agregada funcion buscar y reemplazar en notas de texto.
 • Agregada exportacion de notas.

@@ -15,6 +15,15 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
+      description_1_1_0: `• Ajout des notes hors ligne : conservez une note uniquement sur cet appareil, sans la synchroniser sur le cloud.
+• Reconnaissance vocale 2.0 : dictee vocale amelioree avec nettoyage automatique par IA.
+• L'Assistant IA peut desormais suggerer une categorie a partir du titre de la note.
+• Ajout d'un panneau d'informations sur la note.
+• Ajout d'annuler/retablir et du barre dans l'editeur de texte.
+• La synchronisation Cloud affiche desormais l'etat de chaque appareil connecte.
+• Demarrage de l'app plus rapide.
+• Corrections diverses.`,
+
       description_1_0_0: `• Premiere version stable de Fast Memo Desktop (hors BETA).
 • Nouveau design moderne dans toute l'app, avec la nouvelle police Geist, des surfaces glass et des degrades.
 • Onboarding repense avec de nouvelles etapes d'introduction.
@@ -38,6 +47,14 @@ const fr = {
     },
 
     mobile: {
+      description_3_1_0: `• Ajout des notes hors ligne : conservez une note uniquement sur cet appareil, sans la synchroniser sur le cloud.
+• Reconnaissance vocale 2.0 : dictee vocale amelioree avec nettoyage automatique par IA.
+• L'Assistant IA peut desormais suggerer une categorie a partir du titre de la note.
+• Ajout d'un panneau d'informations sur la note.
+• Ajout d'annuler/retablir et du barre dans l'editeur de texte.
+• La synchronisation Cloud affiche desormais l'etat de chaque appareil connecte.
+• Corrections diverses.`,
+
       description_3_0_0: `• Nouveau design moderne dans toute l'app, avec la nouvelle police Geist, des surfaces glass et des degrades.
 • Onboarding repense avec de nouvelles etapes d'introduction.
 • Ajout des parametres de creation de note pour personnaliser les valeurs par defaut.
@@ -45,7 +62,7 @@ const fr = {
 • Icone de l'app et ecran de demarrage renouveles.
 • Corrections diverses.`,
 
-      description_2_9_0: `• Ajout d'un nouveau type de note : Code, avec editeur integre, coloration syntaxique, onglets multiples et detection automatique du langage.
+      description_2_9_1: `• Ajout d'un nouveau type de note : Code, avec editeur integre, coloration syntaxique, onglets multiples et detection automatique du langage.
 • Ajout du modele Qwen 2.5 7B avec detection de la RAM de l'appareil. Nouvelles actions AI pour le code : Expliquer le code et Ajouter des commentaires.
 • Ajout de la fonction rechercher et remplacer dans les notes texte.
 • Ajout de l'exportation de notes.

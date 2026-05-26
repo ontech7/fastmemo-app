@@ -15,6 +15,15 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
+      description_1_1_0: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
+• Riconoscimento vocale 2.0: dettatura vocale migliorata con pulizia automatica tramite AI.
+• L'Assistente AI ora puo' suggerire una categoria a partire dal titolo della nota.
+• Aggiunto un pannello con le informazioni della nota.
+• Aggiunti annulla/ripeti e barrato nell'editor di testo.
+• La sincronizzazione Cloud ora mostra lo stato di ogni dispositivo collegato.
+• Avvio dell'app piu' veloce.
+• Fix varie.`,
+
       description_1_0_0: `• Prima versione stabile di Fast Memo Desktop (fuori dalla BETA).
 • Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.
 • Onboarding ridisegnato con nuovi step introduttivi.
@@ -38,6 +47,14 @@ const it = {
     },
 
     mobile: {
+      description_3_1_0: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
+• Riconoscimento vocale 2.0: dettatura vocale migliorata con pulizia automatica tramite AI.
+• L'Assistente AI ora puo' suggerire una categoria a partire dal titolo della nota.
+• Aggiunto un pannello con le informazioni della nota.
+• Aggiunti annulla/ripeti e barrato nell'editor di testo.
+• La sincronizzazione Cloud ora mostra lo stato di ogni dispositivo collegato.
+• Fix varie.`,
+
       description_3_0_0: `• Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.
 • Onboarding ridisegnato con nuovi step introduttivi.
 • Aggiunte impostazioni di creazione nota per personalizzare i valori predefiniti.
@@ -45,7 +62,7 @@ const it = {
 • Rinnovate icona dell'app e schermata di avvio.
 • Fix varie.`,
 
-      description_2_9_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
+      description_2_9_1: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
 • Aggiunto modello Qwen 2.5 7B con rilevamento RAM del dispositivo. Nuove azioni AI per il codice: Spiega il codice e Aggiungi commenti.
 • Aggiunta funzione trova e sostituisci nelle note di testo.
 • Aggiunta esportazione note.

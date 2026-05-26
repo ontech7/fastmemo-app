@@ -13,6 +13,7 @@ import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 function getVersionChangelogs(t: (key: string) => string) {
   return Platform.OS === "web"
     ? [
+        { version: "v1.1.0", text: t("changelog.web.description_1_1_0") },
         { version: "v1.0.0", text: t("changelog.web.description_1_0_0") },
         { version: "v0.3.1", text: t("changelog.web.description_0_3_0") },
         { version: "v0.2.1", text: t("changelog.web.description_0_2_0") },
@@ -20,8 +21,9 @@ function getVersionChangelogs(t: (key: string) => string) {
         { version: "v0.1.0", text: t("changelog.web.description_0_1_0") },
       ]
     : [
+        { version: "v3.1.0", text: t("changelog.mobile.description_3_1_0") },
         { version: "v3.0.0", text: t("changelog.mobile.description_3_0_0") },
-        { version: "v2.9.1", text: t("changelog.mobile.description_2_9_0") },
+        { version: "v2.9.1", text: t("changelog.mobile.description_2_9_1") },
         { version: "v2.8.0", text: t("changelog.mobile.description_2_8_0") },
         { version: "v2.7.1", text: t("changelog.mobile.description_2_7_1") },
         { version: "v2.7.0", text: t("changelog.mobile.description_2_7_0") },
