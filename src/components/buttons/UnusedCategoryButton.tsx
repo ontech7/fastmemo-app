@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.md,
     marginRight: PADDING_MARGIN.md,
     backgroundColor: COLOR.surface,
-    borderRadius: BORDER.normal,
+    borderRadius: BORDER.big,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: GLASS.border,
   },

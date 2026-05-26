@@ -16,11 +16,11 @@ import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
+import CategoryIcon from "@/components/CategoryIcon";
+import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import { deleteCategory, swapCategory } from "@/slicers/categoriesSlice";
 import { deleteNotesCategory, resetNotesCategory } from "@/slicers/notesSlice";
 import { selectorWebhook_deleteCategory } from "@/slicers/settingsSlice";
-import CategoryIcon from "@/components/CategoryIcon";
-import ComplexDialog from "@/components/dialogs/ComplexDialog";
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
