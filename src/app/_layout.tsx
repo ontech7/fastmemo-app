@@ -4,7 +4,9 @@ import WebToaster from "@/components/WebToaster";
 import AppBackground from "@/components/ui/AppBackground";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { usePreventBackspaceNav } from "@/hooks/usePreventBackspaceNav";
 import i18n from "@/libs/i18n";
+import { closeTauriSplashscreen } from "@/libs/tauri";
 import SyncOnProvider from "@/providers/SyncOnProvider";
 import { persistor, store } from "@/slicers/store";
 import { DialogProvider } from "@ontech7/react-native-dialog";
@@ -45,6 +47,9 @@ export default Sentry.wrap(function RootLayout() {
   const { colors } = useTheme();
   colors.background = "transparent";
 
+  // Stop the WebView's Backspace-key history navigation (no-op on native).
+  usePreventBackspaceNav();
+
   const [fontsLoaded, fontError] = useFonts({
     "Geist-Regular": require("@/assets/fonts/Geist-Regular.ttf"),
     "Geist-Medium": require("@/assets/fonts/Geist-Medium.ttf"),
@@ -61,18 +66,25 @@ export default Sentry.wrap(function RootLayout() {
     return () => clearTimeout(id);
   }, []);
 
-  const ready = fontsLoaded || !!fontError || fontWaitElapsed;
+  // On web/Tauri the native expo splash doesn't exist and the font loader can
+  // hang in the WebView (asset URLs resolve differently), so blocking the first
+  // paint on it would leave the user staring at the flat background. Render
+  // immediately and let Geist swap in once loaded — the first screen is just the
+  // logo image, so there's no visible text reflow. Native still gates so text
+  // never flashes a system font.
+  const ready = Platform.OS === "web" || fontsLoaded || !!fontError || fontWaitElapsed;
 
-  // Hide the native splash only once a JS view (the gradient splash or the
-  // app shell) has laid out, so the gradient is already painted underneath —
-  // no flash of the flat native background.
+  // Hide the splash only once a JS view (the gradient splash or the app shell)
+  // has laid out, so the gradient is already painted underneath — no flash of
+  // the flat background. On Tauri this also tears down the native splash window.
   const onLayoutRootView = useCallback(() => {
     SplashScreen.hideAsync().catch(() => {});
+    closeTauriSplashscreen();
   }, []);
 
-  // While fonts load, render nothing and keep the native splash up (it's already
-  // COLOR.bg + the same centered logo, so there's no separate JS splash to keep
-  // in sync). hideAsync only fires from the app shell's onLayout below.
+  // While fonts load (native only), render nothing and keep the native splash up
+  // (it's already COLOR.bg + the same centered logo, so there's no separate JS
+  // splash to keep in sync). hideAsync only fires from the app shell's onLayout.
   if (!ready) {
     return null;
   }

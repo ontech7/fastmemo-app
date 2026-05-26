@@ -14,12 +14,19 @@ export async function exportAsPdf(title: string, htmlContent: string): Promise<{
 
 export async function shareFile(uri: string, filename: string): Promise<void> {
   const isAvailable = await Sharing.isAvailableAsync();
-  if (isAvailable) {
-    await Sharing.shareAsync(uri, {
-      mimeType: filename.endsWith(".pdf") ? "application/pdf" : filename.endsWith(".md") ? "text/markdown" : "text/plain",
-      dialogTitle: filename,
-    });
-  }
+  if (!isAvailable) return;
+
+  // Chat apps (Telegram, WhatsApp) interpret a "text/plain" (or "text/markdown")
+  // share as plain-text content to send as a message, not as a file attachment —
+  // since we only pass a file stream they reject it ("format not supported"). A
+  // generic document MIME forces attachment handling; the extension is preserved
+  // in the filename so the receiver still sees it as a .txt/.md.
+  const mimeType = filename.endsWith(".pdf") ? "application/pdf" : "application/octet-stream";
+
+  await Sharing.shareAsync(uri, {
+    mimeType,
+    dialogTitle: filename,
+  });
 }
 
 export async function exportAsTextFile(content: string, filename: string): Promise<void> {

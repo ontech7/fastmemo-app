@@ -11,10 +11,16 @@ import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
-import { selectorDeveloperMode, selectorWebhook_addTextNote } from "@/slicers/settingsSlice";
+import {
+  selectorAIAssistant,
+  selectorDeveloperMode,
+  selectorVoiceRecognition,
+  selectorWebhook_addTextNote,
+} from "@/slicers/settingsSlice";
 import type { TextNote } from "@/types";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
 import { toast } from "@/utils/toast";
+import { voiceTextToHtml } from "@/utils/voiceTranscript";
 import { useFocusEffect } from "@react-navigation/native";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -34,6 +40,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const { t } = useTranslation();
 
   const devMode = useSelector(selectorDeveloperMode);
+
+  const aiAssistant = useSelector(selectorAIAssistant);
+  const voiceRecognition = useSelector(selectorVoiceRecognition);
+  const showAiActions = aiAssistant.enabled && aiAssistant.modelDownloaded;
+  const showVoiceButton = voiceRecognition.enabled;
 
   const memoInitialNote = useMemo<TextNote>(() => ({ ...initialNote, type: initialNote.type || "text" }), [initialNote]);
   const isEmpty = useCallback((n: TextNote) => isStringEmpty(n.title) && isStringEmpty(n.text), []);
@@ -151,16 +162,21 @@ export default function NoteTextEditor({ initialNote }: Props) {
       color: COLOR.softWhite,
       placeholderColor: COLOR.textMuted,
       cssText: richTextSyle,
+      // breathing room so the last line clears the action bar / toolbar below
+      contentCSSText: "padding-bottom: 24px;",
     }),
     []
   );
 
   const toolbarActions = useMemo(
     () => [
+      actions.undo,
+      actions.redo,
       actions.insertImage,
       actions.heading1,
       actions.setBold,
       actions.setItalic,
+      actions.setStrikethrough,
       actions.setUnderline,
       actions.alignLeft,
       actions.alignCenter,
@@ -190,7 +206,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
         <View style={styles.header}>
           <BackButton chip callback={updateNoteWebhook} />
 
-          <View style={{ flexGrow: 1 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <TextInput
               style={styles.titleInput}
               onChangeText={setTitle}
@@ -258,6 +274,50 @@ export default function NoteTextEditor({ initialNote }: Props) {
           />
         )}
 
+        {/* Auxiliary actions live in a dedicated bar below the editor (not floating over
+            the text) so there is a clear separation from the rich text content. */}
+        {editorReady && !note.readOnly && (showAiActions || showVoiceButton) && (
+          <View style={styles.actionDock}>
+            {showAiActions && (
+              <AIEditorActions
+                noteType="text"
+                getContent={() => stripHtml(note.text)}
+                noteTitle={note.title}
+                onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                onSummaryGenerated={(summary) => {
+                  richTextEditor.current?.setContentHTML(summary);
+                  setText(summary);
+                }}
+                onCategorySuggested={(name) => {
+                  const cat = findCategoryByName(name);
+                  if (cat) setNoteAsync({ ...note, category: cat });
+                }}
+                onTextRewritten={(rewritten) => {
+                  const html = voiceTextToHtml(rewritten, { leadingSpace: false });
+                  richTextEditor.current?.setContentHTML(html);
+                  setText(html);
+                }}
+                style={styles.dockAiButton}
+                menuBottomOffset={110}
+              />
+            )}
+
+            {showVoiceButton && (
+              <VoiceRecognitionButton
+                onInsert={(text) => {
+                  const html = voiceTextToHtml(text);
+                  // the dictation sheet dismissed the keyboard; refocus so the
+                  // text lands at the caret, then insert
+                  richTextEditor.current?.focusContentEditor();
+                  setTimeout(() => richTextEditor.current?.insertHTML(html), 50);
+                }}
+                aiCleanup
+                style={styles.dockVoiceButton}
+              />
+            )}
+          </View>
+        )}
+
         <DismissKeyboardButton
           showKeyboardDismiss={isKeyboardShown}
           onPress={() => richTextEditor.current?.dismissKeyboard()}
@@ -279,42 +339,6 @@ export default function NoteTextEditor({ initialNote }: Props) {
             iconMap={toolbarIconMap}
           />
         )}
-
-        {editorReady && !note.readOnly && (
-          <VoiceRecognitionButton
-            setTranscript={(transcript, isFinal) => {
-              richTextEditor.current?.setContentHTML(note.text + " " + transcript);
-              if (isFinal) setText(note.text + " " + transcript);
-            }}
-            style={{ right: 40 }}
-          />
-        )}
-
-        {editorReady && !note.readOnly && (
-          <AIEditorActions
-            noteType="text"
-            getContent={() => stripHtml(note.text)}
-            noteTitle={note.title}
-            onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
-            onSummaryGenerated={(summary) => {
-              richTextEditor.current?.setContentHTML(summary);
-              setText(summary);
-            }}
-            onContinueGenerated={(continuation) => {
-              const newText = note.text + " " + continuation;
-              richTextEditor.current?.setContentHTML(newText);
-              setText(newText);
-            }}
-            onTextFormatted={(html) => {
-              richTextEditor.current?.setContentHTML(html);
-              setText(html);
-            }}
-            onCategorySuggested={(name) => {
-              const cat = findCategoryByName(name);
-              if (cat) setNoteAsync({ ...note, category: cat });
-            }}
-          />
-        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -333,6 +357,10 @@ const styles = StyleSheet.create({
   },
   titleInput: {
     textAlign: "center",
+    // Android misplaces the caret of an empty centered TextInput (drifts to the
+    // bottom/right until typing starts); these two keep it centered.
+    textAlignVertical: "center",
+    includeFontPadding: false,
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.lg,
     marginHorizontal: PADDING_MARGIN.sm,
@@ -374,10 +402,29 @@ const styles = StyleSheet.create({
     width: SIZE.full,
     height: 38,
     backgroundColor: COLOR.surface,
-    borderTopLeftRadius: BORDER.normal,
   },
   richToolbarContainerDesktop: {
     borderRadius: BORDER.normal,
+  },
+  actionDock: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.lg,
+    paddingHorizontal: PADDING_MARGIN.xl,
+    paddingTop: PADDING_MARGIN.lg,
+    paddingBottom: PADDING_MARGIN.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: GLASS.border,
+  },
+  dockAiButton: {
+    position: "relative",
+    bottom: 0,
+    left: 0,
+  },
+  dockVoiceButton: {
+    position: "relative",
+    bottom: 0,
+    right: 0,
   },
   textWrapper: {
     marginVertical: PADDING_MARGIN.xl,

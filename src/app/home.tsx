@@ -59,7 +59,14 @@ export default function HomeScreen() {
 
   const currentCategory = useSelector(getCurrentCategory);
   const showHidden = useSelector(selectorShowHidden);
-  const notes = useSelector(getNotesFilteredPerCategory(currentCategory, showHidden));
+  // Keep the memoized selector instance stable across renders — building it inline
+  // on every render gives reselect an empty cache each time, so `notes` would be a
+  // fresh array on every render and rebuild the whole list (jank while typing).
+  const selectNotes = useMemo(
+    () => getNotesFilteredPerCategory(currentCategory, showHidden),
+    [currentCategory, showHidden]
+  );
+  const notes = useSelector(selectNotes);
 
   // @ts-ignore
   const trashedNotes = store.getState().notes.temporaryItems;

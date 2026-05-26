@@ -1,7 +1,7 @@
 {
   "name": "fastmemo-app-new-arch",
   "main": "expo-router/entry",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "scripts": {
     "start": "expo start",
     "start:clear-cache": "expo start -c",
@@ -18,6 +18,10 @@
     "tauri:build:mac": "dotenv -e .env -- tauri build --target universal-apple-darwin",
     "tauri:build:windows": "dotenv -e .env -- tauri build --target x86_64-pc-windows-msvc",
     "tauri:build:linux": "dotenv -e .env -- tauri build --target x86_64-unknown-linux-gnu",
+    "tauri:build:test": "dotenv -e .env -- tauri build -c src-tauri/tauri.test.conf.json",
+    "tauri:build:test:mac": "dotenv -e .env -- tauri build --target universal-apple-darwin -c src-tauri/tauri.test.conf.json",
+    "tauri:build:test:windows": "dotenv -e .env -- tauri build --target x86_64-pc-windows-msvc -c src-tauri/tauri.test.conf.json",
+    "tauri:build:test:linux": "dotenv -e .env -- tauri build --target x86_64-unknown-linux-gnu -c src-tauri/tauri.test.conf.json",
     "format": "prettier --write \"./src/**/*.{ts,tsx,js,jsx,md,json}\"",
     "format:diff": "prettier --write $(git diff --name-only | grep '.ts\\|.tsx\\|.js\\|.json\\|.md')",
     "lint": "expo lint",

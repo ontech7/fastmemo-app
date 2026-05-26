@@ -8,10 +8,10 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/
 import { useCloudSync } from "@/hooks/useCloudSync";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useSecret } from "@/hooks/useSecret";
+import { openUrl } from "@/utils/openUrl";
 import { toast } from "@/utils/toast";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { openUrl } from "@/utils/openUrl";
 import {
   ArrowPathIcon,
   CheckIcon,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: BORDER.normal,
+    borderRadius: BORDER.big,
     backgroundColor: COLOR.accentMuted,
     ...SHADOW.fab,
   },

@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, StarIcon } from "react-native-heroicons/outline";
+import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, SignalSlashIcon, StarIcon } from "react-native-heroicons/outline";
 import { useSelector } from "react-redux";
 
 import { useRouter } from "@/hooks/useRouter";
@@ -49,7 +49,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
 
   const { sortBy } = useSelector(getNoteFilters);
 
-  const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked } = content;
+  const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked, local } = content;
 
   const onLongPressHandler = () => {
     if (!isDeleteMode) {
@@ -83,7 +83,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
   const accent = getCardAccent(type, isImportant);
   const fg = isImportant ? COLOR.softWhite : COLOR.darkBlue;
   const chipBg = isImportant ? "rgba(255, 255, 255, 0.18)" : "rgba(2, 14, 53, 0.09)";
-  const hasStatus = important || readOnly || locked || hidden;
+  const hasStatus = important || readOnly || locked || hidden || local;
   const TypeIcon = type && type !== "text" ? NOTE_TYPES.find((nt) => nt.key === type)?.icon : undefined;
 
   const sortByUpdated = sortBy === "updatedAt";
@@ -142,6 +142,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
               {locked && <KeyIcon size={14} color={fg} />}
               {readOnly && <BookOpenIcon size={14} color={fg} />}
               {hidden && <EyeSlashIcon size={14} color={fg} />}
+              {local && <SignalSlashIcon size={14} color={fg} />}
             </View>
           )}
         </View>

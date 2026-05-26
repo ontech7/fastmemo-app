@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ElementRef } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
 import { ArrowsRightLeftIcon, ArrowsUpDownIcon, ListBulletIcon } from "react-native-heroicons/outline";
 import Animated, {
   Easing,
@@ -32,6 +32,10 @@ interface Props {
   currentMode: "free" | "steps";
   onSelectMode: (mode: TodoNote["mode"]) => void;
   disabled?: boolean;
+  /** Override the trigger position. Defaults to a bottom-left floating FAB. */
+  style?: ViewStyle;
+  /** Bottom padding for the overlay menu so the options clear the trigger. */
+  menuBottomOffset?: number;
 }
 
 interface MenuItemProps {
@@ -81,13 +85,16 @@ function AnimatedMenuItem({ option, index, totalItems, menuProgress, label, onPr
  * Bottom-left FAB that opens a dimmed overlay with the todo modes you can switch
  * to (the current one is filtered out) — same interaction as AddNoteOverlayButton.
  */
-export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled = false }: Props) {
+export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled = false, style, menuBottomOffset }: Props) {
   const { t } = useTranslation();
 
   const insets = useSafeAreaInsets();
 
   const [isOpen, setIsOpen] = useState(false);
+  // Left edge (window coords) of the trigger, so the menu opens exactly from the button.
+  const [menuLeft, setMenuLeft] = useState(40);
   const menuProgress = useSharedValue(0);
+  const triggerRef = useRef<ElementRef<typeof TouchableOpacity>>(null);
 
   const options = TODO_MODES.filter((m) => m.mode !== currentMode);
 
@@ -98,22 +105,13 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
     });
   }, [isOpen, menuProgress]);
 
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (isOpen) {
-        setIsOpen(false);
-        return true;
-      }
-      return false;
-    });
-
-    return () => backHandler.remove();
-  }, [isOpen]);
-
   const backdropAnimatedStyle = useAnimatedStyle(() => ({ opacity: menuProgress.value }));
 
   const toggleOverlay = () => {
     if (disabled) return;
+    if (!isOpen) {
+      triggerRef.current?.measureInWindow((x) => setMenuLeft(x));
+    }
     setIsOpen((p) => !p);
   };
 
@@ -124,28 +122,33 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
 
   return (
     <>
-      <AnimatedPressable
-        style={[styles.fullscreenOverlay, { paddingBottom: insets.bottom + 88 }, backdropAnimatedStyle]}
-        pointerEvents={isOpen ? "auto" : "none"}
-        onPress={() => setIsOpen(false)}
-      >
-        <View style={styles.overlayContainer}>
-          {options.map((option, index) => (
-            <AnimatedMenuItem
-              key={option.mode}
-              option={option}
-              index={index}
-              totalItems={options.length}
-              menuProgress={menuProgress}
-              label={t(option.labelKey)}
-              onPress={() => selectMode(option.mode)}
-            />
-          ))}
-        </View>
-      </AnimatedPressable>
+      <Modal visible={isOpen} transparent animationType="none" statusBarTranslucent onRequestClose={() => setIsOpen(false)}>
+        <AnimatedPressable
+          style={[
+            styles.fullscreenOverlay,
+            { paddingBottom: menuBottomOffset ?? insets.bottom + 88, paddingLeft: menuLeft },
+            backdropAnimatedStyle,
+          ]}
+          onPress={() => setIsOpen(false)}
+        >
+          <View style={styles.overlayContainer}>
+            {options.map((option, index) => (
+              <AnimatedMenuItem
+                key={option.mode}
+                option={option}
+                index={index}
+                totalItems={options.length}
+                menuProgress={menuProgress}
+                label={t(option.labelKey)}
+                onPress={() => selectMode(option.mode)}
+              />
+            ))}
+          </View>
+        </AnimatedPressable>
+      </Modal>
 
-      <View style={[styles.fabGroup, { bottom: insets.bottom + 38 }]} pointerEvents="box-none">
-        <TouchableOpacity style={styles.fab} activeOpacity={0.7} onPress={toggleOverlay}>
+      <View style={[styles.fabGroup, !style && { bottom: insets.bottom + 38 }, style]} pointerEvents="box-none">
+        <TouchableOpacity ref={triggerRef} style={styles.fab} activeOpacity={0.7} onPress={toggleOverlay}>
           <ArrowsRightLeftIcon size={24} color={COLOR.softWhite} />
         </TouchableOpacity>
       </View>
@@ -174,8 +177,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.8)",
     justifyContent: "flex-end",
     alignItems: "flex-start",
-    paddingLeft: 40,
-    zIndex: 5,
+    // Sit above the floating AI action button (zIndex 6) so the mode dropdown
+    // stays usable; the toggle FAB (fabGroup, zIndex 10) remains tappable above.
+    zIndex: 7,
   },
   overlayContainer: {
     gap: PADDING_MARGIN.md,

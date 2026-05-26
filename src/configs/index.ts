@@ -7,8 +7,8 @@ export const configs: AppConfigs = {
 
   app: {
     version: {
-      mobile: "3.0.0",
-      web: "1.0.0",
+      mobile: "3.1.0",
+      web: "1.1.0",
     },
     name: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "Fast Memo" : "Fast Memo Test",
     slug: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "FastMemoApp" : "fastmemoapptest",

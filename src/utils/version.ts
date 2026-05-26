@@ -20,7 +20,7 @@ export function getCurrentAppVersion(): string {
 }
 
 /**
- * Compares two semver-like version strings (e.g. "3.0.0", "1.0.0").
+ * Compares two semver-like version strings (e.g. "3.1.0", "1.1.0").
  * Only the numeric dot-separated parts are considered; suffixes (e.g. "-beta")
  * are stripped before comparison.
  *

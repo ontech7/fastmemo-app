@@ -39,6 +39,13 @@ export interface NoteBase {
   locked: boolean;
   readOnly: boolean;
   hidden: boolean;
+  /**
+   * When true the note lives only on this device: it is never uploaded to the
+   * cloud and incoming cloud copies for the same id are ignored. Re-syncing an
+   * offline note creates a brand-new note (new id + " (2)" title) to avoid any
+   * overlap with stale cloud/other-device versions.
+   */
+  local?: boolean;
   deleteDate: number | null;
 }
 

@@ -15,6 +15,15 @@ const ja = {
     title: "新着情報",
 
     web: {
+      description_1_1_0: `• オフラインノートを追加。ノートをこの端末だけに保存し、クラウドには同期しません。
+• 音声認識 2.0：音声入力を刷新し、AI による自動整形に対応。
+• AI アシスタントがノートのタイトルからカテゴリを提案できるようになりました。
+• ノートの情報パネルを追加。
+• テキストエディタに元に戻す/やり直しと取り消し線を追加。
+• クラウド同期で、接続中の各端末の状態を表示するようになりました。
+• アプリの起動を高速化。
+• 各種修正。`,
+
       description_1_0_0: `• Fast Memo Desktop の初の安定版をリリース（BETA を卒業）。
 • 全画面を刷新した新しいモダンデザイン。新フォント Geist、グラス調の表面、グラデーションを採用。
 • 紹介ステップを刷新したオンボーディング。
@@ -38,6 +47,14 @@ const ja = {
     },
 
     mobile: {
+      description_3_1_0: `• オフラインノートを追加。ノートをこの端末だけに保存し、クラウドには同期しません。
+• 音声認識 2.0：音声入力を刷新し、AI による自動整形に対応。
+• AI アシスタントがノートのタイトルからカテゴリを提案できるようになりました。
+• ノートの情報パネルを追加。
+• テキストエディタに元に戻す/やり直しと取り消し線を追加。
+• クラウド同期で、接続中の各端末の状態を表示するようになりました。
+• 各種修正。`,
+
       description_3_0_0: `• 全画面を刷新した新しいモダンデザイン。新フォント Geist、グラス調の表面、グラデーションを採用。
 • 紹介ステップを刷新したオンボーディング。
 • 新規ノートの初期設定をカスタマイズできるノート作成設定を追加。
@@ -45,7 +62,7 @@ const ja = {
 • アプリアイコンとスプラッシュ画面を刷新。
 • 各種修正。`,
 
-      description_2_9_0: `• 新しいノートタイプ「コード」を追加。エディタ内蔵、シンタックスハイライト、複数タブ、言語自動検出に対応。
+      description_2_9_1: `• 新しいノートタイプ「コード」を追加。エディタ内蔵、シンタックスハイライト、複数タブ、言語自動検出に対応。
 • Qwen 2.5 7BモデルとデバイスRAM検出を追加。コード向け新AIアクション：コードの説明とコメント追加。
 • テキストノートに検索と置換機能を追加。
 • ノートのエクスポート機能を追加。
@@ -184,11 +201,27 @@ const ja = {
       protect: "保護",
       readonly: "読み取り専用",
       hide: "非表示",
+      make_offline: "オフラインにする",
+      sync_to_cloud: "クラウドに同期",
+      made_offline: "ノートはオフラインになりました",
+      synced_as_duplicate: "コピーとしてクラウドに同期しました",
       changecategory: "カテゴリを変更",
       share: "共有",
       export: "エクスポート",
       export_description: "エクスポート形式を選択してください",
       export_txt: "プレーンテキスト (.txt)",
+      info: "情報",
+    },
+    info: {
+      title: "情報",
+      type: "種類",
+      category: "カテゴリ",
+      created: "作成日",
+      updated: "更新日",
+      flags: "フラグ",
+      no_flags: "なし",
+      offline: "オフライン",
+      close: "閉じる",
     },
     find_replace: {
       search_placeholder: "検索...",
@@ -237,6 +270,9 @@ const ja = {
     title: "同期済みデバイス",
     lastSync: "最終同期: ",
     error_fetching: "デバイスの取得エラー",
+    upToDate: "最新",
+    pending: "{{count}} 件保留中",
+    mostRecent: "最も新しい",
   },
   createcategory: {
     title_create: "カテゴリーを作成",
@@ -361,10 +397,12 @@ const ja = {
     cap: {
       generate_title: "ノート内容からタイトルを生成",
       summarize: "テキストノートを数文で要約",
-      continue_writing: "続きを書く",
-      format_text: "見出し、太字、リストなどでテキストを整形",
+      fix_grammar: "スペルと文法を修正",
+      shorten: "テキストを短く簡潔にする",
+      translate: "ノートをアプリの言語に翻訳",
       suggest_items: "チェックリストの新しい項目を提案",
       suggest_category: "ノートに最適なカテゴリを提案",
+      voice_cleanup: "口述テキストを句読点付きで整える",
       explain_code: "コードの動作を説明",
       add_comments: "コードにコメントを追加",
     },
@@ -405,13 +443,17 @@ const ja = {
     editor: {
       generate_title: "タイトルを生成",
       summarize: "要約する",
-      continue_writing: "続きを書く",
       suggest_items: "項目を提案",
-      format_text: "テキストを整形",
       suggest_category: "カテゴリを提案",
       explain_code: "コードを説明",
       add_comments: "コメントを追加",
+      fix_grammar: "文法を修正",
+      shorten: "短くする",
+      translate: "翻訳",
       min_model: "最低",
+      before: "変更前",
+      after: "変更後",
+      apply: "適用",
       no_content: "まず何か書いてください",
       no_category_match: "該当するカテゴリが見つかりません",
       error: "生成できませんでした。もう一度お試しください",
@@ -424,6 +466,15 @@ const ja = {
     continuous: "手動停止",
     language: "言語",
     language_default: "デフォルト（システム）",
+    dictation: {
+      listening: "聞き取り中…",
+      paused: "一時停止",
+      hint: "話してください。",
+      insert: "挿入",
+      cancel: "キャンセル",
+      ai_cleanup: "AIで整える",
+      processing: "処理中…",
+    },
   },
   help: {
     title: "ヘルプ",

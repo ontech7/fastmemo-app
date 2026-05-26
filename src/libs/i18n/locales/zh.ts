@@ -15,6 +15,15 @@ const zh = {
     title: "什么是新的？",
 
     web: {
+      description_1_1_0: `• 新增离线笔记：仅将笔记保存在本设备，不同步到云端。
+• 语音识别 2.0：改进语音听写，支持 AI 自动整理文本。
+• AI 助手现在可以根据笔记标题推荐分类。
+• 新增笔记信息面板。
+• 文本编辑器新增撤销/重做和删除线。
+• 云同步现在会显示每台已连接设备的状态。
+• 应用启动更快。
+• 其他修复。`,
+
       description_1_0_0: `• Fast Memo Desktop 首个稳定版本（已结束 BETA）。
 • 全新现代化设计，全应用焕新，采用全新 Geist 字体、玻璃质感界面和渐变效果。
 • 重新设计的引导流程，新增介绍步骤。
@@ -38,6 +47,14 @@ const zh = {
     },
 
     mobile: {
+      description_3_1_0: `• 新增离线笔记：仅将笔记保存在本设备，不同步到云端。
+• 语音识别 2.0：改进语音听写，支持 AI 自动整理文本。
+• AI 助手现在可以根据笔记标题推荐分类。
+• 新增笔记信息面板。
+• 文本编辑器新增撤销/重做和删除线。
+• 云同步现在会显示每台已连接设备的状态。
+• 其他修复。`,
+
       description_3_0_0: `• 全新现代化设计，全应用焕新，采用全新 Geist 字体、玻璃质感界面和渐变效果。
 • 重新设计的引导流程，新增介绍步骤。
 • 新增笔记创建设置，可自定义新笔记的默认选项。
@@ -45,7 +62,7 @@ const zh = {
 • 焕新应用图标和启动画面。
 • 其他修复。`,
 
-      description_2_9_0: `• 新增代码笔记类型，内置代码编辑器，支持语法高亮、多标签页和语言自动检测。
+      description_2_9_1: `• 新增代码笔记类型，内置代码编辑器，支持语法高亮、多标签页和语言自动检测。
 • 新增Qwen 2.5 7B模型，支持设备RAM检测。代码新AI功能：解释代码和添加注释。
 • 文本笔记新增查找和替换功能。
 • 新增笔记导出功能。
@@ -184,11 +201,27 @@ const zh = {
       protect: "保护",
       readonly: "只读",
       hide: "隐藏",
+      make_offline: "设为离线",
+      sync_to_cloud: "同步到云端",
+      made_offline: "笔记现已离线",
+      synced_as_duplicate: "已作为副本同步到云端",
       changecategory: "更改类别",
       share: "分享",
       export: "导出",
       export_description: "选择导出格式",
       export_txt: "纯文本 (.txt)",
+      info: "信息",
+    },
+    info: {
+      title: "信息",
+      type: "类型",
+      category: "类别",
+      created: "创建时间",
+      updated: "更新时间",
+      flags: "标记",
+      no_flags: "无",
+      offline: "离线",
+      close: "关闭",
     },
     find_replace: {
       search_placeholder: "搜索...",
@@ -237,6 +270,9 @@ const zh = {
     title: "连接的设备",
     lastSync: "上次同步：",
     error_fetching: "获取设备时出错",
+    upToDate: "已是最新",
+    pending: "{{count}} 项待同步",
+    mostRecent: "最新",
   },
   createcategory: {
     title_create: "创建类别",
@@ -361,10 +397,12 @@ const zh = {
     cap: {
       generate_title: "根据笔记内容生成标题",
       summarize: "将文本笔记总结为几句话",
-      continue_writing: "从上次停止处继续写作",
-      format_text: "用标题、粗体、列表等格式化文本",
+      fix_grammar: "修正拼写和语法",
+      shorten: "让文本更简短精炼",
+      translate: "将笔记翻译成应用语言",
       suggest_items: "为清单建议新项目",
       suggest_category: "为笔记建议最佳类别",
+      voice_cleanup: "用标点整理口述文本",
       explain_code: "解释代码的作用",
       add_comments: "为代码添加注释",
     },
@@ -405,13 +443,17 @@ const zh = {
     editor: {
       generate_title: "生成标题",
       summarize: "总结",
-      continue_writing: "继续写作",
       suggest_items: "建议项目",
-      format_text: "格式化文本",
       suggest_category: "建议类别",
       explain_code: "解释代码",
       add_comments: "添加注释",
+      fix_grammar: "修正语法",
+      shorten: "缩短",
+      translate: "翻译",
       min_model: "最低",
+      before: "之前",
+      after: "之后",
+      apply: "应用",
       no_content: "请先写点内容",
       no_category_match: "未找到匹配的类别",
       error: "无法生成，请重试",
@@ -424,6 +466,15 @@ const zh = {
     continuous: "手动停止",
     language: "语言",
     language_default: "默认（系统）",
+    dictation: {
+      listening: "正在聆听…",
+      paused: "已暂停",
+      hint: "请开始说话。",
+      insert: "插入",
+      cancel: "取消",
+      ai_cleanup: "用AI整理",
+      processing: "处理中…",
+    },
   },
   help: {
     title: "帮助",

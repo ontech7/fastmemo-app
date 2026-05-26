@@ -270,7 +270,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
           ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.columnsScrollView, aiSettings.enabled && { paddingBottom: 100 }]}
+          contentContainerStyle={[styles.columnsScrollView, aiSettings.enabled && { paddingBottom: 90 }]}
           snapToInterval={snapInterval}
           snapToAlignment="start"
           decelerationRate="fast"

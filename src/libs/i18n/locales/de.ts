@@ -15,6 +15,15 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_1_1_0: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
+• Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
+• Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
+• Ein Infofenster zur Notiz hinzugefugt.
+• Ruckgangig/Wiederholen und Durchstreichen im Texteditor hinzugefugt.
+• Die Cloud-Synchronisierung zeigt jetzt den Status jedes verbundenen Gerats an.
+• Schnellerer App-Start.
+• Verschiedene Fehlerbehebungen.`,
+
       description_1_0_0: `• Erste stabile Version von Fast Memo Desktop (kein BETA mehr).
 • Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
 • Onboarding mit neuen Einfuhrungsschritten neu gestaltet.
@@ -38,6 +47,14 @@ const de = {
     },
 
     mobile: {
+      description_3_1_0: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
+• Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
+• Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
+• Ein Infofenster zur Notiz hinzugefugt.
+• Ruckgangig/Wiederholen und Durchstreichen im Texteditor hinzugefugt.
+• Die Cloud-Synchronisierung zeigt jetzt den Status jedes verbundenen Gerats an.
+• Verschiedene Fehlerbehebungen.`,
+
       description_3_0_0: `• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
 • Onboarding mit neuen Einfuhrungsschritten neu gestaltet.
 • Einstellungen zur Notizerstellung hinzugefugt, um Standardwerte anzupassen.
@@ -45,7 +62,7 @@ const de = {
 • App-Icon und Startbildschirm aufgefrischt.
 • Verschiedene Fehlerbehebungen.`,
 
-      description_2_9_0: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
+      description_2_9_1: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
 • Qwen 2.5 7B Modell mit Gerate-RAM-Erkennung hinzugefugt. Neue AI-Aktionen fur Code: Code erklaren und Kommentare hinzufugen.
 • Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
 • Notiz-Export hinzugefugt.
@@ -184,11 +201,27 @@ const de = {
       protect: "Schützen",
       readonly: "Schreibgeschützt",
       hide: "Verstecken",
+      make_offline: "Offline schalten",
+      sync_to_cloud: "Mit Cloud synchronisieren",
+      made_offline: "Notiz ist jetzt offline",
+      synced_as_duplicate: "Als Kopie in die Cloud synchronisiert",
       changecategory: "Kategorie ändern",
       share: "Aktie",
       export: "Exportieren",
       export_description: "Wählen Sie das Exportformat",
       export_txt: "Klartext (.txt)",
+      info: "Informationen",
+    },
+    info: {
+      title: "Informationen",
+      type: "Typ",
+      category: "Kategorie",
+      created: "Erstellt",
+      updated: "Aktualisiert",
+      flags: "Markierungen",
+      no_flags: "Keine",
+      offline: "Offline",
+      close: "Schließen",
     },
     find_replace: {
       search_placeholder: "Suchen...",
@@ -237,6 +270,9 @@ const de = {
     title: "Verbundene Geräte",
     lastSync: "Letzte Sync.: ",
     error_fetching: "Fehler beim Abrufen der Geräte",
+    upToDate: "Aktuell",
+    pending: "{{count}} ausstehend",
+    mostRecent: "Neueste",
   },
   createcategory: {
     title_create: "Kategorie Erstellen",
@@ -362,10 +398,12 @@ const de = {
     cap: {
       generate_title: "Titel aus dem Notizinhalt generieren",
       summarize: "Textnotiz in wenigen Saetzen zusammenfassen",
-      continue_writing: "Weiterschreiben, wo du aufgehoert hast",
-      format_text: "Text mit Ueberschriften, Fettdruck, Listen usw. formatieren",
+      fix_grammar: "Rechtschreibung und Grammatik korrigieren",
+      shorten: "Einen Text kürzer und prägnanter machen",
+      translate: "Eine Notiz in deine App-Sprache übersetzen",
       suggest_items: "Neue Elemente fuer eine Checkliste vorschlagen",
       suggest_category: "Die beste Kategorie fuer eine Notiz vorschlagen",
+      voice_cleanup: "Diktierten Text mit Satzzeichen aufräumen",
       explain_code: "Erklaren was der Code macht",
       add_comments: "Kommentare zum Code hinzufugen",
     },
@@ -406,13 +444,17 @@ const de = {
     editor: {
       generate_title: "Titel generieren",
       summarize: "Zusammenfassen",
-      continue_writing: "Weiterschreiben",
       suggest_items: "Elemente vorschlagen",
-      format_text: "Text formatieren",
       suggest_category: "Kategorie vorschlagen",
       explain_code: "Code erklaren",
       add_comments: "Kommentare hinzufugen",
+      fix_grammar: "Grammatik korrigieren",
+      shorten: "Kürzen",
+      translate: "Übersetzen",
       min_model: "Minimum",
+      before: "Vorher",
+      after: "Nachher",
+      apply: "Anwenden",
       no_content: "Schreibe zuerst etwas",
       no_category_match: "Keine passende Kategorie gefunden",
       error: "Konnte nicht generieren, versuche es erneut",
@@ -425,6 +467,15 @@ const de = {
     continuous: "Manueller Stopp",
     language: "Sprache",
     language_default: "Standard (System)",
+    dictation: {
+      listening: "Höre zu…",
+      paused: "Pausiert",
+      hint: 'Sprich jetzt. Sage "Komma", "Punkt", "Fragezeichen" oder "neue Zeile" für Satzzeichen.',
+      insert: "Einfügen",
+      cancel: "Abbrechen",
+      ai_cleanup: "Mit KI aufräumen",
+      processing: "Verarbeite…",
+    },
   },
   help: {
     title: "Hilfe",

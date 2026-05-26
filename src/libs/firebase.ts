@@ -26,6 +26,12 @@ export interface ConnectedDevice {
   modelName: string;
   brand: string;
   lastSync: string;
+  /** Devices that still have to pull this device's queued changes. */
+  devicesToSync: string[];
+  /** Queued note ops (add/delete/detach) this device published for others to apply. */
+  pendingNotes: number;
+  /** Queued category ops (add/delete) this device published for others to apply. */
+  pendingCategories: number;
 }
 
 interface HandshakeState {
@@ -235,9 +241,21 @@ export const getAllConnectedDevices = async (): Promise<ConnectedDevice[]> => {
 
     const devices: ConnectedDevice[] = [];
 
+    // Same docs, more fields — the queues and devicesToSync already live here, so
+    // surfacing sync status costs no extra reads.
+    const countKeys = (o: unknown) => (o && typeof o === "object" ? Object.keys(o).length : 0);
+
     querySnapshot.forEach((doc) => {
-      const { uuid, modelName, brand, lastSync } = doc.data();
-      devices.push({ uuid, modelName, brand, lastSync });
+      const data = doc.data();
+      devices.push({
+        uuid: data.uuid,
+        modelName: data.modelName,
+        brand: data.brand,
+        lastSync: data.lastSync,
+        devicesToSync: Array.isArray(data.devicesToSync) ? data.devicesToSync : [],
+        pendingNotes: countKeys(data.addNotes) + countKeys(data.deleteNotes) + countKeys(data.detachNotes),
+        pendingCategories: countKeys(data.addCategories) + countKeys(data.deleteCategories),
+      });
     });
 
     return devices;
@@ -271,6 +289,7 @@ export const addDeviceToCloud = async (): Promise<boolean> => {
         deleteCategories: {},
         addNotes: {},
         deleteNotes: {},
+        detachNotes: {},
         devicesToSync: [],
       },
     });
@@ -336,6 +355,7 @@ export const removeDeviceFromDevicesToSync = async (deviceUuid: string): Promise
                 deleteCategories: {},
                 addNotes: {},
                 deleteNotes: {},
+                detachNotes: {},
               }
             : {}),
         },

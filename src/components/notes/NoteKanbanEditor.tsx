@@ -1,13 +1,15 @@
 import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import KanbanBoard from "@/components/kanban/KanbanBoard";
+import QuickActionsDivider from "@/components/notes/QuickActionsDivider";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
 import KanbanDragProvider from "@/providers/KanbanDragProvider";
-import { selectorWebhook_addKanbanNote } from "@/slicers/settingsSlice";
+import { selectorAIAssistant, selectorWebhook_addKanbanNote } from "@/slicers/settingsSlice";
 import type { KanbanItem, KanbanNote } from "@/types";
 import { isStringEmpty } from "@/utils/string";
 import { useCallback, useMemo, useRef } from "react";
@@ -15,8 +17,8 @@ import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { useSelector } from "react-redux";
 import uuid from "react-uuid";
-import KanbanBoard from "@/components/kanban/KanbanBoard";
 
 const COLUMN_PEEK = 40;
 
@@ -61,6 +63,12 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
     isEmpty: isKanbanNoteEmpty,
     buildPayloadExtras,
   });
+
+  const aiSettings = useSelector(selectorAIAssistant);
+
+  // The AI button is the only floating bottom action for now; the divider
+  // follows whether it's actually shown.
+  const showAiActions = aiSettings.enabled && aiSettings.modelDownloaded && !note.readOnly;
 
   /* Title */
 
@@ -178,10 +186,12 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
                 const cat = findCategoryByName(name);
                 if (cat) setNoteAsync({ ...note, category: cat });
               }}
-              style={{ bottom: 20 }}
-              menuBottomOffset={120}
+              style={{ bottom: 10 }}
+              menuBottomOffset={110}
             />
           )}
+
+          {showAiActions && <QuickActionsDivider bottom={70} />}
         </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -202,6 +212,10 @@ const styles = StyleSheet.create({
   titleInput: {
     flex: 1,
     textAlign: "center",
+    // Android misplaces the caret of an empty centered TextInput (drifts to the
+    // bottom/right until typing starts); these two keep it centered.
+    textAlignVertical: "center",
+    includeFontPadding: false,
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.lg,
     marginHorizontal: PADDING_MARGIN.sm,

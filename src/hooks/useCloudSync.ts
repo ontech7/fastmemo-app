@@ -13,6 +13,8 @@ import {
   COLLECTIONS,
   deleteActiveFirebase,
   getAllConnectedDevices,
+  getAllDeviceUuids,
+  getDeviceUuid,
   Handshake,
   handshakeFirebase,
   initFirebase,
@@ -128,6 +130,9 @@ export const useCloudSync = () => {
     for (let i = 0; i < allNotes.length; i++) {
       const note = allNotes[i];
 
+      // offline notes are device-only and must never be uploaded
+      if (note.local) continue;
+
       await setElementInCloud({
         collection: COLLECTIONS.data.notes,
         identifier: note.id,
@@ -191,12 +196,113 @@ export const useCloudSync = () => {
     dispatch(resetCloudNotes());
   };
 
+  /** Map of cloud note id -> updatedAt. Metadata is stored unencrypted, so this
+   * needs no decryption and lets us diff what this device contributes. */
+  const getCloudNotesMeta = async (db: Firestore | null): Promise<Record<string, number>> => {
+    if (!db) return {};
+
+    const snapshot = await getDocs(collection(db, COLLECTIONS.data.notes));
+
+    const meta: Record<string, number> = {};
+    snapshot.forEach((doc) => {
+      meta[doc.id] = Number(doc.data().updatedAt) || 0;
+    });
+    return meta;
+  };
+
+  /** Map of cloud category icon -> stored category (categories aren't encrypted). */
+  const getCloudCategoriesMeta = async (db: Firestore | null): Promise<Record<string, Category>> => {
+    if (!db) return {};
+
+    const snapshot = await getDocs(collection(db, COLLECTIONS.data.categories));
+
+    const meta: Record<string, Category> = {};
+    snapshot.forEach((doc) => {
+      meta[doc.id] = doc.data() as Category;
+    });
+    return meta;
+  };
+
+  /**
+   * Fan out the notes/categories this device adds or updates (vs the pre-upload
+   * cloud state) into the per-device queues, so already-connected devices
+   * reconcile them incrementally through SyncOnProvider. Without this, a
+   * connecting device's extra notes/categories only land in the shared
+   * collections and never reach the other devices — the misaligned-device-1 bug.
+   *
+   * Only the diff is fanned out (new or changed items); re-sending items already
+   * in the cloud could resurrect something another device deliberately deleted.
+   */
+  const fanOutLocalDiff = async (
+    cloudNotesBefore: Record<string, number>,
+    cloudCategoriesBefore: Record<string, Category>
+  ): Promise<void> => {
+    const deviceUuid = await getDeviceUuid();
+    const allDevices = await getAllDeviceUuids();
+    if (!deviceUuid || !allDevices) return;
+
+    const others = allDevices.filter((uuid) => uuid !== deviceUuid);
+    if (others.length === 0) return; // first/only device — nobody to notify
+
+    const addNotes: Record<string, Note> = {};
+    for (const note of allNotes) {
+      if (note.local) continue; // offline-only notes never sync
+
+      const createdAt = note.createdAt ?? getReversedDateTime(note.date);
+      const updatedAt = note.updatedAt ?? getReversedDateTime(note.date);
+      const cloudUpdated = cloudNotesBefore[note.id];
+
+      // new (absent from cloud) or a locally newer version -> the others need it
+      if (cloudUpdated === undefined || (Number(updatedAt) || 0) > cloudUpdated) {
+        addNotes[note.id] = CryptNote.encrypt({ ...note, createdAt, updatedAt } as Note);
+      }
+    }
+
+    const addCategories: Record<string, Category> = {};
+    for (const category of allCategories) {
+      if (category.index) continue; // the default "All" category is universal
+
+      const prev = cloudCategoriesBefore[category.icon];
+      // `selected` is device-local UI state, so it never counts as a change
+      const changed =
+        !prev ||
+        prev.name !== category.name ||
+        (prev.order ?? 0) !== (category.order ?? 0) ||
+        !!prev.index !== !!category.index;
+
+      if (changed) {
+        addCategories[category.icon] = { ...category, index: category.index ?? false, order: category.order ?? 1, selected: false };
+      }
+    }
+
+    const hasNotes = Object.keys(addNotes).length > 0;
+    const hasCategories = Object.keys(addCategories).length > 0;
+    if (!hasNotes && !hasCategories) return;
+
+    await setElementInCloud({
+      collection: COLLECTIONS.various.connectedDevices,
+      identifier: deviceUuid,
+      payload: {
+        ...(hasNotes ? { addNotes } : {}),
+        ...(hasCategories ? { addCategories } : {}),
+        devicesToSync: others,
+      },
+      merge: true,
+    });
+  };
+
   const syncCloudData = async (loadingMethodDisabled?: boolean): Promise<void> => {
     if (!loadingMethodDisabled) setIsLoading(true);
 
     const { db } = retrieveFirebase();
 
+    // snapshot cloud versions before our upload overwrites them, so we can fan out
+    // exactly what this device contributes to the other devices
+    const cloudNotesBefore = await getCloudNotesMeta(db);
+    const cloudCategoriesBefore = await getCloudCategoriesMeta(db);
+
     await uploadCloudData();
+    await fanOutLocalDiff(cloudNotesBefore, cloudCategoriesBefore);
     await retrieveCloudData(db);
 
     // update sync timestamp in cloud and in local

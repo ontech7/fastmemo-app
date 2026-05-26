@@ -15,6 +15,15 @@ const es = {
     title: "¿Qué hay de nuevo?",
 
     web: {
+      description_1_1_0: `• Agregadas las notas sin conexion: manten una nota solo en este dispositivo, sin sincronizarla en la nube.
+• Reconocimiento de voz 2.0: dictado por voz mejorado con limpieza automatica mediante IA.
+• El Asistente IA ahora puede sugerir una categoria a partir del titulo de la nota.
+• Agregado un panel con la informacion de la nota.
+• Agregados deshacer/rehacer y tachado en el editor de texto.
+• La sincronizacion en la nube ahora muestra el estado de cada dispositivo conectado.
+• Inicio de la app mas rapido.
+• Correcciones varias.`,
+
       description_1_0_0: `• Primera version estable de Fast Memo Desktop (fuera de BETA).
 • Nuevo diseno moderno en toda la app, con la nueva fuente Geist, superficies glass y degradados.
 • Rediseno del onboarding con nuevos pasos introductorios.
@@ -38,6 +47,14 @@ const es = {
     },
 
     mobile: {
+      description_3_1_0: `• Agregadas las notas sin conexion: manten una nota solo en este dispositivo, sin sincronizarla en la nube.
+• Reconocimiento de voz 2.0: dictado por voz mejorado con limpieza automatica mediante IA.
+• El Asistente IA ahora puede sugerir una categoria a partir del titulo de la nota.
+• Agregado un panel con la informacion de la nota.
+• Agregados deshacer/rehacer y tachado en el editor de texto.
+• La sincronizacion en la nube ahora muestra el estado de cada dispositivo conectado.
+• Correcciones varias.`,
+
       description_3_0_0: `• Nuevo diseno moderno en toda la app, con la nueva fuente Geist, superficies glass y degradados.
 • Rediseno del onboarding con nuevos pasos introductorios.
 • Agregados ajustes de creacion de notas para personalizar los valores predeterminados.
@@ -45,7 +62,7 @@ const es = {
 • Icono de la app y pantalla de inicio renovados.
 • Correcciones varias.`,
 
-      description_2_9_0: `• Agregado nuevo tipo de nota: Codigo, con editor integrado, resaltado de sintaxis, pestanas multiples y deteccion automatica del lenguaje.
+      description_2_9_1: `• Agregado nuevo tipo de nota: Codigo, con editor integrado, resaltado de sintaxis, pestanas multiples y deteccion automatica del lenguaje.
 • Agregado modelo Qwen 2.5 7B con deteccion de RAM del dispositivo. Nuevas acciones AI para codigo: Explicar codigo y Agregar comentarios.
 • Agregada funcion buscar y reemplazar en notas de texto.
 • Agregada exportacion de notas.
@@ -184,11 +201,27 @@ const es = {
       protect: "Proteger",
       readonly: "Solo lectura",
       hide: "Esconder",
+      make_offline: "Hacer sin conexión",
+      sync_to_cloud: "Sincronizar en la nube",
+      made_offline: "La nota ahora está sin conexión",
+      synced_as_duplicate: "Sincronizada en la nube como copia",
       changecategory: "Cambiar categoría",
       share: "Compartir",
       export: "Exportar",
       export_description: "Elige el formato de exportación",
       export_txt: "Texto plano (.txt)",
+      info: "Información",
+    },
+    info: {
+      title: "Información",
+      type: "Tipo",
+      category: "Categoría",
+      created: "Creada",
+      updated: "Actualizada",
+      flags: "Indicadores",
+      no_flags: "Ninguno",
+      offline: "Sin conexión",
+      close: "Cerrar",
     },
     find_replace: {
       search_placeholder: "Buscar...",
@@ -237,6 +270,9 @@ const es = {
     title: "Dispositivos conectados",
     lastSync: "Última sinc.: ",
     error_fetching: "Error al obtener dispositivos",
+    upToDate: "Actualizado",
+    pending: "{{count}} pendientes",
+    mostRecent: "Más reciente",
   },
   createcategory: {
     title_create: "Crear Categoría",
@@ -362,10 +398,12 @@ const es = {
     cap: {
       generate_title: "Generar un titulo a partir del contenido",
       summarize: "Resumir una nota de texto en pocas frases",
-      continue_writing: "Continuar escribiendo donde lo dejaste",
-      format_text: "Formatear texto con titulos, negrita, listas, etc.",
+      fix_grammar: "Corregir ortografía y gramática",
+      shorten: "Hacer un texto más corto y conciso",
+      translate: "Traducir una nota al idioma de la app",
       suggest_items: "Sugerir nuevos elementos para una lista",
       suggest_category: "Sugerir la mejor categoria para una nota",
+      voice_cleanup: "Limpiar el texto dictado con puntuación",
       explain_code: "Explicar que hace el codigo",
       add_comments: "Agregar comentarios al codigo",
     },
@@ -406,13 +444,17 @@ const es = {
     editor: {
       generate_title: "Generar titulo",
       summarize: "Resumir",
-      continue_writing: "Continuar escribiendo",
       suggest_items: "Sugerir elementos",
-      format_text: "Formatear texto",
       suggest_category: "Sugerir categoria",
       explain_code: "Explicar codigo",
       add_comments: "Agregar comentarios",
+      fix_grammar: "Corregir gramática",
+      shorten: "Acortar",
+      translate: "Traducir",
       min_model: "Minimo",
+      before: "Antes",
+      after: "Después",
+      apply: "Aplicar",
       no_content: "Escribe algo primero",
       no_category_match: "No se encontro una categoria",
       error: "No se pudo generar, intenta de nuevo",
@@ -425,6 +467,15 @@ const es = {
     continuous: "Parada manual",
     language: "Idioma",
     language_default: "Predeterminado (sistema)",
+    dictation: {
+      listening: "Escuchando…",
+      paused: "En pausa",
+      hint: 'Habla ahora. Di "coma", "punto", "interrogación" o "nueva línea" para puntuar.',
+      insert: "Insertar",
+      cancel: "Cancelar",
+      ai_cleanup: "Mejorar con IA",
+      processing: "Procesando…",
+    },
   },
   help: {
     title: "Ayuda",

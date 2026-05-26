@@ -1,160 +1,217 @@
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import * as Localization from "expo-localization";
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
-import { useEffect, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Keyboard, StyleSheet, TouchableOpacity, View } from "react-native";
 import { MicrophoneIcon } from "react-native-heroicons/outline";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
-import { selectorVoiceRecognition } from "@/slicers/settingsSlice";
+import DictationSheet from "@/components/voice/DictationSheet";
+import { generateEditorContent, initContext } from "@/libs/ai";
+import { supportedLanguages } from "@/libs/i18n";
+import { selectorAIAssistant, selectorVoiceRecognition } from "@/slicers/settingsSlice";
+import { formatVoiceTranscript } from "@/utils/voiceTranscript";
 import { toast } from "@/utils/toast";
 
 import { BORDER, COLOR, SHADOW } from "@/constants/styles";
 
+import type { AIModelId } from "@/libs/ai";
 import type { ViewStyle } from "react-native";
 
 const KEEP_AWAKE_TAG = "voice-recognition";
 
 interface Props {
-  setTranscript: (transcript: string, isFinal: boolean) => void;
+  /** Called once with the final, formatted dictation text when the user confirms. */
+  onInsert: (text: string) => void;
+  /** Offer a one-tap "clean up with AI" action in the dictation sheet (text notes). */
+  aiCleanup?: boolean;
   style?: ViewStyle;
 }
 
-export default function VoiceRecognitionButton({ setTranscript, style = {} }: Props) {
-  const [recognizing, setRecognizing] = useState(false);
-
+export default function VoiceRecognitionButton({ onInsert, aiCleanup = false, style = {} }: Props) {
   const selectors = useSelector(selectorVoiceRecognition);
+  const aiSettings = useSelector(selectorAIAssistant);
 
-  const pulseScale = useSharedValue(1);
-  const pulseOpacity = useSharedValue(0);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [finalText, setFinalText] = useState("");
+  const [interim, setInterim] = useState("");
+  // AI-cleaned text overrides the raw transcript in the preview until the user
+  // dictates again or inserts it.
+  const [cleanedText, setCleanedText] = useState<string | null>(null);
+  const [activeLang, setActiveLang] = useState("en-US");
 
-  useSpeechRecognitionEvent("start", () => {
-    if (selectors.enabled && !selectors.continuous) {
-      setRecognizing(true);
+  const aiAvailable = aiCleanup && aiSettings.enabled && aiSettings.modelDownloaded;
+
+  const activeLangRef = useRef(activeLang);
+  activeLangRef.current = activeLang;
+
+  const resolveLang = useCallback(
+    () => (selectors.language !== "system" ? selectors.language : Localization.getLocales()[0]?.languageTag || "en-US"),
+    [selectors.language]
+  );
+
+  useSpeechRecognitionEvent("result", (event) => {
+    // new speech discards any AI-cleaned override (back to raw dictation)
+    setCleanedText(null);
+    const transcript = event.results[0]?.transcript ?? "";
+    if (event.isFinal) {
+      setFinalText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      setInterim("");
+    } else {
+      setInterim(transcript);
     }
   });
 
   useSpeechRecognitionEvent("end", () => {
-    if (selectors.enabled && !selectors.continuous) {
-      setRecognizing(false);
-    }
-  });
-
-  useSpeechRecognitionEvent("result", (event) => {
-    if (selectors.enabled) {
-      setTranscript(event.results[0]?.transcript || "", event.isFinal);
-    }
+    setListening(false);
+    deactivateKeepAwake(KEEP_AWAKE_TAG);
   });
 
   useSpeechRecognitionEvent("error", (event) => {
     console.warn("Speech recognition error:", event.error, event.message);
-    setRecognizing(false);
+    setListening(false);
   });
 
-  // Pulse animation + keep-awake
-  useEffect(() => {
-    if (recognizing) {
-      pulseScale.value = withRepeat(
-        withSequence(
-          withTiming(1.25, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        false
-      );
-      pulseOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.5, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: 800, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        false
-      );
-      activateKeepAwakeAsync(KEEP_AWAKE_TAG);
-    } else {
-      pulseScale.value = withTiming(1, { duration: 200 });
-      pulseOpacity.value = withTiming(0, { duration: 200 });
-      deactivateKeepAwake(KEEP_AWAKE_TAG);
-    }
-
-    return () => {
-      deactivateKeepAwake(KEEP_AWAKE_TAG);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recognizing]);
-
-  const handleStart = async () => {
-    try {
-      const isAvailable = ExpoSpeechRecognitionModule.isRecognitionAvailable();
-
-      if (!isAvailable) {
-        toast("Not available");
-        console.warn("Speech recognition not available");
-        return;
-      }
-
+  const startEngine = useCallback(
+    async (reset: boolean) => {
       const currentPermissions = await ExpoSpeechRecognitionModule.getMicrophonePermissionsAsync();
-
-      let permissionGranted = currentPermissions.granted;
-
-      if (!permissionGranted) {
-        const result = await ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync();
-        permissionGranted = result.granted;
+      let granted = currentPermissions.granted;
+      if (!granted) {
+        granted = (await ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync()).granted;
       }
-
-      if (!permissionGranted) {
-        console.warn("Permissions not granted");
-        setRecognizing(false);
+      if (!granted) {
+        setListening(false);
         return;
       }
 
-      Keyboard.dismiss();
-      setRecognizing(true);
+      if (reset) {
+        setFinalText("");
+        setInterim("");
+      }
 
-      ExpoSpeechRecognitionModule.start({
-        lang: selectors.language !== "system" ? selectors.language : Localization.getLocales()[0].languageTag || "en-US",
-        interimResults: selectors.interimResults,
-        continuous: selectors.continuous,
-        maxAlternatives: 1,
-      });
-    } catch (error) {
-      console.error("Error starting speech recognition:", error);
-      setRecognizing(false);
+      try {
+        ExpoSpeechRecognitionModule.start({
+          lang: activeLangRef.current,
+          interimResults: selectors.interimResults,
+          continuous: selectors.continuous,
+          maxAlternatives: 1,
+        });
+        setListening(true);
+        activateKeepAwakeAsync(KEEP_AWAKE_TAG);
+      } catch (error) {
+        console.error("Error starting speech recognition:", error);
+        setListening(false);
+      }
+    },
+    [selectors.interimResults, selectors.continuous]
+  );
+
+  const openDictation = useCallback(async () => {
+    if (!ExpoSpeechRecognitionModule.isRecognitionAvailable()) {
+      toast("Not available");
+      return;
     }
-  };
 
-  const handleStop = () => {
-    setRecognizing(false);
-    ExpoSpeechRecognitionModule.stop();
-  };
+    const lang = resolveLang();
+    setActiveLang(lang);
+    activeLangRef.current = lang;
 
-  const pulseRingStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-    opacity: pulseOpacity.value,
-  }));
+    setCleanedText(null);
+    Keyboard.dismiss();
+    setSheetOpen(true);
+    await startEngine(true);
+  }, [resolveLang, startEngine]);
+
+  const stopEngine = useCallback(() => {
+    try {
+      ExpoSpeechRecognitionModule.stop();
+    } catch {
+      // already stopped
+    }
+    deactivateKeepAwake(KEEP_AWAKE_TAG);
+    setListening(false);
+  }, []);
+
+  const toggleListening = useCallback(() => {
+    if (listening) {
+      stopEngine();
+    } else {
+      startEngine(false);
+    }
+  }, [listening, stopEngine, startEngine]);
+
+  const closeAndReset = useCallback(() => {
+    stopEngine();
+    setSheetOpen(false);
+    setFinalText("");
+    setInterim("");
+    setCleanedText(null);
+  }, [stopEngine]);
+
+  const preview = useMemo(
+    () => formatVoiceTranscript(`${finalText} ${interim}`.trim(), activeLang, { capitalize: true }),
+    [finalText, interim, activeLang]
+  );
+
+  // what the sheet shows and what Insert commits: the AI-cleaned text if present,
+  // otherwise the raw formatted transcript
+  const displayTranscript = cleanedText ?? preview;
+
+  const handleConfirm = useCallback(() => {
+    stopEngine();
+    setSheetOpen(false);
+    setFinalText("");
+    setInterim("");
+    setCleanedText(null);
+    if (displayTranscript) onInsert(displayTranscript);
+  }, [stopEngine, displayTranscript, onInsert]);
+
+  const handleConfirmWithAI = useCallback(async () => {
+    stopEngine();
+    if (!displayTranscript) return;
+
+    setProcessing(true);
+    try {
+      await initContext(aiSettings.selectedModel as AIModelId);
+      const result = await generateEditorContent("clean_transcript", displayTranscript);
+      // show the cleaned result in the sheet; the user reviews it and taps Insert
+      if (result.success && result.text) setCleanedText(result.text);
+    } catch (error) {
+      console.warn("AI cleanup failed:", error);
+    }
+    setProcessing(false);
+  }, [stopEngine, displayTranscript, aiSettings.selectedModel]);
+
+  const languageLabel = useMemo(() => {
+    const prefix = activeLang.split("-")[0];
+    return supportedLanguages[prefix]?.name ?? activeLang;
+  }, [activeLang]);
 
   if (!selectors.enabled) return null;
 
   return (
-    <View style={[styles.wrapper, style]}>
-      <Animated.View style={[styles.pulseRing, pulseRingStyle]} />
+    <>
+      <View style={[styles.wrapper, style]}>
+        <TouchableOpacity activeOpacity={0.7} style={styles.button} onPress={openDictation}>
+          <MicrophoneIcon size={24} color={COLOR.softWhite} />
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity
-        activeOpacity={0.7}
-        style={[styles.button, recognizing && styles.buttonActive]}
-        onPress={recognizing ? handleStop : handleStart}
-      >
-        {recognizing ? <View style={styles.stopIcon} /> : <MicrophoneIcon size={24} color={COLOR.softWhite} />}
-      </TouchableOpacity>
-    </View>
+      <DictationSheet
+        visible={sheetOpen}
+        listening={listening}
+        processing={processing}
+        transcript={displayTranscript}
+        languageLabel={languageLabel}
+        aiAvailable={aiAvailable}
+        onToggleListening={toggleListening}
+        onCancel={closeAndReset}
+        onConfirm={handleConfirm}
+        onConfirmWithAI={aiAvailable ? handleConfirmWithAI : undefined}
+      />
+    </>
   );
 }
 
@@ -171,13 +228,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 2,
   },
-  pulseRing: {
-    position: "absolute",
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.important,
-  },
   button: {
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
@@ -186,14 +236,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...SHADOW.fab,
-  },
-  buttonActive: {
-    backgroundColor: COLOR.important,
-  },
-  stopIcon: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
-    backgroundColor: COLOR.softWhite,
   },
 });

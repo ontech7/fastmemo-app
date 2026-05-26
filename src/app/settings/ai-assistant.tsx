@@ -255,10 +255,12 @@ export default function AIAssistantScreen() {
             {[
               { key: "ai.cap.generate_title" },
               { key: "ai.cap.summarize", min: "1.5B" },
-              { key: "ai.cap.continue_writing", min: "1.5B" },
-              { key: "ai.cap.format_text", min: "3B" },
+              { key: "ai.cap.fix_grammar", min: "1.5B" },
+              { key: "ai.cap.shorten", min: "1.5B" },
+              { key: "ai.cap.translate", min: "3B" },
               { key: "ai.cap.suggest_items" },
               { key: "ai.cap.suggest_category" },
+              { key: "ai.cap.voice_cleanup" },
               { key: "ai.cap.explain_code", min: "7B" },
               { key: "ai.cap.add_comments", min: "7B" },
             ].map((item, index, arr) => (

@@ -11,7 +11,7 @@ import { defaultCategory } from "@/configs/default";
 import { only_if_cloudConnected } from "@/libs/firebase";
 import { CryptNote } from "@/utils/crypt";
 import { createdAt_asc_sort } from "@/utils/sort";
-import { addCloudNotesAsync, deleteCloudNotesAsync, wipeNotes } from "./thunks/notes";
+import { addCloudNotesAsync, deleteCloudNotesAsync, detachCloudNotesAsync, wipeNotes } from "./thunks/notes";
 
 const initialState: NotesState = {
   items: [],
@@ -21,12 +21,29 @@ const initialState: NotesState = {
     items: {
       add: {},
       delete: {},
+      detach: {},
     },
   },
   filters: {
     sortBy: "createdAt",
     order: "desc",
   },
+};
+
+/** Queue a note for cloud upload — unless it is an offline (device-only) note. */
+const queueCloudAdd = (state: NotesState, note: Note): void => {
+  if (note.local) return;
+  only_if_cloudConnected(() => {
+    state.cloud.items.add[note.id] = CryptNote.encrypt(note);
+  });
+};
+
+/** Queue a note for cloud deletion — unless it is an offline (device-only) note. */
+const queueCloudDelete = (state: NotesState, note: Note): void => {
+  if (note.local) return;
+  only_if_cloudConnected(() => {
+    state.cloud.items.delete[note.id] = CryptNote.encrypt(note);
+  });
 };
 
 const sortNotes = (items: Note[], filters: NoteFilters): void => {
@@ -67,9 +84,7 @@ const notesSlice = createSlice({
         }
       }
 
-      only_if_cloudConnected(() => {
-        state.cloud.items.add[action.payload.id] = CryptNote.encrypt(action.payload);
-      });
+      queueCloudAdd(state, action.payload);
     },
 
     setNoteFilters: (state, action: PayloadAction<NoteFilters>) => {
@@ -87,9 +102,7 @@ const notesSlice = createSlice({
           note.category.index = iconTo === "none";
           note.category.name = nameTo;
           note.category.icon = iconTo;
-          only_if_cloudConnected(() => {
-            state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-          });
+          queueCloudAdd(state, note);
         }
       });
     },
@@ -101,9 +114,7 @@ const notesSlice = createSlice({
         found.category.index = iconTo === "none";
         found.category.name = nameTo;
         found.category.icon = iconTo;
-        only_if_cloudConnected(() => {
-          state.cloud.items.add[found.id] = CryptNote.encrypt(found);
-        });
+        queueCloudAdd(state, found);
       }
     },
 
@@ -128,9 +139,7 @@ const notesSlice = createSlice({
         note.deleteDate = deleteDate;
         state.temporaryItems.unshift(note);
 
-        only_if_cloudConnected(() => {
-          state.cloud.items.delete[note.id] = CryptNote.encrypt(note);
-        });
+        queueCloudDelete(state, note);
         return false;
       });
     },
@@ -148,9 +157,7 @@ const notesSlice = createSlice({
       state.items.forEach((note) => {
         if (note.category.icon === icon) {
           note.category = defaultCategory;
-          only_if_cloudConnected(() => {
-            state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-          });
+          queueCloudAdd(state, note);
         }
       });
     },
@@ -175,9 +182,7 @@ const notesSlice = createSlice({
 
         sortNotes(state.items, state.filters);
 
-        only_if_cloudConnected(() => {
-          state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-        });
+        queueCloudAdd(state, note);
         return false;
       });
     },
@@ -199,9 +204,7 @@ const notesSlice = createSlice({
           state.items[idx] = note;
         }
 
-        only_if_cloudConnected(() => {
-          state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-        });
+        queueCloudAdd(state, note);
         return false;
       });
 
@@ -223,9 +226,7 @@ const notesSlice = createSlice({
           state.items[idx] = note;
         }
 
-        only_if_cloudConnected(() => {
-          state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-        });
+        queueCloudAdd(state, note);
       });
       state.temporaryItems = [];
 
@@ -235,16 +236,20 @@ const notesSlice = createSlice({
     setNotes: (state, action: PayloadAction<{ notes: Note[]; fromSync?: boolean }>) => {
       const { notes, fromSync } = action.payload;
 
-      state.items = [...notes];
+      if (fromSync) {
+        // a cloud reconcile must never drop device-only notes: keep the local
+        // ones that the incoming cloud set does not (and must not) contain
+        const incomingIds = new Set(notes.map((n) => n.id));
+        const offlineOnly = state.items.filter((note) => note.local && !incomingIds.has(note.id));
+        state.items = [...notes, ...offlineOnly];
+      } else {
+        state.items = [...notes];
+      }
 
       sortNotes(state.items, state.filters);
 
       if (!fromSync) {
-        only_if_cloudConnected(() => {
-          state.items.forEach((note) => {
-            state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-          });
-        });
+        state.items.forEach((note) => queueCloudAdd(state, note));
       }
     },
 
@@ -270,9 +275,7 @@ const notesSlice = createSlice({
           state.temporaryItems[idx] = note;
         }
 
-        only_if_cloudConnected(() => {
-          state.cloud.items.delete[note.id] = CryptNote.encrypt(note);
-        });
+        queueCloudDelete(state, note);
         return false;
       });
     },
@@ -290,9 +293,7 @@ const notesSlice = createSlice({
           state.temporaryItems[idx] = note;
         }
 
-        only_if_cloudConnected(() => {
-          state.cloud.items.delete[note.id] = CryptNote.encrypt(note);
-        });
+        queueCloudDelete(state, note);
         return false;
       });
     },
@@ -301,9 +302,7 @@ const notesSlice = createSlice({
       state.items.forEach((note) => {
         if (action.payload.includes(`${note.id}|${note.locked}`)) {
           note.important = !note.important;
-          only_if_cloudConnected(() => {
-            state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-          });
+          queueCloudAdd(state, note);
         }
       });
     },
@@ -312,9 +311,7 @@ const notesSlice = createSlice({
       state.items.forEach((note) => {
         if (action.payload.includes(`${note.id}|${note.locked}`)) {
           note.readOnly = !note.readOnly;
-          only_if_cloudConnected(() => {
-            state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-          });
+          queueCloudAdd(state, note);
         }
       });
     },
@@ -323,9 +320,7 @@ const notesSlice = createSlice({
       state.items.forEach((note) => {
         if (action.payload.includes(`${note.id}|${note.locked}`)) {
           note.hidden = !note.hidden;
-          only_if_cloudConnected(() => {
-            state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-          });
+          queueCloudAdd(state, note);
         }
       });
     },
@@ -334,9 +329,7 @@ const notesSlice = createSlice({
       state.items.forEach((note) => {
         if (action.payload.includes(`${note.id}|${note.locked}`)) {
           note.locked = !note.locked;
-          only_if_cloudConnected(() => {
-            state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-          });
+          queueCloudAdd(state, note);
         }
       });
     },
@@ -350,6 +343,9 @@ const notesSlice = createSlice({
           if (idx === -1) {
             state.items.unshift(note);
           } else {
+            // never let a cloud/other-device copy overwrite a note that has
+            // been detached (made offline) on this device
+            if (state.items[idx].local) return;
             state.items[idx] = note;
           }
         });
@@ -361,6 +357,8 @@ const notesSlice = createSlice({
       Object.values(action.payload).forEach((cloudNote) => {
         state.items = state.items.filter((localNote) => {
           if (localNote.id !== cloudNote.id) return true;
+          // an offline note is owned by this device: ignore incoming deletions
+          if (localNote.local) return true;
 
           localNote.deleteDate = Date.now() + state.temporaryTrashTimespan * 86400000;
           state.temporaryItems.unshift(localNote);
@@ -369,9 +367,68 @@ const notesSlice = createSlice({
       });
     },
 
+    /**
+     * Detach a note from the cloud (synced -> offline). Marks it device-only and,
+     * when connected, queues its removal from the cloud + a fan-out signal so other
+     * devices mark their own copy offline the next time they sync.
+     */
+    detachNote: (state, action: PayloadAction<string>) => {
+      const note = state.items.find((n) => n.id === action.payload);
+      if (!note || note.local) return;
+
+      // backfill the bucket for state persisted before this feature existed
+      if (!state.cloud.items.detach) state.cloud.items.detach = {};
+
+      // drop any pending upload before flipping the flag
+      delete state.cloud.items.add[note.id];
+      note.local = true;
+
+      only_if_cloudConnected(() => {
+        state.cloud.items.detach[note.id] = CryptNote.encrypt(note);
+      });
+    },
+
+    /**
+     * Re-sync an offline note (offline -> synced). To avoid any overlap with stale
+     * cloud/other-device versions it is published as a brand-new note: new id and a
+     * " (2)" title suffix, so the user recognises it as a duplicate.
+     */
+    reattachNote: (state, action: PayloadAction<{ id: string; newId: string }>) => {
+      const { id, newId } = action.payload;
+      const idx = state.items.findIndex((n) => n.id === id);
+      if (idx === -1) return;
+
+      const now = Date.now();
+      const reattached: Note = {
+        ...state.items[idx],
+        id: newId,
+        title: `${state.items[idx].title ?? ""} (2)`.trim(),
+        local: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      state.items[idx] = reattached;
+      sortNotes(state.items, state.filters);
+
+      queueCloudAdd(state, reattached);
+    },
+
+    /** Incoming fan-out: another device detached these notes; keep our copies but mark them offline. */
+    detachLocalNotes: (state, action: PayloadAction<Record<string, Note>>) => {
+      Object.values(action.payload).forEach((cloudNote) => {
+        const note = state.items.find((n) => n.id === cloudNote.id);
+        if (!note) return;
+        note.local = true;
+        delete state.cloud.items.add[note.id];
+        delete state.cloud.items.delete[note.id];
+      });
+    },
+
     resetCloudNotes: (state) => {
       state.cloud.items.add = {};
       state.cloud.items.delete = {};
+      state.cloud.items.detach = {};
     },
   },
 
@@ -385,6 +442,12 @@ const notesSlice = createSlice({
       .addCase(deleteCloudNotesAsync.fulfilled, (state, action: PayloadAction<Record<string, Note>>) => {
         Object.keys(action.payload).forEach((id) => {
           delete state.cloud.items.delete[id];
+        });
+      })
+      .addCase(detachCloudNotesAsync.fulfilled, (state, action: PayloadAction<Record<string, Note>>) => {
+        if (!state.cloud.items.detach) return;
+        Object.keys(action.payload).forEach((id) => {
+          delete state.cloud.items.detach[id];
         });
       })
       .addCase(wipeNotes, (state) => {
@@ -421,6 +484,9 @@ export const {
   toggleProtectedNotes,
   addLocalNotes,
   deleteLocalNotes,
+  detachNote,
+  reattachNote,
+  detachLocalNotes,
   resetCloudNotes,
 } = notesSlice.actions;
 

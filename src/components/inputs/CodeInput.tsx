@@ -48,6 +48,9 @@ export default function CodeInput({ value, onChangeCode, onSubmit, disabled }: P
       if (e.key >= "0" && e.key <= "9") {
         addNumberWithVibration(e.key);
       } else if (e.key === "Backspace" || e.key === "Delete") {
+        // Drive the code input — and swallow the WebView's default Backspace
+        // history navigation so it deletes a digit instead of going back.
+        e.preventDefault();
         removeNumberWithVibration();
       }
     };

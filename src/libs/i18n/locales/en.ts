@@ -15,6 +15,15 @@ const en = {
     title: "What's new?",
 
     web: {
+      description_1_1_0: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
+• Voice Recognition 2.0: improved voice dictation with automatic AI cleanup.
+• The AI Assistant can now suggest a category from the note title.
+• Added a note info panel.
+• Added undo/redo and strikethrough to the text editor.
+• Cloud Sync now shows the status of each connected device.
+• Faster app startup.
+• Various fixes.`,
+
       description_1_0_0: `• First stable release of Fast Memo Desktop (out of BETA).
 • Brand-new modern design across the whole app, with the new Geist font, glass surfaces and gradients.
 • Redesigned onboarding with new intro steps.
@@ -38,6 +47,14 @@ const en = {
     },
 
     mobile: {
+      description_3_1_0: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
+• Voice Recognition 2.0: improved voice dictation with automatic AI cleanup.
+• The AI Assistant can now suggest a category from the note title.
+• Added a note info panel.
+• Added undo/redo and strikethrough to the text editor.
+• Cloud Sync now shows the status of each connected device.
+• Various fixes.`,
+
       description_3_0_0: `• Brand-new modern design across the whole app, with the new Geist font, glass surfaces and gradients.
 • Redesigned onboarding with new intro steps.
 • Added note creation settings to customize the defaults for new notes.
@@ -45,7 +62,7 @@ const en = {
 • Refreshed app icon and splash screen.
 • Various fixes.`,
 
-      description_2_9_0: `• Added new note type: Code note with built-in code editor, syntax highlighting, multiple tabs, and language auto-detection.
+      description_2_9_1: `• Added new note type: Code note with built-in code editor, syntax highlighting, multiple tabs, and language auto-detection.
 • Added Qwen 2.5 7B model with device RAM detection. New AI actions for code: Explain code and Add comments.
 • Added find and replace in text notes.
 • Added note export.
@@ -184,11 +201,27 @@ const en = {
       protect: "Protect",
       readonly: "Read-Only",
       hide: "Hide",
+      make_offline: "Make offline",
+      sync_to_cloud: "Sync to cloud",
+      made_offline: "Note is now offline",
+      synced_as_duplicate: "Synced to cloud as a copy",
       changecategory: "Change Category",
       share: "Share",
       export: "Export",
       export_description: "Choose the export format",
       export_txt: "Plain Text (.txt)",
+      info: "Information",
+    },
+    info: {
+      title: "Information",
+      type: "Type",
+      category: "Category",
+      created: "Created",
+      updated: "Updated",
+      flags: "Flags",
+      no_flags: "None",
+      offline: "Offline",
+      close: "Close",
     },
     find_replace: {
       search_placeholder: "Search...",
@@ -237,6 +270,9 @@ const en = {
     title: "Synced Devices",
     lastSync: "Last sync: ",
     error_fetching: "Error fetching devices",
+    upToDate: "Up to date",
+    pending: "{{count}} pending",
+    mostRecent: "Most recent",
   },
   createcategory: {
     title_create: "Create Category",
@@ -362,10 +398,12 @@ const en = {
     cap: {
       generate_title: "Generate a title from note content",
       summarize: "Summarize a text note into a few sentences",
-      continue_writing: "Continue writing from where you left off",
-      format_text: "Format text with headings, bold, lists, etc.",
+      fix_grammar: "Fix spelling and grammar",
+      shorten: "Make a text shorter and more concise",
+      translate: "Translate a note into your app language",
       suggest_items: "Suggest new items for a checklist",
       suggest_category: "Suggest the best category for a note",
+      voice_cleanup: "Clean up dictated text with punctuation",
       explain_code: "Explain what code does",
       add_comments: "Add inline comments to code",
     },
@@ -406,13 +444,17 @@ const en = {
     editor: {
       generate_title: "Generate title",
       summarize: "Summarize",
-      continue_writing: "Continue writing",
       suggest_items: "Suggest items",
-      format_text: "Format text",
       suggest_category: "Suggest category",
       explain_code: "Explain code",
       add_comments: "Add comments",
+      fix_grammar: "Fix grammar",
+      shorten: "Make shorter",
+      translate: "Translate",
       min_model: "Minimum",
+      before: "Before",
+      after: "After",
+      apply: "Apply",
       no_content: "Write something first",
       no_category_match: "No matching category found",
       error: "Could not generate, try again",
@@ -425,6 +467,15 @@ const en = {
     continuous: "Manual stop",
     language: "Language",
     language_default: "Default (system)",
+    dictation: {
+      listening: "Listening…",
+      paused: "Paused",
+      hint: 'Speak now. Say "comma", "period", "question mark" or "new line" to punctuate.',
+      insert: "Insert",
+      cancel: "Cancel",
+      ai_cleanup: "Clean up with AI",
+      processing: "Cleaning up…",
+    },
   },
   help: {
     title: "Help",
