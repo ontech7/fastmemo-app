@@ -4,7 +4,7 @@ import { initLlama, type LlamaContext } from "llama.rn";
 import { NativeModules } from "react-native";
 
 import { store } from "@/slicers/store";
-import { AI_MODELS, DEFAULT_MODEL_ID, JSON_ARRAY_GRAMMAR, getEditorSystemPrompt } from "./constants";
+import { AI_MODELS, DEFAULT_MODEL_ID, JSON_ARRAY_GRAMMAR, getEditorSystemPrompt, truncateForAction } from "./constants";
 import type { AIModelId, AIModelInfo, AIModelStatus, EditorAction, EditorActionResult } from "./types";
 
 type StatusListener = (status: AIModelStatus, progress?: number) => void;
@@ -300,12 +300,15 @@ export async function generateEditorContent(
   const langCode = resolveLanguage();
   const isJsonOutput = action === "suggest_items";
 
+  // Cap input length for gist-only actions so long notes don't blow up prefill latency.
+  content = truncateForAction(action, content);
+
   // For suggest_category, build a user message with category list
   let categoryNames: string[] = [];
   if (action === "suggest_category") {
     const categories = store.getState().categories.items;
     categoryNames = categories.map((c: { name: string }) => c.name);
-    content = `Categories: ${categoryNames.join(", ")}\n\nNote title: ${content}`;
+    content = `Categories: ${categoryNames.join(", ")}\n\nNote:\n${content}`;
   }
 
   const nPredict =
@@ -313,14 +316,20 @@ export async function generateEditorContent(
       ? 30
       : action === "suggest_items"
         ? 100
-        : action === "format_text" || action === "add_comments"
+        : action === "add_comments"
           ? 1500
           : action === "explain_code"
             ? 300
-            : 200;
+            : action === "fix_grammar" || action === "translate" || action === "clean_transcript"
+              ? 800
+              : 200;
 
   const temperature =
-    action === "generate_title" ? 0.05 : action === "continue_writing" ? 0.4 : action === "add_comments" ? 0.1 : 0.15;
+    action === "generate_title"
+      ? 0.05
+      : action === "add_comments"
+        ? 0.1
+          : 0.15;
 
   try {
     const systemPrompt = getEditorSystemPrompt(action, langCode);
@@ -362,18 +371,6 @@ export async function generateEditorContent(
         }
       }
       return { success: false, error: "Invalid response format" };
-    }
-
-    // For format_text, clean HTML wrappers and return as-is
-    if (action === "format_text") {
-      const html = text
-        .replace(/^```html\s*/i, "")
-        .replace(/```\s*$/g, "")
-        .replace(/<\/?html[^>]*>/gi, "")
-        .replace(/<\/?body[^>]*>/gi, "")
-        .replace(/<\/?head[^>]*>/gi, "")
-        .trim();
-      return { success: true, text: html };
     }
 
     // For add_comments, strip code fences and return code with comments

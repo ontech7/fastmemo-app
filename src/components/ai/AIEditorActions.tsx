@@ -20,12 +20,13 @@ import {
 } from "react-native";
 import {
   ChatBubbleLeftRightIcon,
+  CheckBadgeIcon,
   CodeBracketIcon,
   DocumentTextIcon,
   FolderIcon,
+  LanguageIcon,
   ListBulletIcon,
-  PaintBrushIcon,
-  PencilSquareIcon,
+  ScissorsIcon,
   SparklesIcon,
   TagIcon,
   XMarkIcon,
@@ -64,8 +65,9 @@ const TEXT_ACTIONS: ActionDef[] = [
   { id: "generate_title", labelKey: "ai.editor.generate_title", icon: TagIcon },
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
   { id: "summarize", labelKey: "ai.editor.summarize", icon: DocumentTextIcon, minModelId: "qwen-1.5b" },
-  { id: "format_text", labelKey: "ai.editor.format_text", icon: PaintBrushIcon, minModelId: "qwen-3b" },
-  { id: "continue_writing", labelKey: "ai.editor.continue_writing", icon: PencilSquareIcon, minModelId: "qwen-1.5b" },
+  { id: "fix_grammar", labelKey: "ai.editor.fix_grammar", icon: CheckBadgeIcon, minModelId: "qwen-1.5b" },
+  { id: "shorten", labelKey: "ai.editor.shorten", icon: ScissorsIcon, minModelId: "qwen-1.5b" },
+  { id: "translate", labelKey: "ai.editor.translate", icon: LanguageIcon, minModelId: "qwen-3b" },
 ];
 
 const TODO_ACTIONS: ActionDef[] = [
@@ -106,14 +108,11 @@ interface Props {
   noteTitle: string;
   onTitleGenerated: (title: string) => void;
   onSummaryGenerated?: (summary: string) => void;
-  onContinueGenerated?: (continuation: string) => void;
   onItemsSuggested?: (items: string[]) => void;
-  /** Called with formatted HTML when format_text succeeds. */
-  onTextFormatted?: (formattedHtml: string) => void;
   /** Called with the matched category name when suggest_category succeeds. */
   onCategorySuggested?: (categoryName: string) => void;
-  /** Called with explanation text when explain_code succeeds. */
-  onCodeExplained?: (explanation: string) => void;
+  /** Called with rewritten text for content-replacing actions (fix_grammar, shorten, translate). */
+  onTextRewritten?: (text: string) => void;
   /** Called with commented code when add_comments succeeds. */
   onCodeCommented?: (commentedCode: string) => void;
   disabled?: boolean;
@@ -129,11 +128,9 @@ export default function AIEditorActions({
   noteTitle,
   onTitleGenerated,
   onSummaryGenerated,
-  onContinueGenerated,
   onItemsSuggested,
-  onTextFormatted,
   onCategorySuggested,
-  onCodeExplained,
+  onTextRewritten,
   onCodeCommented,
   disabled = false,
   style,
@@ -146,9 +143,15 @@ export default function AIEditorActions({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>("idle");
   const [outputText, setOutputText] = useState<string | null>(null);
+  // Staged result of a content-modifying action: shown as a before/after preview
+  // and applied only when the user confirms (nothing is overwritten automatically).
+  const [preview, setPreview] = useState<{ title: string; before: string; after: string; apply: () => void } | null>(null);
+  // Left edge (window coords) of the trigger, so the menu opens exactly from the button.
+  const [menuLeft, setMenuLeft] = useState(40);
 
   const menuProgress = useSharedValue(0);
   const cancelledRef = useRef(false);
+  const triggerRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const actionItems = getActionsForType(noteType);
@@ -158,8 +161,11 @@ export default function AIEditorActions({
   const toggleMenu = useCallback(() => {
     if (feedback === "processing") return;
     Keyboard.dismiss();
+    if (!isMenuOpen) {
+      triggerRef.current?.measureInWindow((x) => setMenuLeft(x));
+    }
     setIsMenuOpen((prev) => !prev);
-  }, [feedback]);
+  }, [feedback, isMenuOpen]);
 
   useEffect(() => {
     menuProgress.value = withTiming(isMenuOpen ? 1 : 0, {
@@ -185,15 +191,27 @@ export default function AIEditorActions({
       closeMenu();
 
       const rawContent = getContent();
-      if (!rawContent.trim()) {
+      const hasTitle = noteTitle.trim().length > 0;
+
+      // Category suggestion leans on the title first, so a title alone is enough
+      // (e.g. "Marco's Birthday" → Birthday). Every other action needs content.
+      if (!rawContent.trim() && !(action === "suggest_category" && hasTitle)) {
         toast(t("ai.editor.no_content"));
         return;
       }
 
-      // Include the note title as context for actions that benefit from it
-      const needsTitle =
-        action !== "generate_title" && action !== "format_text" && action !== "add_comments" && action !== "explain_code";
-      const content = needsTitle && noteTitle.trim() ? `${noteTitle}\n${rawContent}` : rawContent;
+      let content: string;
+      if (action === "suggest_category") {
+        // Pass whichever parts exist (title and/or content); a title alone is enough.
+        // Title goes first so it survives input truncation.
+        content = [hasTitle && `Title: ${noteTitle.trim()}`, rawContent.trim() && `Content: ${rawContent.trim()}`]
+          .filter(Boolean)
+          .join("\n");
+      } else {
+        // Include the note title as context for actions that benefit from it
+        const needsTitle = action !== "generate_title" && action !== "add_comments" && action !== "explain_code";
+        content = needsTitle && hasTitle ? `${noteTitle}\n${rawContent}` : rawContent;
+      }
 
       setFeedback("processing");
       cancelledRef.current = false;
@@ -206,32 +224,48 @@ export default function AIEditorActions({
         if (cancelledRef.current) return;
 
         if (result.success) {
-          setFeedback("success");
+          // Stage a before/after preview for anything that overwrites existing
+          // content; apply lightweight/additive results directly.
+          const stage = (after: string, apply: () => void) => {
+            setFeedback("idle");
+            setPreview({ title: t(`ai.editor.${action}`), before: rawContent, after, apply });
+          };
 
           switch (action) {
-            case "generate_title":
-              if (result.text) onTitleGenerated(result.text);
-              break;
-            case "summarize":
-              if (result.text) onSummaryGenerated?.(result.text);
-              break;
-            case "continue_writing":
-              if (result.text) onContinueGenerated?.(result.text);
-              break;
             case "suggest_items":
+              setFeedback("success");
               if (result.items?.length) onItemsSuggested?.(result.items);
               break;
-            case "format_text":
-              if (result.text) onTextFormatted?.(result.text);
-              break;
             case "suggest_category":
+              setFeedback("success");
               if (result.text) onCategorySuggested?.(result.text);
               break;
             case "explain_code":
+              setFeedback("idle");
               if (result.text) setOutputText(result.text);
               break;
+            case "generate_title":
+              if (result.text) {
+                const after = result.text;
+                setFeedback("idle");
+                setPreview({
+                  title: t("ai.editor.generate_title"),
+                  before: noteTitle,
+                  after,
+                  apply: () => onTitleGenerated(after),
+                });
+              }
+              break;
+            case "summarize":
+              if (result.text) stage(result.text, () => onSummaryGenerated?.(result.text!));
+              break;
+            case "fix_grammar":
+            case "shorten":
+            case "translate":
+              if (result.text) stage(result.text, () => onTextRewritten?.(result.text!));
+              break;
             case "add_comments":
-              if (result.text) onCodeCommented?.(result.text);
+              if (result.text) stage(result.text, () => onCodeCommented?.(result.text!));
               break;
           }
         } else {
@@ -250,14 +284,13 @@ export default function AIEditorActions({
     },
     [
       getContent,
+      noteTitle,
       aiSettings.selectedModel,
       onTitleGenerated,
       onSummaryGenerated,
-      onContinueGenerated,
       onItemsSuggested,
-      onTextFormatted,
       onCategorySuggested,
-      onCodeExplained,
+      onTextRewritten,
       onCodeCommented,
       t,
       closeMenu,
@@ -279,7 +312,10 @@ export default function AIEditorActions({
   return (
     <>
       <Modal visible={isMenuOpen} transparent animationType="none" statusBarTranslucent onRequestClose={closeMenu}>
-        <AnimatedPressable style={[styles.overlay, backdropStyle, { paddingBottom: menuBottomOffset }]} onPress={closeMenu}>
+        <AnimatedPressable
+          style={[styles.overlay, backdropStyle, { paddingBottom: menuBottomOffset, paddingLeft: menuLeft }]}
+          onPress={closeMenu}
+        >
           <View style={styles.menuContainer}>
             {actionItems.map((actionItem, index) => {
               const canRun =
@@ -304,6 +340,7 @@ export default function AIEditorActions({
       </Modal>
 
       <TouchableOpacity
+        ref={triggerRef}
         style={[styles.aiButton, style]}
         activeOpacity={0.7}
         onPress={feedback === "processing" ? handleCancel : toggleMenu}
@@ -338,6 +375,56 @@ export default function AIEditorActions({
           </ScrollView>
         </View>
       )}
+
+      <Modal
+        visible={preview !== null}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setPreview(null)}
+      >
+        <View style={styles.previewBackdrop}>
+          <View style={styles.previewCard}>
+            <View style={styles.previewHeader}>
+              <SparklesIcon size={18} color={AI_COLOR} />
+              <Text style={styles.previewTitle}>{preview?.title}</Text>
+            </View>
+
+            <ScrollView style={styles.previewScroll} contentContainerStyle={{ gap: PADDING_MARGIN.md }}>
+              <View>
+                <Text style={styles.previewLabel}>{t("ai.editor.before")}</Text>
+                <Text style={[styles.previewBlock, styles.previewBefore]}>
+                  {preview?.before?.trim() ? preview.before : "—"}
+                </Text>
+              </View>
+              <View>
+                <Text style={[styles.previewLabel, { color: AI_COLOR }]}>{t("ai.editor.after")}</Text>
+                <Text style={[styles.previewBlock, styles.previewAfter]}>{preview?.after}</Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.previewFooter}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.previewAction, styles.previewCancel]}
+                onPress={() => setPreview(null)}
+              >
+                <Text style={styles.previewCancelLabel}>{t("cancel")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.previewAction, styles.previewApply]}
+                onPress={() => {
+                  preview?.apply();
+                  setPreview(null);
+                }}
+              >
+                <Text style={styles.previewApplyLabel}>{t("ai.editor.apply")}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -416,7 +503,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.8)",
     justifyContent: "flex-end",
     alignItems: "flex-start",
-    paddingLeft: 40,
     zIndex: 5,
   },
   menuContainer: {
@@ -455,12 +541,7 @@ const styles = StyleSheet.create({
     left: 40,
     padding: PADDING_MARGIN.sm + 2,
     borderRadius: BORDER.normal,
-    backgroundColor: AI_COLOR,
-    shadowColor: AI_COLOR,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 3,
-    elevation: 3,
+    backgroundColor: COLOR.accentMuted,
   },
   outputPanel: {
     position: "absolute",
@@ -502,5 +583,84 @@ const styles = StyleSheet.create({
     color: COLOR.softWhite,
     fontSize: FONTSIZE.medium,
     lineHeight: 22,
+  },
+  previewBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    paddingHorizontal: PADDING_MARGIN.lg,
+  },
+  previewCard: {
+    maxHeight: "80%",
+    backgroundColor: COLOR.surface,
+    borderRadius: BORDER.big,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLOR.blue,
+    padding: PADDING_MARGIN.lg,
+  },
+  previewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+    marginBottom: PADDING_MARGIN.md,
+  },
+  previewTitle: {
+    color: COLOR.softWhite,
+    fontSize: FONTSIZE.paragraph,
+    fontWeight: FONTWEIGHT.semiBold,
+  },
+  previewScroll: {
+    flexGrow: 0,
+  },
+  previewLabel: {
+    color: COLOR.lightBlue,
+    fontSize: FONTSIZE.small,
+    fontWeight: FONTWEIGHT.semiBold,
+    marginBottom: PADDING_MARGIN.xs,
+    textTransform: "uppercase",
+  },
+  previewBlock: {
+    fontSize: FONTSIZE.medium,
+    lineHeight: 22,
+    padding: PADDING_MARGIN.md,
+    borderRadius: BORDER.normal,
+  },
+  previewBefore: {
+    color: COLOR.lightBlue,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  previewAfter: {
+    color: COLOR.softWhite,
+    backgroundColor: "rgba(108, 99, 255, 0.12)",
+  },
+  previewFooter: {
+    flexDirection: "row",
+    gap: PADDING_MARGIN.md,
+    marginTop: PADDING_MARGIN.lg,
+  },
+  previewAction: {
+    flex: 1,
+    paddingVertical: PADDING_MARGIN.md,
+    borderRadius: BORDER.normal,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  previewCancel: {
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLOR.blue,
+  },
+  previewApply: {
+    backgroundColor: AI_COLOR,
+  },
+  previewCancelLabel: {
+    color: COLOR.lightBlue,
+    fontSize: FONTSIZE.paragraph,
+    fontWeight: FONTWEIGHT.semiBold,
+  },
+  previewApplyLabel: {
+    color: COLOR.softWhite,
+    fontSize: FONTSIZE.paragraph,
+    fontWeight: FONTWEIGHT.semiBold,
   },
 });

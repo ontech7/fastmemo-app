@@ -102,21 +102,48 @@ const EDITOR_SYSTEM_PROMPTS: Record<EditorAction, string> = {
     "You generate short note titles. Given note content, output ONLY a concise title (2-5 words) in {{LANG}}. No quotes, no explanation, just the title.",
   summarize:
     "You summarize notes concisely. Given note content, output ONLY a brief summary (2-3 sentences) in {{LANG}}. No extra text.",
-  continue_writing:
-    "You continue writing text. Given the beginning of a note, output ONLY a natural continuation (2-3 sentences) in {{LANG}}. No extra text.",
   suggest_items:
     'You suggest checklist items. Given existing items, output ONLY a JSON array with 3 new related items in {{LANG}}. Format: ["item1","item2","item3"]',
   suggest_category:
-    "You assign notes to categories. Output ONLY the exact category name that matches. If none fits, output: none",
-  format_text:
-    "You add HTML formatting to text. CRITICAL RULES: 1) Keep EVERY single word of the original text EXACTLY as-is - do NOT rewrite, remove, summarize, or add any word. 2) Detect the structure: identify titles/headings, key terms, emphasized words, lists, and paragraph breaks. 3) Apply ONLY these HTML tags: <h1>/<h2> for headings, <b> for keywords and important terms, <i> for emphasis, <ul><li> for bullet lists, <ol><li> for numbered lists. 4) Output the COMPLETE original text with HTML tags added around existing words.",
+    "You assign notes to categories based on their title and content. Either alone is enough to decide. Output ONLY the exact category name from the list that matches. If none fits, output: none",
   explain_code:
     "You explain code clearly. Given source code, output ONLY a clear explanation of what the code does and how it works in {{LANG}}. Be concise (3-5 sentences). No code in your output, just the explanation.",
   add_comments:
     "You add inline comments to source code. CRITICAL: keep ALL code EXACTLY as-is. Do NOT modify, delete, or rewrite any line of code. ONLY add comment lines above important lines to explain what they do. Use the appropriate comment syntax for the language (// for JS/TS/C/Java, # for Python/Ruby/Bash, etc). Output the COMPLETE original code with comments added.",
+  fix_grammar:
+    "You correct spelling, grammar and punctuation. Output ONLY the corrected text in the SAME language as the input, preserving the original meaning and wording as much as possible. No explanation, no quotes.",
+  shorten:
+    "You make text more concise. Output ONLY a shorter version in the SAME language as the input, keeping the key information. No explanation, no quotes.",
+  translate: "You translate text into {{LANG}}. Output ONLY the translation, nothing else. No quotes, no explanation.",
+  clean_transcript:
+    "You clean up dictated text. Add correct punctuation and capitalization and fix obvious transcription mistakes, keeping the original wording, meaning and language. Output ONLY the cleaned text as plain text. No explanation, no quotes.",
 };
 
 export function getEditorSystemPrompt(action: EditorAction, langCode: string): string {
   const lang = LANG_NAMES[langCode] || LANG_NAMES[langCode.split("-")[0]] || "the same language as the input";
   return EDITOR_SYSTEM_PROMPTS[action].replace("{{LANG}}", lang);
+}
+
+/**
+ * Max input characters for actions where only the gist matters. Capping the
+ * input keeps prompt prefill (the dominant latency on small on-device models)
+ * fast on long notes — a title or category only needs the opening of the note,
+ * not its full body. Actions not listed here receive the full content.
+ */
+const MAX_INPUT_CHARS: Partial<Record<EditorAction, number>> = {
+  generate_title: 800,
+  suggest_category: 500,
+};
+
+/**
+ * Trim content to the action's input cap, cutting on a word boundary so the
+ * model never sees a chopped-off word. Returns the content unchanged when the
+ * action has no cap or is already short enough.
+ */
+export function truncateForAction(action: EditorAction, content: string): string {
+  const limit = MAX_INPUT_CHARS[action];
+  if (!limit || content.length <= limit) return content;
+  const slice = content.slice(0, limit);
+  const lastSpace = slice.lastIndexOf(" ");
+  return (lastSpace > limit * 0.6 ? slice.slice(0, lastSpace) : slice).trim();
 }
