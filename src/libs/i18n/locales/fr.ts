@@ -253,6 +253,9 @@ const fr = {
     title: "Des appareils connectés",
     lastSync: "Dernière synch.: ",
     error_fetching: "Erreur lors de la récupération des appareils",
+    upToDate: "À jour",
+    pending: "{{count}} en attente",
+    mostRecent: "Plus récent",
   },
   createcategory: {
     title_create: "Créer une Catégorie",

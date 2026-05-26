@@ -253,6 +253,9 @@ const zh = {
     title: "连接的设备",
     lastSync: "上次同步：",
     error_fetching: "获取设备时出错",
+    upToDate: "已是最新",
+    pending: "{{count}} 项待同步",
+    mostRecent: "最新",
   },
   createcategory: {
     title_create: "创建类别",

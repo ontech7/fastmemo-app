@@ -253,6 +253,9 @@ const ja = {
     title: "同期済みデバイス",
     lastSync: "最終同期: ",
     error_fetching: "デバイスの取得エラー",
+    upToDate: "最新",
+    pending: "{{count}} 件保留中",
+    mostRecent: "最も新しい",
   },
   createcategory: {
     title_create: "カテゴリーを作成",

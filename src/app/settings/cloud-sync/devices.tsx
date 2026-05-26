@@ -30,11 +30,41 @@ import Animated, {
 } from "react-native-reanimated";
 
 export default function SyncedDevicesScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [connectedDevices, setConnectedDevices] = useState<ConnectedDevice[]>([]);
   const numberOfDevices = connectedDevices.length;
   const [currentDeviceUuid, setCurrentDeviceUuid] = useState("");
+
+  // Newest device by lastSync — the "most up to date" reference.
+  const freshestTs = connectedDevices.reduce((max, d) => Math.max(max, parseInt(d.lastSync) || 0), 0);
+
+  // A device is "behind" when it still appears in another device's devicesToSync;
+  // sum the ops queued for it to know how far. All derived from already-fetched docs.
+  const pendingFor = (uuid: string) =>
+    connectedDevices.reduce(
+      (acc, d) => (d.devicesToSync?.includes(uuid) ? acc + d.pendingNotes + d.pendingCategories : acc),
+      0
+    );
+
+  // Localized "2 hours ago" via Intl; falls back to "" if the runtime lacks it.
+  const relativeSync = (lastSync: string) => {
+    const ts = parseInt(lastSync);
+    if (!ts) return "";
+    const diff = ts - Date.now();
+    const abs = Math.abs(diff);
+    const MIN = 60_000;
+    const HR = 3_600_000;
+    const DAY = 86_400_000;
+    try {
+      const rtf = new Intl.RelativeTimeFormat(i18n.language, { numeric: "auto" });
+      if (abs < HR) return rtf.format(Math.round(diff / MIN), "minute");
+      if (abs < DAY) return rtf.format(Math.round(diff / HR), "hour");
+      return rtf.format(Math.round(diff / DAY), "day");
+    } catch {
+      return "";
+    }
+  };
   const { timeoutStates, setTimeoutTask } = useTimeoutTask();
 
   const netInfo = useNetInfo();
@@ -140,43 +170,66 @@ export default function SyncedDevicesScreen() {
               <Text style={styles.error_text}>{t("synceddevices.error_fetching")}</Text>
             </View>
           ) : (
-            connectedDevices?.map((connectedDevice) => (
-              <View key={connectedDevice.uuid} style={styles.deviceCard}>
-                {connectedDevice.brand !== "web" ? (
-                  connectedDevice.brand !== "Apple" ? (
-                    <DeviceAndroidIcon size={32} color={COLOR.textPrimary} />
+            connectedDevices?.map((connectedDevice) => {
+              const behind = pendingFor(connectedDevice.uuid);
+              const isMostRecent = freshestTs > 0 && parseInt(connectedDevice.lastSync) === freshestTs;
+              const relative = relativeSync(connectedDevice.lastSync);
+
+              return (
+                <View key={connectedDevice.uuid} style={styles.deviceCard}>
+                  {connectedDevice.brand !== "web" ? (
+                    connectedDevice.brand !== "Apple" ? (
+                      <DeviceAndroidIcon size={32} color={COLOR.textPrimary} />
+                    ) : (
+                      <DeviceAppleIcon size={32} color={COLOR.textPrimary} />
+                    )
                   ) : (
-                    <DeviceAppleIcon size={32} color={COLOR.textPrimary} />
-                  )
-                ) : (
-                  <ComputerDesktopIcon size={32} color={COLOR.textPrimary} />
-                )}
-
-                <View style={styles.deviceInfo}>
-                  <Text numberOfLines={1} style={styles.deviceName}>
-                    {connectedDevice.modelName}
-                  </Text>
-
-                  <Text style={styles.deviceSyncLabel}>
-                    {t("synceddevices.lastSync")}
-
-                    <Text style={styles.deviceSyncDate}>{new Date(parseInt(connectedDevice.lastSync)).toLocaleString()}</Text>
-                  </Text>
-                </View>
-
-                <View>
-                  {currentDeviceUuid == connectedDevice.uuid ? (
-                    <Animated.View style={[styles.currentDeviceDot, blinkStyle]} />
-                  ) : (
-                    <TouchableOpacity activeOpacity={0.7} onPress={() => deleteDeviceFromCloud(connectedDevice.uuid)}>
-                      <View style={styles.deleteChip}>
-                        <TrashIcon size={16} color={COLOR.textMuted} />
-                      </View>
-                    </TouchableOpacity>
+                    <ComputerDesktopIcon size={32} color={COLOR.textPrimary} />
                   )}
+
+                  <View style={styles.deviceInfo}>
+                    <View style={styles.deviceNameRow}>
+                      <Text numberOfLines={1} style={styles.deviceName}>
+                        {connectedDevice.modelName}
+                      </Text>
+                      {isMostRecent && (
+                        <View style={styles.recentTag}>
+                          <Text style={styles.recentTagText}>{t("synceddevices.mostRecent")}</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text style={styles.deviceSyncLabel}>
+                      {t("synceddevices.lastSync")}
+                      <Text style={styles.deviceSyncDate}>
+                        {new Date(parseInt(connectedDevice.lastSync)).toLocaleString()}
+                      </Text>
+                    </Text>
+
+                    <View style={styles.statusRow}>
+                      {!!relative && <Text style={styles.relativeText}>{relative}</Text>}
+                      <View style={[styles.statusPill, behind === 0 ? styles.statusPillOk : styles.statusPillBehind]}>
+                        <Text style={[styles.statusPillText, behind === 0 ? styles.statusTextOk : styles.statusTextBehind]}>
+                          {behind === 0 ? t("synceddevices.upToDate") : t("synceddevices.pending", { count: behind })}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View>
+                    {currentDeviceUuid == connectedDevice.uuid ? (
+                      <Animated.View style={[styles.currentDeviceDot, blinkStyle]} />
+                    ) : (
+                      <TouchableOpacity activeOpacity={0.7} onPress={() => deleteDeviceFromCloud(connectedDevice.uuid)}>
+                        <View style={styles.deleteChip}>
+                          <TrashIcon size={16} color={COLOR.textMuted} />
+                        </View>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
         </ScrollView>
       </SafeAreaView>
@@ -245,10 +298,27 @@ const styles = StyleSheet.create({
     marginLeft: PADDING_MARGIN.md,
     flex: 1,
   },
+  deviceNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+  },
   deviceName: {
+    flexShrink: 1,
     fontSize: FONTSIZE.subtitle,
     fontFamily: FONT.semiBold,
     color: COLOR.textPrimary,
+  },
+  recentTag: {
+    paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: 1,
+    borderRadius: BORDER.rounded,
+    backgroundColor: GLASS.fillStrong,
+  },
+  recentTagText: {
+    fontSize: FONTSIZE.small - 1,
+    fontFamily: FONT.semiBold,
+    color: COLOR.accentSoft,
   },
   deviceSyncLabel: {
     color: COLOR.textSecondary,
@@ -257,6 +327,38 @@ const styles = StyleSheet.create({
   deviceSyncDate: {
     color: COLOR.textMuted,
     fontFamily: FONT.regular,
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+    marginTop: PADDING_MARGIN.xs,
+  },
+  relativeText: {
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+  },
+  statusPill: {
+    paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: 1,
+    borderRadius: BORDER.rounded,
+  },
+  statusPillOk: {
+    backgroundColor: "rgba(76, 175, 80, 0.15)",
+  },
+  statusPillBehind: {
+    backgroundColor: "rgba(255, 167, 38, 0.18)",
+  },
+  statusPillText: {
+    fontSize: FONTSIZE.small - 1,
+    fontFamily: FONT.semiBold,
+  },
+  statusTextOk: {
+    color: COLOR.codeMint,
+  },
+  statusTextBehind: {
+    color: "#FFA726",
   },
   currentDeviceDot: {
     backgroundColor: COLOR.accentSoft,

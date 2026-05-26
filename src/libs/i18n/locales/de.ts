@@ -253,6 +253,9 @@ const de = {
     title: "Verbundene Geräte",
     lastSync: "Letzte Sync.: ",
     error_fetching: "Fehler beim Abrufen der Geräte",
+    upToDate: "Aktuell",
+    pending: "{{count}} ausstehend",
+    mostRecent: "Neueste",
   },
   createcategory: {
     title_create: "Kategorie Erstellen",

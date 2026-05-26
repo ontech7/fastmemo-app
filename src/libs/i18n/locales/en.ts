@@ -253,6 +253,9 @@ const en = {
     title: "Synced Devices",
     lastSync: "Last sync: ",
     error_fetching: "Error fetching devices",
+    upToDate: "Up to date",
+    pending: "{{count}} pending",
+    mostRecent: "Most recent",
   },
   createcategory: {
     title_create: "Create Category",

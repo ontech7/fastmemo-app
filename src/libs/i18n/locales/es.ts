@@ -253,6 +253,9 @@ const es = {
     title: "Dispositivos conectados",
     lastSync: "Última sinc.: ",
     error_fetching: "Error al obtener dispositivos",
+    upToDate: "Actualizado",
+    pending: "{{count}} pendientes",
+    mostRecent: "Más reciente",
   },
   createcategory: {
     title_create: "Crear Categoría",
