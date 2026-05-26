@@ -4,6 +4,7 @@ import WebToaster from "@/components/WebToaster";
 import AppBackground from "@/components/ui/AppBackground";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { usePreventBackspaceNav } from "@/hooks/usePreventBackspaceNav";
 import i18n from "@/libs/i18n";
 import { closeTauriSplashscreen } from "@/libs/tauri";
 import SyncOnProvider from "@/providers/SyncOnProvider";
@@ -45,6 +46,9 @@ Sentry.init({
 export default Sentry.wrap(function RootLayout() {
   const { colors } = useTheme();
   colors.background = "transparent";
+
+  // Stop the WebView's Backspace-key history navigation (no-op on native).
+  usePreventBackspaceNav();
 
   const [fontsLoaded, fontError] = useFonts({
     "Geist-Regular": require("@/assets/fonts/Geist-Regular.ttf"),
