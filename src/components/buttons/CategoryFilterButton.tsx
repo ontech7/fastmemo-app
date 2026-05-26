@@ -149,6 +149,8 @@ const styles = StyleSheet.create({
     paddingTop: PADDING_MARGIN.sm,
   },
   button: {
+    alignItems: "center",
+    justifyContent: "center",
     padding: PADDING_MARGIN.sm,
     marginBottom: PADDING_MARGIN.sm,
     backgroundColor: GLASS.fill,
