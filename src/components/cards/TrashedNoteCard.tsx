@@ -1,7 +1,7 @@
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, StarIcon } from "react-native-heroicons/outline";
+import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, SignalSlashIcon, StarIcon } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
 
 import { formatDateTime, reverseDate } from "@/utils/date";
@@ -46,7 +46,8 @@ function getCardAccent(type: Note["type"], important: boolean): string {
 function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode }: Props) {
   const { t } = useTranslation();
 
-  const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked, deleteDate } = content;
+  const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked, local, deleteDate } =
+    content;
 
   const dispatch = useDispatch();
 
@@ -74,7 +75,7 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
   const accent = getCardAccent(type, isImportant);
   const fg = isImportant ? COLOR.softWhite : COLOR.darkBlue;
   const chipBg = isImportant ? "rgba(255, 255, 255, 0.18)" : "rgba(2, 14, 53, 0.06)";
-  const hasStatus = important || readOnly || locked || hidden;
+  const hasStatus = important || readOnly || locked || hidden || local;
   const TypeIcon = type && type !== "text" ? NOTE_TYPES.find((nt) => nt.key === type)?.icon : undefined;
 
   const updatedDate = formatDateTime(Number(updatedAt) || Number(new Date(reverseDate(date))));
@@ -144,6 +145,7 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
                 {locked && <KeyIcon size={14} color={fg} />}
                 {readOnly && <BookOpenIcon size={14} color={fg} />}
                 {hidden && <EyeSlashIcon size={14} color={fg} />}
+                {local && <SignalSlashIcon size={14} color={fg} />}
               </View>
             )}
           </View>

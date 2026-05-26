@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fast Memo</title>
+    <style>
+      /* Static, self-contained splash shown by the Tauri `splashscreen` window
+         while the WebView loads and parses the JS bundle. It mirrors the in-app
+         AppBackground (deep night blue + soft accent glows) so the handover to
+         the real UI has no color/flash difference. No JS, no fonts — paints in
+         a single frame. */
+      :root {
+        --bg: #05091a;
+        --accent: #4f6bff;
+        --accent-deep: #3a52e0;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: default;
+      }
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        background:
+          radial-gradient(70% 55% at 88% -2%, rgba(79, 107, 255, 0.28), transparent 70%),
+          radial-gradient(55% 45% at 6% 104%, rgba(58, 82, 224, 0.18), transparent 70%),
+          var(--bg);
+      }
+      .center {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 28px;
+      }
+      .logo {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+        animation: pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.85;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.04);
+        }
+      }
+      /* Thin indeterminate progress shimmer */
+      .bar {
+        width: 132px;
+        height: 3px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+      .bar::after {
+        content: "";
+        display: block;
+        width: 40%;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent-deep), var(--accent));
+        animation: slide 1.2s ease-in-out infinite;
+      }
+      @keyframes slide {
+        0% {
+          transform: translateX(-120%);
+        }
+        100% {
+          transform: translateX(360%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .logo,
+        .bar::after {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <div class="center">
+      <img class="logo" src="/splash-logo.png" alt="Fast Memo" />
+      <div class="bar" role="progressbar" aria-label="Loading"></div>
+    </div>
+  </body>
+</html>

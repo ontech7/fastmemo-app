@@ -10,10 +10,9 @@ interface Props {
   noteTitle: string;
   onTitleGenerated: (title: string) => void;
   onSummaryGenerated?: (summary: string) => void;
-  onContinueGenerated?: (continuation: string) => void;
   onItemsSuggested?: (items: string[]) => void;
-  onTextFormatted?: (formattedHtml: string) => void;
   onCategorySuggested?: (categoryName: string) => void;
+  onTextRewritten?: (text: string) => void;
   disabled?: boolean;
   style?: ViewStyle;
   menuBottomOffset?: number;

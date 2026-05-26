@@ -100,13 +100,26 @@
     },
     "windows": [
       {
+        "label": "main",
         "fullscreen": false,
         "height": 800,
         "resizable": true,
         "title": "Fast Memo",
         "width": 900,
         "minWidth": 500,
-        "minHeight": 700
+        "minHeight": 700,
+        "visible": false
+      },
+      {
+        "label": "splashscreen",
+        "url": "splashscreen.html",
+        "title": "Fast Memo",
+        "width": 900,
+        "height": 800,
+        "resizable": false,
+        "decorations": false,
+        "center": true,
+        "focus": true
       }
     ]
   }

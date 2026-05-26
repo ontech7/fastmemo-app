@@ -15,6 +15,8 @@ export interface NotesState {
     items: {
       add: Record<string, Note>;
       delete: Record<string, Note>;
+      /** Notes detached from the cloud: removed remotely + signalled to other devices. */
+      detach: Record<string, Note>;
     };
   };
   filters: NoteFilters;

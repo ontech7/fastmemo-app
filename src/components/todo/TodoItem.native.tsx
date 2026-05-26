@@ -58,7 +58,6 @@ export default function TodoItem({
   stepMode = false,
   stepStatus = "future",
   stepNumber,
-  isFirst = false,
   isLast = false,
   animationsReady = false,
 }: Props) {
@@ -167,8 +166,6 @@ export default function TodoItem({
       {/* left rail: connector line + tappable numbered circle (checkbox) + Ongoing label */}
 
       <View style={styles.stepColumn} pointerEvents="box-none">
-        <View style={[styles.stepLine, isFirst && styles.stepLineHidden]} />
-
         <TouchableOpacity activeOpacity={0.7} disabled={disabled} onPress={handleCheck}>
           <Animated.View
             style={[
@@ -289,7 +286,7 @@ const styles = StyleSheet.create({
   stepRow: {
     flexDirection: "row",
     alignItems: "stretch",
-    minHeight: 60,
+    minHeight: 52,
   },
   stepColumn: {
     width: STEP_COLUMN_WIDTH,
@@ -297,10 +294,12 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     position: "relative",
   },
+  // Single connector below each circle; it flexes so the gap autogrows with the
+  // entry height and stays continuous down to the next step's circle.
   stepLine: {
     width: 2,
     flex: 1,
-    minHeight: 6,
+    minHeight: 8,
     backgroundColor: GLASS.border,
   },
   stepLineHidden: {
@@ -343,7 +342,7 @@ const styles = StyleSheet.create({
   },
   stepTextWrap: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     paddingHorizontal: PADDING_MARGIN.sm,
   },
   stepTextInput: {
@@ -368,7 +367,8 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   stepDelete: {
-    alignSelf: "center",
+    alignSelf: "flex-start",
+    marginTop: 2,
     marginLeft: PADDING_MARGIN.sm,
   },
   deleteButton: {

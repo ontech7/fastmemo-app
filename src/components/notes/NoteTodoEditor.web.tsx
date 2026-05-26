@@ -5,7 +5,8 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
-import { capitalize, isStringEmpty } from "@/utils/string";
+import { isStringEmpty } from "@/utils/string";
+import { voiceTextToLines } from "@/utils/voiceTranscript";
 import {
   closestCenter,
   DndContext,
@@ -271,47 +272,49 @@ export default function NoteTodoEditor({ initialNote }: Props) {
             <Text style={styles.noItems}>{t("note.no_items")}</Text>
           )}
         </ScrollView>
-
-        <TouchableOpacity activeOpacity={0.7} style={styles.addListItemButton} onPress={addListItem}>
-          <PlusIcon size={28} color={COLOR.softWhite} />
-        </TouchableOpacity>
       </View>
 
-      <TodoModeMenuButton currentMode={currentMode} onSelectMode={setMode} disabled={note.readOnly} />
-
       {!note.readOnly && (
-        <VoiceRecognitionButton
-          setTranscript={(transcript, isFinal) => {
-            if (isFinal) {
-              if (!transcript.trim()) {
-                return;
-              }
+        <View style={styles.actionBar}>
+          <View style={styles.actionBarLeft}>
+            <TodoModeMenuButton
+              currentMode={currentMode}
+              onSelectMode={setMode}
+              disabled={note.readOnly}
+              style={styles.barButton}
+              menuBottomOffset={110}
+            />
 
-              let lastItem = note.list[note.list.length - 1];
-              const mutableList = [...note.list];
+            <VoiceRecognitionButton
+              onInsert={(text) => {
+                const lines = voiceTextToLines(text);
+                if (lines.length === 0) return;
 
-              if (!lastItem || lastItem.text.trim()) {
-                lastItem = {
-                  id: uuid(),
-                  text: "",
-                  checked: false,
-                };
-                mutableList.push(lastItem);
-              }
+                const mutableList = [...note.list];
+                const last = mutableList[mutableList.length - 1];
+                let startIndex = 0;
 
-              const index = mutableList.findIndex((todoItem) => todoItem.id === lastItem.id);
-              mutableList[index] = { ...mutableList[index], text: capitalize(transcript.trim()) };
+                // reuse a trailing empty item for the first dictated line
+                if (last && !last.text.trim()) {
+                  mutableList[mutableList.length - 1] = { ...last, text: lines[0] };
+                  startIndex = 1;
+                }
 
-              setNoteAsync({
-                ...note,
-                list: mutableList,
-              });
-            }
-          }}
-          style={{
-            bottom: 135,
-          }}
-        />
+                for (let i = startIndex; i < lines.length; i++) {
+                  mutableList.push({ id: uuid(), text: lines[i], checked: false });
+                }
+
+                setNoteAsync({ ...note, list: mutableList });
+              }}
+              aiCleanup
+              style={styles.barButton}
+            />
+          </View>
+
+          <TouchableOpacity activeOpacity={0.7} style={styles.addButton} onPress={addListItem}>
+            <PlusIcon size={28} color={COLOR.softWhite} />
+          </TouchableOpacity>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -358,16 +361,35 @@ const styles = StyleSheet.create({
   draggableList: {
     flex: 1,
     paddingHorizontal: PADDING_MARGIN.lg,
-    paddingBottom: 200,
+    paddingBottom: PADDING_MARGIN.md,
     marginTop: PADDING_MARGIN.xl,
   },
-  addListItemButton: {
-    zIndex: 2,
-    position: "absolute",
-    bottom: 20,
-    right: 40,
+  actionBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: PADDING_MARGIN.lg,
+    paddingTop: PADDING_MARGIN.md,
+    paddingBottom: PADDING_MARGIN.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: GLASS.border,
+  },
+  actionBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.md,
+  },
+  // Neutralizes the floating-FAB positioning of mode/voice so they sit inline in the bar.
+  barButton: {
+    position: "relative",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  addButton: {
     padding: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
+    borderRadius: BORDER.big,
     backgroundColor: COLOR.accentMuted,
     ...SHADOW.fab,
   },

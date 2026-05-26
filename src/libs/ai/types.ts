@@ -17,12 +17,14 @@ export interface AIModelInfo {
 export type EditorAction =
   | "generate_title"
   | "summarize"
-  | "continue_writing"
   | "suggest_items"
   | "suggest_category"
-  | "format_text"
   | "explain_code"
-  | "add_comments";
+  | "add_comments"
+  | "fix_grammar"
+  | "shorten"
+  | "translate"
+  | "clean_transcript";
 
 export interface EditorActionResult {
   success: boolean;

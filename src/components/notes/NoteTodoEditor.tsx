@@ -20,14 +20,15 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
-import SafeAreaView from "@/components/SafeAreaView";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
-import AppBackground from "@/components/ui/AppBackground";
+import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem.native";
+import AppBackground from "@/components/ui/AppBackground";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
 import { capitalize, isStringEmpty } from "@/utils/string";
+import { voiceTextToLines } from "@/utils/voiceTranscript";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
@@ -262,10 +263,9 @@ export default function NoteTodoEditor({ initialNote }: Props) {
               <GestureHandlerRootView style={styles.draggableList}>
                 {note.list.length > 0 ? (
                   <DraggableFlatList
-                    style={{
-                      paddingHorizontal: PADDING_MARGIN.lg,
-                      height: "100%",
-                    }}
+                    containerStyle={{ flex: 1 }}
+                    style={{ flex: 1, paddingHorizontal: PADDING_MARGIN.lg }}
+                    contentContainerStyle={{ paddingTop: PADDING_MARGIN.xl, paddingBottom: PADDING_MARGIN.md }}
                     ref={draggableListRef}
                     data={note.list}
                     onDragEnd={({ data }) => setNoteAsync({ ...note, list: data })}
@@ -276,77 +276,77 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                   <Text style={styles.noItems}>{t("note.no_items")}</Text>
                 )}
               </GestureHandlerRootView>
-
-              <TouchableOpacity activeOpacity={0.7} style={styles.addListItemButton} onPress={addListItem}>
-                <PlusIcon size={28} color={COLOR.softWhite} />
-              </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
         </View>
 
-        <TodoModeMenuButton currentMode={currentMode} onSelectMode={setMode} disabled={note.readOnly} />
-
         {!note.readOnly && (
-          <VoiceRecognitionButton
-            setTranscript={(transcript, isFinal) => {
-              if (isFinal) {
-                if (!transcript.trim()) {
-                  return;
+          <View style={styles.actionBar}>
+            <View style={styles.actionBarLeft}>
+              <TodoModeMenuButton
+                currentMode={currentMode}
+                onSelectMode={setMode}
+                disabled={note.readOnly}
+                style={styles.barButton}
+                menuBottomOffset={110}
+              />
+
+              <AIEditorActions
+                noteType="todo"
+                getContent={() =>
+                  note.list
+                    .map((item) => item.text)
+                    .filter(Boolean)
+                    .join(", ")
                 }
-
-                let lastItem = note.list[note.list.length - 1];
-                const mutableList = [...note.list];
-
-                if (!lastItem || lastItem.text.trim()) {
-                  lastItem = {
+                noteTitle={note.title}
+                onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                onItemsSuggested={(items) => {
+                  const newItems = items.map((text) => ({
                     id: uuid(),
-                    text: "",
+                    text: capitalize(text),
                     checked: false,
-                  };
-                  mutableList.push(lastItem);
-                }
+                  }));
+                  setNoteAsync({ ...note, list: [...note.list, ...newItems] });
+                }}
+                onCategorySuggested={(name) => {
+                  const cat = findCategoryByName(name);
+                  if (cat) setNoteAsync({ ...note, category: cat });
+                }}
+                style={styles.barButton}
+                menuBottomOffset={110}
+              />
 
-                const index = mutableList.findIndex((todoItem) => todoItem.id === lastItem.id);
-                mutableList[index] = { ...mutableList[index], text: capitalize(transcript.trim()) };
+              <VoiceRecognitionButton
+                onInsert={(text) => {
+                  const lines = voiceTextToLines(text);
+                  if (lines.length === 0) return;
 
-                setNoteAsync({
-                  ...note,
-                  list: mutableList,
-                });
-              }
-            }}
-            style={{
-              bottom: 135,
-            }}
-          />
-        )}
+                  const mutableList = [...note.list];
+                  const last = mutableList[mutableList.length - 1];
+                  let startIndex = 0;
 
-        {!note.readOnly && (
-          <AIEditorActions
-            noteType="todo"
-            getContent={() =>
-              note.list
-                .map((item) => item.text)
-                .filter(Boolean)
-                .join(", ")
-            }
-            noteTitle={note.title}
-            onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
-            onItemsSuggested={(items) => {
-              const newItems = items.map((text) => ({
-                id: uuid(),
-                text: capitalize(text),
-                checked: false,
-              }));
-              setNoteAsync({ ...note, list: [...note.list, ...newItems] });
-            }}
-            onCategorySuggested={(name) => {
-              const cat = findCategoryByName(name);
-              if (cat) setNoteAsync({ ...note, category: cat });
-            }}
-            style={{ bottom: 135 }}
-            menuBottomOffset={200}
-          />
+                  // reuse a trailing empty item for the first dictated line
+                  if (last && !last.text.trim()) {
+                    mutableList[mutableList.length - 1] = { ...last, text: lines[0] };
+                    startIndex = 1;
+                  }
+
+                  for (let i = startIndex; i < lines.length; i++) {
+                    mutableList.push({ id: uuid(), text: lines[i], checked: false });
+                  }
+
+                  setNoteAsync({ ...note, list: mutableList });
+                }}
+                aiCleanup
+                style={styles.barButton}
+              />
+            </View>
+
+            <TouchableOpacity activeOpacity={0.7} style={styles.addButton} onPress={addListItem}>
+              <PlusIcon size={28} color={COLOR.softWhite} />
+            </TouchableOpacity>
+          </View>
         )}
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -369,6 +369,10 @@ const styles = StyleSheet.create({
   titleInput: {
     flex: 1,
     textAlign: "center",
+    // Android misplaces the caret of an empty centered TextInput (drifts to the
+    // bottom/right until typing starts); these two keep it centered.
+    textAlignVertical: "center",
+    includeFontPadding: false,
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.lg,
     marginHorizontal: PADDING_MARGIN.sm,
@@ -394,17 +398,34 @@ const styles = StyleSheet.create({
     color: COLOR.textSecondary,
   },
   draggableList: {
-    height: SIZE.full,
-    paddingBottom: 200,
-    marginTop: PADDING_MARGIN.xl,
+    flex: 1,
   },
-  addListItemButton: {
-    zIndex: 2,
-    position: "absolute",
-    bottom: 20,
-    right: 40,
+  actionBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: PADDING_MARGIN.lg,
+    paddingTop: PADDING_MARGIN.lg,
+    paddingBottom: PADDING_MARGIN.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: GLASS.border,
+  },
+  actionBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.md,
+  },
+  // Neutralizes the floating-FAB positioning of mode/AI/voice so they sit inline in the bar.
+  barButton: {
+    position: "relative",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  addButton: {
     padding: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
+    borderRadius: BORDER.big,
     backgroundColor: COLOR.accentMuted,
     ...SHADOW.fab,
   },
