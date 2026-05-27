@@ -165,8 +165,10 @@ export default function NoteTextEditor({ initialNote }: Props) {
       // Horizontal inset lives here (not on containerStyle) so it matches the header
       // and toolbar margins on every platform: on web the webview is a plain <iframe>
       // that ignores containerStyle, so only this content padding aligns the text.
-      // padding-bottom gives breathing room so the last line clears the bar below.
-      contentCSSText: `padding-left: ${PADDING_MARGIN.lg}px; padding-right: ${PADDING_MARGIN.lg}px; padding-bottom: 24px;`,
+      // The gap from the toolbar is handled by editorWrapper's paddingBottom (a real
+      // layout gap outside the iframe) — content padding-bottom can't do it because the
+      // iframe's bottom edge is the scroll viewport edge, so the caret always lands on it.
+      contentCSSText: `padding: ${PADDING_MARGIN.sm}px ${PADDING_MARGIN.lg}px ${PADDING_MARGIN.sm}px;`,
     }),
     []
   );
@@ -262,19 +264,21 @@ export default function NoteTextEditor({ initialNote }: Props) {
         />
 
         {editorReady && (
-          <RichEditor
-            containerStyle={styles.richTextContainer}
-            androidLayerType="hardware"
-            useContainer={false}
-            disabled={note.readOnly}
-            ref={richTextEditor}
-            allowFileAccess={true}
-            onChange={setText}
-            initialContentHTML={initialNote.text}
-            placeholder={t("note.description_placeholder")}
-            pasteAsPlainText
-            editorStyle={editorStyle}
-          />
+          <View style={styles.editorWrapper}>
+            <RichEditor
+              containerStyle={styles.richTextContainer}
+              androidLayerType="hardware"
+              useContainer={false}
+              disabled={note.readOnly}
+              ref={richTextEditor}
+              allowFileAccess={true}
+              onChange={setText}
+              initialContentHTML={initialNote.text}
+              placeholder={t("note.description_placeholder")}
+              pasteAsPlainText
+              editorStyle={editorStyle}
+            />
+          </View>
         )}
 
         {/* Auxiliary actions live in a dedicated bar below the editor (not floating over
@@ -333,9 +337,10 @@ export default function NoteTextEditor({ initialNote }: Props) {
               Platform.OS === "web" && styles.richToolbarContainerDesktop,
               { display: Platform.OS !== "web" && !isKeyboardShown ? "none" : "flex" },
             ]}
-            // On web the inner list keeps its intrinsic (content) width and overflows the
-            // bar on narrow viewports (~400px). Pinning it to the bar width lets
-            // react-native-web's horizontal ScrollView fall back to overflow-x scrolling.
+            // On web, capping the inner list at the bar width (rather than pinning it to
+            // 100%) lets it keep its intrinsic width when the icons fit — so the bar's
+            // alignItems:center centers them — while still capping + falling back to
+            // react-native-web's horizontal overflow-x scrolling on narrow viewports.
             flatContainerStyle={Platform.OS === "web" ? styles.richToolbarFlatContainer : undefined}
             editor={richTextEditor}
             onPressAddImage={pickImage}
@@ -395,10 +400,17 @@ const styles = StyleSheet.create({
     fontFamily: FONT.medium,
     color: COLOR.textSecondary,
   },
+  editorWrapper: {
+    // The editor's <iframe> fills this box at height:100%, so its bottom edge sits on
+    // this padding — guaranteeing a real gap before the toolbar that the caret can't
+    // cross while typing (CSS inside the iframe can't achieve this on its own).
+    flex: 1,
+    paddingBottom: PADDING_MARGIN.lg,
+  },
   richTextContainer: {
     // Horizontal inset is applied via the editor's contentCSSText instead, so it stays
     // consistent on web (where this containerStyle is ignored by the iframe webview).
-    paddingTop: PADDING_MARGIN.lg,
+    paddingTop: PADDING_MARGIN.sm,
     paddingBottom: PADDING_MARGIN.xs,
   },
   loadingContainer: {
@@ -420,7 +432,7 @@ const styles = StyleSheet.create({
     marginHorizontal: PADDING_MARGIN.lg,
   },
   richToolbarFlatContainer: {
-    width: SIZE.full,
+    maxWidth: SIZE.full,
   },
   actionDock: {
     flexDirection: "row",
