@@ -15,15 +15,21 @@ tauri = { version = "1.5", features = [ "process-relaunch", "shell-open", "dialo
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# Desktop biometric unlock: Touch ID (macOS) and Windows Hello behind one
-# cross-platform prompt. Linux is intentionally unsupported (see the frontend
-# gate in src/libs/biometric.ts).
-robius-authentication = "0.1.1"
+# Desktop biometric unlock is scoped to macOS (Touch ID) and Windows (Hello), so
+# `robius-authentication` is a target-specific dependency. On Linux it would pull
+# in `polkit-sys` (needs the system `polkit-gobject-1` lib); we intentionally skip
+# it there — Linux stays on the secret code (see the frontend gate in
+# src/libs/biometric.ts and the cfg'd `biometric_authenticate` stub in main.rs).
 
-# macOS-only: tint the native titlebar to the app background (#05091A).
-# Pinned to what tao/wry already resolve, so nothing extra compiles.
+# macOS: titlebar tint (#05091A) + biometric unlock.
+# cocoa is pinned to what tao/wry already resolve, so nothing extra compiles.
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.24"
+robius-authentication = "0.1.1"
+
+# Windows: biometric unlock (Windows Hello).
+[target.'cfg(target_os = "windows")'.dependencies]
+robius-authentication = "0.1.1"
 
 [features]
 default = ["custom-protocol"]

@@ -32,6 +32,7 @@ fn close_splashscreen(app: tauri::AppHandle) {
 /// blocking pool to keep the async runtime free. Any failure (cancel, no
 /// enrolled biometric, unsupported hardware) resolves to `Ok(false)` so the
 /// frontend can fall back to the secret-code prompt.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 #[tauri::command]
 async fn biometric_authenticate(reason: String) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {
@@ -61,6 +62,15 @@ async fn biometric_authenticate(reason: String) -> Result<bool, String> {
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// Linux stub: biometrics are unsupported there (no `robius-authentication`), so
+/// the command always reports failure and the frontend falls back to the secret
+/// code. Kept registered so `invoke_handler` is identical across platforms.
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[tauri::command]
+async fn biometric_authenticate(_reason: String) -> Result<bool, String> {
+    Ok(false)
 }
 
 /// Tint the native macOS titlebar to the app background (#05091A). macOS only
