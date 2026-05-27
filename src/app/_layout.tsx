@@ -7,6 +7,7 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constant
 import { usePreventBackspaceNav } from "@/hooks/usePreventBackspaceNav";
 import i18n from "@/libs/i18n";
 import { closeTauriSplashscreen } from "@/libs/tauri";
+import AppUpdateProvider from "@/providers/AppUpdateProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
 import { persistor, store } from "@/slicers/store";
 import { DialogProvider } from "@ontech7/react-native-dialog";
@@ -131,57 +132,65 @@ export default Sentry.wrap(function RootLayout() {
           <Provider store={store}>
             <PersistGate loading={null} persistor={persistor}>
               <SyncOnProvider />
-              <RootSiblingParent>
-                <StatusBar style="light" />
-                <WebToaster />
-                <View style={styles.root} onLayout={onLayoutRootView}>
-                  <AppBackground style={StyleSheet.absoluteFill} />
-                  <Stack screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
-                    <Stack.Screen name="index" options={{ headerShown: false, animation: "none" }} />
-                    <Stack.Screen name="intro" options={{ headerShown: false, animation: "fade" }} />
-                    <Stack.Screen name="home" options={{ headerShown: false, animation: "fade" }} />
-                    <Stack.Screen name="changelog" options={{ headerShown: false, animation: "fade_from_bottom" }} />
-                    <Stack.Screen name="secret-code" options={{ headerShown: false, animation: "fade_from_bottom" }} />
-                    <Stack.Screen name="notes/[noteId]" options={{ headerShown: false, animation: "fade_from_bottom" }} />
-                    <Stack.Screen name="categories/organize" options={{ headerShown: false, animation: "fade_from_bottom" }} />
-                    <Stack.Screen name="categories/create" options={{ headerShown: false, animation: "fade_from_bottom" }} />
-                    <Stack.Screen name="categories/change" options={{ headerShown: false, animation: "ios_from_left" }} />
-                    <Stack.Screen name="temporary-trash" options={{ headerShown: false, animation: "ios_from_left" }} />
-                    <Stack.Screen name="settings/general" options={{ headerShown: false, animation: "ios_from_left" }} />
-                    <Stack.Screen
-                      name="settings/cloud-sync/connect"
-                      options={{ headerShown: false, animation: "ios_from_left" }}
-                    />
-                    <Stack.Screen
-                      name="settings/cloud-sync/devices"
-                      options={{ headerShown: false, animation: "fade_from_bottom" }}
-                    />
-                    <Stack.Screen name="settings/information" options={{ headerShown: false, animation: "ios_from_left" }} />
-                    <Stack.Screen
-                      name="settings/about-developer"
-                      options={{ headerShown: false, animation: "ios_from_left" }}
-                    />
-                    <Stack.Screen
-                      name="settings/developer-options"
-                      options={{ headerShown: false, animation: "ios_from_left" }}
-                    />
-                    <Stack.Screen name="settings/help" options={{ headerShown: false, animation: "ios_from_left" }} />
-                    <Stack.Screen name="settings/report" options={{ headerShown: false, animation: "ios_from_left" }} />
-                    <Stack.Screen
-                      name="settings/setup-secret-code"
-                      options={{ headerShown: false, animation: "fade_from_bottom" }}
-                    />
-                    <Stack.Screen name="settings/webhooks" options={{ headerShown: false, animation: "ios_from_left" }} />
-                    <Stack.Screen
-                      name="settings/voice-recognition"
-                      options={{ headerShown: false, animation: "ios_from_left" }}
-                    />
-                    <Stack.Screen name="settings/ai-assistant" options={{ headerShown: false, animation: "ios_from_left" }} />
-                    <Stack.Screen name="settings/note-creation" options={{ headerShown: false, animation: "ios_from_left" }} />
-                    <Stack.Screen name="+not-found" />
-                  </Stack>
-                </View>
-              </RootSiblingParent>
+              <AppUpdateProvider>
+                <RootSiblingParent>
+                  <StatusBar style="light" />
+                  <WebToaster />
+                  <View style={styles.root} onLayout={onLayoutRootView}>
+                    <AppBackground style={StyleSheet.absoluteFill} />
+                    <Stack screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
+                      <Stack.Screen name="index" options={{ headerShown: false, animation: "none" }} />
+                      <Stack.Screen name="intro" options={{ headerShown: false, animation: "fade" }} />
+                      <Stack.Screen name="home" options={{ headerShown: false, animation: "fade" }} />
+                      <Stack.Screen name="changelog" options={{ headerShown: false, animation: "fade_from_bottom" }} />
+                      <Stack.Screen name="secret-code" options={{ headerShown: false, animation: "fade_from_bottom" }} />
+                      <Stack.Screen name="notes/[noteId]" options={{ headerShown: false, animation: "fade_from_bottom" }} />
+                      <Stack.Screen
+                        name="categories/organize"
+                        options={{ headerShown: false, animation: "fade_from_bottom" }}
+                      />
+                      <Stack.Screen name="categories/create" options={{ headerShown: false, animation: "fade_from_bottom" }} />
+                      <Stack.Screen name="categories/change" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen name="temporary-trash" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen name="settings/general" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen
+                        name="settings/cloud-sync/connect"
+                        options={{ headerShown: false, animation: "ios_from_left" }}
+                      />
+                      <Stack.Screen
+                        name="settings/cloud-sync/devices"
+                        options={{ headerShown: false, animation: "fade_from_bottom" }}
+                      />
+                      <Stack.Screen name="settings/information" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen
+                        name="settings/about-developer"
+                        options={{ headerShown: false, animation: "ios_from_left" }}
+                      />
+                      <Stack.Screen
+                        name="settings/developer-options"
+                        options={{ headerShown: false, animation: "ios_from_left" }}
+                      />
+                      <Stack.Screen name="settings/help" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen name="settings/report" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen
+                        name="settings/setup-secret-code"
+                        options={{ headerShown: false, animation: "fade_from_bottom" }}
+                      />
+                      <Stack.Screen name="settings/webhooks" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen
+                        name="settings/voice-recognition"
+                        options={{ headerShown: false, animation: "ios_from_left" }}
+                      />
+                      <Stack.Screen name="settings/ai-assistant" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen
+                        name="settings/note-creation"
+                        options={{ headerShown: false, animation: "ios_from_left" }}
+                      />
+                      <Stack.Screen name="+not-found" />
+                    </Stack>
+                  </View>
+                </RootSiblingParent>
+              </AppUpdateProvider>
             </PersistGate>
           </Provider>
         </DialogProvider>

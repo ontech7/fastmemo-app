@@ -1,4 +1,3 @@
-import UpdateAvailableBanner from "@/components/banners/UpdateAvailableBanner";
 import AddNoteOverlayButton from "@/components/buttons/AddNoteOverlayButton";
 import DeleteNotesButton from "@/components/buttons/DeleteNotesButton";
 import FavoriteNotesButton from "@/components/buttons/FavoriteNotesButton";
@@ -13,10 +12,8 @@ import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
-import useNetInfo from "@/hooks/useNetInfo";
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
-import { checkLatestAppVersion } from "@/libs/api/checkLatestVersion";
 import Haptics from "@/libs/haptics";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import {
@@ -36,9 +33,7 @@ import {
   selectorWebhook_updateNote,
 } from "@/slicers/settingsSlice";
 import type { CodeNote, Note, TextNote, TodoItem, TodoNote } from "@/types";
-import { openUrl } from "@/utils/openUrl";
 import { formatToPlainText } from "@/utils/string";
-import { getCurrentAppVersion, isDesktopOrWeb, isNewerVersion, pickUpdateUrl } from "@/utils/version";
 import { webhook } from "@/utils/webhook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
@@ -62,10 +57,7 @@ export default function HomeScreen() {
   // Keep the memoized selector instance stable across renders — building it inline
   // on every render gives reselect an empty cache each time, so `notes` would be a
   // fresh array on every render and rebuild the whole list (jank while typing).
-  const selectNotes = useMemo(
-    () => getNotesFilteredPerCategory(currentCategory, showHidden),
-    [currentCategory, showHidden]
-  );
+  const selectNotes = useMemo(() => getNotesFilteredPerCategory(currentCategory, showHidden), [currentCategory, showHidden]);
   const notes = useSelector(selectNotes);
 
   // @ts-ignore
@@ -88,10 +80,6 @@ export default function HomeScreen() {
   const isNoteProtected = selectedNotes.some((id: string) => id.split("|")[1] == "true");
 
   const [showDeleteNotesDialog, setShowDeleteNotesDialog] = useState(false);
-
-  const [updateReleaseUrl, setUpdateReleaseUrl] = useState<string | null>(null);
-
-  const { isConnected } = useNetInfo();
 
   const { unlockWithSecret } = useSecret();
 
@@ -328,36 +316,6 @@ export default function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // check for a newer version on the remote API and prompt the user to update
-  useEffect(() => {
-    if (!isConnected) return;
-
-    let cancelled = false;
-
-    const checkLatest = async () => {
-      const data = await checkLatestAppVersion();
-      if (cancelled || !data) return;
-
-      const latest = isDesktopOrWeb() ? data.desktop.version : data.mobile.version;
-      const current = getCurrentAppVersion();
-
-      if (isNewerVersion(current, latest)) {
-        setUpdateReleaseUrl(data.releaseUrl);
-      }
-    };
-
-    checkLatest();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isConnected]);
-
-  const onPressUpdate = useCallback(() => {
-    if (!updateReleaseUrl) return;
-    openUrl(pickUpdateUrl(updateReleaseUrl));
-  }, [updateReleaseUrl]);
-
   // filters
 
   const toggleDeepSearch = () => {
@@ -401,7 +359,7 @@ export default function HomeScreen() {
                 </View>
 
                 {isDeleteMode && (
-                  <View style={styles.topContainer}>
+                  <View style={styles.headerActions}>
                     <DeleteNotesButton onPressDelete={() => setShowDeleteNotesDialog(true)} />
                   </View>
                 )}
@@ -459,8 +417,6 @@ export default function HomeScreen() {
 
         <AddNoteOverlayButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
       </KeyboardAvoidingView>
-
-      <UpdateAvailableBanner visible={updateReleaseUrl != null} onPress={onPressUpdate} />
     </>
   );
 }
@@ -483,9 +439,10 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: "hidden",
   },
-  topContainer: {
+  headerActions: {
     flexDirection: "row",
-    gap: PADDING_MARGIN.lg,
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
   },
   searchRow: {
     flexDirection: "row",

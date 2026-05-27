@@ -321,6 +321,7 @@ const de = {
     days: "Tage",
     change_secret_code: "Ändern Sie Ihren Geheimcode",
     enable_fingerprint: "Fingerabdruck aktivieren",
+    fingerprint_reason: "Entsperre deine Notizen",
     advanced: "Fortschrittlich",
     show_hidden: "Versteckte Notizen anzeigen",
     export_import_data: "Daten exportieren/importieren",
@@ -718,12 +719,6 @@ const de = {
       "Sind Sie sicher, dass Sie Ihre Daten löschen möchten?\nSie verlieren alle erstellten Notizen und Kategorien.",
     finish_organize_categories: "Fertigstellen, um Kategorien zu organisieren oder Ihre Änderungen rückgängig zu machen.",
     generic_success_description: "Der Vorgang war erfolgreich.",
-  },
-
-  /* banner */
-  banner: {
-    update_available: "Neue Version verfügbar!",
-    update_available_cta: "Aktualisieren",
   },
 
   /* generic */

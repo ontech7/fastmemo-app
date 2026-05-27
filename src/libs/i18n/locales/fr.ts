@@ -321,6 +321,7 @@ const fr = {
     days: "jours",
     change_secret_code: "Changez votre code secret",
     enable_fingerprint: "Activer l'empreinte digitale",
+    fingerprint_reason: "Déverrouillez vos notes",
     advanced: "Avancé",
     show_hidden: "Afficher les notes masquées",
     export_import_data: "Exporter/Importer des données",
@@ -717,12 +718,6 @@ const fr = {
     are_you_sure_wipe: "Voulez-vous vraiment effacer vos données?\nVous perdrez toutes les notes et catégories créées.",
     finish_organize_categories: "Terminer pour organiser les catégories ou annuler vos modifications.",
     generic_success_description: "L'opération a réussi.",
-  },
-
-  /* banner */
-  banner: {
-    update_available: "Nouvelle version disponible!",
-    update_available_cta: "Mettre à jour",
   },
 
   /* generic */

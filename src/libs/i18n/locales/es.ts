@@ -321,6 +321,7 @@ const es = {
     days: "días",
     change_secret_code: "Cambia tu código secreto",
     enable_fingerprint: "Habilitar huella digital",
+    fingerprint_reason: "Desbloquea tus notas",
     advanced: "Avanzado",
     show_hidden: "Mostrar notas ocultas",
     export_import_data: "Exportar/Importar datos",
@@ -713,12 +714,6 @@ const es = {
     are_you_sure_wipe: "¿Estás seguro de que quieres borrar tus datos?\nPerderás todas las notas y categorías creadas.",
     finish_organize_categories: "Finalice para organizar categorías o deshacer sus cambios.",
     generic_success_description: "La operación fue exitosa.",
-  },
-
-  /* banner */
-  banner: {
-    update_available: "Nueva versión disponible!",
-    update_available_cta: "Actualizar",
   },
 
   /* generic */

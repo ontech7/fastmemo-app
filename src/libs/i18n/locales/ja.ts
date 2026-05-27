@@ -321,6 +321,7 @@ const ja = {
     days: "日数",
     change_secret_code: "秘密のコードを変更",
     enable_fingerprint: "指紋認証を有効にする",
+    fingerprint_reason: "メモのロックを解除",
     advanced: "高度",
     show_hidden: "隠しノートを表示",
     export_import_data: "データのエクスポート/インポート",
@@ -706,12 +707,6 @@ const ja = {
     are_you_sure_wipe: "データを消去してもよろしいですか？\n作成されたすべてのノートとカテゴリが失われます。",
     finish_organize_categories: "カテゴリの整理を完了するか、変更を元に戻します。",
     generic_success_description: "操作は成功しました。",
-  },
-
-  /* banner */
-  banner: {
-    update_available: "新しいバージョンがあります！",
-    update_available_cta: "更新",
   },
 
   /* generic */

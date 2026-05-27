@@ -321,6 +321,7 @@ const zh = {
     days: "天",
     change_secret_code: "更改密码",
     enable_fingerprint: "启用指纹",
+    fingerprint_reason: "解锁你的笔记",
     advanced: "先进的",
     show_hidden: "显示隐藏的注释",
     export_import_data: "导出/导入数据",
@@ -700,12 +701,6 @@ const zh = {
     are_you_sure_wipe: "您确定要擦除数据吗？\n您将丢失所有创建的笔记和类别。",
     finish_organize_categories: "完成以组织类别或撤消更改。",
     generic_success_description: "操作成功。",
-  },
-
-  /* banner */
-  banner: {
-    update_available: "有新版本!",
-    update_available_cta: "更新",
   },
 
   /* generic */

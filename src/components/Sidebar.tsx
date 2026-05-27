@@ -7,6 +7,7 @@ import { getCategories } from "@/slicers/categoriesSlice";
 import GeneralSettingsButton from "./buttons/GeneralSettingsButton";
 import ReorganizeButton from "./buttons/ReorganizeButton";
 import TemporaryTrashButton from "./buttons/TemporaryTrashButton";
+import UpdateAppButton from "./buttons/UpdateAppButton";
 import FavoriteCategoryList from "./lists/FavoriteCategoryList";
 import GlassSurface from "./ui/GlassSurface";
 
@@ -26,6 +27,8 @@ export default function Sidebar() {
         <View style={styles.body}>
           <FavoriteCategoryList categories={categories} />
         </View>
+
+        <UpdateAppButton />
 
         <View style={styles.divider} />
 
