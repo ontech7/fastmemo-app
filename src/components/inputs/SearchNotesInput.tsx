@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Keyboard, Pressable, StyleSheet, TextInput } from "react-native";
+import type { StyleProp, ViewStyle } from "react-native";
 import { DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, XMarkIcon } from "react-native-heroicons/outline";
 
 import { BORDER, COLOR, FONT, PADDING_MARGIN } from "@/constants/styles";
@@ -9,13 +10,14 @@ interface Props {
   text: string;
   onChangeText: (text: string) => void;
   showDeepSearch?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
-export default function SearchNotesInput({ text, onChangeText, showDeepSearch = false }: Props) {
+export default function SearchNotesInput({ text, onChangeText, showDeepSearch = false, containerStyle }: Props) {
   const { t } = useTranslation();
 
   return (
-    <GlassSurface radius={BORDER.big} style={styles.container}>
+    <GlassSurface radius={BORDER.big} style={[styles.container, containerStyle]}>
       <TextInput
         value={text}
         onChangeText={onChangeText}

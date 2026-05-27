@@ -400,25 +400,28 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                <View style={styles.topContainer}>
-                  {isDeleteMode ? (
+                {isDeleteMode && (
+                  <View style={styles.topContainer}>
                     <DeleteNotesButton onPressDelete={() => setShowDeleteNotesDialog(true)} />
-                  ) : (
-                    <NoteFiltersButton
-                      filters={{
-                        showDeepSearch,
-                        toggleDeepSearch,
-                      }}
-                    />
-                  )}
-                </View>
+                  </View>
+                )}
               </View>
 
-              <SearchNotesInput
-                text={!showDeepSearch ? filterText : deepFilterText}
-                onChangeText={!showDeepSearch ? setFilterText : setDeepFilterText}
-                showDeepSearch={showDeepSearch}
-              />
+              <View style={styles.searchRow}>
+                <SearchNotesInput
+                  text={!showDeepSearch ? filterText : deepFilterText}
+                  onChangeText={!showDeepSearch ? setFilterText : setDeepFilterText}
+                  showDeepSearch={showDeepSearch}
+                  containerStyle={styles.searchInputFlex}
+                />
+
+                <NoteFiltersButton
+                  filters={{
+                    showDeepSearch,
+                    toggleDeepSearch,
+                  }}
+                />
+              </View>
 
               <FlashList
                 maintainVisibleContentPosition={{
@@ -483,6 +486,16 @@ const styles = StyleSheet.create({
   topContainer: {
     flexDirection: "row",
     gap: PADDING_MARGIN.lg,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+    marginBottom: PADDING_MARGIN.lg,
+  },
+  searchInputFlex: {
+    flex: 1,
+    marginBottom: 0,
   },
   saveNoteButton: {
     marginBottom: PADDING_MARGIN.sm,
