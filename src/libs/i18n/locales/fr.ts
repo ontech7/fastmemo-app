@@ -476,6 +476,15 @@ const fr = {
   },
   help: {
     title: "Aider",
+    search_placeholder: "Comment pouvons-nous vous aider ?",
+    no_results: "Aucun résultat. Essayez un autre mot.",
+    cat_notes: "Notes",
+    cat_editor: "Éditeur et mise en forme",
+    cat_categories: "Catégories",
+    cat_trash: "Corbeille",
+    cat_cloud: "Synchronisation et chiffrement",
+    cat_data: "Sécurité et données",
+    cat_ai: "Assistant IA",
     how_to_create_note: {
       title: "Comment puis-je créer une note?",
       text_1_0: "Vous pouvez créer une note en cliquant sur le bouton",
@@ -621,10 +630,52 @@ const fr = {
       text_5_0: "Une fenêtre contextuelle apparaîtra et la deuxième option correspond à ce que vous recherchez.",
     },
     what_cloud_sync: {
-      title: "Qu'est-ce que Cloud-Sync?",
+      title: "Qu'est-ce que Cloud Sync ?",
       text_1_0:
-        "Il est possible de synchroniser vos notes en connectant votre compte Google Firebase et en activant le mode de synchronisation.",
-      text_2_0: "Vous n'avez rien d'autre à faire. Vos notes seront stockées dans votre Google Firebase, cryptées.",
+        "Vous pouvez synchroniser vos notes entre appareils en connectant votre propre projet Google Firebase et en activant la synchronisation. Il n'y a pas de serveur central Fast Memo : vos données vivent uniquement dans votre Firebase.",
+      text_2_0:
+        "Vos notes sont chiffrées de bout en bout sur votre appareil avant d'être envoyées, de sorte que personne d'autre que vous ne peut les lire.",
+    },
+    what_encryption: {
+      title: "Comment mes notes sont-elles chiffrées ?",
+      text_1_0:
+        "Cloud Sync utilise le chiffrement de bout en bout. Lors de la première configuration, vous choisissez un mot de passe de chiffrement, et votre appareil en dérive la clé qui protège vos notes.",
+      text_2_0:
+        "La clé ne quitte jamais votre appareil et n'est jamais stockée dans le cloud : même une personne ayant accès à votre Firebase ne peut pas lire le contenu de vos notes sans votre mot de passe.",
+      text_3_0:
+        "Le contenu des notes est chiffré ; les titres et les dates restent lisibles pour que l'application puisse les trier et les synchroniser.",
+    },
+    how_unlock_device: {
+      title: "Pourquoi dois-je déverrouiller sur chaque appareil ?",
+      text_1_0:
+        "Chaque appareil déverrouille le chiffrement une fois en saisissant votre mot de passe. Ensuite, la clé est stockée en toute sécurité sur l'appareil (Keychain / Keystore), vous n'avez donc pas à la ressaisir à chaque lancement.",
+      text_2_0:
+        "Si un appareil reste verrouillé, la synchronisation y est suspendue jusqu'à ce que vous le déverrouilliez, ce qui empêche vos notes d'être enregistrées de façon illisible.",
+    },
+    forgot_password: {
+      title: "J'ai oublié mon mot de passe de chiffrement",
+      text_1_0:
+        "Lorsque vous configurez le chiffrement, une clé de récupération vous est présentée une seule fois. Conservez-la en lieu sûr.",
+      text_2_0:
+        "Sur l'écran de déverrouillage, choisissez « Mot de passe oublié », saisissez votre clé de récupération et définissez un nouveau mot de passe. Aucune note n'est perdue.",
+      text_3_0:
+        "Si vous perdez à la fois le mot de passe et la clé de récupération, vos notes dans le cloud ne peuvent être déchiffrées par personne : c'est le principe du chiffrement de bout en bout.",
+    },
+    reset_encryption: {
+      title: "Que fait la réinitialisation du chiffrement ?",
+      text_1_0:
+        "La réinitialisation est le dernier recours, lorsque le mot de passe et la clé de récupération sont tous deux perdus.",
+      text_2_0:
+        "Elle crée une nouvelle configuration de chiffrement à partir des notes actuellement présentes sur cet appareil et remplace la copie du cloud. Les anciennes notes du cloud qui ne peuvent plus être déchiffrées sont supprimées.",
+      text_3_0:
+        "Vos notes locales sont conservées et renvoyées, donc cet appareil ne perd rien, mais vos autres appareils devront se déverrouiller à nouveau avec le nouveau mot de passe.",
+    },
+    quick_backup: {
+      title: "Qu'est-ce que la sauvegarde rapide ?",
+      text_1_0:
+        "Sur les écrans de configuration, de déverrouillage et de réinitialisation du chiffrement, vous trouverez un bouton facultatif « Sauvegarde rapide ».",
+      text_2_0:
+        "Il exporte un fichier de vos notes protégé par une phrase secrète directement depuis cet appareil, indépendamment du cloud : un filet de sécurité avant une synchronisation importante ou une réinitialisation. Vos notes restent de toute façon toujours sur cet appareil.",
     },
     what_secret_code: {
       title: "Qu'est-ce qu'un code secret?",

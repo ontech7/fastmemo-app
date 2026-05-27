@@ -7,7 +7,7 @@ import ProtectNotesButton from "@/components/buttons/ProtectNotesButton";
 import ReadOnlyNotesButton from "@/components/buttons/ReadOnlyNotesButton";
 import NoteCard from "@/components/cards/NoteCard";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
-import SearchNotesInput from "@/components/inputs/SearchNotesInput";
+import SearchInput from "@/components/inputs/SearchInput";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
 import { configs } from "@/configs";
@@ -45,6 +45,7 @@ import { FlashList } from "@shopify/flash-list";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
+import { DocumentMagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useDispatch, useSelector, useStore } from "react-redux";
@@ -391,10 +392,11 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.searchRow}>
-                <SearchNotesInput
-                  text={!showDeepSearch ? filterText : deepFilterText}
+                <SearchInput
+                  value={!showDeepSearch ? filterText : deepFilterText}
                   onChangeText={!showDeepSearch ? setFilterText : setDeepFilterText}
-                  showDeepSearch={showDeepSearch}
+                  placeholder={!showDeepSearch ? t("home.search") : t("home.deepSearch")}
+                  icon={showDeepSearch ? <DocumentMagnifyingGlassIcon size={18} color={COLOR.softWhite} /> : undefined}
                   containerStyle={styles.searchInputFlex}
                 />
 

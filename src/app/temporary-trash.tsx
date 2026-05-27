@@ -15,7 +15,7 @@ import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 import BackButton from "@/components/buttons/BackButton";
 import TrashedNotesSettingsButton from "@/components/buttons/TrashedNotesSettingsButton";
 import TrashedNoteCard from "@/components/cards/TrashedNoteCard";
-import SearchNotesInput from "@/components/inputs/SearchNotesInput";
+import SearchInput from "@/components/inputs/SearchInput";
 import AppBackground from "@/components/ui/AppBackground";
 import { deleteNote, getTrashedNotesFilteredPerCategory } from "@/slicers/notesSlice";
 import {
@@ -145,7 +145,7 @@ export default function TemporaryTrashScreen() {
         />
       </View>
 
-      <SearchNotesInput text={filterText} onChangeText={setFilterText} />
+      <SearchInput value={filterText} onChangeText={setFilterText} placeholder={t("home.search")} />
 
       <FlashList
         maintainVisibleContentPosition={{

@@ -476,6 +476,15 @@ const de = {
   },
   help: {
     title: "Hilfe",
+    search_placeholder: "Wie können wir Ihnen helfen?",
+    no_results: "Keine Ergebnisse. Versuchen Sie ein anderes Wort.",
+    cat_notes: "Notizen",
+    cat_editor: "Editor & Formatierung",
+    cat_categories: "Kategorien",
+    cat_trash: "Papierkorb",
+    cat_cloud: "Synchronisierung & Verschlüsselung",
+    cat_data: "Sicherheit & Daten",
+    cat_ai: "KI-Assistent",
     how_to_create_note: {
       title: "Wie kann ich eine Notiz erstellen?",
       text_1_0: "Sie können eine Notiz erstellen, indem Sie unten rechts auf der Startseite auf die Schaltfläche",
@@ -623,8 +632,50 @@ const de = {
     what_cloud_sync: {
       title: "Was ist Cloud Sync?",
       text_1_0:
-        "Sie können Ihre Notizen synchronisieren, indem Sie Ihr Google Firebase-Konto verbinden und den Synchronisierungsmodus aktivieren.",
-      text_2_0: "Sie müssen nichts weiter tun. Ihre Notizen werden verschlüsselt in Ihrer Google Firebase gespeichert.",
+        "Sie können Ihre Notizen geräteübergreifend synchronisieren, indem Sie Ihr eigenes Google-Firebase-Projekt verbinden und die Synchronisierung aktivieren. Es gibt keinen zentralen Fast-Memo-Server – Ihre Daten liegen nur in Ihrem Firebase.",
+      text_2_0:
+        "Ihre Notizen werden auf Ihrem Gerät Ende-zu-Ende verschlüsselt, bevor sie hochgeladen werden, sodass niemand außer Ihnen sie lesen kann.",
+    },
+    what_encryption: {
+      title: "Wie werden meine Notizen verschlüsselt?",
+      text_1_0:
+        "Cloud Sync verwendet Ende-zu-Ende-Verschlüsselung. Bei der ersten Einrichtung wählen Sie ein Verschlüsselungspasswort, aus dem Ihr Gerät den Schlüssel ableitet, der Ihre Notizen schützt.",
+      text_2_0:
+        "Der Schlüssel verlässt nie Ihr Gerät und wird nie in der Cloud gespeichert, sodass selbst jemand mit Zugriff auf Ihr Firebase den Inhalt Ihrer Notizen ohne Ihr Passwort nicht lesen kann.",
+      text_3_0:
+        "Der Inhalt der Notizen wird verschlüsselt; Titel und Daten bleiben lesbar, damit die App sie sortieren und synchronisieren kann.",
+    },
+    how_unlock_device: {
+      title: "Warum muss ich auf jedem Gerät entsperren?",
+      text_1_0:
+        "Jedes Gerät entsperrt die Verschlüsselung einmal durch Eingabe Ihres Passworts. Danach wird der Schlüssel sicher auf dem Gerät gespeichert (Keychain / Keystore), sodass Sie ihn nicht bei jedem Start erneut eingeben müssen.",
+      text_2_0:
+        "Bleibt ein Gerät gesperrt, wird die Synchronisierung darauf pausiert, bis Sie entsperren – so werden Ihre Notizen nie unlesbar gespeichert.",
+    },
+    forgot_password: {
+      title: "Ich habe mein Verschlüsselungspasswort vergessen",
+      text_1_0:
+        "Bei der Einrichtung der Verschlüsselung wird Ihnen einmalig ein Wiederherstellungsschlüssel angezeigt. Bewahren Sie ihn sicher auf.",
+      text_2_0:
+        "Wählen Sie auf dem Entsperrbildschirm „Passwort vergessen“, geben Sie Ihren Wiederherstellungsschlüssel ein und legen Sie ein neues Passwort fest. Es gehen keine Notizen verloren.",
+      text_3_0:
+        "Wenn Sie sowohl das Passwort als auch den Wiederherstellungsschlüssel verlieren, können Ihre Cloud-Notizen von niemandem entschlüsselt werden – das ist der Sinn der Ende-zu-Ende-Verschlüsselung.",
+    },
+    reset_encryption: {
+      title: "Was bewirkt das Zurücksetzen der Verschlüsselung?",
+      text_1_0:
+        "Das Zurücksetzen ist die letzte Möglichkeit, wenn sowohl das Passwort als auch der Wiederherstellungsschlüssel verloren sind.",
+      text_2_0:
+        "Es erstellt eine neue Verschlüsselungs-Einrichtung aus den aktuell auf diesem Gerät vorhandenen Notizen und ersetzt die Cloud-Kopie. Alte Cloud-Notizen, die nicht mehr entschlüsselt werden können, werden entfernt.",
+      text_3_0:
+        "Ihre lokalen Notizen bleiben erhalten und werden erneut hochgeladen, sodass dieses Gerät nichts verliert – aber Ihre anderen Geräte müssen sich mit dem neuen Passwort erneut entsperren.",
+    },
+    quick_backup: {
+      title: "Was ist die schnelle Sicherung?",
+      text_1_0:
+        "Auf den Bildschirmen für Einrichtung, Entsperren und Zurücksetzen der Verschlüsselung finden Sie eine optionale Schaltfläche „Schnelle Sicherung“.",
+      text_2_0:
+        "Sie exportiert eine passphrasengeschützte Datei Ihrer Notizen direkt von diesem Gerät, unabhängig von der Cloud – ein Sicherheitsnetz vor einer großen Synchronisierung oder einem Zurücksetzen. Ihre Notizen bleiben ohnehin immer auf diesem Gerät.",
     },
     what_secret_code: {
       title: "Was ist ein Geheimcode?",

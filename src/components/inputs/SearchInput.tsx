@@ -1,49 +1,46 @@
-import { useTranslation } from "react-i18next";
-import { Keyboard, Pressable, StyleSheet, TextInput } from "react-native";
+import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
+import type { ReactNode } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
-import { DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, XMarkIcon } from "react-native-heroicons/outline";
+import { MagnifyingGlassIcon, XMarkIcon } from "react-native-heroicons/outline";
 
 import { BORDER, COLOR, FONT, PADDING_MARGIN } from "@/constants/styles";
 import GlassSurface from "@/components/ui/GlassSurface";
 
 interface Props {
-  text: string;
+  value: string;
   onChangeText: (text: string) => void;
-  showDeepSearch?: boolean;
+  placeholder?: string;
+  /** Leading icon shown while the field is empty. Defaults to a magnifying glass. */
+  icon?: ReactNode;
+  /** Extra behavior to run when the clear (✕) button is pressed. */
+  onClear?: () => void;
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-export default function SearchNotesInput({ text, onChangeText, showDeepSearch = false, containerStyle }: Props) {
-  const { t } = useTranslation();
+export default function SearchInput({ value, onChangeText, placeholder, icon, onClear, containerStyle }: Props) {
+  const handleClear = () => {
+    onChangeText("");
+    Keyboard.dismiss();
+    onClear?.();
+  };
 
   return (
     <GlassSurface radius={BORDER.big} style={[styles.container, containerStyle]}>
       <TextInput
-        value={text}
+        value={value}
         onChangeText={onChangeText}
         cursorColor={COLOR.softWhite}
-        placeholder={!showDeepSearch ? t("home.search") : t("home.deepSearch")}
+        placeholder={placeholder}
         placeholderTextColor={COLOR.placeholder}
         style={styles.searchInput}
         returnKeyType="search"
         onSubmitEditing={() => Keyboard.dismiss()}
       />
 
-      {!text ? (
-        !showDeepSearch ? (
-          <MagnifyingGlassIcon style={styles.icon} size={18} color={COLOR.softWhite} />
-        ) : (
-          <DocumentMagnifyingGlassIcon style={styles.icon} size={18} color={COLOR.softWhite} />
-        )
+      {!value ? (
+        <View style={styles.icon}>{icon ?? <MagnifyingGlassIcon size={18} color={COLOR.softWhite} />}</View>
       ) : (
-        <Pressable
-          style={styles.icon}
-          hitSlop={8}
-          onPress={() => {
-            onChangeText("");
-            Keyboard.dismiss();
-          }}
-        >
+        <Pressable style={styles.icon} hitSlop={8} onPress={handleClear}>
           <XMarkIcon size={18} color={COLOR.softWhite} />
         </Pressable>
       )}

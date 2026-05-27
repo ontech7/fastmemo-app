@@ -476,6 +476,15 @@ const es = {
   },
   help: {
     title: "Ayuda",
+    search_placeholder: "¿Cómo podemos ayudarte?",
+    no_results: "Sin resultados. Prueba con otra palabra.",
+    cat_notes: "Notas",
+    cat_editor: "Editor y formato",
+    cat_categories: "Categorías",
+    cat_trash: "Papelera",
+    cat_cloud: "Sincronización y cifrado",
+    cat_data: "Seguridad y datos",
+    cat_ai: "Asistente de IA",
     how_to_create_note: {
       title: "¿Cómo puedo crear una nota?",
       text_1_0: "Puede crear una nota haciendo clic en el botón",
@@ -620,8 +629,50 @@ const es = {
     what_cloud_sync: {
       title: "¿Qué es la sincronización en la nube?",
       text_1_0:
-        "Es posible sincronizar tus notas conectando tu cuenta de Google Firebase y habilitando el modo de sincronización.",
-      text_2_0: "No necesitas hacer nada más. Tus notas se almacenarán en tu Google Firebase, cifradas.",
+        "Puedes sincronizar tus notas entre dispositivos conectando tu propio proyecto de Google Firebase y activando la sincronización. No hay un servidor central de Fast Memo: tus datos viven solo en tu Firebase.",
+      text_2_0:
+        "Tus notas se cifran de extremo a extremo en tu dispositivo antes de subirse, así nadie más que tú puede leerlas.",
+    },
+    what_encryption: {
+      title: "¿Cómo se cifran mis notas?",
+      text_1_0:
+        "La sincronización en la nube usa cifrado de extremo a extremo. La primera vez que la configuras eliges una contraseña de cifrado, y tu dispositivo deriva de ella la clave que protege tus notas.",
+      text_2_0:
+        "La clave nunca sale de tu dispositivo y nunca se guarda en la nube, así que ni siquiera alguien con acceso a tu Firebase puede leer el contenido de tus notas sin tu contraseña.",
+      text_3_0:
+        "Se cifra el contenido de las notas; los títulos y las fechas permanecen legibles para que la app pueda ordenarlas y sincronizarlas.",
+    },
+    how_unlock_device: {
+      title: "¿Por qué tengo que desbloquear en cada dispositivo?",
+      text_1_0:
+        "Cada dispositivo desbloquea el cifrado una vez introduciendo tu contraseña. Después, la clave se almacena de forma segura en el dispositivo (Keychain / Keystore), así no tienes que volver a introducirla en cada inicio.",
+      text_2_0:
+        "Si un dispositivo permanece bloqueado, la sincronización se pausa en él hasta que lo desbloquees, evitando que tus notas se guarden de forma ilegible.",
+    },
+    forgot_password: {
+      title: "Olvidé mi contraseña de cifrado",
+      text_1_0:
+        "Cuando configuras el cifrado se te muestra una clave de recuperación una sola vez. Guárdala en un lugar seguro.",
+      text_2_0:
+        "En la pantalla de desbloqueo elige 'Olvidé la contraseña', introduce tu clave de recuperación y establece una nueva contraseña. No se pierde ninguna nota.",
+      text_3_0:
+        "Si pierdes tanto la contraseña como la clave de recuperación, nadie puede descifrar tus notas en la nube: ese es el sentido del cifrado de extremo a extremo.",
+    },
+    reset_encryption: {
+      title: "¿Qué hace restablecer el cifrado?",
+      text_1_0:
+        "Restablecer es el último recurso, para cuando se han perdido tanto la contraseña como la clave de recuperación.",
+      text_2_0:
+        "Crea una configuración de cifrado nueva a partir de las notas que hay actualmente en este dispositivo y reemplaza la copia de la nube. Las notas antiguas de la nube que ya no se pueden descifrar se eliminan.",
+      text_3_0:
+        "Tus notas locales se conservan y se vuelven a subir, así que este dispositivo no pierde nada, pero tus otros dispositivos tendrán que desbloquear de nuevo con la nueva contraseña.",
+    },
+    quick_backup: {
+      title: "¿Qué es la copia de seguridad rápida?",
+      text_1_0:
+        "En las pantallas de configuración, desbloqueo y restablecimiento del cifrado encontrarás un botón opcional de 'Copia de seguridad rápida'.",
+      text_2_0:
+        "Exporta un archivo de tus notas protegido con una frase de contraseña directamente desde este dispositivo, independiente de la nube: una red de seguridad antes de una sincronización importante o un restablecimiento. Tus notas siempre permanecen en este dispositivo de todos modos.",
     },
     what_secret_code: {
       title: "¿Qué es un código secreto?",
