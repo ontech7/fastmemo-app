@@ -2,6 +2,7 @@ import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useSecret } from "@/hooks/useSecret";
+import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import { getCloudConnected, selectorWebhook_wipeData } from "@/slicers/settingsSlice";
 import { useAppDispatch } from "@/slicers/store";
 import { wipeCategoriesThunk } from "@/slicers/thunks/categories";
@@ -30,6 +31,13 @@ export default function SectionItem_WipeData({ isLast }: Props) {
 
   const webhook_wipeData = useSelector(selectorWebhook_wipeData);
   const isCloudConnected = useSelector(getCloudConnected);
+  const vaultUnlocked = useVaultUnlocked();
+
+  // Wiping the cloud requires a connected, online project AND an unlocked vault.
+  // When sync is paused waiting for the passphrase (vault locked), we hide the
+  // "wipe + cloud" path so the user can't erase cloud data without first proving
+  // ownership of the vault — that would bypass the E2E unlock rules.
+  const canWipeCloud = isCloudConnected && !!netInfo?.isConnected && vaultUnlocked;
 
   const [showWipeDataDialog, setShowWipeDataDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
@@ -38,7 +46,7 @@ export default function SectionItem_WipeData({ isLast }: Props) {
     <>
       <ComplexDialog
         open={showWipeDataDialog}
-        actionsColumn={isCloudConnected && netInfo?.isConnected}
+        actionsColumn={canWipeCloud}
         adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}
         title={t("warning")}
         description={t("popup.are_you_sure_wipe")}
@@ -56,7 +64,7 @@ export default function SectionItem_WipeData({ isLast }: Props) {
           },
         }}
         alternative={
-          isCloudConnected && netInfo?.isConnected
+          canWipeCloud
             ? {
                 label: t("wipeWithCloud"),
                 handler: () => {
