@@ -162,8 +162,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
       color: COLOR.softWhite,
       placeholderColor: COLOR.textMuted,
       cssText: richTextSyle,
-      // breathing room so the last line clears the action bar / toolbar below
-      contentCSSText: "padding-bottom: 24px;",
+      // Horizontal inset lives here (not on containerStyle) so it matches the header
+      // and toolbar margins on every platform: on web the webview is a plain <iframe>
+      // that ignores containerStyle, so only this content padding aligns the text.
+      // padding-bottom gives breathing room so the last line clears the bar below.
+      contentCSSText: `padding-left: ${PADDING_MARGIN.lg}px; padding-right: ${PADDING_MARGIN.lg}px; padding-bottom: 24px;`,
     }),
     []
   );
@@ -330,6 +333,10 @@ export default function NoteTextEditor({ initialNote }: Props) {
               Platform.OS === "web" && styles.richToolbarContainerDesktop,
               { display: Platform.OS !== "web" && !isKeyboardShown ? "none" : "flex" },
             ]}
+            // On web the inner list keeps its intrinsic (content) width and overflows the
+            // bar on narrow viewports (~400px). Pinning it to the bar width lets
+            // react-native-web's horizontal ScrollView fall back to overflow-x scrolling.
+            flatContainerStyle={Platform.OS === "web" ? styles.richToolbarFlatContainer : undefined}
             editor={richTextEditor}
             onPressAddImage={pickImage}
             iconSize={20}
@@ -389,7 +396,8 @@ const styles = StyleSheet.create({
     color: COLOR.textSecondary,
   },
   richTextContainer: {
-    paddingHorizontal: PADDING_MARGIN.lg,
+    // Horizontal inset is applied via the editor's contentCSSText instead, so it stays
+    // consistent on web (where this containerStyle is ignored by the iframe webview).
     paddingTop: PADDING_MARGIN.lg,
     paddingBottom: PADDING_MARGIN.xs,
   },
@@ -405,6 +413,14 @@ const styles = StyleSheet.create({
   },
   richToolbarContainerDesktop: {
     borderRadius: BORDER.normal,
+    overflow: "hidden",
+    // drop the full-width pin so the horizontal margins below actually inset the
+    // bar from the window edges (the parent stretches it back to fill the gap).
+    width: "auto",
+    marginHorizontal: PADDING_MARGIN.lg,
+  },
+  richToolbarFlatContainer: {
+    width: SIZE.full,
   },
   actionDock: {
     flexDirection: "row",
