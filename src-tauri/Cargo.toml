@@ -11,9 +11,14 @@ edition = "2021"
 tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
-tauri = { version = "1.5", features = [ "updater", "process-relaunch", "shell-open", "dialog-all", "fs-all", "path-all", "notification-all", "clipboard-all"] }
+tauri = { version = "1.5", features = [ "process-relaunch", "shell-open", "dialog-all", "fs-all", "path-all", "notification-all", "clipboard-all"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+# Desktop biometric unlock: Touch ID (macOS) and Windows Hello behind one
+# cross-platform prompt. Linux is intentionally unsupported (see the frontend
+# gate in src/libs/biometric.ts).
+robius-authentication = "0.1.1"
 
 # macOS-only: tint the native titlebar to the app background (#05091A).
 # Pinned to what tao/wry already resolve, so nothing extra compiles.

@@ -1,6 +1,8 @@
 import React from "react";
 import { Platform } from "react-native";
 
+import { isBiometricSupported } from "@/libs/biometric";
+
 import SectionItem_ExportImportData from "./items/advanced/SectionItem_ExportImportData";
 import SectionItem_ShowHidden from "./items/advanced/SectionItem_ShowHidden";
 import SectionItem_VoiceRecognition from "./items/advanced/SectionItem_VoiceRecognition";
@@ -30,7 +32,7 @@ export const SECTION_BASIC: SectionItemComponent[] = [
   SectionItem_CloudSync,
   SectionItem_TemporaryTrash,
   SectionItem_ChangeSecretCode,
-  !isWeb && SectionItem_EnableFingerprint,
+  isBiometricSupported() && SectionItem_EnableFingerprint,
   SectionItem_AppLanguage,
   SectionItem_NoteCreation,
 ].filter(Boolean) as SectionItemComponent[];

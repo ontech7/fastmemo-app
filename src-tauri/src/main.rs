@@ -23,6 +23,46 @@ fn close_splashscreen(app: tauri::AppHandle) {
     reveal_main(&app);
 }
 
+/// Prompt the OS biometric dialog (Touch ID on macOS, Windows Hello on Windows)
+/// and report whether it succeeded. Used by the frontend's web/Tauri unlock path
+/// to gate access to protected notes without the secret code. `reason` is the
+/// localized message shown in the system prompt.
+///
+/// The system dialog is synchronous, so the blocking call is offloaded to the
+/// blocking pool to keep the async runtime free. Any failure (cancel, no
+/// enrolled biometric, unsupported hardware) resolves to `Ok(false)` so the
+/// frontend can fall back to the secret-code prompt.
+#[tauri::command]
+async fn biometric_authenticate(reason: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        use robius_authentication::{
+            AndroidText, BiometricStrength, Context, Policy, PolicyBuilder, Text, WindowsText,
+        };
+
+        let policy: Policy = PolicyBuilder::new()
+            .biometrics(Some(BiometricStrength::Strong))
+            .password(true) // allow the system password as a fallback factor
+            .build()
+            .ok_or_else(|| "failed to build authentication policy".to_string())?;
+
+        let windows = WindowsText::new("Fast Memo", &reason)
+            .ok_or_else(|| "invalid biometric prompt text".to_string())?;
+        let text = Text {
+            android: AndroidText {
+                title: "Fast Memo",
+                subtitle: None,
+                description: None,
+            },
+            apple: &reason,
+            windows,
+        };
+
+        Ok(Context::new(()).blocking_authenticate(text, &policy).is_ok())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Tint the native macOS titlebar to the app background (#05091A). macOS only
 /// auto-derives the titlebar color from the WebView's painted background, which
 /// is sampled too early under the prod asset protocol and stays the default
@@ -62,7 +102,10 @@ fn apply_macos_titlebar(window: &tauri::Window) {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![close_splashscreen])
+        .invoke_handler(tauri::generate_handler![
+            close_splashscreen,
+            biometric_authenticate
+        ])
         .setup(|app| {
             // Blue titlebar from the first frame, independent of WebView paint
             // timing (see apply_macos_titlebar). Applied while main is still
