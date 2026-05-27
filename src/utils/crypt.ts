@@ -114,8 +114,14 @@ export const CryptNote = {
   decrypt: (note: Note, keyOverride?: string): Note => {
     const key = resolveKey(keyOverride);
 
-    // Without a key we cannot decrypt; leave the note as-is rather than crash.
-    if (!key) {
+    // Bail only when there is genuinely no key (no DEK and no override). An
+    // explicit empty-string key is the REAL legacy key — pre-vault notes were
+    // AES-sealed with "" (SECRET_KEY was never inlined at runtime), so it MUST be
+    // allowed through. `!key` would wrongly treat "" as "no key" and return the
+    // ciphertext unchanged, which the migration would then re-seal as garbage
+    // (see LL-028). getDEK() returns null (never "") when absent, so `== null`
+    // distinguishes "no key" from the empty legacy key cleanly.
+    if (key == null) {
       return { ...note };
     }
 

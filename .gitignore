@@ -35,3 +35,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# firestore test backups (contain real, decryptable user data — keep local only)
+scripts/fixtures/

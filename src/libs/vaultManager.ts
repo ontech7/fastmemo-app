@@ -116,14 +116,15 @@ export const migrateLegacyVault = async (
       // reliable thanks to the marker, so we never re-process a DEK note.
       if (tryDecryptNote(note, dek) !== null) continue;
 
-      // Without the legacy key we can't read legacy notes — skip (never overwrite).
-      // An empty key (misconfigured build) trips this, so it can't corrupt data.
-      if (!legacyKey) continue;
-
       // Read the legacy note leniently (legacy notes predate the marker). The
-      // legacy key is the app's constant global key, i.e. the same key that
-      // originally encrypted this data, so this read is as reliable as the
-      // pre-vault app's own decryption.
+      // legacy key is the app's old global key (`configs.cloud.secretKey`), which
+      // on this app has ALWAYS resolved to "" at runtime: SECRET_KEY lacks the
+      // EXPO_PUBLIC_ prefix, so the Expo bundler strips it from the client bundle
+      // and it never reached the encrypt path — every pre-vault note was AES-sealed
+      // with "". So "" is the genuine (and only) legacy key, and decrypting with it
+      // is as reliable as the pre-vault app's own decryption. We deliberately do
+      // NOT skip on an empty key: that guard dropped every real legacy note,
+      // making them vanish after migration (see LL-028).
       const plain = CryptNote.decrypt(note, legacyKey);
 
       await setElementInCloud({

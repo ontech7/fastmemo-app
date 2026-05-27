@@ -76,8 +76,8 @@ EXPO_PUBLIC_ENV="PROD"
 # Cloud sync API URL (optional - leave empty if not using external API)
 EXPO_PUBLIC_API_URL=""
 
-# Legacy migration key (only decrypts pre-encryption-password cloud data; see note below)
-SECRET_KEY="your-secret-key-here"
+# Legacy migration key — NOTE: has no runtime effect (see note below); leave empty
+SECRET_KEY=""
 
 # Sentry (optional - for error tracking)
 SENTRY_AUTH_TOKEN=""
@@ -87,9 +87,13 @@ SENTRY_AUTH_TOKEN=""
 
 > Cloud sync now uses **per-vault end-to-end encryption**: the encryption key is derived on-device from a user-chosen
 > **encryption password** and is never stored in the cloud or baked into the build (see [Cloud Sync](CLOUD_SYNC.md)).
-> `SECRET_KEY` is **not** the encryption boundary anymore — it is only the legacy key used to migrate data that was encrypted by
-> older builds (pre-encryption-password). New self-hosted deployments can leave it set to any value during the migration window;
-> it is removed once migration is complete.
+> `SECRET_KEY` is **not** the encryption boundary anymore.
+>
+> **It has no runtime effect.** `SECRET_KEY` lacks the `EXPO_PUBLIC_` prefix, so Expo strips it from the client bundle: the app
+> runtime never sees it and reads it as `""`. Consequently, every pre-encryption ("legacy") cloud note was AES-sealed with the
+> **empty string**, and the legacy→vault migration reads them back with `""`. Setting `SECRET_KEY` to any other value here does
+> nothing at runtime. A fresh self-hosted deployment starts directly on the vault model and does not need it at all — leave it
+> empty. (This is also why client secrets can't be hidden in the bundle, and why the vault key is derived at runtime instead.)
 
 You can still generate a value with:
 
@@ -222,11 +226,11 @@ Each user provides their own Firebase credentials, making the app fully decentra
 
 When deploying to platforms like Vercel or Netlify, set these environment variables in the platform's dashboard:
 
-| Variable            | Description                                             | Required                        |
-| ------------------- | ------------------------------------------------------- | ------------------------------- |
-| `EXPO_PUBLIC_ENV`   | Environment mode (`DEV`, `STAGE`, `PROD`)               | Yes                             |
-| `SECRET_KEY`        | Legacy migration key (not the E2E key — see note in §4) | Yes during the migration window |
-| `SENTRY_AUTH_TOKEN` | Sentry authentication token                             | No                              |
+| Variable            | Description                                          | Required |
+| ------------------- | ---------------------------------------------------- | -------- |
+| `EXPO_PUBLIC_ENV`   | Environment mode (`DEV`, `STAGE`, `PROD`)            | Yes      |
+| `SECRET_KEY`        | Legacy key — no runtime effect, leave empty (see §4) | No       |
+| `SENTRY_AUTH_TOKEN` | Sentry authentication token                          | No       |
 
 ## 9. Updating the Application
 
@@ -268,8 +272,8 @@ npx expo export --platform web
 1. **HTTPS**: Always serve your application over HTTPS
 2. **Firebase Rules**: Implement proper Firestore security rules for production
 3. **Encryption**: Cloud data is end-to-end encrypted per-vault from a user-chosen password (see [Cloud Sync](CLOUD_SYNC.md)).
-   The `SECRET_KEY` is only a legacy migration key, not the security boundary — but still treat it as a secret while it is in
-   use
+   `SECRET_KEY` is not the security boundary and has no runtime effect (it is stripped from the client bundle); legacy cloud
+   data was effectively sealed with an empty key and is migrated automatically. Do not rely on `SECRET_KEY` for confidentiality
 4. **Content Security Policy**: Consider adding CSP headers to your server configuration
 
 ## Support

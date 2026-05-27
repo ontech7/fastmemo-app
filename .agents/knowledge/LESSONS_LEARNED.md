@@ -740,6 +740,46 @@ work)
 
 ---
 
+### LL-028: Legacy migration skipped every note because SECRET*KEY was empty at runtime (non-`EXPO_PUBLIC*` env stripped from the bundle)
+
+**Date:** 2026-05-27  
+**Severity:** Critical  
+**Category:** Bug  
+**What happened:** After migrating pre-encryption (legacy v1) cloud data to the per-vault model, the legacy notes did **not**
+appear on the device — they silently vanished. Reproduced via the seed flow (inject legacy notes + delete the `vault` doc, then
+migrate): `migrateLegacyVault` created the vault but re-encrypted **zero** notes, and `retrieveCloudData` then discarded them
+(undecryptable under the new DEK). Worst hit: a user migrating with **no local copy** of their notes (reinstall / new phone /
+fresh device) would see **all** pre-vault cloud notes disappear. The ciphertext stays in Firestore (sealed with the empty key)
+but the migrate path never re-runs once the vault is "present", so the notes are effectively lost from view.
+
+**Root cause:** Two things compounding. (1) `configs.cloud.secretKey = process.env.SECRET_KEY || ""`, but `SECRET_KEY` lacks the
+`EXPO_PUBLIC_` prefix. In Expo (SDK 53) only `EXPO_PUBLIC_*` vars are inlined into the client bundle; `app.config.ts` sees the
+value (it runs in Node at build time) but the app runtime does not, so `process.env.SECRET_KEY` is `undefined` → `""`. Every
+pre-vault note was therefore AES-sealed with the **empty key** `""`, on all platforms, regardless of what `.env` contained. (2)
+`migrateLegacyVault` had a guard `if (!legacyKey) continue;` meant to skip a "misconfigured empty key" — but on this app `""` is
+the genuine and only legacy key, so the guard skipped **every real legacy note**.
+
+**Fix:** Two coordinated changes (the empty-key guard was duplicated). (1) Removed `if (!legacyKey) continue;` in
+`migrateLegacyVault` so legacy notes are read with the legacy key (`""`) and re-sealed under the new DEK. (2)
+`CryptNote.decrypt` had the same flaw — `if (!key) return { ...note }` returned the ciphertext **unchanged** for an empty key,
+so the migration would have re-sealed ciphertext-as-plaintext into permanent garbage; changed to `if (key == null)` (getDEK()
+returns `null`, never `""`, when absent, so this cleanly distinguishes "no key" from the empty legacy key). `CryptNote.encrypt`
+stays fail-closed (`if (!key) throw`) — we never encrypt with an empty key; the migration encrypts with the DEK. The
+`if (tryDecryptNote(note, dek) !== null) continue;` check still protects already-migrated (marker-bearing) notes. Seed script
+(`scripts/seed-legacy-vault.mjs`) and `scripts/vault.test.mjs` updated to encrypt with `""` so they reproduce production
+faithfully (test section [9]).
+
+**Rule:** Client secrets cannot live in a non-`EXPO_PUBLIC_` env var (stripped from the bundle) — and even `EXPO_PUBLIC_*` /
+`extra` are embedded in plaintext, so they were never truly secret. This is exactly why the per-vault model derives keys at
+runtime from a user passphrase. When reading **legacy** data, the legacy key is whatever the old build actually used **at
+runtime** (here `""`), not what the `.env` said; never treat an empty legacy key as "unreadable → skip" when empty is the real
+key, or you silently drop the data the migration exists to preserve.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-05-27 **Resolved in:** dev (per-vault E2E
+work)
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

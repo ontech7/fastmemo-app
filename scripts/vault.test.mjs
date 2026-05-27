@@ -81,15 +81,24 @@ ok("50 fresh vaults all unlock with their own passphrase", falseReject === 0);
 
 console.log("\n[3] Recovery key recovers the DEK");
 ok("correct recovery key returns the same dek", V.unlockVaultWithRecoveryKey(vault, recoveryKey) === dek);
-ok("recovery key is case/format-insensitive", V.unlockVaultWithRecoveryKey(vault, recoveryKey.toLowerCase().replace(/-/g, " ")) === dek);
+ok(
+  "recovery key is case/format-insensitive",
+  V.unlockVaultWithRecoveryKey(vault, recoveryKey.toLowerCase().replace(/-/g, " ")) === dek
+);
 ok("wrong recovery key -> null", V.unlockVaultWithRecoveryKey(vault, "ABCD-EFGH-JKMN-PQRS-TVWX-YZ23") === null);
 
 console.log("\n[4] Change passphrase: DEK unchanged, old passphrase dies, new works");
 const rewrapped = V.rewrapWithNewPassphrase(vault, dek, "my new passphrase");
-ok("old passphrase no longer unlocks the re-wrapped vault", V.unlockVaultWithPassphrase(rewrapped, "correct horse battery staple") === null);
+ok(
+  "old passphrase no longer unlocks the re-wrapped vault",
+  V.unlockVaultWithPassphrase(rewrapped, "correct horse battery staple") === null
+);
 ok("new passphrase unlocks and returns the SAME dek", V.unlockVaultWithPassphrase(rewrapped, "my new passphrase") === dek);
 ok("recovery key STILL works after passphrase change", V.unlockVaultWithRecoveryKey(rewrapped, recoveryKey) === dek);
-ok("a device that cached the dek is unaffected (dek identical)", V.unlockVaultWithPassphrase(rewrapped, "my new passphrase") === dek);
+ok(
+  "a device that cached the dek is unaffected (dek identical)",
+  V.unlockVaultWithPassphrase(rewrapped, "my new passphrase") === dek
+);
 
 console.log("\n[5] Recover then re-wrap recovery key");
 const recoveredDek = V.unlockVaultWithRecoveryKey(vault, recoveryKey);
@@ -161,6 +170,24 @@ import("react-native-crypto-js").then((m) => {
   ok("new empty-body note -> '' via lenient", Crypt.CryptNote.decrypt(emptyNew, key).text === "");
   const legacyEmpty = { id: "le", type: "text", text: CryptoJS.AES.encrypt("", legacyKey).toString() };
   ok("legacy empty-body note reads as '' (not ciphertext)", Crypt.CryptNote.decrypt(legacyEmpty, legacyKey).text === "");
+
+  console.log("\n[9] Production legacy reality: SECRET_KEY was never inlined (empty key)");
+  // SECRET_KEY lacks the EXPO_PUBLIC_ prefix, so it was stripped from the client
+  // bundle and every pre-vault note was AES-sealed with the EMPTY key "". The
+  // migration must read these with "" and re-seal under the DEK — NOT skip them
+  // on an "empty key" guard, which dropped every real legacy note (see LL-028).
+  const emptyKeyLegacy = { id: "ek", type: "text", text: CryptoJS.AES.encrypt("nota prod legacy", "").toString() };
+  ok(
+    "legacy note sealed with empty key is readable via lenient('')",
+    Crypt.CryptNote.decrypt(emptyKeyLegacy, "").text === "nota prod legacy"
+  );
+  ok("strict still rejects the empty-key legacy note (no marker)", Crypt.tryDecryptNote(emptyKeyLegacy, "") === null);
+  // Simulate the migrateLegacyVault sweep: decrypt with legacy "" -> re-seal under the DEK.
+  const reSealed = Crypt.CryptNote.encrypt(Crypt.CryptNote.decrypt(emptyKeyLegacy, ""), key);
+  ok("migration re-seals it so the DEK can read it back", Crypt.tryDecryptNote(reSealed, key)?.text === "nota prod legacy");
+  // Empty-body legacy note sealed with "" must also round-trip to "" (not ciphertext).
+  const emptyKeyLegacyEmpty = { id: "eke", type: "text", text: CryptoJS.AES.encrypt("", "").toString() };
+  ok("empty-body legacy note sealed with '' reads as ''", Crypt.CryptNote.decrypt(emptyKeyLegacyEmpty, "").text === "");
 
   console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
   process.exit(failed === 0 ? 0 : 1);
