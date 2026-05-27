@@ -15,13 +15,11 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
-      description_1_1_0: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
+      description_1_1_1: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
 • Riconoscimento vocale 2.0: dettatura vocale migliorata con pulizia automatica tramite AI.
 • L'Assistente AI ora puo' suggerire una categoria a partire dal titolo della nota.
-• Aggiunto un pannello con le informazioni della nota.
 • Aggiunti annulla/ripeti e barrato nell'editor di testo.
-• La sincronizzazione Cloud ora mostra lo stato di ogni dispositivo collegato.
-• Avvio dell'app piu' veloce.
+• Lo sblocco desktop ora supporta Touch ID e Windows Hello.
 • Fix varie.`,
 
       description_1_0_0: `• Prima versione stabile di Fast Memo Desktop (fuori dalla BETA).
@@ -47,12 +45,10 @@ const it = {
     },
 
     mobile: {
-      description_3_1_0: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
+      description_3_1_1: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
 • Riconoscimento vocale 2.0: dettatura vocale migliorata con pulizia automatica tramite AI.
 • L'Assistente AI ora puo' suggerire una categoria a partire dal titolo della nota.
-• Aggiunto un pannello con le informazioni della nota.
 • Aggiunti annulla/ripeti e barrato nell'editor di testo.
-• La sincronizzazione Cloud ora mostra lo stato di ogni dispositivo collegato.
 • Fix varie.`,
 
       description_3_0_0: `• Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.

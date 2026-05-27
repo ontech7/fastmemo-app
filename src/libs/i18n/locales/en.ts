@@ -15,13 +15,11 @@ const en = {
     title: "What's new?",
 
     web: {
-      description_1_1_0: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
+      description_1_1_1: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
 • Voice Recognition 2.0: improved voice dictation with automatic AI cleanup.
 • The AI Assistant can now suggest a category from the note title.
-• Added a note info panel.
 • Added undo/redo and strikethrough to the text editor.
-• Cloud Sync now shows the status of each connected device.
-• Faster app startup.
+• Desktop unlock now supports Touch ID and Windows Hello.
 • Various fixes.`,
 
       description_1_0_0: `• First stable release of Fast Memo Desktop (out of BETA).
@@ -47,12 +45,10 @@ const en = {
     },
 
     mobile: {
-      description_3_1_0: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
+      description_3_1_1: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
 • Voice Recognition 2.0: improved voice dictation with automatic AI cleanup.
 • The AI Assistant can now suggest a category from the note title.
-• Added a note info panel.
 • Added undo/redo and strikethrough to the text editor.
-• Cloud Sync now shows the status of each connected device.
 • Various fixes.`,
 
       description_3_0_0: `• Brand-new modern design across the whole app, with the new Geist font, glass surfaces and gradients.

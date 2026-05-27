@@ -15,13 +15,11 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
-      description_1_1_0: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
+      description_1_1_1: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
 • Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
 • Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
-• Ein Infofenster zur Notiz hinzugefugt.
 • Ruckgangig/Wiederholen und Durchstreichen im Texteditor hinzugefugt.
-• Die Cloud-Synchronisierung zeigt jetzt den Status jedes verbundenen Gerats an.
-• Schnellerer App-Start.
+• Das Entsperren am Desktop unterstutzt jetzt Touch ID und Windows Hello.
 • Verschiedene Fehlerbehebungen.`,
 
       description_1_0_0: `• Erste stabile Version von Fast Memo Desktop (kein BETA mehr).
@@ -47,12 +45,10 @@ const de = {
     },
 
     mobile: {
-      description_3_1_0: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
+      description_3_1_1: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
 • Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
 • Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
-• Ein Infofenster zur Notiz hinzugefugt.
 • Ruckgangig/Wiederholen und Durchstreichen im Texteditor hinzugefugt.
-• Die Cloud-Synchronisierung zeigt jetzt den Status jedes verbundenen Gerats an.
 • Verschiedene Fehlerbehebungen.`,
 
       description_3_0_0: `• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
