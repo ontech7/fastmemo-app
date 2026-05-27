@@ -213,7 +213,7 @@ export default function ReportScreen() {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch(`${configs.apiUrl}/report`, {
+      const response = await fetch(`${configs.apiUrl}/report/`, {
         method: "POST",
         signal: controller.signal,
         body: JSON.stringify(data),
