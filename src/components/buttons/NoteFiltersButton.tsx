@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { StyleSheet } from "react-native";
 import {
   ArrowLongDownIcon,
   ArrowLongUpIcon,
@@ -8,11 +9,11 @@ import {
 } from "react-native-heroicons/outline";
 import { useDispatch, useSelector } from "react-redux";
 
-import IconChip from "@/components/ui/IconChip";
+import GlassSurface from "@/components/ui/GlassSurface";
 import PopupMenu, { PopupMenuDivider, PopupMenuLabel, PopupMenuOption } from "@/components/ui/PopupMenu";
 import { getNoteFilters, reorderNotes, setNoteFilters } from "@/slicers/notesSlice";
 
-import { COLOR } from "@/constants/styles";
+import { BORDER, COLOR } from "@/constants/styles";
 import { useSecret } from "@/hooks/useSecret";
 
 interface Props {
@@ -54,9 +55,9 @@ export default function NoteFiltersButton({ filters }: Props) {
   return (
     <PopupMenu
       trigger={
-        <IconChip>
+        <GlassSurface radius={BORDER.big} style={styles.trigger}>
           <FunnelIcon size={20} color={COLOR.softWhite} />
-        </IconChip>
+        </GlassSurface>
       }
     >
       <PopupMenuOption
@@ -99,3 +100,14 @@ export default function NoteFiltersButton({ filters }: Props) {
     </PopupMenu>
   );
 }
+
+/* STYLES */
+
+const styles = StyleSheet.create({
+  trigger: {
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

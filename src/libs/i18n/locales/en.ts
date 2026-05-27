@@ -15,13 +15,11 @@ const en = {
     title: "What's new?",
 
     web: {
-      description_1_1_0: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
+      description_1_1_1: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
 • Voice Recognition 2.0: improved voice dictation with automatic AI cleanup.
 • The AI Assistant can now suggest a category from the note title.
-• Added a note info panel.
 • Added undo/redo and strikethrough to the text editor.
-• Cloud Sync now shows the status of each connected device.
-• Faster app startup.
+• Desktop unlock now supports Touch ID and Windows Hello.
 • Various fixes.`,
 
       description_1_0_0: `• First stable release of Fast Memo Desktop (out of BETA).
@@ -47,12 +45,10 @@ const en = {
     },
 
     mobile: {
-      description_3_1_0: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
+      description_3_1_1: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
 • Voice Recognition 2.0: improved voice dictation with automatic AI cleanup.
 • The AI Assistant can now suggest a category from the note title.
-• Added a note info panel.
 • Added undo/redo and strikethrough to the text editor.
-• Cloud Sync now shows the status of each connected device.
 • Various fixes.`,
 
       description_3_0_0: `• Brand-new modern design across the whole app, with the new Geist font, glass surfaces and gradients.
@@ -321,6 +317,7 @@ const en = {
     days: "days",
     change_secret_code: "Change your secret code",
     enable_fingerprint: "Enable Fingerprint",
+    fingerprint_reason: "Unlock your notes",
     advanced: "Advanced",
     show_hidden: "Show hidden notes",
     export_import_data: "Export/Import data",
@@ -710,12 +707,6 @@ const en = {
     are_you_sure_wipe: "Are you sure you want to wipe your data?\nYou will lose all notes and categories created.",
     finish_organize_categories: "Finish to organize categories or undo your changes.",
     generic_success_description: "The operation was successful.",
-  },
-
-  /* banner */
-  banner: {
-    update_available: "New version available!",
-    update_available_cta: "Update",
   },
 
   /* generic */

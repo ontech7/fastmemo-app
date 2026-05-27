@@ -1,4 +1,5 @@
 import { configs } from "@/configs";
+import { useAppUpdate } from "@/providers/AppUpdateProvider";
 import { openUrl } from "@/utils/openUrl";
 import { isTauri } from "@/utils/platform";
 import { useState } from "react";
@@ -7,6 +8,7 @@ import { Platform } from "react-native";
 
 import SectionItemList_Navigation from "@/components/settings/components/item/SectionItemList_Navigation";
 import SectionItemList from "@/components/settings/components/list/SectionItemList";
+import BlinkingDot from "@/components/ui/BlinkingDot";
 
 interface Props {
   isLast: boolean;
@@ -14,6 +16,7 @@ interface Props {
 
 export default function SectionItem_CheckUpdates({ isLast }: Props) {
   const { t } = useTranslation();
+  const { updateAvailable } = useAppUpdate();
   const [isChecking, setIsChecking] = useState(false);
 
   const checkForUpdates = async () => {
@@ -60,6 +63,7 @@ export default function SectionItem_CheckUpdates({ isLast }: Props) {
     <SectionItemList isLast={isLast}>
       <SectionItemList_Navigation
         title={isChecking ? t("generalsettings.checking_updates") : t("generalsettings.check_updates")}
+        extra={updateAvailable ? <BlinkingDot style={{ marginLeft: 8, alignSelf: "center" }} /> : null}
         onPress={checkForUpdates}
       />
     </SectionItemList>

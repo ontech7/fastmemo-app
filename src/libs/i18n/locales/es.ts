@@ -15,13 +15,11 @@ const es = {
     title: "¿Qué hay de nuevo?",
 
     web: {
-      description_1_1_0: `• Agregadas las notas sin conexion: manten una nota solo en este dispositivo, sin sincronizarla en la nube.
+      description_1_1_1: `• Agregadas las notas sin conexion: manten una nota solo en este dispositivo, sin sincronizarla en la nube.
 • Reconocimiento de voz 2.0: dictado por voz mejorado con limpieza automatica mediante IA.
 • El Asistente IA ahora puede sugerir una categoria a partir del titulo de la nota.
-• Agregado un panel con la informacion de la nota.
 • Agregados deshacer/rehacer y tachado en el editor de texto.
-• La sincronizacion en la nube ahora muestra el estado de cada dispositivo conectado.
-• Inicio de la app mas rapido.
+• El desbloqueo en el escritorio ahora admite Touch ID y Windows Hello.
 • Correcciones varias.`,
 
       description_1_0_0: `• Primera version estable de Fast Memo Desktop (fuera de BETA).
@@ -47,12 +45,10 @@ const es = {
     },
 
     mobile: {
-      description_3_1_0: `• Agregadas las notas sin conexion: manten una nota solo en este dispositivo, sin sincronizarla en la nube.
+      description_3_1_1: `• Agregadas las notas sin conexion: manten una nota solo en este dispositivo, sin sincronizarla en la nube.
 • Reconocimiento de voz 2.0: dictado por voz mejorado con limpieza automatica mediante IA.
 • El Asistente IA ahora puede sugerir una categoria a partir del titulo de la nota.
-• Agregado un panel con la informacion de la nota.
 • Agregados deshacer/rehacer y tachado en el editor de texto.
-• La sincronizacion en la nube ahora muestra el estado de cada dispositivo conectado.
 • Correcciones varias.`,
 
       description_3_0_0: `• Nuevo diseno moderno en toda la app, con la nueva fuente Geist, superficies glass y degradados.
@@ -321,6 +317,7 @@ const es = {
     days: "días",
     change_secret_code: "Cambia tu código secreto",
     enable_fingerprint: "Habilitar huella digital",
+    fingerprint_reason: "Desbloquea tus notas",
     advanced: "Avanzado",
     show_hidden: "Mostrar notas ocultas",
     export_import_data: "Exportar/Importar datos",
@@ -713,12 +710,6 @@ const es = {
     are_you_sure_wipe: "¿Estás seguro de que quieres borrar tus datos?\nPerderás todas las notas y categorías creadas.",
     finish_organize_categories: "Finalice para organizar categorías o deshacer sus cambios.",
     generic_success_description: "La operación fue exitosa.",
-  },
-
-  /* banner */
-  banner: {
-    update_available: "Nueva versión disponible!",
-    update_available_cta: "Actualizar",
   },
 
   /* generic */

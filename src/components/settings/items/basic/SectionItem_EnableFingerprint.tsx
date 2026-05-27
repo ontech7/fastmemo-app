@@ -1,7 +1,8 @@
-import * as LocalAuthentication from "expo-local-authentication";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Switch, Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+
+import { authenticateBiometric } from "@/libs/biometric";
 
 import { COLOR, FONT, FONTSIZE } from "@/constants/styles";
 
@@ -20,8 +21,8 @@ export default function SectionItem_EnableFingerprint({ isLast }: Props) {
   const fingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
 
   const toggleFingerprint = async () => {
-    const authResult = await LocalAuthentication.authenticateAsync();
-    if (authResult?.success) {
+    const success = await authenticateBiometric(t("generalsettings.fingerprint_reason"));
+    if (success) {
       dispatch(setIsFingerprintEnabled(!fingerprintEnabled));
     }
   };

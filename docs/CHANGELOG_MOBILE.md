@@ -1,11 +1,9 @@
-## v3.1.0
+## v3.1.1
 
 - Added offline notes: keep a note only on this device, excluded from cloud sync. You can detach a synced note to make it local, or re-sync a local note (a new synced copy is created).
 - Voice Recognition 2.0: redesigned voice dictation with automatic AI cleanup of the transcript.
 - The AI Assistant can now suggest a category directly from the note title.
-- Added a note info panel showing details about each note.
 - Added undo/redo and strikethrough to the text editor toolbar.
-- Cloud Sync now shows the status of each connected device (pending changes and last sync).
 - Various fixes.
 
 ## v3.0.0

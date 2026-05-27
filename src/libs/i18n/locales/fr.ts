@@ -15,13 +15,11 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
-      description_1_1_0: `• Ajout des notes hors ligne : conservez une note uniquement sur cet appareil, sans la synchroniser sur le cloud.
+      description_1_1_1: `• Ajout des notes hors ligne : conservez une note uniquement sur cet appareil, sans la synchroniser sur le cloud.
 • Reconnaissance vocale 2.0 : dictee vocale amelioree avec nettoyage automatique par IA.
 • L'Assistant IA peut desormais suggerer une categorie a partir du titre de la note.
-• Ajout d'un panneau d'informations sur la note.
 • Ajout d'annuler/retablir et du barre dans l'editeur de texte.
-• La synchronisation Cloud affiche desormais l'etat de chaque appareil connecte.
-• Demarrage de l'app plus rapide.
+• Le deverrouillage sur ordinateur prend desormais en charge Touch ID et Windows Hello.
 • Corrections diverses.`,
 
       description_1_0_0: `• Premiere version stable de Fast Memo Desktop (hors BETA).
@@ -47,12 +45,10 @@ const fr = {
     },
 
     mobile: {
-      description_3_1_0: `• Ajout des notes hors ligne : conservez une note uniquement sur cet appareil, sans la synchroniser sur le cloud.
+      description_3_1_1: `• Ajout des notes hors ligne : conservez une note uniquement sur cet appareil, sans la synchroniser sur le cloud.
 • Reconnaissance vocale 2.0 : dictee vocale amelioree avec nettoyage automatique par IA.
 • L'Assistant IA peut desormais suggerer une categorie a partir du titre de la note.
-• Ajout d'un panneau d'informations sur la note.
 • Ajout d'annuler/retablir et du barre dans l'editeur de texte.
-• La synchronisation Cloud affiche desormais l'etat de chaque appareil connecte.
 • Corrections diverses.`,
 
       description_3_0_0: `• Nouveau design moderne dans toute l'app, avec la nouvelle police Geist, des surfaces glass et des degrades.
@@ -321,6 +317,7 @@ const fr = {
     days: "jours",
     change_secret_code: "Changez votre code secret",
     enable_fingerprint: "Activer l'empreinte digitale",
+    fingerprint_reason: "Déverrouillez vos notes",
     advanced: "Avancé",
     show_hidden: "Afficher les notes masquées",
     export_import_data: "Exporter/Importer des données",
@@ -717,12 +714,6 @@ const fr = {
     are_you_sure_wipe: "Voulez-vous vraiment effacer vos données?\nVous perdrez toutes les notes et catégories créées.",
     finish_organize_categories: "Terminer pour organiser les catégories ou annuler vos modifications.",
     generic_success_description: "L'opération a réussi.",
-  },
-
-  /* banner */
-  banner: {
-    update_available: "Nouvelle version disponible!",
-    update_available_cta: "Mettre à jour",
   },
 
   /* generic */
