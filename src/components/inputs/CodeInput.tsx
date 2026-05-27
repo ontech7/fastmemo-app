@@ -77,13 +77,13 @@ export default function CodeInput({ value, onChangeCode, onSubmit, disabled }: P
           justifyContent: "center",
         }}
       >
-        <Text style={styles.numberInput}>{code?.[0] ?? ""}</Text>
+        <Text style={styles.numberInput}>{code?.[0] ? "•" : ""}</Text>
 
-        <Text style={styles.numberInput}>{code?.[1] ?? ""}</Text>
+        <Text style={styles.numberInput}>{code?.[1] ? "•" : ""}</Text>
 
-        <Text style={styles.numberInput}>{code?.[2] ?? ""}</Text>
+        <Text style={styles.numberInput}>{code?.[2] ? "•" : ""}</Text>
 
-        <Text style={styles.numberInput}>{code?.[3] ?? ""}</Text>
+        <Text style={styles.numberInput}>{code?.[3] ? "•" : ""}</Text>
       </View>
 
       <VirtualNumberKeyboard onAdd={addNumberWithVibration} onRemove={removeNumberWithVibration} disabled={disabled} />
