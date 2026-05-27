@@ -28,18 +28,18 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 
 ## Features
 
-| Feature                  | Description                                                         |
-| ------------------------ | ------------------------------------------------------------------- |
-| **AI Assistant (BETA)**  | On-device AI with Qwen 2.5 (0.5B-7B). No data leaves your phone     |
-| **Rich Text Editor**     | Create beautifully formatted notes with full rich text support      |
-| **To-Do List**           | Organize your checklist                                             |
-| **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                     |
-| **Code Editor**          | Write code with syntax highlighting, tabs, and language detection   |
-| **Cloud Sync**           | Encrypted synchronization across all devices (no centralized)       |
-| **Biometric Protection** | Secure sensitive notes with fingerprint or secret code              |
-| **Webhooks**             | Explore new stuff with Internet of Things                           |
-| **Voice Recognition**    | Dictate notes using speech-to-text on text and todo notes           |
-| **Multi-language**       | Available in English, Italian, French, German, Spanish, and Chinese |
+| Feature                  | Description                                                            |
+| ------------------------ | ---------------------------------------------------------------------- |
+| **AI Assistant (BETA)**  | On-device AI with Qwen 2.5 (0.5B-7B). No data leaves your phone        |
+| **Rich Text Editor**     | Create beautifully formatted notes with full rich text support         |
+| **To-Do List**           | Organize your checklist                                                |
+| **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                        |
+| **Code Editor**          | Write code with syntax highlighting, tabs, and language detection      |
+| **Cloud Sync**           | End-to-end encrypted sync across devices (your key, no central server) |
+| **Biometric Protection** | Secure sensitive notes with fingerprint or secret code                 |
+| **Webhooks**             | Explore new stuff with Internet of Things                              |
+| **Voice Recognition**    | Dictate notes using speech-to-text on text and todo notes              |
+| **Multi-language**       | Available in English, Italian, French, German, Spanish, and Chinese    |
 
 <details>
 <summary><strong>View all features</strong></summary>

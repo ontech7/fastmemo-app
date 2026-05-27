@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     width: SIZE.full,
   },
   headerTitle: {
-    fontSize: FONTSIZE.intro,
+    fontSize: FONTSIZE.subtitle,
     fontFamily: FONT.semiBold,
     color: COLOR.textPrimary,
     letterSpacing: -0.3,

@@ -25,14 +25,14 @@ Before making changes, read the relevant knowledge files under `.agents/knowledg
 **Always check and load the relevant skills before starting work.** Skills contain domain-specific rules and patterns that
 prevent common mistakes. Load a skill when your task matches its trigger conditions.
 
-| Skill                         | When to Load                                                                                           | Content                                                                                                                   |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Skill                         | When to Load                                                                                                                              | Content                                                                                                                                                                         |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `frontend-design/`            | **Any visual/frontend work** — building or restyling components/screens, colors, gradients, glass/blur, fonts, spacing, layout, redesigns | Design system + UI rework rules: tokens, Geist, accent solid+glow, deep-bg + corner glow, glass/blur perf guardrails, layout & safe-area conventions, reusable `ui/` primitives |
-| `vercel-react-native-skills/` | Building/modifying components, optimizing lists, animations, or any React Native UI work               | 36 performance rules across 13 categories (list perf, animations, state, UI patterns, navigation)                         |
-| `redux-toolkit/`              | Working on Redux slices, selectors, thunks, or state management logic                                  | RTK best practices, slice structure, async thunks, memoized selectors, TypeScript integration                             |
-| `tauri-v2/`                   | Touching anything under `src-tauri/`, desktop-specific features, Rust commands, IPC, or desktop builds | Tauri v2 commands, capabilities, permissions, IPC patterns, plugin setup, troubleshooting                                 |
-| `github-issue-workflow/`      | Starting work on a GitHub issue, creating a PR, or preparing a release                                 | Dev/main branching model, conventional commits, PR format, version bumping, changelog updates across 5 files + 7 locales  |
-| `github-issue-template/`      | Creating a new GitHub issue (LL-\* entry, bug, refactor, feature) via `gh`                             | Canonical issue body template, title prefixes, label rules, HEREDOC command shape, cross-referencing with LESSONS_LEARNED |
+| `vercel-react-native-skills/` | Building/modifying components, optimizing lists, animations, or any React Native UI work                                                  | 36 performance rules across 13 categories (list perf, animations, state, UI patterns, navigation)                                                                               |
+| `redux-toolkit/`              | Working on Redux slices, selectors, thunks, or state management logic                                                                     | RTK best practices, slice structure, async thunks, memoized selectors, TypeScript integration                                                                                   |
+| `tauri-v2/`                   | Touching anything under `src-tauri/`, desktop-specific features, Rust commands, IPC, or desktop builds                                    | Tauri v2 commands, capabilities, permissions, IPC patterns, plugin setup, troubleshooting                                                                                       |
+| `github-issue-workflow/`      | Starting work on a GitHub issue, creating a PR, or preparing a release                                                                    | Dev/main branching model, conventional commits, PR format, version bumping, changelog updates across 5 files + 7 locales                                                        |
+| `github-issue-template/`      | Creating a new GitHub issue (LL-\* entry, bug, refactor, feature) via `gh`                                                                | Canonical issue body template, title prefixes, label rules, HEREDOC command shape, cross-referencing with LESSONS_LEARNED                                                       |
 
 Skills are in `.agents/skills/`. Each has a `SKILL.md` with full instructions.
 
@@ -83,6 +83,13 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 16. **Never surface cloud-sync transient failures to the user** (no banners/toasts for `.rejected` of sync thunks, no
     `syncStatus`/`syncError` in slices). Cloud sync is silent by design: offline is not an error, the outbox retries
     automatically, and only handshake-level failures are surfaced (see LL-004)
+17. **Never let an errored/empty cloud read drive a destructive write** -- model reads as tri-state (present/absent/error), and
+    on doubt skip-and-keep-local (a missed sync self-heals; a wrongful overwrite is permanent). See LL-023 and ADR-012
+18. **Never trust a decrypt that didn't throw** -- AES-CBC produces valid-looking garbage on the wrong key. Verify the
+    `CONTENT_MAGIC` marker (`tryDecryptNote`) before treating decrypted output as real on any write path. See LL-024
+19. **Never read authoritative cross-device state with cache-eligible `getDoc`/`getDocs`** -- vault presence, DEK staleness, and
+    any "has another device changed this?" check must use `getDocFromServer`/`getDocsFromServer`. The Firestore local cache can
+    serve stale data and survives restarts. Treat offline/error as "unknown -> skip", not as an answer. See LL-027
 
 ### ALWAYS Do
 
@@ -106,7 +113,7 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 | Routing    | expo-router 5.1 (file-based, typed routes)                                                     |
 | State      | Redux Toolkit 2.8 + Redux Persist (filesystem for notes, AsyncStorage for settings/categories) |
 | Desktop    | Tauri 1.x (Rust)                                                                               |
-| Cloud      | Firebase Firestore (encrypted sync)                                                            |
+| Cloud      | Firebase Firestore (per-vault E2E encryption, envelope DEK/KEK -- ADR-012)                     |
 | AI         | llama.rn 0.12 (Qwen 2.5 GGUF, on-device)                                                       |
 | Editor     | CodeMirror 6 (via WebView)                                                                     |
 | i18n       | i18next + react-i18next (7 languages, single namespace)                                        |
@@ -122,9 +129,9 @@ src/
   components/   -> UI components (domain-grouped: buttons/, cards/, notes/, kanban/, settings/, etc.)
   slicers/      -> Redux slices (notesSlice, categoriesSlice, settingsSlice) + thunks/
   types/        -> TypeScript type definitions (barrel export via index.ts)
-  hooks/        -> Custom hooks (useCloudSync, useRouter, useSecret, useNetInfo, useTimeoutTask)
-  libs/         -> Third-party wrappers (ai/, haptics/, i18n/, storage/, firebase, registry, localization)
-  utils/        -> Pure utility functions (sort, string, date, crypt, toast, webhook, export, platform, openUrl)
+  hooks/        -> Custom hooks (useCloudSync, useRouter, useSecret, useNetInfo, useTimeoutTask, useVaultUnlocked, useVaultPrompt, useVaultProgress)
+  libs/         -> Third-party wrappers (ai/, haptics/, i18n/, storage/, firebase, registry, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress)
+  utils/        -> Pure utility functions (sort, string, date, crypt, vault, secureRandom, ui, toast, webhook, export, platform, openUrl)
   providers/    -> React context providers (KanbanDragProvider, SyncOnProvider)
   constants/    -> Static constants (styles, icons, code-languages, note-types)
   configs/      -> App configuration (environment, defaults, business rules)

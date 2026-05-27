@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
-    fontSize: FONTSIZE.intro,
+    fontSize: FONTSIZE.subtitle,
     fontFamily: FONT.semiBold,
     color: COLOR.textPrimary,
     letterSpacing: -0.3,

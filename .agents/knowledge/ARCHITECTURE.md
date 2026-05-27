@@ -37,8 +37,14 @@ src/
       general.tsx      # Settings hub
       ai-assistant.tsx # AI model management
       cloud-sync/
-        connect.tsx    # Cloud sync setup
-        devices.tsx    # Connected devices
+        connect.tsx        # Cloud sync setup + encryption entry points (enable/unlock/change/reset)
+        devices.tsx        # Connected devices
+        vault-setup.tsx    # Set encryption password (modes: create | migrate | reset)
+        vault-unlock.tsx   # Unlock an existing vault on this device (+ forgot-password link)
+        vault-recovery.tsx # Show the recovery key once, then run the connect continuation
+        vault-recover.tsx  # Forgot-password: recovery key + new password
+        vault-change.tsx   # Change the encryption password (re-wraps DEK only)
+        vault-reset.tsx    # Confirm + route to vault-setup mode=reset (last resort)
       # ... 8 more settings screens
 
   components/          # UI components (domain-grouped)
@@ -47,7 +53,8 @@ src/
     notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor
     kanban/            # KanbanBoard, KanbanColumn, KanbanCard, KanbanDragOverlay
     settings/          # Settings UI system (Section, SectionHeader, SectionWrapper, items/)
-    dialogs/           # ComplexDialog, ConfirmOrCancelDialog, SecretPassphraseDialog
+    vault/             # VaultScaffold (shared chrome for the 6 vault screens) + VaultBackupButton (optional quick export before a risky op)
+    dialogs/           # ComplexDialog, ConfirmOrCancelDialog, SecretPassphraseDialog, VaultPromptDialog
     inputs/            # BaseInput, CodeInput, SearchNotesInput
     lists/             # FavoriteCategoryList, OrderedCategoryList, OrganizeCategoryList
     todo/              # TodoItem.native.tsx, TodoItem.web.tsx
@@ -82,6 +89,9 @@ src/
     useSecret.ts       # Secret code / biometric authentication
     useNetInfo.ts      # Network connectivity state
     useTimeoutTask.ts  # Debounced async task runner with loading states
+    useVaultUnlocked.ts # useSyncExternalStore over vaultSession (is the DEK loaded?)
+    useVaultPrompt.ts  # useSyncExternalStore over vaultPrompt (does encryption need attention?)
+    useVaultProgress.ts # useSyncExternalStore over vaultProgress (re-upload progress bar)
 
   libs/                # Third-party service wrappers
     ai/                # On-device LLM (llama.rn)
@@ -94,15 +104,23 @@ src/
     haptics/           # Platform-split: native (expo-haptics) / web (no-op stubs)
     i18n/              # i18next setup + 7 locale files
     storage/           # Platform-split: native (fs-storage) / web (localforage/IndexedDB)
-    firebase.ts        # Firestore CRUD, device management, handshake, cloud sync operations
-    registry.ts        # In-memory Map for passing non-serializable data between screens
+    firebase.ts        # Firestore CRUD, device management, handshake, cloud sync, vault doc CRUD
+    registry.ts        # In-memory Map for passing non-serializable data between screens (+ vault continuation / recovery-key transport)
     localization.ts    # Locale detection wrapper (expo-localization + web fallback)
+    secureStore.ts     # Platform-split (.web.ts): expo-secure-store / localforage key-value
+    vaultSession.ts    # In-memory DEK + pub/sub; persist/load/wipe via secureStore (namespaced by projectId)
+    vaultManager.ts    # Vault orchestration: probe/initialize/migrate/unlock/recover/changePassphrase/recreate
+    vaultPrompt.ts     # Ephemeral pub/sub signal: "encryption needs attention" (drives VaultPromptDialog)
+    vaultProgress.ts   # Ephemeral pub/sub signal {done,total} for the re-upload determinate progress bar
 
   utils/               # Pure utility functions
     sort.ts            # Sort comparators for Timestamped/Ordered items
     string.ts          # String validation, formatting, size computation
     date.ts            # Date formatting with locale awareness
-    crypt.ts           # Note encryption/decryption (CryptNote namespace)
+    crypt.ts           # Note encryption/decryption (CryptNote); reads DEK from vaultSession, CONTENT_MAGIC auth marker
+    vault.ts           # Envelope-encryption primitives (createVault/unlock/recover/rewrap, canary, PBKDF2 via crypto-js)
+    secureRandom.ts    # OS CSPRNG bytes (WebCrypto getRandomValues, expo-crypto fallback)
+    ui.ts              # yieldToUI() — let the spinner paint a frame before a synchronous freeze
     toast.ts           # Platform-split toast notifications
     webhook.ts         # HTTP POST webhook dispatcher
     export.ts          # PDF/text export, file sharing
@@ -161,9 +179,39 @@ src/
         +------------------------------------------+
         |          Firebase (libs/firebase.ts)       |
         |  Firestore collections: notes, categories  |
+        |  + vault doc (encryption envelope)         |
         |  Device management, handshake, sync        |
         +------------------------------------------+
 ```
+
+### Cloud Sync Encryption Gate (per-vault E2E -- ADR-012)
+
+All cloud sync is gated on the **vault** being unlocked. The encryption key (DEK) lives only in `libs/vaultSession.ts`
+(in-memory + secure-storage cache), never in Redux or Firestore.
+
+```
+connect (handshake)
+  -> probeVault()  [libs/vaultManager.ts]
+       present       -> vault-unlock   (enter password -> derive KEK -> unwrap DEK -> cache)
+       needsMigration-> vault-setup?mode=migrate
+       absent        -> vault-setup?mode=create
+       error         -> abort + toast (never write on an unproven read)
+  -> DEK obtained -> registry continuation finalizes the connection / resync
+
+queueCloudAdd (notesSlice)   -> gated on isVaultUnlocked(); CryptNote.encrypt uses the cached DEK
+                                (per-note AES only — fast; PBKDF2 runs ONLY at setup/unlock/reset)
+queueCloudDelete / detach    -> content-stripped deletionStub (no DEK needed; propagates while locked)
+uploadCloudData              -> instruments vaultProgress (begin/tick/clear) -> determinate bar on
+                                the vault-recovery / vault-unlock / connect (resync) loaders
+SyncOnProvider               -> every sync loop gated on useVaultUnlocked(); re-validates the cached
+                                DEK against the cloud vault (dekMatchesVault) and re-locks on reset
+```
+
+`readVault()` (vault presence + DEK-staleness checks) uses a **server read** (`getDocFromServer`), never Firestore's local cache
+— a cached old vault doc would mask a reset done on another device and survive restarts (see LL-027). Offline -> "error" ->
+callers skip (no false lock/create). A note is never lost to slow encryption/upload: it is written to local state (plaintext,
+persisted) before `queueCloudAdd`, the encrypt-into-outbox is synchronous, and the outbox retains unconfirmed items until the
+Firestore write succeeds (retry — see thunks/notes.ts).
 
 ### Persistence Architecture
 
@@ -211,6 +259,11 @@ Animation conventions:
 
 ### Provider Tower (Root Layout)
 
+> **Boot polyfill:** `_layout.tsx`'s first import is `react-native-get-random-values`, which installs
+> `global.crypto.getRandomValues`. Hermes/RN does not provide it, and `crypto-js` (PBKDF2/AES, used by the vault) needs it for
+> its internal IV/salt -- without the polyfill every vault op throws "Native crypto module could not be used to get secure
+> random number" on the phone (web/Tauri already have the global). See LL-025.
+
 ```
 I18nextProvider
   KeyboardProvider
@@ -223,7 +276,7 @@ I18nextProvider
               StatusBar
               WebToaster (web only, conditional require)
               Stack (expo-router, single flat navigator)
-                26 screens (all headerShown: false, transparentModal)
+                32 screens (all headerShown: false, transparentModal)
 ```
 
 ## Platform Abstraction Strategy
@@ -302,6 +355,11 @@ components/notes/* --> slicers/ (useSelector, useDispatch)
 slicers/*Slice.ts --> utils/crypt (encrypt/decrypt for cloud queue)
                  --> utils/sort (note ordering)
                  --> libs/firebase (cloud sync in thunks -- NOT in reducers)
+                 --> libs/vaultSession (isVaultUnlocked gate before queuing encrypted items)
+
+utils/crypt --> libs/vaultSession (reads the in-memory DEK; encrypt fails closed if locked)
+libs/vaultManager --> utils/vault (envelope primitives) + libs/firebase (vault doc) + libs/vaultSession (cache)
+providers/SyncOnProvider --> libs/vaultSession + hooks/useVaultUnlocked (gate every sync loop on unlock)
 
 libs/ai/context.ts --> llama.rn (native LLM)
                    --> slicers/store (direct getState() for categories, cloud key)
@@ -316,11 +374,11 @@ providers/SyncOnProvider --> slicers/ (selectors + thunk dispatch)
 
 | Metric                      | Count            |
 | --------------------------- | ---------------- |
-| Screens (routes)            | 26               |
-| Components (.tsx)           | ~96              |
+| Screens (routes)            | 32               |
+| Components (.tsx)           | ~98              |
 | Redux reducers              | 48 (27 + 9 + 12) |
-| Custom hooks                | 5                |
-| Utility files               | 9                |
+| Custom hooks                | 8                |
+| Utility files               | 12               |
 | i18n locales                | 7                |
 | Translation keys            | ~670 per locale  |
 | TypeScript type definitions | 7 files          |

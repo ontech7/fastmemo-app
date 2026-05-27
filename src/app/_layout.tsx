@@ -1,3 +1,7 @@
+// Must be first: installs global.crypto.getRandomValues (secure RNG) so crypto-js
+// can generate IVs/salts on native (Hermes), where there is no WebCrypto global.
+import "react-native-get-random-values";
+
 import "@/styles/global.css";
 
 import WebToaster from "@/components/WebToaster";
@@ -159,6 +163,30 @@ export default Sentry.wrap(function RootLayout() {
                       />
                       <Stack.Screen
                         name="settings/cloud-sync/devices"
+                        options={{ headerShown: false, animation: "fade_from_bottom" }}
+                      />
+                      <Stack.Screen
+                        name="settings/cloud-sync/vault-setup"
+                        options={{ headerShown: false, animation: "fade_from_bottom" }}
+                      />
+                      <Stack.Screen
+                        name="settings/cloud-sync/vault-unlock"
+                        options={{ headerShown: false, animation: "fade_from_bottom" }}
+                      />
+                      <Stack.Screen
+                        name="settings/cloud-sync/vault-recovery"
+                        options={{ headerShown: false, animation: "fade_from_bottom" }}
+                      />
+                      <Stack.Screen
+                        name="settings/cloud-sync/vault-recover"
+                        options={{ headerShown: false, animation: "fade_from_bottom" }}
+                      />
+                      <Stack.Screen
+                        name="settings/cloud-sync/vault-change"
+                        options={{ headerShown: false, animation: "fade_from_bottom" }}
+                      />
+                      <Stack.Screen
+                        name="settings/cloud-sync/vault-reset"
                         options={{ headerShown: false, animation: "fade_from_bottom" }}
                       />
                       <Stack.Screen name="settings/information" options={{ headerShown: false, animation: "ios_from_left" }} />

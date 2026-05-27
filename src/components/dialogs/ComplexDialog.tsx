@@ -16,6 +16,8 @@ interface Props {
   cancel?: DialogActionConfig | null;
   alternative?: DialogActionConfig | null;
   actionsColumn?: boolean;
+  /** Called when the user taps outside the dialog (backdrop). Omit to make it non-dismissible. */
+  onDismiss?: (() => void) | null;
 }
 
 export default function ComplexDialog({
@@ -27,9 +29,10 @@ export default function ComplexDialog({
   cancel = null,
   alternative = null,
   actionsColumn = false,
+  onDismiss = null,
 }: Props) {
   return (
-    <Dialog open={open} slideFrom="bottom">
+    <Dialog open={open} slideFrom="bottom" onPressOut={onDismiss ?? undefined}>
       <DialogHeader>
         <DialogTitle adornmentStart={adornmentStart}>{title}</DialogTitle>
         {description && <DialogDescription>{description}</DialogDescription>}

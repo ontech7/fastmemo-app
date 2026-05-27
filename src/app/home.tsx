@@ -35,8 +35,12 @@ import {
 import type { CodeNote, Note, TextNote, TodoItem, TodoNote } from "@/types";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
+import VaultPromptDialog from "@/components/dialogs/VaultPromptDialog";
+import { useVaultPrompt } from "@/hooks/useVaultPrompt";
+import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
+import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -49,6 +53,13 @@ export default function HomeScreen() {
   const { t } = useTranslation();
 
   const router = useRouter();
+
+  const isFocused = useIsFocused();
+  const vaultPromptNeeded = useVaultPrompt();
+  const vaultUnlocked = useVaultUnlocked();
+  // Gate the vault prompt until the version/changelog check has settled, so it
+  // never overlaps the changelog screen that opens on a version bump.
+  const [changelogChecked, setChangelogChecked] = useState(false);
 
   const store = useStore();
 
@@ -303,12 +314,17 @@ export default function HomeScreen() {
       const currentAppVersion = Platform.OS === "web" ? configs.app.version.web : configs.app.version.mobile;
 
       if (lastAppVersion != null && lastAppVersion == currentAppVersion) {
+        // no changelog to show -> the vault prompt may appear right away
+        setChangelogChecked(true);
         return;
       }
 
       setTimeout(() => {
         router.push("/changelog");
         AsyncStorage.setItem("@appVersion", currentAppVersion);
+        // mark settled at push time: home is now unfocused (changelog on top), so
+        // the vault prompt stays hidden until the user returns from the changelog
+        setChangelogChecked(true);
       }, 750);
     };
 
@@ -336,6 +352,15 @@ export default function HomeScreen() {
         onConfirm={() => {
           temporaryDeleteSelectedNotesFromItems();
           setShowDeleteNotesDialog(false);
+        }}
+      />
+
+      <VaultPromptDialog
+        open={vaultPromptNeeded && !vaultUnlocked && isFocused && changelogChecked}
+        onClose={() => setVaultPromptNeeded(false)}
+        onGo={() => {
+          setVaultPromptNeeded(false);
+          router.push("/settings/cloud-sync/connect");
         }}
       />
 

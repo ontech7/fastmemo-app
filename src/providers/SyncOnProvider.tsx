@@ -1,4 +1,5 @@
 import useNetInfo from "@/hooks/useNetInfo";
+import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import { isEmpty, isObjectEmpty } from "@/utils/string";
 import { where } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -7,10 +8,21 @@ import { AppState, Platform } from "react-native";
 import { useSelector } from "react-redux";
 
 import { useAppDispatch } from "@/slicers/store";
-import { COLLECTIONS, getAllDeviceUuids, getAllElementsInCloud, getDeviceUuid, setElementInCloud } from "@/libs/firebase";
+import {
+  COLLECTIONS,
+  getAllDeviceUuids,
+  getAllElementsInCloud,
+  getDeviceUuid,
+  readVault,
+  setElementInCloud,
+} from "@/libs/firebase";
+import { getDEK, isVaultUnlocked, lockVault, wipePersistedDEK } from "@/libs/vaultSession";
+import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
+import { restoreVaultSession } from "@/libs/vaultManager";
+import { dekMatchesVault } from "@/utils/vault";
 import { addLocalCategories, deleteLocalCategories, getCloudCategories } from "@/slicers/categoriesSlice";
 import { addLocalNotes, deleteLocalNotes, detachLocalNotes, getCloudNotes } from "@/slicers/notesSlice";
-import { getCloudConnected, setCloudConnected, setIsCloudSyncEnabled } from "@/slicers/settingsSlice";
+import { getCloudConnected, getCloudSettings, setCloudConnected, setIsCloudSyncEnabled } from "@/slicers/settingsSlice";
 import { addCloudCategoriesAsync, deleteCloudCategoriesAsync } from "@/slicers/thunks/categories";
 import { addCloudNotesAsync, deleteCloudNotesAsync, detachCloudNotesAsync } from "@/slicers/thunks/notes";
 import { toast } from "@/utils/toast";
@@ -29,7 +41,53 @@ export default function SyncOnProvider(): null {
   const isSyncingRef = useRef(false);
 
   const isCloudConnected = useSelector(getCloudConnected);
+  const cloudSettings = useSelector(getCloudSettings);
   const netInfo = useNetInfo();
+
+  // Sync is gated on an unlocked vault: without the DEK we cannot decrypt
+  // incoming notes nor encrypt outgoing ones.
+  const vaultUnlocked = useVaultUnlocked();
+  const restoredRef = useRef(false);
+
+  // On (re)connect, restore this device's cached DEK before any sync runs. If
+  // none is cached (secure storage cleared, app updated while connected, etc.),
+  // raise the "needs attention" signal so home can prompt the user — sync stays
+  // paused until they unlock/set up encryption from Cloud settings.
+  useEffect(() => {
+    if (!isCloudConnected) {
+      restoredRef.current = false;
+      setVaultPromptNeeded(false);
+      return;
+    }
+    if (restoredRef.current || isVaultUnlocked()) return;
+    if (!cloudSettings?.projectId) return;
+
+    restoredRef.current = true;
+    restoreVaultSession(cloudSettings.projectId).then(async (restored) => {
+      if (!restored) {
+        setVaultPromptNeeded(true);
+        return;
+      }
+      // We had a cached DEK — but it may be stale: another device could have
+      // reset/replaced the vault while we were off. Verify it against the cloud
+      // vault right away (so a restart catches it, not just the 10s sync loop).
+      const dek = getDEK();
+      const vaultRead = await readVault();
+      if (vaultRead.status === "error") return; // offline/transient — trust the cache for now
+      const stale = vaultRead.status === "absent" || !dek || !dekMatchesVault(vaultRead.vault!, dek);
+      if (stale) {
+        lockVault();
+        await wipePersistedDEK(cloudSettings.projectId);
+        setVaultPromptNeeded(true);
+      }
+    });
+  }, [isCloudConnected, cloudSettings?.projectId]);
+
+  // Once the vault is unlocked (here or from the Cloud settings flow), the prompt
+  // is no longer relevant.
+  useEffect(() => {
+    if (vaultUnlocked) setVaultPromptNeeded(false);
+  }, [vaultUnlocked]);
 
   const cloudCategories = useSelector(getCloudCategories);
   const cloudCategories_add = useMemo(() => Object.values(cloudCategories.add), [cloudCategories.add]);
@@ -46,6 +104,9 @@ export default function SyncOnProvider(): null {
   ///////////////////////////////////
 
   const syncToLocal = useCallback(async () => {
+    // cannot decrypt incoming notes without the DEK
+    if (!isVaultUnlocked()) return;
+
     // prevent concurrent syncs
     if (isSyncingRef.current) return;
     isSyncingRef.current = true;
@@ -73,6 +134,23 @@ export default function SyncOnProvider(): null {
       if (devices.length == 1 && devices.includes(deviceUuid!)) {
         return;
       }
+
+      // Detect a vault reset/replacement done on another device: if the cloud
+      // vault is gone, or no longer matches our cached DEK, our key is stale.
+      // Re-lock and prompt instead of syncing (or re-uploading) with a dead key.
+      const dek = getDEK();
+      const vaultRead = await readVault();
+      const vaultChanged =
+        vaultRead.status === "absent" ||
+        (vaultRead.status === "present" && !!vaultRead.vault && (!dek || !dekMatchesVault(vaultRead.vault, dek)));
+      if (vaultChanged) {
+        lockVault();
+        if (cloudSettings?.projectId) await wipePersistedDEK(cloudSettings.projectId);
+        setVaultPromptNeeded(true);
+        if (tPendingChanges.current) clearInterval(tPendingChanges.current);
+        return;
+      }
+      // vaultRead.status === "error" -> transient read failure, skip (don't lock)
 
       const devicesData = await getAllElementsInCloud({
         collection: COLLECTIONS.various.connectedDevices,
@@ -138,7 +216,7 @@ export default function SyncOnProvider(): null {
     } finally {
       isSyncingRef.current = false;
     }
-  }, [dispatch, t]);
+  }, [dispatch, t, cloudSettings?.projectId]);
 
   // keep ref in sync for AppState listener
   useEffect(() => {
@@ -154,7 +232,7 @@ export default function SyncOnProvider(): null {
     if (tPendingChanges.current) clearInterval(tPendingChanges.current);
 
     // if not connected correctly or if internet connectivity is lost (offline sync)
-    if (!isCloudConnected || !netInfo?.isConnected) {
+    if (!isCloudConnected || !netInfo?.isConnected || !vaultUnlocked) {
       return;
     }
 
@@ -164,7 +242,7 @@ export default function SyncOnProvider(): null {
     return () => {
       if (tPendingChanges.current) clearInterval(tPendingChanges.current);
     };
-  }, [isCloudConnected, netInfo, syncToLocal]);
+  }, [isCloudConnected, netInfo, vaultUnlocked, syncToLocal]);
 
   ///////////////////////////////////
   // AppState listener - sync immediately on foreground resume
@@ -202,7 +280,7 @@ export default function SyncOnProvider(): null {
 
   useEffect(() => {
     // if not connected correctly or if internet connectivity is lost (offline sync)
-    if (!isCloudConnected || !netInfo?.isConnected) {
+    if (!isCloudConnected || !netInfo?.isConnected || !vaultUnlocked) {
       return;
     }
 
@@ -249,7 +327,7 @@ export default function SyncOnProvider(): null {
 
     syncCategoriesToCloud();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCloudConnected, netInfo, cloudCategories_add, cloudCategories_delete]);
+  }, [isCloudConnected, netInfo, vaultUnlocked, cloudCategories_add, cloudCategories_delete]);
 
   ///////////////////////////////////
   // Pending local changes checker
@@ -258,7 +336,7 @@ export default function SyncOnProvider(): null {
 
   useEffect(() => {
     // if not connected correctly or if internet connectivity is lost (offline sync)
-    if (!isCloudConnected || !netInfo?.isConnected) {
+    if (!isCloudConnected || !netInfo?.isConnected || !vaultUnlocked) {
       return;
     }
 
@@ -320,7 +398,7 @@ export default function SyncOnProvider(): null {
       if (tDebounceNotes.current) clearTimeout(tDebounceNotes.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCloudConnected, netInfo, cloudNotes_add, cloudNotes_delete, cloudNotes_detach]);
+  }, [isCloudConnected, netInfo, vaultUnlocked, cloudNotes_add, cloudNotes_delete, cloudNotes_detach]);
 
   return null;
 }

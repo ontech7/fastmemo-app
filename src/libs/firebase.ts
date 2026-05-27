@@ -2,6 +2,7 @@ import { configs } from "@/configs";
 import { defaultCategory } from "@/configs/default";
 import { getDeviceInfo } from "@/libs/device";
 import type { CloudSettings } from "@/types";
+import { isVaultDoc, VAULT_VERSION, type VaultDoc } from "@/utils/vault";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { FirebaseApp } from "firebase/app";
 import { deleteApp, getApp, getApps, initializeApp } from "firebase/app";
@@ -10,9 +11,11 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocFromServer,
   getDocsFromServer,
   getFirestore,
   query,
+  runTransaction,
   setDoc,
   where,
   type DocumentData,
@@ -84,8 +87,12 @@ export const COLLECTIONS = {
   various: {
     handshake: "handshake",
     connectedDevices: "connectedDevices",
+    vault: "vault",
   },
 } as const;
+
+/** Single document holding the vault's encryption metadata (salt, wrapped keys, canary). */
+export const VAULT_DOC_ID = "config";
 
 export const Handshake = {
   Fail: 0,
@@ -584,6 +591,99 @@ export const getCollectionIdentifiersInCloud = async (collection: string): Promi
     console.log(e);
     return null;
   }
+};
+
+/** Distinguishes a genuinely missing vault from a read that failed (offline /
+ * transient). Critical: callers that CREATE a vault must never treat "error" as
+ * "absent", or a transient failure would overwrite an existing vault and make
+ * all notes undecryptable. */
+export type VaultReadStatus = "present" | "absent" | "error";
+
+/**
+ * Error-aware vault read. Unlike getElementInCloud (which maps any error to
+ * "not present"), this reports "error" so create/migrate paths can refuse to
+ * proceed when they cannot prove the vault is truly absent. A present-but-
+ * malformed doc is also reported as "error" so we never clobber it.
+ */
+export const readVault = async (): Promise<{ status: VaultReadStatus; vault: VaultDoc | null }> => {
+  const { db } = retrieveFirebase();
+  if (db == null) return { status: "error", vault: null };
+
+  try {
+    // MUST read from the server, not Firestore's local cache: after another
+    // device resets/replaces the vault, a cached copy of the OLD vault doc still
+    // matches this device's stale DEK, so cross-device reset detection would
+    // silently miss it (and keep missing it across restarts, since the cache is
+    // persisted). Offline => getDocFromServer throws => caught below => "error",
+    // which callers correctly treat as "skip" (never lock or create on it).
+    const snap = await getDocFromServer(doc(db, COLLECTIONS.various.vault, VAULT_DOC_ID));
+    if (!snap.exists()) return { status: "absent", vault: null };
+    const data = snap.data();
+    if (!isVaultDoc(data)) return { status: "error", vault: null };
+    // A vault written by a newer app version may use a KDF/format this build
+    // can't handle — treat as error ("update the app") rather than failing to
+    // unlock or clobbering it.
+    if (typeof data.version === "number" && data.version > VAULT_VERSION) return { status: "error", vault: null };
+    return { status: "present", vault: data };
+  } catch (e) {
+    console.log("readVault error:", e);
+    return { status: "error", vault: null };
+  }
+};
+
+/**
+ * Atomically create the vault doc only if one does not already exist. Prevents
+ * two devices (or a stale "absent" read) from overwriting each other's vault and
+ * orphaning the DEK. Returns "exists" if another device won the race.
+ */
+export const createVaultExclusive = async (vault: VaultDoc): Promise<"created" | "exists" | "error"> => {
+  const { db } = retrieveFirebase();
+  if (db == null) return "error";
+
+  try {
+    return await runTransaction(db, async (tx) => {
+      const ref = doc(db, COLLECTIONS.various.vault, VAULT_DOC_ID);
+      const snap = await tx.get(ref);
+      if (snap.exists()) return "exists" as const;
+      tx.set(ref, vault);
+      return "created" as const;
+    });
+  } catch (e) {
+    console.log("createVaultExclusive error:", e);
+    return "error";
+  }
+};
+
+/**
+ * Read the vault document (encryption metadata) for the connected Firebase
+ * project. Returns null when no vault has been set up yet OR on a read error;
+ * use readVault() when the difference matters (i.e. before creating one).
+ */
+export const getVault = async (): Promise<VaultDoc | null> => {
+  const res = await getElementInCloud({
+    collection: COLLECTIONS.various.vault,
+    identifier: VAULT_DOC_ID,
+  });
+  return res.isPresent && isVaultDoc(res.data) ? res.data : null;
+};
+
+/** Write/overwrite the vault document. Does not bump the sync clock (not user data). */
+export const setVault = async (vault: VaultDoc): Promise<boolean> => {
+  return setElementInCloud({
+    collection: COLLECTIONS.various.vault,
+    identifier: VAULT_DOC_ID,
+    payload: vault,
+    noUpdateLastSync: true,
+  });
+};
+
+/** Remove the vault document (used by an explicit "reset vault" / forgot-everything flow). */
+export const deleteVault = async (): Promise<boolean> => {
+  return deleteElementInCloud({
+    collection: COLLECTIONS.various.vault,
+    identifier: VAULT_DOC_ID,
+    noUpdateLastSync: true,
+  });
 };
 
 /**

@@ -587,6 +587,159 @@ never trust a model over observed device state.
 
 ---
 
+### LL-023: Fail-soft reads + fail-soft decrypt feeding irreversible writes = silent data loss
+
+**Date:** 2026-05-27  
+**Severity:** Critical  
+**Category:** Bug  
+**What happened:** While building per-vault E2E encryption (ADR-012), an audit found several paths where a _soft_ failure (a
+Firestore read that errored or returned empty, or a decrypt that produced garbage) was treated as _authoritative truth_ and then
+fed into an _irreversible_ write, destroying notes or categories:
+
+- **Migration:** `migrateLegacyVault` decrypted legacy notes with the global key and overwrote them unconditionally. An empty or
+  wrong legacy key destroyed note bodies, and a retry was non-idempotent (re-encrypted already-encrypted content).
+- **Transient read = "absent":** a failed `readVault` was indistinguishable from "no vault yet", so a network blip could trigger
+  vault _creation_ that overwrote a real vault.
+- **Empty/failed cloud read wiped local:** `retrieveCloudData` dispatched `setNotes(fromSync)` / `setCategories(fromSync)` even
+  when the read failed or returned 0 rows while local still had data -- `setCategories` _replaces_ local categories, so one
+  transient failure wiped every user category and stripped every note's category association on the next upload.
+
+**Root cause:** Reads and decrypts were modeled as binary (got data / got nothing) instead of tri-state (present / absent /
+error), and "nothing" was allowed to drive destructive writes.
+
+**Fix:**
+
+- `readVault()` returns tri-state **present / absent / error**; `probeVault` propagates `error`; create/migrate proceed **only
+  on proven absence**; every caller (handshake, `requestVaultAccess`, connect UI, `SyncOnProvider`) bails on `error`.
+- `migrateLegacyVault` writes the vault **first** (atomic `createVaultExclusive`), then runs a **non-destructive** sweep: skip
+  any note that doesn't decrypt (`tryDecryptNote`), and `if (!legacyKey) continue` so an empty key never overwrites.
+- `retrieveCloudData` guards every read with `categoriesReadOk` / `notesReadOk` flags and **never** dispatches the
+  replace-everything sync actions on a failed/empty read while local still holds data. Note-category reassignment is gated on
+  `categoriesReadOk`.
+
+**Rule:** Model every cloud read and every decrypt as **tri-state (present / absent / error)**, never binary. An `error` or
+`empty` result must never drive a destructive or irreversible write (overwrite, replace-all, delete, re-encrypt). When in doubt,
+**skip and keep local** -- a missed sync self-heals on the next tick; a wrongful overwrite is permanent. Extends NEVER #15.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-05-27 **Resolved in:** dev (per-vault E2E
+work)
+
+---
+
+### LL-024: AES-CBC is unauthenticated -- a wrong key decrypts to valid-looking garbage instead of throwing
+
+**Date:** 2026-05-27  
+**Severity:** Critical  
+**Category:** Bug  
+**What happened:** The vault work assumed a wrong decryption key would throw (CryptoJS does throw "Malformed UTF-8"
+_sometimes_). In reality, decrypting AES-CBC ciphertext with the wrong key yields syntactically valid UTF-8 garbage roughly 90%
+of the time **without throwing**. So a device with the wrong DEK (e.g. after another device reset the vault) would
+"successfully" decrypt notes into garbage and then re-upload that garbage as the new truth -- silent corruption.
+
+**Root cause:** AES-CBC provides confidentiality but **no authentication**. There is no built-in way to tell "right key" from
+"wrong key" at decrypt time. (Authenticated AES-GCM would solve this, but it is async/native-only and unusable here -- see
+ADR-012.)
+
+**Fix:** `CryptNote.encrypt` prepends an app-level auth marker `CONTENT_MAGIC = "=FMV1=enc="` to the plaintext before AES.
+`tryDecryptNote` (strict) requires the marker after decrypt and returns `null` otherwise, so wrong-key / foreign-DEK content is
+reliably detected and **skipped** (0 false-accepts over 500 wrong-key trials in `scripts/vault.test.mjs`). `CryptNote.decrypt`
+stays lenient (strips the marker if present, else returns the raw text) so it can still read legacy pre-marker notes during
+migration. The marker changed the wire format, so any DEK-encrypted notes written before the marker existed are unreadable and a
+test vault from that window must be reset.
+
+**Rule:** Never trust that a decrypt "succeeded" just because it didn't throw -- unauthenticated ciphers (AES-CBC) happily
+produce garbage on the wrong key. Carry an explicit authentication marker (or use an AEAD cipher) and **verify it before
+treating decrypted output as real**. Any decrypt feeding a write path must use the strict, marker-checked variant.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-05-27 **Resolved in:** dev (per-vault E2E
+work)
+
+---
+
+### LL-025: crypto-js needs `global.crypto.getRandomValues`, absent on Hermes/RN
+
+**Date:** 2026-05-27  
+**Severity:** Critical  
+**Category:** Platform  
+**What happened:** Every vault operation threw `Native crypto module could not be used to get secure random number` **on the
+phone**, while working fine on web/Tauri. The error came from `crypto-js` generating its internal IV/salt for AES/PBKDF2: it
+looks for `global.crypto.getRandomValues`, which the browser/WebView provides but **Hermes/React Native does not**. This single
+missing global was the real reason all native vault ops failed.
+
+**Root cause:** `crypto-js` was adopted (over WebCrypto/native GCM) because note encryption must be synchronous (ADR-012), but
+it silently depends on a Web Crypto global that RN's JS engine lacks.
+
+**Fix:** Added `react-native-get-random-values@1.11.0` and imported it as the **first line** of `src/app/_layout.tsx` (before
+any crypto-using module), which installs `global.crypto.getRandomValues` backed by the OS CSPRNG. It is a **native module**, so
+it requires a dev-client rebuild (`npx expo prebuild` + rebuild) -- the same constraint as `expo-crypto`.
+
+**Rule:** A pure-JS crypto library running on Hermes is not automatically self-contained -- it may depend on Web Crypto globals
+that RN lacks. When adding such a library, install the `react-native-get-random-values` polyfill at the app entry point and
+remember it is native (dev-client rebuild required). Verify crypto paths **on a device**, not just web/Tauri, because the
+WebView masks this class of bug.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-05-27 **Resolved in:** dev (per-vault E2E
+work)
+
+---
+
+### LL-026: Synchronous PBKDF2 blocks the JS thread, so a loading spinner never paints
+
+**Date:** 2026-05-27  
+**Severity:** Medium  
+**Category:** Bug  
+**What happened:** After tapping a vault action, the user got no visual feedback for ~1-2s, then a result. `setLoading(true)`
+was called immediately before the synchronous `crypto-js` PBKDF2 (100k iters), which blocks the JS thread. React never got a
+frame to render the spinner before the freeze, so the spinner appeared only _after_ the work finished (i.e. never,
+perceptually).
+
+**Root cause:** A synchronous CPU-bound operation in the same tick as a state update that is supposed to render a loading
+indicator -- the render is queued behind the blocking work.
+
+**Fix:** Added `src/utils/ui.ts` `yieldToUI()` (`new Promise(r => setTimeout(r, 50))`) and `await yieldToUI()` right after
+`setLoading(true)` in all four vault submit handlers, giving React a frame to paint the spinner (a native `ActivityIndicator`,
+which keeps animating on the UI thread during the freeze). Also `VaultButton` calls `Keyboard.dismiss()` on press, since the
+full-screen spinner was rendering behind the open keyboard.
+
+**Rule:** When a synchronous, CPU-bound operation (PBKDF2, large encrypt/decrypt, heavy serialization) follows a `setLoading`
+state update, `await` a yield (`setTimeout(0/50)`) between them so the loading UI paints before the thread is blocked. Prefer a
+native `ActivityIndicator` (animates off the JS thread) over a JS-driven animation for the spinner.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-05-27 **Resolved in:** dev (per-vault E2E
+work)
+
+---
+
+### LL-027: Authoritative reads must bypass the Firestore client cache (getDocFromServer)
+
+**Date:** 2026-05-27  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** After resetting encryption on device A (which overwrites the `vault` doc with a new DEK/canary), device B
+sometimes did **not** show the "unlock" prompt — cross-device reset detection silently missed the change, and it kept missing it
+**even across app restarts**. The user reported it as intermittent ("a volte", "pur riavviando").
+
+**Root cause:** `readVault()` in `firebase.ts` read the vault doc with plain `getDoc()`, which can be served from Firestore's
+**local persisted cache**. Device B still had the OLD vault doc cached; that cached doc matches device B's stale DEK, so
+`dekMatchesVault()` returned true → "not stale" → no lock, no prompt. Because Firestore's cache is persisted to disk, the stale
+read survived restarts until the cache happened to refresh. Every other authoritative read in the app already used
+`getDocsFromServer`; `readVault` was the lone exception using the cache-eligible `getDoc`.
+
+**Fix:** Switched `readVault()` to `getDocFromServer(...)`. Offline now throws → caught → returns `"error"`, which all callers
+already treat as "skip" (never lock or create a vault on a non-definitive read), so there is no false lock/false create. This
+makes cross-device reset/replace detection reliable both during a live session (the 10s `syncToLocal` check) and on restart (the
+`SyncOnProvider` restore-effect validation).
+
+**Rule:** Any read whose result drives a security or data-integrity decision (vault presence, DEK staleness, "has another device
+changed this?") MUST use a server read (`getDocFromServer` / `getDocsFromServer`), never cache-eligible `getDoc`/`getDocs`. The
+Firestore local cache is for UX latency, not for authoritative cross-device state. Treat an offline/error read as "unknown →
+skip", not as a definitive answer.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-05-27 **Resolved in:** dev (per-vault E2E
+work)
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

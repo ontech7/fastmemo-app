@@ -76,16 +76,22 @@ EXPO_PUBLIC_ENV="PROD"
 # Cloud sync API URL (optional - leave empty if not using external API)
 EXPO_PUBLIC_API_URL=""
 
-# Secret key for encryption (generate a strong random string)
+# Legacy migration key (only decrypts pre-encryption-password cloud data; see note below)
 SECRET_KEY="your-secret-key-here"
 
 # Sentry (optional - for error tracking)
 SENTRY_AUTH_TOKEN=""
 ```
 
-### Generating a Secret Key
+### About `SECRET_KEY`
 
-You can generate a secure secret key using:
+> Cloud sync now uses **per-vault end-to-end encryption**: the encryption key is derived on-device from a user-chosen
+> **encryption password** and is never stored in the cloud or baked into the build (see [Cloud Sync](CLOUD_SYNC.md)).
+> `SECRET_KEY` is **not** the encryption boundary anymore — it is only the legacy key used to migrate data that was encrypted by
+> older builds (pre-encryption-password). New self-hosted deployments can leave it set to any value during the migration window;
+> it is removed once migration is complete.
+
+You can still generate a value with:
 
 ```bash
 openssl rand -base64 32
@@ -106,11 +112,13 @@ This creates a `dist` folder with all static files ready for deployment.
 ### Option A: Vercel (Recommended)
 
 1. Install Vercel CLI:
+
    ```bash
    npm install -g vercel
    ```
 
 2. Deploy:
+
    ```bash
    vercel --prod
    ```
@@ -120,6 +128,7 @@ This creates a `dist` folder with all static files ready for deployment.
 ### Option B: Netlify
 
 1. Install Netlify CLI:
+
    ```bash
    npm install -g netlify-cli
    ```
@@ -213,11 +222,11 @@ Each user provides their own Firebase credentials, making the app fully decentra
 
 When deploying to platforms like Vercel or Netlify, set these environment variables in the platform's dashboard:
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `EXPO_PUBLIC_ENV` | Environment mode (`DEV`, `STAGE`, `PROD`) | Yes |
-| `SECRET_KEY` | Encryption key for cloud sync | Yes (if using cloud sync) |
-| `SENTRY_AUTH_TOKEN` | Sentry authentication token | No |
+| Variable            | Description                                             | Required                        |
+| ------------------- | ------------------------------------------------------- | ------------------------------- |
+| `EXPO_PUBLIC_ENV`   | Environment mode (`DEV`, `STAGE`, `PROD`)               | Yes                             |
+| `SECRET_KEY`        | Legacy migration key (not the E2E key — see note in §4) | Yes during the migration window |
+| `SENTRY_AUTH_TOKEN` | Sentry authentication token                             | No                              |
 
 ## 9. Updating the Application
 
@@ -258,7 +267,9 @@ npx expo export --platform web
 
 1. **HTTPS**: Always serve your application over HTTPS
 2. **Firebase Rules**: Implement proper Firestore security rules for production
-3. **Secret Key**: Use a strong, unique secret key and never expose it publicly
+3. **Encryption**: Cloud data is end-to-end encrypted per-vault from a user-chosen password (see [Cloud Sync](CLOUD_SYNC.md)).
+   The `SECRET_KEY` is only a legacy migration key, not the security boundary — but still treat it as a secret while it is in
+   use
 4. **Content Security Policy**: Consider adding CSP headers to your server configuration
 
 ## Support

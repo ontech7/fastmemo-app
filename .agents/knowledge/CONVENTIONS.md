@@ -240,14 +240,21 @@ export const getNotesFilteredPerCategory = (category: Category, showHidden: bool
 
 ### Cloud Sync Outbox Pattern
 
-Local mutations queue data for cloud sync via `only_if_cloudConnected()`:
+Local mutations queue data for cloud sync via `only_if_cloudConnected()`, but only when the **vault is unlocked**
+(`isVaultUnlocked()` reads the in-memory DEK from `libs/vaultSession`):
 
 ```ts
 // Inside reducer (mutates Immer draft):
 only_if_cloudConnected(state as unknown as RootState, () => {
-  state.cloud.items.add[note.id] = CryptNote.encrypt(note, secretKey);
+  if (!isVaultUnlocked()) return; // no DEK -> cannot encrypt; do not queue plaintext
+  state.cloud.items.add[note.id] = CryptNote.encrypt(note); // CryptNote reads the DEK from vaultSession
 });
 ```
+
+`CryptNote.encrypt` takes no key argument anymore -- it reads the per-vault DEK from `vaultSession` and **fails closed** if the
+vault is locked (never emits plaintext). The old global `secretKey` argument and build-time `SECRET_KEY` are superseded by
+per-vault envelope encryption (see ADR-012); the legacy key survives only as the migration `legacyKey` and is removed after the
+migration window. Deletes/detaches use a content-stripped `deletionStub` so they need no DEK and propagate even while locked.
 
 Thunks drain the outbox, and `extraReducers` cleans up on fulfillment. **Do not replicate this pattern in new reducers** -- the
 cloud sync queuing should ideally move to middleware.
@@ -600,6 +607,34 @@ reads, writes, and deletes.
 | Full initial sync (100 notes)   | ~100 reads + ~100 writes          |
 | Wipe all notes from cloud       | N deletes (1 per note)            |
 
+### End-to-End Encryption (per-vault) -- safety rules
+
+Cloud encryption uses a per-vault envelope scheme (ADR-012). The encryption key (DEK) lives only in `libs/vaultSession`
+(in-memory + secure-storage cache), never in Redux or Firestore. When touching any cloud read/decrypt/write path, follow these
+hard rules (each maps to a lesson learned):
+
+1. **Tri-state every read.** A Firestore read is `present | absent | error`, never a boolean. Only act destructively (create,
+   overwrite, replace-all, delete) on a **proven** state; bail on `error`, and never let an empty/failed read wipe local data.
+   See LL-023 and `readVault()` / `probeVault` / `retrieveCloudData` guards.
+2. **Verify before trusting a decrypt.** AES-CBC produces valid-looking garbage on the wrong key without throwing. Use the
+   strict, marker-checked `tryDecryptNote` (requires `CONTENT_MAGIC`) on any path that feeds a write; **skip** what doesn't
+   verify rather than storing/re-encrypting it. `CryptNote.decrypt` is lenient only for reading legacy pre-marker notes. See
+   LL-024.
+3. **Migration is non-destructive and idempotent.** Create the vault first (atomic), then sweep: skip notes that don't decrypt,
+   and treat an empty legacy key as "skip, never overwrite". Re-running must not corrupt already-migrated data.
+4. **Encrypt fails closed.** `CryptNote.encrypt` reads the DEK from `vaultSession` and throws if locked; never emit plaintext as
+   if it were ciphertext. Gate cloud queuing on `isVaultUnlocked()`.
+5. **Reset/recreate changes the DEK; password change does not.** Other devices detect a new DEK via the canary
+   (`dekMatchesVault`) and re-lock; password change re-wraps the same DEK so it must NOT trigger a re-lock. Detection reads the
+   vault with a **server read** (`readVault` → `getDocFromServer`), never the Firestore cache — a cached old vault would mask
+   the reset and survive restarts (see LL-027).
+6. **Crypto must be synchronous and cross-platform.** Use `crypto-js` (PBKDF2-SHA256 + AES) with `@/utils/secureRandom` for
+   randomness. Do not reach for WebCrypto (async, native-absent) or a native GCM module (no Tauri WebView). The
+   `react-native-get-random-values` polyfill must stay the first import in `_layout.tsx` (LL-025), and any synchronous KDF must
+   `await yieldToUI()` after `setLoading(true)` so the spinner paints (LL-026). PBKDF2 (key derivation) runs only at
+   setup/unlock/reset/password-change — it is slow on Hermes (no JIT) but never per note; per-note `CryptNote.encrypt` is plain
+   AES with the cached DEK and cannot lose notes (local-first save + synchronous encrypt-into-outbox + retried upload).
+
 ---
 
 ## Naming Conventions
@@ -654,6 +689,9 @@ reads, writes, and deletes.
 | 22  | Never perform encryption or expensive deterministic transforms inside reducers            | Use middleware/thunks. Reducers must stay pure and fast (see LL-017)                                                             |
 | 23  | Never pass object literals as `FlashList` / `FlatList` `extraData`                        | Use primitives or stable memoized objects; inline literals defeat row memoization (see LL-019)                                   |
 | 24  | Never subscribe imperative event listeners with unstable callback deps                    | Use a ref for the callback and subscribe once with `[]` deps (see LL-020)                                                        |
+| 25  | Never let an errored/empty cloud read drive a destructive write                           | Reads are tri-state (present/absent/error); skip-and-keep-local on doubt, a missed sync self-heals (see LL-023)                  |
+| 26  | Never trust a decrypt that didn't throw                                                   | AES-CBC yields valid-looking garbage on the wrong key; verify the `CONTENT_MAGIC` marker before using output (see LL-024)        |
+| 27  | Never read authoritative cross-device state with cache-eligible `getDoc`/`getDocs`        | Use `getDocFromServer`/`getDocsFromServer`; the Firestore cache serves stale data and survives restarts (see LL-027)             |
 
 ### ALWAYS
 

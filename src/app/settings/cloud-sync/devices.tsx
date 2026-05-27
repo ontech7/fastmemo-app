@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.xl,
   },
   headerTitle: {
-    fontSize: FONTSIZE.intro,
+    fontSize: FONTSIZE.subtitle,
     fontFamily: FONT.semiBold,
     textAlign: "center",
     color: COLOR.textPrimary,

@@ -126,7 +126,7 @@ costs.
 
 **Status:** Accepted  
 **Context:** Need routing that maps to URL paths (for web) and supports deep linking.  
-**Decision:** expo-router 5.1 with a single root `Stack` navigator. All 26 screens are registered in `_layout.tsx` with no
+**Decision:** expo-router 5.1 with a single root `Stack` navigator. All 32 screens are registered in `_layout.tsx` with no
 nested layouts.  
 **Rationale:**
 
@@ -137,7 +137,7 @@ nested layouts.
 
 **Trade-offs:**
 
-- The root layout enumerates all 26 screens -- becomes unwieldy as the app grows
+- The root layout enumerates all 32 screens -- becomes unwieldy as the app grows
 - No nested navigation groups (could be added later with `_layout.tsx` in subdirectories)
 - All screens manage their own headers (no shared header from React Navigation)
 
@@ -145,7 +145,7 @@ nested layouts.
 
 ## ADR-007: Cloud Sync with Firebase Firestore + Encryption at Boundary
 
-**Status:** Accepted  
+**Status:** Accepted (encryption-key model **superseded by ADR-012**)  
 **Context:** Need optional cloud sync for notes/categories across devices, with end-to-end encryption.  
 **Decision:** Firebase Firestore as the cloud backend, with AES encryption applied at the Redux boundary before data enters the
 cloud outbox.  
@@ -161,7 +161,10 @@ cloud outbox.
 - Encryption in reducers is technically a side effect (violates pure reducer principle)
 - No real-time sync -- polling-based (interval + app foreground triggers)
 - Device limit enforced client-side
-- Secret key stored in Redux state and synced -- if lost, encrypted data is unrecoverable
+
+**Superseded part:** The original design stored a single global build-time `SECRET_KEY` (shared by every install, embedded in
+the bundle) and uploaded note titles in plaintext. That key model is replaced by the per-vault envelope scheme in **ADR-012**.
+The Firestore backend, outbox pattern, and boundary-encryption placement from this ADR are unchanged.
 
 ---
 
@@ -242,3 +245,56 @@ the provider tower.
 - Unconventional pattern -- a "component" that renders nothing
 - Could be a custom hook called from `_layout.tsx` instead
 - Mixing concerns: polling, debouncing, platform listeners, and dispatch all in one component
+
+---
+
+## ADR-012: Per-Vault End-to-End Encryption (Envelope DEK/KEK)
+
+**Status:** Accepted (supersedes the key model of ADR-007)  
+**Context:** ADR-007 encrypted cloud notes with a single global `SECRET_KEY` baked into the bundle and shared by every install.
+Anyone who extracted it from the app could decrypt any user's Firestore data. There is no Firebase Auth -- a Firebase project is
+a single "vault" that up to a few devices join by manually entering credentials. We needed the encryption key to live **nowhere
+except in the user's head**, without ever locking out a user who knows their password and without losing existing notes or
+categories on upgrade.  
+**Decision:** Per-vault **envelope encryption** keyed by a user-chosen **encryption password**, layered on top of the existing
+Firestore + outbox plumbing from ADR-007.
+
+- **DEK** (data encryption key): a random 256-bit key that encrypts notes. Created once, **never changes**.
+- **KEK** (key encryption key): `PBKDF2-SHA256(password, salt, 100k iters)` -- only _wraps_ the DEK. Changing the password
+  re-wraps the DEK (one tiny write); no note is re-encrypted and other devices keep working.
+- **Recovery key**: an independently generated high-entropy code (Crockford Base32, shown once at setup) that wraps a second
+  copy of the DEK, so a forgotten password is recoverable without a wipe.
+- **Canary**: a known plaintext sealed under the DEK, so a candidate password/DEK can be verified deterministically -- a correct
+  password is **never** wrongly rejected.
+- The DEK is cached per-device in **secure storage** (expo-secure-store on native / localforage on web), namespaced by
+  `projectId`, so each device unlocks **once**.
+- A Firestore `vault` doc (`COLLECTIONS.various.vault`, id `config`) stores only `version`, `kdf` params, `salt`, `wrappedDEK`,
+  `canary`, `recoverySalt`, `wrappedDEKRecovery`, timestamps. None of it leaks the password or DEK.
+
+**Rationale:**
+
+- **Crypto must be synchronous.** Note encryption runs inside Redux reducers (see LL-017), and the queue path is synchronous.
+  WebCrypto is async and absent on native RN; a native AES-GCM module would not run in the Tauri WebView. So we use
+  **`crypto-js`** (pure-JS, identical on iOS/Android/web/Tauri) for PBKDF2-SHA256 + AES, with secure randomness from
+  `@/utils/secureRandom` (OS CSPRNG), never CryptoJS's `Math.random`-backed `WordArray.random`.
+- **Authenticated by a marker, not by the cipher.** AES-CBC is unauthenticated, so a wrong key decrypts to valid-looking garbage
+  ~90% of the time without throwing. `CryptNote.encrypt` prepends `CONTENT_MAGIC = "=FMV1=enc="` before AES; `tryDecryptNote`
+  requires the marker, making wrong-key / foreign-DEK content reliably detectable so it is **skipped, never stored or
+  re-encrypted as garbage** (see LL-024).
+- **Non-destructive migration v1->v2.** Create the vault first (atomically), then sweep legacy notes: skip any note that can't
+  be decrypted with the legacy key, and treat an empty legacy key as "skip" (never overwrite). See LL-023.
+
+**Trade-offs:**
+
+- Pure-JS PBKDF2 at 100k iters blocks the JS thread ~1-2s on unlock/setup/password-change (acceptable: not per-note, and the UI
+  yields a frame so the spinner paints -- see LL-025/LL-026). Iteration count is stored in the vault doc so it can be raised
+  later without breaking old vaults.
+- Note **titles** and metadata (id/type/dates/category) remain plaintext for sync keying/ordering; full title encryption is a
+  deferred follow-up.
+- AES-CBC + an app-level marker is weaker than authenticated AES-GCM, chosen deliberately for cross-platform synchronous
+  interop; the marker covers the data-loss concern, not tamper-proofing.
+- Lose both password **and** recovery key => data is unrecoverable by design (true E2E).
+- A new layer of screens/state (vault setup/unlock/recover/change/reset) and a pub/sub session (`vaultSession`) that all sync is
+  gated on.
+
+---

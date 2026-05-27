@@ -9,7 +9,8 @@ import { retrieveDirtyNoteId } from "@/libs/registry";
 import { configs } from "@/configs";
 import { defaultCategory } from "@/configs/default";
 import { only_if_cloudConnected } from "@/libs/firebase";
-import { CryptNote } from "@/utils/crypt";
+import { getDEK, isVaultUnlocked } from "@/libs/vaultSession";
+import { CryptNote, tryDecryptNote } from "@/utils/crypt";
 import { createdAt_asc_sort } from "@/utils/sort";
 import { addCloudNotesAsync, deleteCloudNotesAsync, detachCloudNotesAsync, wipeNotes } from "./thunks/notes";
 
@@ -30,19 +31,40 @@ const initialState: NotesState = {
   },
 };
 
-/** Queue a note for cloud upload — unless it is an offline (device-only) note. */
+/**
+ * Queue a note for cloud upload — unless it is an offline (device-only) note.
+ * Gated on an unlocked vault: with the vault locked we cannot encrypt, so we
+ * skip queueing rather than leak plaintext. Such notes are picked up by the
+ * full resync that runs right after the vault is unlocked on connect.
+ */
 const queueCloudAdd = (state: NotesState, note: Note): void => {
   if (note.local) return;
   only_if_cloudConnected(() => {
+    if (!isVaultUnlocked()) return;
     state.cloud.items.add[note.id] = CryptNote.encrypt(note);
   });
+};
+
+/**
+ * A delete/detach only needs the note id downstream (deleteElementInCloud by id,
+ * and consumers read only `id`). So we queue a content-stripped stub instead of
+ * an encrypted note: it needs no DEK (works even while the vault is locked) and
+ * never leaks plaintext content into the cloud fan-out doc.
+ */
+const deletionStub = (note: Note): Note => {
+  const stub = { ...note } as Record<string, unknown>;
+  delete stub.text;
+  delete stub.list;
+  delete stub.columns;
+  delete stub.tabs;
+  return stub as unknown as Note;
 };
 
 /** Queue a note for cloud deletion — unless it is an offline (device-only) note. */
 const queueCloudDelete = (state: NotesState, note: Note): void => {
   if (note.local) return;
   only_if_cloudConnected(() => {
-    state.cloud.items.delete[note.id] = CryptNote.encrypt(note);
+    state.cloud.items.delete[note.id] = deletionStub(note);
   });
 };
 
@@ -237,11 +259,17 @@ const notesSlice = createSlice({
       const { notes, fromSync } = action.payload;
 
       if (fromSync) {
+        // never resurrect a note the user has trashed locally but whose cloud
+        // deletion hasn't propagated yet (e.g. it was deleted while the vault was
+        // locked, so the delete is still queued)
+        const trashedIds = new Set(state.temporaryItems.map((n) => n.id));
+        const incoming = notes.filter((n) => !trashedIds.has(n.id));
+
         // a cloud reconcile must never drop device-only notes: keep the local
         // ones that the incoming cloud set does not (and must not) contain
-        const incomingIds = new Set(notes.map((n) => n.id));
+        const incomingIds = new Set(incoming.map((n) => n.id));
         const offlineOnly = state.items.filter((note) => note.local && !incomingIds.has(note.id));
-        state.items = [...notes, ...offlineOnly];
+        state.items = [...incoming, ...offlineOnly];
       } else {
         state.items = [...notes];
       }
@@ -335,10 +363,17 @@ const notesSlice = createSlice({
     },
 
     addLocalNotes: (state, action: PayloadAction<Record<string, Note>>) => {
+      const dek = getDEK();
+      if (!dek) return; // no key -> can't decrypt incoming notes; ignore until unlocked
+
       Object.values(action.payload)
         .sort(createdAt_asc_sort)
         .forEach((cloudNote) => {
-          const note = CryptNote.decrypt(cloudNote);
+          // skip notes we can't decrypt (encrypted under a different DEK): never
+          // store ciphertext as plaintext, or the next edit re-encrypts garbage
+          const note = tryDecryptNote(cloudNote, dek);
+          if (!note) return;
+
           const idx = state.items.findIndex((n) => n.id === note.id);
           if (idx === -1) {
             state.items.unshift(note);
@@ -384,7 +419,7 @@ const notesSlice = createSlice({
       note.local = true;
 
       only_if_cloudConnected(() => {
-        state.cloud.items.detach[note.id] = CryptNote.encrypt(note);
+        state.cloud.items.detach[note.id] = deletionStub(note);
       });
     },
 

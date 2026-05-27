@@ -1,4 +1,5 @@
 import BackButton from "@/components/buttons/BackButton";
+import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
@@ -7,17 +8,26 @@ import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import { useCloudSync } from "@/hooks/useCloudSync";
 import useNetInfo from "@/hooks/useNetInfo";
+import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
+import { useVaultProgress } from "@/hooks/useVaultProgress";
+import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
+import { probeVault } from "@/libs/vaultManager";
 import { openUrl } from "@/utils/openUrl";
 import { toast } from "@/utils/toast";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import {
   ArrowPathIcon,
   CheckIcon,
   DevicePhoneMobileIcon,
+  ExclamationTriangleIcon,
   InformationCircleIcon,
+  KeyIcon,
+  LockOpenIcon,
   PencilIcon,
+  ShieldCheckIcon,
 } from "react-native-heroicons/outline";
 
 export default function CloudSyncScreen() {
@@ -25,8 +35,30 @@ export default function CloudSyncScreen() {
 
   const { unlockWithSecret } = useSecret();
   const netInfo = useNetInfo();
+  const router = useRouter();
+  const vaultUnlocked = useVaultUnlocked();
+  const progress = useVaultProgress();
 
   const { methods, state, cloudSettings } = useCloudSync();
+
+  // When connected but no key is loaded yet, find out whether encryption has
+  // ever been set up, so the action reads "Unlock" (vault exists) vs "Turn on
+  // encryption" (legacy data / first time). null = still checking.
+  const [vaultExists, setVaultExists] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!state.isConnected || vaultUnlocked || !netInfo?.isConnected) return;
+    let active = true;
+    probeVault().then((probe) => {
+      if (!active) return;
+      // Only commit to a definitive answer; on "error" leave it null so neither
+      // the unlock nor the (potentially destructive) setup CTA is shown.
+      if (probe.presence === "present") setVaultExists(true);
+      else if (probe.presence === "absent") setVaultExists(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [state.isConnected, vaultUnlocked, netInfo?.isConnected]);
 
   const isCloudSettingsComplete = cloudSettings.apiKey != "" && cloudSettings.projectId != "" && cloudSettings.appId != "";
 
@@ -38,9 +70,34 @@ export default function CloudSyncScreen() {
     methods.toggleCloudSync();
   };
 
+  const [showResyncDialog, setShowResyncDialog] = useState(false);
+
   return (
     <>
-      <LoadingSpinner visible={state.isLoading} color={COLOR.accentSoft} text={t("cloudsync.syncing_1")} />
+      <LoadingSpinner
+        visible={state.isLoading}
+        color={COLOR.accentSoft}
+        text={t(progress ? "cloudsync.vault.uploading" : "cloudsync.syncing_1")}
+        progress={progress}
+      />
+
+      <ComplexDialog
+        open={showResyncDialog}
+        adornmentStart={<ArrowPathIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}
+        title={t("cloudsync.resync_confirm_title")}
+        description={t("cloudsync.resync_confirm_desc")}
+        confirm={{
+          label: t("confirm"),
+          handler: () => {
+            setShowResyncDialog(false);
+            methods.syncCloudData(false);
+          },
+        }}
+        cancel={{
+          label: t("cancel"),
+          handler: () => setShowResyncDialog(false),
+        }}
+      />
 
       <SafeAreaView style={styles.container}>
         <AppBackground style={StyleSheet.absoluteFill} />
@@ -60,7 +117,7 @@ export default function CloudSyncScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scroll}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
           <View style={styles.sectionWrapper}>
             <View style={styles.sectionList}>
               <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
@@ -80,6 +137,8 @@ export default function CloudSyncScreen() {
                 </View>
               </View>
             </View>
+
+            <Text style={styles.encryptionHint}>{t("cloudsync.vault.enable_hint")}</Text>
 
             {state.isCloudSyncEnabled && (
               <>
@@ -159,6 +218,46 @@ export default function CloudSyncScreen() {
 
                 {state.isConnected && (
                   <>
+                    {!vaultUnlocked && vaultExists === false && (
+                      <View style={styles.ctaCard}>
+                        <Text style={styles.ctaText}>{t("cloudsync.vault.setup_cta_hint")}</Text>
+
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          disabled={state.isLoading || !netInfo?.isConnected}
+                          style={[styles.ctaButton, (state.isLoading || !netInfo?.isConnected) && styles.saveButton_disabled]}
+                          onPress={() => methods.requestVaultAccess()}
+                        >
+                          <ShieldCheckIcon size={20} color={COLOR.softWhite} />
+                          <Text style={styles.ctaButtonText}>{t("cloudsync.vault.setup_action")}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    {!vaultUnlocked && vaultExists === true && (
+                      <View style={styles.warningCard}>
+                        <View style={styles.warningHeader}>
+                          <ExclamationTriangleIcon size={20} color={COLOR.yellow} />
+                          <Text style={styles.warningTitle}>{t("cloudsync.vault.locked_cta_title")}</Text>
+                        </View>
+
+                        <Text style={styles.warningText}>{t("cloudsync.vault.locked_cta_hint")}</Text>
+
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          disabled={state.isLoading || !netInfo?.isConnected}
+                          style={[
+                            styles.warningButton,
+                            (state.isLoading || !netInfo?.isConnected) && styles.saveButton_disabled,
+                          ]}
+                          onPress={() => methods.requestVaultAccess()}
+                        >
+                          <LockOpenIcon size={20} color={COLOR.darkBlue} />
+                          <Text style={styles.warningButtonText}>{t("cloudsync.vault.unlock_action")}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
                     <View style={styles.sectionWrapper}>
                       <View style={styles.saveSettingsWrapper}>
                         <Text style={styles.saveSettingsText}>{t("cloudsync.edit")}</Text>
@@ -184,18 +283,46 @@ export default function CloudSyncScreen() {
 
                         <TouchableOpacity
                           activeOpacity={0.7}
-                          disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
+                          disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected || !vaultUnlocked}
                           style={[
                             styles.saveButton,
-                            (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) &&
+                            (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected || !vaultUnlocked) &&
                               styles.saveButton_disabled,
                           ]}
-                          onPress={() => methods.syncCloudData(false)}
+                          onPress={() => setShowResyncDialog(true)}
                         >
                           <ArrowPathIcon size={24} color={COLOR.softWhite} />
                         </TouchableOpacity>
                       </View>
                     </View>
+
+                    {vaultUnlocked && (
+                      <View style={styles.sectionWrapper}>
+                        <View style={styles.saveSettingsWrapper}>
+                          <Text style={styles.saveSettingsText}>{t("cloudsync.vault.changePassphrase")}</Text>
+
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            disabled={state.isLoading || !netInfo?.isConnected}
+                            style={[
+                              styles.saveButton,
+                              (state.isLoading || !netInfo?.isConnected) && styles.saveButton_disabled,
+                            ]}
+                            onPress={() =>
+                              unlockWithSecret((router, isFingerprint: boolean) => {
+                                if (isFingerprint) {
+                                  router.push("/settings/cloud-sync/vault-change");
+                                } else {
+                                  router.replace("/settings/cloud-sync/vault-change");
+                                }
+                              }, "none")
+                            }
+                          >
+                            <KeyIcon size={24} color={COLOR.softWhite} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
 
                     <View style={styles.sectionWrapper}>
                       <View style={styles.saveSettingsWrapper}>
@@ -223,6 +350,29 @@ export default function CloudSyncScreen() {
                         </TouchableOpacity>
                       </View>
                     </View>
+
+                    {vaultUnlocked && (
+                      <View style={styles.sectionWrapper}>
+                        <View style={styles.saveSettingsWrapper}>
+                          <Text style={styles.saveSettingsText}>{t("cloudsync.vault.resetVault")}</Text>
+
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            disabled={state.isLoading || !netInfo?.isConnected}
+                            style={[
+                              styles.saveButton,
+                              styles.resetButton,
+                              (state.isLoading || !netInfo?.isConnected) && styles.saveButton_disabled,
+                            ]}
+                            onPress={() =>
+                              unlockWithSecret((_, isFingerprint: boolean) => methods.requestReset(!isFingerprint), "none")
+                            }
+                          >
+                            <ExclamationTriangleIcon size={24} color={COLOR.softWhite} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
                   </>
                 )}
               </>
@@ -245,6 +395,9 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: PADDING_MARGIN.lg,
   },
+  scrollContent: {
+    paddingBottom: PADDING_MARGIN.xxl,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -255,7 +408,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flexGrow: 1,
     textAlign: "center",
-    fontSize: FONTSIZE.intro,
+    fontSize: FONTSIZE.subtitle,
     fontFamily: FONT.semiBold,
     color: COLOR.textPrimary,
     letterSpacing: -0.3,
@@ -341,5 +494,86 @@ const styles = StyleSheet.create({
   },
   saveButton_disabled: {
     opacity: 0.5,
+  },
+  resetButton: {
+    backgroundColor: COLOR.darkImportant,
+  },
+  encryptionHint: {
+    marginTop: PADDING_MARGIN.md,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    lineHeight: 18,
+  },
+  ctaCard: {
+    marginTop: PADDING_MARGIN.lg,
+    padding: PADDING_MARGIN.lg,
+    backgroundColor: COLOR.surface,
+    borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLOR.accent,
+  },
+  ctaText: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.medium,
+    lineHeight: 20,
+    marginBottom: PADDING_MARGIN.lg,
+  },
+  ctaButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: PADDING_MARGIN.sm,
+    paddingVertical: PADDING_MARGIN.md + 2,
+    borderRadius: BORDER.big,
+    backgroundColor: COLOR.accent,
+    ...SHADOW.fab,
+  },
+  ctaButtonText: {
+    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.paragraph,
+  },
+  warningCard: {
+    marginTop: PADDING_MARGIN.lg,
+    padding: PADDING_MARGIN.lg,
+    backgroundColor: COLOR.surface,
+    borderRadius: BORDER.normal,
+    borderWidth: 1,
+    borderColor: COLOR.yellow,
+  },
+  warningHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+    marginBottom: PADDING_MARGIN.sm,
+  },
+  warningTitle: {
+    color: COLOR.yellow,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.paragraph,
+  },
+  warningText: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.medium,
+    lineHeight: 20,
+    marginBottom: PADDING_MARGIN.lg,
+  },
+  warningButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: PADDING_MARGIN.sm,
+    paddingVertical: PADDING_MARGIN.md + 2,
+    borderRadius: BORDER.big,
+    backgroundColor: COLOR.yellow,
+    ...SHADOW.fab,
+  },
+  warningButtonText: {
+    color: COLOR.darkBlue,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.paragraph,
   },
 });

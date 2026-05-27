@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: "center",
-    fontSize: FONTSIZE.intro,
+    fontSize: FONTSIZE.subtitle,
     fontFamily: FONT.semiBold,
     color: COLOR.textPrimary,
     letterSpacing: -0.3,
