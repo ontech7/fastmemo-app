@@ -371,6 +371,7 @@ const zh = {
     information: "信息",
     developer: "开发商",
     website: "网站",
+    openLink: "打开链接",
   },
   ai: {
     title: "AI助手",
@@ -477,6 +478,17 @@ const zh = {
     title: "帮助",
     search_placeholder: "有什么可以帮您的？",
     no_results: "没有结果，请换个词试试。",
+    search_placeholders: [
+      "搜索或描述你的需求…",
+      "如何创建笔记？",
+      "工具栏有什么用？",
+      "云同步如何工作？",
+      "如何恢复已删除的笔记？",
+    ],
+    ai_thinking: "正在用 AI 搜索…",
+    ai_results: "AI 结果 · 点按清除",
+    ai_invite_title: "没找到你想要的？",
+    ai_invite_subtitle: "用你自己的话描述，让 AI 助手帮你找到合适的主题。",
     cat_notes: "笔记",
     cat_editor: "编辑器与格式",
     cat_categories: "分类",
@@ -502,7 +514,7 @@ const zh = {
       text_4_0: "点击右侧的叉号可删除该事项。",
       text_5_0: "底部的按钮可以让您：",
       text_6_0: "• 添加 — 向清单中添加新事项。",
-      text_7_0: "• 隐藏/显示已勾选 — 隐藏或重新显示您已勾选的事项。",
+      text_7_0: "• 切换模式 — 在列表（经典的待办清单）和步骤（按顺序完成的带编号顺序列表）之间切换。",
       text_8_0: "• 全部删除 — 删除清单中的所有事项。",
       text_9_0: "只需返回主页即可保存。",
     },
@@ -648,6 +660,7 @@ const zh = {
       text_1_0:
         "您可以通过连接自己的 Google Firebase 项目并启用同步，在各设备间同步笔记。没有 Fast Memo 中央服务器——您的数据只存在于您自己的 Firebase 中。",
       text_2_0: "您的笔记在上传前会在设备上进行端到端加密，因此除您之外没有人能读取它们。",
+      text_link: "阅读设置 Google Firebase 的分步指南 →",
     },
     what_encryption: {
       title: "我的笔记是如何加密的？",

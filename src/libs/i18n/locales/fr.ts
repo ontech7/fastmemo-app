@@ -372,6 +372,7 @@ const fr = {
     information: "Information",
     developer: "Développeur",
     website: "Site Internet",
+    openLink: "Ouvrir le lien",
   },
   ai: {
     title: "Assistant IA",
@@ -478,6 +479,17 @@ const fr = {
     title: "Aide",
     search_placeholder: "Comment pouvons-nous vous aider ?",
     no_results: "Aucun résultat. Essayez un autre mot.",
+    search_placeholders: [
+      "Cherchez ou décrivez ce dont vous avez besoin…",
+      "Comment créer une note ?",
+      "À quoi sert la barre d'outils ?",
+      "Comment fonctionne la synchronisation cloud ?",
+      "Comment récupérer une note supprimée ?",
+    ],
+    ai_thinking: "Recherche avec l'IA…",
+    ai_results: "Résultats IA · appuyez pour réinitialiser",
+    ai_invite_title: "Vous ne trouvez pas ce que vous cherchez ?",
+    ai_invite_subtitle: "Décrivez-le avec vos mots et laissez l'assistant IA trouver le bon sujet.",
     cat_notes: "Notes",
     cat_editor: "Éditeur et mise en forme",
     cat_categories: "Catégories",
@@ -504,7 +516,7 @@ const fr = {
       text_5_0: "Les boutons en bas vous permettent de :",
       text_6_0: "• Ajouter — ajouter un nouvel élément à la liste.",
       text_7_0:
-        "• Masquer/Afficher les éléments cochés — masquer ou faire réapparaître les éléments que vous avez déjà cochés.",
+        "• Changer de mode — basculez entre Liste (une liste de tâches classique) et Étapes (une liste numérotée et séquentielle à compléter dans l'ordre).",
       text_8_0: "• Tout supprimer — supprimer tous les éléments de la liste.",
       text_9_0: "Pour l'enregistrer, il suffit de revenir à la page d'accueil.",
     },
@@ -661,6 +673,7 @@ const fr = {
         "Vous pouvez synchroniser vos notes entre appareils en connectant votre propre projet Google Firebase et en activant la synchronisation. Il n'y a pas de serveur central Fast Memo — vos données vivent uniquement dans votre Firebase.",
       text_2_0:
         "Vos notes sont chiffrées de bout en bout sur votre appareil avant d'être envoyées, de sorte que personne d'autre que vous ne peut les lire.",
+      text_link: "Lire le guide pas à pas pour configurer Google Firebase →",
     },
     what_encryption: {
       title: "Comment mes notes sont-elles chiffrées ?",

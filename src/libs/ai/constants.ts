@@ -94,6 +94,24 @@ ws     ::= [ \\t\\n]*
 `.trim();
 
 /**
+ * GBNF grammar for a JSON array of integers (used by the Help intent search,
+ * which returns the indices of the matching help topics).
+ */
+export const JSON_INT_ARRAY_GRAMMAR = `
+root ::= "[" ws (int (ws "," ws int)*)? ws "]" ws
+int  ::= [0-9]+
+ws   ::= [ \\t\\n]*
+`.trim();
+
+/**
+ * System prompt for the Help intent search. The model only ever picks numbers
+ * from a provided list, so it can map a free-form question to existing help
+ * topics without being able to invent any.
+ */
+export const HELP_SEARCH_SYSTEM_PROMPT =
+  "You are a help search assistant for a note-taking app. The user describes what they need in their own words, in any language. From the numbered list of help topics below, pick the ones that best answer the user's need. Output ONLY a JSON array of the topic numbers, most relevant first, at most 6 numbers. If nothing is relevant, output an empty array []. No explanation, no extra text.";
+
+/**
  * System prompts for in-editor AI actions.
  * Each is a short directive prompt optimized for small models (Qwen 0.5B-3B).
  */
