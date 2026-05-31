@@ -7,7 +7,7 @@ import {
 } from "@/slicers/settingsSlice";
 import { formatDateTime } from "@/utils/date";
 import { webhook } from "@/utils/webhook";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Keyboard } from "react-native";
 import { KeyboardController } from "react-native-keyboard-controller";

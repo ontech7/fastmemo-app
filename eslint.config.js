@@ -59,6 +59,16 @@ module.exports = defineConfig([
       "react/react-in-jsx-scope": "off",
       "react/no-unescaped-entities": "off",
       "react/no-array-index-key": "off",
+      // React Compiler readiness rules newly enabled by eslint-config-expo v56
+      // (eslint-plugin-react-hooks v7). Kept as warnings rather than errors:
+      // - `immutability` false-fires on Reanimated worklet shared-value mutations
+      //   (e.g. `sharedValue.value = x`), which is the correct Reanimated API.
+      // - the others flag pre-existing patterns worth revisiting before enabling
+      //   React Compiler, but should not block linting today.
+      "react-hooks/immutability": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/purity": "warn",
       // Unused imports
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [

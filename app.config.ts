@@ -20,7 +20,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: appIcon,
   scheme: appSlug,
   userInterfaceStyle: "automatic",
-  newArchEnabled: true,
   backgroundColor,
   ios: {
     supportsTablet: true,
@@ -32,7 +31,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundImage: "./src/assets/images/adaptive-icon-bg.png",
       backgroundColor,
     },
-    edgeToEdgeEnabled: true,
     package: appBundle,
     blockedPermissions: [
       "android.permission.READ_MEDIA_IMAGES",
@@ -47,9 +45,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     "expo-router",
+    "expo-status-bar",
+    "expo-font",
+    "expo-image",
     "expo-image-picker",
     "expo-localization",
     "expo-secure-store",
+    "expo-sharing",
     [
       "expo-speech-recognition",
       {
@@ -68,7 +70,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     "llama.rn",
     [
-      "@sentry/react-native/expo",
+      "@sentry/react-native",
       {
         url: "https://sentry.io/",
         note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
