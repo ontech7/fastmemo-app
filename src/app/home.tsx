@@ -40,7 +40,7 @@ import { useVaultPrompt } from "@/hooks/useVaultPrompt";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -263,6 +263,13 @@ export default function HomeScreen() {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(0);
   const height = useSharedValue(1);
+  // Measured height of the row, so `main`'s collapse animates against a numeric
+  // maxHeight. An animated *percentage* maxHeight (`"100%"`) resolves unreliably
+  // on the New Architecture (Fabric): Yoga's percentage pass races with
+  // Reanimated's synchronous updates and stays stuck on a stale base, leaving
+  // `main` collapsed until some unrelated event (e.g. the keyboard showing)
+  // forces a relayout. A pixel value tracked via onLayout stays correct.
+  const containerHeight = useSharedValue(0);
 
   const animatedOpacity = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -272,9 +279,9 @@ export default function HomeScreen() {
     transform: [{ translateY: translateY.value }],
   }));
 
-  const animatedMaxHeight = useAnimatedStyle(() => ({
-    maxHeight: `${height.value * 100}%`,
-  }));
+  const animatedMaxHeight = useAnimatedStyle(() =>
+    containerHeight.value > 0 ? { maxHeight: containerHeight.value * height.value } : {}
+  );
 
   useEffect(() => {
     if (isDeleteMode) {
@@ -367,7 +374,12 @@ export default function HomeScreen() {
 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
         <SafeAreaView style={styles.safe}>
-          <View style={styles.row}>
+          <View
+            style={styles.row}
+            onLayout={(e) => {
+              containerHeight.value = e.nativeEvent.layout.height;
+            }}
+          >
             <Sidebar />
             <Animated.View style={[styles.main, animatedMaxHeight]}>
               <View style={styles.header}>
@@ -545,11 +557,7 @@ const styles = StyleSheet.create({
     borderColor: GLASS.border,
     bottom: -58,
     right: 110,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    boxShadow: "0px 7px 7px rgba(0,0,0,0.5)",
   },
   loadingText: {
     color: COLOR.softWhite,
