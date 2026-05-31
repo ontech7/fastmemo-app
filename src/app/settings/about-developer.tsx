@@ -1,12 +1,14 @@
+import authorImage from "@/assets/images/author.png";
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { openUrl } from "@/utils/openUrl";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { openUrl } from "@/utils/openUrl";
 import { ArrowTopRightOnSquareIcon } from "react-native-heroicons/outline";
-import authorImage from "@/assets/images/author.png";
+import { StarIcon } from "react-native-heroicons/solid";
 
 const DEVELOPER_NAME = "Andrea Losavio";
 const LINKEDIN_URL = "https://www.linkedin.com/in/andrea-losavio/";
@@ -15,6 +17,14 @@ const WEBSITE_URL = "https://www.andrealosavio.com";
 
 export default function AboutDeveloperScreen() {
   const { t } = useTranslation();
+
+  const githubStars = useGithubStars();
+
+  const links: { label: string; url: string; stars?: number | null }[] = [
+    { label: t("aboutdeveloper.website"), url: WEBSITE_URL },
+    { label: "LinkedIn", url: LINKEDIN_URL },
+    { label: "GitHub", url: GITHUB_URL, stars: githubStars },
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -47,49 +57,78 @@ export default function AboutDeveloperScreen() {
               <Text style={styles.sectionItemList_text}>{DEVELOPER_NAME}</Text>
             </View>
 
-            <View style={styles.sectionItemList}>
-              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => openUrl(WEBSITE_URL)}>
-                <Text style={styles.sectionItemList_title}>{t("aboutdeveloper.website")}</Text>
+            {links.map((link, index) => (
+              <View
+                key={link.label}
+                style={[styles.sectionItemList, index === links.length - 1 && styles.sectionItemList_last]}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  style={styles.link_button}
+                  accessibilityRole="link"
+                  accessibilityLabel={`${link.label} – ${t("aboutdeveloper.openLink")}`}
+                  onPress={() => openUrl(link.url)}
+                >
+                  <View style={styles.linkTitleWrapper}>
+                    <Text style={styles.sectionItemList_title}>{link.label}</Text>
 
-                <View style={styles.sectionItemList_textWrapper}>
-                  <Text style={styles.sectionItemList_text} numberOfLines={1}>
-                    Go to website
-                  </Text>
-                  <ArrowTopRightOnSquareIcon color={COLOR.textSecondary} size={18} />
-                </View>
-              </TouchableOpacity>
-            </View>
+                    {typeof link.stars === "number" && (
+                      <View style={styles.starBadge}>
+                        <StarIcon color={COLOR.yellow} size={13} />
 
-            <View style={styles.sectionItemList}>
-              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => openUrl(LINKEDIN_URL)}>
-                <Text style={styles.sectionItemList_title}>LinkedIn</Text>
+                        <Text style={styles.starCount}>{link.stars.toLocaleString()}</Text>
+                      </View>
+                    )}
+                  </View>
 
-                <View style={styles.sectionItemList_textWrapper}>
-                  <Text style={styles.sectionItemList_text} numberOfLines={1}>
-                    Go to website
-                  </Text>
-                  <ArrowTopRightOnSquareIcon color={COLOR.textSecondary} size={18} />
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
-              <TouchableOpacity activeOpacity={0.7} style={styles.link_button} onPress={() => openUrl(GITHUB_URL)}>
-                <Text style={styles.sectionItemList_title}>GitHub</Text>
-
-                <View style={styles.sectionItemList_textWrapper}>
-                  <Text style={styles.sectionItemList_text} numberOfLines={1}>
-                    Go to website
-                  </Text>
-                  <ArrowTopRightOnSquareIcon color={COLOR.textSecondary} size={18} />
-                </View>
-              </TouchableOpacity>
-            </View>
+                  <View style={styles.sectionItemList_textWrapper}>
+                    <Text style={styles.sectionItemList_text} numberOfLines={1}>
+                      {t("aboutdeveloper.openLink")}
+                    </Text>
+                    <ArrowTopRightOnSquareIcon color={COLOR.textSecondary} size={18} />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ))}
           </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+// Public repo whose star count is shown next to the GitHub link.
+const GITHUB_STARS_API = "https://api.github.com/repos/ontech7/fastmemo-app";
+
+/**
+ * Stargazers count for the FastMemo repo from the GitHub REST API. Returns null
+ * until loaded, or on any failure (offline, rate-limited, aborted) — the UI just
+ * omits the badge rather than surfacing an error. Unauthenticated (60 req/h per IP).
+ */
+function useGithubStars(): number | null {
+  const [stars, setStars] = useState<number | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(GITHUB_STARS_API, {
+      headers: { Accept: "application/vnd.github+json" },
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.stargazers_count === "number") {
+          setStars(data.stargazers_count);
+        }
+      })
+      .catch(() => {
+        /* offline / rate-limited / aborted — keep the badge hidden */
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  return stars;
 }
 
 /* STYLES */
@@ -191,5 +230,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     width: SIZE.full,
+  },
+  linkTitleWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  starBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER.rounded,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
+  },
+  starCount: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.medium,
+    fontSize: FONTSIZE.small,
   },
 });
