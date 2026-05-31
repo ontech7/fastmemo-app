@@ -15,10 +15,9 @@ import AppUpdateProvider from "@/providers/AppUpdateProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
 import { persistor, store } from "@/slicers/store";
 import { DialogProvider } from "@ontech7/react-native-dialog";
-import { useTheme } from "@react-navigation/native";
 import * as Sentry from "@sentry/react-native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useTheme } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
@@ -118,8 +117,10 @@ export default Sentry.wrap(function RootLayout() {
               fontSize: FONTSIZE.medium,
             },
             input: {
-              color: COLOR.textPrimary,
-              fontFamily: FONT.regular,
+              textInput: {
+                color: COLOR.textPrimary,
+                fontFamily: FONT.regular,
+              },
             },
             footer: {
               padding: PADDING_MARGIN.lg,
@@ -127,9 +128,11 @@ export default Sentry.wrap(function RootLayout() {
               gap: PADDING_MARGIN.sm,
             },
             action: {
-              color: COLOR.accentSoft,
-              fontSize: FONTSIZE.paragraph,
-              fontWeight: "600",
+              text: {
+                color: COLOR.accentSoft,
+                fontSize: FONTSIZE.paragraph,
+                fontWeight: "600",
+              },
             },
           }}
         >
