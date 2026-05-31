@@ -79,25 +79,17 @@ export const BLUR = {
 };
 
 export const SHADOW = {
+  // boxShadow is the cross-platform replacement for the deprecated shadow* props
+  // (shadowOpacity is folded into the color's alpha; elevation is no longer
+  // needed — boxShadow renders on Android too on the New Architecture).
   card: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
+    boxShadow: "0px 6px 12px rgba(0,0,0,0.35)",
   },
   fab: {
-    shadowColor: COLOR.accentMuted,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 18,
+    boxShadow: `0px -2px 18px ${COLOR.accentMuted}80`,
   },
   glow: {
-    shadowColor: COLOR.accentMuted,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.55,
-    shadowRadius: 16,
-    elevation: 8,
+    boxShadow: `0px 0px 16px ${COLOR.accentMuted}8C`,
   },
 } as const;
 

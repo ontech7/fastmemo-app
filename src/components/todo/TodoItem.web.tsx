@@ -145,7 +145,7 @@ export default function TodoItem({
   return (
     <div ref={setNodeRef} style={style}>
       <View style={styles.stepRow}>
-        <View style={styles.stepColumn} pointerEvents="box-none">
+        <View style={[styles.stepColumn, { pointerEvents: "box-none" }]}>
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => checkItem(item.id)}
@@ -168,7 +168,7 @@ export default function TodoItem({
           <View style={[styles.stepLine, isLast && styles.stepLineHidden]} />
 
           {isOngoing && (
-            <View style={styles.stepOngoingLabelWrap} pointerEvents="none">
+            <View style={[styles.stepOngoingLabelWrap, { pointerEvents: "none" }]}>
               <Text style={styles.stepOngoingLabel}>{t("note.ongoing")}</Text>
             </View>
           )}

@@ -212,8 +212,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
   return (
     <>
       <AnimatedPressable
-        style={[styles.fullscreenOverlay, backdropAnimatedStyle]}
-        pointerEvents={isOverlayOpen ? "auto" : "none"}
+        style={[styles.fullscreenOverlay, backdropAnimatedStyle, { pointerEvents: isOverlayOpen ? "auto" : "none" }]}
         onPress={closeOverlay}
       >
         <View style={styles.overlayContainer}>
@@ -231,8 +230,8 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
         </View>
       </AnimatedPressable>
 
-      <View style={styles.fabGroup} pointerEvents="box-none">
-        <Animated.View style={secondaryFabAnimatedStyle} pointerEvents={isDeleteMode ? "none" : "auto"}>
+      <View style={[styles.fabGroup, { pointerEvents: "box-none" }]}>
+        <Animated.View style={[secondaryFabAnimatedStyle, { pointerEvents: isDeleteMode ? "none" : "auto" }]}>
           <TouchableOpacity style={styles.fabSecondary} activeOpacity={0.7} onPress={toggleOverlay}>
             <Animated.View style={chevronAnimatedStyle}>
               <ChevronUpIcon size={20} color={COLOR.softWhite} />
@@ -247,8 +246,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
 
           {showTypeHint && (
             <Animated.View
-              style={[styles.fabHintBadge, { backgroundColor: hintColor }, hintAnimatedStyle]}
-              pointerEvents="none"
+              style={[styles.fabHintBadge, { backgroundColor: hintColor }, hintAnimatedStyle, { pointerEvents: "none" }]}
             >
               <HintIcon size={13} color={COLOR.darkBlue} />
             </Animated.View>

@@ -17,7 +17,8 @@ import { isStringEmpty } from "@/utils/string";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { InteractionManager, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { runWhenIdle } from "@/utils/idle";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PlusIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -48,7 +49,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   const [editorReady, setEditorReady] = useState(false);
 
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runWhenIdle(() => {
       setEditorReady(true);
     });
     return () => task.cancel();
@@ -338,8 +339,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: BORDER.small,
     borderTopRightRadius: BORDER.small,
     maxWidth: 160,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 2 },
   },
   tabActive: {
     backgroundColor: "#1e1e1e",

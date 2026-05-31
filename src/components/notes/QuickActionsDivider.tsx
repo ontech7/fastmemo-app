@@ -14,7 +14,7 @@ interface Props {
  * spans edge to edge (no side inset).
  */
 export default function QuickActionsDivider({ bottom }: Props) {
-  return <View style={[styles.divider, { bottom }]} pointerEvents="none" />;
+  return <View style={[styles.divider, { bottom, pointerEvents: "none" }]} />;
 }
 
 const styles = StyleSheet.create({

@@ -166,11 +166,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardWrapperFloating: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    boxShadow: "0px 4px 8px rgba(0,0,0,0.3)",
   },
   cardContent: {
     flex: 1,
