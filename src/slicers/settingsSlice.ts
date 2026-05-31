@@ -162,21 +162,27 @@ export const selectorWebhook_updateCategory = (state: RootState) => state.settin
 export const selectorWebhook_exportData = (state: RootState) => state.settings.webhooks.exportData;
 export const selectorWebhook_importData = (state: RootState) => state.settings.webhooks.importData;
 export const selectorWebhook_wipeData = (state: RootState) => state.settings.webhooks.wipeData;
+// Hoisted fallback defaults: returning a fresh object literal from a selector
+// gives a new reference on every call, which trips React-Redux's "selector
+// returned a different result with the same parameters" warning and forces
+// rerenders. A stable module-level constant fixes that.
+const DEFAULT_AI_ASSISTANT: AIAssistantSettings = {
+  enabled: false,
+  modelDownloaded: false,
+  selectedModel: "qwen-0.5b",
+  voiceOnly: false,
+};
 export const selectorAIAssistant = (state: RootState): AIAssistantSettings =>
-  state.settings.aiAssistant || {
-    enabled: false,
-    modelDownloaded: false,
-    selectedModel: "qwen-0.5b",
-    voiceOnly: false,
-  };
+  state.settings.aiAssistant || DEFAULT_AI_ASSISTANT;
+const DEFAULT_DEVELOPER_MODE: DeveloperModeSettings = {
+  enabled: false,
+  unlimitedTextSpace: false,
+  unlimitedKanbanColumns: false,
+  unlimitedTrashTime: false,
+  customAppIcon: null,
+};
 export const selectorDeveloperMode = (state: RootState): DeveloperModeSettings =>
-  state.settings.developerMode || {
-    enabled: false,
-    unlimitedTextSpace: false,
-    unlimitedKanbanColumns: false,
-    unlimitedTrashTime: false,
-    customAppIcon: null,
-  };
+  state.settings.developerMode || DEFAULT_DEVELOPER_MODE;
 const DEFAULT_NOTE_CREATION: NoteCreationSettings = {
   mode: "simple",
   smartType: "text",
@@ -184,19 +190,19 @@ const DEFAULT_NOTE_CREATION: NoteCreationSettings = {
 };
 export const selectorNoteCreation = (state: RootState): NoteCreationSettings =>
   state.settings.noteCreation || DEFAULT_NOTE_CREATION;
+const WEB_VOICE_RECOGNITION: VoiceRecognitionSettings = {
+  enabled: false,
+  interimResults: true,
+  continuous: true,
+  language: "system",
+};
+const DEFAULT_VOICE_RECOGNITION: VoiceRecognitionSettings = {
+  enabled: true,
+  interimResults: true,
+  continuous: true,
+  language: "system",
+};
 export const selectorVoiceRecognition = (state: RootState): VoiceRecognitionSettings =>
-  Platform.OS === "web"
-    ? {
-        enabled: false,
-        interimResults: true,
-        continuous: true,
-        language: "system",
-      }
-    : state.settings.voiceRecognition || {
-        enabled: state.settings.voiceRecognition?.enabled || true,
-        interimResults: state.settings.voiceRecognition?.interimResults || true,
-        continuous: state.settings.voiceRecognition?.continuous || true,
-        language: state.settings.voiceRecognition?.language || "system",
-      };
+  Platform.OS === "web" ? WEB_VOICE_RECOGNITION : state.settings.voiceRecognition || DEFAULT_VOICE_RECOGNITION;
 
 export default settingsSlice.reducer;
