@@ -16,10 +16,12 @@ import {
   removeDeviceFromDevicesToSync,
   type ConnectedDevice,
 } from "@/libs/firebase";
+import { triggerSyncNow } from "@/libs/registry";
+import { toast } from "@/utils/toast";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ComputerDesktopIcon, TrashIcon } from "react-native-heroicons/outline";
+import { ArrowPathIcon, ComputerDesktopIcon, TrashIcon } from "react-native-heroicons/outline";
 import Animated, {
   cancelAnimation,
   Easing,
@@ -123,6 +125,26 @@ export default function SyncedDevicesScreen() {
     setRefreshing(false);
   };
 
+  // Manually run this device's sync (pull pending + push pending) for the rare
+  // case automatic sync didn't fire, then refresh the list so the counts update.
+  const [syncing, setSyncing] = useState(false);
+
+  const syncCurrentDevice = async () => {
+    if (!netInfo?.isConnected) {
+      toast(t("noInternetConnection"));
+      return;
+    }
+    setSyncing(true);
+    try {
+      await triggerSyncNow();
+      await getDevices();
+    } catch (e) {
+      console.log("manual sync error:", e);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   useEffect(() => {
     if (netInfo?.isConnected) {
       getDevices();
@@ -134,7 +156,7 @@ export default function SyncedDevicesScreen() {
 
   return (
     <>
-      <LoadingSpinner visible={timeoutStates.loading.get()} color={COLOR.accentSoft} text={t("loading")} />
+      <LoadingSpinner visible={timeoutStates.loading.get() || syncing} color={COLOR.accentSoft} text={t("loading")} />
 
       <SafeAreaView style={styles.container}>
         <AppBackground style={StyleSheet.absoluteFill} />
@@ -201,9 +223,7 @@ export default function SyncedDevicesScreen() {
 
                     <Text style={styles.deviceSyncLabel}>
                       {t("synceddevices.lastSync")}
-                      <Text style={styles.deviceSyncDate}>
-                        {new Date(parseInt(connectedDevice.lastSync)).toLocaleString()}
-                      </Text>
+                      <Text style={styles.deviceSyncDate}>{new Date(parseInt(connectedDevice.lastSync)).toLocaleString()}</Text>
                     </Text>
 
                     <View style={styles.statusRow}>
@@ -218,7 +238,18 @@ export default function SyncedDevicesScreen() {
 
                   <View>
                     {currentDeviceUuid == connectedDevice.uuid ? (
-                      <Animated.View style={[styles.currentDeviceDot, blinkStyle]} />
+                      <View style={styles.currentDeviceActions}>
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          disabled={syncing || !netInfo?.isConnected}
+                          onPress={syncCurrentDevice}
+                        >
+                          <View style={[styles.syncChip, (syncing || !netInfo?.isConnected) && styles.syncChipDisabled]}>
+                            <ArrowPathIcon size={16} color={COLOR.accentSoft} />
+                          </View>
+                        </TouchableOpacity>
+                        <Animated.View style={[styles.currentDeviceDot, blinkStyle]} />
+                      </View>
                     ) : (
                       <TouchableOpacity activeOpacity={0.7} onPress={() => deleteDeviceFromCloud(connectedDevice.uuid)}>
                         <View style={styles.deleteChip}>
@@ -359,6 +390,24 @@ const styles = StyleSheet.create({
   },
   statusTextBehind: {
     color: "#FFA726",
+  },
+  currentDeviceActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+  },
+  syncChip: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: BORDER.normal,
+    backgroundColor: GLASS.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLOR.accent,
+  },
+  syncChipDisabled: {
+    opacity: 0.5,
   },
   currentDeviceDot: {
     backgroundColor: COLOR.accentSoft,

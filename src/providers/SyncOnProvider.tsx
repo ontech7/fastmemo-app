@@ -1,7 +1,7 @@
 import useNetInfo from "@/hooks/useNetInfo";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import { isEmpty, isObjectEmpty } from "@/utils/string";
-import { where } from "firebase/firestore";
+import { deleteField, where } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AppState, Platform } from "react-native";
@@ -18,6 +18,7 @@ import {
 } from "@/libs/firebase";
 import { getDEK, isVaultUnlocked, lockVault, wipePersistedDEK } from "@/libs/vaultSession";
 import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
+import { registerSyncNow } from "@/libs/registry";
 import { restoreVaultSession } from "@/libs/vaultManager";
 import { dekMatchesVault } from "@/utils/vault";
 import { addLocalCategories, deleteLocalCategories, getCloudCategories } from "@/slicers/categoriesSlice";
@@ -38,7 +39,9 @@ export default function SyncOnProvider(): null {
   const tPendingChanges = useRef<ReturnType<typeof setInterval> | null>(null);
   const tDebounceNotes = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncToLocalRef = useRef<(() => Promise<void>) | null>(null);
+  const syncToCloudRef = useRef<(() => Promise<void>) | null>(null);
   const isSyncingRef = useRef(false);
+  const isSyncingCloudRef = useRef(false);
 
   const isCloudConnected = useSelector(getCloudConnected);
   const cloudSettings = useSelector(getCloudSettings);
@@ -63,24 +66,31 @@ export default function SyncOnProvider(): null {
     if (!cloudSettings?.projectId) return;
 
     restoredRef.current = true;
-    restoreVaultSession(cloudSettings.projectId).then(async (restored) => {
-      if (!restored) {
-        setVaultPromptNeeded(true);
-        return;
-      }
-      // We had a cached DEK — but it may be stale: another device could have
-      // reset/replaced the vault while we were off. Verify it against the cloud
-      // vault right away (so a restart catches it, not just the 10s sync loop).
-      const dek = getDEK();
-      const vaultRead = await readVault();
-      if (vaultRead.status === "error") return; // offline/transient — trust the cache for now
-      const stale = vaultRead.status === "absent" || !dek || !dekMatchesVault(vaultRead.vault!, dek);
-      if (stale) {
-        lockVault();
-        await wipePersistedDEK(cloudSettings.projectId);
-        setVaultPromptNeeded(true);
-      }
-    });
+    restoreVaultSession(cloudSettings.projectId)
+      .then(async (restored) => {
+        if (!restored) {
+          setVaultPromptNeeded(true);
+          return;
+        }
+        // We had a cached DEK — but it may be stale: another device could have
+        // reset/replaced the vault while we were off. Verify it against the cloud
+        // vault right away (so a restart catches it, not just the 10s sync loop).
+        const dek = getDEK();
+        const vaultRead = await readVault();
+        if (vaultRead.status === "error") return; // offline/transient — trust the cache for now
+        const stale = vaultRead.status === "absent" || !dek || !dekMatchesVault(vaultRead.vault!, dek);
+        if (stale) {
+          lockVault();
+          await wipePersistedDEK(cloudSettings.projectId);
+          setVaultPromptNeeded(true);
+        }
+      })
+      .catch((e) => {
+        // Transient restore/read failure: leave the prompt untouched and let a
+        // later reconnect/restart retry. Allow a retry by clearing the guard.
+        restoredRef.current = false;
+        console.log("restoreVaultSession error:", e);
+      });
   }, [isCloudConnected, cloudSettings?.projectId]);
 
   // Once the vault is unlocked (here or from the Cloud settings flow), the prompt
@@ -115,11 +125,15 @@ export default function SyncOnProvider(): null {
       const devices = await getAllDeviceUuids();
       const deviceUuid = await getDeviceUuid();
 
-      // if no internet connectivity, stop thread
-      if (devices == null) {
-        if (tPendingChanges.current) clearInterval(tPendingChanges.current);
-        return;
-      }
+      // Transient read failure (an offline blip or a stale Firebase channel):
+      // skip this tick and let the interval retry on the next one. Do NOT clear
+      // the interval here — killing it leaves sync dead until an unrelated dep
+      // change or an app restart (the "had to restart to sync" symptom), which
+      // is especially bad on desktop where the Firestore channel can die while
+      // the OS still reports online, so netInfo never changes to revive it.
+      // Genuine offline is already handled by the effect that mounts this
+      // interval (it gates on netInfo.isConnected and tears it down).
+      if (devices == null) return;
 
       // device got removed from the cloud, should disconnect
       if (!devices.includes(deviceUuid!)) {
@@ -165,29 +179,32 @@ export default function SyncOnProvider(): null {
       for (let i = 0; i < devicesData.data.length; i++) {
         const deviceData = devicesData.data[i];
 
+        // Each queue field is guarded against undefined: once cleared via
+        // deleteField() the key is absent, and isObjectEmpty() would throw on
+        // undefined. This also covers older device docs missing some fields.
+
         // if there is some "add categories" data, put it in the local "add" object
-        if (!isObjectEmpty(deviceData.addCategories)) {
+        if (deviceData.addCategories && !isObjectEmpty(deviceData.addCategories)) {
           dispatch(addLocalCategories(deviceData.addCategories));
         }
 
         // if there is some "add notes" data, put it in the local "add" object
-        if (!isObjectEmpty(deviceData.addNotes)) {
+        if (deviceData.addNotes && !isObjectEmpty(deviceData.addNotes)) {
           dispatch(addLocalNotes(deviceData.addNotes));
         }
 
         // if there is some "delete notes" data, put it in the local "delete" object
-        if (!isObjectEmpty(deviceData.deleteNotes)) {
+        if (deviceData.deleteNotes && !isObjectEmpty(deviceData.deleteNotes)) {
           dispatch(deleteLocalNotes(deviceData.deleteNotes));
         }
 
         // if there is some "detach notes" data, mark those notes as offline locally
-        // (guarded: device docs created before this feature have no detachNotes field)
         if (deviceData.detachNotes && !isObjectEmpty(deviceData.detachNotes)) {
           dispatch(detachLocalNotes(deviceData.detachNotes));
         }
 
         // if there is some "delete categories" data, put it in the local "delete" object
-        if (!isObjectEmpty(deviceData.deleteCategories)) {
+        if (deviceData.deleteCategories && !isObjectEmpty(deviceData.deleteCategories)) {
           dispatch(deleteLocalCategories(deviceData.deleteCategories));
         }
 
@@ -200,11 +217,15 @@ export default function SyncOnProvider(): null {
             devicesToSync: devicesExceptMe,
             ...(devicesExceptMe.length == 0
               ? {
-                  addCategories: {},
-                  deleteCategories: {},
-                  addNotes: {},
-                  deleteNotes: {},
-                  detachNotes: {},
+                  // deleteField() actually removes the queues. Writing `{}` with
+                  // merge:true is a no-op on Firestore (nested maps are deep-
+                  // merged), so the queues would never clear and a later fan-out
+                  // could re-deliver these stale adds/deletes.
+                  addCategories: deleteField(),
+                  deleteCategories: deleteField(),
+                  addNotes: deleteField(),
+                  deleteNotes: deleteField(),
+                  detachNotes: deleteField(),
                 }
               : {}),
           },
@@ -224,6 +245,84 @@ export default function SyncOnProvider(): null {
   }, [syncToLocal]);
 
   ///////////////////////////////////
+  // Pending local changes pusher
+  // syncToCloud - notes & categories (retriable)
+  //
+  // Extracted so the periodic interval and the foreground trigger can re-attempt
+  // pending uploads, not just the change-driven effects below. Without this, a
+  // change made while the Firebase channel was down stays queued until the next
+  // local edit or an app restart (the "didn't sync until I restarted" symptom).
+  ///////////////////////////////////
+
+  const syncToCloud = useCallback(async () => {
+    // notes are encrypted before upload -> needs the DEK
+    if (!isVaultUnlocked()) return;
+
+    const hasCategories = !isEmpty(cloudCategories_add) || !isEmpty(cloudCategories_delete);
+    const hasNotes = !isEmpty(cloudNotes_add) || !isEmpty(cloudNotes_delete) || !isEmpty(cloudNotes_detach);
+    if (!hasCategories && !hasNotes) return;
+
+    // prevent the change-driven, interval and foreground triggers from overlapping
+    if (isSyncingCloudRef.current) return;
+    isSyncingCloudRef.current = true;
+
+    try {
+      const devices = await getAllDeviceUuids();
+      const deviceUuid = await getDeviceUuid();
+
+      // transient read failure: keep the queues and retry on the next trigger
+      if (devices == null) return;
+
+      const devicesExceptMe = devices.filter((otherDeviceUuid) => otherDeviceUuid != deviceUuid);
+      const areMoreThanOneDevice = devicesExceptMe.length > 0;
+
+      if (!isEmpty(cloudCategories_add)) {
+        await dispatch(
+          addCloudCategoriesAsync({ deviceUuid: deviceUuid!, devicesToSync: devicesExceptMe, areMoreThanOneDevice })
+        ).unwrap();
+      }
+      if (!isEmpty(cloudCategories_delete)) {
+        await dispatch(
+          deleteCloudCategoriesAsync({ deviceUuid: deviceUuid!, devicesToSync: devicesExceptMe, areMoreThanOneDevice })
+        ).unwrap();
+      }
+      if (!isEmpty(cloudNotes_add)) {
+        await dispatch(
+          addCloudNotesAsync({ deviceUuid: deviceUuid!, devicesToSync: devicesExceptMe, areMoreThanOneDevice })
+        ).unwrap();
+      }
+      if (!isEmpty(cloudNotes_delete)) {
+        await dispatch(
+          deleteCloudNotesAsync({ deviceUuid: deviceUuid!, devicesToSync: devicesExceptMe, areMoreThanOneDevice })
+        ).unwrap();
+      }
+      if (!isEmpty(cloudNotes_detach)) {
+        await dispatch(
+          detachCloudNotesAsync({ deviceUuid: deviceUuid!, devicesToSync: devicesExceptMe, areMoreThanOneDevice })
+        ).unwrap();
+      }
+    } catch (e) {
+      console.log("syncToCloud error:", e);
+    } finally {
+      isSyncingCloudRef.current = false;
+    }
+  }, [dispatch, cloudCategories_add, cloudCategories_delete, cloudNotes_add, cloudNotes_delete, cloudNotes_detach]);
+
+  useEffect(() => {
+    syncToCloudRef.current = syncToCloud;
+  }, [syncToCloud]);
+
+  // Expose a manual "sync now" trigger for the Devices screen: a full pull +
+  // push for this device, for the rare case automatic sync didn't fire. Uses
+  // the refs so it always runs the latest implementations; registered once.
+  useEffect(() => {
+    registerSyncNow(async () => {
+      await syncToLocalRef.current?.();
+      await syncToCloudRef.current?.();
+    });
+  }, []);
+
+  ///////////////////////////////////
   // Pending cloud changes checker
   // syncToLocal - notes & categories
   ///////////////////////////////////
@@ -236,8 +335,14 @@ export default function SyncOnProvider(): null {
       return;
     }
 
-    syncToLocal();
-    tPendingChanges.current = setInterval(syncToLocal, PENDING_CHANGES_DELAY);
+    // each tick: pull incoming, then re-attempt any pending outgoing uploads
+    const tick = () => {
+      syncToLocal();
+      syncToCloudRef.current?.();
+    };
+
+    tick();
+    tPendingChanges.current = setInterval(tick, PENDING_CHANGES_DELAY);
 
     return () => {
       if (tPendingChanges.current) clearInterval(tPendingChanges.current);
@@ -254,6 +359,7 @@ export default function SyncOnProvider(): null {
       const handleVisibilityChange = () => {
         if (document.visibilityState === "visible") {
           syncToLocalRef.current?.();
+          syncToCloudRef.current?.();
         }
       };
 
@@ -263,8 +369,9 @@ export default function SyncOnProvider(): null {
 
     const appStateSubscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState === "active") {
-        // app came back to foreground, sync immediately
+        // app came back to foreground, sync immediately (in + out)
         syncToLocalRef.current?.();
+        syncToCloudRef.current?.();
       }
     });
 
@@ -284,49 +391,12 @@ export default function SyncOnProvider(): null {
       return;
     }
 
-    // if both groups are empty, call syncToCloud method
+    // if both groups are empty, nothing to push
     if (isEmpty(cloudCategories_add) && isEmpty(cloudCategories_delete)) {
       return;
     }
 
-    const syncCategoriesToCloud = async () => {
-      try {
-        const devices = await getAllDeviceUuids();
-        const deviceUuid = await getDeviceUuid();
-
-        // if no internet connectivity, return
-        if (devices == null) {
-          return;
-        }
-
-        const devicesExceptMe = devices.filter((otherDeviceUuid) => otherDeviceUuid != deviceUuid);
-
-        if (!isEmpty(cloudCategories_add)) {
-          await dispatch(
-            addCloudCategoriesAsync({
-              deviceUuid: deviceUuid!,
-              devicesToSync: devicesExceptMe,
-              areMoreThanOneDevice: devicesExceptMe.length > 0,
-            })
-          ).unwrap();
-        }
-
-        if (!isEmpty(cloudCategories_delete)) {
-          await dispatch(
-            deleteCloudCategoriesAsync({
-              deviceUuid: deviceUuid!,
-              devicesToSync: devicesExceptMe,
-              areMoreThanOneDevice: devicesExceptMe.length > 0,
-            })
-          ).unwrap();
-        }
-      } catch (e) {
-        console.log("syncCategoriesToCloud error:", e);
-      }
-    };
-
-    syncCategoriesToCloud();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    syncToCloudRef.current?.();
   }, [isCloudConnected, netInfo, vaultUnlocked, cloudCategories_add, cloudCategories_delete]);
 
   ///////////////////////////////////
@@ -340,64 +410,18 @@ export default function SyncOnProvider(): null {
       return;
     }
 
-    // if all groups are empty, don't call syncToCloud method
+    // if all groups are empty, nothing to push
     if (isEmpty(cloudNotes_add) && isEmpty(cloudNotes_delete) && isEmpty(cloudNotes_detach)) {
       return;
     }
 
-    const syncNotesToCloud = async () => {
-      try {
-        const devices = await getAllDeviceUuids();
-        const deviceUuid = await getDeviceUuid();
-
-        // if no internet connectivity, return
-        if (devices == null) {
-          return;
-        }
-
-        const devicesExceptMe = devices.filter((otherDeviceUuid) => otherDeviceUuid != deviceUuid);
-
-        if (!isEmpty(cloudNotes_add)) {
-          await dispatch(
-            addCloudNotesAsync({
-              deviceUuid: deviceUuid!,
-              devicesToSync: devicesExceptMe,
-              areMoreThanOneDevice: devicesExceptMe.length > 0,
-            })
-          ).unwrap();
-        }
-
-        if (!isEmpty(cloudNotes_delete)) {
-          await dispatch(
-            deleteCloudNotesAsync({
-              deviceUuid: deviceUuid!,
-              devicesToSync: devicesExceptMe,
-              areMoreThanOneDevice: devicesExceptMe.length > 0,
-            })
-          ).unwrap();
-        }
-
-        if (!isEmpty(cloudNotes_detach)) {
-          await dispatch(
-            detachCloudNotesAsync({
-              deviceUuid: deviceUuid!,
-              devicesToSync: devicesExceptMe,
-              areMoreThanOneDevice: devicesExceptMe.length > 0,
-            })
-          ).unwrap();
-        }
-      } catch (e) {
-        console.log("syncNotesToCloud error:", e);
-      }
-    };
-
+    // debounced so rapid edits batch into a single upload
     if (tDebounceNotes.current) clearTimeout(tDebounceNotes.current);
-    tDebounceNotes.current = setTimeout(syncNotesToCloud, DEBOUNCE_NOTES_DELAY);
+    tDebounceNotes.current = setTimeout(() => syncToCloudRef.current?.(), DEBOUNCE_NOTES_DELAY);
 
     return () => {
       if (tDebounceNotes.current) clearTimeout(tDebounceNotes.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCloudConnected, netInfo, vaultUnlocked, cloudNotes_add, cloudNotes_delete, cloudNotes_detach]);
 
   return null;
