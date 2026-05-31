@@ -9,8 +9,6 @@ import Animated, {
   LinearTransition,
   useAnimatedStyle,
   useSharedValue,
-  withSequence,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 
@@ -63,7 +61,6 @@ export default function TodoItem({
 }: Props) {
   const { t } = useTranslation();
 
-  const checkScale = useSharedValue(1);
   const circleFill = useSharedValue(0);
 
   const isOngoing = stepMode && stepStatus === "ongoing";
@@ -77,20 +74,12 @@ export default function TodoItem({
     });
   }, [isOngoing, circleFill]);
 
-  const checkboxAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkScale.value }],
-  }));
-
   const circleFillStyle = useAnimatedStyle(() => ({
     opacity: circleFill.value,
     transform: [{ scale: 0.6 + 0.4 * circleFill.value }],
   }));
 
   const handleCheck = () => {
-    checkScale.value = withSequence(
-      withTiming(0.82, { duration: 90, easing: Easing.out(Easing.quad) }),
-      withSpring(1, { damping: 8, stiffness: 220 })
-    );
     checkItem(item.id);
   };
 
@@ -117,13 +106,13 @@ export default function TodoItem({
             style={{ marginRight: PADDING_MARGIN.sm }}
             onPress={handleCheck}
           >
-            <Animated.View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked, checkboxAnimatedStyle]}>
+            <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked]}>
               {item.checked && (
                 <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)}>
                   <CheckIcon size={24} color={COLOR.softWhite} />
                 </Animated.View>
               )}
-            </Animated.View>
+            </View>
           </TouchableOpacity>
 
           <TextInput
@@ -165,19 +154,11 @@ export default function TodoItem({
     <Animated.View layout={rowLayout} entering={rowEntering} exiting={rowExiting} style={styles.stepRow}>
       {/* left rail: connector line + tappable numbered circle (checkbox) + Ongoing label */}
 
-      <View style={styles.stepColumn} pointerEvents="box-none">
+      <View style={[styles.stepColumn, { pointerEvents: "box-none" }]}>
         <TouchableOpacity activeOpacity={0.7} disabled={disabled} onPress={handleCheck}>
-          <Animated.View
-            style={[
-              styles.stepCircle,
-              { borderColor: circleBorderColor },
-              isStepDone && styles.stepCircleDone,
-              checkboxAnimatedStyle,
-            ]}
-          >
+          <View style={[styles.stepCircle, { borderColor: circleBorderColor }, isStepDone && styles.stepCircleDone]}>
             <Animated.View
-              pointerEvents="none"
-              style={[StyleSheet.absoluteFillObject, styles.stepCircleFill, circleFillStyle]}
+              style={[StyleSheet.absoluteFill, styles.stepCircleFill, circleFillStyle, { pointerEvents: "none" }]}
             />
 
             {isStepDone ? (
@@ -185,7 +166,7 @@ export default function TodoItem({
             ) : (
               <Text style={[styles.stepCircleNumber, { color: numberColor }]}>{stepNumber}</Text>
             )}
-          </Animated.View>
+          </View>
         </TouchableOpacity>
 
         <View style={[styles.stepLine, isLast && styles.stepLineHidden]} />
@@ -194,8 +175,7 @@ export default function TodoItem({
           <Animated.View
             entering={FadeIn.duration(220)}
             exiting={FadeOut.duration(150)}
-            style={styles.stepOngoingLabelWrap}
-            pointerEvents="none"
+            style={[styles.stepOngoingLabelWrap, { pointerEvents: "none" }]}
           >
             <Text style={styles.stepOngoingLabel}>{t("note.ongoing")}</Text>
           </Animated.View>
