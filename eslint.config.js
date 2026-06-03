@@ -17,7 +17,7 @@ module.exports = defineConfig([
       "build/**",
       "dist/**",
       "node_modules/**",
-      "src/assets/**",
+      "assets/**",
       "src/generated/**",
       "src-tauri/**",
       "*.mjs",

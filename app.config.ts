@@ -5,9 +5,9 @@ const isDev = process.env.EXPO_PUBLIC_ENV === "DEV";
 const appName = isDev ? "Fast Memo Test" : "Fast Memo";
 const appSlug = isDev ? "fastmemoapptest" : "FastMemoApp";
 const appBundle = isDev ? "com.ontech7.fastmemoapptest" : "com.ontech7.FastMemoApp";
-const appIcon = isDev ? "./src/assets/images/test/icon.png" : "./src/assets/images/icon.png";
-const adaptiveIcon = isDev ? "./src/assets/images/test/adaptive-icon.png" : "./src/assets/images/adaptive-icon.png";
-const favicon = isDev ? "./src/assets/images/test/favicon.png" : "./src/assets/images/favicon.png";
+const appIcon = isDev ? "./assets/images/test/icon.png" : "./assets/images/icon.png";
+const adaptiveIcon = isDev ? "./assets/images/test/adaptive-icon.png" : "./assets/images/adaptive-icon.png";
+const favicon = isDev ? "./assets/images/test/favicon.png" : "./assets/images/favicon.png";
 const backgroundColor = "#05091A";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: adaptiveIcon,
-      backgroundImage: "./src/assets/images/adaptive-icon-bg.png",
+      backgroundImage: "./assets/images/adaptive-icon-bg.png",
       backgroundColor,
     },
     package: appBundle,
@@ -63,7 +63,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        image: "./src/assets/images/splash-logo.png",
+        image: "./assets/images/splash-logo.png",
         imageWidth: 150,
         backgroundColor,
       },

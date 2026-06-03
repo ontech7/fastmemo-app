@@ -54,10 +54,10 @@ export default Sentry.wrap(function RootLayout() {
   usePreventBackspaceNav();
 
   const [fontsLoaded, fontError] = useFonts({
-    "Geist-Regular": require("@/assets/fonts/Geist-Regular.ttf"),
-    "Geist-Medium": require("@/assets/fonts/Geist-Medium.ttf"),
-    "Geist-SemiBold": require("@/assets/fonts/Geist-SemiBold.ttf"),
-    "Geist-Bold": require("@/assets/fonts/Geist-Bold.ttf"),
+    "Geist-Regular": require("~/assets/fonts/Geist-Regular.ttf"),
+    "Geist-Medium": require("~/assets/fonts/Geist-Medium.ttf"),
+    "Geist-SemiBold": require("~/assets/fonts/Geist-SemiBold.ttf"),
+    "Geist-Bold": require("~/assets/fonts/Geist-Bold.ttf"),
   });
 
   // Never get stuck on the splash if fonts fail or hang to load — e.g. on
@@ -215,7 +215,7 @@ export default Sentry.wrap(function RootLayout() {
                         name="settings/note-creation"
                         options={{ headerShown: false, animation: "ios_from_left" }}
                       />
-                      <Stack.Screen name="+not-found" />
+                      <Stack.Screen name="+not-found" options={{ headerShown: false }} />
                     </Stack>
                   </View>
                 </RootSiblingParent>

@@ -1,4 +1,4 @@
-import authorImage from "@/assets/images/author.png";
+import authorImage from "~/assets/images/author.png";
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";

@@ -1,4 +1,5 @@
-import lottieJson from "@/assets/lottie/Logo_with_Text.json";
+import splashLogo from "~/assets/images/splash-logo.png";
+import lottieJson from "~/assets/lottie/Logo_with_Text.json";
 import LottieView from "@/components/lottie/LottieAnimation";
 import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
@@ -79,7 +80,7 @@ export default function LoadingScreen() {
           speed={1.32}
         />
       ) : (
-        <Image source={require("@/assets/images/splash-logo.png")} style={styles.staticLogo} resizeMode="contain" />
+        <Image source={splashLogo} style={styles.staticLogo} resizeMode="contain" />
       )}
     </View>
   );

@@ -1,3 +1,4 @@
+import heading1Icon from "~/assets/actions/heading1.png";
 import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
@@ -197,7 +198,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const toolbarIconMap = useMemo(
     () => ({
-      heading1: require("../../assets/actions/heading1.png"),
+      heading1: heading1Icon,
     }),
     []
   );

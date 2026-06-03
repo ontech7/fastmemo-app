@@ -12,7 +12,7 @@ import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "
 import { useDispatch, useSelector } from "react-redux";
 
 import pkg from "@/../package.json";
-import lottieJson from "@/assets/lottie/Logo.json";
+import lottieJson from "~/assets/lottie/Logo.json";
 
 // Library versions are read straight from package.json so they never need to be
 // updated by hand. We strip the semver range prefix (^, ~, >=, …) for display.

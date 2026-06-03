@@ -1,5 +1,5 @@
-import aiLottieJson from "@/assets/lottie/AI_Loader.json";
-import lottieJson from "@/assets/lottie/Logo.json";
+import aiLottieJson from "~/assets/lottie/AI_Loader.json";
+import lottieJson from "~/assets/lottie/Logo.json";
 import CloseButton from "@/components/buttons/CloseButton";
 import ChangelogItem from "@/components/changelog/ChangelogItem";
 import LottieView from "@/components/lottie/LottieAnimation";
