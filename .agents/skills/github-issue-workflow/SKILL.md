@@ -368,7 +368,7 @@ Prepend a new version section at the top of the relevant file:
 
 Style: each entry is a `- ` bullet with a user-facing description. Keep it concise but informative.
 
-#### 4b. In-app changelog screen (`src/app/changelog.tsx`)
+#### 4b. In-app changelog screen (`app/changelog.tsx`)
 
 Add the new version entry to the `getVersionChangelogs` function. Entries are ordered newest-first.
 
@@ -450,7 +450,7 @@ gh pr create --base main --title "chore: release v<VERSION>" --body "$(cat <<'EO
 - [ ] Version bumps: Cargo.toml, tauri.conf.json, src/configs/index.ts
 - [ ] docs/CHANGELOG_MOBILE.md updated
 - [ ] docs/CHANGELOG_DESKTOP.md updated
-- [ ] src/app/changelog.tsx updated (new version entries)
+- [ ] app/changelog.tsx updated (new version entries)
 - [ ] i18n translations added (all 7 locales)
 - [ ] README.md badges updated
 EOF
@@ -474,7 +474,7 @@ Version files:
 Changelogs:
   - docs/CHANGELOG_MOBILE.md             (mobile)
   - docs/CHANGELOG_DESKTOP.md            (desktop)
-  - src/app/changelog.tsx                 (in-app, both platforms)
+  - app/changelog.tsx                 (in-app, both platforms)
   - src/libs/i18n/locales/{en,it,es,fr,de,zh,ja}.ts  (translations)
 
 Other:
@@ -489,7 +489,7 @@ Release steps:
 3.  git checkout -b release/vX.Y.Z
 4.  Bump versions (5 files)
 5.  Update docs/CHANGELOG_*.md
-6.  Update src/app/changelog.tsx
+6.  Update app/changelog.tsx
 7.  Add i18n translations (7 locale files)
 8.  Update README.md badges
 9.  git commit -m "chore: update version and changelogs to X.Y.Z"

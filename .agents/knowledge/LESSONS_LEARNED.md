@@ -332,7 +332,7 @@ Metro's file-based resolution. Notable cases:
 - `src/libs/haptics/index.ts:3` --
   `Platform.OS === "web" ? require("./haptics.web").default : require("./haptics.native").default` even though both files
   already exist as platform variants.
-- `src/app/settings/ai-assistant.tsx:18-21` -- `let aiLib = null; if (Platform.OS !== "web") aiLib = require("@/libs/ai")` even
+- `app/settings/ai-assistant.tsx:18-21` -- `let aiLib = null; if (Platform.OS !== "web") aiLib = require("@/libs/ai")` even
   though `libs/ai/index.web.ts` already exports safe stubs for every API.
 - `src/utils/toast.ts:7, 22` -- per-function `require("react-hot-toast")` / `require("react-native-root-toast")`.
 - `src/hooks/useNetInfo.ts:50`, `src/hooks/useSecret.ts:45`, `src/libs/localization.ts:22`, `src/libs/firebase.ts:111`,
@@ -357,10 +357,10 @@ split is viable. Use file-based platform resolution. Dynamic `require` remains l
 **Resolution summary:** Every site listed in the umbrella was migrated to a file-based platform split:
 
 - `src/libs/haptics/` -- removed the runtime-`require` barrel; `index.ts` (native) + `index.web.ts` now resolve via Metro.
-- `src/app/settings/ai-assistant.tsx` -- replaced the `aiLib = require("@/libs/ai")` dance with direct static imports; the web
+- `app/settings/ai-assistant.tsx` -- replaced the `aiLib = require("@/libs/ai")` dance with direct static imports; the web
   bundle uses the existing `index.web.ts` no-op stubs.
 - `src/utils/toast.ts` -- split into `toast.ts` (native, `react-native-root-toast`) + `toast.web.ts` (web, `react-hot-toast`).
-- `src/app/_layout.tsx` -- extracted `<WebToaster>` into `src/components/WebToaster.tsx` + `WebToaster.web.tsx`.
+- `app/_layout.tsx` -- extracted `<WebToaster>` into `src/components/WebToaster.tsx` + `WebToaster.web.tsx`.
 - `src/hooks/useNetInfo.ts` -- split into native (static `@react-native-community/netinfo` import) + web (`fetch` +
   `online`/`offline` listeners, Tauri-safe).
 - `src/hooks/useSecret.ts` -- split into native (static `expo-local-authentication`) + web (biometrics disabled, always routes
@@ -669,7 +669,7 @@ missing global was the real reason all native vault ops failed.
 **Root cause:** `crypto-js` was adopted (over WebCrypto/native GCM) because note encryption must be synchronous (ADR-012), but
 it silently depends on a Web Crypto global that RN's JS engine lacks.
 
-**Fix:** Added `react-native-get-random-values@1.11.0` and imported it as the **first line** of `src/app/_layout.tsx` (before
+**Fix:** Added `react-native-get-random-values@1.11.0` and imported it as the **first line** of `app/_layout.tsx` (before
 any crypto-using module), which installs `global.crypto.getRandomValues` backed by the OS CSPRNG. It is a **native module**, so
 it requires a dev-client rebuild (`npx expo prebuild` + rebuild) -- the same constraint as `expo-crypto`.
 

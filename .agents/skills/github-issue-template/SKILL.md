@@ -190,7 +190,7 @@ stale.
 
 ## Files related
 
-- src/app/home.tsx
+- app/home.tsx
 - src/slicers/notesSlice.ts
 
 ## Important notes
