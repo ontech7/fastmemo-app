@@ -24,18 +24,23 @@ export default function LoadingScreen() {
   useEffect(() => {
     const runInitialActions = async () => {
       try {
+        // Single storage round-trip instead of three sequential reads — these
+        // gate first paint, so on Tauri/web startup the difference is visible.
+        const [[, language], [, cloudSyncRaw], [, firstScreen]] = await AsyncStorage.multiGet([
+          "@appLanguage",
+          "@cloudSync",
+          "@firstScreen",
+        ]);
+
         // set app language
-        const language = await AsyncStorage.getItem("@appLanguage");
         i18n.changeLanguage(language && language !== "system" ? language : Localization.getLocales()[0].languageCode || "en");
 
         // enable firebase if cloudSync config is available
-        const cloudSyncRaw = await AsyncStorage.getItem("@cloudSync");
         const cloudSyncConfig = JSON.parse(cloudSyncRaw ?? "{}");
         if (!isObjectEmpty(cloudSyncConfig)) {
           initFirebase(cloudSyncConfig);
         }
 
-        const firstScreen = await AsyncStorage.getItem("@firstScreen");
         SplashScreen.hideAsync().catch(() => {});
 
         if (!firstScreen) {
