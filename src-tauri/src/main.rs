@@ -1,27 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::time::Duration;
+#[cfg(target_os = "macos")]
 use tauri::Manager;
-
-/// Reveal the main window and tear down the splash. Called by the frontend once
-/// the first screen has actually painted (see `closeTauriSplashscreen`), so the
-/// handover happens with the real UI already underneath — no flash of the flat
-/// window background.
-fn reveal_main(app: &tauri::AppHandle) {
-    if let Some(splash) = app.get_window("splashscreen") {
-        let _ = splash.close();
-    }
-    if let Some(main) = app.get_window("main") {
-        let _ = main.show();
-        let _ = main.set_focus();
-    }
-}
-
-#[tauri::command]
-fn close_splashscreen(app: tauri::AppHandle) {
-    reveal_main(&app);
-}
 
 /// Prompt the OS biometric dialog (Touch ID on macOS, Windows Hello on Windows)
 /// and report whether it succeeded. Used by the frontend's web/Tauri unlock path
@@ -112,27 +93,18 @@ fn apply_macos_titlebar(window: &tauri::Window) {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![
-            close_splashscreen,
-            biometric_authenticate
-        ])
+        .invoke_handler(tauri::generate_handler![biometric_authenticate])
         .setup(|app| {
             // Blue titlebar from the first frame, independent of WebView paint
-            // timing (see apply_macos_titlebar). Applied while main is still
-            // hidden, so it's already tinted when revealed.
+            // timing (see apply_macos_titlebar). Applied during setup, before the
+            // window is shown, so it's already tinted on first paint.
             #[cfg(target_os = "macos")]
             if let Some(main) = app.get_window("main") {
                 apply_macos_titlebar(&main);
             }
 
-            // Safety net: if the frontend never signals readiness (e.g. a JS
-            // error before first paint), don't leave the user staring at the
-            // splash forever — force the main window up after a grace period.
-            let handle = app.handle();
-            std::thread::spawn(move || {
-                std::thread::sleep(Duration::from_secs(10));
-                reveal_main(&handle);
-            });
+            #[cfg(not(target_os = "macos"))]
+            let _ = app;
             Ok(())
         })
         .run(tauri::generate_context!())

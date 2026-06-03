@@ -10,7 +10,6 @@ import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { usePreventBackspaceNav } from "@/hooks/usePreventBackspaceNav";
 import i18n from "@/libs/i18n";
-import { closeTauriSplashscreen } from "@/libs/tauri";
 import AppUpdateProvider from "@/providers/AppUpdateProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
 import { persistor, store } from "@/slicers/store";
@@ -80,10 +79,9 @@ export default Sentry.wrap(function RootLayout() {
 
   // Hide the splash only once a JS view (the gradient splash or the app shell)
   // has laid out, so the gradient is already painted underneath — no flash of
-  // the flat background. On Tauri this also tears down the native splash window.
+  // the flat background.
   const onLayoutRootView = useCallback(() => {
     SplashScreen.hideAsync().catch(() => {});
-    closeTauriSplashscreen();
   }, []);
 
   // While fonts load (native only), render nothing and keep the native splash up
