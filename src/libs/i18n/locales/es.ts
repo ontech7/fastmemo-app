@@ -276,10 +276,12 @@ const es = {
     name_title: "Nombre",
     name_placeholder: "Ingrese el nombre de la categoría aquí...",
     icon_title: "Icono",
+    suggested_title: "Sugeridos",
     notes_num: "Nota: ",
   },
   organizecategory: {
     title: "Organizar",
+    empty: "Aún no hay categorías.\nToca el botón + para crear una.",
   },
   trashednotes: {
     title: "Notas Desechadas",

@@ -276,10 +276,12 @@ const zh = {
     name_title: "姓名",
     name_placeholder: "在此处输入类别名称...",
     icon_title: "图标",
+    suggested_title: "推荐",
     notes_num: "笔记: ",
   },
   organizecategory: {
     title: "组织",
+    empty: "还没有类别。\n点击 + 按钮创建一个。",
   },
   trashednotes: {
     title: "垃圾笔记",

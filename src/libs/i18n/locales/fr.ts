@@ -276,10 +276,12 @@ const fr = {
     name_title: "Nom",
     name_placeholder: "Entrez le nom de la catégorie ici...",
     icon_title: "Icône",
+    suggested_title: "Suggérés",
     notes_num: "Notes: ",
   },
   organizecategory: {
     title: "Organiser",
+    empty: "Aucune catégorie pour l'instant.\nAppuyez sur le bouton + pour en créer une.",
   },
   trashednotes: {
     title: "Notes supprimées",

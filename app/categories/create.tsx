@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -6,6 +6,7 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useDispatch, useSelector } from "react-redux";
 
 import { webhook } from "@/utils/webhook";
+import { suggestIcons } from "@/utils/suggestIcons";
 import { useRouter } from "@/hooks/useRouter";
 import SafeAreaView from "@/components/SafeAreaView";
 
@@ -38,20 +39,27 @@ export default function CreateCategoryScreen() {
 
   const [categoryIcon, setCategoryIcon] = useState(icon || "");
   const [categoryName, setCategoryName] = useState(name || "");
-  const unusedCategories = useSelector(getUnusedCategories(icon));
+
+  // Build the selector once per `icon` (factory selectors must not be recreated every render).
+  const unusedCategoriesSelector = useMemo(() => getUnusedCategories(icon), [icon]);
+  const unusedCategories = useSelector(unusedCategoriesSelector);
+
+  // Selectable icons, "none" placeholder excluded.
+  const iconOptions = useMemo(() => unusedCategories.filter((cat) => cat.name !== "none"), [unusedCategories]);
+
+  // Deterministic, offline icon suggestions derived from the typed name (7 languages).
+  const suggestedIcons = useMemo(() => {
+    const availableNames = iconOptions.map((cat) => cat.name);
+    return suggestIcons(categoryName, availableNames);
+  }, [categoryName, iconOptions]);
 
   const router = useRouter();
 
   const dispatch = useDispatch();
 
   const toggleCategoryIcon = useCallback((selectedCategoryIcon: string) => {
-    setCategoryIcon((prevCategoryIcon: string) => {
-      if (prevCategoryIcon == "" || prevCategoryIcon != selectedCategoryIcon) {
-        return selectedCategoryIcon;
-      } else {
-        return "";
-      }
-    });
+    // Tapping the selected icon again clears it; otherwise switch to the new one.
+    setCategoryIcon((prevCategoryIcon) => (prevCategoryIcon === selectedCategoryIcon ? "" : selectedCategoryIcon));
   }, []);
 
   const saveNewCategory = () => {
@@ -138,20 +146,34 @@ export default function CreateCategoryScreen() {
             onChangeText={setCategoryName}
           />
 
+          {suggestedIcons.length > 0 && (
+            <>
+              <Text style={styles.label}>{t("createcategory.suggested_title")}</Text>
+
+              <View style={styles.categoryList}>
+                {suggestedIcons.map((iconName) => (
+                  <UnusedCategoryButton
+                    key={iconName}
+                    name={iconName}
+                    selected={categoryIcon === iconName}
+                    toggleCategoryIcon={toggleCategoryIcon}
+                  />
+                ))}
+              </View>
+            </>
+          )}
+
           <Text style={styles.label}>{t("createcategory.icon_title")}</Text>
 
           <View style={styles.categoryList}>
-            {unusedCategories.map(
-              (cat) =>
-                cat.name != "none" && (
-                  <UnusedCategoryButton
-                    key={cat.name}
-                    name={cat.name}
-                    selected={categoryIcon === cat.name}
-                    toggleCategoryIcon={toggleCategoryIcon}
-                  />
-                )
-            )}
+            {iconOptions.map((cat) => (
+              <UnusedCategoryButton
+                key={cat.name}
+                name={cat.name}
+                selected={categoryIcon === cat.name}
+                toggleCategoryIcon={toggleCategoryIcon}
+              />
+            ))}
           </View>
         </ScrollView>
 

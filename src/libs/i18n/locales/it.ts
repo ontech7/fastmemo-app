@@ -351,10 +351,12 @@ const it = {
     name_title: "Nome",
     name_placeholder: "Inserisci qui il nome della categoria...",
     icon_title: "Icona",
+    suggested_title: "Suggeriti",
     notes_num: "Note: ",
   },
   organizecategory: {
     title: "Organizza",
+    empty: "Nessuna categoria.\nTocca il pulsante + per crearne una.",
   },
   trashednotes: {
     title: "Note Cestinate",

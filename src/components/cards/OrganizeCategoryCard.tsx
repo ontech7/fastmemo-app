@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { LockClosedIcon } from "react-native-heroicons/outline";
 import { useSelector } from "react-redux";
 
 import { useRouter } from "@/hooks/useRouter";
@@ -20,6 +21,7 @@ interface Props {
   category: Category;
   order: number;
   notNumbered?: boolean;
+  locked?: boolean;
   editMode: boolean;
   orderedCategories: OrderedCategories;
   setOrderedCategories: (categories: OrderedCategories) => void;
@@ -29,6 +31,7 @@ export default function OrganizeCategoryCard({
   category,
   order,
   notNumbered = false,
+  locked = false,
   editMode,
   orderedCategories,
   setOrderedCategories,
@@ -92,7 +95,8 @@ export default function OrganizeCategoryCard({
     <View style={styles.buttonWrapper}>
       <TouchableOpacity
         style={styles.button}
-        activeOpacity={0.7}
+        activeOpacity={locked ? 1 : 0.7}
+        disabled={locked}
         onPress={() => {
           if (!editMode) {
             navigateToCreateCategory();
@@ -116,10 +120,17 @@ export default function OrganizeCategoryCard({
         </View>
       </TouchableOpacity>
 
-      {!notNumbered && order && (
+      {locked ? (
         <View style={styles.categoryPosition_wrapper}>
-          <Text style={styles.categoryPosition}>{order}</Text>
+          <LockClosedIcon size={12} color={COLOR.softWhite} />
         </View>
+      ) : (
+        !notNumbered &&
+        !!order && (
+          <View style={styles.categoryPosition_wrapper}>
+            <Text style={styles.categoryPosition}>{order}</Text>
+          </View>
+        )
       )}
     </View>
   );

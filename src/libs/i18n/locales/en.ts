@@ -349,10 +349,12 @@ const en = {
     name_title: "Name",
     name_placeholder: "Enter category name here...",
     icon_title: "Icon",
+    suggested_title: "Suggested",
     notes_num: "Notes: ",
   },
   organizecategory: {
     title: "Organize",
+    empty: "No categories yet.\nTap the + button to create one.",
   },
   trashednotes: {
     title: "Trashed Notes",

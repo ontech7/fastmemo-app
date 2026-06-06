@@ -276,10 +276,12 @@ const ja = {
     name_title: "名前",
     name_placeholder: "ここにカテゴリー名を入力してください...",
     icon_title: "アイコン",
+    suggested_title: "おすすめ",
     notes_num: "ノート数: ",
   },
   organizecategory: {
     title: "整理",
+    empty: "カテゴリーがまだありません。\n+ ボタンを押して作成しましょう。",
   },
   trashednotes: {
     title: "削除されたノート",
