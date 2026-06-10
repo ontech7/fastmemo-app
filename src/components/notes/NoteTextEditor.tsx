@@ -240,8 +240,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
             {noteTextLength} {t("note.characters")}
           </Text>
           <Text style={[styles.subtitle, { flexGrow: 1 }]}>
-            {devMode.enabled && devMode.unlimitedTextSpace ? "∞" : `${convertToMB(configs.notes.sizeLimit)} MB`} /{" "}
-            {convertToMB(noteTextSize)} MB
+            {convertToMB(noteTextSize)} MB /{" "}
+            {devMode.enabled && devMode.unlimitedTextSpace ? "∞" : `${convertToMB(configs.notes.sizeLimit)} MB`}
           </Text>
         </View>
       </View>
