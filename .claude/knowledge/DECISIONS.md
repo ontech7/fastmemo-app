@@ -20,6 +20,8 @@
 - Platform-specific code still needed for ~10 file pairs (.web.tsx / .native.tsx)
 - Some libraries require native-side patching (metro.config.js has WebView + Sentry patches)
 
+**Updated (June 2026):** upgraded to Expo SDK 56 / React Native 0.85 (React 19.2). The decision stands; only the baseline versions moved. See `docs/CHANGELOG_MOBILE.md` v3.2.0.
+
 ---
 
 ## ADR-002: Redux Toolkit over Zustand/Jotai

@@ -10,16 +10,18 @@ platforms: Android (primary), Web, and Desktop (Tauri).
 
 | Platform | Framework                            | Build Tool   | Status          |
 | -------- | ------------------------------------ | ------------ | --------------- |
-| Android  | React Native 0.79 (New Architecture) | EAS Build    | Active (v3.1.1) |
+| Android  | React Native 0.85 (New Architecture) | EAS Build    | Active (v3.2.0) |
 | Web      | Expo Web (React DOM)                 | Expo/Webpack | Active          |
-| Desktop  | Tauri 1.x (Rust + WebView)           | tauri-action | Active (v1.1.1) |
+| Desktop  | Tauri 1.x (Rust + WebView)           | tauri-action | Active (v1.2.0) |
 | iOS      | React Native                         | -            | Dismissed       |
 
 ## Source Directory Structure
 
+> As of v3.2.0 / Expo SDK 56, `app/` and `assets/` live at the **project root** (moved out of `src/`). The tree below still reflects their internal layout.
+
 ```
 src/
-  app/                 # Expo Router screens (file-based routing)
+  app/                 # Expo Router screens (file-based routing) — physically at repo root since v3.2.0
     _layout.tsx        # Root layout: provider tower + single flat Stack navigator
     index.tsx          # Boot/splash screen (platform-split: index.web.tsx)
     intro.tsx          # Onboarding carousel (platform-split: intro.web.tsx)
