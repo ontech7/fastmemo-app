@@ -131,31 +131,36 @@ jobs:
         id: tauri_version
         run: echo "version=$(jq -r '.package.version' src-tauri/tauri.conf.json)" >> $GITHUB_OUTPUT
 
-      - name: extract desktop-only changelog
+      - name: extract user-facing changelog from en.ts
         id: desktop_notes
+        env:
+          VERSION: ${{ steps.tauri_version.outputs.version }}
         run: |
           set -eo pipefail
 
-          extract_latest() {
-            awk '/^## /{if(found) exit; found=1; next} found' "$1"
-          }
+          # Pull the user-facing notes from the i18n source so latest.json shows
+          # exactly what the average user reads in-app (changelog.web.description_X_Y_Z).
+          # The desktop version (e.g. 1.2.0) maps to the key description_1_2_0.
+          node -e '
+            const fs = require("fs");
+            const version = process.env.VERSION;
+            const key = "description_" + version.replace(/\./g, "_");
+            const content = fs.readFileSync("src/libs/i18n/locales/en.ts", "utf8");
 
-          desktop_file="docs/CHANGELOG_DESKTOP.md"
-          notes=""
+            // Scope the lookup to the changelog.web block to avoid matching mobile keys.
+            const webStart = content.indexOf("web:");
+            const mobileStart = content.indexOf("mobile:", webStart);
+            const webBlock = webStart >= 0
+              ? content.slice(webStart, mobileStart >= 0 ? mobileStart : undefined)
+              : content;
 
-          if [ -s "$desktop_file" ]; then
-            notes=$(extract_latest "$desktop_file")
-          fi
+            const match = webBlock.match(new RegExp(key + "\\s*:\\s*`([\\s\\S]*?)`"));
+            const notes = match && match[1].trim()
+              ? match[1].trim()
+              : "Checkout GitHub latest release for more details.";
 
-          if [ -z "$notes" ]; then
-            notes="Checkout GitHub latest release for more details."
-          fi
-
-          {
-            echo "content<<EOF"
-            echo "$notes"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, "content<<EOF\n" + notes + "\nEOF\n");
+          '
 
       - name: reconstruct latest.json from release assets
         env:
