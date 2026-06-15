@@ -5,6 +5,7 @@ import "react-native-get-random-values";
 import "@/styles/global.css";
 
 import WebToaster from "@/components/WebToaster";
+import WebViewWarmup from "@/components/WebViewWarmup";
 import AppBackground from "@/components/ui/AppBackground";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
@@ -141,6 +142,7 @@ export default Sentry.wrap(function RootLayout() {
                 <RootSiblingParent>
                   <StatusBar style="light" />
                   <WebToaster />
+                  <WebViewWarmup />
                   <View style={styles.root} onLayout={onLayoutRootView}>
                     <AppBackground style={StyleSheet.absoluteFill} />
                     <Stack screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
