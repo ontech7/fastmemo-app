@@ -2,7 +2,7 @@
 
 <img width="600" height="114" alt="GithubLogo" src="https://github.com/user-attachments/assets/2b91e421-2c6b-4739-bb16-1220bd591667" />
 
-**A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, cloud sync, etc.**
+**A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, and end-to-end encrypted cloud sync.**
 
 ![Android](https://badgen.net/badge/Android/v3.2.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v1.2.0/blue)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
