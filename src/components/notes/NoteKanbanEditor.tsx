@@ -29,7 +29,9 @@ interface Props {
 const isKanbanNoteEmpty = (n: KanbanNote) => {
   const no_title = isStringEmpty(n.title);
   const no_columns = !n.columns?.length;
-  const no_cards = n.columns?.every((col) => !col.items?.length);
+  // A column holding only blank cards counts as having no cards, so a fresh note
+  // whose default empty card was never typed into still trashes itself on exit.
+  const no_cards = n.columns?.every((col) => (col.items ?? []).every((item) => isStringEmpty(item.text)));
   return no_title && (no_columns || no_cards);
 };
 
@@ -49,11 +51,26 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
       columns:
         initialNote.columns?.length > 0
           ? initialNote.columns
-          : [{ id: uuid(), name: "", color: KANBAN_COLUMN_COLORS[0], items: [] }],
+          : [
+              {
+                id: uuid(),
+                name: "",
+                color: KANBAN_COLUMN_COLORS[0],
+                items: [{ id: uuid(), text: "", createdAt: initialNote.createdAt }],
+              },
+            ],
     }),
     [initialNote]
   );
   const buildPayloadExtras = useCallback((n: KanbanNote) => ({ columns: n.columns }), []);
+
+  // Only a brand-new note autofocuses its first card; opening an existing note
+  // focuses nothing so the user can just read.
+  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const initialFocusCardId = useMemo(
+    () => (isNewNote && !initialNote.readOnly ? (memoInitialNote.columns[0]?.items[0]?.id ?? null) : null),
+    [isNewNote, initialNote.readOnly, memoInitialNote]
+  );
 
   const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<KanbanNote>({
     initialNote: memoInitialNote,
@@ -122,79 +139,85 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
   );
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
-        <AppBackground style={StyleSheet.absoluteFill} />
+    <View style={{ flex: 1 }}>
+      {/* Static full-screen backdrop kept OUTSIDE the KeyboardAvoidingView: when
+          the keyboard animates, `behavior:"height"` resizes the KAV subtree every
+          frame, and a full-screen SVG gradient re-rasterizing each frame is what
+          dropped the keyboard open to ~10fps. */}
+      <AppBackground style={StyleSheet.absoluteFill} />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <SafeAreaView style={styles.container}>
+          <View>
+            <View style={styles.header}>
+              <BackButton chip callback={updateNoteWebhook} />
 
-        <View>
-          <View style={styles.header}>
-            <BackButton chip callback={updateNoteWebhook} />
-
-            <TextInput
-              style={styles.titleInput}
-              onChangeText={setTitle}
-              value={note.title}
-              editable={!note.readOnly}
-              cursorColor={COLOR.softWhite}
-              placeholder={t("note.title_placeholder")}
-              placeholderTextColor={COLOR.textMuted}
-              maxLength={96}
-            />
-
-            <NoteSettingsButton note={note} setNote={setNoteAsync} />
-          </View>
-        </View>
-
-        <View style={styles.boardContainer}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <KanbanDragProvider
-              columns={note.columns}
-              onMoveCard={moveCard}
-              onReorderCards={reorderCards}
-              scrollViewRef={scrollViewRef}
-              columnWidth={columnWidth}
-              columnGap={PADDING_MARGIN.md}
-            >
-              <KanbanBoard
-                note={note}
-                setNoteAsync={setNoteAsync}
-                columnWidth={columnWidth}
-                snapInterval={snapInterval}
-                scrollViewRef={scrollViewRef}
+              <TextInput
+                style={styles.titleInput}
+                onChangeText={setTitle}
+                value={note.title}
+                editable={!note.readOnly}
+                cursorColor={COLOR.softWhite}
+                placeholder={t("note.title_placeholder")}
+                placeholderTextColor={COLOR.textMuted}
+                maxLength={96}
               />
-            </KanbanDragProvider>
-          </GestureHandlerRootView>
 
-          {!note.readOnly && (
-            <AIEditorActions
-              noteType="kanban"
-              getContent={() =>
-                note.columns
-                  .map((col) => {
-                    const cards = col.items
-                      .map((item) => item.text)
-                      .filter(Boolean)
-                      .join(", ");
-                    return cards ? `${col.name}: ${cards}` : col.name;
-                  })
-                  .filter(Boolean)
-                  .join(". ")
-              }
-              noteTitle={note.title}
-              onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
-              onCategorySuggested={(name) => {
-                const cat = findCategoryByName(name);
-                if (cat) setNoteAsync({ ...note, category: cat });
-              }}
-              style={{ bottom: 10 }}
-              menuBottomOffset={110}
-            />
-          )}
+              <NoteSettingsButton note={note} setNote={setNoteAsync} />
+            </View>
+          </View>
 
-          {showAiActions && <QuickActionsDivider bottom={70} />}
-        </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+          <View style={styles.boardContainer}>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <KanbanDragProvider
+                columns={note.columns}
+                onMoveCard={moveCard}
+                onReorderCards={reorderCards}
+                scrollViewRef={scrollViewRef}
+                columnWidth={columnWidth}
+                columnGap={PADDING_MARGIN.md}
+              >
+                <KanbanBoard
+                  note={note}
+                  setNoteAsync={setNoteAsync}
+                  columnWidth={columnWidth}
+                  snapInterval={snapInterval}
+                  scrollViewRef={scrollViewRef}
+                  initialFocusCardId={initialFocusCardId}
+                />
+              </KanbanDragProvider>
+            </GestureHandlerRootView>
+
+            {!note.readOnly && (
+              <AIEditorActions
+                noteType="kanban"
+                getContent={() =>
+                  note.columns
+                    .map((col) => {
+                      const cards = col.items
+                        .map((item) => item.text)
+                        .filter(Boolean)
+                        .join(", ");
+                      return cards ? `${col.name}: ${cards}` : col.name;
+                    })
+                    .filter(Boolean)
+                    .join(". ")
+                }
+                noteTitle={note.title}
+                onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                onCategorySuggested={(name) => {
+                  const cat = findCategoryByName(name);
+                  if (cat) setNoteAsync({ ...note, category: cat });
+                }}
+                style={{ bottom: 10 }}
+                menuBottomOffset={110}
+              />
+            )}
+
+            {showAiActions && <QuickActionsDivider bottom={70} />}
+          </View>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 

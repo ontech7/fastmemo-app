@@ -17,7 +17,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { PlusIcon } from "react-native-heroicons/outline";
@@ -125,11 +125,15 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     [note, setNoteAsync, stepMode]
   );
 
-  const [autoFocus, setAutoFocus] = useState(false);
-
-  useEffect(() => {
-    setTimeout(() => setAutoFocus(true), 20);
-  }, []);
+  // Autofocus is per-row: only the row whose id matches `focusId` grabs focus.
+  // A brand-new note focuses its first row; opening an existing note focuses
+  // nothing so the user can just read. `focusId` is seeded synchronously so the
+  // target row mounts with autoFocus already set — setting it after mount is a
+  // no-op because the input reads `autoFocus` only once.
+  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const [focusId, setFocusId] = useState<string | null>(
+    isNewNote && !initialNote.readOnly ? (memoInitialNote.list[0]?.id ?? null) : null
+  );
 
   const currentMode = stepMode ? "steps" : "free";
 
@@ -139,7 +143,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         return;
       }
       // Switching mode remounts the rows; don't let their inputs grab focus.
-      setAutoFocus(false);
+      setFocusId(null);
       setNoteAsync({ ...note, mode });
     },
     [note, setNoteAsync]
@@ -166,17 +170,10 @@ export default function NoteTodoEditor({ initialNote }: Props) {
       return;
     }
 
-    setNoteAsync({
-      ...note,
-      list: [
-        ...note.list,
-        {
-          id: uuid(),
-          text: "",
-          checked: false,
-        },
-      ],
-    });
+    const newItem = { id: uuid(), text: "", checked: false };
+    setNoteAsync({ ...note, list: [...note.list, newItem] });
+    // Focus the freshly added row so the user can type without clicking it.
+    setFocusId(newItem.id);
   }, [note, setNoteAsync]);
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -257,7 +254,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                       checkItem={checkListItem}
                       deleteItem={deleteListItem}
                       disabled={note.readOnly}
-                      autoFocus={autoFocus}
+                      autoFocus={item.id === focusId}
                       stepMode={stepMode}
                       stepStatus={stepStatus}
                       stepNumber={stepMode ? index + 1 : undefined}

@@ -117,7 +117,7 @@ export default function TodoItem({
             editable={!disabled}
             placeholderTextColor={COLOR.textMuted}
             cursorColor={COLOR.softWhite}
-            autoFocus={autoFocus && !item.text}
+            autoFocus={autoFocus}
             onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
           />
 
@@ -190,7 +190,7 @@ export default function TodoItem({
             editable={!disabled}
             placeholderTextColor={COLOR.textMuted}
             cursorColor={COLOR.softWhite}
-            autoFocus={autoFocus && isOngoing && !item.text}
+            autoFocus={autoFocus}
             onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
           />
         </View>

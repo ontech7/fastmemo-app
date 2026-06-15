@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CheckIcon, TrashIcon } from "react-native-heroicons/outline";
@@ -33,6 +33,10 @@ interface Props {
   disabled: boolean;
   hidden?: boolean;
   autoFocus: boolean;
+  // Forwarded to the row's text input so the parent can focus it imperatively
+  // once the screen transition settles (mount-time autoFocus alone is dropped
+  // mid-transition on native).
+  inputRef?: RefObject<TextInput | null>;
   stepMode?: boolean;
   stepStatus?: StepStatus;
   stepNumber?: number;
@@ -53,6 +57,7 @@ export default function TodoItem({
   disabled,
   hidden = false,
   autoFocus,
+  inputRef,
   stepMode = false,
   stepStatus = "future",
   stepNumber,
@@ -116,6 +121,7 @@ export default function TodoItem({
           </TouchableOpacity>
 
           <TextInput
+            ref={inputRef}
             style={[styles.listItemInputFree, item.checked && { textDecorationLine: "line-through", opacity: 0.5 }]}
             textAlignVertical="center"
             multiline
@@ -186,6 +192,7 @@ export default function TodoItem({
 
       <View style={styles.stepTextWrap}>
         <TextInput
+          ref={inputRef}
           style={[styles.stepTextInput, item.checked && styles.stepTextDone, isFuture && styles.stepTextFuture]}
           textAlignVertical="center"
           multiline
@@ -193,7 +200,7 @@ export default function TodoItem({
           value={item.text}
           editable={!disabled}
           cursorColor={COLOR.softWhite}
-          autoFocus={autoFocus && isOngoing}
+          autoFocus={autoFocus}
         />
       </View>
 
