@@ -1,4 +1,4 @@
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import type { AIModelId, EditorAction } from "@/libs/ai";
 import { cancelCommand, generateEditorContent, initContext, isModelSufficient, MODEL_SHORT_LABEL } from "@/libs/ai";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
@@ -493,6 +493,8 @@ function AnimatedActionItem({
 
 /* STYLE */
 
+const BUTTON_SIZE = 40;
+
 const styles = StyleSheet.create({
   overlay: {
     position: "absolute",
@@ -535,9 +537,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 100,
     left: 40,
-    padding: PADDING_MARGIN.sm + 2,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: BORDER.normal,
     backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
   outputPanel: {
     position: "absolute",
