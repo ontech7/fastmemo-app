@@ -163,6 +163,7 @@ const zh = {
   home: {
     notes: "笔记",
     search: "写一些东西...",
+    quickNote: "快速笔记…",
     deepSearch: "深度搜索（文本、列表等）",
     selected_count: "已选 {{count}}",
 
@@ -358,6 +359,9 @@ const zh = {
     title: "创建笔记",
     mode_section: "模式",
     default_type_section: "默认笔记类型",
+    quick_note_section: "快速笔记",
+    quick_note_label: "快速笔记栏",
+    quick_note_description: "在主屏幕底部显示一个栏，无需打开完整编辑器即可随手写下并保存文字笔记。点按、输入并发送。",
     mode: {
       simple: "简单",
       simple_description: "点按创建文本笔记。使用菜单选择其他类型。",

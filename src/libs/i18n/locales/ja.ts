@@ -163,6 +163,7 @@ const ja = {
   home: {
     notes: "メモ",
     search: "何かを検索...",
+    quickNote: "クイックメモ…",
     deepSearch: "詳細検索（テキスト、リストなど）",
     selected_count: "{{count}}件選択",
 
@@ -358,6 +359,10 @@ const ja = {
     title: "ノート作成",
     mode_section: "モード",
     default_type_section: "既定のノート種類",
+    quick_note_section: "クイックメモ",
+    quick_note_label: "クイックメモバー",
+    quick_note_description:
+      "ホーム画面下部にバーを表示し、完全なエディタを開かずにテキストメモをすばやく書いて保存できます。タップして入力し、送信。",
     mode: {
       simple: "シンプル",
       simple_description: "タップでテキストノートを作成。他の種類はメニューから。",

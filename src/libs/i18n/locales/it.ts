@@ -164,6 +164,7 @@ const it = {
   home: {
     notes: "Note",
     search: "Cerca qualcosa…",
+    quickNote: "Nota rapida…",
     deepSearch: "Ricerca approfondita (testo, liste…)",
     selected_count: "{{count}} selezionate",
 
@@ -434,6 +435,10 @@ const it = {
     title: "Creazione nota",
     mode_section: "Modalità",
     default_type_section: "Tipo di nota predefinito",
+    quick_note_section: "Nota rapida",
+    quick_note_label: "Barra nota rapida",
+    quick_note_description:
+      "Mostra in fondo alla home una barra per scrivere e salvare al volo una nota di testo, senza aprire l'editor completo. Tocca, scrivi e invia.",
     mode: {
       simple: "Semplice",
       simple_description: "Il tap crea una nota di testo. Usa il menù per gli altri tipi.",

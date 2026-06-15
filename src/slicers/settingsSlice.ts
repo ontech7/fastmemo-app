@@ -68,6 +68,7 @@ const initialState: SettingsState = {
     mode: "simple",
     smartType: "text",
     lastUsedType: "text",
+    quickNote: true,
   },
 };
 
@@ -187,6 +188,7 @@ const DEFAULT_NOTE_CREATION: NoteCreationSettings = {
   mode: "simple",
   smartType: "text",
   lastUsedType: "text",
+  quickNote: true,
 };
 export const selectorNoteCreation = (state: RootState): NoteCreationSettings =>
   state.settings.noteCreation || DEFAULT_NOTE_CREATION;

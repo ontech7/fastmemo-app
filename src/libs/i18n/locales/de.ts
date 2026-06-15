@@ -163,6 +163,7 @@ const de = {
   home: {
     notes: "Notiz",
     search: "Nach etwas suchen…",
+    quickNote: "Schnelle Notiz…",
     deepSearch: "Tiefensuche (Text, Listen…)",
     selected_count: "{{count}} ausgewählt",
 
@@ -359,6 +360,10 @@ const de = {
     title: "Notiz erstellen",
     mode_section: "Modus",
     default_type_section: "Standard-Notiztyp",
+    quick_note_section: "Schnelle Notiz",
+    quick_note_label: "Schnellnotiz-Leiste",
+    quick_note_description:
+      "Zeigt unten auf dem Startbildschirm eine Leiste, um im Handumdrehen eine Textnotiz zu schreiben und zu speichern, ohne den vollständigen Editor zu öffnen. Tippen, schreiben, senden.",
     mode: {
       simple: "Einfach",
       simple_description: "Tippen erstellt eine Textnotiz. Verwende das Menü für andere Typen.",

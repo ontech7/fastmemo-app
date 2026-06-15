@@ -163,6 +163,7 @@ const en = {
   home: {
     notes: "Notes",
     search: "Search something...",
+    quickNote: "Quick note…",
     deepSearch: "Deep search (text, lists…)",
     selected_count: "{{count}} selected",
 
@@ -432,6 +433,10 @@ const en = {
     title: "Note creation",
     mode_section: "Mode",
     default_type_section: "Default note type",
+    quick_note_section: "Quick note",
+    quick_note_label: "Quick-note bar",
+    quick_note_description:
+      "Shows a bar at the bottom of the home screen to write and save a text note on the fly, without opening the full editor. Tap, type and send.",
     mode: {
       simple: "Simple",
       simple_description: "Tap creates a text note. Use the dropdown for other types.",
