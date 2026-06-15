@@ -9,11 +9,14 @@ import { deleteApp, getApp, getApps, initializeApp } from "firebase/app";
 import {
   collection as collectionFirestore,
   deleteDoc,
+  disableNetwork,
   doc,
+  enableNetwork,
   getDoc,
   getDocFromServer,
   getDocsFromServer,
   getFirestore,
+  initializeFirestore,
   query,
   runTransaction,
   setDoc,
@@ -111,7 +114,17 @@ export const initFirebase = (options: CloudSettings): void => {
       .catch((error) => console.log("Error deleting app:", error));
   }
 
-  initializeApp(options, configs.firebase.appName);
+  const app = initializeApp(options, configs.firebase.appName);
+
+  // Initialize Firestore explicitly with auto-detected long polling. The default
+  // transport (WebChannel streaming) wedges inside the OS WebViews Tauri runs in
+  // (WKWebView / WebView2 / WebKitGTK), typically after the desktop sleeps or the
+  // network switches, and the SDK doesn't recover on its own — which is why the
+  // connection "died" until the app was fully restarted. Long polling survives
+  // those environments far better; auto-detect keeps the faster streaming path
+  // where it actually works (mobile / normal web). Must run before any
+  // getFirestore() call so the transport choice takes effect.
+  initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 };
 
 export const retrieveFirebase = (): { app: FirebaseApp | null; db: Firestore | null } => {
@@ -122,6 +135,28 @@ export const retrieveFirebase = (): { app: FirebaseApp | null; db: Firestore | n
     return { app, db };
   } catch (e) {
     return { app: null, db: null };
+  }
+};
+
+/**
+ * Force Firestore to drop and re-establish its backend connection without
+ * recreating the whole app. Recovers a wedged transport (the channel that dies on
+ * Tauri WebViews after sleep / a network switch) the same way a full app restart
+ * does, but in place. Safe to call when not connected — it's a no-op if Firestore
+ * isn't initialized. Resolves once the connection is back up (or on failure).
+ */
+export const reconnectFirebase = async (): Promise<void> => {
+  const { db } = retrieveFirebase();
+
+  if (db == null) {
+    return;
+  }
+
+  try {
+    await disableNetwork(db);
+    await enableNetwork(db);
+  } catch (e) {
+    console.log("Error reconnecting firebase:", e);
   }
 };
 

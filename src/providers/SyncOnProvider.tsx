@@ -14,6 +14,7 @@ import {
   getAllElementsInCloud,
   getDeviceUuid,
   readVault,
+  reconnectFirebase,
   setElementInCloud,
 } from "@/libs/firebase";
 import { getDEK, isVaultUnlocked, lockVault, wipePersistedDEK } from "@/libs/vaultSession";
@@ -42,6 +43,14 @@ export default function SyncOnProvider(): null {
   const syncToCloudRef = useRef<(() => Promise<void>) | null>(null);
   const isSyncingRef = useRef(false);
   const isSyncingCloudRef = useRef(false);
+  // Mirrors isCloudConnected for the foreground-resume handler (which runs with []
+  // deps) so it only forces a Firestore reconnect when sync is actually active.
+  const isCloudConnectedRef = useRef(false);
+  // True while reconnectFirebase() is toggling the network off->on. The reads use
+  // getDocsFromServer (source: "server"), which throws "Failed to get documents
+  // from server" if it fires during that offline window — so sync pauses until the
+  // connection is back up.
+  const isReconnectingRef = useRef(false);
 
   const isCloudConnected = useSelector(getCloudConnected);
   const cloudSettings = useSelector(getCloudSettings);
@@ -116,6 +125,10 @@ export default function SyncOnProvider(): null {
   const syncToLocal = useCallback(async () => {
     // cannot decrypt incoming notes without the DEK
     if (!isVaultUnlocked()) return;
+
+    // the connection is mid-reconnect (network toggled off) -> server reads would
+    // fail; skip and let the next trigger run once it's back up
+    if (isReconnectingRef.current) return;
 
     // prevent concurrent syncs
     if (isSyncingRef.current) return;
@@ -258,6 +271,10 @@ export default function SyncOnProvider(): null {
     // notes are encrypted before upload -> needs the DEK
     if (!isVaultUnlocked()) return;
 
+    // mid-reconnect: the network is toggled off, server reads/writes would fail;
+    // skip and let a later trigger re-attempt once the channel is back up
+    if (isReconnectingRef.current) return;
+
     const hasCategories = !isEmpty(cloudCategories_add) || !isEmpty(cloudCategories_delete);
     const hasNotes = !isEmpty(cloudNotes_add) || !isEmpty(cloudNotes_delete) || !isEmpty(cloudNotes_detach);
     if (!hasCategories && !hasNotes) return;
@@ -354,13 +371,34 @@ export default function SyncOnProvider(): null {
   ///////////////////////////////////
 
   useEffect(() => {
+    isCloudConnectedRef.current = isCloudConnected;
+  }, [isCloudConnected]);
+
+  useEffect(() => {
+    // Coming back to the foreground is exactly when a wedged Firestore channel
+    // surfaces (the window was hidden / the desktop slept). Force a reconnect
+    // first so we recover in place — otherwise the immediate sync just hits the
+    // same dead connection and the user is back to restarting the app. Only when
+    // sync is active, so we don't toggle the network on an idle Firestore.
+    const resume = async () => {
+      if (isCloudConnectedRef.current) {
+        // pause sync while the network is toggled off->on so no server read fires
+        // into the offline window; cleared before the follow-up sync below runs
+        isReconnectingRef.current = true;
+        try {
+          await reconnectFirebase();
+        } finally {
+          isReconnectingRef.current = false;
+        }
+      }
+      syncToLocalRef.current?.();
+      syncToCloudRef.current?.();
+    };
+
     // on web/tauri, use visibilitychange instead
     if (Platform.OS === "web") {
       const handleVisibilityChange = () => {
-        if (document.visibilityState === "visible") {
-          syncToLocalRef.current?.();
-          syncToCloudRef.current?.();
-        }
+        if (document.visibilityState === "visible") resume();
       };
 
       document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -368,11 +406,7 @@ export default function SyncOnProvider(): null {
     }
 
     const appStateSubscription = AppState.addEventListener("change", (nextAppState) => {
-      if (nextAppState === "active") {
-        // app came back to foreground, sync immediately (in + out)
-        syncToLocalRef.current?.();
-        syncToCloudRef.current?.();
-      }
+      if (nextAppState === "active") resume();
     });
 
     return () => {
