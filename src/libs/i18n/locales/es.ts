@@ -15,6 +15,11 @@ const es = {
     title: "¿Qué hay de nuevo?",
 
     web: {
+      description_1_2_0: `• Sincronización en la nube con cifrado de extremo a extremo: tus notas se protegen con tu propia clave.
+• Nueva barra de "nota rápida" para escribir una nota al instante desde el inicio.
+• Sección de Ayuda renovada con búsqueda inteligente con IA.
+• Varias correcciones y mejoras.`,
+
       description_1_1_1: `• Agregadas las notas sin conexion: manten una nota solo en este dispositivo, sin sincronizarla en la nube.
 • Reconocimiento de voz 2.0: dictado por voz mejorado con limpieza automatica mediante IA.
 • El Asistente IA ahora puede sugerir una categoria a partir del titulo de la nota.
@@ -45,6 +50,11 @@ const es = {
     },
 
     mobile: {
+      description_3_2_0: `• Sincronización en la nube con cifrado de extremo a extremo: tus notas se protegen con tu propia clave.
+• Nueva barra de "nota rápida" para escribir una nota al instante desde el inicio.
+• Sección de Ayuda renovada con búsqueda inteligente con IA.
+• Varias correcciones y mejoras.`,
+
       description_3_1_1: `• Agregadas las notas sin conexion: manten una nota solo en este dispositivo, sin sincronizarla en la nube.
 • Reconocimiento de voz 2.0: dictado por voz mejorado con limpieza automatica mediante IA.
 • El Asistente IA ahora puede sugerir una categoria a partir del titulo de la nota.

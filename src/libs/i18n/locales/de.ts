@@ -15,6 +15,11 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_1_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Deine Notizen werden mit deinem eigenen Schlüssel geschützt.
+• Neue Schnellnotiz-Leiste, um direkt vom Startbildschirm eine Notiz zu erfassen.
+• Überarbeiteter Hilfe-Bereich mit KI-gestützter intelligenter Suche.
+• Verschiedene Fehlerbehebungen und Verbesserungen.`,
+
       description_1_1_1: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
 • Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
 • Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
@@ -45,6 +50,11 @@ const de = {
     },
 
     mobile: {
+      description_3_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Deine Notizen werden mit deinem eigenen Schlüssel geschützt.
+• Neue Schnellnotiz-Leiste, um direkt vom Startbildschirm eine Notiz zu erfassen.
+• Überarbeiteter Hilfe-Bereich mit KI-gestützter intelligenter Suche.
+• Verschiedene Fehlerbehebungen und Verbesserungen.`,
+
       description_3_1_1: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
 • Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
 • Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.

@@ -15,6 +15,11 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
+      description_1_2_0: `• Synchronisation cloud chiffrée de bout en bout : vos notes sont protégées avec votre propre clé.
+• Nouvelle barre de « note rapide » pour saisir une note instantanément depuis l'accueil.
+• Section d'aide repensée avec recherche intelligente par IA.
+• Diverses corrections et améliorations.`,
+
       description_1_1_1: `• Ajout des notes hors ligne : conservez une note uniquement sur cet appareil, sans la synchroniser sur le cloud.
 • Reconnaissance vocale 2.0 : dictee vocale amelioree avec nettoyage automatique par IA.
 • L'Assistant IA peut desormais suggerer une categorie a partir du titre de la note.
@@ -45,6 +50,11 @@ const fr = {
     },
 
     mobile: {
+      description_3_2_0: `• Synchronisation cloud chiffrée de bout en bout : vos notes sont protégées avec votre propre clé.
+• Nouvelle barre de « note rapide » pour saisir une note instantanément depuis l'accueil.
+• Section d'aide repensée avec recherche intelligente par IA.
+• Diverses corrections et améliorations.`,
+
       description_3_1_1: `• Ajout des notes hors ligne : conservez une note uniquement sur cet appareil, sans la synchroniser sur le cloud.
 • Reconnaissance vocale 2.0 : dictee vocale amelioree avec nettoyage automatique par IA.
 • L'Assistant IA peut desormais suggerer une categorie a partir du titre de la note.

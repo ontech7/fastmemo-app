@@ -1,3 +1,24 @@
+## v3.2.0
+
+- Cloud sync is now end-to-end encrypted per vault: notes are sealed with a key derived from your passphrase (envelope DEK/KEK scheme), with a one-time recovery key and password change/reset flows. The old global key is gone, and legacy notes sealed with the previous empty key are migrated automatically.
+- Hardened the encrypted sync: self-healing sync, manual per-device sync, "wipe + cloud" hidden while the vault is locked, and in-place recovery of a wedged Firestore connection (long-polling transport + reconnect on app resume) instead of needing a restart.
+- Added a quick-note bar on the home screen: jot and save a plain-text note instantly without opening the full editor (it persists a real text note, so it reopens unchanged).
+- Overhauled the Help screen into macro-categories with fuller docs and on-device AI smart search; translated the Help content into ES, FR, DE, ZH, JA.
+- Unified every editor's bottom actions (AI, voice, to-do mode, add) behind a single shared action dock, consistent across text, to-do, kanban and code notes.
+- Untitled notes now auto-derive their title from the content.
+- Smoother editor open: the formatting toolbar is glued to the keyboard with a fade-in, autofocus is reliable, the editor no longer flashes on open, and the WebView engine is pre-warmed on launch.
+- Fixed the soft keyboard not rising in the code editor on Android.
+- Categories: pinned "All" in the organize screen and made AI icon suggestions deterministic.
+- Settings: live GitHub stars and auto-read library versions in the About section.
+- The editor subtitle now shows the current size before the maximum.
+- Consistent webhook/to-do checkboxes and polished AI editor action buttons.
+- Fixed a missing trailing slash on the report endpoint URL.
+- Upgraded to Expo SDK 56 (React Native 0.85, React 19.2).
+- Migrated react-native-dialog to the 1.3 API.
+- Moved the expo-router `app/` and `assets/` directories to the project root.
+- Cleared React Native 0.85 / web deprecation warnings and fixed a New Architecture `maxHeight` issue.
+- Stabilized settings selector fallbacks.
+
 ## v3.1.1
 
 - Added offline notes: keep a note only on this device, excluded from cloud sync. You can detach a synced note to make it local, or re-sync a local note (a new synced copy is created).

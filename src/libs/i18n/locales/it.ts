@@ -15,6 +15,11 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
+      description_1_2_0: `• Sincronizzazione cloud con crittografia end-to-end: le tue note sono protette con una chiave solo tua.
+• Nuova barra "nota rapida" per scrivere al volo una nota dalla home.
+• Sezione Aiuto rinnovata con ricerca intelligente basata su AI.
+• Varie correzioni e miglioramenti.`,
+
       description_1_1_1: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
 • Riconoscimento vocale 2.0: dettatura vocale migliorata con pulizia automatica tramite AI.
 • L'Assistente AI ora puo' suggerire una categoria a partire dal titolo della nota.
@@ -45,6 +50,11 @@ const it = {
     },
 
     mobile: {
+      description_3_2_0: `• Sincronizzazione cloud con crittografia end-to-end: le tue note sono protette con una chiave solo tua.
+• Nuova barra "nota rapida" per scrivere al volo una nota dalla home.
+• Sezione Aiuto rinnovata con ricerca intelligente basata su AI.
+• Varie correzioni e miglioramenti.`,
+
       description_3_1_1: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
 • Riconoscimento vocale 2.0: dettatura vocale migliorata con pulizia automatica tramite AI.
 • L'Assistente AI ora puo' suggerire una categoria a partire dal titolo della nota.

@@ -15,6 +15,11 @@ const en = {
     title: "What's new?",
 
     web: {
+      description_1_2_0: `• End-to-end encrypted cloud sync: your notes are sealed with your own key.
+• New quick-note bar to capture a note instantly from the home screen.
+• Revamped Help section with AI-powered smart search.
+• Various fixes and improvements.`,
+
       description_1_1_1: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
 • Voice Recognition 2.0: improved voice dictation with automatic AI cleanup.
 • The AI Assistant can now suggest a category from the note title.
@@ -45,6 +50,11 @@ const en = {
     },
 
     mobile: {
+      description_3_2_0: `• End-to-end encrypted cloud sync: your notes are sealed with your own key.
+• New quick-note bar to capture a note instantly from the home screen.
+• Revamped Help section with AI-powered smart search.
+• Various fixes and improvements.`,
+
       description_3_1_1: `• Added offline notes: keep a note only on this device, without syncing it to the cloud.
 • Voice Recognition 2.0: improved voice dictation with automatic AI cleanup.
 • The AI Assistant can now suggest a category from the note title.
