@@ -4,7 +4,6 @@ import type { Firestore } from "firebase/firestore";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
 import { defaultCategory } from "@/configs/default";
@@ -73,18 +72,26 @@ export const useCloudSync = () => {
   const [isConnected, setIsConnected] = useState<boolean>(selectorCloudConnected);
   const [isConnecting, setIsConnecting] = useState<ConnectingState>({ loading: false });
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [handshakeFailed, setHandshakeFailed] = useState<boolean>(false);
 
   const dispatch = useDispatch();
 
   const toggleCloudSync = async (): Promise<void> => {
     if (isCloudSyncEnabled) {
-      await removeDeviceFromCloud();
+      // Best-effort cloud cleanup. If a call rejects (transient/offline) we still
+      // disconnect locally below, so the user never gets stuck in a half-on state
+      // with no way to toggle off.
+      try {
+        await removeDeviceFromCloud();
 
-      // forget the cached DEK for this device, but leave the cloud vault intact
-      // so reconnecting (or another device) can still unlock with the passphrase
-      if (cloudSettings.projectId) await forgetDeviceVault(cloudSettings.projectId);
+        // forget the cached DEK for this device, but leave the cloud vault intact
+        // so reconnecting (or another device) can still unlock with the passphrase
+        if (cloudSettings.projectId) await forgetDeviceVault(cloudSettings.projectId);
 
-      await deleteActiveFirebase();
+        await deleteActiveFirebase();
+      } catch (e) {
+        console.log("toggleCloudSync cleanup error:", e);
+      }
 
       setIsConnected(false);
       dispatch(setCloudConnected(false));
@@ -487,11 +494,7 @@ export const useCloudSync = () => {
 
           setIsLoading(false);
 
-          Alert.alert(t("cloudsync.handshakeFailed"), t("cloudsync.handshakeFailedDesc"), [
-            {
-              text: t("confirm"),
-            },
-          ]);
+          setHandshakeFailed(true);
 
           break;
         default:
@@ -512,6 +515,7 @@ export const useCloudSync = () => {
       requestVaultAccess,
       requestReset,
       syncCloudData,
+      dismissHandshakeFailed: () => setHandshakeFailed(false),
     },
     state: {
       isLoading,
@@ -519,6 +523,7 @@ export const useCloudSync = () => {
       isConnecting: isConnecting?.loading ?? false,
       isConnected,
       isEditable: !isConnecting?.loading && !isConnected,
+      handshakeFailed,
     },
     cloudSettings,
   };

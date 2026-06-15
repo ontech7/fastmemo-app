@@ -43,6 +43,23 @@ export function retrieveVaultContinuation(): (() => void | Promise<void>) | unde
   return cb;
 }
 
+/* SYNC */
+
+/**
+ * Manual "sync now" trigger registered by SyncOnProvider (which owns the sync
+ * logic) so any screen — e.g. the Devices screen — can force a pull + push for
+ * the current device when, rarely, automatic sync didn't fire. Persistent (not
+ * one-shot): the latest registration stays until replaced.
+ */
+export function registerSyncNow(callback: () => Promise<void>): void {
+  registry.set("syncNow", callback);
+}
+
+export function triggerSyncNow(): Promise<void> {
+  const cb = registry.get("syncNow") as (() => Promise<void>) | undefined;
+  return cb ? cb() : Promise.resolve();
+}
+
 /** One-shot transport for a freshly generated recovery key to the display screen. */
 export function storeVaultRecoveryKey(recoveryKey: string): void {
   registry.set("vaultRecoveryKey", recoveryKey);

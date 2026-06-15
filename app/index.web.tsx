@@ -1,13 +1,13 @@
-import lottieJson from "@/assets/lottie/Logo_with_Text.json";
+import splashLogo from "~/assets/images/splash-logo.png";
+import lottieJson from "~/assets/lottie/Logo_with_Text.json";
 import LottieView from "@/components/lottie/LottieAnimation";
 import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import { initFirebase } from "@/libs/firebase";
+import { getLocales } from "@/libs/localization";
 import { isObjectEmpty } from "@/utils/string";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
-import * as Localization from "expo-localization";
-import * as SplashScreen from "expo-splash-screen";
 import i18n from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
@@ -25,7 +25,8 @@ export default function LoadingScreen() {
       try {
         // set app language
         const language = await AsyncStorage.getItem("@appLanguage");
-        i18n.changeLanguage(language && language !== "system" ? language : Localization.getLocales()[0].languageCode || "en");
+        const locales = getLocales();
+        i18n.changeLanguage(language && language !== "system" ? language : locales[0]?.languageCode || "en");
 
         // enable firebase if cloudSync config is available
         const cloudSyncRaw = await AsyncStorage.getItem("@cloudSync");
@@ -35,7 +36,6 @@ export default function LoadingScreen() {
         }
 
         const firstScreen = await AsyncStorage.getItem("@firstScreen");
-        SplashScreen.hideAsync().catch(() => {});
 
         if (!firstScreen) {
           // first launch
@@ -45,7 +45,6 @@ export default function LoadingScreen() {
           router.replace("/home");
         }
       } catch (error) {
-        SplashScreen.hideAsync().catch(() => {});
         router.replace("/home");
         Sentry.captureException(error);
       }
@@ -57,14 +56,12 @@ export default function LoadingScreen() {
 
   useEffect(() => {
     if (showLottie) {
-      logoAnimRef.current?.play();
+      setTimeout(() => {
+        logoAnimRef.current?.play();
+      }, 150);
     }
   }, [showLottie]);
 
-  // Solid app-color splash + logo (matching the native splash) shown while init
-  // runs. On first launch we play the animated logo, otherwise we
-  // keep the static logo until we hand straight over to /home (no fade — the
-  // destination would otherwise reveal the gradient backdrop mid-transition).
   return (
     <View style={styles.splashContainer}>
       {showLottie ? (
@@ -74,18 +71,15 @@ export default function LoadingScreen() {
           source={lottieJson}
           loop={false}
           autoPlay={false}
-          resizeMode="contain"
           onAnimationFinish={handleLottieFinish}
           speed={1.32}
         />
       ) : (
-        <Image source={require("@/assets/images/splash-logo.png")} style={styles.staticLogo} resizeMode="contain" />
+        <Image source={splashLogo} style={styles.staticLogo} resizeMode="contain" />
       )}
     </View>
   );
 }
-
-/* STYLES */
 
 const styles = StyleSheet.create({
   splashContainer: {

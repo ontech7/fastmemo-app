@@ -49,7 +49,7 @@ export default function LoadingSpinner({ visible, color = null, text = null, pro
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 999,
     backgroundColor: "rgba(5, 9, 26, 0.72)",
     justifyContent: "center",

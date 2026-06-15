@@ -163,6 +163,7 @@ const ja = {
   home: {
     notes: "メモ",
     search: "何かを検索...",
+    quickNote: "クイックメモ…",
     deepSearch: "詳細検索（テキスト、リストなど）",
     selected_count: "{{count}}件選択",
 
@@ -276,10 +277,12 @@ const ja = {
     name_title: "名前",
     name_placeholder: "ここにカテゴリー名を入力してください...",
     icon_title: "アイコン",
+    suggested_title: "おすすめ",
     notes_num: "ノート数: ",
   },
   organizecategory: {
     title: "整理",
+    empty: "カテゴリーがまだありません。\n+ ボタンを押して作成しましょう。",
   },
   trashednotes: {
     title: "削除されたノート",
@@ -356,6 +359,10 @@ const ja = {
     title: "ノート作成",
     mode_section: "モード",
     default_type_section: "既定のノート種類",
+    quick_note_section: "クイックメモ",
+    quick_note_label: "クイックメモバー",
+    quick_note_description:
+      "ホーム画面下部にバーを表示し、完全なエディタを開かずにテキストメモをすばやく書いて保存できます。タップして入力し、送信。",
     mode: {
       simple: "シンプル",
       simple_description: "タップでテキストノートを作成。他の種類はメニューから。",
@@ -371,6 +378,7 @@ const ja = {
     information: "情報",
     developer: "開発者",
     website: "ウェブサイト",
+    openLink: "リンクを開く",
   },
   ai: {
     title: "AIアシスタント",
@@ -477,6 +485,17 @@ const ja = {
     title: "ヘルプ",
     search_placeholder: "どのようなご用件ですか？",
     no_results: "結果がありません。別の言葉でお試しください。",
+    search_placeholders: [
+      "検索、または必要なことを入力…",
+      "ノートはどう作成しますか？",
+      "ツールバーは何に使いますか？",
+      "クラウド同期の仕組みは？",
+      "削除したノートはどう復元しますか？",
+    ],
+    ai_thinking: "AIで検索中…",
+    ai_results: "AIの結果 · タップでクリア",
+    ai_invite_title: "お探しのものが見つかりませんか？",
+    ai_invite_subtitle: "自分の言葉で説明すると、AIアシスタントが適切なトピックを見つけます。",
     cat_notes: "ノート",
     cat_editor: "エディタと書式",
     cat_categories: "カテゴリ",
@@ -502,7 +521,8 @@ const ja = {
       text_4_0: "右側の×印をタップすると、その項目を削除できます。",
       text_5_0: "下部のボタンでは次のことができます：",
       text_6_0: "• 追加 — リストに新しい項目を追加します。",
-      text_7_0: "• チェック済みを非表示/表示 — チェックを付けた項目を隠したり、再表示したりします。",
+      text_7_0:
+        "• モードを切り替え — リスト（従来のチェックリスト）とステップ（順番に完了する番号付きの順次リスト）を切り替えます。",
       text_8_0: "• すべて削除 — リスト内のすべての項目を削除します。",
       text_9_0: "保存するには、ホーム画面に戻るだけです。",
     },
@@ -651,6 +671,7 @@ const ja = {
       text_1_0:
         "自分の Google Firebase プロジェクトを接続して同期を有効にすると、デバイス間でノートを同期できます。Fast Memo の中央サーバーは存在せず、データはあなたの Firebase の中だけにあります。",
       text_2_0: "ノートはアップロード前にデバイス上でエンドツーエンド暗号化されるため、あなた以外の誰も読むことはできません。",
+      text_link: "Google Firebase の設定手順ガイドを読む →",
     },
     what_encryption: {
       title: "ノートはどのように暗号化されますか？",

@@ -163,6 +163,7 @@ const de = {
   home: {
     notes: "Notiz",
     search: "Nach etwas suchen…",
+    quickNote: "Schnelle Notiz…",
     deepSearch: "Tiefensuche (Text, Listen…)",
     selected_count: "{{count}} ausgewählt",
 
@@ -276,10 +277,12 @@ const de = {
     name_title: "Name",
     name_placeholder: "Geben Sie hier den Kategorienamen ein...",
     icon_title: "Symbol",
+    suggested_title: "Vorschläge",
     notes_num: "Notiz: ",
   },
   organizecategory: {
     title: "Organisieren",
+    empty: "Noch keine Kategorien.\nTippe auf die Schaltfläche +, um eine zu erstellen.",
   },
   trashednotes: {
     title: "Vernichtete Notizen",
@@ -357,6 +360,10 @@ const de = {
     title: "Notiz erstellen",
     mode_section: "Modus",
     default_type_section: "Standard-Notiztyp",
+    quick_note_section: "Schnelle Notiz",
+    quick_note_label: "Schnellnotiz-Leiste",
+    quick_note_description:
+      "Zeigt unten auf dem Startbildschirm eine Leiste, um im Handumdrehen eine Textnotiz zu schreiben und zu speichern, ohne den vollständigen Editor zu öffnen. Tippen, schreiben, senden.",
     mode: {
       simple: "Einfach",
       simple_description: "Tippen erstellt eine Textnotiz. Verwende das Menü für andere Typen.",
@@ -372,6 +379,7 @@ const de = {
     information: "Information",
     developer: "Entwickler",
     website: "Webseite",
+    openLink: "Link öffnen",
   },
   ai: {
     title: "KI-Assistent",
@@ -478,6 +486,17 @@ const de = {
     title: "Hilfe",
     search_placeholder: "Wie können wir Ihnen helfen?",
     no_results: "Keine Ergebnisse. Versuchen Sie ein anderes Wort.",
+    search_placeholders: [
+      "Suchen oder beschreiben, was Sie brauchen…",
+      "Wie erstelle ich eine Notiz?",
+      "Wozu dient die Symbolleiste?",
+      "Wie funktioniert die Cloud-Synchronisierung?",
+      "Wie stelle ich eine gelöschte Notiz wieder her?",
+    ],
+    ai_thinking: "Suche mit KI…",
+    ai_results: "KI-Ergebnisse · zum Zurücksetzen tippen",
+    ai_invite_title: "Nicht gefunden, wonach Sie suchen?",
+    ai_invite_subtitle: "Beschreiben Sie es in eigenen Worten und der KI-Assistent findet das passende Thema.",
     cat_notes: "Notizen",
     cat_editor: "Editor & Formatierung",
     cat_categories: "Kategorien",
@@ -503,7 +522,8 @@ const de = {
       text_4_0: "Tippen Sie auf das Kreuz rechts, um einen Eintrag zu entfernen.",
       text_5_0: "Mit den Schaltflächen unten können Sie:",
       text_6_0: "• Hinzufügen — einen neuen Eintrag zur Liste hinzufügen.",
-      text_7_0: "• Erledigte aus-/einblenden — bereits abgehakte Einträge ausblenden oder wieder anzeigen.",
+      text_7_0:
+        "• Modus wechseln — wechseln Sie zwischen Liste (eine klassische Checkliste) und Schritte (eine nummerierte, sequenzielle Liste, die der Reihe nach abgeschlossen wird).",
       text_8_0: "• Alle löschen — jeden Eintrag der Liste entfernen.",
       text_9_0: "Um sie zu speichern, kehren Sie einfach zur Startseite zurück.",
     },
@@ -663,6 +683,7 @@ const de = {
         "Sie können Ihre Notizen geräteübergreifend synchronisieren, indem Sie Ihr eigenes Google-Firebase-Projekt verbinden und die Synchronisierung aktivieren. Es gibt keinen zentralen Fast-Memo-Server — Ihre Daten liegen nur in Ihrem Firebase.",
       text_2_0:
         "Ihre Notizen werden auf Ihrem Gerät Ende-zu-Ende verschlüsselt, bevor sie hochgeladen werden, sodass niemand außer Ihnen sie lesen kann.",
+      text_link: "Schritt-für-Schritt-Anleitung zur Einrichtung von Google Firebase lesen →",
     },
     what_encryption: {
       title: "Wie werden meine Notizen verschlüsselt?",

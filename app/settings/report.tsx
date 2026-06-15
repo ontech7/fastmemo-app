@@ -1,7 +1,7 @@
 import { configs } from "@/configs";
 import * as Sentry from "@sentry/react-native";
 import * as Device from "expo-device";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,7 +21,7 @@ import { formatDateTime } from "@/utils/date";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
-import lottieJson from "@/assets/lottie/Logo.json";
+import lottieJson from "~/assets/lottie/Logo.json";
 
 interface Attachment {
   filename: string;

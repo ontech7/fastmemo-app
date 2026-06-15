@@ -37,14 +37,8 @@ export default function ChangeCategoryScreen() {
     }
   }, [currentNote, router]);
 
-  const toggleCategory = useCallback((_selectedCategory: Category) => {
-    setSelectedCategory((prevCategory: Category) => {
-      if (prevCategory.icon == "" || prevCategory.icon != _selectedCategory.icon) {
-        return _selectedCategory;
-      } else {
-        return prevCategory;
-      }
-    });
+  const toggleCategory = useCallback((category: Category) => {
+    setSelectedCategory((prevCategory: Category) => (prevCategory.icon === category.icon ? prevCategory : category));
   }, []);
 
   const updateExistentCategory = () => {
@@ -60,6 +54,8 @@ export default function ChangeCategoryScreen() {
     router.replace(`/notes/${currentNote.id}`);
   };
 
+  if (!currentNote) return null;
+
   return (
     <SafeAreaView style={styles.container}>
       <AppBackground style={StyleSheet.absoluteFill} />
@@ -69,15 +65,11 @@ export default function ChangeCategoryScreen() {
 
         <Text style={styles.headerTitle}>{t("changecategory.title")}</Text>
 
-        {selectedCategory ? (
-          <TouchableOpacity activeOpacity={0.7} onPress={updateExistentCategory}>
-            <IconChip>
-              <CheckIcon size={20} color={COLOR.softWhite} />
-            </IconChip>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.headerSpacer} />
-        )}
+        <TouchableOpacity activeOpacity={0.7} onPress={updateExistentCategory}>
+          <IconChip>
+            <CheckIcon size={20} color={COLOR.softWhite} />
+          </IconChip>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.categoryList}>
@@ -119,9 +111,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     flexGrow: 1,
     textAlign: "center",
-  },
-  headerSpacer: {
-    width: 42,
   },
   categoryList: {
     flexDirection: "row",

@@ -4,12 +4,13 @@ import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import CodeDraggableTab from "@/components/notes/CodeDraggableTab";
 import CodeEditorWebView, { type CodeEditorWebViewRef } from "@/components/notes/CodeEditorWebView";
 import CodeLanguagePickerModal from "@/components/notes/CodeLanguagePickerModal";
-import QuickActionsDivider from "@/components/notes/QuickActionsDivider";
+import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { inferLanguageFromTitle, LANGUAGE_LABELS } from "@/constants/code-languages";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, MONOSPACE_FONT, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
+import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName } from "@/libs/ai";
 import { selectorAIAssistant, selectorWebhook_addCodeNote } from "@/slicers/settingsSlice";
 import type { CodeNote, CodeTab } from "@/types";
@@ -17,7 +18,7 @@ import { isStringEmpty } from "@/utils/string";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { InteractionManager, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PlusIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -45,13 +46,32 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   const tabScrollRef = useRef<ScrollView>(null);
   const editorRef = useRef<CodeEditorWebViewRef>(null);
 
-  const [editorReady, setEditorReady] = useState(false);
+  // The CodeMirror WebView mounts immediately (never gated behind an idle timer)
+  // so it starts loading at once; a placeholder of the raw code stays on top of
+  // it until it reports it has painted (`onReady`), so the user never sees the
+  // empty editor surface while the WebView spins up.
+  const [editorPainted, setEditorPainted] = useState(false);
 
+  // Only a brand-new note autofocuses the editor content (not the tab title), so
+  // opening an existing note just lets the user read without popping the keyboard.
+  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const transitionDone = useScreenTransitionEnd();
+  const didFocusRef = useRef(false);
+
+  // Focus once the editor has painted AND the screen transition has settled.
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => {
-      setEditorReady(true);
-    });
-    return () => task.cancel();
+    if (didFocusRef.current) return;
+    if (!isNewNote || initialNote.readOnly) return;
+    if (!editorPainted || !transitionDone) return;
+    didFocusRef.current = true;
+    editorRef.current?.focus();
+  }, [editorPainted, transitionDone, isNewNote, initialNote.readOnly]);
+
+  // Safety net: never leave the loading cover up forever if the WebView's ready
+  // signal somehow never arrives.
+  useEffect(() => {
+    const id = setTimeout(() => setEditorPainted(true), 3000);
+    return () => clearTimeout(id);
   }, []);
 
   const memoInitialNote = useMemo<CodeNote>(
@@ -65,13 +85,18 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: CodeNote) => ({ tabs: n.tabs, activeTabId: n.activeTabId }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<CodeNote>({
+  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
     initialNote: memoInitialNote,
     defaultType: "code",
     addWebhookSelector: selectorWebhook_addCodeNote,
     addAction: "note/addCodeNote",
     isEmpty: isCodeNoteEmpty,
     buildPayloadExtras,
+    getTitleSource: (n) =>
+      n.tabs
+        .map((tab) => tab.code)
+        .filter(Boolean)
+        .join(" "),
   });
 
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -171,122 +196,137 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   );
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
-        <AppBackground style={StyleSheet.absoluteFill} />
-
-        <View>
-          <View style={styles.header}>
-            <BackButton chip callback={updateNoteWebhook} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <TextInput
-                style={styles.titleInput}
-                onChangeText={setTitle}
-                value={note.title}
-                editable={!note.readOnly}
-                cursorColor={COLOR.softWhite}
-                placeholder={t("note.title_placeholder")}
-                placeholderTextColor={COLOR.textMuted}
-                maxLength={96}
-              />
-            </View>
-            <NoteSettingsButton note={note} setNote={setNoteAsync} />
-          </View>
-        </View>
-
-        <View style={styles.tabBarContainer}>
-          <GestureHandlerRootView style={{ flexDirection: "row" }}>
-            <ScrollView
-              ref={tabScrollRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tabBarContent}
-            >
-              {note.tabs.map((tab, index) => (
-                <CodeDraggableTab
-                  key={tab.id}
-                  tab={tab}
-                  index={index}
-                  isActive={tab.id === note.activeTabId}
-                  isEditing={editingTabTitle === tab.id}
-                  readOnly={note.readOnly}
-                  tabCount={note.tabs.length}
-                  onSelect={() => setActiveTab(tab.id)}
-                  onEditTitle={() => setEditingTabTitle(tab.id)}
-                  onStopEditTitle={() => setEditingTabTitle(null)}
-                  onTitleChange={(text) => updateTabTitle(tab.id, text)}
-                  onDelete={() => removeTab(tab.id)}
-                  onReorder={handleReorder}
-                  t={t}
+    <View style={{ flex: 1 }}>
+      {/* Static full-screen backdrop kept OUTSIDE the KeyboardAvoidingView: when
+          the keyboard animates, `behavior:"height"` resizes the KAV subtree every
+          frame, and a full-screen SVG gradient re-rasterizing each frame is what
+          dropped the keyboard open to ~10fps. */}
+      <AppBackground style={StyleSheet.absoluteFill} />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <SafeAreaView style={styles.container}>
+          <View>
+            <View style={styles.header}>
+              <BackButton chip callback={updateNoteWebhook} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <TextInput
+                  style={styles.titleInput}
+                  onChangeText={setTitle}
+                  value={note.title}
+                  editable={!note.readOnly}
+                  cursorColor={COLOR.softWhite}
+                  placeholder={autoTitle || t("note.title_placeholder")}
+                  placeholderTextColor={COLOR.textMuted}
+                  maxLength={96}
                 />
-              ))}
-              {note.tabs.length < MAX_TABS && !note.readOnly && (
-                <TouchableOpacity style={styles.addTabButton} onPress={addTab} activeOpacity={0.7}>
-                  <PlusIcon size={16} color={COLOR.textSecondary} />
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          </GestureHandlerRootView>
-        </View>
+              </View>
+              <NoteSettingsButton note={note} setNote={setNoteAsync} />
+            </View>
+          </View>
 
-        <View style={styles.languageBar}>
-          <TouchableOpacity
-            style={styles.languageSelector}
-            onPress={() => !note.readOnly && setShowLanguagePicker(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.languageLabel}>{LANGUAGE_LABELS[activeTab?.language] || activeTab?.language}</Text>
-          </TouchableOpacity>
-          <Text style={styles.tabCounter}>
-            {activeTabIndex + 1}/{note.tabs.length}
-          </Text>
-        </View>
+          <View style={styles.tabBarContainer}>
+            <GestureHandlerRootView style={{ flexDirection: "row" }}>
+              <ScrollView
+                ref={tabScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tabBarContent}
+              >
+                {note.tabs.map((tab, index) => (
+                  <CodeDraggableTab
+                    key={tab.id}
+                    tab={tab}
+                    index={index}
+                    isActive={tab.id === note.activeTabId}
+                    isEditing={editingTabTitle === tab.id}
+                    readOnly={note.readOnly}
+                    tabCount={note.tabs.length}
+                    onSelect={() => setActiveTab(tab.id)}
+                    onEditTitle={() => setEditingTabTitle(tab.id)}
+                    onStopEditTitle={() => setEditingTabTitle(null)}
+                    onTitleChange={(text) => updateTabTitle(tab.id, text)}
+                    onDelete={() => removeTab(tab.id)}
+                    onReorder={handleReorder}
+                    t={t}
+                  />
+                ))}
+                {note.tabs.length < MAX_TABS && !note.readOnly && (
+                  <TouchableOpacity style={styles.addTabButton} onPress={addTab} activeOpacity={0.7}>
+                    <PlusIcon size={16} color={COLOR.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+            </GestureHandlerRootView>
+          </View>
 
-        <View style={[styles.editorContainer, showAiActions && { marginBottom: 90 }]}>
-          {editorReady ? (
+          <View style={styles.languageBar}>
+            <TouchableOpacity
+              style={styles.languageSelector}
+              onPress={() => !note.readOnly && setShowLanguagePicker(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.languageLabel}>{LANGUAGE_LABELS[activeTab?.language] || activeTab?.language}</Text>
+            </TouchableOpacity>
+            <Text style={styles.tabCounter}>
+              {activeTabIndex + 1}/{note.tabs.length}
+            </Text>
+          </View>
+
+          <View style={[styles.editorContainer, showAiActions && styles.editorContainerWithDock]}>
             <CodeEditorWebView
               ref={editorRef}
               initialCode={activeTab?.code || ""}
               language={activeTab?.language || "plaintext"}
               readOnly={note.readOnly}
               onChange={updateTabCode}
+              onReady={() => setEditorPainted(true)}
             />
-          ) : (
-            <Text style={styles.codePlaceholder}>{activeTab?.code || ""}</Text>
+
+            {/* Raw-code placeholder kept over the WebView until CodeMirror has
+                painted, so the user sees the code immediately instead of the empty
+                editor surface while the WebView loads. */}
+            {!editorPainted && (
+              <View style={styles.codeLoadingCover} pointerEvents="none">
+                <Text style={styles.codePlaceholder}>{activeTab?.code || ""}</Text>
+              </View>
+            )}
+          </View>
+
+          {showAiActions && (
+            <EditorActionDock>
+              <View style={dockGroupStyle}>
+                <AIEditorActions
+                  noteType="code"
+                  getContent={() => activeTab?.code || ""}
+                  noteTitle={note.title}
+                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                  onCategorySuggested={(name) => {
+                    const cat = findCategoryByName(name);
+                    if (cat) setNoteAsync({ ...note, category: cat });
+                  }}
+                  onCodeCommented={(commentedCode) => {
+                    const updatedTabs = note.tabs.map((tab) =>
+                      tab.id === note.activeTabId ? { ...tab, code: commentedCode } : tab
+                    );
+                    setNoteAsync({ ...note, tabs: updatedTabs });
+                    editorRef.current?.setCode(commentedCode);
+                  }}
+                  style={dockButtonStyle}
+                  menuBottomOffset={110}
+                />
+              </View>
+            </EditorActionDock>
           )}
-        </View>
 
-        {!note.readOnly && (
-          <AIEditorActions
-            noteType="code"
-            getContent={() => activeTab?.code || ""}
-            noteTitle={note.title}
-            onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
-            onCategorySuggested={(name) => {
-              const cat = findCategoryByName(name);
-              if (cat) setNoteAsync({ ...note, category: cat });
-            }}
-            onCodeCommented={(commentedCode) => {
-              const updatedTabs = note.tabs.map((tab) => (tab.id === note.activeTabId ? { ...tab, code: commentedCode } : tab));
-              setNoteAsync({ ...note, tabs: updatedTabs });
-              editorRef.current?.setCode(commentedCode);
-            }}
-            style={{ bottom: 50 }}
-            menuBottomOffset={120}
+          <CodeLanguagePickerModal
+            visible={showLanguagePicker}
+            selectedLanguage={activeTab?.language || "plaintext"}
+            onSelect={updateTabLanguage}
+            onClose={() => setShowLanguagePicker(false)}
+            title={t("code.language")}
           />
-        )}
-
-        {showAiActions && <QuickActionsDivider bottom={110} />}
-
-        <CodeLanguagePickerModal
-          visible={showLanguagePicker}
-          selectedLanguage={activeTab?.language || "plaintext"}
-          onSelect={updateTabLanguage}
-          onClose={() => setShowLanguagePicker(false)}
-          title={t("code.language")}
-        />
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -338,8 +378,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: BORDER.small,
     borderTopRightRadius: BORDER.small,
     maxWidth: 160,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 2 },
   },
   tabActive: {
     backgroundColor: "#1e1e1e",
@@ -410,10 +448,25 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: BORDER.normal,
     overflow: "hidden",
   },
+  // A little breathing room before the action dock (only applied when it's shown,
+  // so without the dock the editor still fills down to the safe area).
+  editorContainerWithDock: {
+    marginBottom: PADDING_MARGIN.lg,
+  },
   codePlaceholder: {
     color: COLOR.textPrimary,
     fontFamily: MONOSPACE_FONT,
     fontSize: FONTSIZE.small,
     padding: PADDING_MARGIN.md,
+  },
+  // Opaque cover (matches the editor surface) shown over the WebView until
+  // CodeMirror reports it has painted, hiding the empty-editor flash on load.
+  codeLoadingCover: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#282c34",
   },
 });

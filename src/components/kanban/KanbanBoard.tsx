@@ -2,7 +2,8 @@ import KanbanColumn from "@/components/kanban/KanbanColumn";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
-import { selectorAIAssistant, selectorDeveloperMode } from "@/slicers/settingsSlice";
+import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
+import { selectorDeveloperMode } from "@/slicers/settingsSlice";
 import type { KanbanNote } from "@/types";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -13,6 +14,7 @@ import type {
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView as ScrollViewType,
+  TextInput as TextInputType,
 } from "react-native";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { PlusIcon } from "react-native-heroicons/outline";
@@ -28,12 +30,20 @@ interface Props {
   columnWidth: number;
   snapInterval: number;
   scrollViewRef: RefObject<ScrollViewType | null>;
+  /** Card id to autofocus on mount (only set for brand-new notes). */
+  initialFocusCardId?: string | null;
 }
 
-export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInterval, scrollViewRef }: Props) {
+export default function KanbanBoard({
+  note,
+  setNoteAsync,
+  columnWidth,
+  snapInterval,
+  scrollViewRef,
+  initialFocusCardId,
+}: Props) {
   const { t } = useTranslation();
 
-  const aiSettings = useSelector(selectorAIAssistant);
   const devMode = useSelector(selectorDeveloperMode);
 
   const maxColumns =
@@ -45,6 +55,25 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
   const scrollOffsetRef = useRef(0);
   const overlayRootRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
+
+  // Only the card whose id matches `focusCardId` autofocuses: the first card of a
+  // new note (set at mount so its freshly-mounted input grabs focus), then
+  // whichever card the user later adds via "Add card".
+  const [focusCardId, setFocusCardId] = useState<string | null>(initialFocusCardId ?? null);
+
+  // Mount-time autoFocus is frequently dropped while the screen transition is
+  // still running, so re-focus the seeded first card imperatively once it
+  // settles.
+  const transitionDone = useScreenTransitionEnd();
+  const cardInputRef = useRef<TextInputType>(null);
+  const didFocusRef = useRef(false);
+
+  useEffect(() => {
+    if (didFocusRef.current) return;
+    if (!initialFocusCardId || note.readOnly || !transitionDone) return;
+    didFocusRef.current = true;
+    cardInputRef.current?.focus();
+  }, [transitionDone, initialFocusCardId, note.readOnly]);
 
   // Drag-to-scroll state for web/desktop
   const [isDraggingScroll, setIsDraggingScroll] = useState(false);
@@ -205,14 +234,14 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
     (columnId: string) => {
       if (note.readOnly) return;
 
+      const newCard = { id: uuid(), text: "", createdAt: Date.now() };
       const columns = note.columns.map((col) => {
         if (col.id !== columnId) return col;
-        return {
-          ...col,
-          items: [...col.items, { id: uuid(), text: "", createdAt: Date.now() }],
-        };
+        return { ...col, items: [...col.items, newCard] };
       });
       setNoteAsync({ ...note, columns });
+      // Focus the freshly added card so the user can type without tapping it.
+      setFocusCardId(newCard.id);
     },
     [note, setNoteAsync]
   );
@@ -270,7 +299,7 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
           ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.columnsScrollView, aiSettings.enabled && { paddingBottom: 90 }]}
+          contentContainerStyle={styles.columnsScrollView}
           snapToInterval={snapInterval}
           snapToAlignment="start"
           decelerationRate="fast"
@@ -299,6 +328,8 @@ export default function KanbanBoard({ note, setNoteAsync, columnWidth, snapInter
               addCard={addCard}
               moveColumn={moveColumn}
               disabled={note.readOnly}
+              autoFocusCardId={focusCardId}
+              autoFocusCardInputRef={cardInputRef}
             />
           ))}
 

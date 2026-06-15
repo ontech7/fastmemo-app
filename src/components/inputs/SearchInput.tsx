@@ -14,10 +14,12 @@ interface Props {
   icon?: ReactNode;
   /** Extra behavior to run when the clear (✕) button is pressed. */
   onClear?: () => void;
+  /** Called when the user submits the field (search / enter key). */
+  onSubmit?: () => void;
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-export default function SearchInput({ value, onChangeText, placeholder, icon, onClear, containerStyle }: Props) {
+export default function SearchInput({ value, onChangeText, placeholder, icon, onClear, onSubmit, containerStyle }: Props) {
   const handleClear = () => {
     onChangeText("");
     Keyboard.dismiss();
@@ -34,7 +36,10 @@ export default function SearchInput({ value, onChangeText, placeholder, icon, on
         placeholderTextColor={COLOR.placeholder}
         style={styles.searchInput}
         returnKeyType="search"
-        onSubmitEditing={() => Keyboard.dismiss()}
+        onSubmitEditing={() => {
+          Keyboard.dismiss();
+          onSubmit?.();
+        }}
       />
 
       {!value ? (

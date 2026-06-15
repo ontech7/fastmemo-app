@@ -32,3 +32,10 @@ export interface EditorActionResult {
   items?: string[];
   error?: string;
 }
+
+/** A single help topic exposed to the AI intent search: its i18n base key and
+ * its (already-localized) title. */
+export interface HelpCatalogEntry {
+  base: string;
+  title: string;
+}

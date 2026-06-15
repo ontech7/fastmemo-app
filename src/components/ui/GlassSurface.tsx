@@ -40,11 +40,10 @@ export default function GlassSurface({
       <BlurView
         intensity={intensity}
         tint={BLUR.tint}
-        experimentalBlurMethod={Platform.OS === "android" && androidBlur ? "dimezisBlurView" : undefined}
-        style={[StyleSheet.absoluteFill, isWeb && styles.behindWeb]}
-        pointerEvents="none"
+        blurMethod={Platform.OS === "android" && androidBlur ? "dimezisBlurView" : undefined}
+        style={[StyleSheet.absoluteFill, isWeb && styles.behindWeb, { pointerEvents: "none" }]}
       />
-      <View style={[StyleSheet.absoluteFill, isWeb && styles.behindWeb, { backgroundColor: fill }]} pointerEvents="none" />
+      <View style={[StyleSheet.absoluteFill, isWeb && styles.behindWeb, { backgroundColor: fill, pointerEvents: "none" }]} />
       {children}
     </View>
   );

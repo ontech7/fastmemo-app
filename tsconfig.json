@@ -17,10 +17,11 @@
     "target": "ESNext",
     "types": ["node", "dom-speech-recognition"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "~/*": ["./*"]
     }
   },
   "exclude": ["node_modules", "babel.config.js", "metro.config.js", "src/editor"],
-  "include": ["src/**/*", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "include": ["app/**/*", "src/**/*", ".expo/types/**/*.ts", "expo-env.d.ts"],
   "extends": "expo/tsconfig.base"
 }

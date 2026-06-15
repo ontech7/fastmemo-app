@@ -163,6 +163,7 @@ const en = {
   home: {
     notes: "Notes",
     search: "Search something...",
+    quickNote: "Quick note…",
     deepSearch: "Deep search (text, lists…)",
     selected_count: "{{count}} selected",
 
@@ -349,10 +350,12 @@ const en = {
     name_title: "Name",
     name_placeholder: "Enter category name here...",
     icon_title: "Icon",
+    suggested_title: "Suggested",
     notes_num: "Notes: ",
   },
   organizecategory: {
     title: "Organize",
+    empty: "No categories yet.\nTap the + button to create one.",
   },
   trashednotes: {
     title: "Trashed Notes",
@@ -430,6 +433,10 @@ const en = {
     title: "Note creation",
     mode_section: "Mode",
     default_type_section: "Default note type",
+    quick_note_section: "Quick note",
+    quick_note_label: "Quick-note bar",
+    quick_note_description:
+      "Shows a bar at the bottom of the home screen to write and save a text note on the fly, without opening the full editor. Tap, type and send.",
     mode: {
       simple: "Simple",
       simple_description: "Tap creates a text note. Use the dropdown for other types.",
@@ -445,6 +452,7 @@ const en = {
     information: "Information",
     developer: "Developer",
     website: "Website",
+    openLink: "Open link",
   },
   ai: {
     title: "AI Assistant",
@@ -551,6 +559,17 @@ const en = {
     title: "Help",
     search_placeholder: "How can we help you?",
     no_results: "No results. Try another word.",
+    search_placeholders: [
+      "Search or describe what you need…",
+      "How do I create a note?",
+      "What does the toolbar do?",
+      "How does cloud sync work?",
+      "How do I recover a deleted note?",
+    ],
+    ai_thinking: "Searching with AI…",
+    ai_results: "AI results · tap to clear",
+    ai_invite_title: "Can't find what you're looking for?",
+    ai_invite_subtitle: "Describe it in your own words and let the AI assistant find the right topic.",
     cat_notes: "Notes",
     cat_editor: "Editor & formatting",
     cat_categories: "Categories",
@@ -576,7 +595,8 @@ const en = {
       text_4_0: "Tap the cross on the right to remove an item.",
       text_5_0: "The buttons at the bottom let you:",
       text_6_0: "• Add — add a new item to the list.",
-      text_7_0: "• Hide/Show checked — hide or bring back the items you've already ticked off.",
+      text_7_0:
+        "• Switch mode — switch between List (a classic checklist) and Step (a numbered, sequential list you complete in order).",
       text_8_0: "• Delete all — remove every item in the list.",
       text_9_0: "To save it, just go back to the Home screen.",
     },
@@ -726,6 +746,7 @@ const en = {
       text_1_0:
         "You can sync your notes across devices by connecting your own Google Firebase project and enabling sync. There is no central Fast Memo server — your data lives only in your Firebase.",
       text_2_0: "Your notes are end-to-end encrypted on your device before they're uploaded, so no one but you can read them.",
+      text_link: "Read the step-by-step guide to set up Google Firebase →",
     },
     what_encryption: {
       title: "How are my notes encrypted?",

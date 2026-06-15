@@ -164,6 +164,7 @@ const it = {
   home: {
     notes: "Note",
     search: "Cerca qualcosa…",
+    quickNote: "Nota rapida…",
     deepSearch: "Ricerca approfondita (testo, liste…)",
     selected_count: "{{count}} selezionate",
 
@@ -351,10 +352,12 @@ const it = {
     name_title: "Nome",
     name_placeholder: "Inserisci qui il nome della categoria...",
     icon_title: "Icona",
+    suggested_title: "Suggeriti",
     notes_num: "Note: ",
   },
   organizecategory: {
     title: "Organizza",
+    empty: "Nessuna categoria.\nTocca il pulsante + per crearne una.",
   },
   trashednotes: {
     title: "Note Cestinate",
@@ -432,6 +435,10 @@ const it = {
     title: "Creazione nota",
     mode_section: "Modalità",
     default_type_section: "Tipo di nota predefinito",
+    quick_note_section: "Nota rapida",
+    quick_note_label: "Barra nota rapida",
+    quick_note_description:
+      "Mostra in fondo alla home una barra per scrivere e salvare al volo una nota di testo, senza aprire l'editor completo. Tocca, scrivi e invia.",
     mode: {
       simple: "Semplice",
       simple_description: "Il tap crea una nota di testo. Usa il menù per gli altri tipi.",
@@ -447,6 +454,7 @@ const it = {
     information: "Informazioni",
     developer: "Sviluppatore",
     website: "Sito web",
+    openLink: "Apri link",
   },
   ai: {
     title: "Assistente AI",
@@ -553,6 +561,17 @@ const it = {
     title: "Aiuto",
     search_placeholder: "Come possiamo aiutarti?",
     no_results: "Nessun risultato. Prova con un'altra parola.",
+    search_placeholders: [
+      "Cerca o descrivi cosa ti serve…",
+      "Come creo una nota?",
+      "A cosa serve la barra strumenti?",
+      "Come funziona la sincronizzazione cloud?",
+      "Come recupero una nota eliminata?",
+    ],
+    ai_thinking: "Ricerca con l'AI…",
+    ai_results: "Risultati AI · tocca per azzerare",
+    ai_invite_title: "Non trovi quello che cerchi?",
+    ai_invite_subtitle: "Descrivilo a parole tue e lascia che l'assistente AI trovi l'argomento giusto.",
     cat_notes: "Note",
     cat_editor: "Editor e formattazione",
     cat_categories: "Categorie",
@@ -578,7 +597,8 @@ const it = {
       text_4_0: "Tocca la crocetta a destra per eliminare un elemento.",
       text_5_0: "I pulsanti in basso ti permettono di:",
       text_6_0: "• Aggiungi — aggiunge un nuovo elemento alla lista.",
-      text_7_0: "• Mostra/Nascondi completati — nasconde o fa riapparire gli elementi già spuntati.",
+      text_7_0:
+        "• Cambia modalità — passa tra Lista (una classica checklist) e Step (un elenco numerato e sequenziale da completare in ordine).",
       text_8_0: "• Elimina tutto — rimuove tutti gli elementi della lista.",
       text_9_0: "Per salvarla basta tornare alla schermata principale.",
     },
@@ -732,6 +752,7 @@ const it = {
         "Puoi sincronizzare le tue note tra i dispositivi collegando il tuo progetto Google Firebase e attivando la sincronizzazione. Non esiste un server centrale di Fast Memo: i tuoi dati vivono solo nel tuo Firebase.",
       text_2_0:
         "Le tue note vengono cifrate end-to-end sul dispositivo prima di essere caricate, così nessuno tranne te può leggerle.",
+      text_link: "Leggi la guida passo passo per configurare Google Firebase →",
     },
     what_encryption: {
       title: "Come vengono cifrate le mie note?",

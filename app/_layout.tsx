@@ -5,20 +5,19 @@ import "react-native-get-random-values";
 import "@/styles/global.css";
 
 import WebToaster from "@/components/WebToaster";
+import WebViewWarmup from "@/components/WebViewWarmup";
 import AppBackground from "@/components/ui/AppBackground";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { usePreventBackspaceNav } from "@/hooks/usePreventBackspaceNav";
 import i18n from "@/libs/i18n";
-import { closeTauriSplashscreen } from "@/libs/tauri";
 import AppUpdateProvider from "@/providers/AppUpdateProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
 import { persistor, store } from "@/slicers/store";
 import { DialogProvider } from "@ontech7/react-native-dialog";
-import { useTheme } from "@react-navigation/native";
 import * as Sentry from "@sentry/react-native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useTheme } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
@@ -56,10 +55,10 @@ export default Sentry.wrap(function RootLayout() {
   usePreventBackspaceNav();
 
   const [fontsLoaded, fontError] = useFonts({
-    "Geist-Regular": require("@/assets/fonts/Geist-Regular.ttf"),
-    "Geist-Medium": require("@/assets/fonts/Geist-Medium.ttf"),
-    "Geist-SemiBold": require("@/assets/fonts/Geist-SemiBold.ttf"),
-    "Geist-Bold": require("@/assets/fonts/Geist-Bold.ttf"),
+    "Geist-Regular": require("~/assets/fonts/Geist-Regular.ttf"),
+    "Geist-Medium": require("~/assets/fonts/Geist-Medium.ttf"),
+    "Geist-SemiBold": require("~/assets/fonts/Geist-SemiBold.ttf"),
+    "Geist-Bold": require("~/assets/fonts/Geist-Bold.ttf"),
   });
 
   // Never get stuck on the splash if fonts fail or hang to load — e.g. on
@@ -81,10 +80,9 @@ export default Sentry.wrap(function RootLayout() {
 
   // Hide the splash only once a JS view (the gradient splash or the app shell)
   // has laid out, so the gradient is already painted underneath — no flash of
-  // the flat background. On Tauri this also tears down the native splash window.
+  // the flat background.
   const onLayoutRootView = useCallback(() => {
     SplashScreen.hideAsync().catch(() => {});
-    closeTauriSplashscreen();
   }, []);
 
   // While fonts load (native only), render nothing and keep the native splash up
@@ -118,8 +116,10 @@ export default Sentry.wrap(function RootLayout() {
               fontSize: FONTSIZE.medium,
             },
             input: {
-              color: COLOR.textPrimary,
-              fontFamily: FONT.regular,
+              textInput: {
+                color: COLOR.textPrimary,
+                fontFamily: FONT.regular,
+              },
             },
             footer: {
               padding: PADDING_MARGIN.lg,
@@ -127,9 +127,11 @@ export default Sentry.wrap(function RootLayout() {
               gap: PADDING_MARGIN.sm,
             },
             action: {
-              color: COLOR.accentSoft,
-              fontSize: FONTSIZE.paragraph,
-              fontWeight: "600",
+              text: {
+                color: COLOR.accentSoft,
+                fontSize: FONTSIZE.paragraph,
+                fontWeight: "600",
+              },
             },
           }}
         >
@@ -140,6 +142,7 @@ export default Sentry.wrap(function RootLayout() {
                 <RootSiblingParent>
                   <StatusBar style="light" />
                   <WebToaster />
+                  <WebViewWarmup />
                   <View style={styles.root} onLayout={onLayoutRootView}>
                     <AppBackground style={StyleSheet.absoluteFill} />
                     <Stack screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
@@ -214,7 +217,7 @@ export default Sentry.wrap(function RootLayout() {
                         name="settings/note-creation"
                         options={{ headerShown: false, animation: "ios_from_left" }}
                       />
-                      <Stack.Screen name="+not-found" />
+                      <Stack.Screen name="+not-found" options={{ headerShown: false }} />
                     </Stack>
                   </View>
                 </RootSiblingParent>

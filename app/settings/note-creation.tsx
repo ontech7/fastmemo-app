@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
@@ -8,7 +8,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import { NOTE_TYPES } from "@/constants/note-types";
-import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { selectorNoteCreation, setNoteCreation } from "@/slicers/settingsSlice";
 import type { NoteCreationMode, NoteCreationType } from "@/types";
 
@@ -61,6 +61,13 @@ export default function NoteCreationScreen() {
     [dispatch, noteCreation]
   );
 
+  const toggleQuickNote = useCallback(
+    (value: boolean) => {
+      dispatch(setNoteCreation({ ...noteCreation, quickNote: value }));
+    },
+    [dispatch, noteCreation]
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <AppBackground style={StyleSheet.absoluteFill} />
@@ -91,6 +98,28 @@ export default function NoteCreationScreen() {
             />
           </View>
         )}
+
+        <View style={styles.sectionWrapper}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeaderTitle}>{t("note_creation.quick_note_section")}</Text>
+          </View>
+          <View style={styles.sectionList}>
+            <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
+              <View style={styles.sectionItemContent}>
+                <Text style={styles.sectionItemList_title}>{t("note_creation.quick_note_label")}</Text>
+                <Text style={styles.sectionItemList_desc}>{t("note_creation.quick_note_description")}</Text>
+              </View>
+
+              <Switch
+                trackColor={{ false: COLOR.surfaceMuted, true: COLOR.accentMuted }}
+                thumbColor={COLOR.softWhite}
+                onValueChange={toggleQuickNote}
+                value={noteCreation.quickNote ?? true}
+                style={{ height: 25 }}
+              />
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -136,5 +165,38 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.paragraph,
     paddingVertical: PADDING_MARGIN.sm,
     fontFamily: FONT.semiBold,
+  },
+  sectionList: {
+    borderRadius: BORDER.normal,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLASS.border,
+    overflow: "hidden",
+  },
+  sectionItemList: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: COLOR.surface,
+    padding: PADDING_MARGIN.lg,
+    borderBottomWidth: 1,
+    borderColor: GLASS.border,
+  },
+  sectionItemList_last: {
+    borderBottomWidth: 0,
+  },
+  sectionItemContent: {
+    flex: 1,
+    marginRight: PADDING_MARGIN.md,
+  },
+  sectionItemList_title: {
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.paragraph,
+  },
+  sectionItemList_desc: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    marginTop: PADDING_MARGIN.xs,
   },
 });

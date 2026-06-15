@@ -7,14 +7,19 @@ import ProtectNotesButton from "@/components/buttons/ProtectNotesButton";
 import ReadOnlyNotesButton from "@/components/buttons/ReadOnlyNotesButton";
 import NoteCard from "@/components/cards/NoteCard";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
+import VaultPromptDialog from "@/components/dialogs/VaultPromptDialog";
 import SearchInput from "@/components/inputs/SearchInput";
+import QuickNoteBar, { QUICK_NOTE_BAR_RESERVED } from "@/components/notes/QuickNoteBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
+import { useVaultPrompt } from "@/hooks/useVaultPrompt";
+import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import Haptics from "@/libs/haptics";
+import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import {
   deleteNote,
@@ -27,6 +32,7 @@ import {
 } from "@/slicers/notesSlice";
 import {
   selectorDeveloperMode,
+  selectorNoteCreation,
   selectorShowHidden,
   selectorWebhook_deleteNote,
   selectorWebhook_temporaryDeleteNote,
@@ -35,19 +41,16 @@ import {
 import type { CodeNote, Note, TextNote, TodoItem, TodoNote } from "@/types";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
-import VaultPromptDialog from "@/components/dialogs/VaultPromptDialog";
-import { useVaultPrompt } from "@/hooks/useVaultPrompt";
-import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
-import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
+import { useIsFocused, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
 import { DocumentMagnifyingGlassIcon } from "react-native-heroicons/outline";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector, useStore } from "react-redux";
 
 export default function HomeScreen() {
@@ -82,7 +85,15 @@ export default function HomeScreen() {
 
   const dispatch = useDispatch();
 
+  const insets = useSafeAreaInsets();
+
+  const noteCreation = useSelector(selectorNoteCreation);
+  // Default ON for state persisted before the setting existed.
+  const quickNoteEnabled = noteCreation.quickNote ?? true;
+
   const [isDeleteMode, setIsDeleteMode] = useState(false);
+  // Live height the quick-note bar reports, so the FAB can ride just above it.
+  const [barHeight, setBarHeight] = useState(QUICK_NOTE_BAR_RESERVED);
 
   const [showDeepSearch, setShowDeepSearch] = useState(false);
   const [deepFilterText, setDeepFilterText] = useState("");
@@ -263,6 +274,13 @@ export default function HomeScreen() {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(0);
   const height = useSharedValue(1);
+  // Measured height of the row, so `main`'s collapse animates against a numeric
+  // maxHeight. An animated *percentage* maxHeight (`"100%"`) resolves unreliably
+  // on the New Architecture (Fabric): Yoga's percentage pass races with
+  // Reanimated's synchronous updates and stays stuck on a stale base, leaving
+  // `main` collapsed until some unrelated event (e.g. the keyboard showing)
+  // forces a relayout. A pixel value tracked via onLayout stays correct.
+  const containerHeight = useSharedValue(0);
 
   const animatedOpacity = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -272,9 +290,9 @@ export default function HomeScreen() {
     transform: [{ translateY: translateY.value }],
   }));
 
-  const animatedMaxHeight = useAnimatedStyle(() => ({
-    maxHeight: `${height.value * 100}%`,
-  }));
+  const animatedMaxHeight = useAnimatedStyle(() =>
+    containerHeight.value > 0 ? { maxHeight: containerHeight.value * height.value } : {}
+  );
 
   useEffect(() => {
     if (isDeleteMode) {
@@ -341,6 +359,12 @@ export default function HomeScreen() {
     setDeepFilterText("");
   };
 
+  // Lift the FAB to sit just above the quick-note bar (which grows with its text):
+  // clear the bottom safe-area inset + the bar's reported height + a gap. The bar
+  // shows only when enabled and not selecting; otherwise the FAB keeps its place.
+  const showQuickBar = quickNoteEnabled && !isDeleteMode;
+  const fabBottom = insets.bottom + barHeight + PADDING_MARGIN.xl;
+
   return (
     <>
       <ConfirmOrCancelDialog
@@ -365,9 +389,14 @@ export default function HomeScreen() {
         }}
       />
 
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
+      <View style={styles.container}>
         <SafeAreaView style={styles.safe}>
-          <View style={styles.row}>
+          <View
+            style={styles.row}
+            onLayout={(e) => {
+              containerHeight.value = e.nativeEvent.layout.height;
+            }}
+          >
             <Sidebar />
             <Animated.View style={[styles.main, animatedMaxHeight]}>
               <View style={styles.header}>
@@ -408,26 +437,40 @@ export default function HomeScreen() {
                 />
               </View>
 
-              <FlashList
-                maintainVisibleContentPosition={{
-                  disabled: true,
-                }}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                data={filteredNotes}
-                extraData={{ isDeleteMode }}
-                renderItem={({ item }) => (
-                  <NoteCard
-                    content={item}
-                    isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
-                    selectNote={selectNote}
-                    isDeleteMode={isDeleteMode}
-                    toggleDeleteMode={toggleDeleteMode}
-                  />
-                )}
-                keyExtractor={(item) => item.id}
-              />
+              <View style={styles.listWrapper}>
+                <FlashList
+                  maintainVisibleContentPosition={{
+                    disabled: true,
+                  }}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
+                  data={filteredNotes}
+                  extraData={{ isDeleteMode }}
+                  renderItem={({ item }) => (
+                    <NoteCard
+                      content={item}
+                      isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
+                      selectNote={selectNote}
+                      isDeleteMode={isDeleteMode}
+                      toggleDeleteMode={toggleDeleteMode}
+                    />
+                  )}
+                  keyExtractor={(item) => item.id}
+                />
+              </View>
+
+              {/* Quick-note bar lives in normal flow at the bottom of the list column so it
+                  aligns with the cards. Wrapping it in a KeyboardStickyView (transform, no
+                  relayout) makes it track the keyboard 1:1 instead of lagging behind a
+                  layout-animating KeyboardAvoidingView. `opened: insets.bottom` cancels the
+                  bottom inset the keyboard already covers, so it rests just above the keyboard.
+                  Hidden in delete mode (the column collapses for the edit toolbar). */}
+              {showQuickBar && (
+                <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
+                  <QuickNoteBar onHeightChange={setBarHeight} />
+                </KeyboardStickyView>
+              )}
             </Animated.View>
           </View>
         </SafeAreaView>
@@ -442,8 +485,12 @@ export default function HomeScreen() {
           <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
         </Animated.View>
 
-        <AddNoteOverlayButton isDeleteMode={isDeleteMode} toggleDeleteMode={toggleDeleteMode} />
-      </KeyboardAvoidingView>
+        <AddNoteOverlayButton
+          isDeleteMode={isDeleteMode}
+          toggleDeleteMode={toggleDeleteMode}
+          bottomOffset={showQuickBar ? fabBottom : undefined}
+        />
+      </View>
     </>
   );
 }
@@ -454,6 +501,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: PADDING_MARGIN.md,
+  },
+  listWrapper: {
+    flex: 1,
   },
   safe: {
     flex: 1,
@@ -545,11 +595,7 @@ const styles = StyleSheet.create({
     borderColor: GLASS.border,
     bottom: -58,
     right: 110,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7,
-    elevation: 7,
+    boxShadow: "0px 7px 7px rgba(0,0,0,0.5)",
   },
   loadingText: {
     color: COLOR.softWhite,

@@ -1,6 +1,7 @@
+import BackButton from "@/components/buttons/BackButton";
+import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
-import LottieView from "@/components/lottie/LottieAnimation";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { selectorDeveloperMode, setDeveloperMode } from "@/slicers/settingsSlice";
@@ -9,17 +10,23 @@ import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import BackButton from "@/components/buttons/BackButton";
 
-import lottieJson from "@/assets/lottie/Logo.json";
+import pkg from "@/../package.json";
+import lottieJson from "~/assets/lottie/Logo.json";
 
-const REACT_VER = "19.0.0";
-const REACT_NATIVE_VER = "0.79.5";
-const FIREBASE_VER = "9.22.1";
-const EXPO_SDK_VER = "53.0.20";
-const HEROICONS_VER = "4.0.0";
-const TAURI_VER = "1.6.3";
-const LLAMA_RN_VER = "0.12.0-rc.8";
+// Library versions are read straight from package.json so they never need to be
+// updated by hand. We strip the semver range prefix (^, ~, >=, …) for display.
+const deps = { ...pkg.dependencies, ...pkg.devDependencies } as Record<string, string>;
+const version = (name: string) => (deps[name] ?? "").replace(/^[\^~>=<\s]+/, "").trim();
+
+const REACT_VER = version("react");
+const REACT_NATIVE_VER = version("react-native");
+const FIREBASE_VER = version("firebase");
+const EXPO_SDK_VER = version("expo");
+const HEROICONS_VER = version("react-native-heroicons");
+const TAURI_VER = version("@tauri-apps/cli");
+const LLAMA_RN_VER = version("llama.rn");
+const CODEMIRROR_VER = version("@codemirror/view");
 
 const DEV_MODE_TAPS_REQUIRED = 7;
 const DEV_MODE_COUNTDOWN_START = 4;
@@ -149,6 +156,12 @@ export default function InformationScreen() {
                 <Text style={styles.sectionItemList_text}>{EXPO_SDK_VER}</Text>
               </View>
             )}
+
+            <View style={styles.sectionItemList}>
+              <Text style={styles.sectionItemList_title}>CodeMirror</Text>
+
+              <Text style={styles.sectionItemList_text}>{CODEMIRROR_VER}</Text>
+            </View>
 
             {Platform.OS !== "web" && (
               <View style={styles.sectionItemList}>

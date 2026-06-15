@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { useTranslation } from "react-i18next";
 import { BackHandler, StyleSheet, Text, View } from "react-native";

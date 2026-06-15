@@ -50,6 +50,8 @@ export interface NoteCreationSettings {
   mode: NoteCreationMode;
   smartType: NoteCreationType;
   lastUsedType: NoteCreationType;
+  /** Show the always-present quick-note capture bar at the bottom of the home list. */
+  quickNote: boolean;
 }
 
 export interface DeveloperModeSettings {

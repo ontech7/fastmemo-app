@@ -32,7 +32,7 @@ export default function ComplexDialog({
   onDismiss = null,
 }: Props) {
   return (
-    <Dialog open={open} slideFrom="bottom" onPressOut={onDismiss ?? undefined}>
+    <Dialog open={open} slideFrom="center" onPressOut={onDismiss ?? undefined}>
       <DialogHeader>
         <DialogTitle adornmentStart={adornmentStart}>{title}</DialogTitle>
         {description && <DialogDescription>{description}</DialogDescription>}

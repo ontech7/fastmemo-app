@@ -35,12 +35,17 @@ export default function NoteScreen() {
       };
       const noteType = noteTypeMap[noteId as NewNoteId];
 
+      // A single timestamp for both fields: the editors detect "brand-new" via
+      // `createdAt === updatedAt`, so two separate `Date.now()` calls could
+      // differ by a millisecond and silently disable the autofocus.
+      const now = Date.now();
+
       const baseNote = {
         id: uuid(),
         type: noteType,
         title: "",
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: now,
+        updatedAt: now,
         date: formatDateTime(),
         category: currentCategory,
         important: false,
@@ -54,7 +59,12 @@ export default function NoteScreen() {
       } else if (noteType === "todo") {
         return { ...baseNote, list: [{ id: uuid(), text: "", checked: false }] };
       } else if (noteType === "kanban") {
-        return { ...baseNote, columns: [{ id: uuid(), name: "", color: "#EEE78E", items: [] }] };
+        // Pre-create the first card so the board has something to autofocus
+        // (mirrors todo's empty list item and code's empty tab).
+        return {
+          ...baseNote,
+          columns: [{ id: uuid(), name: "", color: "#EEE78E", items: [{ id: uuid(), text: "", createdAt: now }] }],
+        };
       } else {
         const tabId = uuid();
         return { ...baseNote, tabs: [{ id: tabId, title: "", code: "", language: "javascript" }], activeTabId: tabId };

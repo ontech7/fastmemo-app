@@ -99,6 +99,18 @@ export default function CloudSyncScreen() {
         }}
       />
 
+      <ComplexDialog
+        open={state.handshakeFailed}
+        adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.yellow} style={{ marginBottom: -3 }} />}
+        title={t("cloudsync.handshakeFailed")}
+        description={t("cloudsync.handshakeFailedDesc")}
+        confirm={{
+          label: t("confirm"),
+          handler: () => methods.dismissHandshakeFailed(),
+        }}
+        onDismiss={() => methods.dismissHandshakeFailed()}
+      />
+
       <SafeAreaView style={styles.container}>
         <AppBackground style={StyleSheet.absoluteFill} />
 

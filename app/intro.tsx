@@ -1,3 +1,11 @@
+import step1 from "~/assets/intro/step1.png";
+import step2 from "~/assets/intro/step2.png";
+import step3 from "~/assets/intro/step3.png";
+import step4 from "~/assets/intro/step4.png";
+import step5 from "~/assets/intro/step5.png";
+import step6 from "~/assets/intro/step6.png";
+import step7 from "~/assets/intro/step7.png";
+import step8 from "~/assets/intro/step8.png";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { BORDER, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
@@ -28,35 +36,35 @@ export default function IntroScreen() {
   const carouselSteps = useMemo(
     () => [
       {
-        image: require("../assets/intro/step1.png"),
+        image: step1,
         description: t("intro.step1"),
       },
       {
-        image: require("../assets/intro/step2.png"),
+        image: step2,
         description: t("intro.step2"),
       },
       {
-        image: require("../assets/intro/step3.png"),
+        image: step3,
         description: t("intro.step3"),
       },
       {
-        image: require("../assets/intro/step4.png"),
+        image: step4,
         description: t("intro.step4"),
       },
       {
-        image: require("../assets/intro/step5.png"),
+        image: step5,
         description: t("intro.step5"),
       },
       {
-        image: require("../assets/intro/step6.png"),
+        image: step6,
         description: t("intro.step6"),
       },
       {
-        image: require("../assets/intro/step7.png"),
+        image: step7,
         description: t("intro.step7"),
       },
       {
-        image: require("../assets/intro/step8.png"),
+        image: step8,
         description: t("intro.step8"),
       },
     ],
