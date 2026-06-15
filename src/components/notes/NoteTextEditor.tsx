@@ -58,13 +58,14 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const isEmpty = useCallback((n: TextNote) => isStringEmpty(n.title) && isStringEmpty(n.text), []);
   const buildPayloadExtras = useCallback((n: TextNote) => ({ text: n.text }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TextNote>({
+  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<TextNote>({
     initialNote: memoInitialNote,
     defaultType: "text",
     addWebhookSelector: selectorWebhook_addTextNote,
     addAction: "note/addTextNote",
     isEmpty,
     buildPayloadExtras,
+    getTitleSource: (n) => stripHtml(n.text),
   });
 
   const [noteTextLength, setNoteTextLength] = useState(getTextLength(note.text));
@@ -260,7 +261,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
                 value={note.title}
                 editable={!note.readOnly}
                 cursorColor={COLOR.softWhite}
-                placeholder={t("note.title_placeholder")}
+                placeholder={autoTitle || t("note.title_placeholder")}
                 placeholderTextColor={COLOR.textMuted}
                 maxLength={96}
               />

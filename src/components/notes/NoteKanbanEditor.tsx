@@ -72,13 +72,18 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
     [isNewNote, initialNote.readOnly, memoInitialNote]
   );
 
-  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<KanbanNote>({
+  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<KanbanNote>({
     initialNote: memoInitialNote,
     defaultType: "kanban",
     addWebhookSelector: selectorWebhook_addKanbanNote,
     addAction: "note/addKanbanNote",
     isEmpty: isKanbanNoteEmpty,
     buildPayloadExtras,
+    getTitleSource: (n) =>
+      n.columns
+        .flatMap((col) => col.items.map((item) => item.text))
+        .filter(Boolean)
+        .join(" "),
   });
 
   const aiSettings = useSelector(selectorAIAssistant);
@@ -157,7 +162,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
                 value={note.title}
                 editable={!note.readOnly}
                 cursorColor={COLOR.softWhite}
-                placeholder={t("note.title_placeholder")}
+                placeholder={autoTitle || t("note.title_placeholder")}
                 placeholderTextColor={COLOR.textMuted}
                 maxLength={96}
               />

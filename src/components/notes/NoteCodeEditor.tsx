@@ -85,13 +85,18 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: CodeNote) => ({ tabs: n.tabs, activeTabId: n.activeTabId }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<CodeNote>({
+  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
     initialNote: memoInitialNote,
     defaultType: "code",
     addWebhookSelector: selectorWebhook_addCodeNote,
     addAction: "note/addCodeNote",
     isEmpty: isCodeNoteEmpty,
     buildPayloadExtras,
+    getTitleSource: (n) =>
+      n.tabs
+        .map((tab) => tab.code)
+        .filter(Boolean)
+        .join(" "),
   });
 
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -209,7 +214,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   value={note.title}
                   editable={!note.readOnly}
                   cursorColor={COLOR.softWhite}
-                  placeholder={t("note.title_placeholder")}
+                  placeholder={autoTitle || t("note.title_placeholder")}
                   placeholderTextColor={COLOR.textMuted}
                   maxLength={96}
                 />

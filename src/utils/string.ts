@@ -23,3 +23,12 @@ export const getTextSize = (htmlString: string): number => {
 export const capitalize = (str: string = ""): string => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
+
+/**
+ * Builds a fallback note title from the note's own content: whitespace collapsed to
+ * single spaces, trimmed, and capped at `maxLength` characters. Used to auto-title
+ * brand-new notes the user never named, so notes never land in the list untitled.
+ */
+export const deriveNoteTitle = (source: string, maxLength = 32): string => {
+  return source.replace(/\s+/g, " ").trim().slice(0, maxLength).trim();
+};
