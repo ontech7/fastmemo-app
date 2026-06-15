@@ -144,12 +144,7 @@ fn set_webview_background(window: &tauri::Window) {
     use webkit2gtk::WebViewExt;
 
     let _ = window.with_webview(|webview| {
-        let bg = gtk::gdk::RGBA {
-            red: 5.0 / 255.0,
-            green: 9.0 / 255.0,
-            blue: 26.0 / 255.0,
-            alpha: 1.0,
-        };
+        let bg = gtk::gdk::RGBA::new(5.0 / 255.0, 9.0 / 255.0, 26.0 / 255.0, 1.0);
         webview.inner().set_background_color(&bg);
     });
 }
