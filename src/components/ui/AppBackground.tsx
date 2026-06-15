@@ -26,10 +26,10 @@ function glowStops(color: string, peak: number) {
  */
 export default function AppBackground({ style }: Props) {
   return (
-    <View style={[styles.base, style]} pointerEvents="none">
+    <View style={[styles.base, style, { pointerEvents: "none" }]}>
       {/* width/height as props (not just style) — react-native-svg on web sizes
           the <svg> from these, otherwise it collapses to a small top-left box. */}
-      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Svg width="100%" height="100%" style={[StyleSheet.absoluteFill, { pointerEvents: "none" }]}>
         <Defs>
           <RadialGradient id="glowTop" cx="88%" cy="-2%" rx="70%" ry="55%">
             {glowStops(COLOR.accent, 0.28)}

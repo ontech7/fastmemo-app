@@ -1,11 +1,19 @@
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Localization from "expo-localization";
 import { initLlama, type LlamaContext } from "llama.rn";
 import { NativeModules } from "react-native";
 
 import { store } from "@/slicers/store";
-import { AI_MODELS, DEFAULT_MODEL_ID, JSON_ARRAY_GRAMMAR, getEditorSystemPrompt, truncateForAction } from "./constants";
-import type { AIModelId, AIModelInfo, AIModelStatus, EditorAction, EditorActionResult } from "./types";
+import {
+  AI_MODELS,
+  DEFAULT_MODEL_ID,
+  HELP_SEARCH_SYSTEM_PROMPT,
+  JSON_ARRAY_GRAMMAR,
+  JSON_INT_ARRAY_GRAMMAR,
+  getEditorSystemPrompt,
+  truncateForAction,
+} from "./constants";
+import type { AIModelId, AIModelInfo, AIModelStatus, EditorAction, EditorActionResult, HelpCatalogEntry } from "./types";
 
 type StatusListener = (status: AIModelStatus, progress?: number) => void;
 
@@ -324,12 +332,7 @@ export async function generateEditorContent(
               ? 800
               : 200;
 
-  const temperature =
-    action === "generate_title"
-      ? 0.05
-      : action === "add_comments"
-        ? 0.1
-          : 0.15;
+  const temperature = action === "generate_title" ? 0.05 : action === "add_comments" ? 0.1 : 0.15;
 
   try {
     const systemPrompt = getEditorSystemPrompt(action, langCode);
@@ -420,5 +423,68 @@ export async function generateEditorContent(
   } catch (error) {
     console.error("[AI] Editor content generation failed:", error);
     return { success: false, error: String(error) };
+  }
+}
+
+/**
+ * Map a natural-language question to the most relevant Help topics.
+ *
+ * The model is constrained (via grammar) to output only indices into
+ * `catalog`, so it can never invent a topic — at worst it picks a real but
+ * less-relevant entry. Returns the matching `base` keys ordered by relevance,
+ * or an empty array on any failure so the caller can fall back to plain
+ * keyword search.
+ */
+export async function searchHelpByIntent(query: string, catalog: HelpCatalogEntry[]): Promise<string[]> {
+  if (!query.trim() || catalog.length === 0) return [];
+
+  if (!_context) {
+    const settingsState = store.getState().settings;
+    const modelId = (settingsState.aiAssistant?.selectedModel as AIModelId) || DEFAULT_MODEL_ID;
+    const initialized = await initContext(modelId);
+    if (!initialized) return [];
+  }
+
+  const list = catalog.map((entry, i) => `${i}. ${entry.title}`).join("\n");
+  const userContent = `Topics:\n${list}\n\nQuestion: ${query.trim()}`;
+
+  try {
+    const result = await _context!.completion({
+      messages: [
+        { role: "system", content: HELP_SEARCH_SYSTEM_PROMPT },
+        { role: "user", content: userContent },
+      ],
+      n_predict: 48,
+      stop: STOP_WORDS,
+      temperature: 0.1,
+      top_p: 0.9,
+      grammar: JSON_INT_ARRAY_GRAMMAR,
+    });
+
+    const text = result.text?.trim();
+    if (!text) return [];
+
+    let indices: number[] = [];
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) indices = parsed.map(Number);
+    } catch {
+      // Grammar should prevent this, but tolerate stray output just in case.
+      indices = (text.match(/\d+/g) ?? []).map(Number);
+    }
+
+    const seen = new Set<number>();
+    const keys: string[] = [];
+    for (const idx of indices) {
+      if (Number.isInteger(idx) && idx >= 0 && idx < catalog.length && !seen.has(idx)) {
+        seen.add(idx);
+        keys.push(catalog[idx].base);
+        if (keys.length >= 6) break;
+      }
+    }
+    return keys;
+  } catch (error) {
+    console.error("[AI] Help search failed:", error);
+    return [];
   }
 }

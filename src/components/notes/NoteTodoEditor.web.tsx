@@ -17,7 +17,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { PlusIcon } from "react-native-heroicons/outline";
@@ -25,6 +25,7 @@ import uuid from "react-uuid";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
+import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import TodoItem from "@/components/todo/TodoItem.web";
 
@@ -60,13 +61,18 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TodoNote>({
+  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
     defaultType: "todo",
     addWebhookSelector: selectorWebhook_addTodoNote,
     addAction: "note/addTodoNote",
     isEmpty: isTodoNoteEmpty,
     buildPayloadExtras,
+    getTitleSource: (n) =>
+      n.list
+        .map((item) => item.text)
+        .filter(Boolean)
+        .join(" "),
   });
 
   const setTitle = useCallback(
@@ -125,11 +131,15 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     [note, setNoteAsync, stepMode]
   );
 
-  const [autoFocus, setAutoFocus] = useState(false);
-
-  useEffect(() => {
-    setTimeout(() => setAutoFocus(true), 20);
-  }, []);
+  // Autofocus is per-row: only the row whose id matches `focusId` grabs focus.
+  // A brand-new note focuses its first row; opening an existing note focuses
+  // nothing so the user can just read. `focusId` is seeded synchronously so the
+  // target row mounts with autoFocus already set — setting it after mount is a
+  // no-op because the input reads `autoFocus` only once.
+  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const [focusId, setFocusId] = useState<string | null>(
+    isNewNote && !initialNote.readOnly ? (memoInitialNote.list[0]?.id ?? null) : null
+  );
 
   const currentMode = stepMode ? "steps" : "free";
 
@@ -139,7 +149,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         return;
       }
       // Switching mode remounts the rows; don't let their inputs grab focus.
-      setAutoFocus(false);
+      setFocusId(null);
       setNoteAsync({ ...note, mode });
     },
     [note, setNoteAsync]
@@ -166,17 +176,10 @@ export default function NoteTodoEditor({ initialNote }: Props) {
       return;
     }
 
-    setNoteAsync({
-      ...note,
-      list: [
-        ...note.list,
-        {
-          id: uuid(),
-          text: "",
-          checked: false,
-        },
-      ],
-    });
+    const newItem = { id: uuid(), text: "", checked: false };
+    setNoteAsync({ ...note, list: [...note.list, newItem] });
+    // Focus the freshly added row so the user can type without clicking it.
+    setFocusId(newItem.id);
   }, [note, setNoteAsync]);
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -205,7 +208,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
             value={note.title}
             editable={!note.readOnly}
             cursorColor={COLOR.softWhite}
-            placeholder={t("note.title_placeholder")}
+            placeholder={autoTitle || t("note.title_placeholder")}
             placeholderTextColor={COLOR.textMuted}
             maxLength={96}
           />
@@ -257,7 +260,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                       checkItem={checkListItem}
                       deleteItem={deleteListItem}
                       disabled={note.readOnly}
-                      autoFocus={autoFocus}
+                      autoFocus={item.id === focusId}
                       stepMode={stepMode}
                       stepStatus={stepStatus}
                       stepNumber={stepMode ? index + 1 : undefined}
@@ -275,13 +278,13 @@ export default function NoteTodoEditor({ initialNote }: Props) {
       </View>
 
       {!note.readOnly && (
-        <View style={styles.actionBar}>
-          <View style={styles.actionBarLeft}>
+        <EditorActionDock>
+          <View style={dockGroupStyle}>
             <TodoModeMenuButton
               currentMode={currentMode}
               onSelectMode={setMode}
               disabled={note.readOnly}
-              style={styles.barButton}
+              style={dockButtonStyle}
               menuBottomOffset={110}
             />
 
@@ -307,14 +310,14 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                 setNoteAsync({ ...note, list: mutableList });
               }}
               aiCleanup
-              style={styles.barButton}
+              style={dockButtonStyle}
             />
           </View>
 
           <TouchableOpacity activeOpacity={0.7} style={styles.addButton} onPress={addListItem}>
             <PlusIcon size={28} color={COLOR.softWhite} />
           </TouchableOpacity>
-        </View>
+        </EditorActionDock>
       )}
     </SafeAreaView>
   );
@@ -363,29 +366,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.lg,
     paddingBottom: PADDING_MARGIN.md,
     marginTop: PADDING_MARGIN.xl,
-  },
-  actionBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: PADDING_MARGIN.lg,
-    paddingTop: PADDING_MARGIN.md,
-    paddingBottom: PADDING_MARGIN.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: GLASS.border,
-  },
-  actionBarLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: PADDING_MARGIN.md,
-  },
-  // Neutralizes the floating-FAB positioning of mode/voice so they sit inline in the bar.
-  barButton: {
-    position: "relative",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
   },
   addButton: {
     padding: PADDING_MARGIN.md,

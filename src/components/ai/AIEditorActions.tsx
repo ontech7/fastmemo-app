@@ -1,4 +1,4 @@
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import type { AIModelId, EditorAction } from "@/libs/ai";
 import { cancelCommand, generateEditorContent, initContext, isModelSufficient, MODEL_SHORT_LABEL } from "@/libs/ai";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
@@ -493,6 +493,8 @@ function AnimatedActionItem({
 
 /* STYLE */
 
+const BUTTON_SIZE = 40;
+
 const styles = StyleSheet.create({
   overlay: {
     position: "absolute",
@@ -528,20 +530,20 @@ const styles = StyleSheet.create({
     padding: PADDING_MARGIN.sm + 2,
     borderRadius: BORDER.normal,
     backgroundColor: COLOR.lightBlue,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    boxShadow: "0px 3px 4px rgba(0,0,0,0.3)",
   },
   aiButton: {
     zIndex: 6,
     position: "absolute",
     bottom: 100,
     left: 40,
-    padding: PADDING_MARGIN.sm + 2,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: BORDER.normal,
     backgroundColor: COLOR.accentMuted,
+    ...SHADOW.fab,
   },
   outputPanel: {
     position: "absolute",
@@ -554,11 +556,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLOR.blue,
     zIndex: 7,
-    shadowColor: COLOR.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 8,
+    boxShadow: "0px 4px 6px rgba(0,0,0,0.4)",
   },
   outputHeader: {
     flexDirection: "row",

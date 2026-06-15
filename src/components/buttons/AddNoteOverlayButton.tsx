@@ -15,6 +15,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { useDispatch, useSelector } from "react-redux";
 
+import { KeyboardStickyView } from "react-native-keyboard-controller";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { useRouter } from "@/hooks/useRouter";
 import { selectorNoteCreation, setNoteCreation } from "@/slicers/settingsSlice";
 import type { Href } from "expo-router";
@@ -31,6 +34,8 @@ const ANIMATION_DURATION_CLOSE = 180;
 interface Props {
   isDeleteMode: boolean;
   toggleDeleteMode: () => void;
+  /** Lifts the FAB group so it rides just above a bottom bar (e.g. the quick-note bar). Defaults to 60. */
+  bottomOffset?: number;
 }
 
 interface MenuItemProps {
@@ -76,11 +81,13 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
   );
 }
 
-export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }: Props) {
+export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, bottomOffset }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
   const dispatch = useDispatch();
   const noteCreation = useSelector(selectorNoteCreation);
+
+  const insets = useSafeAreaInsets();
 
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
 
@@ -212,8 +219,12 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
   return (
     <>
       <AnimatedPressable
-        style={[styles.fullscreenOverlay, backdropAnimatedStyle]}
-        pointerEvents={isOverlayOpen ? "auto" : "none"}
+        style={[
+          styles.fullscreenOverlay,
+          backdropAnimatedStyle,
+          // Keep the type menu aligned just above the FAB even when it's lifted above the quick-note bar.
+          { paddingBottom: (bottomOffset ?? 60) + 70, pointerEvents: isOverlayOpen ? "auto" : "none" },
+        ]}
         onPress={closeOverlay}
       >
         <View style={styles.overlayContainer}>
@@ -231,8 +242,13 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
         </View>
       </AnimatedPressable>
 
-      <View style={styles.fabGroup} pointerEvents="box-none">
-        <Animated.View style={secondaryFabAnimatedStyle} pointerEvents={isDeleteMode ? "none" : "auto"}>
+      {/* Ride above the quick-note bar via `bottom` (set by the parent from the bar's height) and
+          stick to the keyboard with the same offset as the bar, so the two move together 1:1. */}
+      <KeyboardStickyView
+        offset={{ closed: 0, opened: insets.bottom }}
+        style={[styles.fabGroup, { bottom: bottomOffset ?? 60, pointerEvents: "box-none" }]}
+      >
+        <Animated.View style={[secondaryFabAnimatedStyle, { pointerEvents: isDeleteMode ? "none" : "auto" }]}>
           <TouchableOpacity style={styles.fabSecondary} activeOpacity={0.7} onPress={toggleOverlay}>
             <Animated.View style={chevronAnimatedStyle}>
               <ChevronUpIcon size={20} color={COLOR.softWhite} />
@@ -247,14 +263,13 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode }:
 
           {showTypeHint && (
             <Animated.View
-              style={[styles.fabHintBadge, { backgroundColor: hintColor }, hintAnimatedStyle]}
-              pointerEvents="none"
+              style={[styles.fabHintBadge, { backgroundColor: hintColor }, hintAnimatedStyle, { pointerEvents: "none" }]}
             >
               <HintIcon size={13} color={COLOR.darkBlue} />
             </Animated.View>
           )}
         </TouchableOpacity>
-      </View>
+      </KeyboardStickyView>
     </>
   );
 }

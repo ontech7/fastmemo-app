@@ -20,11 +20,13 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
+import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem.native";
 import AppBackground from "@/components/ui/AppBackground";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
+import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName } from "@/libs/ai";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
 import { capitalize, isStringEmpty } from "@/utils/string";
@@ -59,13 +61,18 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook } = useNoteEditor<TodoNote>({
+  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
     defaultType: "todo",
     addWebhookSelector: selectorWebhook_addTodoNote,
     addAction: "note/addTodoNote",
     isEmpty: isTodoNoteEmpty,
     buildPayloadExtras,
+    getTitleSource: (n) =>
+      n.list
+        .map((item) => item.text)
+        .filter(Boolean)
+        .join(" "),
   });
 
   /* local */
@@ -126,11 +133,28 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     [note, setNoteAsync, stepMode]
   );
 
-  const [autoFocus, setAutoFocus] = useState(false);
+  // Autofocus is per-row: only the row whose id matches `focusId` grabs focus.
+  // A brand-new note focuses its first row; opening an existing note focuses
+  // nothing so the user can just read. `focusId` is seeded synchronously so the
+  // target row mounts with autoFocus already set — setting it after mount is a
+  // no-op because RN reads `autoFocus` only once.
+  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const [focusId, setFocusId] = useState<string | null>(
+    isNewNote && !initialNote.readOnly ? (memoInitialNote.list[0]?.id ?? null) : null
+  );
+
+  // Mount-time autoFocus is frequently dropped while the screen transition is
+  // still running, so re-focus the seeded row imperatively once it settles.
+  const transitionDone = useScreenTransitionEnd();
+  const focusInputRef = useRef<TextInput>(null);
+  const didFocusRef = useRef(false);
 
   useEffect(() => {
-    setTimeout(() => setAutoFocus(true), 20);
-  }, []);
+    if (didFocusRef.current) return;
+    if (!isNewNote || initialNote.readOnly || !transitionDone) return;
+    didFocusRef.current = true;
+    focusInputRef.current?.focus();
+  }, [transitionDone, isNewNote, initialNote.readOnly]);
 
   const currentMode = stepMode ? "steps" : "free";
 
@@ -140,7 +164,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         return;
       }
       // Switching mode remounts the rows; don't let their inputs grab focus.
-      setAutoFocus(false);
+      setFocusId(null);
       setNoteAsync({ ...note, mode });
     },
     [note, setNoteAsync]
@@ -169,17 +193,10 @@ export default function NoteTodoEditor({ initialNote }: Props) {
       return;
     }
 
-    setNoteAsync({
-      ...note,
-      list: [
-        ...note.list,
-        {
-          id: uuid(),
-          text: "",
-          checked: false,
-        },
-      ],
-    });
+    const newItem = { id: uuid(), text: "", checked: false };
+    setNoteAsync({ ...note, list: [...note.list, newItem] });
+    // Focus the freshly added row so the user can type without tapping it.
+    setFocusId(newItem.id);
   }, [note, setNoteAsync]);
 
   // Enable row layout/entering/exiting animations only after the navigation
@@ -208,7 +225,8 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         deleteItem={deleteListItem}
         drag={drag}
         disabled={isActive || note.readOnly}
-        autoFocus={autoFocus}
+        autoFocus={item.id === focusId}
+        inputRef={item.id === focusId ? focusInputRef : undefined}
         stepMode={stepMode}
         stepStatus={stepStatus}
         stepNumber={stepMode ? index + 1 : undefined}
@@ -220,136 +238,141 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
-        <AppBackground style={StyleSheet.absoluteFill} />
+    <View style={{ flex: 1 }}>
+      {/* Static full-screen backdrop kept OUTSIDE the KeyboardAvoidingView: when
+          the keyboard animates, `behavior:"height"` resizes the KAV subtree every
+          frame, and a full-screen SVG gradient re-rasterizing each frame is what
+          dropped the keyboard open to ~10fps. */}
+      <AppBackground style={StyleSheet.absoluteFill} />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <SafeAreaView style={styles.container}>
+          <View>
+            <View style={styles.header}>
+              <BackButton chip callback={updateNoteWebhook} />
 
-        <View>
-          <View style={styles.header}>
-            <BackButton chip callback={updateNoteWebhook} />
-
-            <TextInput
-              style={styles.titleInput}
-              onChangeText={setTitle}
-              value={note.title}
-              editable={!note.readOnly}
-              cursorColor={COLOR.softWhite}
-              placeholder={t("note.title_placeholder")}
-              placeholderTextColor={COLOR.textMuted}
-              maxLength={96}
-            />
-
-            <NoteSettingsButton note={note} setNote={setNoteAsync} />
-          </View>
-
-          <View style={styles.subtitleWrapper}>
-            <Text style={[styles.subtitle, { flexGrow: 1 }]}>
-              {t("note.completed")}{" "}
-              <Text
-                style={{
-                  color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon,
-                }}
-              >
-                {numberOfCheckedItems}
-              </Text>{" "}
-              {t("note.on")} {numberOfAllItems}
-            </Text>
-          </View>
-        </View>
-
-        <View style={{ flex: 1 }}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <View style={{ flex: 1 }}>
-              <GestureHandlerRootView style={styles.draggableList}>
-                {note.list.length > 0 ? (
-                  <DraggableFlatList
-                    containerStyle={{ flex: 1 }}
-                    style={{ flex: 1, paddingHorizontal: PADDING_MARGIN.lg }}
-                    contentContainerStyle={{ paddingTop: PADDING_MARGIN.xl, paddingBottom: PADDING_MARGIN.md }}
-                    ref={draggableListRef}
-                    data={note.list}
-                    onDragEnd={({ data }) => setNoteAsync({ ...note, list: data })}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderTodoItem}
-                  />
-                ) : (
-                  <Text style={styles.noItems}>{t("note.no_items")}</Text>
-                )}
-              </GestureHandlerRootView>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-
-        {!note.readOnly && (
-          <View style={styles.actionBar}>
-            <View style={styles.actionBarLeft}>
-              <TodoModeMenuButton
-                currentMode={currentMode}
-                onSelectMode={setMode}
-                disabled={note.readOnly}
-                style={styles.barButton}
-                menuBottomOffset={110}
+              <TextInput
+                style={styles.titleInput}
+                onChangeText={setTitle}
+                value={note.title}
+                editable={!note.readOnly}
+                cursorColor={COLOR.softWhite}
+                placeholder={autoTitle || t("note.title_placeholder")}
+                placeholderTextColor={COLOR.textMuted}
+                maxLength={96}
               />
 
-              <AIEditorActions
-                noteType="todo"
-                getContent={() =>
-                  note.list
-                    .map((item) => item.text)
-                    .filter(Boolean)
-                    .join(", ")
-                }
-                noteTitle={note.title}
-                onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
-                onItemsSuggested={(items) => {
-                  const newItems = items.map((text) => ({
-                    id: uuid(),
-                    text: capitalize(text),
-                    checked: false,
-                  }));
-                  setNoteAsync({ ...note, list: [...note.list, ...newItems] });
-                }}
-                onCategorySuggested={(name) => {
-                  const cat = findCategoryByName(name);
-                  if (cat) setNoteAsync({ ...note, category: cat });
-                }}
-                style={styles.barButton}
-                menuBottomOffset={110}
-              />
-
-              <VoiceRecognitionButton
-                onInsert={(text) => {
-                  const lines = voiceTextToLines(text);
-                  if (lines.length === 0) return;
-
-                  const mutableList = [...note.list];
-                  const last = mutableList[mutableList.length - 1];
-                  let startIndex = 0;
-
-                  // reuse a trailing empty item for the first dictated line
-                  if (last && !last.text.trim()) {
-                    mutableList[mutableList.length - 1] = { ...last, text: lines[0] };
-                    startIndex = 1;
-                  }
-
-                  for (let i = startIndex; i < lines.length; i++) {
-                    mutableList.push({ id: uuid(), text: lines[i], checked: false });
-                  }
-
-                  setNoteAsync({ ...note, list: mutableList });
-                }}
-                aiCleanup
-                style={styles.barButton}
-              />
+              <NoteSettingsButton note={note} setNote={setNoteAsync} />
             </View>
 
-            <TouchableOpacity activeOpacity={0.7} style={styles.addButton} onPress={addListItem}>
-              <PlusIcon size={28} color={COLOR.softWhite} />
-            </TouchableOpacity>
+            <View style={styles.subtitleWrapper}>
+              <Text style={[styles.subtitle, { flexGrow: 1 }]}>
+                {t("note.completed")}{" "}
+                <Text
+                  style={{
+                    color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon,
+                  }}
+                >
+                  {numberOfCheckedItems}
+                </Text>{" "}
+                {t("note.on")} {numberOfAllItems}
+              </Text>
+            </View>
           </View>
-        )}
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+
+          <View style={{ flex: 1 }}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={{ flex: 1 }}>
+                <GestureHandlerRootView style={styles.draggableList}>
+                  {note.list.length > 0 ? (
+                    <DraggableFlatList
+                      containerStyle={{ flex: 1 }}
+                      style={{ flex: 1, paddingHorizontal: PADDING_MARGIN.lg }}
+                      contentContainerStyle={{ paddingTop: PADDING_MARGIN.xl, paddingBottom: PADDING_MARGIN.md }}
+                      ref={draggableListRef}
+                      data={note.list}
+                      onDragEnd={({ data }) => setNoteAsync({ ...note, list: data })}
+                      keyExtractor={(item) => item.id}
+                      renderItem={renderTodoItem}
+                    />
+                  ) : (
+                    <Text style={styles.noItems}>{t("note.no_items")}</Text>
+                  )}
+                </GestureHandlerRootView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+
+          {!note.readOnly && (
+            <EditorActionDock>
+              <View style={dockGroupStyle}>
+                <TodoModeMenuButton
+                  currentMode={currentMode}
+                  onSelectMode={setMode}
+                  disabled={note.readOnly}
+                  style={dockButtonStyle}
+                  menuBottomOffset={110}
+                />
+
+                <AIEditorActions
+                  noteType="todo"
+                  getContent={() =>
+                    note.list
+                      .map((item) => item.text)
+                      .filter(Boolean)
+                      .join(", ")
+                  }
+                  noteTitle={note.title}
+                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                  onItemsSuggested={(items) => {
+                    const newItems = items.map((text) => ({
+                      id: uuid(),
+                      text: capitalize(text),
+                      checked: false,
+                    }));
+                    setNoteAsync({ ...note, list: [...note.list, ...newItems] });
+                  }}
+                  onCategorySuggested={(name) => {
+                    const cat = findCategoryByName(name);
+                    if (cat) setNoteAsync({ ...note, category: cat });
+                  }}
+                  style={dockButtonStyle}
+                  menuBottomOffset={110}
+                />
+
+                <VoiceRecognitionButton
+                  onInsert={(text) => {
+                    const lines = voiceTextToLines(text);
+                    if (lines.length === 0) return;
+
+                    const mutableList = [...note.list];
+                    const last = mutableList[mutableList.length - 1];
+                    let startIndex = 0;
+
+                    // reuse a trailing empty item for the first dictated line
+                    if (last && !last.text.trim()) {
+                      mutableList[mutableList.length - 1] = { ...last, text: lines[0] };
+                      startIndex = 1;
+                    }
+
+                    for (let i = startIndex; i < lines.length; i++) {
+                      mutableList.push({ id: uuid(), text: lines[i], checked: false });
+                    }
+
+                    setNoteAsync({ ...note, list: mutableList });
+                  }}
+                  aiCleanup
+                  style={dockButtonStyle}
+                />
+              </View>
+
+              <TouchableOpacity activeOpacity={0.7} style={styles.addButton} onPress={addListItem}>
+                <PlusIcon size={28} color={COLOR.softWhite} />
+              </TouchableOpacity>
+            </EditorActionDock>
+          )}
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -399,29 +422,6 @@ const styles = StyleSheet.create({
   },
   draggableList: {
     flex: 1,
-  },
-  actionBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: PADDING_MARGIN.lg,
-    paddingTop: PADDING_MARGIN.lg,
-    paddingBottom: PADDING_MARGIN.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: GLASS.border,
-  },
-  actionBarLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: PADDING_MARGIN.md,
-  },
-  // Neutralizes the floating-FAB positioning of mode/AI/voice so they sit inline in the bar.
-  barButton: {
-    position: "relative",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
   },
   addButton: {
     padding: PADDING_MARGIN.md,

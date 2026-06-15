@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CheckIcon } from "react-native-heroicons/outline";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
@@ -23,7 +24,11 @@ function WebhookItem({ title, webhook, setWebhookUrl, toggleWebhook }: Props) {
 
         <TouchableOpacity activeOpacity={0.7} style={styles.checkboxWrapper} onPress={toggleWebhook}>
           <View style={[styles.checkbox, webhook.enabled && styles.checkboxChecked]}>
-            {webhook.enabled && <CheckIcon size={26} color={COLOR.softWhite} style={{ margin: 8 }} />}
+            {webhook.enabled && (
+              <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)}>
+                <CheckIcon size={24} color={COLOR.softWhite} />
+              </Animated.View>
+            )}
           </View>
         </TouchableOpacity>
 
@@ -105,8 +110,10 @@ const styles = StyleSheet.create({
     borderRadius: BORDER.normal,
     height: 48,
     width: 48,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: GLASS.border,
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkboxChecked: {
     backgroundColor: COLOR.accentMuted,

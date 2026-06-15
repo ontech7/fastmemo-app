@@ -15,6 +15,11 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
+      description_1_2_0: `• Synchronisation cloud chiffrée de bout en bout : vos notes sont protégées avec votre propre clé.
+• Nouvelle barre de « note rapide » pour saisir une note instantanément depuis l'accueil.
+• Section d'aide repensée avec recherche intelligente par IA.
+• Diverses corrections et améliorations.`,
+
       description_1_1_1: `• Ajout des notes hors ligne : conservez une note uniquement sur cet appareil, sans la synchroniser sur le cloud.
 • Reconnaissance vocale 2.0 : dictee vocale amelioree avec nettoyage automatique par IA.
 • L'Assistant IA peut desormais suggerer une categorie a partir du titre de la note.
@@ -45,6 +50,11 @@ const fr = {
     },
 
     mobile: {
+      description_3_2_0: `• Synchronisation cloud chiffrée de bout en bout : vos notes sont protégées avec votre propre clé.
+• Nouvelle barre de « note rapide » pour saisir une note instantanément depuis l'accueil.
+• Section d'aide repensée avec recherche intelligente par IA.
+• Diverses corrections et améliorations.`,
+
       description_3_1_1: `• Ajout des notes hors ligne : conservez une note uniquement sur cet appareil, sans la synchroniser sur le cloud.
 • Reconnaissance vocale 2.0 : dictee vocale amelioree avec nettoyage automatique par IA.
 • L'Assistant IA peut desormais suggerer une categorie a partir du titre de la note.
@@ -163,6 +173,7 @@ const fr = {
   home: {
     notes: "Notes",
     search: "Chercher quelque chose...",
+    quickNote: "Note rapide…",
     deepSearch: "Recherche approfondie (texte, listes…)",
     selected_count: "{{count}} sélectionnées",
 
@@ -276,10 +287,12 @@ const fr = {
     name_title: "Nom",
     name_placeholder: "Entrez le nom de la catégorie ici...",
     icon_title: "Icône",
+    suggested_title: "Suggérés",
     notes_num: "Notes: ",
   },
   organizecategory: {
     title: "Organiser",
+    empty: "Aucune catégorie pour l'instant.\nAppuyez sur le bouton + pour en créer une.",
   },
   trashednotes: {
     title: "Notes supprimées",
@@ -357,6 +370,10 @@ const fr = {
     title: "Création de note",
     mode_section: "Mode",
     default_type_section: "Type de note par défaut",
+    quick_note_section: "Note rapide",
+    quick_note_label: "Barre de note rapide",
+    quick_note_description:
+      "Affiche une barre en bas de l'accueil pour écrire et enregistrer une note texte à la volée, sans ouvrir l'éditeur complet. Touchez, écrivez et envoyez.",
     mode: {
       simple: "Simple",
       simple_description: "Appuyer crée une note texte. Utilisez le menu pour les autres types.",
@@ -372,6 +389,7 @@ const fr = {
     information: "Information",
     developer: "Développeur",
     website: "Site Internet",
+    openLink: "Ouvrir le lien",
   },
   ai: {
     title: "Assistant IA",
@@ -475,182 +493,329 @@ const fr = {
     },
   },
   help: {
-    title: "Aider",
+    title: "Aide",
+    search_placeholder: "Comment pouvons-nous vous aider ?",
+    no_results: "Aucun résultat. Essayez un autre mot.",
+    search_placeholders: [
+      "Cherchez ou décrivez ce dont vous avez besoin…",
+      "Comment créer une note ?",
+      "À quoi sert la barre d'outils ?",
+      "Comment fonctionne la synchronisation cloud ?",
+      "Comment récupérer une note supprimée ?",
+    ],
+    ai_thinking: "Recherche avec l'IA…",
+    ai_results: "Résultats IA · appuyez pour réinitialiser",
+    ai_invite_title: "Vous ne trouvez pas ce que vous cherchez ?",
+    ai_invite_subtitle: "Décrivez-le avec vos mots et laissez l'assistant IA trouver le bon sujet.",
+    cat_notes: "Notes",
+    cat_editor: "Éditeur et mise en forme",
+    cat_categories: "Catégories",
+    cat_trash: "Corbeille",
+    cat_cloud: "Synchronisation cloud et chiffrement",
+    cat_data: "Sécurité et données",
+    cat_settings: "Paramètres",
+    cat_more: "Plus et infos",
+    cat_ai: "Assistant IA",
     how_to_create_note: {
-      title: "Comment puis-je créer une note?",
-      text_1_0: "Vous pouvez créer une note en cliquant sur le bouton",
+      title: "Comment créer une note ?",
+      text_1_0: "Appuyez sur le bouton",
       text_1_1: "dans le coin inférieur droit de la page d'accueil.",
-      text_2_0: "Il apparaîtra une nouvelle page où vous pourrez écrire un titre et une description à votre note.",
-      text_3_0: "Vous pouvez le sauvegarder en revenant sur la page d'accueil.",
+      text_2_0: "Une nouvelle page s'ouvre où vous pouvez ajouter un titre et rédiger votre note.",
+      text_3_0: "Pour l'enregistrer, il suffit de revenir à la page d'accueil.",
     },
     how_to_create_todo_note: {
-      title: "Comment puis-je créer une note de tâche?",
-      text_1_0: "Vous pouvez créer une note de tâche en cliquant sur",
-      text_1_1: "bouton en bas à droite de la page d'accueil.",
-      text_2_0:
-        "Une nouvelle page apparaîtra sur laquelle vous pourrez écrire un titre et une liste de textes de tâches à faire sur votre note.",
-      text_3_0: "En appuyant sur les 6 points à droite d'un élément, vous pourrez le déplacer de haut en bas.",
-      text_4_0: "Le bouton croix à droite supprimera cet élément.",
-      text_5_0: "Les boutons en bas sont: ",
-      text_6_0: "• Ajouter: un nouvel élément de tâche sera ajouté à la liste.",
-      text_7_0: "• Masquer/afficher coché: les éléments à faire seront masqués/affichés s'ils sont cochés.",
-      text_8_0: "• Supprimer tout: cela supprimera toutes les tâches à faire présentes dans la note.",
-      text_9_0: "Vous pouvez le sauvegarder en revenant sur la page d'accueil.",
+      title: "Comment créer une liste de tâches ?",
+      text_1_0: "Appuyez sur le bouton",
+      text_1_1: "dans le coin inférieur droit de la page d'accueil.",
+      text_2_0: "Une nouvelle page s'ouvre où vous pouvez ajouter un titre et vos tâches à faire.",
+      text_3_0: "Faites glisser les six points à droite d'un élément pour le déplacer vers le haut ou le bas.",
+      text_4_0: "Appuyez sur la croix à droite pour supprimer un élément.",
+      text_5_0: "Les boutons en bas vous permettent de :",
+      text_6_0: "• Ajouter — ajouter un nouvel élément à la liste.",
+      text_7_0:
+        "• Changer de mode — basculez entre Liste (une liste de tâches classique) et Étapes (une liste numérotée et séquentielle à compléter dans l'ordre).",
+      text_8_0: "• Tout supprimer — supprimer tous les éléments de la liste.",
+      text_9_0: "Pour l'enregistrer, il suffit de revenir à la page d'accueil.",
     },
     how_to_create_kanban_note: {
-      title: "Comment puis-je créer une note Kanban?",
-      text_1_0: "Vous pouvez créer une note Kanban en cliquant sur le bouton",
-      text_1_1: "dans le coin inférieur droit de la page d'accueil et en sélectionnant 'Kanban'.",
-      text_2_0: "Une nouvelle page apparaîtra avec une colonne déjà créée.",
-      text_3_0: "• Pour ajouter une colonne: cliquez sur le bouton 'Ajouter une colonne' à droite (maximum 5 colonnes).",
-      text_4_0: "• Pour renommer une colonne: modifiez le texte dans l'en-tête de la colonne.",
-      text_5_0: "• Pour changer la couleur d'une colonne: cliquez sur le carré coloré dans l'en-tête.",
-      text_6_0: "• Pour ajouter une carte: cliquez sur 'Ajouter une carte' en bas de la colonne.",
-      text_7_0: "• Pour déplacer une carte: appuyez longuement sur la carte et faites-la glisser vers une autre colonne.",
-      text_8_0: "• Pour supprimer une carte: cliquez sur l'icône de la corbeille sur la carte.",
-      text_9_0: "• Pour supprimer une colonne: cliquez sur l'icône de la corbeille dans l'en-tête de la colonne.",
-      text_10_0: "Vous pouvez sauvegarder la note en revenant sur la page d'accueil.",
+      title: "Comment créer un tableau Kanban ?",
+      text_1_0: "Appuyez sur le bouton",
+      text_1_1: "dans le coin inférieur droit de la page d'accueil et choisissez 'Kanban'.",
+      text_2_0: "Un tableau s'ouvre avec une colonne prête à l'emploi.",
+      text_3_0: "• Ajouter une colonne — appuyez sur 'Ajouter une colonne' à droite (jusqu'à 10).",
+      text_4_0: "• Renommer une colonne — modifiez le texte dans son en-tête.",
+      text_5_0: "• Changer la couleur d'une colonne — appuyez sur le carré coloré dans son en-tête.",
+      text_6_0: "• Ajouter une carte — appuyez sur 'Ajouter une carte' en bas d'une colonne.",
+      text_7_0: "• Déplacer une carte — appuyez longuement dessus, puis faites-la glisser vers une autre colonne.",
+      text_8_0: "• Supprimer une carte — appuyez sur l'icône de corbeille sur la carte.",
+      text_9_0: "• Supprimer une colonne — appuyez sur l'icône de corbeille dans son en-tête.",
+      text_10_0: "Pour enregistrer le tableau, il suffit de revenir à la page d'accueil.",
+    },
+    how_to_create_code_note: {
+      title: "Comment créer une note de code ?",
+      text_1_0: "Appuyez sur le bouton",
+      text_1_1: "dans le coin inférieur droit de la page d'accueil et choisissez 'Code'.",
+      text_2_0: "Vous obtenez un véritable éditeur de code avec coloration syntaxique.",
+      text_3_0:
+        "• Onglets — gardez plusieurs extraits dans une seule note ; ajoutez-les, renommez-les, supprimez-les ou faites-les glisser pour les réorganiser (jusqu'à 6).",
+      text_4_0: "• Langage — appuyez sur la barre de langage pour en choisir un, ou laissez-le être détecté automatiquement.",
+      text_5_0: "• Rechercher et remplacer — appuyez sur l'icône de recherche en haut, comme dans une note de texte.",
+      text_6_0: "Pour l'enregistrer, il suffit de revenir à la page d'accueil.",
     },
     how_to_edit_note: {
-      title: "Comment puis-je modifier une note?",
-      text_1_0: "Vous pouvez modifier une note en la sélectionnant dans la page d'accueil",
+      title: "Comment modifier une note ?",
+      text_1_0: "Appuyez simplement sur la note dans la page d'accueil pour l'ouvrir et apporter vos modifications.",
     },
     how_to_delete_note: {
-      title: "Comment puis-je supprimer une note?",
-      text_1_0: "Vous pouvez supprimer une note en cliquant",
-      text_1_1: "dans le coin supérieur droit, lors de l'affichage d'une note.",
-      text_2_0: "Cela ouvrira un menu contextuel. La première option est ce que vous recherchez.",
+      title: "Comment supprimer une note ?",
+      text_1_0: "Lors de l'affichage d'une note, appuyez sur",
+      text_1_1: "dans le coin supérieur droit.",
+      text_2_0: "Un menu s'ouvre — 'Supprimer' est la première option.",
     },
     how_to_select_notes: {
-      title: "Comment puis-je sélectionner des notes?",
-      text_1_0: "Vous pouvez sélectionner des notes en appuyant longuement sur une note.",
+      title: "Comment sélectionner plusieurs notes à la fois ?",
+      text_1_0: "Appuyez longuement sur n'importe quelle note pour commencer la sélection.",
       text_2_0:
-        "Vous passerez en 'mode édition', et il est possible d'effectuer diverses actions comme les supprimer, les mettre comme importantes, en lecture seule ou verrouillées.",
+        "Cela active le mode sélection, où vous pouvez agir sur plusieurs notes en même temps — les supprimer, ou les marquer comme importantes, en lecture seule ou verrouillées.",
+    },
+    what_are_hidden_notes: {
+      title: "Comment fonctionnent les notes masquées ?",
+      text_1_0: "Ouvrez le menu d'options d'une note et appuyez sur 'Masquer' pour la dissimuler sur la page d'accueil.",
+      text_2_0:
+        "Pour revoir les notes masquées, activez 'Afficher les notes masquées' dans les paramètres avancés — votre code secret vous sera demandé.",
     },
     what_toolbar_below: {
-      title: "Quelle est la barre d'outils ci-dessous?",
-      text_1_0: "La barre d'outils peut enrichir votre texte de nombreuses façons.",
-      text_2_0: "• Image: vous pouvez mettre et couper une image de votre galerie.",
-      text_3_0: "• Gras: vous pouvez mettre votre texte en gras.",
-      text_4_0: "• Italique: vous pouvez mettre votre texte en italique.",
-      text_5_0: "• Souligné: vous pouvez souligner votre texte.",
-      text_6_0: "• Sous-ensemble: vous pouvez mettre votre texte en bas par rapport à votre texte.",
-      text_7_0: "• Superset: vous pouvez placer votre texte en première position par rapport à votre texte.",
-      text_8_0: "• Liste à puces: vous pouvez créer une liste à puces.",
-      text_9_0: "• Liste triée: vous pouvez créer une liste triée.",
-      text_10_0: "• Code: vous pouvez créer un wrapper dans lequel vous pouvez écrire du code formaté.",
+      title: "Qu'est-ce que la barre d'outils en bas ?",
+      text_1_0: "Elle vous permet de mettre en forme et d'enrichir votre texte. Voici ce que font les boutons :",
+      text_2_0: "• Annuler / Rétablir — revenir en arrière ou en avant dans vos dernières modifications.",
+      text_3_0: "• Image — insérer une image depuis votre galerie.",
+      text_4_0: "• Gras — mettre le texte sélectionné en gras.",
+      text_5_0: "• Italique — mettre le texte sélectionné en italique.",
+      text_6_0: "• Barré — barrer le texte sélectionné.",
+      text_7_0: "• Souligné — souligner le texte sélectionné.",
+      text_8_0: "• Indice — abaisser légèrement le texte sous la ligne.",
+      text_9_0: "• Exposant — élever légèrement le texte au-dessus de la ligne.",
+      text_10_0: "• Liste à puces — démarrer une liste à puces.",
+      text_11_0: "• Liste numérotée — démarrer une liste numérotée.",
+      text_12_0: "• Code — entourer le texte d'un bloc de code formaté.",
+    },
+    what_find_replace: {
+      title: "Comment rechercher et remplacer du texte ?",
+      text_1_0:
+        "Lors de l'édition d'une note de texte ou de code, appuyez sur l'icône de recherche dans le coin supérieur droit.",
+      text_2_0: "Saisissez ce que vous cherchez : les flèches passent d'une occurrence à l'autre et indiquent leur nombre.",
+      text_3_0: "Activez 'Remplacer' pour remplacer l'occurrence actuelle, ou remplacez toutes les occurrences d'un coup.",
     },
     what_are_settings_note: {
-      title: "Quels sont les paramètres d'une note?",
-      text_1_0: "Les paramètres des notes sont:",
-      text_2_0: "• Supprimer: vous pouvez supprimer la note actuelle.",
-      text_3_0: "• Important: vous pouvez définir votre note comme importante",
-      text_4_0:
-        "• Protéger: vous pouvez verrouiller votre note. Vous aurez besoin d'un code ou de votre empreinte digitale si elle est activée.",
-      text_5_0: "• Lecture seule: votre note ne peut pas être modifiée.",
-      text_6_0: "• Changer de catégorie: vous pouvez changer la catégorie d'une note à une autre.",
-      text_7_0: "• Partager: vous pouvez partager le texte de votre note avec une autre application sociale.",
+      title: "Quelles sont les options d'une note ?",
+      text_1_0: "Ouvrez une note et appuyez sur le menu ⋮ dans le coin supérieur droit. De là, vous pouvez :",
+      text_2_0: "• Supprimer — déplacer la note vers la corbeille.",
+      text_3_0: "• Important — marquer la note pour qu'elle ressorte en haut.",
+      text_4_0: "• Protéger — verrouiller la note derrière votre code secret ou votre empreinte digitale.",
+      text_5_0: "• Lecture seule — empêcher la note d'être modifiée par accident.",
+      text_6_0:
+        "• Masquer — garder la note hors de la page d'accueil jusqu'à ce que vous choisissiez d'afficher les notes masquées.",
+      text_7_0: "• Rendre hors ligne — garder la note uniquement sur cet appareil, jamais synchronisée vers le cloud.",
+      text_8_0: "• Changer de catégorie — déplacer la note vers une autre catégorie.",
+      text_9_0: "• Exporter (notes de texte) — enregistrer la note sous forme de fichier .txt, Markdown ou PDF.",
+      text_10_0: "• Informations — voir le type, la catégorie et les dates de la note.",
     },
     how_create_category: {
-      title: "Comment puis-je créer une catégorie?",
-      text_1_0: "Vous pouvez créer une nouvelle catégorie en cliquant",
-      text_1_1: "dans le coin supérieur gauche de la page d'accueil.",
-      text_2_0: "Vous serez redirigé vers la page 'Organiser'. Dans le coin inférieur droit, vous devez cliquer",
-      text_2_1: "",
-      text_3_0:
-        "Une fois de plus, vous serez redirigé vers la page 'Créer une catégorie'. Il vous sera demandé de créer un nom et de sélectionner une icône unique.",
-      text_4_0: "Après avoir compilé le formulaire, le",
-      text_4_1: "apparaîtra dans le coin inférieur droit. Vous devez cliquer dessus pour enregistrer votre nouvelle catégorie.",
+      title: "Comment créer une catégorie ?",
+      text_1_0: "Sur la page d'accueil, appuyez sur",
+      text_1_1: "dans le coin supérieur gauche.",
+      text_2_0: "Cela ouvre la page 'Organiser'. Là, appuyez sur",
+      text_2_1: "dans le coin inférieur droit.",
+      text_3_0: "Sur la page 'Créer une catégorie', donnez-lui un nom et choisissez une icône qui n'est pas déjà utilisée.",
+      text_4_0: "Quand vous avez terminé, appuyez sur",
+      text_4_1: "dans le coin inférieur droit pour l'enregistrer.",
     },
     how_edit_category: {
-      title: "Comment puis-je modifier une catégorie?",
-      text_1_0: "Vous pouvez modifier une catégorie en cliquant",
-      text_1_1: "dans le coin supérieur gauche de la page d'accueil.",
+      title: "Comment modifier une catégorie ?",
+      text_1_0: "Sur la page d'accueil, appuyez sur",
+      text_1_1: "dans le coin supérieur gauche.",
       text_2_0:
-        "Vous serez redirigé vers la page 'Organiser'. Vous devez sélectionner une catégorie et vous serez à nouveau redirigé vers la page 'Mettre à jour la catégorie'.",
+        "Sur la page 'Organiser', appuyez sur la catégorie que vous souhaitez modifier — sa page d'édition s'ouvre, où vous pouvez la renommer ou choisir une nouvelle icône.",
     },
     how_organize_categories: {
-      title: "Comment puis-je organiser mes catégories?",
-      text_1_0: "Vous pouvez modifier une catégorie en cliquant",
-      text_1_1: "dans le coin supérieur gauche de la page d'accueil.",
-      text_2_0: "Vous allez être redirigé vers la page 'Organiser'. Vous devez cliquer",
-      text_2_1: "pour passer en 'mode organisation'",
-      text_3_0:
-        "Lorsque vous cliquez sur une catégorie, il sera 'non numéroté'. Vous pouvez cliquer sur une autre catégorie pour changer l'ordre des catégories.",
-      text_4_0: "Lorsque vous avez terminé, vous pouvez cliquer sur",
-      text_4_1: "les modifications.",
-      text_5_0: "Si vous souhaitez annuler vos modifications, vous pouvez cliquer",
-      text_5_1: "",
+      title: "Comment réorganiser mes catégories ?",
+      text_1_0: "Sur la page d'accueil, appuyez sur",
+      text_1_1: "dans le coin supérieur gauche.",
+      text_2_0: "Sur la page 'Organiser', appuyez sur",
+      text_2_1: "pour passer en mode organisation.",
+      text_3_0: "Appuyez sur une catégorie pour la prendre, puis appuyez sur une autre pour l'y déposer et changer l'ordre.",
+      text_4_0: "Quand l'ordre vous convient, appuyez sur",
+      text_4_1: "pour l'enregistrer.",
+      text_5_0: "Pour annuler vos modifications, appuyez sur",
+      text_5_1: "dans le coin supérieur droit.",
     },
     how_delete_category: {
-      title: "Comment puis-je supprimer une catégorie?",
-      text_1_0:
-        "Lorsque vous êtes sur la page d'accueil, vous pouvez appuyer longuement sur une catégorie, et vous passez en 'mode édition'.",
-      text_2_0: "Si vous cliquez sur",
+      title: "Comment supprimer une catégorie ?",
+      text_1_0: "Sur la page d'accueil, appuyez longuement sur une catégorie pour passer en mode sélection.",
+      text_2_0: "Puis appuyez sur",
       text_2_1:
-        "une fenêtre contextuelle apparaîtra, vous demandant si vous souhaitez supprimer la catégorie avec vos notes, ou simplement les transférer vers TOUTES les notes.",
+        "et choisissez de supprimer la catégorie avec ses notes, ou de conserver les notes en les déplaçant vers 'Toutes'.",
     },
     what_are_trashed_notes: {
-      title: "Quelles sont les notes supprimées?",
-      text_1_0:
-        "Lors de la suppression d'une note, elle ira dans la corbeille. C'est une corbeille où toutes les notes vont temporairement.",
+      title: "Qu'est-ce que la corbeille ?",
+      text_1_0: "Lorsque vous supprimez une note, elle n'est pas perdue tout de suite — elle va d'abord dans la corbeille.",
       text_2_0:
-        "Par défaut, ils ne durent que 7 jours, puis ils disparaissent. Vous pouvez modifier ce paramètre dans les paramètres de base.",
+        "Les notes y restent 7 jours, puis sont définitivement supprimées. Vous pouvez modifier leur durée de conservation dans les paramètres de base.",
     },
     how_restore_trashed_notes: {
-      title: "Comment puis-je restaurer des notes supprimées?",
-      text_1_0:
-        "Lorsque vous êtes sur la page 'Notes supprimées', vous pouvez sélectionner une note et une fenêtre contextuelle apparaîtra vous demandant si vous souhaitez restaurer cette note.",
+      title: "Comment restaurer des notes supprimées ?",
+      text_1_0: "Ouvrez la page 'Corbeille' et appuyez sur une note — il vous sera demandé si vous souhaitez la restaurer.",
       text_2_0:
-        "Vous pouvez restaurer plusieurs notes en appuyant longuement sur une note et en sélectionnant les notes souhaitées. Cliquez",
+        "Pour en restaurer plusieurs à la fois, appuyez longuement sur une note, sélectionnez celles que vous voulez, puis appuyez sur",
       text_2_1: "dans le coin supérieur droit.",
-      text_3_0: "Une fenêtre contextuelle apparaîtra et la deuxième option correspond à ce que vous recherchez.",
-      text_4_0: "Vous pouvez également restaurer toutes les notes présentes dans la corbeille en cliquant sur",
+      text_3_0: "Dans le menu qui apparaît, choisissez 'Restaurer'.",
+      text_4_0: "Pour tout récupérer d'un coup, appuyez sur",
       text_4_1: "dans le coin supérieur droit.",
-      text_5_0: "Une fenêtre contextuelle apparaîtra et la deuxième option correspond à ce que vous recherchez.",
+      text_5_0: "Dans le menu qui apparaît, choisissez 'Tout restaurer'.",
     },
     how_restore_delete_notes: {
-      title: "Comment puis-je restaurer des notes supprimées?",
+      title: "Comment supprimer définitivement des notes de la corbeille ?",
       text_1_0:
-        "Lorsque vous êtes dans la page 'Notes à la corbeille', vous pouvez appuyer longuement sur une note pour passer en 'mode édition' et sélectionner les notes que vous souhaitez supprimer.",
-      text_2_0: "Cliquez sur",
+        "Ouvrez la page 'Corbeille', appuyez longuement sur une note pour passer en mode sélection, puis choisissez celles à supprimer.",
+      text_2_0: "Appuyez sur",
       text_2_1: "dans le coin supérieur droit.",
-      text_3_0: "Une fenêtre contextuelle apparaîtra et la première option correspond à ce que vous recherchez.",
-      text_4_0: "Vous pouvez également supprimer toutes les notes présentes dans le bac, en cliquant",
+      text_3_0: "Dans le menu qui apparaît, choisissez 'Supprimer'.",
+      text_4_0: "Pour vider toute la corbeille d'un coup, appuyez sur",
       text_4_1: "dans le coin supérieur droit.",
-      text_5_0: "Une fenêtre contextuelle apparaîtra et la deuxième option correspond à ce que vous recherchez.",
+      text_5_0: "Dans le menu qui apparaît, choisissez 'Tout supprimer'.",
     },
     what_cloud_sync: {
-      title: "Qu'est-ce que Cloud-Sync?",
+      title: "Qu'est-ce que la synchronisation cloud ?",
       text_1_0:
-        "Il est possible de synchroniser vos notes en connectant votre compte Google Firebase et en activant le mode de synchronisation.",
-      text_2_0: "Vous n'avez rien d'autre à faire. Vos notes seront stockées dans votre Google Firebase, cryptées.",
+        "Vous pouvez synchroniser vos notes entre appareils en connectant votre propre projet Google Firebase et en activant la synchronisation. Il n'y a pas de serveur central Fast Memo — vos données vivent uniquement dans votre Firebase.",
+      text_2_0:
+        "Vos notes sont chiffrées de bout en bout sur votre appareil avant d'être envoyées, de sorte que personne d'autre que vous ne peut les lire.",
+      text_link: "Lire le guide pas à pas pour configurer Google Firebase →",
+    },
+    what_encryption: {
+      title: "Comment mes notes sont-elles chiffrées ?",
+      text_1_0:
+        "La synchronisation cloud utilise le chiffrement de bout en bout. Lors de la première configuration, vous choisissez un mot de passe de chiffrement, et votre appareil en dérive la clé qui protège vos notes.",
+      text_2_0:
+        "La clé ne quitte jamais votre appareil et n'est jamais stockée dans le cloud : même une personne ayant accès à votre Firebase ne peut pas lire le contenu de vos notes sans votre mot de passe.",
+      text_3_0:
+        "Le contenu des notes est chiffré ; les titres et les dates restent lisibles pour que l'application puisse les trier et les synchroniser.",
+    },
+    how_unlock_device: {
+      title: "Pourquoi dois-je déverrouiller sur chaque appareil ?",
+      text_1_0:
+        "Chaque appareil déverrouille le chiffrement une fois en saisissant votre mot de passe. Ensuite, la clé est stockée en toute sécurité sur l'appareil (Keychain / Keystore), vous n'avez donc pas à la ressaisir à chaque lancement.",
+      text_2_0:
+        "Si un appareil reste verrouillé, la synchronisation y est suspendue jusqu'à ce que vous le déverrouilliez — cela empêche vos notes d'être enregistrées de façon illisible.",
+    },
+    forgot_password: {
+      title: "J'ai oublié mon mot de passe de chiffrement",
+      text_1_0:
+        "Lorsque vous configurez le chiffrement, une clé de récupération vous est présentée une seule fois. Conservez-la en lieu sûr.",
+      text_2_0:
+        "Sur l'écran de déverrouillage, choisissez 'Mot de passe oublié', saisissez votre clé de récupération et définissez un nouveau mot de passe. Aucune note n'est perdue.",
+      text_3_0:
+        "Si vous perdez à la fois le mot de passe et la clé de récupération, vos notes dans le cloud ne peuvent être déchiffrées par personne — c'est tout l'intérêt du chiffrement de bout en bout.",
+    },
+    reset_encryption: {
+      title: "Que fait la réinitialisation du chiffrement ?",
+      text_1_0:
+        "La réinitialisation est le dernier recours, lorsque le mot de passe et la clé de récupération sont tous deux perdus.",
+      text_2_0:
+        "Elle crée une nouvelle configuration de chiffrement à partir des notes actuellement présentes sur cet appareil et remplace la copie du cloud. Les anciennes notes du cloud qui ne peuvent plus être déchiffrées sont supprimées.",
+      text_3_0:
+        "Vos notes locales sont conservées et renvoyées, donc cet appareil ne perd rien — mais vos autres appareils devront se déverrouiller à nouveau avec le nouveau mot de passe.",
+    },
+    quick_backup: {
+      title: "Qu'est-ce que la sauvegarde rapide ?",
+      text_1_0:
+        "Sur les écrans de configuration, de déverrouillage et de réinitialisation du chiffrement, vous trouverez un bouton facultatif 'Sauvegarde rapide'.",
+      text_2_0:
+        "Il exporte un fichier de vos notes protégé par une phrase secrète directement depuis cet appareil, indépendamment du cloud — un filet de sécurité avant une synchronisation importante ou une réinitialisation. Vos notes restent de toute façon toujours sur cet appareil.",
     },
     what_secret_code: {
-      title: "Qu'est-ce qu'un code secret?",
+      title: "Qu'est-ce que le code secret ?",
       text_1_0:
-        "Vos notes verrouillées nécessiteront un code secret que vous avez généré lors de la première ouverture de l'application.",
-      text_2_0: "Vous pouvez le modifier depuis les paramètres de base.",
+        "C'est le code que vous avez défini la première fois que vous avez ouvert l'application, et il vous sera nécessaire pour ouvrir toute note que vous avez verrouillée.",
+      text_2_0: "Vous pouvez le modifier à tout moment depuis les paramètres de base.",
     },
     what_import_export: {
-      title: "Qu'est-ce que l'import/export de données?",
-      text_1_0: "Vous pouvez importer ou exporter des données localement.",
-      text_2_0: "En les exportant, un fichier sera généré dans le dossier dans lequel vous souhaitez enregistrer.",
-      text_3_0: "Il sera crypté par défaut. Vous aurez besoin d'une phrase secrète pour l'importer.",
+      title: "Qu'est-ce que l'import et l'export ?",
+      text_1_0:
+        "Ils vous permettent d'enregistrer une copie de vos données, ou de les restaurer, directement sur votre appareil.",
+      text_2_0: "Lorsque vous exportez, un fichier est enregistré dans le dossier que vous choisissez.",
+      text_3_0:
+        "Le fichier est toujours chiffré — vous aurez besoin de la phrase secrète que vous avez définie pour l'importer à nouveau.",
+    },
+    how_export_note: {
+      title: "Comment exporter une seule note ?",
+      text_1_0: "Ouvrez une note de texte, appuyez sur le menu d'options et choisissez 'Exporter'.",
+      text_2_0: "Puis choisissez le format souhaité :",
+      text_3_0: "• Texte brut (.txt) — uniquement le texte, sans mise en forme.",
+      text_4_0: "• Markdown (.md) — conserve les titres et la mise en forme de base.",
+      text_5_0: "• PDF — un document soigné, prêt à partager.",
+      text_6_0: "Le fichier est partagé via votre appareil, vous pouvez donc l'enregistrer ou l'envoyer où vous voulez.",
     },
     what_wipe_data: {
-      title: "Qu'est-ce que l'effacement des données?",
-      text_1_0: "Vous pouvez effacer toutes les notes et catégories.",
-      text_2_0: "Une popup apparaîtra afin de vous demander si vous êtes sûr de cette action.",
-      text_3_0: "Ils seront définitivement supprimés.",
+      title: "Que fait l'effacement des données ?",
+      text_1_0: "Il supprime toutes vos notes et catégories de cet appareil d'un seul coup.",
+      text_2_0: "Une confirmation vous sera d'abord demandée, car cette action est irréversible.",
+      text_3_0: "Une fois confirmé, tout est supprimé définitivement.",
+    },
+    what_note_creation: {
+      title: "Que fait le paramètre de création de note ?",
+      text_1_0:
+        "Il détermine ce qui se passe lorsque vous appuyez sur le bouton [+] de la page d'accueil. Dans Paramètres → Création de note, vous pouvez choisir :",
+      text_2_0: "• Simple — [+] crée une note de texte ; utilisez le menu pour les autres types.",
+      text_3_0: "• Intelligent — [+] crée toujours le type que vous avez choisi comme favori.",
+      text_4_0: "• Adaptatif — [+] crée le même type que la dernière note sur laquelle vous avez travaillé.",
+    },
+    what_home_filters: {
+      title: "Comment fonctionnent les filtres de l'accueil ?",
+      text_1_0:
+        "Appuyez sur l'icône de filtre en haut de la page d'accueil pour changer la façon dont vos notes sont affichées.",
+      text_2_0: "• Trier par — trier par date de création ou dernière mise à jour, par ordre croissant ou décroissant.",
+      text_3_0:
+        "• Recherche approfondie — rechercher aussi dans le contenu des notes et des listes, pas seulement dans les titres (votre code secret est d'abord demandé).",
+    },
+    what_language: {
+      title: "Comment changer la langue ?",
+      text_1_0: "Ouvrez les paramètres de base et appuyez sur 'Langue' pour en changer.",
+      text_2_0:
+        "Vous pouvez suivre automatiquement la langue de votre appareil, ou en choisir une parmi les sept disponibles : anglais, italien, espagnol, français, allemand, chinois et japonais.",
+    },
+    what_version_check: {
+      title: "L'application vérifie-t-elle les mises à jour ?",
+      text_1_0: "Oui — quand vous ouvrez Fast Memo, elle vérifie discrètement si une nouvelle version est disponible.",
+      text_2_0:
+        "Lorsqu'une mise à jour est disponible, un écran 'Quoi de neuf ?' montre les changements. Vous pouvez aussi vérifier à tout moment depuis les paramètres.",
+    },
+    what_report_problem: {
+      title: "Comment signaler un problème ?",
+      text_1_0: "Allez dans Paramètres → Signaler un problème.",
+      text_2_0:
+        "Choisissez un sujet, décrivez ce qui s'est passé, et joignez éventuellement quelques captures d'écran et les infos de votre appareil pour nous aider à examiner le problème.",
+      text_3_0: "Vous pouvez envoyer un signalement par jour.",
+    },
+    what_webhooks: {
+      title: "Qu'est-ce que les webhooks ?",
+      text_1_0:
+        "Les webhooks sont destinés aux utilisateurs avancés : ils permettent à Fast Memo de notifier un autre service chaque fois qu'un événement se produit — une note créée, mise à jour ou supprimée, une catégorie modifiée, des données exportées, et ainsi de suite.",
+      text_2_0: "Chaque action peut appeler une adresse web de votre choix. Vous les configurez dans Paramètres → Webhooks.",
+    },
+    what_platforms: {
+      title: "Où puis-je utiliser Fast Memo ?",
+      text_1_0:
+        "Fast Memo fonctionne à la fois sur mobile et sur ordinateur (Windows, macOS et Linux), ainsi qu'en version web.",
+      text_2_0: "Connectez le même projet Google Firebase sur chaque appareil et vos notes restent synchronisées partout.",
     },
     what_ai_assistant: {
-      title: "Qu'est-ce que l'Assistant IA?",
+      title: "Qu'est-ce que l'Assistant IA ?",
       text_1_0:
-        "Fast Memo inclut un Assistant IA self-hosted qui fonctionne entierement sur votre appareil. Aucune donnee n'est envoyee a des serveurs externes.",
-      text_2_0: "Pour le configurer, allez dans Parametres -> Assistant IA, choisissez un modele et telechargez-le.",
+        "Fast Memo inclut un Assistant IA auto-hébergé qui fonctionne entièrement sur votre appareil. Aucune donnée n'est envoyée à des serveurs externes.",
+      text_2_0: "Pour le configurer, allez dans Paramètres -> Assistant IA, choisissez un modèle et téléchargez-le.",
       text_3_0:
-        "Une fois active, un bouton etoile apparait dans chaque editeur. Appuyez dessus pour acceder a des actions intelligentes comme: generer un titre, resumer, continuer a ecrire, formater le texte, suggerer des elements ou suggerer une categorie.",
+        "Une fois activé, un bouton étincelle apparaît dans chaque éditeur de note. Appuyez dessus pour accéder à des actions intelligentes comme : générer un titre, résumer, continuer à écrire, mettre en forme le texte, suggérer des éléments de liste ou suggérer une catégorie.",
       text_4_0: "L'IA fonctionne hors ligne et prend en charge plusieurs langues.",
     },
   },
