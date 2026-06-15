@@ -2,9 +2,11 @@ import { configs } from "@/configs";
 import { useAppUpdate } from "@/providers/AppUpdateProvider";
 import { openUrl } from "@/utils/openUrl";
 import { isTauri } from "@/utils/platform";
+import { selectorDeveloperMode } from "@/slicers/settingsSlice";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform } from "react-native";
+import { useSelector } from "react-redux";
 
 import SectionItemList_Navigation from "@/components/settings/components/item/SectionItemList_Navigation";
 import SectionItemList from "@/components/settings/components/list/SectionItemList";
@@ -18,6 +20,12 @@ export default function SectionItem_CheckUpdates({ isLast }: Props) {
   const { t } = useTranslation();
   const { updateAvailable } = useAppUpdate();
   const [isChecking, setIsChecking] = useState(false);
+
+  // SectionItem_DeveloperOptions is the only entry after this one in SECTION_INFO,
+  // and it renders nothing unless developer mode is enabled. When it's disabled this
+  // item becomes the last visible row, so drop its bottom border in that case.
+  const developerMode = useSelector(selectorDeveloperMode);
+  const isLastVisible = isLast || !developerMode.enabled;
 
   const checkForUpdates = async () => {
     if (isChecking) return;
@@ -60,7 +68,7 @@ export default function SectionItem_CheckUpdates({ isLast }: Props) {
   };
 
   return (
-    <SectionItemList isLast={isLast}>
+    <SectionItemList isLast={isLastVisible}>
       <SectionItemList_Navigation
         title={isChecking ? t("generalsettings.checking_updates") : t("generalsettings.check_updates")}
         extra={updateAvailable ? <BlinkingDot style={{ marginLeft: 8, alignSelf: "center" }} /> : null}

@@ -16,8 +16,9 @@ type DoNextType = "goBack" | "reload" | "dismissAll" | "none" | CallbackFn;
 /**
  * Web/Tauri variant. In a plain browser fingerprint is never available, so the
  * secret-code prompt is the only unlock flow. Inside a Tauri WebView on
- * macOS/Windows, when fingerprint is enabled the OS biometric prompt is used
- * instead, falling back to the secret code if it is cancelled or fails.
+ * macOS/Windows, when fingerprint is enabled the OS biometric prompt is the
+ * only unlock path — like native, cancelling/failing it just aborts (no
+ * secret-code fallback).
  */
 export const useSecret = () => {
   const { t } = useTranslation();
@@ -50,14 +51,12 @@ export const useSecret = () => {
   const unlockWithSecret = (callback: CallbackFn, doNext: DoNextType = "goBack") => {
     if (isFingerprintEnabled && isBiometricSupported()) {
       authenticateBiometric(t("generalsettings.fingerprint_reason")).then((success) => {
-        if (success) {
-          // The biometric prompt is an overlay, not a pushed screen, so there
-          // is nothing to navigate back from — mirror the native flow and just
-          // run the callback. On failure, fall back to the secret-code screen.
-          callback(router, true);
-        } else {
-          promptSecretCode(callback, doNext, false);
-        }
+        // The biometric prompt is an overlay, not a pushed screen, so there is
+        // nothing to navigate back from — mirror the native flow: run the
+        // callback on success and do nothing on cancel/failure. With fingerprint
+        // enabled that's the only unlock path, so there is no secret-code
+        // fallback — cancelling simply aborts.
+        if (success) callback(router, true);
       });
       return;
     }

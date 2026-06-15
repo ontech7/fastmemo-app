@@ -2,9 +2,9 @@
 
 <img width="600" height="114" alt="GithubLogo" src="https://github.com/user-attachments/assets/2b91e421-2c6b-4739-bb16-1220bd591667" />
 
-**A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, cloud sync, etc.**
+**A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, and end-to-end encrypted cloud sync.**
 
-![Android](https://badgen.net/badge/Android/v3.1.1/blue) ![Desktop](https://badgen.net/badge/Desktop/v1.1.1/blue)
+![Android](https://badgen.net/badge/Android/v3.2.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v1.2.0/blue)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
 
 [Download](https://github.com/ontech7/fastmemo-app/releases) | [Documentation](docs/) |
@@ -28,18 +28,18 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 
 ## Features
 
-| Feature                  | Description                                                         |
-| ------------------------ | ------------------------------------------------------------------- |
-| **AI Assistant (BETA)**  | On-device AI with Qwen 2.5 (0.5B-7B). No data leaves your phone     |
-| **Rich Text Editor**     | Create beautifully formatted notes with full rich text support      |
-| **To-Do List**           | Organize your checklist                                             |
-| **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                     |
-| **Code Editor**          | Write code with syntax highlighting, tabs, and language detection   |
-| **Cloud Sync**           | Encrypted synchronization across all devices (no centralized)       |
-| **Biometric Protection** | Secure sensitive notes with fingerprint or secret code              |
-| **Webhooks**             | Explore new stuff with Internet of Things                           |
-| **Voice Recognition**    | Dictate notes using speech-to-text on text and todo notes           |
-| **Multi-language**       | Available in English, Italian, French, German, Spanish, and Chinese |
+| Feature                  | Description                                                            |
+| ------------------------ | ---------------------------------------------------------------------- |
+| **AI Assistant (BETA)**  | On-device AI with Qwen 2.5 (0.5B-7B). No data leaves your phone        |
+| **Rich Text Editor**     | Create beautifully formatted notes with full rich text support         |
+| **To-Do List**           | Organize your checklist                                                |
+| **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                        |
+| **Code Editor**          | Write code with syntax highlighting, tabs, and language detection      |
+| **Cloud Sync**           | End-to-end encrypted sync across devices (your key, no central server) |
+| **Biometric Protection** | Secure sensitive notes with fingerprint or secret code                 |
+| **Webhooks**             | Explore new stuff with Internet of Things                              |
+| **Voice Recognition**    | Dictate notes using speech-to-text on text and todo notes              |
+| **Multi-language**       | Available in English, Italian, French, German, Spanish, and Chinese    |
 
 <details>
 <summary><strong>View all features</strong></summary>

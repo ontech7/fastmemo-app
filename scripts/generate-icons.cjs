@@ -14,7 +14,7 @@ const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
 
-const IMG = path.join(__dirname, "..", "src", "assets", "images");
+const IMG = path.join(__dirname, "..", "assets", "images");
 
 /* ---------- CRC32 (PNG chunk checksums) ---------- */
 const CRC_TABLE = (() => {

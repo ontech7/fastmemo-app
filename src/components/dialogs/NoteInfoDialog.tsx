@@ -56,7 +56,7 @@ export default function NoteInfoDialog({ open, note, onClose }: Props) {
   ].filter(Boolean) as { key: string; label: string; Icon: typeof StarIcon }[];
 
   return (
-    <Dialog open={open} slideFrom="bottom" onPressOut={onClose}>
+    <Dialog open={open} slideFrom="center" onPressOut={onClose}>
       <DialogHeader>
         <DialogTitle adornmentStart={<InformationCircleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}>
           {t("note.info.title")}

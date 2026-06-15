@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import { CATEGORY_MAP } from "@/constants/icons";
 
 interface Props {
@@ -7,7 +9,10 @@ interface Props {
 }
 
 export default function CategoryIcon({ size = 28, name, color }: Props) {
-  const { Icon } = CATEGORY_MAP[name];
+  const entry = CATEGORY_MAP[name];
 
-  return <Icon size={size} color={color} />;
+  // "none" (the index "All" category) maps to Fragment, which rejects size/color.
+  if (!entry || entry.Icon === Fragment) return null;
+
+  return <entry.Icon size={size} color={color} />;
 }

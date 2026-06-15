@@ -4,7 +4,6 @@ import type { Firestore } from "firebase/firestore";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
 import { defaultCategory } from "@/configs/default";
@@ -23,7 +22,12 @@ import {
   setElementInCloud,
   updateLastSyncInCloud,
 } from "@/libs/firebase";
-import { CryptNote } from "@/utils/crypt";
+import { useRouter } from "@/hooks/useRouter";
+import { storeVaultContinuation } from "@/libs/registry";
+import { getDEK, isVaultUnlocked } from "@/libs/vaultSession";
+import { beginVaultProgress, clearVaultProgress, tickVaultProgress } from "@/libs/vaultProgress";
+import { forgetDeviceVault, probeVault } from "@/libs/vaultManager";
+import { CryptNote, tryDecryptNote } from "@/utils/crypt";
 import { getReversedDateTime } from "@/utils/date";
 import { toast } from "@/utils/toast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -47,6 +51,8 @@ interface ConnectingState {
 export const useCloudSync = () => {
   const { t } = useTranslation();
 
+  const router = useRouter();
+
   const allNotes = useSelector(getAllNotes);
   const allCategories = useSelector(getCategories);
 
@@ -66,14 +72,26 @@ export const useCloudSync = () => {
   const [isConnected, setIsConnected] = useState<boolean>(selectorCloudConnected);
   const [isConnecting, setIsConnecting] = useState<ConnectingState>({ loading: false });
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [handshakeFailed, setHandshakeFailed] = useState<boolean>(false);
 
   const dispatch = useDispatch();
 
   const toggleCloudSync = async (): Promise<void> => {
     if (isCloudSyncEnabled) {
-      await removeDeviceFromCloud();
+      // Best-effort cloud cleanup. If a call rejects (transient/offline) we still
+      // disconnect locally below, so the user never gets stuck in a half-on state
+      // with no way to toggle off.
+      try {
+        await removeDeviceFromCloud();
 
-      await deleteActiveFirebase();
+        // forget the cached DEK for this device, but leave the cloud vault intact
+        // so reconnecting (or another device) can still unlock with the passphrase
+        if (cloudSettings.projectId) await forgetDeviceVault(cloudSettings.projectId);
+
+        await deleteActiveFirebase();
+      } catch (e) {
+        console.log("toggleCloudSync cleanup error:", e);
+      }
 
       setIsConnected(false);
       dispatch(setCloudConnected(false));
@@ -105,93 +123,185 @@ export const useCloudSync = () => {
     setIsConnected(false);
   };
 
-  const uploadCloudData = async (): Promise<void> => {
-    ////////////////////////////////
-    // categories
-    ////////////////////////////////
+  /**
+   * Route an already-connected device that has no usable key yet to the right
+   * encryption screen: unlock if a vault exists, otherwise set it up / migrate
+   * legacy data. Covers the "updated the app while already connected" case where
+   * no vault has ever been created. On success it just resyncs.
+   */
+  const requestVaultAccess = async (): Promise<void> => {
+    const projectId = cloudSettings.projectId;
 
-    for (let i = 0; i < allCategories.length; i++) {
-      const category = allCategories[i];
-
-      await setElementInCloud({
-        collection: COLLECTIONS.data.categories,
-        identifier: category.icon,
-        payload: {
-          ...category,
-          order: category.order ?? i,
-        },
-      });
+    // Probe first: on an unverifiable read, do NOT route to create (it could
+    // overwrite an existing vault). Ask the user to retry instead.
+    const probe = await probeVault();
+    if (probe.presence === "error") {
+      toast(t("cloudsync.vault.verify_failed"));
+      return;
     }
 
-    ////////////////////////////////
-    // notes
-    ////////////////////////////////
+    storeVaultContinuation(async () => {
+      await syncCloudData(false);
+    });
 
-    for (let i = 0; i < allNotes.length; i++) {
-      const note = allNotes[i];
+    if (probe.presence === "present") {
+      router.push({ pathname: "/settings/cloud-sync/vault-unlock", params: { projectId } });
+    } else if (probe.needsMigration) {
+      router.push({ pathname: "/settings/cloud-sync/vault-setup", params: { projectId, mode: "migrate" } });
+    } else {
+      router.push({ pathname: "/settings/cloud-sync/vault-setup", params: { projectId, mode: "create" } });
+    }
+  };
 
-      // offline notes are device-only and must never be uploaded
-      if (note.local) continue;
+  /**
+   * Open the last-resort reset flow. It wipes the cloud vault + notes and then
+   * recreates a vault, re-uploading local notes via this resync continuation.
+   * `useReplace` swaps the secret-code screen when unlock wasn't via fingerprint
+   * (mirrors the "manage devices" gating), so the back stack stays clean.
+   */
+  const requestReset = (useReplace: boolean): void => {
+    storeVaultContinuation(async () => {
+      await syncCloudData(false);
+    });
+    const target = { pathname: "/settings/cloud-sync/vault-reset", params: { projectId: cloudSettings.projectId } } as const;
+    if (useReplace) {
+      router.replace(target);
+    } else {
+      router.push(target);
+    }
+  };
 
-      await setElementInCloud({
-        collection: COLLECTIONS.data.notes,
-        identifier: note.id,
-        payload: CryptNote.encrypt({
-          ...note,
-          createdAt: note.createdAt ?? getReversedDateTime(note.date),
-          updatedAt: note.updatedAt ?? getReversedDateTime(note.date),
-        } as Note),
-      });
+  const uploadCloudData = async (): Promise<void> => {
+    // Drive a determinate progress bar over the data-proportional upload: one
+    // write per category + per uploadable note. This is the part that takes
+    // several seconds on setup/migration/reset (the PBKDF2 freeze before it
+    // can't report progress). Cleared in `finally` so a background sync never
+    // leaves a stale bar.
+    const uploadableNotes = allNotes.reduce((n, note) => (note.local ? n : n + 1), 0);
+    beginVaultProgress(allCategories.length + uploadableNotes);
+
+    try {
+      ////////////////////////////////
+      // categories
+      ////////////////////////////////
+
+      for (let i = 0; i < allCategories.length; i++) {
+        const category = allCategories[i];
+
+        await setElementInCloud({
+          collection: COLLECTIONS.data.categories,
+          identifier: category.icon,
+          payload: {
+            ...category,
+            order: category.order ?? i,
+          },
+        });
+        tickVaultProgress();
+      }
+
+      ////////////////////////////////
+      // notes
+      ////////////////////////////////
+
+      for (let i = 0; i < allNotes.length; i++) {
+        const note = allNotes[i];
+
+        // offline notes are device-only and must never be uploaded
+        if (note.local) continue;
+
+        await setElementInCloud({
+          collection: COLLECTIONS.data.notes,
+          identifier: note.id,
+          payload: CryptNote.encrypt({
+            ...note,
+            createdAt: note.createdAt ?? getReversedDateTime(note.date),
+            updatedAt: note.updatedAt ?? getReversedDateTime(note.date),
+          } as Note),
+        });
+        tickVaultProgress();
+      }
+    } finally {
+      clearVaultProgress();
     }
   };
 
   const retrieveCloudData = async (db: Firestore | null): Promise<void> => {
     if (!db) return;
 
+    // Never replace local state without the key to read the cloud copies.
+    const dek = getDEK();
+    if (!dek) return;
+
     ////////////////////////////////
     // categories
     ////////////////////////////////
 
-    const q_categories = query(collection(db, COLLECTIONS.data.categories), orderBy("order", "asc"));
-    const querySnapshot_categories = await getDocs(q_categories);
-
     const categories: Category[] = [defaultCategory];
+    let categoriesReadOk = false;
 
-    querySnapshot_categories.forEach((doc) => {
-      const category = doc.data();
-
-      if (category.index) return;
-
-      categories.push({
-        ...category,
-        selected: false,
-      } as Category);
-    });
+    try {
+      const q_categories = query(collection(db, COLLECTIONS.data.categories), orderBy("order", "asc"));
+      const querySnapshot_categories = await getDocs(q_categories);
+      querySnapshot_categories.forEach((doc) => {
+        const category = doc.data();
+        if (category.index) return;
+        categories.push({ ...category, selected: false } as Category);
+      });
+      categoriesReadOk = true;
+    } catch (e) {
+      console.log("retrieveCloudData categories error:", e);
+    }
 
     ////////////////////////////////
     // notes
     ////////////////////////////////
 
-    const q_notes = query(collection(db, COLLECTIONS.data.notes), orderBy("createdAt", "desc"));
-    const querySnapshot_notes = await getDocs(q_notes);
-
     const notes: Note[] = [];
+    let notesReadOk = false;
 
-    querySnapshot_notes.forEach((doc) => {
-      const note = doc.data();
+    try {
+      const q_notes = query(collection(db, COLLECTIONS.data.notes), orderBy("createdAt", "desc"));
+      const querySnapshot_notes = await getDocs(q_notes);
+      querySnapshot_notes.forEach((doc) => {
+        const note = doc.data() as Note;
 
-      // fix discrepancy between existing category and note category
-      const categoryExists = categories.some((category) => category.icon == note.category.icon);
+        // Reassign to the default category only when we actually have a trustworthy
+        // category list. If the categories read failed, categories=[default] and we
+        // must NOT reassign — that would strip every note's category (and then
+        // propagate the loss on the next upload).
+        if (categoriesReadOk && !categories.some((category) => category.icon === note.category.icon)) {
+          note.category = defaultCategory;
+        }
 
-      if (!categoryExists) {
-        note.category = defaultCategory;
-      }
+        // Skip notes this device can't decrypt (e.g. encrypted under a different
+        // DEK after a reset). Storing the ciphertext as plaintext would show
+        // garbage and, on the next edit, re-encrypt it into permanent garbage.
+        const decrypted = tryDecryptNote(note, dek);
+        if (decrypted) notes.push(decrypted);
+      });
+      notesReadOk = true;
+    } catch (e) {
+      console.log("retrieveCloudData notes error:", e);
+    }
 
-      notes.push(CryptNote.decrypt(note as Note));
-    });
+    // Category data-loss guard (symmetric to notes): a failed read — or an empty
+    // result while this device still holds user categories — must NOT wipe them.
+    // setCategories(fromSync) REPLACES local categories, so a transient read
+    // failure would otherwise drop them. Genuine deletions propagate via the
+    // per-category delete fan-out (deleteLocalCategories), not here.
+    const hasLocalCategories = allCategories.some((c) => !c.index);
+    if (categoriesReadOk && !(categories.length <= 1 && hasLocalCategories)) {
+      dispatch(setCategories({ categories, fromSync: true }));
+      dispatch(resetCloudCategories());
+    }
 
-    dispatch(setCategories({ categories, fromSync: true }));
-    dispatch(resetCloudCategories());
+    // Notes data-loss guard: a failed read — or an empty result while this device
+    // still holds synced notes — must NOT wipe local state. Genuine deletions
+    // propagate incrementally through the per-note delete fan-out, not here.
+    const hasLocalSynced = allNotes.some((n) => !n.local);
+    if (!notesReadOk) return;
+    if (notes.length === 0 && hasLocalSynced) return;
+
     dispatch(setNotes({ notes, fromSync: true }));
     dispatch(resetCloudNotes());
   };
@@ -271,7 +381,12 @@ export const useCloudSync = () => {
         !!prev.index !== !!category.index;
 
       if (changed) {
-        addCategories[category.icon] = { ...category, index: category.index ?? false, order: category.order ?? 1, selected: false };
+        addCategories[category.icon] = {
+          ...category,
+          index: category.index ?? false,
+          order: category.order ?? 1,
+          selected: false,
+        };
       }
     }
 
@@ -292,6 +407,11 @@ export const useCloudSync = () => {
   };
 
   const syncCloudData = async (loadingMethodDisabled?: boolean): Promise<void> => {
+    // Sync needs the DEK to encrypt/decrypt notes. Without an unlocked vault we
+    // would otherwise throw (CryptNote.encrypt is fail-closed). Bail out quietly;
+    // the UI already surfaces the "set up / unlock encryption" call-to-action.
+    if (!isVaultUnlocked()) return;
+
     if (!loadingMethodDisabled) setIsLoading(true);
 
     const { db } = retrieveFirebase();
@@ -317,7 +437,7 @@ export const useCloudSync = () => {
 
     const asyncHandshake = async () => {
       switch (isConnecting?.code) {
-        case Handshake.Success:
+        case Handshake.Success: {
           const cloudDevices = await getAllConnectedDevices();
 
           if (cloudDevices.length >= configs.cloud.deviceLimit) {
@@ -326,19 +446,44 @@ export const useCloudSync = () => {
             return;
           }
 
-          await addDeviceToCloud();
+          const projectId = firestoreSettings.projectId;
 
-          await syncCloudData(true);
+          // Finalize the connection once the vault has been unlocked/created and
+          // the DEK is in the session (the vault screen runs this continuation).
+          const finalizeConnection = async () => {
+            await addDeviceToCloud();
+            await syncCloudData(true);
+            await AsyncStorage.setItem("@cloudSync", JSON.stringify(firestoreSettings));
+            setIsConnected(true);
+            dispatch(setCloudConnected(true));
+            dispatch(setCloudSettings(firestoreSettings));
+            setIsLoading(false);
+          };
 
-          await AsyncStorage.setItem("@cloudSync", JSON.stringify(firestoreSettings));
+          // Decide which vault path to take, then hand off to its screen. The DEK
+          // must exist before any sync, so we never finalize here directly.
+          const probe = await probeVault();
 
-          setIsConnected(true);
+          // Unverifiable read: abort the connect rather than risk creating a
+          // vault over an existing one. Nothing has been finalized yet.
+          if (probe.presence === "error") {
+            setIsLoading(false);
+            toast(t("cloudsync.vault.verify_failed"));
+            return;
+          }
 
-          dispatch(setCloudConnected(true));
-          dispatch(setCloudSettings(firestoreSettings));
-
+          storeVaultContinuation(finalizeConnection);
           setIsLoading(false);
+
+          if (probe.presence === "present") {
+            router.push({ pathname: "/settings/cloud-sync/vault-unlock", params: { projectId } });
+          } else if (probe.needsMigration) {
+            router.push({ pathname: "/settings/cloud-sync/vault-setup", params: { projectId, mode: "migrate" } });
+          } else {
+            router.push({ pathname: "/settings/cloud-sync/vault-setup", params: { projectId, mode: "create" } });
+          }
           break;
+        }
         case Handshake.Fail:
           await removeDeviceFromCloud();
 
@@ -349,11 +494,7 @@ export const useCloudSync = () => {
 
           setIsLoading(false);
 
-          Alert.alert(t("cloudsync.handshakeFailed"), t("cloudsync.handshakeFailedDesc"), [
-            {
-              text: t("confirm"),
-            },
-          ]);
+          setHandshakeFailed(true);
 
           break;
         default:
@@ -371,7 +512,10 @@ export const useCloudSync = () => {
       setCloudSetting,
       saveCloudSettings,
       editCloudSettings,
+      requestVaultAccess,
+      requestReset,
       syncCloudData,
+      dismissHandshakeFailed: () => setHandshakeFailed(false),
     },
     state: {
       isLoading,
@@ -379,6 +523,7 @@ export const useCloudSync = () => {
       isConnecting: isConnecting?.loading ?? false,
       isConnected,
       isEditable: !isConnecting?.loading && !isConnected,
+      handshakeFailed,
     },
     cloudSettings,
   };

@@ -6,8 +6,9 @@ import {
   selectorWebhook_updateNote,
 } from "@/slicers/settingsSlice";
 import { formatDateTime } from "@/utils/date";
+import { deriveNoteTitle } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Keyboard } from "react-native";
 import { KeyboardController } from "react-native-keyboard-controller";
@@ -32,6 +33,13 @@ interface UseNoteEditorOptions<T extends Note> {
    * what is unique to its note type (e.g. `text`, `list`, `columns`, `tabs`).
    */
   buildPayloadExtras: (note: T) => Record<string, unknown>;
+  /**
+   * Returns the text a brand-new, still-untitled note should derive its title from
+   * (e.g. the note body, or the joined todo/kanban/code entries). While the user
+   * hasn't typed a title themselves, the title mirrors the first chars of this.
+   * Omit to disable auto-titling.
+   */
+  getTitleSource?: (note: T) => string;
 }
 
 interface UseNoteEditorResult<T extends Note> {
@@ -42,6 +50,12 @@ interface UseNoteEditorResult<T extends Note> {
   setNoteAsync: (currNote: T) => void;
   /** Called on hardware back press / explicit back button press. Fires the update/delete webhook. */
   updateNoteWebhook: () => Promise<void>;
+  /**
+   * Title derived live from the content while a brand-new note is still untitled.
+   * Editors surface it as the title field's placeholder; it is also what gets
+   * persisted/shown in the list. Empty string once the note has a title or isn't new.
+   */
+  autoTitle: string;
 }
 
 /**
@@ -69,6 +83,7 @@ export function useNoteEditor<T extends Note>({
   addAction,
   isEmpty,
   buildPayloadExtras,
+  getTitleSource,
 }: UseNoteEditorOptions<T>): UseNoteEditorResult<T> {
   const dispatch = useDispatch();
 
@@ -78,6 +93,20 @@ export function useNoteEditor<T extends Note>({
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
 
   const [note, setNote] = useState<T>(initialNote);
+
+  /* --- Auto-title for brand-new, untitled notes --- */
+
+  // A freshly created note the user never names is still persisted with a title
+  // derived from its content, so it never shows up untitled in the list. The local
+  // title is left empty (editors surface `autoTitle` as the field's placeholder),
+  // so the user can type their own at any point and it immediately takes over —
+  // no fragile syncing of a derived value back through every content update.
+  const getTitleSourceRef = useRef(getTitleSource);
+  useEffect(() => {
+    getTitleSourceRef.current = getTitleSource;
+  }, [getTitleSource]);
+  const wasNewRef = useRef(initialNote.createdAt === initialNote.updatedAt);
+  const autoTitle = wasNewRef.current && !note.title.trim() && getTitleSource ? deriveNoteTitle(getTitleSource(note)) : "";
 
   /* --- Common webhook payload composer --- */
 
@@ -144,9 +173,18 @@ export function useNoteEditor<T extends Note>({
         return;
       }
 
+      // Persist a content-derived title only while the user hasn't named this
+      // brand-new note (the local title stays empty so they keep full control of
+      // the field). Keying off the empty title — never a synced derived value —
+      // is what keeps this correct for the list/board/code editors too.
+      const deriveFrom = getTitleSourceRef.current;
+      const derivedTitle =
+        wasNewRef.current && !currNote.title.trim() && deriveFrom ? deriveNoteTitle(deriveFrom(currNote)) : "";
+
       dispatch(
         addNote({
           ...currNote,
+          title: derivedTitle || currNote.title,
           type: currNote.type || defaultType,
           updatedAt: Date.now(),
           date: formatDateTime(),
@@ -199,5 +237,5 @@ export function useNoteEditor<T extends Note>({
     }, [])
   );
 
-  return { note, setNote, setNoteAsync, updateNoteWebhook };
+  return { note, setNote, setNoteAsync, updateNoteWebhook, autoTitle };
 }

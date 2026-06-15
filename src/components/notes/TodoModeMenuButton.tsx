@@ -147,7 +147,7 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
         </AnimatedPressable>
       </Modal>
 
-      <View style={[styles.fabGroup, !style && { bottom: insets.bottom + 38 }, style]} pointerEvents="box-none">
+      <View style={[styles.fabGroup, !style && { bottom: insets.bottom + 38 }, style, { pointerEvents: "box-none" }]}>
         <TouchableOpacity ref={triggerRef} style={styles.fab} activeOpacity={0.7} onPress={toggleOverlay}>
           <ArrowsRightLeftIcon size={24} color={COLOR.softWhite} />
         </TouchableOpacity>

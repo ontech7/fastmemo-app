@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import {
   Dialog,
   DialogAction,
@@ -9,6 +8,7 @@ import {
   DialogInput,
   DialogTitle,
 } from "@ontech7/react-native-dialog";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BORDER, COLOR, GLASS } from "@/constants/styles";
@@ -27,7 +27,7 @@ export default function SecretPassphraseDialog({ open, title, description = null
   const textInputRef = useRef(null);
 
   return (
-    <Dialog open={open} slideFrom="bottom">
+    <Dialog open={open} slideFrom="center">
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
         {description && <DialogDescription>{description}</DialogDescription>}
@@ -37,7 +37,7 @@ export default function SecretPassphraseDialog({ open, title, description = null
           placeholder={t("generalsettings.export_import_placeholder_input")}
           placeholderTextColor={COLOR.textMuted}
           cursorColor={COLOR.textPrimary}
-          containerStyle={{ backgroundColor: COLOR.bg, borderColor: GLASS.border, borderRadius: BORDER.normal }}
+          style={{ backgroundColor: COLOR.bg, borderColor: GLASS.border, borderRadius: BORDER.normal }}
           secureTextEntry
           autoCapitalize="none"
           onChangeText={(text) => (textInputRef.current = text)}

@@ -15,6 +15,11 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_1_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Deine Notizen werden mit deinem eigenen Schlüssel geschützt.
+• Neue Schnellnotiz-Leiste, um direkt vom Startbildschirm eine Notiz zu erfassen.
+• Überarbeiteter Hilfe-Bereich mit KI-gestützter intelligenter Suche.
+• Verschiedene Fehlerbehebungen und Verbesserungen.`,
+
       description_1_1_1: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
 • Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
 • Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
@@ -45,6 +50,11 @@ const de = {
     },
 
     mobile: {
+      description_3_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Deine Notizen werden mit deinem eigenen Schlüssel geschützt.
+• Neue Schnellnotiz-Leiste, um direkt vom Startbildschirm eine Notiz zu erfassen.
+• Überarbeiteter Hilfe-Bereich mit KI-gestützter intelligenter Suche.
+• Verschiedene Fehlerbehebungen und Verbesserungen.`,
+
       description_3_1_1: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
 • Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
 • Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
@@ -163,6 +173,7 @@ const de = {
   home: {
     notes: "Notiz",
     search: "Nach etwas suchen…",
+    quickNote: "Schnelle Notiz…",
     deepSearch: "Tiefensuche (Text, Listen…)",
     selected_count: "{{count}} ausgewählt",
 
@@ -276,10 +287,12 @@ const de = {
     name_title: "Name",
     name_placeholder: "Geben Sie hier den Kategorienamen ein...",
     icon_title: "Symbol",
+    suggested_title: "Vorschläge",
     notes_num: "Notiz: ",
   },
   organizecategory: {
     title: "Organisieren",
+    empty: "Noch keine Kategorien.\nTippe auf die Schaltfläche +, um eine zu erstellen.",
   },
   trashednotes: {
     title: "Vernichtete Notizen",
@@ -357,6 +370,10 @@ const de = {
     title: "Notiz erstellen",
     mode_section: "Modus",
     default_type_section: "Standard-Notiztyp",
+    quick_note_section: "Schnelle Notiz",
+    quick_note_label: "Schnellnotiz-Leiste",
+    quick_note_description:
+      "Zeigt unten auf dem Startbildschirm eine Leiste, um im Handumdrehen eine Textnotiz zu schreiben und zu speichern, ohne den vollständigen Editor zu öffnen. Tippen, schreiben, senden.",
     mode: {
       simple: "Einfach",
       simple_description: "Tippen erstellt eine Textnotiz. Verwende das Menü für andere Typen.",
@@ -372,6 +389,7 @@ const de = {
     information: "Information",
     developer: "Entwickler",
     website: "Webseite",
+    openLink: "Link öffnen",
   },
   ai: {
     title: "KI-Assistent",
@@ -476,182 +494,330 @@ const de = {
   },
   help: {
     title: "Hilfe",
+    search_placeholder: "Wie können wir Ihnen helfen?",
+    no_results: "Keine Ergebnisse. Versuchen Sie ein anderes Wort.",
+    search_placeholders: [
+      "Suchen oder beschreiben, was Sie brauchen…",
+      "Wie erstelle ich eine Notiz?",
+      "Wozu dient die Symbolleiste?",
+      "Wie funktioniert die Cloud-Synchronisierung?",
+      "Wie stelle ich eine gelöschte Notiz wieder her?",
+    ],
+    ai_thinking: "Suche mit KI…",
+    ai_results: "KI-Ergebnisse · zum Zurücksetzen tippen",
+    ai_invite_title: "Nicht gefunden, wonach Sie suchen?",
+    ai_invite_subtitle: "Beschreiben Sie es in eigenen Worten und der KI-Assistent findet das passende Thema.",
+    cat_notes: "Notizen",
+    cat_editor: "Editor & Formatierung",
+    cat_categories: "Kategorien",
+    cat_trash: "Papierkorb",
+    cat_cloud: "Cloud-Synchronisierung & Verschlüsselung",
+    cat_data: "Sicherheit & Daten",
+    cat_settings: "Einstellungen",
+    cat_more: "Mehr & Infos",
+    cat_ai: "KI-Assistent",
     how_to_create_note: {
-      title: "Wie kann ich eine Notiz erstellen?",
-      text_1_0: "Sie können eine Notiz erstellen, indem Sie unten rechts auf der Startseite auf die Schaltfläche",
-      text_1_1: "klicken.",
-      text_2_0: "Es öffnet sich eine neue Seite, auf der Sie Ihrer Notiz einen Titel und eine Beschreibung hinzufügen können.",
-      text_3_0: "Sie können es speichern, indem Sie zur Startseite zurückkehren.",
+      title: "Wie erstelle ich eine Notiz?",
+      text_1_0: "Tippen Sie auf die",
+      text_1_1: "Schaltfläche unten rechts auf der Startseite.",
+      text_2_0: "Es öffnet sich eine neue Seite, auf der Sie einen Titel hinzufügen und Ihre Notiz schreiben können.",
+      text_3_0: "Um sie zu speichern, kehren Sie einfach zur Startseite zurück.",
     },
     how_to_create_todo_note: {
-      title: "Wie kann ich eine To-Do-Notiz erstellen?",
-      text_1_0: "Sie können eine To-Do-Notiz erstellen, indem Sie auf klicken",
+      title: "Wie erstelle ich eine To-Do-Liste?",
+      text_1_0: "Tippen Sie auf die",
       text_1_1: "Schaltfläche unten rechts auf der Startseite.",
-      text_2_0:
-        "Es öffnet sich eine neue Seite, auf der Sie Ihrer Notiz einen Titel und eine Liste mit To-Do-Texten hinzufügen können.",
-      text_3_0: "Durch Drücken der 6 Punkte rechts neben einem Element können Sie es nach oben und unten verschieben.",
-      text_4_0: "Das Kreuz auf der rechten Seite löscht dieses Element.",
-      text_5_0: "Die Schaltflächen unten sind:",
-      text_6_0: "• Hinzufügen: Ein neues To-Do-Element wird zur Liste hinzugefügt.",
-      text_7_0: "• Ein-/Ausblenden aktiviert: Es werden Aufgabenelemente ein-/ausblenden, wenn sie aktiviert sind.",
-      text_8_0: "• Alle löschen: Alle in der Notiz vorhandenen To-Do-Elemente werden entfernt.",
-      text_9_0: "Sie können es speichern, indem Sie zur Startseite zurückkehren.",
+      text_2_0: "Es öffnet sich eine neue Seite, auf der Sie einen Titel und Ihre To-Do-Einträge hinzufügen können.",
+      text_3_0: "Ziehen Sie an den sechs Punkten rechts neben einem Eintrag, um ihn nach oben oder unten zu verschieben.",
+      text_4_0: "Tippen Sie auf das Kreuz rechts, um einen Eintrag zu entfernen.",
+      text_5_0: "Mit den Schaltflächen unten können Sie:",
+      text_6_0: "• Hinzufügen — einen neuen Eintrag zur Liste hinzufügen.",
+      text_7_0:
+        "• Modus wechseln — wechseln Sie zwischen Liste (eine klassische Checkliste) und Schritte (eine nummerierte, sequenzielle Liste, die der Reihe nach abgeschlossen wird).",
+      text_8_0: "• Alle löschen — jeden Eintrag der Liste entfernen.",
+      text_9_0: "Um sie zu speichern, kehren Sie einfach zur Startseite zurück.",
     },
     how_to_create_kanban_note: {
-      title: "Wie kann ich eine Kanban-Notiz erstellen?",
-      text_1_0: "Sie können eine Kanban-Notiz erstellen, indem Sie auf die Schaltfläche",
-      text_1_1: "unten rechts auf der Startseite klicken und 'Kanban' auswählen.",
-      text_2_0: "Eine neue Seite wird mit einer bereits erstellten Spalte angezeigt.",
+      title: "Wie erstelle ich ein Kanban-Board?",
+      text_1_0: "Tippen Sie auf die",
+      text_1_1: "Schaltfläche unten rechts auf der Startseite und wählen Sie 'Kanban'.",
+      text_2_0: "Es öffnet sich ein Board mit einer einsatzbereiten Spalte.",
+      text_3_0: "• Spalte hinzufügen — tippen Sie rechts auf 'Spalte hinzufügen' (bis zu 10).",
+      text_4_0: "• Spalte umbenennen — bearbeiten Sie den Text in ihrer Überschrift.",
+      text_5_0: "• Spaltenfarbe ändern — tippen Sie auf das farbige Quadrat in ihrer Überschrift.",
+      text_6_0: "• Karte hinzufügen — tippen Sie unten in einer Spalte auf 'Karte hinzufügen'.",
+      text_7_0: "• Karte verschieben — halten Sie sie gedrückt und ziehen Sie sie in eine andere Spalte.",
+      text_8_0: "• Karte löschen — tippen Sie auf das Papierkorbsymbol der Karte.",
+      text_9_0: "• Spalte löschen — tippen Sie auf das Papierkorbsymbol in ihrer Überschrift.",
+      text_10_0: "Um das Board zu speichern, kehren Sie einfach zur Startseite zurück.",
+    },
+    how_to_create_code_note: {
+      title: "Wie erstelle ich eine Code-Notiz?",
+      text_1_0: "Tippen Sie auf die",
+      text_1_1: "Schaltfläche unten rechts auf der Startseite und wählen Sie 'Code'.",
+      text_2_0: "Sie erhalten einen echten Code-Editor mit Syntaxhervorhebung.",
       text_3_0:
-        "• Um eine Spalte hinzuzufügen: Klicken Sie auf die Schaltfläche 'Spalte hinzufügen' rechts (maximal 5 Spalten).",
-      text_4_0: "• Um eine Spalte umzubenennen: Bearbeiten Sie den Text in der Spaltenüberschrift.",
-      text_5_0: "• Um die Farbe einer Spalte zu ändern: Klicken Sie auf das farbige Quadrat in der Überschrift.",
-      text_6_0: "• Um eine Karte hinzuzufügen: Klicken Sie unten in der Spalte auf 'Karte hinzufügen'.",
-      text_7_0: "• Um eine Karte zu verschieben: Halten Sie die Karte gedrückt und ziehen Sie sie in eine andere Spalte.",
-      text_8_0: "• Um eine Karte zu löschen: Klicken Sie auf das Papierkorbsymbol auf der Karte.",
-      text_9_0: "• Um eine Spalte zu löschen: Klicken Sie auf das Papierkorbsymbol in der Spaltenüberschrift.",
-      text_10_0: "Sie können die Notiz speichern, indem Sie zur Startseite zurückkehren.",
+        "• Tabs — bewahren Sie mehrere Snippets in einer Notiz auf; fügen Sie welche hinzu, benennen Sie sie um, löschen Sie sie oder ziehen Sie sie zum Umsortieren (bis zu 6).",
+      text_4_0: "• Sprache — tippen Sie auf die Sprachleiste, um eine auszuwählen, oder lassen Sie sie automatisch erkennen.",
+      text_5_0: "• Suchen & Ersetzen — tippen Sie oben auf das Suchsymbol, genau wie bei einer Textnotiz.",
+      text_6_0: "Um sie zu speichern, kehren Sie einfach zur Startseite zurück.",
     },
     how_to_edit_note: {
-      title: "Wie kann ich eine Notiz bearbeiten?",
-      text_1_0: "Sie können eine Notiz bearbeiten, indem Sie sie auf der Startseite auswählen.",
+      title: "Wie bearbeite ich eine Notiz?",
+      text_1_0: "Tippen Sie einfach auf der Startseite auf die Notiz, um sie zu öffnen und Ihre Änderungen vorzunehmen.",
     },
     how_to_delete_note: {
-      title: "Wie kann ich eine Notiz löschen?",
-      text_1_0: "Sie können eine Notiz löschen, indem Sie auf klicken",
-      text_1_1: "in der oberen rechten Ecke, wenn eine Notiz angezeigt wird.",
-      text_2_0: "Es öffnet sich ein Popup-Menü. Die erste Option ist das, wonach Sie suchen.",
+      title: "Wie lösche ich eine Notiz?",
+      text_1_0: "Tippen Sie beim Anzeigen einer Notiz auf",
+      text_1_1: "in der oberen rechten Ecke.",
+      text_2_0: "Es öffnet sich ein Menü — 'Löschen' ist die erste Option.",
     },
     how_to_select_notes: {
-      title: "Wie kann ich einige Notizen auswählen?",
-      text_1_0: "Sie können Notizen auswählen, indem Sie lange auf eine Notiz drücken.",
+      title: "Wie wähle ich mehrere Notizen auf einmal aus?",
+      text_1_0: "Halten Sie eine beliebige Notiz gedrückt, um mit dem Auswählen zu beginnen.",
       text_2_0:
-        "Sie gelangen in den 'Bearbeitungsmodus' und können verschiedene Aktionen ausführen, z. B. löschen, sie als wichtig, schreibgeschützt oder gesperrt festlegen.",
+        "Dadurch wird der Auswahlmodus aktiviert, in dem Sie mehrere Notizen gemeinsam bearbeiten können — sie löschen oder als wichtig, schreibgeschützt oder gesperrt markieren.",
+    },
+    what_are_hidden_notes: {
+      title: "Wie funktionieren ausgeblendete Notizen?",
+      text_1_0:
+        "Öffnen Sie das Optionsmenü einer Notiz und tippen Sie auf 'Ausblenden', um sie auf der Startseite nicht mehr anzuzeigen.",
+      text_2_0:
+        "Um ausgeblendete Notizen wieder zu sehen, aktivieren Sie 'Ausgeblendete Notizen anzeigen' in den erweiterten Einstellungen — dafür benötigen Sie Ihren Geheimcode.",
     },
     what_toolbar_below: {
-      title: "Was ist das für eine Symbolleiste unten?",
-      text_1_0: "Die Symbolleiste kann Ihren Text auf viele Arten bereichern.",
-      text_2_0: "• Bild: Sie können ein Bild aus Ihrer Galerie einfügen und ausschneiden.",
-      text_3_0: "• Fett: Sie können Ihren Text fett formatieren.",
-      text_4_0: "• Kursiv: Sie können Ihren Text kursiv schreiben.",
-      text_5_0: "• Unterstreichen: Sie können Ihren Text unterstreichen.",
-      text_6_0: "• Teilmenge: Sie können Ihren Text relativ zu Ihrem Text an einer unteren Position platzieren.",
-      text_7_0: "• Obermenge: Sie können Ihren Text relativ zu Ihrem Text an oberster Stelle platzieren.",
-      text_8_0: "• Aufzählungsliste: Sie können eine Aufzählungsliste erstellen.",
-      text_9_0: "• Geordnete Liste: Sie können eine geordnete Liste erstellen.",
-      text_10_0: "• Code: Sie können einen Wrapper erstellen, in den Sie formatierten Code schreiben können.",
+      title: "Was ist die Symbolleiste unten?",
+      text_1_0: "Damit können Sie Ihren Text formatieren und anreichern. Das machen die Schaltflächen:",
+      text_2_0: "• Rückgängig / Wiederherstellen — gehen Sie in Ihren letzten Änderungen vor oder zurück.",
+      text_3_0: "• Bild — fügen Sie ein Bild aus Ihrer Galerie ein.",
+      text_4_0: "• Fett — formatieren Sie den ausgewählten Text fett.",
+      text_5_0: "• Kursiv — formatieren Sie den ausgewählten Text kursiv.",
+      text_6_0: "• Durchgestrichen — streichen Sie den ausgewählten Text durch.",
+      text_7_0: "• Unterstrichen — unterstreichen Sie den ausgewählten Text.",
+      text_8_0: "• Tiefgestellt — setzen Sie den Text leicht unter die Zeile.",
+      text_9_0: "• Hochgestellt — setzen Sie den Text leicht über die Zeile.",
+      text_10_0: "• Aufzählungsliste — beginnen Sie eine Aufzählungsliste.",
+      text_11_0: "• Nummerierte Liste — beginnen Sie eine nummerierte Liste.",
+      text_12_0: "• Code — fassen Sie den Text in einem formatierten Codeblock zusammen.",
+    },
+    what_find_replace: {
+      title: "Wie suche und ersetze ich Text?",
+      text_1_0: "Tippen Sie beim Bearbeiten einer Text- oder Code-Notiz oben rechts auf das Suchsymbol.",
+      text_2_0: "Geben Sie ein, wonach Sie suchen: Die Pfeile springen zwischen den Treffern und zeigen an, wie viele es gibt.",
+      text_3_0: "Aktivieren Sie 'Ersetzen', um den aktuellen Treffer auszutauschen, oder ersetzen Sie alle Treffer auf einmal.",
     },
     what_are_settings_note: {
-      title: "Welche Einstellungen gibt es für eine Notiz?",
-      text_1_0: "Die Einstellungen für Notizen sind:",
-      text_2_0: "• Löschen: Sie können die aktuelle Notiz löschen.",
-      text_3_0: "• Wichtig: Sie können Ihre Notiz als wichtig festlegen",
-      text_4_0:
-        "• Schützen: Sie können Ihre Notiz sperren. Sie benötigen einen Code oder Ihren Fingerabdruck, falls aktiviert.",
-      text_5_0: "• Schreibgeschützt: Ihre Notiz kann nicht geändert werden.",
-      text_6_0: "• Kategorie ändern: Sie können die Kategorie einer Notiz in eine andere ändern.",
-      text_7_0: "• Teilen: Sie können den Text Ihrer Notiz mit einer anderen sozialen Anwendung teilen.",
+      title: "Welche Notizoptionen gibt es?",
+      text_1_0: "Öffnen Sie eine Notiz und tippen Sie oben rechts auf das ⋮-Menü. Von dort aus können Sie:",
+      text_2_0: "• Löschen — die Notiz in den Papierkorb verschieben.",
+      text_3_0: "• Wichtig — die Notiz markieren, damit sie oben hervorsticht.",
+      text_4_0: "• Schützen — die Notiz hinter Ihrem Geheimcode oder Fingerabdruck sperren.",
+      text_5_0: "• Schreibgeschützt — die Notiz vor versehentlichem Bearbeiten schützen.",
+      text_6_0:
+        "• Ausblenden — die Notiz von der Startseite fernhalten, bis Sie sich entscheiden, ausgeblendete Notizen anzuzeigen.",
+      text_7_0: "• Offline schalten — die Notiz nur auf diesem Gerät behalten, niemals in die Cloud synchronisieren.",
+      text_8_0: "• Kategorie ändern — die Notiz in eine andere Kategorie verschieben.",
+      text_9_0: "• Exportieren (Textnotizen) — die Notiz als .txt-, Markdown- oder PDF-Datei speichern.",
+      text_10_0: "• Information — Typ, Kategorie und Daten der Notiz anzeigen.",
     },
     how_create_category: {
-      title: "Wie kann ich eine Kategorie erstellen?",
-      text_1_0: "Sie können eine neue Kategorie erstellen, indem Sie auf klicken",
-      text_1_1: "in der oberen linken Ecke der Startseite.",
-      text_2_0: "Sie werden zur Seite 'Organisieren' weitergeleitet. Klicken Sie unten rechts auf ",
-      text_2_1: "",
+      title: "Wie erstelle ich eine Kategorie?",
+      text_1_0: "Tippen Sie auf der Startseite auf",
+      text_1_1: "in der oberen linken Ecke.",
+      text_2_0: "Dadurch öffnet sich die Seite 'Organisieren'. Tippen Sie dort auf",
+      text_2_1: "in der unteren rechten Ecke.",
       text_3_0:
-        "Sie werden erneut zur Seite 'Kategorie erstellen' weitergeleitet. Sie werden aufgefordert, einen Namen zu erstellen und ein eindeutiges Symbol auszuwählen.",
-      text_4_0: "Nach dem Kompilieren des Formulars wird das",
-      text_4_1: "wird in der unteren rechten Ecke angezeigt. Sie müssen darauf klicken, um Ihre neue Kategorie zu speichern.",
+        "Geben Sie der Kategorie auf der Seite 'Kategorie erstellen' einen Namen und wählen Sie ein noch nicht verwendetes Symbol.",
+      text_4_0: "Wenn Sie fertig sind, tippen Sie auf",
+      text_4_1: "in der unteren rechten Ecke, um sie zu speichern.",
     },
     how_edit_category: {
-      title: "Wie kann ich eine Kategorie bearbeiten?",
-      text_1_0: "Sie können eine Kategorie bearbeiten, indem Sie darauf klicken",
-      text_1_1: "in der oberen linken Ecke der Startseite.",
+      title: "Wie bearbeite ich eine Kategorie?",
+      text_1_0: "Tippen Sie auf der Startseite auf",
+      text_1_1: "in der oberen linken Ecke.",
       text_2_0:
-        "Sie werden zur Seite 'Organisieren' weitergeleitet. Sie müssen eine Kategorie auswählen und werden erneut zur Seite 'Kategorie aktualisieren' weitergeleitet.",
+        "Tippen Sie auf der Seite 'Organisieren' auf die Kategorie, die Sie ändern möchten — es öffnet sich ihre Bearbeitungsseite, auf der Sie sie umbenennen oder ein neues Symbol wählen können.",
     },
     how_organize_categories: {
-      title: "Wie kann ich meine Kategorien organisieren?",
-      text_1_0: "Sie können eine Kategorie bearbeiten, indem Sie darauf klicken",
-      text_1_1: "in der oberen linken Ecke der Startseite.",
-      text_2_0: "Sie werden zur Seite ‚Organisieren‘ weitergeleitet. Sie müssen klicken",
-      text_2_1: "um in den ‚Organisierungsmodus‘ zu wechseln",
+      title: "Wie ändere ich die Reihenfolge meiner Kategorien?",
+      text_1_0: "Tippen Sie auf der Startseite auf",
+      text_1_1: "in der oberen linken Ecke.",
+      text_2_0: "Tippen Sie auf der Seite 'Organisieren' auf",
+      text_2_1: "um in den Organisieren-Modus zu gelangen.",
       text_3_0:
-        "Wenn Sie auf eine Kategorie klicken, wird diese ‚nicht nummeriert‘. Sie können auf eine andere Kategorie klicken, um die Reihenfolge der Kategorien zu ändern.",
-      text_4_0: "Wenn Sie fertig sind, können Sie auf klicken",
-      text_4_1: "die Änderungen.",
-      text_5_0: "Wenn Sie Ihre Änderungen rückgängig machen möchten, können Sie auf klicken",
-      text_5_1: "",
+        "Tippen Sie auf eine Kategorie, um sie aufzunehmen, und dann auf eine andere, um sie dort abzulegen und die Reihenfolge zu ändern.",
+      text_4_0: "Wenn Sie mit der Reihenfolge zufrieden sind, tippen Sie auf",
+      text_4_1: "um sie zu speichern.",
+      text_5_0: "Um Ihre Änderungen zu verwerfen, tippen Sie auf",
+      text_5_1: "in der oberen rechten Ecke.",
     },
     how_delete_category: {
-      title: "Wie kann ich eine Kategorie löschen?",
-      text_1_0: "Auf der Startseite können Sie lange auf eine Kategorie drücken und gelangen so in den Bearbeitungsmodus.",
-      text_2_0: "Wenn Sie auf klicken",
+      title: "Wie lösche ich eine Kategorie?",
+      text_1_0: "Halten Sie auf der Startseite eine Kategorie gedrückt, um in den Auswahlmodus zu gelangen.",
+      text_2_0: "Tippen Sie dann auf",
       text_2_1:
-        "Es erscheint ein Popup, in dem Sie gefragt werden, ob Sie die Kategorie zusammen mit Ihren Notizen löschen oder sie einfach auf ALLE Notizen übertragen möchten.",
+        "und wählen Sie, ob Sie die Kategorie samt ihren Notizen löschen oder die Notizen behalten möchten, indem Sie sie nach 'Alle' verschieben.",
     },
     what_are_trashed_notes: {
-      title: "Was sind die verworfenen Notizen?",
-      text_1_0:
-        "Wenn Sie eine Notiz löschen, wird sie in den Papierkorb verschoben. Es ist ein Papierkorb, in dem alle Notizen vorübergehend abgelegt werden.",
+      title: "Was ist der Papierkorb?",
+      text_1_0: "Wenn Sie eine Notiz löschen, ist sie nicht sofort weg — sie landet zuerst im Papierkorb.",
       text_2_0:
-        "Standardmäßig halten sie nur 7 Tage und dann sind sie verschwunden. Sie können diese Einstellung in den Grundeinstellungen ändern.",
+        "Notizen bleiben dort 7 Tage und werden dann endgültig entfernt. Wie lange sie aufbewahrt werden, können Sie in den Grundeinstellungen ändern.",
     },
     how_restore_trashed_notes: {
-      title: "Wie kann ich gelöschte Notizen wiederherstellen?",
+      title: "Wie stelle ich gelöschte Notizen wieder her?",
       text_1_0:
-        "Auf der Seite 'Notizen im Papierkorb' können Sie eine Notiz auswählen und ein Popup wird angezeigt, in dem Sie gefragt werden, ob Sie diese Notiz wiederherstellen möchten.",
+        "Öffnen Sie die Seite 'Papierkorb' und tippen Sie auf eine Notiz — Sie werden gefragt, ob Sie sie wiederherstellen möchten.",
       text_2_0:
-        "Sie können mehrere Notizen wiederherstellen, indem Sie lange auf eine Notiz drücken und die gewünschten Notizen auswählen. Klicken Sie auf",
+        "Um mehrere auf einmal wiederherzustellen, halten Sie eine Notiz gedrückt, wählen Sie die gewünschten aus und tippen Sie dann auf",
       text_2_1: "in der oberen rechten Ecke.",
-      text_3_0: "Ein Popup erscheint und die zweite Option ist genau das, wonach Sie suchen.",
-      text_4_0: "Sie können auch alle im Papierkorb vorhandenen Notizen wiederherstellen, indem Sie auf klicken",
+      text_3_0: "Wählen Sie im erscheinenden Menü 'Wiederherstellen'.",
+      text_4_0: "Um alles auf einmal zurückzuholen, tippen Sie auf",
       text_4_1: "in der oberen rechten Ecke.",
-      text_5_0: "Ein Popup erscheint und die zweite Option ist genau das, wonach Sie suchen.",
+      text_5_0: "Wählen Sie im erscheinenden Menü 'Alle wiederherstellen'.",
     },
     how_restore_delete_notes: {
-      title: "Wie kann ich gelöschte Notizen wiederherstellen?",
+      title: "Wie lösche ich Notizen endgültig aus dem Papierkorb?",
       text_1_0:
-        "Wenn Sie sich auf der Seite 'Notizen im Papierkorb' befinden, können Sie lange auf eine Notiz drücken, um in den 'Bearbeitungsmodus' zu gelangen, und die Notizen auswählen, die Sie löschen möchten.",
-      text_2_0: "Klicken Sie auf",
+        "Öffnen Sie die Seite 'Papierkorb', halten Sie eine Notiz gedrückt, um in den Auswahlmodus zu gelangen, und wählen Sie dann die zu entfernenden aus.",
+      text_2_0: "Tippen Sie auf",
       text_2_1: "in der oberen rechten Ecke.",
-      text_3_0: "Ein Popup erscheint und die erste Option ist das, wonach Sie suchen.",
-      text_4_0: "Sie können auch alle im Papierkorb vorhandenen Notizen löschen, indem Sie auf klicken",
+      text_3_0: "Wählen Sie im erscheinenden Menü 'Löschen'.",
+      text_4_0: "Um den gesamten Papierkorb auf einmal zu leeren, tippen Sie auf",
       text_4_1: "in der oberen rechten Ecke.",
-      text_5_0: "Ein Popup erscheint und die zweite Option ist genau das, wonach Sie suchen.",
+      text_5_0: "Wählen Sie im erscheinenden Menü 'Alle löschen'.",
     },
     what_cloud_sync: {
       title: "Was ist Cloud Sync?",
       text_1_0:
-        "Sie können Ihre Notizen synchronisieren, indem Sie Ihr Google Firebase-Konto verbinden und den Synchronisierungsmodus aktivieren.",
-      text_2_0: "Sie müssen nichts weiter tun. Ihre Notizen werden verschlüsselt in Ihrer Google Firebase gespeichert.",
+        "Sie können Ihre Notizen geräteübergreifend synchronisieren, indem Sie Ihr eigenes Google-Firebase-Projekt verbinden und die Synchronisierung aktivieren. Es gibt keinen zentralen Fast-Memo-Server — Ihre Daten liegen nur in Ihrem Firebase.",
+      text_2_0:
+        "Ihre Notizen werden auf Ihrem Gerät Ende-zu-Ende verschlüsselt, bevor sie hochgeladen werden, sodass niemand außer Ihnen sie lesen kann.",
+      text_link: "Schritt-für-Schritt-Anleitung zur Einrichtung von Google Firebase lesen →",
+    },
+    what_encryption: {
+      title: "Wie werden meine Notizen verschlüsselt?",
+      text_1_0:
+        "Cloud Sync verwendet Ende-zu-Ende-Verschlüsselung. Bei der ersten Einrichtung wählen Sie ein Verschlüsselungspasswort, aus dem Ihr Gerät den Schlüssel ableitet, der Ihre Notizen schützt.",
+      text_2_0:
+        "Der Schlüssel verlässt nie Ihr Gerät und wird nie in der Cloud gespeichert, sodass selbst jemand mit Zugriff auf Ihr Firebase den Inhalt Ihrer Notizen ohne Ihr Passwort nicht lesen kann.",
+      text_3_0:
+        "Der Inhalt der Notizen wird verschlüsselt; Titel und Daten bleiben lesbar, damit die App sie sortieren und synchronisieren kann.",
+    },
+    how_unlock_device: {
+      title: "Warum muss ich auf jedem Gerät entsperren?",
+      text_1_0:
+        "Jedes Gerät entsperrt die Verschlüsselung einmal durch Eingabe Ihres Passworts. Danach wird der Schlüssel sicher auf dem Gerät gespeichert (Keychain / Keystore), sodass Sie ihn nicht bei jedem Start erneut eingeben müssen.",
+      text_2_0:
+        "Bleibt ein Gerät gesperrt, wird die Synchronisierung darauf pausiert, bis Sie entsperren — so werden Ihre Notizen nie unlesbar gespeichert.",
+    },
+    forgot_password: {
+      title: "Ich habe mein Verschlüsselungspasswort vergessen",
+      text_1_0:
+        "Bei der Einrichtung der Verschlüsselung wird Ihnen einmalig ein Wiederherstellungsschlüssel angezeigt. Bewahren Sie ihn sicher auf.",
+      text_2_0:
+        "Wählen Sie auf dem Entsperrbildschirm 'Passwort vergessen', geben Sie Ihren Wiederherstellungsschlüssel ein und legen Sie ein neues Passwort fest. Es gehen keine Notizen verloren.",
+      text_3_0:
+        "Wenn Sie sowohl das Passwort als auch den Wiederherstellungsschlüssel verlieren, können Ihre Cloud-Notizen von niemandem entschlüsselt werden — das ist der Sinn der Ende-zu-Ende-Verschlüsselung.",
+    },
+    reset_encryption: {
+      title: "Was bewirkt das Zurücksetzen der Verschlüsselung?",
+      text_1_0:
+        "Das Zurücksetzen ist die letzte Möglichkeit, wenn sowohl das Passwort als auch der Wiederherstellungsschlüssel verloren sind.",
+      text_2_0:
+        "Es erstellt eine neue Verschlüsselungs-Einrichtung aus den aktuell auf diesem Gerät vorhandenen Notizen und ersetzt die Cloud-Kopie. Alte Cloud-Notizen, die nicht mehr entschlüsselt werden können, werden entfernt.",
+      text_3_0:
+        "Ihre lokalen Notizen bleiben erhalten und werden erneut hochgeladen, sodass dieses Gerät nichts verliert — aber Ihre anderen Geräte müssen sich mit dem neuen Passwort erneut entsperren.",
+    },
+    quick_backup: {
+      title: "Was ist die schnelle Sicherung?",
+      text_1_0:
+        "Auf den Bildschirmen für Einrichtung, Entsperren und Zurücksetzen der Verschlüsselung finden Sie eine optionale Schaltfläche 'Schnelle Sicherung'.",
+      text_2_0:
+        "Sie exportiert eine passphrasengeschützte Datei Ihrer Notizen direkt von diesem Gerät, unabhängig von der Cloud — ein Sicherheitsnetz vor einer großen Synchronisierung oder einem Zurücksetzen. Ihre Notizen bleiben ohnehin immer auf diesem Gerät.",
     },
     what_secret_code: {
-      title: "Was ist ein Geheimcode?",
+      title: "Was ist der Geheimcode?",
       text_1_0:
-        "Für Ihre gesperrten Notizen ist ein Geheimcode erforderlich, den Sie beim ersten Öffnen der App generiert haben.",
-      text_2_0: "Sie können es in den Grundeinstellungen ändern.",
+        "Es ist der Code, den Sie beim ersten Öffnen der App festgelegt haben, und Sie benötigen ihn, um jede von Ihnen gesperrte Notiz zu öffnen.",
+      text_2_0: "Sie können ihn jederzeit in den Grundeinstellungen ändern.",
     },
     what_import_export: {
-      title: "Was sind Import-/Exportdaten?",
-      text_1_0: "Sie können Daten lokal importieren oder exportieren.",
-      text_2_0: "Durch den Export wird eine Datei in dem Ordner generiert, in dem Sie speichern möchten.",
-      text_3_0: "Es wird standardmäßig verschlüsselt. Sie benötigen eine Passphrase, um es zu importieren.",
+      title: "Was sind Import und Export?",
+      text_1_0: "Damit können Sie hier auf Ihrem Gerät eine Kopie Ihrer Daten speichern oder sie wieder zurückholen.",
+      text_2_0: "Beim Exportieren wird eine Datei in dem von Ihnen gewählten Ordner gespeichert.",
+      text_3_0:
+        "Die Datei ist immer verschlüsselt — Sie benötigen die von Ihnen festgelegte Passphrase, um sie wieder zu importieren.",
+    },
+    how_export_note: {
+      title: "Wie exportiere ich eine einzelne Notiz?",
+      text_1_0: "Öffnen Sie eine Textnotiz, tippen Sie auf das Optionsmenü und wählen Sie 'Exportieren'.",
+      text_2_0: "Wählen Sie dann das gewünschte Format:",
+      text_3_0: "• Reiner Text (.txt) — nur der Text, ohne Formatierung.",
+      text_4_0: "• Markdown (.md) — behält Überschriften und grundlegende Formatierung bei.",
+      text_5_0: "• PDF — ein sauberes Dokument, bereit zum Teilen.",
+      text_6_0: "Die Datei wird über Ihr Gerät geteilt, sodass Sie sie speichern oder senden können, wohin Sie möchten.",
     },
     what_wipe_data: {
-      title: "Was ist Wipe-Daten?",
-      text_1_0: "Sie können alle Notizen und Kategorien löschen.",
-      text_2_0: "Es erscheint ein Popup, in dem Sie gefragt werden, ob Sie sich bei dieser Aktion sicher sind.",
-      text_3_0: "Sie werden dauerhaft gelöscht.",
+      title: "Was bewirkt das Löschen der Daten?",
+      text_1_0: "Es entfernt alle Ihre Notizen und Kategorien von diesem Gerät auf einmal.",
+      text_2_0: "Sie werden zuerst um Bestätigung gebeten, da dies nicht rückgängig gemacht werden kann.",
+      text_3_0: "Nach der Bestätigung wird alles dauerhaft gelöscht.",
+    },
+    what_note_creation: {
+      title: "Was bewirkt die Einstellung zur Notizerstellung?",
+      text_1_0:
+        "Sie legt fest, was passiert, wenn Sie auf der Startseite auf die [+]-Schaltfläche tippen. Unter Einstellungen → Notizerstellung können Sie wählen:",
+      text_2_0: "• Einfach — [+] erstellt eine Textnotiz; nutzen Sie das Menü für die anderen Typen.",
+      text_3_0: "• Smart — [+] erstellt immer den Typ, den Sie als Favoriten gewählt haben.",
+      text_4_0: "• Adaptiv — [+] erstellt denselben Typ wie die zuletzt bearbeitete Notiz.",
+    },
+    what_home_filters: {
+      title: "Wie funktionieren die Filter auf der Startseite?",
+      text_1_0: "Tippen Sie oben auf der Startseite auf das Filtersymbol, um zu ändern, wie Ihre Notizen angezeigt werden.",
+      text_2_0: "• Sortieren nach — nach Erstellungsdatum oder letzter Aktualisierung, aufsteigend oder absteigend.",
+      text_3_0:
+        "• Tiefensuche — sucht auch innerhalb der Notizinhalte und Listen, nicht nur in den Titeln (fragt zuerst nach Ihrem Geheimcode).",
+    },
+    what_language: {
+      title: "Wie ändere ich die Sprache?",
+      text_1_0: "Öffnen Sie die Grundeinstellungen und tippen Sie auf 'Sprache', um zu wechseln.",
+      text_2_0:
+        "Sie können automatisch der Sprache Ihres Geräts folgen oder eine der sieben verfügbaren wählen: Englisch, Italienisch, Spanisch, Französisch, Deutsch, Chinesisch und Japanisch.",
+    },
+    what_version_check: {
+      title: "Prüft die App auf Updates?",
+      text_1_0: "Ja — wenn Sie Fast Memo öffnen, prüft sie im Hintergrund, ob eine neuere Version verfügbar ist.",
+      text_2_0:
+        "Wenn es ein Update gibt, zeigt ein 'Was ist neu?'-Bildschirm, was sich geändert hat. Sie können auch jederzeit in den Einstellungen nachsehen.",
+    },
+    what_report_problem: {
+      title: "Wie melde ich ein Problem?",
+      text_1_0: "Gehen Sie zu Einstellungen → Problem melden.",
+      text_2_0:
+        "Wählen Sie ein Thema, beschreiben Sie, was passiert ist, und hängen Sie optional ein paar Screenshots und Ihre Geräteinformationen an, damit wir der Sache nachgehen können.",
+      text_3_0: "Sie können einen Bericht pro Tag senden.",
+    },
+    what_webhooks: {
+      title: "Was sind Webhooks?",
+      text_1_0:
+        "Webhooks sind für fortgeschrittene Nutzer: Sie lassen Fast Memo einen anderen Dienst benachrichtigen, sobald etwas passiert — eine Notiz erstellt, aktualisiert oder gelöscht, eine Kategorie geändert, Daten exportiert und so weiter.",
+      text_2_0: "Jede Aktion kann eine Webadresse Ihrer Wahl aufrufen. Sie richten sie unter Einstellungen → Webhooks ein.",
+    },
+    what_platforms: {
+      title: "Wo kann ich Fast Memo nutzen?",
+      text_1_0:
+        "Fast Memo funktioniert sowohl auf Mobilgeräten als auch auf dem Desktop (Windows, macOS und Linux) sowie als Web-Version.",
+      text_2_0: "Verbinden Sie auf jedem Gerät dasselbe Google-Firebase-Projekt, und Ihre Notizen bleiben überall synchron.",
     },
     what_ai_assistant: {
       title: "Was ist der KI-Assistent?",
       text_1_0:
-        "Fast Memo enthaelt einen selbst gehosteten KI-Assistenten, der vollstaendig auf deinem Geraet laeuft. Keine Daten werden an externe Server gesendet.",
-      text_2_0: "Zum Einrichten gehe zu Einstellungen -> KI-Assistent, waehle ein Modell und lade es herunter.",
+        "Fast Memo enthält einen selbst gehosteten KI-Assistenten, der vollständig auf Ihrem Gerät läuft. Es werden keine Daten an externe Server gesendet.",
+      text_2_0: "Zum Einrichten gehen Sie zu Einstellungen -> KI-Assistent, wählen ein Modell und laden es herunter.",
       text_3_0:
-        "Nach der Aktivierung erscheint ein Sparkle-Button in jedem Notiz-Editor. Tippe darauf fuer smarte Aktionen wie: Titel generieren, zusammenfassen, weiterschreiben, Text formatieren, Checklisten-Elemente vorschlagen oder Kategorie vorschlagen.",
-      text_4_0: "Die KI funktioniert offline und unterstuetzt mehrere Sprachen.",
+        "Nach der Aktivierung erscheint eine Sparkle-Schaltfläche in jedem Notiz-Editor. Tippen Sie darauf, um auf smarte Aktionen zuzugreifen, wie: Titel generieren, zusammenfassen, weiterschreiben, Text formatieren, Checklisten-Elemente vorschlagen oder eine Kategorie vorschlagen.",
+      text_4_0: "Die KI funktioniert offline und unterstützt mehrere Sprachen.",
     },
   },
   report: {

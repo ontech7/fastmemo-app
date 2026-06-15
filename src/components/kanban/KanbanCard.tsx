@@ -1,7 +1,7 @@
 import DragIcon from "@/components/icons/DragIcon";
 import Haptics from "@/libs/haptics";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
-import { useRef, useState } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { TrashIcon } from "react-native-heroicons/outline";
@@ -17,9 +17,14 @@ interface Props {
   setText: (id: string, text: string) => void;
   deleteItem: (id: string) => void;
   disabled: boolean;
+  autoFocus?: boolean;
+  // Forwarded to the card's text input so the board can focus it imperatively
+  // once the screen transition settles (mount-time autoFocus alone is dropped
+  // mid-transition on native).
+  inputRef?: RefObject<TextInput | null>;
 }
 
-export default function KanbanCard({ item, columnId, setText, deleteItem, disabled }: Props) {
+export default function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, inputRef }: Props) {
   const [height, setHeight] = useState(40);
 
   const { startDrag, updateDragPosition, endDrag, isDragging, draggedItem } = useKanbanDrag();
@@ -83,6 +88,7 @@ export default function KanbanCard({ item, columnId, setText, deleteItem, disabl
       <Animated.View style={[styles.cardWrapper, animatedCardStyle]}>
         <View style={styles.cardContent}>
           <TextInput
+            ref={inputRef}
             style={[styles.textInput, { height }]}
             textAlignVertical="center"
             multiline
@@ -92,6 +98,7 @@ export default function KanbanCard({ item, columnId, setText, deleteItem, disabl
             editable={!disabled && !isBeingDragged}
             placeholderTextColor={COLOR.textMuted}
             cursorColor={COLOR.softWhite}
+            autoFocus={autoFocus}
             onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
           />
 
@@ -166,11 +173,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardWrapperFloating: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    boxShadow: "0px 4px 8px rgba(0,0,0,0.3)",
   },
   cardContent: {
     flex: 1,

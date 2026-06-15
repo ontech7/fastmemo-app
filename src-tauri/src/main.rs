@@ -1,27 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::time::Duration;
 use tauri::Manager;
-
-/// Reveal the main window and tear down the splash. Called by the frontend once
-/// the first screen has actually painted (see `closeTauriSplashscreen`), so the
-/// handover happens with the real UI already underneath — no flash of the flat
-/// window background.
-fn reveal_main(app: &tauri::AppHandle) {
-    if let Some(splash) = app.get_window("splashscreen") {
-        let _ = splash.close();
-    }
-    if let Some(main) = app.get_window("main") {
-        let _ = main.show();
-        let _ = main.set_focus();
-    }
-}
-
-#[tauri::command]
-fn close_splashscreen(app: tauri::AppHandle) {
-    reveal_main(&app);
-}
 
 /// Prompt the OS biometric dialog (Touch ID on macOS, Windows Hello on Windows)
 /// and report whether it succeeded. Used by the frontend's web/Tauri unlock path
@@ -110,29 +90,88 @@ fn apply_macos_titlebar(window: &tauri::Window) {
     }
 }
 
+// Kill the white launch flash by giving the native WebView the app background
+// (#05091A) from the first frame. By default every platform's WebView paints
+// white until the first HTML/CSS frame; with no splash to mask it that shows as
+// a white blink on launch. Once global.css paints the body the pixels match, so
+// this only affects the otherwise-white pre-paint window. Each call is a no-op
+// if the WebView handle can't be reached.
+
+/// macOS: WKWebView ignores `setOpaque:`; the property that actually controls
+/// its background is the (KVC-only) `drawsBackground`. Turning it off makes the
+/// WebView composite transparently, so the blue NSWindow (see
+/// `apply_macos_titlebar`) shows through until the page paints.
+#[cfg(target_os = "macos")]
+fn set_webview_background(window: &tauri::Window) {
+    use cocoa::base::{id, nil, NO};
+    use cocoa::foundation::NSString;
+    use objc::{class, msg_send, sel, sel_impl};
+
+    let _ = window.with_webview(|webview| {
+        let wk = webview.inner() as id;
+        unsafe {
+            let no_value: id = msg_send![class!(NSNumber), numberWithBool: NO];
+            let key = NSString::alloc(nil).init_str("drawsBackground");
+            let _: () = msg_send![wk, setValue: no_value forKey: key];
+        }
+    });
+}
+
+/// Windows: set the WebView2 controller's default background color. Needs
+/// `ICoreWebView2Controller2` (WebView2 runtime 92+); no-op on older runtimes.
+#[cfg(target_os = "windows")]
+fn set_webview_background(window: &tauri::Window) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{COREWEBVIEW2_COLOR, ICoreWebView2Controller2};
+    use windows::core::Interface;
+
+    let _ = window.with_webview(|webview| {
+        if let Ok(controller) = webview.controller().cast::<ICoreWebView2Controller2>() {
+            unsafe {
+                let _ = controller.SetDefaultBackgroundColor(COREWEBVIEW2_COLOR {
+                    A: 255,
+                    R: 0x05,
+                    G: 0x09,
+                    B: 0x1A,
+                });
+            }
+        }
+    });
+}
+
+/// Linux: set the WebKitGTK view's background color directly.
+#[cfg(target_os = "linux")]
+fn set_webview_background(window: &tauri::Window) {
+    use webkit2gtk::WebViewExt;
+
+    let _ = window.with_webview(|webview| {
+        let bg = gtk::gdk::RGBA {
+            red: 5.0 / 255.0,
+            green: 9.0 / 255.0,
+            blue: 26.0 / 255.0,
+            alpha: 1.0,
+        };
+        webview.inner().set_background_color(&bg);
+    });
+}
+
+/// Fallback for any non-desktop target (Tauri only ships macOS/Windows/Linux).
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+fn set_webview_background(_window: &tauri::Window) {}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![
-            close_splashscreen,
-            biometric_authenticate
-        ])
+        .invoke_handler(tauri::generate_handler![biometric_authenticate])
         .setup(|app| {
-            // Blue titlebar from the first frame, independent of WebView paint
-            // timing (see apply_macos_titlebar). Applied while main is still
-            // hidden, so it's already tinted when revealed.
-            #[cfg(target_os = "macos")]
             if let Some(main) = app.get_window("main") {
+                // Blue titlebar from the first frame, independent of WebView paint
+                // timing (see apply_macos_titlebar). Applied during setup, before
+                // the window is shown, so it's already tinted on first paint.
+                #[cfg(target_os = "macos")]
                 apply_macos_titlebar(&main);
-            }
 
-            // Safety net: if the frontend never signals readiness (e.g. a JS
-            // error before first paint), don't leave the user staring at the
-            // splash forever — force the main window up after a grace period.
-            let handle = app.handle();
-            std::thread::spawn(move || {
-                std::thread::sleep(Duration::from_secs(10));
-                reveal_main(&handle);
-            });
+                // App-background WebView so launch never flashes white.
+                set_webview_background(&main);
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -1,6 +1,6 @@
 [package]
 name = "fastmemo"
-version = "1.1.1"
+version = "1.2.0"
 description = "Fast Memo - Notes in one click"
 authors = ["ontech7"]
 license = "GNU Affero General Public License v3.0"
@@ -10,8 +10,14 @@ edition = "2021"
 [build-dependencies]
 tauri-build = { version = "1.5", features = [] }
 
+# objc 0.2's `sel!`/`msg_send!` macros (used in main.rs for the macOS WebView)
+# expand to `cfg(feature = "cargo-clippy")`, which trips the unexpected_cfgs lint
+# on Rust 1.80+. Declare it as expected so the lint stays on for everything else.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("cargo-clippy"))'] }
+
 [dependencies]
-tauri = { version = "1.5", features = [ "process-relaunch", "shell-open", "dialog-all", "fs-all", "path-all", "notification-all", "clipboard-all"] }
+tauri = { version = "1.5", features = [ "updater", "process-relaunch", "shell-open", "dialog-all", "fs-all", "path-all", "notification-all", "clipboard-all"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
@@ -21,15 +27,28 @@ serde_json = "1.0"
 # it there — Linux stays on the secret code (see the frontend gate in
 # src/libs/biometric.ts and the cfg'd `biometric_authenticate` stub in main.rs).
 
-# macOS: titlebar tint (#05091A) + biometric unlock.
-# cocoa is pinned to what tao/wry already resolve, so nothing extra compiles.
+# Every native dep below is pinned to the exact version tao/wry already resolve
+# (see Cargo.lock), so the types unify with the live WebView handle and nothing
+# extra compiles. They power the #05091A WebView background that kills the white
+# launch flash on each platform (see `set_webview_background` in main.rs).
+
+# macOS: titlebar tint (#05091A) + transparent WebView (window blue shows
+# through) + biometric unlock.
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.24"
+objc = "0.2"
 robius-authentication = "0.1.1"
 
-# Windows: biometric unlock (Windows Hello).
+# Windows: WebView2 default background (#05091A) + biometric unlock (Windows Hello).
 [target.'cfg(target_os = "windows")'.dependencies]
 robius-authentication = "0.1.1"
+webview2-com = "0.19"
+windows = "0.39"
+
+# Linux: WebKitGTK background (#05091A). No biometrics (see note above).
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = "0.18"
+gtk = "0.15"
 
 [features]
 default = ["custom-protocol"]

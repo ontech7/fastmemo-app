@@ -7,3 +7,39 @@ body {
   outline: none;
   box-shadow: none;
 }
+
+/* App-themed scrollbar (WebKit / Chromium — incl. Tauri WebView2 on Windows) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  /* Glass-style thumb with a transparent border so it floats inside the track */
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #4f6bff; /* COLOR.accent */
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: #3a52e0; /* COLOR.accentDeep */
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox fallback */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
