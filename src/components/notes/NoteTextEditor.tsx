@@ -3,6 +3,7 @@ import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
+import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
@@ -334,45 +335,47 @@ export default function NoteTextEditor({ initialNote }: Props) {
             Rendered from mount (not gated on editor init) so the bottom area never
             reflows/pops in when the editor finishes loading on note creation. */}
           {!note.readOnly && (showAiActions || showVoiceButton) && (
-            <View style={styles.actionDock}>
-              {showAiActions && (
-                <AIEditorActions
-                  noteType="text"
-                  getContent={() => stripHtml(note.text)}
-                  noteTitle={note.title}
-                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
-                  onSummaryGenerated={(summary) => {
-                    richTextEditor.current?.setContentHTML(summary);
-                    setText(summary);
-                  }}
-                  onCategorySuggested={(name) => {
-                    const cat = findCategoryByName(name);
-                    if (cat) setNoteAsync({ ...note, category: cat });
-                  }}
-                  onTextRewritten={(rewritten) => {
-                    const html = voiceTextToHtml(rewritten, { leadingSpace: false });
-                    richTextEditor.current?.setContentHTML(html);
-                    setText(html);
-                  }}
-                  style={styles.dockAiButton}
-                  menuBottomOffset={110}
-                />
-              )}
+            <EditorActionDock>
+              <View style={dockGroupStyle}>
+                {showAiActions && (
+                  <AIEditorActions
+                    noteType="text"
+                    getContent={() => stripHtml(note.text)}
+                    noteTitle={note.title}
+                    onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                    onSummaryGenerated={(summary) => {
+                      richTextEditor.current?.setContentHTML(summary);
+                      setText(summary);
+                    }}
+                    onCategorySuggested={(name) => {
+                      const cat = findCategoryByName(name);
+                      if (cat) setNoteAsync({ ...note, category: cat });
+                    }}
+                    onTextRewritten={(rewritten) => {
+                      const html = voiceTextToHtml(rewritten, { leadingSpace: false });
+                      richTextEditor.current?.setContentHTML(html);
+                      setText(html);
+                    }}
+                    style={dockButtonStyle}
+                    menuBottomOffset={110}
+                  />
+                )}
 
-              {showVoiceButton && (
-                <VoiceRecognitionButton
-                  onInsert={(text) => {
-                    const html = voiceTextToHtml(text);
-                    // the dictation sheet dismissed the keyboard; refocus so the
-                    // text lands at the caret, then insert
-                    richTextEditor.current?.focusContentEditor();
-                    setTimeout(() => richTextEditor.current?.insertHTML(html), 50);
-                  }}
-                  aiCleanup
-                  style={styles.dockVoiceButton}
-                />
-              )}
-            </View>
+                {showVoiceButton && (
+                  <VoiceRecognitionButton
+                    onInsert={(text) => {
+                      const html = voiceTextToHtml(text);
+                      // the dictation sheet dismissed the keyboard; refocus so the
+                      // text lands at the caret, then insert
+                      richTextEditor.current?.focusContentEditor();
+                      setTimeout(() => richTextEditor.current?.insertHTML(html), 50);
+                    }}
+                    aiCleanup
+                    style={dockButtonStyle}
+                  />
+                )}
+              </View>
+            </EditorActionDock>
           )}
 
           {/* On web there is no soft keyboard, so the formatting toolbar is simply
@@ -405,7 +408,9 @@ export default function NoteTextEditor({ initialNote }: Props) {
       {Platform.OS !== "web" && (
         <KeyboardStickyView offset={{ closed: barHeight, opened: 0 }} style={styles.stickyToolbar}>
           <View onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}>
-            <DismissKeyboardButton showKeyboardDismiss onPress={() => richTextEditor.current?.dismissKeyboard()} />
+            {Platform.OS === "ios" && (
+              <DismissKeyboardButton showKeyboardDismiss onPress={() => richTextEditor.current?.dismissKeyboard()} />
+            )}
             <RichToolbar
               style={styles.richToolbarContainer}
               editor={richTextEditor}
@@ -513,26 +518,6 @@ const styles = StyleSheet.create({
   },
   richToolbarFlatContainer: {
     maxWidth: SIZE.full,
-  },
-  actionDock: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: PADDING_MARGIN.lg,
-    paddingHorizontal: PADDING_MARGIN.xl,
-    paddingTop: PADDING_MARGIN.lg,
-    paddingBottom: PADDING_MARGIN.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: GLASS.border,
-  },
-  dockAiButton: {
-    position: "relative",
-    bottom: 0,
-    left: 0,
-  },
-  dockVoiceButton: {
-    position: "relative",
-    bottom: 0,
-    right: 0,
   },
   textWrapper: {
     marginVertical: PADDING_MARGIN.xl,

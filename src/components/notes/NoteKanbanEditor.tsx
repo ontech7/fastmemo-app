@@ -2,7 +2,7 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import KanbanBoard from "@/components/kanban/KanbanBoard";
-import QuickActionsDivider from "@/components/notes/QuickActionsDivider";
+import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
@@ -191,35 +191,37 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
                 />
               </KanbanDragProvider>
             </GestureHandlerRootView>
-
-            {!note.readOnly && (
-              <AIEditorActions
-                noteType="kanban"
-                getContent={() =>
-                  note.columns
-                    .map((col) => {
-                      const cards = col.items
-                        .map((item) => item.text)
-                        .filter(Boolean)
-                        .join(", ");
-                      return cards ? `${col.name}: ${cards}` : col.name;
-                    })
-                    .filter(Boolean)
-                    .join(". ")
-                }
-                noteTitle={note.title}
-                onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
-                onCategorySuggested={(name) => {
-                  const cat = findCategoryByName(name);
-                  if (cat) setNoteAsync({ ...note, category: cat });
-                }}
-                style={{ bottom: 10 }}
-                menuBottomOffset={110}
-              />
-            )}
-
-            {showAiActions && <QuickActionsDivider bottom={70} />}
           </View>
+
+          {showAiActions && (
+            <EditorActionDock>
+              <View style={dockGroupStyle}>
+                <AIEditorActions
+                  noteType="kanban"
+                  getContent={() =>
+                    note.columns
+                      .map((col) => {
+                        const cards = col.items
+                          .map((item) => item.text)
+                          .filter(Boolean)
+                          .join(", ");
+                        return cards ? `${col.name}: ${cards}` : col.name;
+                      })
+                      .filter(Boolean)
+                      .join(". ")
+                  }
+                  noteTitle={note.title}
+                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                  onCategorySuggested={(name) => {
+                    const cat = findCategoryByName(name);
+                    if (cat) setNoteAsync({ ...note, category: cat });
+                  }}
+                  style={dockButtonStyle}
+                  menuBottomOffset={110}
+                />
+              </View>
+            </EditorActionDock>
+          )}
         </SafeAreaView>
       </KeyboardAvoidingView>
     </View>

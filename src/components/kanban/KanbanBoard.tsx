@@ -3,7 +3,7 @@ import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
-import { selectorAIAssistant, selectorDeveloperMode } from "@/slicers/settingsSlice";
+import { selectorDeveloperMode } from "@/slicers/settingsSlice";
 import type { KanbanNote } from "@/types";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -44,7 +44,6 @@ export default function KanbanBoard({
 }: Props) {
   const { t } = useTranslation();
 
-  const aiSettings = useSelector(selectorAIAssistant);
   const devMode = useSelector(selectorDeveloperMode);
 
   const maxColumns =
@@ -300,7 +299,7 @@ export default function KanbanBoard({
           ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.columnsScrollView, aiSettings.enabled && { paddingBottom: 90 }]}
+          contentContainerStyle={styles.columnsScrollView}
           snapToInterval={snapInterval}
           snapToAlignment="start"
           decelerationRate="fast"

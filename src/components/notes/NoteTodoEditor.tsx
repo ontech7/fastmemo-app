@@ -20,6 +20,7 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
+import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem.native";
@@ -302,13 +303,13 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           </View>
 
           {!note.readOnly && (
-            <View style={styles.actionBar}>
-              <View style={styles.actionBarLeft}>
+            <EditorActionDock>
+              <View style={dockGroupStyle}>
                 <TodoModeMenuButton
                   currentMode={currentMode}
                   onSelectMode={setMode}
                   disabled={note.readOnly}
-                  style={styles.barButton}
+                  style={dockButtonStyle}
                   menuBottomOffset={110}
                 />
 
@@ -334,7 +335,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                     const cat = findCategoryByName(name);
                     if (cat) setNoteAsync({ ...note, category: cat });
                   }}
-                  style={styles.barButton}
+                  style={dockButtonStyle}
                   menuBottomOffset={110}
                 />
 
@@ -360,14 +361,14 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                     setNoteAsync({ ...note, list: mutableList });
                   }}
                   aiCleanup
-                  style={styles.barButton}
+                  style={dockButtonStyle}
                 />
               </View>
 
               <TouchableOpacity activeOpacity={0.7} style={styles.addButton} onPress={addListItem}>
                 <PlusIcon size={28} color={COLOR.softWhite} />
               </TouchableOpacity>
-            </View>
+            </EditorActionDock>
           )}
         </SafeAreaView>
       </KeyboardAvoidingView>
@@ -421,29 +422,6 @@ const styles = StyleSheet.create({
   },
   draggableList: {
     flex: 1,
-  },
-  actionBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: PADDING_MARGIN.lg,
-    paddingTop: PADDING_MARGIN.lg,
-    paddingBottom: PADDING_MARGIN.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: GLASS.border,
-  },
-  actionBarLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: PADDING_MARGIN.md,
-  },
-  // Neutralizes the floating-FAB positioning of mode/AI/voice so they sit inline in the bar.
-  barButton: {
-    position: "relative",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
   },
   addButton: {
     padding: PADDING_MARGIN.md,

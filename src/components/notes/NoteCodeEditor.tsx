@@ -4,7 +4,7 @@ import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import CodeDraggableTab from "@/components/notes/CodeDraggableTab";
 import CodeEditorWebView, { type CodeEditorWebViewRef } from "@/components/notes/CodeEditorWebView";
 import CodeLanguagePickerModal from "@/components/notes/CodeLanguagePickerModal";
-import QuickActionsDivider from "@/components/notes/QuickActionsDivider";
+import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { inferLanguageFromTitle, LANGUAGE_LABELS } from "@/constants/code-languages";
@@ -271,7 +271,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
             </Text>
           </View>
 
-          <View style={[styles.editorContainer, showAiActions && { marginBottom: 90 }]}>
+          <View style={[styles.editorContainer, showAiActions && styles.editorContainerWithDock]}>
             <CodeEditorWebView
               ref={editorRef}
               initialCode={activeTab?.code || ""}
@@ -291,29 +291,31 @@ export default function NoteCodeEditor({ initialNote }: Props) {
             )}
           </View>
 
-          {!note.readOnly && (
-            <AIEditorActions
-              noteType="code"
-              getContent={() => activeTab?.code || ""}
-              noteTitle={note.title}
-              onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
-              onCategorySuggested={(name) => {
-                const cat = findCategoryByName(name);
-                if (cat) setNoteAsync({ ...note, category: cat });
-              }}
-              onCodeCommented={(commentedCode) => {
-                const updatedTabs = note.tabs.map((tab) =>
-                  tab.id === note.activeTabId ? { ...tab, code: commentedCode } : tab
-                );
-                setNoteAsync({ ...note, tabs: updatedTabs });
-                editorRef.current?.setCode(commentedCode);
-              }}
-              style={{ bottom: 50 }}
-              menuBottomOffset={120}
-            />
+          {showAiActions && (
+            <EditorActionDock>
+              <View style={dockGroupStyle}>
+                <AIEditorActions
+                  noteType="code"
+                  getContent={() => activeTab?.code || ""}
+                  noteTitle={note.title}
+                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                  onCategorySuggested={(name) => {
+                    const cat = findCategoryByName(name);
+                    if (cat) setNoteAsync({ ...note, category: cat });
+                  }}
+                  onCodeCommented={(commentedCode) => {
+                    const updatedTabs = note.tabs.map((tab) =>
+                      tab.id === note.activeTabId ? { ...tab, code: commentedCode } : tab
+                    );
+                    setNoteAsync({ ...note, tabs: updatedTabs });
+                    editorRef.current?.setCode(commentedCode);
+                  }}
+                  style={dockButtonStyle}
+                  menuBottomOffset={110}
+                />
+              </View>
+            </EditorActionDock>
           )}
-
-          {showAiActions && <QuickActionsDivider bottom={110} />}
 
           <CodeLanguagePickerModal
             visible={showLanguagePicker}
@@ -445,6 +447,11 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: BORDER.normal,
     borderBottomRightRadius: BORDER.normal,
     overflow: "hidden",
+  },
+  // A little breathing room before the action dock (only applied when it's shown,
+  // so without the dock the editor still fills down to the safe area).
+  editorContainerWithDock: {
+    marginBottom: PADDING_MARGIN.lg,
   },
   codePlaceholder: {
     color: COLOR.textPrimary,
