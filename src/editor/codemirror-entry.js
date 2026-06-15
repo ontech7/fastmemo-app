@@ -117,6 +117,8 @@ window.handleMessage = function (msgStr) {
       suppressChange = true;
       view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: msg.code } });
       suppressChange = false;
+    } else if (msg.type === "focus") {
+      view.focus();
     } else if (msg.type === "setLanguage" && msg.language !== currentLang) {
       currentLang = msg.language;
       const doc = view.state.doc.toString();
