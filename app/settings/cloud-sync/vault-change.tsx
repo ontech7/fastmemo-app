@@ -44,7 +44,7 @@ export default function VaultChangeScreen() {
 
     setError(null);
     setLoading(true);
-    await yieldToUI(); // paint the spinner before the synchronous PBKDF2 freeze
+    await yieldToUI(); // paint the spinner first: the key derivation freezes the JS thread on the pure-JS fallback
 
     try {
       const ok = await changePassphrase(current, next);

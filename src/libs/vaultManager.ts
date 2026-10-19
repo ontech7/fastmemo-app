@@ -74,7 +74,7 @@ export interface VaultInitResult {
  * orphan every already-encrypted note).
  */
 export const initializeVault = async (projectId: string, passphrase: string): Promise<VaultInitResult | null> => {
-  const { vault, dek, recoveryKey } = createVault(passphrase);
+  const { vault, dek, recoveryKey } = await createVault(passphrase);
 
   const result = await createVaultExclusive(vault);
   if (result !== "created") return null; // "exists" (race -> unlock instead) or "error" -> don't proceed
@@ -94,7 +94,7 @@ export const migrateLegacyVault = async (
   passphrase: string,
   legacyKey: string
 ): Promise<VaultInitResult | null> => {
-  const { vault, dek, recoveryKey } = createVault(passphrase);
+  const { vault, dek, recoveryKey } = await createVault(passphrase);
 
   // Claim the vault FIRST (atomically). If this succeeds, presence flips to
   // "present", so any interruption/retry/other device takes the safe unlock
@@ -144,7 +144,7 @@ export const unlockWithPassphrase = async (projectId: string, passphrase: string
   const vault = await getVault();
   if (!vault) return false;
 
-  const dek = unlockVaultWithPassphrase(vault, passphrase);
+  const dek = await unlockVaultWithPassphrase(vault, passphrase);
   if (!dek) return false;
 
   await persistDEK(projectId, dek);
@@ -160,11 +160,11 @@ export const recoverWithRecoveryKey = async (
   const vault = await getVault();
   if (!vault) return null;
 
-  const dek = unlockVaultWithRecoveryKey(vault, recoveryKey);
+  const dek = await unlockVaultWithRecoveryKey(vault, recoveryKey);
   if (!dek) return null; // wrong recovery key
 
-  const rewrapped = rewrapWithNewPassphrase(vault, dek, newPassphrase);
-  const { vault: rotated, recoveryKey: nextRecoveryKey } = rewrapRecovery(rewrapped, dek);
+  const rewrapped = await rewrapWithNewPassphrase(vault, dek, newPassphrase);
+  const { vault: rotated, recoveryKey: nextRecoveryKey } = await rewrapRecovery(rewrapped, dek);
 
   // The key WAS valid; a write failure here must not look like "wrong key".
   // Throw so the UI shows a generic retry error instead, and the vault stays as-is.
@@ -188,9 +188,9 @@ export const changePassphrase = async (currentPassphrase: string, newPassphrase:
   if (!vault) return false;
 
   // confirm the current passphrase really maps to the active DEK before rotating
-  if (unlockVaultWithPassphrase(vault, currentPassphrase) !== dek) return false; // wrong current passphrase
+  if ((await unlockVaultWithPassphrase(vault, currentPassphrase)) !== dek) return false; // wrong current passphrase
 
-  const rewrapped = rewrapWithNewPassphrase(vault, dek, newPassphrase);
+  const rewrapped = await rewrapWithNewPassphrase(vault, dek, newPassphrase);
 
   // current passphrase WAS correct; a write failure must not read as "wrong
   // password" — throw so the UI shows a generic retry error, vault unchanged.
@@ -221,7 +221,7 @@ export const forgetDeviceVault = async (projectId: string): Promise<void> => {
  * is a no-op — the existing vault and notes stay intact.
  */
 export const recreateVault = async (projectId: string, passphrase: string): Promise<VaultInitResult | null> => {
-  const { vault, dek, recoveryKey } = createVault(passphrase);
+  const { vault, dek, recoveryKey } = await createVault(passphrase);
 
   // Overwrite (not exclusive): a reset deliberately replaces the existing vault.
   const ok = await setVault(vault);

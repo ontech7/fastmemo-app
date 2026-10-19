@@ -48,7 +48,7 @@ export default function VaultRecoverScreen() {
 
     setError(null);
     setLoading(true);
-    await yieldToUI(); // paint the spinner before the synchronous PBKDF2 freeze
+    await yieldToUI(); // paint the spinner first: the key derivation freezes the JS thread on the pure-JS fallback
 
     try {
       const result = await recoverWithRecoveryKey(projectId!, recoveryKey, passphrase);

@@ -20,7 +20,8 @@
 - Platform-specific code still needed for ~10 file pairs (.web.tsx / .native.tsx)
 - Some libraries require native-side patching (metro.config.js has WebView + Sentry patches)
 
-**Updated (June 2026):** upgraded to Expo SDK 56 / React Native 0.85 (React 19.2). The decision stands; only the baseline versions moved. See `docs/CHANGELOG_MOBILE.md` v3.2.0.
+**Updated (June 2026):** upgraded to Expo SDK 56 / React Native 0.85 (React 19.2). The decision stands; only the baseline
+versions moved. See `docs/CHANGELOG_MOBILE.md` v3.2.0.
 
 ---
 
@@ -288,10 +289,16 @@ Firestore + outbox plumbing from ADR-007.
 
 **Rationale:**
 
-- **Crypto must be synchronous.** Note encryption runs inside Redux reducers (see LL-017), and the queue path is synchronous.
-  WebCrypto is async and absent on native RN; a native AES-GCM module would not run in the Tauri WebView. So we use
-  **`crypto-js`** (pure-JS, identical on iOS/Android/web/Tauri) for PBKDF2-SHA256 + AES, with secure randomness from
-  `@/utils/secureRandom` (OS CSPRNG), never CryptoJS's `Math.random`-backed `WordArray.random`.
+- **Note crypto must be synchronous.** Note encryption runs inside Redux reducers (see LL-017), and the queue path is
+  synchronous. WebCrypto is async and absent on native RN; a native AES-GCM module would not run in the Tauri WebView. So we use
+  **`crypto-js`** (pure-JS, identical on iOS/Android/web/Tauri) for AES, with secure randomness from `@/utils/secureRandom` (OS
+  CSPRNG), never CryptoJS's `Math.random`-backed `WordArray.random`.
+- **The KDF doesn't have to be.** PBKDF2 only runs at setup/unlock/password-change, so it is async and off the JS thread: the
+  local Expo module `modules/fastmemo-crypto` (Kotlin `javax.crypto.Mac` / Swift CommonCrypto, WebCrypto on web/Tauri). Its
+  output must stay byte-identical to `crypto-js` `PBKDF2(password, Hex.parse(salt), SHA256)`, which remains the reference and
+  the fallback: `vault.ts` checks the module against crypto-js once per launch and uses crypto-js when the module is missing (a
+  binary older than the module, under an OTA update), throws, or disagrees. `scripts/vault.test.mjs` checks WebCrypto/crypto-js
+  interop; the Kotlin and Swift code were checked against the same vectors (RFC 7914, unicode, empty password) when written.
 - **Authenticated by a marker, not by the cipher.** AES-CBC is unauthenticated, so a wrong key decrypts to valid-looking garbage
   ~90% of the time without throwing. `CryptNote.encrypt` prepends `CONTENT_MAGIC = "=FMV1=enc="` before AES; `tryDecryptNote`
   requires the marker, making wrong-key / foreign-DEK content reliably detectable so it is **skipped, never stored or
@@ -301,9 +308,9 @@ Firestore + outbox plumbing from ADR-007.
 
 **Trade-offs:**
 
-- Pure-JS PBKDF2 at 100k iters blocks the JS thread ~1-2s on unlock/setup/password-change (acceptable: not per-note, and the UI
-  yields a frame so the spinner paints -- see LL-025/LL-026). Iteration count is stored in the vault doc so it can be raised
-  later without breaking old vaults.
+- PBKDF2 at 100k iters takes ~75ms off the JS thread with the native module (measured on the Android emulator, 2026-10-19). Only
+  the pure-JS fallback blocks the JS thread (~1-2s; the UI yields a frame first so the spinner paints -- LL-025/LL-026).
+  Iteration count is stored in the vault doc so it can be raised later without breaking old vaults.
 - Note **titles** and metadata (id/type/dates/category) remain plaintext for sync keying/ordering; full title encryption is a
   deferred follow-up. Verified 2026-10-19 on a test project: titles, category names, todo `checked` flags and dates are readable
   in Firestore. Sync keys on ids and timestamps, never on titles, so encrypting them is possible; until then the UI copy ("only

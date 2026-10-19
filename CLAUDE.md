@@ -132,6 +132,7 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 ```
 app/            -> Screens (expo-router file-based routing, at project root)
 assets/         -> Static assets (images, lottie animations, at project root)
+modules/        -> Local Expo native modules, autolinked (fastmemo-crypto: native PBKDF2, see ADR-012)
 src/
   components/   -> UI components (domain-grouped: buttons/, cards/, notes/, kanban/, settings/, etc.)
   slicers/      -> Redux slices (notesSlice, categoriesSlice, settingsSlice) + thunks/

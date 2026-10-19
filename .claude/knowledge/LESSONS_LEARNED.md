@@ -692,9 +692,9 @@ missing global was the real reason all native vault ops failed.
 **Root cause:** `crypto-js` was adopted (over WebCrypto/native GCM) because note encryption must be synchronous (ADR-012), but
 it silently depends on a Web Crypto global that RN's JS engine lacks.
 
-**Fix:** Added `react-native-get-random-values@1.11.0` and imported it as the **first line** of `app/_layout.tsx` (before
-any crypto-using module), which installs `global.crypto.getRandomValues` backed by the OS CSPRNG. It is a **native module**, so
-it requires a dev-client rebuild (`npx expo prebuild` + rebuild) -- the same constraint as `expo-crypto`.
+**Fix:** Added `react-native-get-random-values@1.11.0` and imported it as the **first line** of `app/_layout.tsx` (before any
+crypto-using module), which installs `global.crypto.getRandomValues` backed by the OS CSPRNG. It is a **native module**, so it
+requires a dev-client rebuild (`npx expo prebuild` + rebuild) -- the same constraint as `expo-crypto`.
 
 **Rule:** A pure-JS crypto library running on Hermes is not automatically self-contained -- it may depend on Web Crypto globals
 that RN lacks. When adding such a library, install the `react-native-get-random-values` polyfill at the app entry point and
@@ -993,6 +993,29 @@ dimensions at module scope in UI that can be resized (web/Tauri); use `useWindow
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
 `feat/upgrade-expo-58`
+
+---
+
+### LL-037: An unanchored `.gitignore` rule hid a native module's source from git and EAS
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Platform  
+**What happened:** The new local Expo module `modules/fastmemo-crypto` (native PBKDF2) built and worked locally, but its
+`android/` and `ios/` folders never appeared in `git status`. A commit would have left them out, and EAS Build (which uploads
+what git doesn't ignore) would have produced binaries without the module. Nothing would have failed: the vault falls back to the
+pure-JS PBKDF2 when the module is missing, so the regression would only have shown up as a slow unlock.
+
+**Root cause:** The CNG rules `android` and `ios` in `.gitignore` match a directory with that name at any depth, including a
+module's native source folders.
+
+**Fix:** Root-anchored `/android` and `/ios`, plus `modules/*/android/build/` for the module's Gradle output.  
+**Rule:** Ignore rules for generated native projects are root-anchored. After adding native code, check
+`git status --untracked-files=all` lists it. A graceful fallback can hide a missing native module: verify on a device that the
+native path runs (e.g. per-thread CPU time), not only that the feature works.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/ota-pbkdf2-a11y`
 
 ---
 
