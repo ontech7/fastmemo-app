@@ -1,5 +1,6 @@
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.web";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
@@ -215,6 +216,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
           <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
         </View>
+        <NotePresenceBanner noteId={note.id} />
 
         <View style={styles.subtitleWrapper}>
           <Text style={[styles.subtitle, { flexGrow: 1 }]}>

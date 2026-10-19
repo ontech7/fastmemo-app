@@ -47,6 +47,15 @@ export interface NoteBase {
    */
   local?: boolean;
   deleteDate: number | null;
+  /**
+   * Cloud sync revision (ADR-016): stamped on every change that syncs, and never lower than the previous one, so it orders
+   * the versions of a note across devices. Older app versions only bump `updatedAt`: use `noteRev()`, never this alone.
+   */
+  rev?: number;
+  /** Local bookkeeping, never uploaded: the revision last known to be in the cloud. Higher `noteRev()`: unpushed changes. */
+  syncedRev?: number;
+  /** When the note was moved to the trash (the revision of that move). */
+  deletedAt?: number;
 }
 
 export interface TextNote extends NoteBase {

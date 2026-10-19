@@ -20,6 +20,7 @@ import uuid from "react-uuid";
 import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
@@ -264,6 +265,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
               <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
+            <NotePresenceBanner noteId={note.id} />
 
             <View style={styles.subtitleWrapper}>
               <Text style={[styles.subtitle, { flexGrow: 1 }]}>

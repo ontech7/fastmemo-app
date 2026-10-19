@@ -3,7 +3,7 @@ import lottieJson from "~/assets/lottie/Logo_with_Text.json";
 import LottieView from "@/components/lottie/LottieAnimation";
 import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
-import { initFirebase } from "@/libs/firebase";
+import { cloud } from "@/libs/cloud";
 import { isObjectEmpty } from "@/utils/string";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
@@ -38,7 +38,7 @@ export default function LoadingScreen() {
         // enable firebase if cloudSync config is available
         const cloudSyncConfig = JSON.parse(cloudSyncRaw ?? "{}");
         if (!isObjectEmpty(cloudSyncConfig)) {
-          initFirebase(cloudSyncConfig);
+          cloud.init(cloudSyncConfig);
         }
 
         SplashScreen.hideAsync().catch(() => {});

@@ -436,3 +436,81 @@ crates.
 - Quits that bypass the event loop still skip the flush and can lose the edit batch still open (≤1s of typing on desktop): macOS
   Dock → Quit and logout (`terminate:` → `applicationWillTerminate`), a Windows session ending (`WM_ENDSESSION`), Linux SIGTERM.
   Holding those needs `applicationShouldTerminate:` / `WM_QUERYENDSESSION` hooks tao doesn't expose.
+
+---
+
+## ADR-016: Sync Engine Behind a `CloudBackend`, Live Listeners, Revisions and Conflict Copies
+
+**Status:** Accepted (2026-10-19), implemented on `feat/sync-backend`  
+**Context:** Sync polled Firestore every 10s (device list + vault + pending query: ~23k reads/day for two devices open all day,
+half the free quota), and review of the code found correctness gaps: a receiver cleared a sender's fan-out queue with an
+unguarded read-modify-write (a change pushed in between was dropped), an incoming copy overwrote a local unpushed edit (the
+devices then diverged for good), the connect/unlock full sync uploaded every note and then _replaced_ local notes with the cloud
+set (a note whose upload failed, e.g. >1 MiB, vanished; an offline device's stale notes overwrote newer cloud ones), stale queue
+entries replayed while a third device was offline could resurrect trashed notes, and a sender's queue doc could outgrow
+Firestore's 1 MiB limit while a device stayed offline, wedging its uploads. Phase 4 (self-hosted server) also needs the cloud
+behind an interface.  
+**Decision:**
+
+- **`CloudBackend` interface** (`src/libs/cloud/`): domain operations (devices, vault, notes/categories snapshots, push with
+  fan-out, incoming-change subscription, ack, presence). `FirebaseBackend` is the only code importing `firebase/*`; the
+  self-hosted server (phase 4) implements the same interface. Same Firestore data model and wire format, so 3.2.0 / 1.2.0
+  installs keep syncing with updated ones.
+- **Live instead of polling:** one listener on `connectedDevices` (pending changes for this device, recipients for pushes,
+  removal of this device, presence) and one on the vault doc (reset detection). Only server-confirmed snapshots
+  (`!metadata.fromCache`, no pending local writes) drive decisions (LL-027). A server poll every 5 min and on resume covers a
+  silently dead listener; a listener that errors is subscribed again with backoff.
+- **Revisions:** every synced local change stamps `rev` on the note: now, but at least the previous revision + 1, so an edit
+  made on a device whose clock is behind still supersedes the version it was based on. A note's revision is
+  `max(rev, updatedAt)`, so edits from older app versions (which only bump `updatedAt`) still count. `syncedRev` (local
+  bookkeeping, never uploaded) is the revision last known to be in the cloud; `rev > syncedRev` means unpushed local changes.
+  Trash stamps `deletedAt` (deletion stubs carry it), and permanently deleted ids keep a pruned tombstone (`purged`).
+- **Merge on receive (pure functions, `merge.ts`):** an incoming version older than what the device has is ignored (stale
+  replay); a newer one replaces it when there are no local unpushed changes; when both sides changed since the last synced
+  revision, **both are kept**: the newer version keeps the note, the other becomes "<title> (conflict)" with a deterministic id
+  (`<id>~<rev>`), so replays produce the same copy, never a second one. A delete applies only if newer than the local note; an
+  edit newer than a local trash restores it.
+- **Transactional ack:** the receiver applies a sender's queues, persists, then removes itself from `devicesToSync` in a
+  transaction that only commits if the queues are still the ones it applied (content token); otherwise it re-applies. Senders
+  add recipients with `arrayUnion` instead of overwriting the list.
+- **Guarded, batched, bounded pushes:** the outbox goes out in transactions of up to 200 entries (note/category writes + one
+  merged fan-out update + `lastSync`, all or nothing). Each upload carries its base (`syncedRev`, the version it was edited
+  from): the transaction reads the cloud doc and refuses to overwrite a newer version than the base, or to delete a version
+  newer than the deletion. The refused cloud version comes back to be merged like an incoming one (conflict copy if both
+  changed), then the push goes again. This closes the window where two online devices push near-simultaneous edits. The stored
+  note is encrypted at push time (latest content, current key); the outbox copy only marks it as waiting and keeps the outbox
+  readable by an older app after an OTA rollback.
+- **Fan-out size:** a sender's doc holds its queues until every recipient pulled them, under Firestore's 1 MiB limit. Full notes
+  are queued up to ~600 KB, references (`{ id, rev, ref: true }`, whose `text` decrypts with no key, so older apps skip them
+  instead of storing them as notes) up to ~900 KB; uploads beyond that set a `resync` marker and the receivers run a full sync.
+  Deletion stubs (~100 bytes) get the room left up to ~1 MB, since absence never deletes. A transaction failing with a
+  non-retryable error (e.g. a note over 1 MiB) is split to isolate the culprit, which stays queued but is skipped until the next
+  launch. Retries back off exponentially (2s → 5 min) and restart on reconnect/resume; nothing leaves the outbox until
+  committed.
+- **Full sync = reconcile, never replace:** apply pending incoming changes, read the cloud, merge per note with the same rules,
+  push only what this device has newer, and keep every local note: one missing from the cloud is uploaded again. Absence can't
+  tell "deleted elsewhere" from "the cloud was reset or migrated", so a deletion made while this device was disconnected can
+  come back (as before), but nothing is ever dropped. A full sync that doesn't complete (offline, app closed) stays due and runs
+  again when the engine next starts: it's what brings a newly connected device the notes no queue carries.
+- **Presence and live notes:** a device writes `presence: { noteId, at }` on its own doc when a note opens/closes (+ a 5 min
+  heartbeat); others show "open on <device>" on the card and in the editor (stale after 10 min). After applying incoming changes
+  the engine signals the open editor, which reloads the note (it was flushed first, so a local edit is already in the merge: at
+  worst it becomes the conflict copy).
+
+**Trade-offs:**
+
+- Revisions use each device's clock: a badly skewed clock can make an older edit win (the other survives as a conflict copy only
+  when both changed since the last sync).
+- A conflict copy is also created when one side only changed metadata (important, hidden, category) concurrently with a content
+  edit on the other: there is no per-field base to merge against.
+- Old app versions keep their own behavior (unguarded acks and uploads, no conflict copies, reference entries and overflowed
+  queues skipped until their next full sync) until updated.
+- Two devices typing in the same open note at the same moment make one conflict copy per collision (each side's unpushed batch
+  vs the other's): fine for the occasional overlap, not a co-editing experience.
+- A collection read "from the server" while a listener on it is open is answered from the listener's view, which gets this
+  client's own transaction writes a moment later: right after an ack, a poll may see the change again. Merging is idempotent and
+  the ack then finds nothing to do.
+- Live co-editing of the same note (character-level merge) is out of scope: it needs a CRDT per editor and per-keystroke writes
+  the free quota can't sustain.
+- Firestore cost, two devices open 8h/day, 100 edits each: ~1.5k reads + ~700 writes/day (was ~23k reads + ~600 writes, plus a
+  full upload of every note on each connect/unlock).

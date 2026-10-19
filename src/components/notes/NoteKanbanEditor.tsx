@@ -1,6 +1,7 @@
 import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
 import KanbanBoard from "@/components/kanban/KanbanBoard";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import SafeAreaView from "@/components/SafeAreaView";
@@ -169,6 +170,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
 
               <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
+            <NotePresenceBanner noteId={note.id} />
           </View>
 
           <View style={styles.boardContainer}>

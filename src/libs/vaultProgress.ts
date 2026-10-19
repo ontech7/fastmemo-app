@@ -4,9 +4,9 @@
  * (new) DEK during setup / migration / reset.
  *
  * The PBKDF2 key derivation takes a fixed, short time and reports no progress;
- * the per-item upload loop, however, scales with the number of notes and can
- * take several seconds, so it drives a determinate bar instead of a blind
- * spinner. Same pub/sub shape as [[vaultPrompt]] / vaultSession.
+ * the full sync's upload, however, scales with the number of notes and can
+ * take several seconds, so its batches drive a determinate bar instead of a
+ * blind spinner. Same pub/sub shape as [[vaultPrompt]] / vaultSession.
  *
  * getSnapshot returns the SAME object reference until a mutation replaces it, so
  * it is safe for useSyncExternalStore (no render loop).
@@ -35,10 +35,9 @@ export const beginVaultProgress = (total: number): void => {
   notify();
 };
 
-/** Advance by one processed item (clamped to total). No-op if no phase is active. */
-export const tickVaultProgress = (): void => {
-  if (!current) return;
-  current = { done: Math.min(current.done + 1, current.total), total: current.total };
+/** Set how far the phase is (e.g. from a batched upload). Starts one if none is active. */
+export const setVaultProgress = (done: number, total: number): void => {
+  current = total > 0 ? { done: Math.min(done, total), total } : null;
   notify();
 };
 

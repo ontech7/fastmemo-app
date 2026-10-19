@@ -275,35 +275,44 @@ Local mutations queue data for cloud sync via `only_if_cloudConnected()`, but on
 (`isVaultUnlocked()` reads the in-memory DEK from `libs/vaultSession`):
 
 ```ts
-// Inside reducer (mutates Immer draft):
-only_if_cloudConnected(state as unknown as RootState, () => {
-  if (!isVaultUnlocked()) return; // no DEK -> cannot encrypt; do not queue plaintext
-  state.cloud.items.add[note.id] = CryptNote.encrypt(note); // CryptNote reads the DEK from vaultSession
-});
+// Inside a reducer (mutates the Immer draft): every change that syncs stamps a revision, then queues.
+note.important = !note.important;
+touchNote(note); // rev = max(now, previous + 1): orders versions across devices (ADR-016)
+queueCloudAdd(state, note); // only_if_cloudConnected + isVaultUnlocked; the engine re-encrypts at push time
 ```
+
+**Every reducer that changes a synced note calls `touchNote()`** (or `trashNote` / `untrashNote`, which do), and never writes
+`syncedRev` itself: that is the sync engine's bookkeeping (`applyNotesPlan`, `notesPushed`). A change without a new revision is
+ignored by the other devices (their copy looks as new). `addNote` takes `rev`, `syncedRev` and `local` from the stored note, not
+from the editor's copy.
 
 `CryptNote.encrypt` takes no key argument anymore -- it reads the per-vault DEK from `vaultSession` and **fails closed** if the
 vault is locked (never emits plaintext). The old global `secretKey` argument and build-time `SECRET_KEY` are superseded by
 per-vault envelope encryption (see ADR-012); the legacy key survives only as the migration `legacyKey` and is removed after the
 migration window. Deletes/detaches use a content-stripped `deletionStub` so they need no DEK and propagate even while locked.
 
-Thunks drain the outbox, and `extraReducers` cleans up on fulfillment. **Do not replicate this pattern in new reducers** -- the
-cloud sync queuing should ideally move to middleware.
+The sync engine (`libs/cloud/syncEngine.ts`) drains the outbox, and `notesPushed` / `categoriesPushed` dequeue what a push
+committed. **All cloud I/O goes through the `CloudBackend`** (`cloud` from `@/libs/cloud`): only `libs/cloud/firebaseBackend.ts`
+imports `firebase/*` (phase 4 adds a second backend behind the same contract). Merge rules live in `libs/cloud/merge.ts` as pure
+functions: change them there, with a case in `scripts/sync.test.mjs`.
 
-**Cloud sync is silent by design.** Do NOT add `.pending`/`.rejected` handlers to cloud sync thunks in order to surface
-loading/error state to the user (banners, toasts, status fields). The offline-first flow is:
+**Cloud sync is silent by design.** Do NOT surface transient sync failures to the user (banners, toasts, status fields). The
+offline-first flow is:
 
-- `SyncOnProvider` gates every sync loop on `netInfo?.isConnected`; while offline, thunks are not dispatched at all.
-- On transient failures, items stay in the outbox and are retried automatically on the next tick (implicit retry).
-- Only handshake-level failures (invalid credentials, device evicted) are surfaced -- these use the existing
-  `cloudsync.handshakeFailed` alert and `disconnected` toast in `useCloudSync.ts` / `SyncOnProvider.tsx`.
+- The engine runs while connected and unlocked; offline, its listeners wait and pushes fail into a backoff (2s -> 5 min),
+  restarted when the network or the app comes back.
+- On transient failures, items stay in the outbox and are retried automatically; nothing leaves the outbox until committed.
+- Only handshake-level failures (invalid credentials, device evicted) and the user-visible outcomes of a merge (data synced, a
+  conflict copy made, the open note trashed elsewhere) are surfaced, from `SyncOnProvider` / `useLiveNote`.
 
-If observability is needed for a new cloud-sync feature, use Sentry breadcrumbs inside the thunk, not Redux state. See LL-004.
+If observability is needed for a new cloud-sync feature, use Sentry breadcrumbs inside the engine, not Redux state. See LL-004.
 
 **Queue entries are exclusive per id** (LL-033): `queueCloudAdd` / `queueCloudDelete` drop the id from the opposite queue;
-fulfilled handlers dequeue with `dequeueProcessed` (only if the entry is still the uploaded object, so a newer version queued
-meanwhile survives); fan-out writes to a device doc go through `exclusiveQueueEntry` from `@/libs/firebase`, which drops the id
-from the device's other queues in the same write.
+`notesPushed` dequeues only if the entry is still the pushed object (a newer version queued meanwhile survives); the backend's
+push writes each fan-out entry with a field path and deletes the id from the device's other queues in the same transaction.
+
+**Never decide on a cloud snapshot that isn't server-confirmed** (`DevicesSnapshot.fromServer`), and **acknowledge only after
+the merge is persisted** (`persistor.flush()`), through `ackChanges` (it refuses when the sender queued more meanwhile).
 
 ### Note Editor Commits and Persistence
 
@@ -636,11 +645,11 @@ reads, writes, and deletes.
 3. **Never read entire collections when a single document read suffices.** Use `getDoc()` for single documents, reserve
    `getDocs()` with collection queries for bulk operations (initial sync, device handshake).
 
-4. **Minimize polling reads.** `SyncOnProvider` polls on an interval and on app foreground. Each poll that reads cloud state
-   counts against the 50K read limit. Keep polling intervals reasonable and avoid triggering unnecessary syncs.
+4. **Listen, don't poll.** The engine keeps one listener on `connectedDevices` and one on the vault doc (a changed doc costs one
+   read per listening device); its fallback server poll runs every 5 min and on resume. Don't add intervals that read the cloud.
 
-5. **Debounce rapid changes.** When a user edits a note rapidly (typing), the system must debounce before queuing for cloud
-   sync. The current `DEBOUNCE_NOTES_DELAY` in `SyncOnProvider` handles this -- do not bypass or reduce it.
+5. **Debounce rapid changes.** Editors commit in batches (`useNoteEditor`) and the engine pushes 200ms after the outbox changes,
+   one transaction per batch of up to 200 entries -- do not bypass either.
 
 6. **Delete operations are cheap but not free.** The 20K delete limit is generous, but bulk operations (wipe all notes, wipe
    categories) should still use batch deletes and warn the user if the operation is large.
@@ -653,8 +662,9 @@ reads, writes, and deletes.
 
    Document the estimate in the PR description.
 
-8. **Avoid redundant device sync.** The current thunk pattern processes a primary sync and an optional secondary device sync per
-   item. When adding new sync logic, verify that you are not duplicating writes to the same document.
+8. **Avoid redundant device sync.** A push writes each note doc and one merged update of the sender's device doc (queues,
+   recipients, `lastSync`) per transaction. When adding new sync logic, verify that you are not duplicating writes to the same
+   document.
 
 9. **Never store large blobs in Firestore.** Notes with embedded images should store references (URLs or base64 within the
    encrypted note body), not separate Firestore documents per image. Firestore documents have a 1 MB size limit.
@@ -662,20 +672,20 @@ reads, writes, and deletes.
 10. **Test with Firestore usage monitoring.** During development of cloud-related features, check the Firebase console usage tab
     to verify that operations are within expected ranges.
 
-11. **One `lastSync` write per batch.** `setElementInCloud` / `deleteElementInCloud` bump the device's `lastSync` after every
-    write unless `noUpdateLastSync: true`; batch loops pass it and call `updateLastSyncInCloud()` once at the end (it's only
-    displayed in the devices list, see LL-021).
+11. **One `lastSync` write per batch.** `lastSync` rides on the push transaction's device-doc update (it's only displayed in the
+    devices list, see LL-021); a full sync with nothing to push calls `touchLastSync` once.
 
 ### Operation Cost Examples
 
-| User Action                     | Expected Firestore Operations                                                |
-| ------------------------------- | ---------------------------------------------------------------------------- |
-| Create a note (synced)          | 1 write (+1 fan-out write with other devices) + 1 `lastSync` write per batch |
-| Edit a note (synced, debounced) | 1 write (+1 fan-out write with other devices) + 1 `lastSync` write per batch |
-| Delete a note (synced)          | 1 delete                                                                     |
-| Open app with sync enabled      | 1-2 reads (check pending changes)                                            |
-| Full initial sync (100 notes)   | ~100 reads + ~100 writes                                                     |
-| Wipe all notes from cloud       | N deletes (1 per note)                                                       |
+| User Action                   | Expected Firestore Operations                                              |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| Create / edit a note (synced) | 2 reads (note + device doc, in the guard transaction) + 2 writes per batch |
+| ...on each other device       | 1 listener read + ack transaction (1 read + 1 write)                       |
+| Delete a note (synced)        | 2 reads + 1 delete + 1 write per batch                                     |
+| Open app with sync enabled    | N device docs + 1 vault read (listeners' first snapshot)                   |
+| Idle, app open                | N + 1 reads every 5 min (fallback poll); presence: 1 write per open/close  |
+| Full sync (100 notes)         | ~100 reads + writes only for what this device has newer                    |
+| Wipe all notes from cloud     | N deletes (batched, 200 per batch)                                         |
 
 ### End-to-End Encryption (per-vault) -- safety rules
 

@@ -1071,6 +1071,56 @@ read.
 
 ---
 
+### LL-040: Last-writer-wins sync without revisions lost edits silently
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Found in review (ADR-016), each a silent data loss: a receiver cleared a sender's fan-out queue with a
+read-modify-write, dropping a change the sender queued in between; an incoming copy overwrote a local edit not yet pushed, and
+the two devices then kept different versions for good; the connect/unlock full sync uploaded every note and then _replaced_ the
+local notes with the cloud set, so a note whose upload failed (e.g. over 1 MiB) vanished and an offline device's stale copies
+overwrote newer ones; with a third device offline, its pending queue entries were replayed to the others on every push and
+brought trashed notes back; a long-offline device let its sender's queue doc grow past Firestore's 1 MiB limit, wedging that
+sender's uploads.
+
+**Root cause:** No notion of versions: every write was "the latest" by arrival order, and the shared queues were acknowledged
+without checking what had been applied.
+
+**Fix:** Revisions on every synced change (`rev`, `syncedRev`, `deletedAt`, tombstones) and a pure merge
+(`libs/cloud/merge.ts`): stale versions are ignored, concurrent changes keep both versions (conflict copy), a deletion applies
+only when newer. Acks are transactions over a content token; pushes refuse to overwrite a newer cloud version; the full sync
+reconciles instead of replacing; queued entries degrade to references, then to a full-sync marker, before the doc limit.  
+**Rule:** A sync write must say which version it's based on, and a sync read must be compared, not just applied. Never replace a
+local set with a remote one: merge per item, and never drop on absence.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
+### LL-041: A new fan-out entry shape must fail old apps' decryption
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Caught before release: the first reference entry (`{ id, rev, ref: true }`, queued when a note doesn't fit
+the sender's doc) had no `type`/`text`. The released 3.2.0 `tryDecryptNote` decrypts only the fields a note type has, found
+nothing to check, and returned the entry as a valid note: 3.2.0 would have stored a note without category or content (the note
+list reads `category.index`).
+
+**Root cause:** `tryDecryptNote` proves the key only through the fields it decrypts; an entry with none of them passes.
+
+**Fix:** References carry `type: "text"` and a `text` that decrypts with no key, so every version's marker check rejects and
+skips them (tested against the real `crypt.ts` in `scripts/sync.test.mjs`).  
+**Rule:** Anything new put in a queue that older versions read as notes must fail their `tryDecryptNote`. Check new wire shapes
+against the code of the oldest version still installed.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

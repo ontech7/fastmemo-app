@@ -70,12 +70,12 @@ src/
 
   slicers/             # Redux state management
     store.ts           # Store configuration (nested persist, notes JSON reuse, legacy fold, typed hooks)
-    notesSlice.ts      # Notes state: CRUD, trash, filters, cloud sync queue (27 reducers)
-    categoriesSlice.ts # Categories state: CRUD, reorder, cloud sync queue (9 reducers)
+    notesSlice.ts      # Notes state: CRUD, trash, filters, revisions, cloud outbox, sync plans/pushes (28 reducers)
+    categoriesSlice.ts # Categories state: CRUD, reorder, cloud outbox, sync plans/pushes (8 reducers)
     settingsSlice.ts   # App settings: language, security, cloud, AI, dev mode (12 reducers)
     thunks/
-      notes.ts         # Async cloud sync for notes (drain outbox queue)
-      categories.ts    # Async cloud sync for categories (drain outbox queue)
+      notes.ts         # wipeNotes (+ the cloud collection)
+      categories.ts    # wipeCategories (+ the cloud collection)
 
   types/               # TypeScript type definitions
     index.ts           # Barrel re-export (type-only exports)
@@ -87,7 +87,8 @@ src/
     config.ts          # AppConfigs interface
 
   hooks/               # Custom React hooks
-    useCloudSync.ts    # Cloud sync lifecycle management (connect, disconnect, sync, handshake)
+    useCloudSync.ts    # Cloud sync lifecycle management (connect, disconnect, full sync, handshake)
+    useLiveNote.ts     # Open editor: reloads changes merged from other devices, publishes presence
     useRouter.ts       # Expo Router wrapper with push-debounce (1000ms guard)
     useSecret.ts       # Secret code / biometric authentication
     useNetInfo.ts      # Network connectivity state
@@ -109,7 +110,16 @@ src/
     storage/           # Platform-split: native (fsStorage: atomic tmp+rename writes) / web (localforage/IndexedDB)
                        #   + legacyRootNotes.ts: one-shot fold of the notes copy out of `persist:root`
     flushOnExit.ts     # Platform-split: flush pending editor batches + persistor on background / hide / window close
-    firebase.ts        # Firestore CRUD, device management, handshake, cloud sync, vault doc CRUD
+    cloud/             # Cloud sync (ADR-016)
+      types.ts         # CloudBackend contract (devices, vault, data, push, listeners, ack, presence)
+      firebaseBackend.ts # The Firestore implementation: the ONLY importer of firebase/*
+      index.ts         # Active backend (`cloud`), isCloudConnected / only_if_cloudConnected, device uuid
+      revision.ts      # noteRev / nextRev / touchNote, deletion stubs, tombstone pruning (pure)
+      merge.ts         # Merge rules: planner for incoming versions, full-sync reconcile, categories (pure)
+      syncEngine.ts    # Listeners -> merge -> persist -> ack; serialized pushes with backoff; poll; presence
+      sync.ts          # The app's engine (bound to the store) + event bus (applied/devices/removed/vaultStale)
+      presence.ts      # useNoteOpenElsewhere(): which other device has a note open
+      token.ts         # contentToken(): stable hash of queue content (guards the ack)
     registry.ts        # In-memory Map for passing non-serializable data between screens (+ vault continuation / recovery-key transport, pending editor flushes)
     localization.ts    # Locale detection wrapper (expo-localization + web fallback)
     secureStore.ts     # Platform-split (.web.ts): expo-secure-store / localforage key-value
@@ -134,7 +144,7 @@ src/
 
   providers/           # React context providers
     KanbanDragProvider.tsx  # Kanban drag-and-drop state (reanimated shared values)
-    SyncOnProvider.tsx      # Headless cloud sync polling (returns null, side-effects only)
+    SyncOnProvider.tsx      # Headless: runs the sync engine while connected + unlocked, turns its events into UI
 
   constants/           # Static constants
     styles.ts          # COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, BORDER, SIZE, MONOSPACE_FONT
@@ -168,24 +178,27 @@ src/
                v                       v
         +------------------------------------------+
         |         Cloud Sync Outbox Pattern         |
-        |  Reducers queue encrypted items into      |
-        |  cloud.items.add / cloud.items.delete     |
-        |  via only_if_cloudConnected()             |
+        |  Reducers stamp `rev` (touchNote) and     |
+        |  queue into cloud.items.add / .delete /   |
+        |  .detach via only_if_cloudConnected()     |
         +------------------------------------------+
-               |                       |
-               v                       v
+               |                       ^
+               v                       | applyNotesPlan / notesPushed
         +------------------------------------------+
-        |        Async Thunks (thunks/)             |
-        |  Drain outbox queues -> Firebase CRUD     |
-        |  On fulfilled -> remove from outbox       |
+        |   SyncEngine (libs/cloud/syncEngine.ts)   |
+        |  One task at a time: merge incoming       |
+        |  (planner, flush editors first) -> persist|
+        |  -> ack; push outbox (encrypt at push)    |
         +------------------------------------------+
                |
                v
         +------------------------------------------+
-        |          Firebase (libs/firebase.ts)       |
-        |  Firestore collections: notes, categories  |
-        |  + vault doc (encryption envelope)         |
-        |  Device management, handshake, sync        |
+        |   CloudBackend (FirebaseBackend)          |
+        |  notes/, categories/, vault/config,       |
+        |  connectedDevices/{uuid}: fan-out queues, |
+        |  devicesToSync, lastSync, presence        |
+        |  onSnapshot devices + vault; guarded      |
+        |  transactional push and ack               |
         +------------------------------------------+
 ```
 
@@ -205,18 +218,38 @@ connect (handshake)
 
 queueCloudAdd (notesSlice)   -> gated on isVaultUnlocked(); CryptNote.encrypt uses the cached DEK
                                 (per-note AES only — fast; PBKDF2 runs ONLY at setup/unlock/reset)
-queueCloudDelete / detach    -> content-stripped deletionStub (no DEK needed; propagates while locked)
-uploadCloudData              -> instruments vaultProgress (begin/tick/clear) -> determinate bar on
-                                the vault-recovery / vault-unlock / connect (resync) loaders
-SyncOnProvider               -> every sync loop gated on useVaultUnlocked(); re-validates the cached
-                                DEK against the cloud vault (dekMatchesVault) and re-locks on reset
+queueCloudDelete / detach    -> id + revision stub (no DEK needed; propagates while locked)
+syncCloudData (full sync)    -> SyncEngine.fullSync(onProgress) -> vaultProgress (begin/set/clear) -> determinate
+                                bar on the vault-recovery / vault-unlock / connect (resync) loaders
+SyncOnProvider               -> the engine runs only while useVaultUnlocked(); its vault listener (server
+                                snapshots) re-validates the DEK (dekMatchesVault) and reports vaultStale -> re-lock
 ```
 
 `readVault()` (vault presence + DEK-staleness checks) uses a **server read** (`getDocFromServer`), never Firestore's local cache
-— a cached old vault doc would mask a reset done on another device and survive restarts (see LL-027). Offline -> "error" ->
-callers skip (no false lock/create). A note is never lost to slow encryption/upload: it is written to local state (plaintext,
-persisted) before `queueCloudAdd`, the encrypt-into-outbox is synchronous, and the outbox retains unconfirmed items until the
-Firestore write succeeds (retry — see thunks/notes.ts).
+— a cached old vault doc would mask a reset done on another device and survive restarts (see LL-027). Listeners act only on
+server-confirmed snapshots (not `fromCache`, no pending local writes). Offline -> "error" -> callers skip (no false
+lock/create). A note is never lost to slow encryption/upload: it is written to local state (plaintext, persisted) before
+`queueCloudAdd`, and the outbox keeps every entry until a push commits it (the engine retries with backoff, 2s -> 5 min).
+
+### Cloud Sync Engine (ADR-016)
+
+```
+other device push -> connectedDevices/{sender}: queues + devicesToSync += me
+  -> onSnapshot (server) -> SyncEngine.processDevices
+       removed from the list? -> onRemoved (disconnect)
+       per sender ChangeSet: readVersions (fetch references, decrypt; unreadable -> vault check)
+         -> flushPending() -> createPlanner(state).add/remove/detach -> applyNotesPlan
+         -> persistor.flush() -> ackChanges (transaction: only if the queues are still the merged ones)
+         -> onApplied {changed, conflicts} -> toast + open editor reloads (useLiveNote)
+local change -> reducer: touchNote (rev) + outbox -> store.subscribe -> kick (200 ms)
+  -> pushOutbox: encrypt the stored note now, base = syncedRev
+  -> backend.push (transaction per chunk: guarded writes, exclusive fan-out entries, arrayUnion recipients)
+       committed -> notesPushed (dequeue if unchanged, syncedRev = pushed rev)
+       superseded (cloud newer than base) -> merged as incoming, then pushed again
+       rejected (e.g. > 1 MiB) -> kept queued, skipped until next launch
+full sync (connect/unlock/"sync now"/overflow) -> pull queues -> reconcile(fetchNotes) -> push; due again until it completes
+presence: editor open -> setPresence(noteId) (debounced, 5 min heartbeat) -> others: useNoteOpenElsewhere
+```
 
 ### Persistence Architecture
 
@@ -371,22 +404,25 @@ components/notes/* --> slicers/ (useSelector, useDispatch)
                   --> libs/ai (AI editor actions)
                   --> hooks/useRouter (navigation)
 
-slicers/*Slice.ts --> utils/crypt (encrypt/decrypt for cloud queue)
+slicers/*Slice.ts --> utils/crypt (encrypt for the cloud outbox)
                  --> utils/sort (note ordering)
-                 --> libs/firebase (cloud sync in thunks -- NOT in reducers)
+                 --> libs/cloud (only_if_cloudConnected) + libs/cloud/revision (stamping) -- no cloud I/O in reducers
                  --> libs/vaultSession (isVaultUnlocked gate before queuing encrypted items)
 
 utils/crypt --> libs/vaultSession (reads the in-memory DEK; encrypt fails closed if locked)
-libs/vaultManager --> utils/vault (envelope primitives) + libs/firebase (vault doc) + libs/vaultSession (cache)
-providers/SyncOnProvider --> libs/vaultSession + hooks/useVaultUnlocked (gate every sync loop on unlock)
+libs/vaultManager --> utils/vault (envelope primitives) + libs/cloud (vault doc) + libs/vaultSession (cache)
+providers/SyncOnProvider --> libs/vaultSession + hooks/useVaultUnlocked (engine runs only while unlocked)
 
 libs/ai/context.ts --> llama.rn (native LLM)
                    --> slicers/store (direct getState() for categories, cloud key)
                    --> libs/i18n (language-aware prompts)
 
-providers/SyncOnProvider --> slicers/ (selectors + thunk dispatch)
-                         --> libs/firebase (device sync)
-                         --> hooks/useNetInfo (connectivity check)
+providers/SyncOnProvider --> libs/cloud/sync (engine lifecycle + events) + libs/cloud/presence
+                         --> hooks/useNetInfo (back online -> engine.resume)
+
+libs/cloud/sync --> slicers/store (store, persistor) + slices (plan/push actions) + libs/registry (flushPending)
+libs/cloud/syncEngine, merge, revision --> no app imports (pure; tested by scripts/sync.test.mjs)
+libs/cloud/firebaseBackend --> firebase/* (the only place; tested by scripts/sync-firestore.test.mjs)
 ```
 
 ## Approximate Scale

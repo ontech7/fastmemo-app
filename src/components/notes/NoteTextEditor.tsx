@@ -2,6 +2,7 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import FindReplaceBar from "@/components/notes/FindReplaceBar";
@@ -101,6 +102,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const isEmpty = useCallback((n: TextNote) => isStringEmpty(n.title) && isStringEmpty(n.text), []);
   const buildPayloadExtras = useCallback((n: TextNote) => ({ text: n.text }), []);
 
+  const [noteTextLength, setNoteTextLength] = useState(() => getTextLength(memoInitialNote.text));
+  const [noteTextSize, setNoteTextSize] = useState(() => getTextSize(memoInitialNote.text));
+
+  const richTextEditor = useRef(null);
+
   const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TextNote>({
     initialNote: memoInitialNote,
     defaultType: "text",
@@ -109,12 +115,13 @@ export default function NoteTextEditor({ initialNote }: Props) {
     isEmpty,
     buildPayloadExtras,
     getTitleSource: (n) => stripHtml(n.text),
+    // Changed on another device while open here: the WebView editor holds its own copy of the content.
+    onRemoteChange: (remote) => {
+      richTextEditor.current?.setContentHTML(remote.text);
+      setNoteTextLength(getTextLength(remote.text));
+      setNoteTextSize(getTextSize(remote.text));
+    },
   });
-
-  const [noteTextLength, setNoteTextLength] = useState(getTextLength(note.text));
-  const [noteTextSize, setNoteTextSize] = useState(getTextSize(note.text));
-
-  const richTextEditor = useRef(null);
 
   const [showFindReplace, setShowFindReplace] = useState(false);
   // The RichEditor (a WebView) is mounted immediately into a reserved, flex-sized
@@ -324,6 +331,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
             <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
           </View>
+          <NotePresenceBanner noteId={note.id} />
 
           <View style={styles.subtitleWrapper}>
             <Text style={[styles.subtitle, { flexGrow: 1 }]}>

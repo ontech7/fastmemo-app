@@ -261,6 +261,10 @@ const fr = {
     title: "Changer de Catégorie",
   },
   cloudsync: {
+    conflict_suffix: "(conflit)",
+    conflict_copies: "Modifiée sur deux appareils avant la synchronisation : l'autre version a été gardée en copie",
+    open_on: "Ouverte sur {{devices}}",
+    note_deleted_elsewhere: "Cette note a été mise à la corbeille sur un autre appareil. La modifier la restaure.",
     title: "Cloud Sync",
     syncing_1: "Synchronisation en cours...",
     syncing_2: "Attendre la fin",
@@ -357,6 +361,7 @@ const fr = {
     upToDate: "À jour",
     pending: "{{count}} en attente",
     mostRecent: "Plus récent",
+    count: "({{count}}/{{limit}}) appareils",
   },
   createcategory: {
     title_create: "Créer une Catégorie",

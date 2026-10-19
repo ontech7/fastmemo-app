@@ -3,7 +3,7 @@ import lottieJson from "~/assets/lottie/Logo_with_Text.json";
 import LottieView from "@/components/lottie/LottieAnimation";
 import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
-import { initFirebase } from "@/libs/firebase";
+import { cloud } from "@/libs/cloud";
 import { getLocales } from "@/libs/localization";
 import { isObjectEmpty } from "@/utils/string";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -32,7 +32,7 @@ export default function LoadingScreen() {
         const cloudSyncRaw = await AsyncStorage.getItem("@cloudSync");
         const cloudSyncConfig = JSON.parse(cloudSyncRaw ?? "{}");
         if (!isObjectEmpty(cloudSyncConfig)) {
-          initFirebase(cloudSyncConfig);
+          cloud.init(cloudSyncConfig);
         }
 
         const firstScreen = await AsyncStorage.getItem("@firstScreen");

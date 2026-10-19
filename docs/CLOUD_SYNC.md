@@ -33,15 +33,23 @@ credentials above, plus the **encryption password** described below.
 
 ### How It Works
 
-| Step                | Description                                                           |
-| ------------------- | --------------------------------------------------------------------- |
-| **1. Handshake**    | Establishes the connection using your Firebase credentials            |
-| **2. Unlock**       | You enter the encryption password; the vault key is derived locally   |
-| **3. Upload**       | Local data is encrypted with the vault key and uploaded to Firestore  |
-| **4. Download**     | Encrypted changes from other devices are decrypted and synced locally |
-| **5. Multi-device** | Manage connected devices in cloud settings                            |
-| **6. Auto-sync**    | Checks for updates every 20 seconds                                   |
-| **7. Offline mode** | Changes queue locally and sync when back online                       |
+| Step                | Description                                                                                        |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| **1. Handshake**    | Establishes the connection using your Firebase credentials                                         |
+| **2. Unlock**       | You enter the encryption password; the vault key is derived locally                                |
+| **3. First sync**   | Your notes and the cloud's are merged: what's only here is uploaded (encrypted), the rest comes in |
+| **4. Live sync**    | Changes reach your other devices within seconds; a note open on another device updates in place    |
+| **5. Multi-device** | Manage connected devices in cloud settings; a note open elsewhere shows "Open on _device_"         |
+| **6. Offline mode** | Changes queue locally and go out when back online, retried until the cloud has them                |
+| **7. Conflicts**    | A note edited on two devices before they synced keeps both versions (see below)                    |
+
+### Conflicts
+
+Every change carries a revision, so the newer version of a note always wins, whatever order the devices come online in. When a
+note was changed on two devices before either change reached the other (for example, one of them was offline), nothing is
+overwritten: the newer version stays, and the other is kept next to it as a copy titled "_title_ (conflict)". Keep the one you
+want and delete the other. A note deleted on one device and edited later on another comes back; deleted after the edit, it goes
+to the trash, edit included.
 
 ## End-to-End Encryption
 

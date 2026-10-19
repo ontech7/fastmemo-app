@@ -7,9 +7,11 @@ import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
 import KeyIcon from "react-native-heroicons/outline/KeyIcon";
 import SignalSlashIcon from "react-native-heroicons/outline/SignalSlashIcon";
 import StarIcon from "react-native-heroicons/outline/StarIcon";
+import UsersIcon from "react-native-heroicons/outline/UsersIcon";
 import { useSelector } from "react-redux";
 
 import { useRouter } from "@/hooks/useRouter";
+import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
 
@@ -55,6 +57,9 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
   const { sortBy } = useSelector(getNoteFilters);
 
   const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked, local } = content;
+
+  // Another synced device has it open right now.
+  const openElsewhere = useNoteOpenElsewhere(id);
 
   const onLongPressHandler = () => {
     if (!isDeleteMode) {
@@ -158,6 +163,15 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
           {metaLabel}
           <Text style={styles.dateValue}>{metaDate}</Text>
         </Text>
+
+        {!!openElsewhere && (
+          <View style={styles.presenceRow}>
+            <UsersIcon size={12} color={fg} />
+            <Text style={[styles.presence, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
+              {t("cloudsync.open_on", { devices: openElsewhere })}
+            </Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -232,6 +246,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   dateValue: { fontFamily: FONT.semiBold },
+  presenceRow: { flexDirection: "row", alignItems: "center", gap: PADDING_MARGIN.xs + 1 },
+  presence: { flexShrink: 1, fontSize: FONTSIZE.small, fontFamily: FONT.medium, opacity: 0.75 },
 });
 
 export default memo(NoteCard);
