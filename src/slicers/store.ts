@@ -26,12 +26,32 @@ const failedNotesRead = (err: unknown): never => {
   throw err;
 };
 
+// Whether the last notes write failed: redux-persist only logs it, and its flush() resolves anyway.
+let notesWriteFailed = false;
+
 const baseNotesStorage = FSStorage();
 const notesStorage = baseNotesStorage && {
   getItem: (key: string) => baseNotesStorage.getItem(key).catch(failedNotesRead),
-  setItem: (key: string, value: string) => (notesReadFailed ? Promise.resolve() : baseNotesStorage.setItem(key, value)),
+  setItem: (key: string, value: string) =>
+    notesReadFailed
+      ? Promise.resolve()
+      : baseNotesStorage.setItem(key, value).then(
+          () => {
+            notesWriteFailed = false;
+          },
+          (err: unknown) => {
+            notesWriteFailed = true;
+            throw err;
+          }
+        ),
   removeItem: (key: string) => baseNotesStorage.removeItem(key),
 };
+
+/** Whether the notes were read at launch (if not, they aren't written this session, see above). */
+export const notesLoaded = (): boolean => !notesReadFailed;
+
+/** Whether the notes as they are now are on disk, after a `persistor.flush()`. */
+export const notesPersisted = (): boolean => !notesReadFailed && !notesWriteFailed;
 
 // redux-persist serializes every key again right after rehydrating it: all notes, on every boot,
 // though nothing changed. Rehydrated values remember the JSON they came from, reused for as long as

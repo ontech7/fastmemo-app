@@ -7,9 +7,12 @@ import {
 } from "@/slicers/settingsSlice";
 import { formatDateTime } from "@/utils/date";
 import { deriveNoteTitle } from "@/utils/string";
+import { toast } from "@/utils/toast";
 import { webhook } from "@/utils/webhook";
+import { useLiveNote } from "@/hooks/useLiveNote";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 
 import type { Note, NoteType, RootState, WebhookPayload } from "@/types";
@@ -22,6 +25,15 @@ import type { Note, NoteType, RootState, WebhookPayload } from "@/types";
 const COMMIT_DEBOUNCE_MS = 300;
 const COMMIT_MAX_WAIT_MS = 1000;
 
+/** Whether two versions of a note hold the same values (a shallow comparison: editors replace what they change). */
+const isSameNote = (a: Note, b: Note): boolean => {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of keys) {
+    if (a[key as keyof Note] !== b[key as keyof Note]) return false;
+  }
+  return true;
+};
+
 interface UseNoteEditorOptions<T extends Note> {
   initialNote: T;
   defaultType: NoteType;
@@ -31,12 +43,21 @@ interface UseNoteEditorOptions<T extends Note> {
   buildPayloadExtras: (note: T) => Record<string, unknown>;
   /** Text a brand-new, still-untitled note derives its title from. Omit to disable. */
   getTitleSource?: (note: T) => string;
+  /**
+   * Another device changed the open note: the hook now holds the stored version (load it into a WebView editor);
+   * `previous` is the version it was showing.
+   */
+  onRemoteChange?: (note: T, previous: T) => void;
+  /** What of the editor's current state survives a reload from another device's change. */
+  keepOnRemote?: (remote: T, current: T) => T;
 }
 
 interface UseNoteEditorResult<T extends Note> {
   note: T;
   setNote: React.Dispatch<React.SetStateAction<T>>;
   setNoteAsync: (currNote: T) => void;
+  /** As on native: an update computed from the current copy. */
+  updateNoteAsync: (update: (current: T) => T) => void;
   flushNote: () => void;
   updateNoteWebhook: () => Promise<void>;
   /** Title derived from content while a new note is untitled; shown as the field placeholder. */
@@ -61,7 +82,10 @@ export function useNoteEditor<T extends Note>({
   isEmpty,
   buildPayloadExtras,
   getTitleSource,
+  onRemoteChange,
+  keepOnRemote,
 }: UseNoteEditorOptions<T>): UseNoteEditorResult<T> {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
 
   const webhook_add = useSelector(addWebhookSelector);
@@ -70,6 +94,8 @@ export function useNoteEditor<T extends Note>({
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
 
   const [note, setNote] = useState<T>(initialNote);
+  // The editor's note, synchronously (state lags a render behind).
+  const currentRef = useRef<T>(initialNote);
 
   /* --- Auto-title for brand-new, untitled notes --- */
 
@@ -194,7 +220,12 @@ export function useNoteEditor<T extends Note>({
 
   const setNoteAsync = useCallback(
     (currNote: T) => {
+      const prev = currentRef.current;
+      currentRef.current = currNote;
       setNote(currNote);
+
+      // Nothing changed (e.g. an editor reporting back the content it was just reloaded with): nothing to commit.
+      if (isSameNote(prev, currNote)) return;
 
       const now = Date.now();
       if (!pendingNoteRef.current) pendingSinceRef.current = now;
@@ -207,11 +238,35 @@ export function useNoteEditor<T extends Note>({
     [flushNote]
   );
 
+  const updateNoteAsync = useCallback((update: (current: T) => T) => setNoteAsync(update(currentRef.current)), [setNoteAsync]);
+
   useEffect(() => () => flushNote(), [flushNote]);
 
   useFocusEffect(useCallback(() => () => flushNote(), [flushNote]));
 
   useEffect(() => registerPendingFlush(flushNote), [flushNote]);
+
+  /* --- Changes from other devices (see the native variant) --- */
+
+  useLiveNote(note.id, {
+    onRemote: (stored) => {
+      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = null;
+      pendingNoteRef.current = null;
+
+      const previous = currentRef.current;
+      let next = keepOnRemote ? keepOnRemote(stored as T, previous) : (stored as T);
+      // Still untitled here: the stored title is the one derived from the content (see auto-title), not a name.
+      const deriveFrom = getTitleSourceRef.current;
+      if (wasNewRef.current && !previous.title.trim() && deriveFrom && next.title === deriveNoteTitle(deriveFrom(next))) {
+        next = { ...next, title: "" };
+      }
+      currentRef.current = next;
+      setNote(next);
+      onRemoteChange?.(next, previous);
+    },
+    onDeleted: () => toast(t("cloudsync.note_deleted_elsewhere")),
+  });
 
   /* --- Explicit back button handler (no hardwareBackPress on web) --- */
 
@@ -236,5 +291,5 @@ export function useNoteEditor<T extends Note>({
     });
   }, [note, flushNote, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, isEmpty, buildWebhookPayload]);
 
-  return { note, setNote, setNoteAsync, flushNote, updateNoteWebhook, autoTitle };
+  return { note, setNote, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle };
 }

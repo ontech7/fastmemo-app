@@ -20,6 +20,11 @@ export interface NotesState {
     };
   };
   filters: NoteFilters;
+  /**
+   * Ids of permanently deleted notes -> the revision they were deleted at, so an older copy still queued somewhere can't
+   * bring them back (ADR-016). Pruned after a while.
+   */
+  purged?: Record<string, number>;
 }
 
 export interface CategoriesState {

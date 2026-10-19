@@ -1,5 +1,5 @@
 import { EditorView, lineNumbers, highlightActiveLine, highlightActiveLineGutter, keymap } from "@codemirror/view";
-import { Compartment, EditorState } from "@codemirror/state";
+import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { syntaxHighlighting, defaultHighlightStyle, indentOnInput, bracketMatching, foldGutter } from "@codemirror/language";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
@@ -72,6 +72,8 @@ const config = window.__EDITOR_CONFIG__ || {};
 let currentLang = config.language || "javascript";
 let currentReadOnly = config.readOnly || false;
 let suppressChange = false;
+// The last document React sent (see CodeEditorWebView's docRef): changes report it.
+let currentDoc = 0;
 
 // Helper: send messages back to React on both native and web/Tauri
 function sendToReact(data) {
@@ -92,7 +94,7 @@ window.addEventListener("message", function (event) {
 
 const changeListener = EditorView.updateListener.of((update) => {
   if (update.docChanged && !suppressChange) {
-    sendToReact(JSON.stringify({ type: "change", code: update.state.doc.toString() }));
+    sendToReact(JSON.stringify({ type: "change", code: update.state.doc.toString(), doc: currentDoc }));
   }
 });
 
@@ -126,7 +128,29 @@ window.handleMessage = function (msgStr) {
   try {
     const msg = JSON.parse(msgStr);
     if (msg.type === "setCode") {
-      if (msg.undoable) {
+      currentDoc = msg.doc ?? currentDoc;
+      if (msg.remote) {
+        // Another device's edit of this document: only the span that differs is replaced, so the cursor and selection
+        // map through it, and it stays out of the undo history (undo reverts this device's own edits).
+        const doc = view.state.doc.toString();
+        const code = msg.code;
+        let from = 0;
+        while (from < doc.length && from < code.length && doc[from] === code[from]) from++;
+        let tail = 0;
+        while (
+          tail < doc.length - from &&
+          tail < code.length - from &&
+          doc[doc.length - 1 - tail] === code[code.length - 1 - tail]
+        ) {
+          tail++;
+        }
+        suppressChange = true;
+        view.dispatch({
+          changes: { from, to: doc.length - tail, insert: code.slice(from, code.length - tail) },
+          annotations: Transaction.addToHistory.of(false),
+        });
+        suppressChange = false;
+      } else if (msg.undoable) {
         // An edit of the current document (e.g. AI-commented code): one undo step.
         suppressChange = true;
         view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: msg.code } });

@@ -1,6 +1,7 @@
 import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
 import CodeDraggableTab from "@/components/notes/CodeDraggableTab";
 import CodeEditorWebView, { type CodeEditorWebViewRef } from "@/components/notes/CodeEditorWebView";
 import CodeLanguagePickerModal from "@/components/notes/CodeLanguagePickerModal";
@@ -94,7 +95,21 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: CodeNote) => ({ tabs: n.tabs, activeTabId: n.activeTabId }), []);
 
-  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
+  // Changed on another device while open here: this device stays on its tab (if it still exists), and the WebView
+  // editor, which holds its own copy of the code, loads the new one.
+  const keepOnRemote = useCallback(
+    (remote: CodeNote, current: CodeNote) =>
+      remote.tabs.some((tab) => tab.id === current.activeTabId) ? { ...remote, activeTabId: current.activeTabId } : remote,
+    []
+  );
+  const onRemoteChange = useCallback((remote: CodeNote, previous: CodeNote) => {
+    const tab = remote.tabs.find((candidate) => candidate.id === remote.activeTabId) ?? remote.tabs[0];
+    // Same tab: an edit of the document on screen (the cursor stays). Another tab: a new document.
+    editorRef.current?.setCode(tab?.code || "", { remote: tab?.id === previous.activeTabId });
+    editorRef.current?.setLanguage(tab?.language || "plaintext");
+  }, []);
+
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
     initialNote: memoInitialNote,
     defaultType: "code",
     addWebhookSelector: selectorWebhook_addCodeNote,
@@ -106,6 +121,8 @@ export default function NoteCodeEditor({ initialNote }: Props) {
         .map((tab) => tab.code)
         .filter(Boolean)
         .join(" "),
+    keepOnRemote,
+    onRemoteChange,
   });
 
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -230,6 +247,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
               </View>
               <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
+            <NotePresenceBanner noteId={note.id} />
           </View>
 
           <View style={styles.tabBarContainer}>
@@ -313,10 +331,10 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   noteType="code"
                   getContent={() => activeTab?.code || ""}
                   noteTitle={note.title}
-                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                  onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                   onCategorySuggested={(name) => {
                     const cat = findCategoryByName(name);
-                    if (cat) setNoteAsync({ ...note, category: cat });
+                    if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                   }}
                   onCodeCommented={(commentedCode) => {
                     const updatedTabs = note.tabs.map((tab) =>

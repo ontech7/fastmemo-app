@@ -261,6 +261,10 @@ const ja = {
     title: "カテゴリーの変更",
   },
   cloudsync: {
+    conflict_suffix: "（競合）",
+    conflict_copies: "同期前に2台のデバイスで編集されました：両方のバージョンを保持しました（一方はコピー）",
+    open_on: "{{devices}} で開いています",
+    note_deleted_elsewhere: "このメモは別のデバイスでゴミ箱に移動されました。編集すると元に戻ります。",
     title: "クラウド同期",
     syncing_1: "同期中...",
     syncing_2: "完了までお待ちください",
@@ -352,6 +356,7 @@ const ja = {
     upToDate: "最新",
     pending: "{{count}} 件保留中",
     mostRecent: "最も新しい",
+    count: "（{{count}}/{{limit}}）台のデバイス",
   },
   createcategory: {
     title_create: "カテゴリーを作成",

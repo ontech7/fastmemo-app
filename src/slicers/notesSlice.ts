@@ -6,13 +6,16 @@ import type { Category, Note, NoteFilters, NotesState, RootState } from "@/types
 
 import { retrieveDirtyNoteId } from "@/libs/registry";
 
+import type { SyncPlan } from "@/libs/cloud/merge";
+import type { NotesPushed } from "@/libs/cloud/syncEngine";
+
 import { configs } from "@/configs";
 import { defaultCategory } from "@/configs/default";
-import { only_if_cloudConnected } from "@/libs/firebase";
-import { getDEK, isVaultUnlocked } from "@/libs/vaultSession";
-import { CryptNote, tryDecryptNote } from "@/utils/crypt";
-import { createdAt_asc_sort } from "@/utils/sort";
-import { addCloudNotesAsync, deleteCloudNotesAsync, detachCloudNotesAsync, wipeNotes } from "./thunks/notes";
+import { only_if_cloudConnected } from "@/libs/cloud";
+import { baseOf, deletionStub, forUpload, nextRev, noteRev, pruneTombstones, touchNote } from "@/libs/cloud/revision";
+import { isVaultUnlocked } from "@/libs/vaultSession";
+import { CryptNote } from "@/utils/crypt";
+import { wipeNotes } from "./thunks/notes";
 
 const initialState: NotesState = {
   items: [],
@@ -45,26 +48,16 @@ const queueCloudAdd = (state: NotesState, note: Note): void => {
     // needs no DEK, so it also happens while the vault is locked (the resync on unlock uploads the note).
     delete state.cloud.items.delete[note.id];
     if (!isVaultUnlocked()) return;
-    state.cloud.items.add[note.id] = CryptNote.encrypt(note);
+    // The sync engine encrypts the stored note again when it pushes (its latest content, under the current key): this
+    // copy marks the note as waiting, and keeps the outbox readable by an older app version after a rollback.
+    state.cloud.items.add[note.id] = CryptNote.encrypt(forUpload(note));
   });
 };
 
 /**
- * A delete/detach only needs the note id downstream (deleteElementInCloud by id,
- * and consumers read only `id`). So we queue a content-stripped stub instead of
- * an encrypted note: it needs no DEK (works even while the vault is locked) and
- * never leaks plaintext content into the cloud fan-out doc.
+ * Queue a note for cloud deletion — unless it is an offline (device-only) note. A stub goes out (id and revision): it
+ * needs no DEK, so it also works while the vault is locked, and leaks no content into the fan-out doc.
  */
-const deletionStub = (note: Note): Note => {
-  const stub = { ...note } as Record<string, unknown>;
-  delete stub.text;
-  delete stub.list;
-  delete stub.columns;
-  delete stub.tabs;
-  return stub as unknown as Note;
-};
-
-/** Queue a note for cloud deletion — unless it is an offline (device-only) note. */
 const queueCloudDelete = (state: NotesState, note: Note): void => {
   if (note.local) return;
   only_if_cloudConnected(() => {
@@ -73,15 +66,50 @@ const queueCloudDelete = (state: NotesState, note: Note): void => {
   });
 };
 
-/**
- * Dequeues what a cloud thunk processed — unless a newer entry replaced it while it was in flight:
- * that one still has to go out (dropping it lost the last edits made during an upload).
- */
-const dequeueProcessed = (queue: Record<string, Note>, processed: Record<string, Note>): void => {
-  const base = original(queue);
-  Object.entries(processed).forEach(([id, note]) => {
-    if (base?.[id] === note) delete queue[id];
+/** Moves a note to the trash (a draft): stamps the deletion, which is a synced change. */
+const trashNote = (note: Note, deleteDate: number): void => {
+  note.deleteDate = deleteDate;
+  touchNote(note);
+  note.deletedAt = note.rev;
+};
+
+/** Takes a note out of the trash (a draft). Restoring is a synced change too: it beats the deletion. */
+const untrashNote = (note: Note): void => {
+  delete (note as Partial<Note>).deleteDate;
+  delete note.deletedAt;
+  touchNote(note);
+};
+
+/** Permanent deletion: remembers the id, so an older copy still queued on another device can't bring it back. */
+const markPurged = (state: NotesState, notes: Note[]): void => {
+  if (!state.purged) state.purged = {};
+  const purged = state.purged;
+  notes.forEach((note) => {
+    if (!note.local) purged[note.id] = noteRev(note);
   });
+  pruneTombstones(purged);
+};
+
+/** Dequeues what was pushed, unless a newer entry replaced it meanwhile (that one still has to go out). */
+const dequeuePushed = (queue: Record<string, Note>, pushed: NotesPushed["add"]): void => {
+  const base = original(queue);
+  pushed.forEach(({ id, entry }) => {
+    if (base?.[id] === entry) delete queue[id];
+  });
+};
+
+/**
+ * The sync bookkeeping the store keeps for a note, with no undefined keys (Firestore refuses an undefined field). A change
+ * to a note an older app version wrote records what it builds on (see `baseOf`).
+ */
+const storeOwned = (stored: Note): Pick<Note, "syncedRev" | "local"> => {
+  const syncedRev = baseOf(stored);
+  return { ...(syncedRev !== undefined && { syncedRev }), ...(stored.local !== undefined && { local: stored.local }) };
+};
+
+/** The cloud now has `rev` of this note (a draft). */
+const markSynced = (note: Note | undefined, rev: number): void => {
+  if (note && !note.local) note.syncedRev = Math.max(note.syncedRev ?? 0, rev);
 };
 
 const sortNotes = (items: Note[], filters: NoteFilters): void => {
@@ -107,22 +135,37 @@ const notesSlice = createSlice({
       const idx = state.items.findIndex((n) => n.id === action.payload.id);
 
       if (idx === -1) {
+        // Not live: new, or trashed meanwhile (e.g. on another device) while an editor still had it open, which
+        // brings it back.
+        const trashed = state.temporaryItems.find((n) => n.id === action.payload.id);
+        if (trashed) state.temporaryItems = state.temporaryItems.filter((n) => n !== trashed);
+        const { syncedRev: _syncedRev, deletedAt: _deletedAt, ...created } = action.payload;
+        const note = {
+          ...created,
+          rev: nextRev(trashed ?? action.payload),
+          ...(trashed && storeOwned(trashed)),
+        } as Note;
         if ((state.filters?.order ?? "desc") === "desc") {
-          state.items.unshift(action.payload);
+          state.items.unshift(note);
         } else {
-          state.items.push(action.payload);
+          state.items.push(note);
         }
+        queueCloudAdd(state, note);
       } else {
-        state.items[idx] = action.payload;
+        // The payload is an editor's copy: the sync bookkeeping, and whether the note is device-only, are the store's
+        // (an incoming change or a detach may have updated them since the editor loaded the note).
+        const stored = state.items[idx];
+        const { syncedRev: _syncedRev, local: _local, ...edited } = action.payload;
+        const note = { ...edited, rev: nextRev(stored), ...storeOwned(stored) } as Note;
+        state.items[idx] = note;
 
         const dirtyId = retrieveDirtyNoteId();
 
         if (dirtyId === action.payload.id) {
           sortNotes(state.items, state.filters);
         }
+        queueCloudAdd(state, note);
       }
-
-      queueCloudAdd(state, action.payload);
     },
 
     setNoteFilters: (state, action: PayloadAction<NoteFilters>) => {
@@ -140,6 +183,7 @@ const notesSlice = createSlice({
           note.category.index = iconTo === "none";
           note.category.name = nameTo;
           note.category.icon = iconTo;
+          touchNote(note);
           queueCloudAdd(state, note);
         }
       });
@@ -152,19 +196,27 @@ const notesSlice = createSlice({
         found.category.index = iconTo === "none";
         found.category.name = nameTo;
         found.category.icon = iconTo;
+        touchNote(found);
         queueCloudAdd(state, found);
       }
     },
 
     deleteNote: (state, action: PayloadAction<string>) => {
+      markPurged(
+        state,
+        state.temporaryItems.filter((n) => n.id === action.payload)
+      );
       state.temporaryItems = state.temporaryItems.filter((n) => n.id !== action.payload);
     },
 
     deleteSelectedNotes: (state, action: PayloadAction<{ selectedNotes: string[] }>) => {
-      state.temporaryItems = state.temporaryItems.filter((n) => !action.payload.selectedNotes.includes(`${n.id}|${n.locked}`));
+      const isSelected = (n: Note) => action.payload.selectedNotes.includes(`${n.id}|${n.locked}`);
+      markPurged(state, state.temporaryItems.filter(isSelected));
+      state.temporaryItems = state.temporaryItems.filter((n) => !isSelected(n));
     },
 
     deleteAllNotes: (state) => {
+      markPurged(state, state.temporaryItems);
       state.temporaryItems = [];
     },
 
@@ -173,8 +225,7 @@ const notesSlice = createSlice({
       state.items = state.items.filter((note) => {
         if (note.category.icon !== icon) return true;
 
-        const deleteDate = Date.now() + state.temporaryTrashTimespan * 86400000;
-        note.deleteDate = deleteDate;
+        trashNote(note, Date.now() + state.temporaryTrashTimespan * 86400000);
         state.temporaryItems.unshift(note);
 
         queueCloudDelete(state, note);
@@ -195,6 +246,7 @@ const notesSlice = createSlice({
       state.items.forEach((note) => {
         if (note.category.icon === icon) {
           note.category = defaultCategory;
+          touchNote(note);
           queueCloudAdd(state, note);
         }
       });
@@ -205,7 +257,7 @@ const notesSlice = createSlice({
       state.temporaryItems = state.temporaryItems.filter((note) => {
         if (note.id !== id) return true;
 
-        delete note.deleteDate;
+        untrashNote(note);
         if (!categories.some((c) => c.icon === note.category.icon)) {
           note.category = defaultCategory;
         }
@@ -230,7 +282,7 @@ const notesSlice = createSlice({
       state.temporaryItems = state.temporaryItems.filter((note) => {
         if (!selectedNotes.includes(`${note.id}|${note.locked}`)) return true;
 
-        delete note.deleteDate;
+        untrashNote(note);
         if (!categories.some((c) => c.icon === note.category.icon)) {
           note.category = defaultCategory;
         }
@@ -255,7 +307,7 @@ const notesSlice = createSlice({
         if (!categories.some((c) => c.icon === note.category.icon)) {
           note.category = defaultCategory;
         }
-        delete note.deleteDate;
+        untrashNote(note);
 
         const idx = state.items.findIndex((n) => n.id === note.id);
         if (idx === -1) {
@@ -271,34 +323,21 @@ const notesSlice = createSlice({
       sortNotes(state.items, state.filters);
     },
 
-    setNotes: (state, action: PayloadAction<{ notes: Note[]; fromSync?: boolean }>) => {
-      const { notes, fromSync } = action.payload;
-
-      if (fromSync) {
-        // never resurrect a note the user has trashed locally but whose cloud
-        // deletion hasn't propagated yet (e.g. it was deleted while the vault was
-        // locked, so the delete is still queued)
-        const trashedIds = new Set(state.temporaryItems.map((n) => n.id));
-        const incoming = notes.filter((n) => !trashedIds.has(n.id));
-
-        // a cloud reconcile must never drop device-only notes: keep the local
-        // ones that the incoming cloud set does not (and must not) contain
-        const incomingIds = new Set(incoming.map((n) => n.id));
-        const offlineOnly = state.items.filter((note) => note.local && !incomingIds.has(note.id));
-        state.items = [...incoming, ...offlineOnly];
-      } else {
-        state.items = [...notes];
-      }
+    /**
+     * Replaces the notes (import). They keep their revisions, and count as changes made here: where the cloud has another
+     * version of a note, both are kept (one as a conflict copy).
+     */
+    setNotes: (state, action: PayloadAction<{ notes: Note[] }>) => {
+      // Another device's (or an older) sync bookkeeping means nothing here.
+      state.items = action.payload.notes.map(({ syncedRev: _syncedRev, ...note }) => note as Note);
 
       sortNotes(state.items, state.filters);
 
-      if (!fromSync) {
-        state.items.forEach((note) => queueCloudAdd(state, note));
-      }
+      state.items.forEach((note) => queueCloudAdd(state, note));
     },
 
     setTrashedNotes: (state, action: PayloadAction<Note[]>) => {
-      state.temporaryItems = action.payload;
+      state.temporaryItems = action.payload.map(({ syncedRev: _syncedRev, ...note }) => note as Note);
     },
 
     setTemporaryTrashTimespan: (state, action: PayloadAction<number>) => {
@@ -310,7 +349,7 @@ const notesSlice = createSlice({
       state.items = state.items.filter((note) => {
         if (note.id !== id) return true;
 
-        note.deleteDate = Date.now() + state.temporaryTrashTimespan * 86400000;
+        trashNote(note, Date.now() + state.temporaryTrashTimespan * 86400000);
 
         const idx = state.temporaryItems.findIndex((n) => n.id === note.id);
         if (idx === -1) {
@@ -328,7 +367,7 @@ const notesSlice = createSlice({
       state.items = state.items.filter((note) => {
         if (!action.payload.includes(`${note.id}|${note.locked}`)) return true;
 
-        note.deleteDate = Date.now() + state.temporaryTrashTimespan * 86400000;
+        trashNote(note, Date.now() + state.temporaryTrashTimespan * 86400000);
 
         const idx = state.temporaryItems.findIndex((n) => n.id === note.id);
         if (idx === -1) {
@@ -346,6 +385,7 @@ const notesSlice = createSlice({
       state.items.forEach((note) => {
         if (action.payload.includes(`${note.id}|${note.locked}`)) {
           note.important = !note.important;
+          touchNote(note);
           queueCloudAdd(state, note);
         }
       });
@@ -355,6 +395,7 @@ const notesSlice = createSlice({
       state.items.forEach((note) => {
         if (action.payload.includes(`${note.id}|${note.locked}`)) {
           note.readOnly = !note.readOnly;
+          touchNote(note);
           queueCloudAdd(state, note);
         }
       });
@@ -364,6 +405,7 @@ const notesSlice = createSlice({
       state.items.forEach((note) => {
         if (action.payload.includes(`${note.id}|${note.locked}`)) {
           note.hidden = !note.hidden;
+          touchNote(note);
           queueCloudAdd(state, note);
         }
       });
@@ -373,48 +415,9 @@ const notesSlice = createSlice({
       state.items.forEach((note) => {
         if (action.payload.includes(`${note.id}|${note.locked}`)) {
           note.locked = !note.locked;
+          touchNote(note);
           queueCloudAdd(state, note);
         }
-      });
-    },
-
-    addLocalNotes: (state, action: PayloadAction<Record<string, Note>>) => {
-      const dek = getDEK();
-      if (!dek) return; // no key -> can't decrypt incoming notes; ignore until unlocked
-
-      Object.values(action.payload)
-        .sort(createdAt_asc_sort)
-        .forEach((cloudNote) => {
-          // skip notes we can't decrypt (encrypted under a different DEK): never
-          // store ciphertext as plaintext, or the next edit re-encrypts garbage
-          const note = tryDecryptNote(cloudNote, dek);
-          if (!note) return;
-
-          const idx = state.items.findIndex((n) => n.id === note.id);
-          if (idx === -1) {
-            state.items.unshift(note);
-          } else {
-            // never let a cloud/other-device copy overwrite a note that has
-            // been detached (made offline) on this device
-            if (state.items[idx].local) return;
-            state.items[idx] = note;
-          }
-        });
-
-      sortNotes(state.items, state.filters);
-    },
-
-    deleteLocalNotes: (state, action: PayloadAction<Record<string, Note>>) => {
-      Object.values(action.payload).forEach((cloudNote) => {
-        state.items = state.items.filter((localNote) => {
-          if (localNote.id !== cloudNote.id) return true;
-          // an offline note is owned by this device: ignore incoming deletions
-          if (localNote.local) return true;
-
-          localNote.deleteDate = Date.now() + state.temporaryTrashTimespan * 86400000;
-          state.temporaryItems.unshift(localNote);
-          return false;
-        });
       });
     },
 
@@ -450,14 +453,16 @@ const notesSlice = createSlice({
       if (idx === -1) return;
 
       const now = Date.now();
+      const { syncedRev: _syncedRev, ...note } = state.items[idx];
       const reattached: Note = {
-        ...state.items[idx],
+        ...note,
         id: newId,
         title: `${state.items[idx].title ?? ""} (2)`.trim(),
         local: false,
         createdAt: now,
         updatedAt: now,
-      };
+        rev: now,
+      } as Note;
 
       state.items[idx] = reattached;
       sortNotes(state.items, state.filters);
@@ -465,40 +470,109 @@ const notesSlice = createSlice({
       queueCloudAdd(state, reattached);
     },
 
-    /** Incoming fan-out: another device detached these notes; keep our copies but mark them offline. */
-    detachLocalNotes: (state, action: PayloadAction<Record<string, Note>>) => {
-      Object.values(action.payload).forEach((cloudNote) => {
-        const note = state.items.find((n) => n.id === cloudNote.id);
-        if (!note) return;
-        note.local = true;
-        delete state.cloud.items.add[note.id];
-        delete state.cloud.items.delete[note.id];
+    /** Merges incoming cloud changes (a plan made by the sync engine, see `libs/cloud/merge`). */
+    applyNotesPlan: (state, action: PayloadAction<SyncPlan>) => {
+      const plan = action.payload;
+      const { cloud } = state;
+
+      if (plan.put.length > 0) {
+        const put = new Map(plan.put.map((note) => [note.id, note]));
+        state.temporaryItems = state.temporaryItems.filter((note) => !put.has(note.id));
+        state.items = state.items.map((note) => {
+          const next = put.get(note.id);
+          if (!next) return note;
+          put.delete(note.id);
+          return next;
+        });
+        state.items.unshift(...put.values());
+      }
+
+      if (plan.trash.length > 0) {
+        const deleteDate = Date.now() + state.temporaryTrashTimespan * 86400000;
+        const trash = new Map(plan.trash.map((note) => [note.id, { ...note, deleteDate }]));
+        state.items = state.items.filter((note) => !trash.has(note.id));
+        state.temporaryItems = state.temporaryItems.filter((note) => !trash.has(note.id));
+        state.temporaryItems.unshift(...trash.values());
+      }
+
+      plan.detach.forEach((id) => {
+        const note = state.items.find((n) => n.id === id);
+        if (note) note.local = true;
+        delete cloud.items.add[id];
+        delete cloud.items.delete[id];
       });
+
+      const synced = Object.entries(plan.synced);
+      if (synced.length > 0) {
+        const byId = new Map([...state.items, ...state.temporaryItems].map((note) => [note.id, note]));
+        synced.forEach(([id, rev]) => markSynced(byId.get(id), rev));
+      }
+
+      plan.dropUploads.forEach((id) => delete cloud.items.add[id]);
+      plan.dropDeletes.forEach((id) => delete cloud.items.delete[id]);
+
+      plan.upload.forEach((id) => {
+        const note = state.items.find((n) => n.id === id);
+        if (note) queueCloudAdd(state, note);
+      });
+      plan.sendDeletes.forEach((id) => {
+        const note = state.temporaryItems.find((n) => n.id === id);
+        if (note) queueCloudDelete(state, note);
+      });
+      plan.sendStubs.forEach((stub) => {
+        only_if_cloudConnected(() => {
+          cloud.items.delete[stub.id] = stub;
+          delete cloud.items.add[stub.id];
+        });
+      });
+
+      sortNotes(state.items, state.filters);
     },
 
-    resetCloudNotes: (state) => {
-      state.cloud.items.add = {};
-      state.cloud.items.delete = {};
-      state.cloud.items.detach = {};
+    /** What a push committed: dequeued, and the cloud now has those revisions. */
+    notesPushed: (state, action: PayloadAction<NotesPushed>) => {
+      const { add, delete: deleted, detach } = action.payload;
+      const { items } = state.cloud;
+      dequeuePushed(items.add, add);
+      dequeuePushed(items.delete, deleted);
+      if (items.detach) dequeuePushed(items.detach, detach);
+
+      if (add.length > 0) {
+        const live = new Map(state.items.map((note) => [note.id, note]));
+        add.forEach(({ id, rev }) => markSynced(live.get(id), rev));
+      }
+      if (deleted.length > 0) {
+        const trashed = new Map(state.temporaryItems.map((note) => [note.id, note]));
+        deleted.forEach(({ id, rev }) => markSynced(trashed.get(id), rev));
+      }
+    },
+
+    /** Uploads queued for notes no longer stored as live ones. */
+    dropNoteUploads: (state, action: PayloadAction<string[]>) => {
+      action.payload.forEach((id) => delete state.cloud.items.add[id]);
+    },
+
+    /**
+     * Uploads an older app version queued before this one took over: they're stamped with a revision, on top of the
+     * version they change (an older app doesn't renew it for every change, and the cloud would take the same revision for
+     * the version it already has). One also queued for deletion (an older version could leave both) is live: it's the
+     * upload that counts.
+     */
+    adoptLegacyOutbox: (state, action: PayloadAction<string[]>) => {
+      action.payload.forEach((id) => {
+        const note = state.items.find((n) => n.id === id);
+        if (!note) return;
+        if (note.rev === undefined && note.syncedRev === undefined && !note.local) touchNote(note);
+        delete state.cloud.items.delete[id];
+      });
     },
   },
 
   extraReducers: (builder) => {
-    builder
-      .addCase(addCloudNotesAsync.fulfilled, (state, action: PayloadAction<Record<string, Note>>) => {
-        dequeueProcessed(state.cloud.items.add, action.payload);
-      })
-      .addCase(deleteCloudNotesAsync.fulfilled, (state, action: PayloadAction<Record<string, Note>>) => {
-        dequeueProcessed(state.cloud.items.delete, action.payload);
-      })
-      .addCase(detachCloudNotesAsync.fulfilled, (state, action: PayloadAction<Record<string, Note>>) => {
-        if (!state.cloud.items.detach) return;
-        dequeueProcessed(state.cloud.items.detach, action.payload);
-      })
-      .addCase(wipeNotes, (state) => {
-        state.items = [];
-        state.temporaryItems = [];
-      });
+    builder.addCase(wipeNotes, (state) => {
+      state.items = [];
+      state.temporaryItems = [];
+    });
   },
 });
 
@@ -527,12 +601,12 @@ export const {
   toggleReadOnlyNotes,
   toggleHiddenNotes,
   toggleProtectedNotes,
-  addLocalNotes,
-  deleteLocalNotes,
   detachNote,
   reattachNote,
-  detachLocalNotes,
-  resetCloudNotes,
+  applyNotesPlan,
+  notesPushed,
+  dropNoteUploads,
+  adoptLegacyOutbox,
 } = notesSlice.actions;
 
 // Selectors
@@ -542,7 +616,6 @@ export const getNote =
     state.notes.items.find((note) => note.id === id);
 export const getAllNotes = (state: RootState): Note[] => state.notes.items;
 export const getAllTrashedNotes = (state: RootState): Note[] => state.notes.temporaryItems;
-export const getCloudNotes = (state: RootState): NotesState["cloud"]["items"] => state.notes.cloud.items;
 export const getTemporaryTrashTimespan = (state: RootState): number => state.notes.temporaryTrashTimespan;
 export const getNoteFilters = (state: RootState): NoteFilters =>
   state.notes.filters || {

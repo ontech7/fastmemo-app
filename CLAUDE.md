@@ -92,7 +92,14 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 20. **Never import icons from the `react-native-heroicons` barrels** -- use the deep path
     (`react-native-heroicons/outline/XIcon`); each barrel evaluates ~300 icons at startup (LL-034)
 21. **Never keep the same id in two sync queues** (local outbox `add`/`delete`, or a device doc's `addNotes`/`deleteNotes`/
-    `detachNotes`) -- the latest operation replaces the others (`exclusiveQueueEntry`, `dequeueProcessed`). See LL-033
+    `detachNotes`) -- the latest operation replaces the others (`queueCloudAdd`/`queueCloudDelete`, the backend's push,
+    `notesPushed`). See LL-033
+22. **Never touch the cloud outside the `CloudBackend`** -- only `src/libs/cloud/firebaseBackend.ts` imports `firebase/*`;
+    everything else uses `cloud` from `@/libs/cloud` or the sync engine. Merge rules live in `libs/cloud/merge.ts`, tested by
+    `scripts/sync.test.mjs` (ADR-016)
+23. **Never write a cloud document other devices listen to when nothing changed** (`connectedDevices`, `vault`): each write
+    costs a read on every listener and can wake the loop that writes again. Size anything that accumulates in one Firestore
+    document by bytes **and** index entries (40,000 max, ~50 per queued note). See LL-043, LL-044
 
 ### ALWAYS Do
 
@@ -113,6 +120,8 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 12. **Always give an icon-only pressable `accessibilityRole` + `accessibilityLabel`** (i18n, `a11y.*`), with state as
     `aria-checked` (checkbox/radio), `aria-selected` (tab only) or `aria-expanded` -- not `role`/`accessibilityState`, which one
     platform drops; hidden content gets `aria-hidden` + `focusable={false}` (CONVENTIONS)
+13. **Always stamp a revision (`touchNote`) in a reducer that changes a synced note** -- other devices ignore a change without a
+    newer revision; `syncedRev` is written only by the sync engine's reducers (ADR-016, LL-040)
 
 ## Tech Stack (Quick Reference)
 
@@ -123,7 +132,7 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 | Routing    | expo-router 58 (file-based, typed routes)                                                      |
 | State      | Redux Toolkit 2.8 + Redux Persist (filesystem for notes, AsyncStorage for settings/categories) |
 | Desktop    | Tauri 2.x (Rust, capabilities in `src-tauri/capabilities/`)                                    |
-| Cloud      | Firebase Firestore (per-vault E2E encryption, envelope DEK/KEK -- ADR-012)                     |
+| Cloud      | Firestore behind `CloudBackend` (live sync, revisions -- ADR-016), per-vault E2E (ADR-012)     |
 | AI         | llama.rn 0.12 (Qwen 2.5 GGUF, on-device)                                                       |
 | Editor     | CodeMirror 6 (via WebView)                                                                     |
 | i18n       | i18next + react-i18next (7 languages, single namespace)                                        |
@@ -142,8 +151,8 @@ src/
   components/   -> UI components (domain-grouped: buttons/, cards/, notes/, kanban/, settings/, etc.)
   slicers/      -> Redux slices (notesSlice, categoriesSlice, settingsSlice) + thunks/
   types/        -> TypeScript type definitions (barrel export via index.ts)
-  hooks/        -> Custom hooks (useCloudSync, useRouter, useSecret, useNetInfo, useTimeoutTask, useVaultUnlocked, useVaultPrompt, useVaultProgress)
-  libs/         -> Third-party wrappers (ai/, haptics/, i18n/, storage/, firebase, registry, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress)
+  hooks/        -> Custom hooks (useCloudSync, useLiveNote, useRouter, useSecret, useNetInfo, useTimeoutTask, useVaultUnlocked, useVaultPrompt, useVaultProgress)
+  libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), haptics/, i18n/, storage/, registry, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress)
   utils/        -> Pure utility functions (sort, string, date, crypt, vault, secureRandom, ui, toast, webhook, export, platform, openUrl)
   providers/    -> React context providers (KanbanDragProvider, SyncOnProvider)
   constants/    -> Static constants (styles, icons, code-languages, note-types)

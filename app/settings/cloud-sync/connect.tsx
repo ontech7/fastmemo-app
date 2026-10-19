@@ -88,7 +88,10 @@ export default function CloudSyncScreen() {
           label: t("confirm"),
           handler: () => {
             setShowResyncDialog(false);
-            methods.syncCloudData(false).catch(() => toast(t("cloudsync.vault.error_generic")));
+            methods
+              .syncCloudData(false)
+              .then((ok) => !ok && toast(t("cloudsync.vault.error_generic")))
+              .catch(() => toast(t("cloudsync.vault.error_generic")));
           },
         }}
         cancel={{

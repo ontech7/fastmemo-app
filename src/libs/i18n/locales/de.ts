@@ -261,6 +261,11 @@ const de = {
     title: "Kategorie ändern",
   },
   cloudsync: {
+    conflict_suffix: "(Konflikt)",
+    conflict_copies: "Vor dem Synchronisieren auf zwei Geräten bearbeitet: Beide Versionen wurden behalten (eine als Kopie)",
+    open_on: "Geöffnet auf {{devices}}",
+    note_deleted_elsewhere:
+      "Diese Notiz wurde auf einem anderen Gerät in den Papierkorb verschoben. Bearbeiten stellt sie wieder her.",
     title: "Cloud Sync",
     syncing_1: "Synchronisierung läuft…",
     syncing_2: "Warten Sie, bis der Vorgang abgeschlossen ist",
@@ -358,6 +363,7 @@ const de = {
     upToDate: "Aktuell",
     pending: "{{count}} ausstehend",
     mostRecent: "Neueste",
+    count: "({{count}}/{{limit}}) Geräte",
   },
   createcategory: {
     title_create: "Kategorie Erstellen",

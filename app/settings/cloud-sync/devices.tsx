@@ -9,14 +9,9 @@ import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useTimeoutTask } from "@/hooks/useTimeoutTask";
-import {
-  getAllConnectedDevices,
-  getDeviceUuid,
-  removeDeviceFromCloud,
-  removeDeviceFromDevicesToSync,
-  type ConnectedDevice,
-} from "@/libs/firebase";
-import { triggerSyncNow } from "@/libs/registry";
+import { cloud, getDeviceUuid, type CloudDevice } from "@/libs/cloud";
+import { onSyncEvent, syncNow } from "@/libs/cloud/sync";
+import { isVaultUnlocked } from "@/libs/vaultSession";
 import { toast } from "@/utils/toast";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -36,7 +31,7 @@ import Animated, {
 export default function SyncedDevicesScreen() {
   const { t, i18n } = useTranslation();
 
-  const [connectedDevices, setConnectedDevices] = useState<ConnectedDevice[]>([]);
+  const [connectedDevices, setConnectedDevices] = useState<CloudDevice[]>([]);
   const numberOfDevices = connectedDevices.length;
   const [currentDeviceUuid, setCurrentDeviceUuid] = useState("");
 
@@ -98,27 +93,38 @@ export default function SyncedDevicesScreen() {
   // retrieve devices
 
   const deleteDeviceFromCloud = async (uuid: string) => {
-    const res_removeDeviceCloud = await removeDeviceFromCloud(uuid);
-    const res_removeDeviceSync = await removeDeviceFromDevicesToSync(uuid);
+    // Removed first, so the others stop making it a recipient; then nobody waits for its acks anymore (their queues
+    // would only clear at their next push otherwise).
+    if (!(await cloud.unregisterDevice(uuid))) return;
+    await cloud.dropRecipient(uuid);
 
-    if (!res_removeDeviceCloud || !res_removeDeviceSync) {
-      return;
-    }
-
-    setConnectedDevices((prevConnectedDevices: ConnectedDevice[]) =>
-      prevConnectedDevices.filter((prevConnectedDevice: ConnectedDevice) => prevConnectedDevice.uuid != uuid)
+    setConnectedDevices((prevConnectedDevices) =>
+      prevConnectedDevices.filter((prevConnectedDevice) => prevConnectedDevice.uuid != uuid)
     );
   };
 
   const getDevices = async () => {
     await setTimeoutTask(async () => {
       const currDeviceUuid = await getDeviceUuid();
-      setCurrentDeviceUuid(currDeviceUuid);
+      setCurrentDeviceUuid(currDeviceUuid ?? "");
 
-      const cloudDevices = await getAllConnectedDevices();
+      const cloudDevices = await cloud.listDevices();
+      if (!cloudDevices) {
+        timeoutStates.error.set(true);
+        return;
+      }
       setConnectedDevices(cloudDevices);
     }, 5000);
   };
+
+  // The list follows the sync engine's live view of the devices (sync status, last sync).
+  useEffect(
+    () =>
+      onSyncEvent((event) => {
+        if (event.type === "devices") setConnectedDevices(event.devices);
+      }),
+    []
+  );
 
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -136,9 +142,13 @@ export default function SyncedDevicesScreen() {
       toast(t("noInternetConnection"));
       return;
     }
+    if (!isVaultUnlocked()) {
+      toast(t("cloudsync.vault.locked_prompt"));
+      return;
+    }
     setSyncing(true);
     try {
-      await triggerSyncNow();
+      if (!(await syncNow())) toast(t("cloudsync.vault.error_generic"));
       await getDevices();
     } catch (e) {
       console.log("manual sync error:", e);
@@ -176,7 +186,7 @@ export default function SyncedDevicesScreen() {
                 },
               ]}
             >
-              ({numberOfDevices}/{configs.cloud.deviceLimit}) dispositivi
+              {t("synceddevices.count", { count: numberOfDevices, limit: configs.cloud.deviceLimit })}
             </Text>
           </View>
 

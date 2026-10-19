@@ -1071,6 +1071,206 @@ read.
 
 ---
 
+### LL-040: Last-writer-wins sync without revisions lost edits silently
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Found in review (ADR-016), each a silent data loss: a receiver cleared a sender's fan-out queue with a
+read-modify-write, dropping a change the sender queued in between; an incoming copy overwrote a local edit not yet pushed, and
+the two devices then kept different versions for good; the connect/unlock full sync uploaded every note and then _replaced_ the
+local notes with the cloud set, so a note whose upload failed (e.g. over 1 MiB) vanished and an offline device's stale copies
+overwrote newer ones; with a third device offline, its pending queue entries were replayed to the others on every push and
+brought trashed notes back; a long-offline device let its sender's queue doc grow past Firestore's 1 MiB limit, wedging that
+sender's uploads.
+
+**Root cause:** No notion of versions: every write was "the latest" by arrival order, and the shared queues were acknowledged
+without checking what had been applied.
+
+**Fix:** Revisions on every synced change (`rev`, `syncedRev`, `deletedAt`, tombstones) and a pure merge
+(`libs/cloud/merge.ts`): stale versions are ignored, concurrent changes keep both versions (conflict copy), a deletion applies
+only when newer. Acks are transactions over a content token; pushes refuse to overwrite a newer cloud version; the full sync
+reconciles instead of replacing; queued entries degrade to references, then to a full-sync marker, before the doc limit.  
+**Rule:** A sync write must say which version it's based on, and a sync read must be compared, not just applied. Never replace a
+local set with a remote one: merge per item, and never drop on absence.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
+### LL-041: A new fan-out entry shape must fail old apps' decryption
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Caught before release: the first reference entry (`{ id, rev, ref: true }`, queued when a note doesn't fit
+the sender's doc) had no `type`/`text`. The released 3.2.0 `tryDecryptNote` decrypts only the fields a note type has, found
+nothing to check, and returned the entry as a valid note: 3.2.0 would have stored a note without category or content (the note
+list reads `category.index`).
+
+**Root cause:** `tryDecryptNote` proves the key only through the fields it decrypts; an entry with none of them passes.
+
+**Fix:** References carry `type: "text"` and a `text` that decrypts with no key, so every version's marker check rejects and
+skips them (tested against the real `crypt.ts` in `scripts/sync.test.mjs`).  
+**Rule:** Anything new put in a queue that older versions read as notes must fail their `tryDecryptNote`. Check new wire shapes
+against the code of the oldest version still installed.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
+### LL-042: An undefined field made Firestore refuse a note for good
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Caught in a two-browser test before release: an edit of a synced note made in its open editor never left the
+device, so the other device's open editor never updated. `addNote` copied the store's `syncedRev`/`local` onto the editor's copy
+as explicit keys, so every note that isn't device-only got `local: undefined`. Firestore refuses an undefined field value as
+`invalid-argument`, which the push treats as permanent (like a note over the size limit): the note was skipped until the next
+app start. The unit tests passed because the in-memory backend clones through JSON, which drops undefined.
+
+**Root cause:** Firestore rejects undefined values by default, while JSON (the persisted state, the test fake) silently drops
+them: the bad note only existed in memory, between an edit and the next restart, and no test exercised the real write path with
+it.
+
+**Fix:** `initializeFirestore(..., { ignoreUndefinedProperties: true })`, so an undefined field is dropped as JSON would, and
+`addNote` writes no undefined keys. The `CloudBackend` contract states that an undefined field is never a reason to reject.
+Covered against real Firestore in `scripts/sync-firestore.test.mjs`, and in `scripts/sync.test.mjs`.  
+**Rule:** A test double must refuse what the real backend refuses, or the case needs a test against the real one. A "permanent"
+rejection is only for what the data itself can never fix (size): anything the app produced is a bug to fix at the source.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
+### LL-043: A Firestore document hit the index-entry limit long before 1 MiB
+
+**Date:** 2026-10-20  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Found in the phase 3 review: the fan-out queues on a sender's device doc were budgeted by size only (~900
+KB). Firestore also caps a document at 40,000 index entries, and every field of every map in it counts: a queued note is ~50
+entries, a reference or deletion stub ~12. A few hundred queued notes (an offline device, a bulk change) stayed far under the
+size budget and made every push of that device fail with a non-retryable error; the split that isolates a bad entry then blamed
+each entry in turn, so the outbox stalled until the next launch, and again after it.
+
+**Root cause:** The limits model knew one Firestore limit out of two, and the in-memory fake enforced neither.
+
+**Fix:** `planFanout` budgets bytes and index entries (full notes 600 KB / 20k, references 900 KB / 30k, stubs 1 MB / 36k). Past
+the budget the queues start over with the current push and the devices that hadn't pulled them get `fullSyncDue` (one full sync
+each); deletions also write `tombstones/{id}` so that full sync can tell a deletion from a lost note. An entry refused alone is
+retried without queueing before it's rejected. Covered against real Firestore (`scripts/sync-firestore.test.mjs`) and in the
+fake, which now has a queue limit (`maxQueuedEntries`).  
+**Rule:** Size anything that accumulates in one Firestore document by bytes **and** index entries, and give it a way to start
+over that doesn't depend on the full document being writable.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
+### LL-044: A refused deletion looped pushes, each one waking every device
+
+**Date:** 2026-10-20  
+**Severity:** High  
+**Category:** Performance  
+**What happened:** Found in the phase 3 review. A deletion the cloud refused (another device had edited the note since) came
+back as `superseded`, the merge restored the note but left the deletion queued, and the next push sent it again. Every push also
+wrote the sender's device doc even when the cloud took nothing, and that write reached every listener, the sender's included:
+its snapshot kicked a new push straight away, past the retry backoff. Result: a push loop costing a read on every device per
+round, for as long as the app stayed open.
+
+**Root cause:** Three small choices that were each harmless alone: a refused operation that stayed queued, a write made "for
+bookkeeping" (`lastSync`) on a document others listen to, and a retry path (snapshot -> kick) that didn't go through the
+backoff.
+
+**Fix:** A newer version restored by the merge drops the deletion still queued for it; a push that applies nothing writes
+nothing; a snapshot kicks a push only when no retry is scheduled; pushes go out at most every 2 s and acks wait for the sender
+to be quiet (5 s, at most 30 s). The cost tests in `scripts/sync.test.mjs` count pushes, acks and device-doc writes.  
+**Rule:** Never write a document others listen to when nothing changed, and route every retry through the backoff, whatever
+wakes it.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
+### LL-045: Changes from an older app version looked like no change at all
+
+**Date:** 2026-10-20  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Found in the phase 3 review. 3.2.0 / 1.2.0 don't know revisions: they change flags or the category, or
+restore from the trash, without a new `rev`, and their notes have none at all. The merge treated "same revision" as "already
+have it", so those changes never reached updated devices; a note with no revision had no base, so the first edit made on an
+updated device was pushed as if the cloud had never had it; and uploads left in the outbox by the older version had no revision
+to be guarded with.
+
+**Root cause:** The merge was tested with data written by the new app only. Revisions were designed as the whole truth, but for
+notes an older version touched they're missing or stale.
+
+**Fix:** The same revision with other content is a change: the cloud's version wins and an unsynced local change becomes the
+copy; the push guard refuses an equal revision so the merge settles it. A note without a revision has its own version as base
+(`baseOf`), recorded by its first change, and `adoptLegacyOutbox` stamps the uploads an older version left. Remaining limits (a
+restore older than a deletion is undone) are in ADR-016.  
+**Rule:** Test compatibility with fixtures written the way the old app writes them (no `rev`, unstamped changes, its outbox),
+not only with the new app's data.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
+### LL-046: A change the editor sent before a live reload overwrote the reload
+
+**Date:** 2026-10-20  
+**Severity:** Medium  
+**Category:** Bug  
+**What happened:** Found in the review of live editing. The rich text and CodeMirror editors run in a WebView and report changes
+asynchronously. A change message computed on the old content, still in flight when a remote version was loaded, arrived after
+the reload and was taken as the user's edit: the remote change was silently reverted, then pushed back as newer. The same window
+existed between the merge and the open editor being told, while the merge waited for the disk write.
+
+**Root cause:** Messages across an async boundary carried no notion of which content they were computed on.
+
+**Fix:** Every reload carries a sequence (CodeMirror `doc`; rich text echoes a `FASTMEMO_RELOAD_SHOWN` marker) and a change from
+before the latest reload is dropped; the engine tells the open editor before persisting.  
+**Rule:** Tag messages that cross an async boundary (WebView, worker, native module) with the version they were computed on, and
+drop the stale ones.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
+### LL-047: The sync tests passed against a fake that was kinder than Firestore
+
+**Date:** 2026-10-20  
+**Severity:** Medium  
+**Category:** Convention  
+**What happened:** Most of the phase 3 review findings had a passing test next to them. The in-memory backend accepted what
+Firestore refuses or does differently: no index-entry limit (LL-043), equal revisions applied, a merge-write that re-created a
+removed device's doc (a "ghost" with no `uuid` that became a recipient nobody would ever ack for), recipients only ever added.
+Mutation runs on the engine and merge also left guards that no test noticed being removed.
+
+**Root cause:** The fake was written from the contract as intended, not from Firestore's behavior, and nothing checked that the
+tests fail when a guard goes.
+
+**Fix:** The fake now refuses and limits what Firestore does, and each behavior the engine relies on has a twin case against
+real Firestore in `scripts/sync-firestore.test.mjs`; device updates use `updateDoc` and docs without a `uuid` are ignored; the
+surviving mutants got tests.  
+**Rule:** Every backend behavior the engine depends on is tested against the real backend once; a guard without a test that
+fails when it's removed isn't tested.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

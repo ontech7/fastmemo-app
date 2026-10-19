@@ -8,9 +8,12 @@ import {
 } from "@/slicers/settingsSlice";
 import { formatDateTime } from "@/utils/date";
 import { deriveNoteTitle } from "@/utils/string";
+import { toast } from "@/utils/toast";
 import { webhook } from "@/utils/webhook";
+import { useLiveNote } from "@/hooks/useLiveNote";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AppState, BackHandler, Keyboard } from "react-native";
 import { KeyboardController } from "react-native-keyboard-controller";
 import { useDispatch, useSelector } from "react-redux";
@@ -27,6 +30,15 @@ import type { Note, NoteType, RootState, WebhookPayload } from "@/types";
  */
 const COMMIT_DEBOUNCE_MS = 500;
 const COMMIT_MAX_WAIT_MS = 2000;
+
+/** Whether two versions of a note hold the same values (a shallow comparison: editors replace what they change). */
+const isSameNote = (a: Note, b: Note): boolean => {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of keys) {
+    if (a[key as keyof Note] !== b[key as keyof Note]) return false;
+  }
+  return true;
+};
 
 interface UseNoteEditorOptions<T extends Note> {
   /** The initial note coming from props. Used to detect "newly created" notes. */
@@ -52,6 +64,13 @@ interface UseNoteEditorOptions<T extends Note> {
    * Omit to disable auto-titling.
    */
   getTitleSource?: (note: T) => string;
+  /**
+   * Another device changed the open note (ADR-016): the hook now holds the stored version. Editors that keep their own
+   * copy of the content (a WebView) load it from here; `previous` is the version they were showing.
+   */
+  onRemoteChange?: (note: T, previous: T) => void;
+  /** What of the editor's current state survives a reload from another device's change (e.g. the selected code tab). */
+  keepOnRemote?: (remote: T, current: T) => T;
 }
 
 interface UseNoteEditorResult<T extends Note> {
@@ -60,6 +79,11 @@ interface UseNoteEditorResult<T extends Note> {
   setNote: React.Dispatch<React.SetStateAction<T>>;
   /** Updates local state and schedules the note's batched commit to Redux (add, or temp+delete when empty). */
   setNoteAsync: (currNote: T) => void;
+  /**
+   * `setNoteAsync` for an update computed from the note later (e.g. an AI result): applied to the current copy, which
+   * may have been reloaded with another device's change meanwhile.
+   */
+  updateNoteAsync: (update: (current: T) => T) => void;
   /** Commits the pending batch now, if any. Call before acting on the stored note (delete, detach, ...). */
   flushNote: () => void;
   /** Called on hardware back press / explicit back button press. Fires the update/delete webhook. */
@@ -98,7 +122,10 @@ export function useNoteEditor<T extends Note>({
   isEmpty,
   buildPayloadExtras,
   getTitleSource,
+  onRemoteChange,
+  keepOnRemote,
 }: UseNoteEditorOptions<T>): UseNoteEditorResult<T> {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
 
   const webhook_add = useSelector(addWebhookSelector);
@@ -107,6 +134,8 @@ export function useNoteEditor<T extends Note>({
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
 
   const [note, setNote] = useState<T>(initialNote);
+  // The editor's note, synchronously (state lags a render behind).
+  const currentRef = useRef<T>(initialNote);
 
   /* --- Auto-title for brand-new, untitled notes --- */
 
@@ -231,7 +260,13 @@ export function useNoteEditor<T extends Note>({
 
   const setNoteAsync = useCallback(
     (currNote: T) => {
+      const prev = currentRef.current;
+      currentRef.current = currNote;
       setNote(currNote);
+
+      // Nothing changed (e.g. an editor reporting back the content it was just reloaded with): nothing to commit, or two
+      // devices with the note open would bounce it between them.
+      if (isSameNote(prev, currNote)) return;
 
       const now = Date.now();
       if (!pendingNoteRef.current) pendingSinceRef.current = now;
@@ -251,10 +286,35 @@ export function useNoteEditor<T extends Note>({
     [flushNote]
   );
 
+  const updateNoteAsync = useCallback((update: (current: T) => T) => setNoteAsync(update(currentRef.current)), [setNoteAsync]);
+
   // Never leave a batch behind: the editor goes away, or the app may be killed once in background.
   useEffect(() => () => flushNote(), [flushNote]);
 
   useEffect(() => registerPendingFlush(flushNote), [flushNote]);
+
+  /* --- Changes from other devices --- */
+
+  useLiveNote(note.id, {
+    onRemote: (stored) => {
+      // The sync engine committed the pending batch before merging: nothing local is lost by reloading.
+      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = null;
+      pendingNoteRef.current = null;
+
+      const previous = currentRef.current;
+      let next = keepOnRemote ? keepOnRemote(stored as T, previous) : (stored as T);
+      // Still untitled here: the stored title is the one derived from the content (see auto-title), not a name.
+      const deriveFrom = getTitleSourceRef.current;
+      if (wasNewRef.current && !previous.title.trim() && deriveFrom && next.title === deriveNoteTitle(deriveFrom(next))) {
+        next = { ...next, title: "" };
+      }
+      currentRef.current = next;
+      setNote(next);
+      onRemoteChange?.(next, previous);
+    },
+    onDeleted: () => toast(t("cloudsync.note_deleted_elsewhere")),
+  });
 
   /* --- Back/webhook handler --- */
 
@@ -303,5 +363,5 @@ export function useNoteEditor<T extends Note>({
     }, [flushNote])
   );
 
-  return { note, setNote, setNoteAsync, flushNote, updateNoteWebhook, autoTitle };
+  return { note, setNote, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle };
 }

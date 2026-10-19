@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 const { API_KEY, PROJECT_ID, APP_ID } = process.env;
 if (!API_KEY || !PROJECT_ID || !APP_ID) throw new Error("Mancano API_KEY/PROJECT_ID/APP_ID");
 
-// Le collection usate dall'app (src/libs/firebase.ts COLLECTIONS). Il client SDK non
+// Le collection usate dall'app (src/libs/cloud/firebaseBackend.ts). Il client SDK non
 // può elencare le collection, quindi le enumeriamo esplicitamente.
 const COLLECTIONS = ["notes", "categories", "vault", "connectedDevices", "handshake"];
 

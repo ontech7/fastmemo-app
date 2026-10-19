@@ -4,15 +4,7 @@ import { supportedLanguages } from "@/libs/i18n";
 
 import { capitalize } from "./string";
 
-export const reverseDate = (dateFormatted: string): string => {
-  const [, date, , time] = dateFormatted.split(" ");
-  const [day, month, year] = date.split("/");
-  return `${year}-${month}-${day}T${time}:00Z`;
-};
-
-export const getReversedDateTime = (dateFormatted: string): number => {
-  return new Date(reverseDate(dateFormatted)).getTime();
-};
+export { getReversedDateTime, reverseDate } from "./dateParse";
 
 // Building an Intl.DateTimeFormat is expensive on Hermes, and every note card formats a date.
 // Keyed by time zone too: the formatter captures the zone it was built in.

@@ -7,12 +7,18 @@ const isWeb = Platform.OS === "web";
 
 const EDITOR_BG = "#282c34";
 
+interface SetCodeOptions {
+  undoable?: boolean;
+  remote?: boolean;
+}
+
 export interface CodeEditorWebViewRef {
   /**
    * Replaces the document. By default as a new document with its own undo history (e.g. a tab
-   * switch); `undoable` makes it an edit of the current one instead (e.g. AI-commented code).
+   * switch); `undoable` makes it an edit of the current one instead (e.g. AI-commented code);
+   * `remote` is another device's edit of it: the cursor stays, and undo doesn't revert it.
    */
-  setCode: (code: string, options?: { undoable?: boolean }) => void;
+  setCode: (code: string, options?: SetCodeOptions) => void;
   setLanguage: (language: string) => void;
   setReadOnly: (readOnly: boolean) => void;
   focus: () => void;
@@ -35,6 +41,9 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
     const hiddenInputRef = useRef<TextInputInstance>(null);
     const isReady = useRef(false);
     const pendingMessages = useRef<string[]>([]);
+    // Documents sent to the editor: a change it reports carries the one it was made in, and one made in a document
+    // replaced since (a keystroke on its way as another device's edit or a tab switch arrives) would undo the new one.
+    const docRef = useRef(0);
 
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
@@ -64,8 +73,16 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
     );
 
     useImperativeHandle(ref, () => ({
-      setCode: (code: string, options?: { undoable?: boolean }) =>
-        sendMessage(JSON.stringify({ type: "setCode", code, undoable: !!options?.undoable })),
+      setCode: (code: string, options?: SetCodeOptions) =>
+        sendMessage(
+          JSON.stringify({
+            type: "setCode",
+            code,
+            doc: ++docRef.current,
+            undoable: !!options?.undoable,
+            remote: !!options?.remote,
+          })
+        ),
       setLanguage: (lang: string) => sendMessage(JSON.stringify({ type: "setLanguage", language: lang })),
       setReadOnly: (ro: boolean) => sendMessage(JSON.stringify({ type: "setReadOnly", readOnly: ro })),
       focus: () => {
@@ -95,7 +112,7 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
             }
             pendingMessages.current = [];
             onReadyRef.current?.();
-          } else if (data.type === "change") {
+          } else if (data.type === "change" && (data.doc ?? 0) === docRef.current) {
             onChangeRef.current(data.code);
           }
         } catch {}
