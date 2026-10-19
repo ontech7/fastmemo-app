@@ -40,11 +40,12 @@ const initialState: NotesState = {
 const queueCloudAdd = (state: NotesState, note: Note): void => {
   if (note.local) return;
   only_if_cloudConnected(() => {
+    // The upload supersedes a pending deletion (e.g. trashed, then restored while offline): uploads
+    // run before deletions, so keeping both would delete the restored note from the cloud. Cancelling
+    // needs no DEK, so it also happens while the vault is locked (the resync on unlock uploads the note).
+    delete state.cloud.items.delete[note.id];
     if (!isVaultUnlocked()) return;
     state.cloud.items.add[note.id] = CryptNote.encrypt(note);
-    // The upload supersedes a pending deletion (e.g. trashed, then restored while offline): uploads
-    // run before deletions, so keeping both would delete the restored note from the cloud.
-    delete state.cloud.items.delete[note.id];
   });
 };
 

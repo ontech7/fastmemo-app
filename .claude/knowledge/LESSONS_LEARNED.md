@@ -924,7 +924,9 @@ treat "edit while not active" as "write now".
 **Fix:** (1) `dequeueProcessed` only removes an entry if it is still the object that was uploaded
 (`original(queue)[id] === note`). (2) `queueCloudAdd` / `queueCloudDelete` remove the id from the opposite queue. (3)
 `exclusiveQueueEntry` (`libs/firebase.ts`) publishes the id in its queue and `deleteField()`s it from the others in the same
-write (notes and categories). Old app versions still write non-exclusive queues until updated.  
+write (notes and categories). Old app versions still write non-exclusive queues until updated. (1) and (2) were first done for
+notes only; the categories outbox got the same helpers in review (`feat/ota-pbkdf2-a11y`), plus a delete of the old icon's
+document when an edit changes a category's icon (the cloud keys categories by icon).  
 **Rule:** A queued sync operation must be exclusive per id at every level (local outbox, fan-out doc): the latest operation
 replaces the others, never coexists with them. Never dequeue by id alone after an async upload.
 
