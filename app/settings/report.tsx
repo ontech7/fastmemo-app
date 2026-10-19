@@ -5,7 +5,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
@@ -20,6 +20,7 @@ import AppBackground from "@/components/ui/AppBackground";
 import { useRouter } from "@/hooks/useRouter";
 import { setReportDate } from "@/slicers/settingsSlice";
 import { formatDateTime } from "@/utils/date";
+import { getDisplayAppVersion } from "@/utils/version";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
@@ -190,7 +191,7 @@ export default function ReportScreen() {
     data.topics = [...topicsSelected];
     data.description = problemDescription;
 
-    const currentAppVersion = Platform.OS === "web" ? configs.app.version.web : configs.app.version.mobile;
+    const currentAppVersion = getDisplayAppVersion();
 
     if (sendDeviceInfo) {
       data.deviceInfo = {

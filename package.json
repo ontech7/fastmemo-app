@@ -27,7 +27,8 @@
     "lint": "expo lint",
     "clean:projects": "rm -rf android ios dist",
     "clean:all": "rm -rf node_modules .expo android ios .expo-shared .eas dist",
-    "build:editor": "node scripts/build-codemirror.mjs"
+    "build:editor": "node scripts/build-codemirror.mjs",
+    "ota:check": "bash scripts/ota-guard.sh"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.1",
@@ -88,6 +89,7 @@
     "expo-splash-screen": "~58.0.10",
     "expo-status-bar": "~58.0.3",
     "expo-system-ui": "~58.0.6",
+    "expo-updates": "~58.0.17",
     "firebase": "9.22.1",
     "html-to-formatted-text": "^2.7.0",
     "html2canvas": "^1.4.1",

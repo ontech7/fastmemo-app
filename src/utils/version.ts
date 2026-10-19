@@ -20,6 +20,19 @@ export function getCurrentAppVersion(): string {
 }
 
 /**
+ * How many OTA updates (EAS Update) the running mobile bundle sits on top of its store version. An OTA cannot bump the
+ * app version (it's a native fingerprint input), so the OTA workflow injects the count at publish time; the bundle
+ * embedded in a store build has none (0).
+ */
+export const OTA_REVISION = Number(process.env.EXPO_PUBLIC_OTA_REVISION) || 0;
+
+/** The version shown to users and sent with reports: "3.3.0", or "3.3.0 · OTA 2" after two OTA updates. */
+export function getDisplayAppVersion(): string {
+  const version = getCurrentAppVersion();
+  return OTA_REVISION > 0 && !isDesktopOrWeb() ? `${version} · OTA ${OTA_REVISION}` : version;
+}
+
+/**
  * Compares two semver-like version strings (e.g. "3.1.1", "1.1.1").
  * Only the numeric dot-separated parts are considered; suffixes (e.g. "-beta")
  * are stripped before comparison.

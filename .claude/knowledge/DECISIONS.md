@@ -347,3 +347,41 @@ closes (`flushOnExit`, which also flushes the persistor).
 - On Android, JS timers stop in background, so background edits are written synchronously (LL-032)
 - Tauri v1's native Quit (Cmd+Q, Dock) terminates without `onCloseRequested`; the last sub-second batch can be lost there until
   the app handles the exit itself (custom Quit menu item or Tauri 2's `ExitRequested`)
+
+---
+
+## ADR-014: OTA Updates (EAS Update) for Android, Counted on Top of the Store Version
+
+**Status:** Accepted (2026-10-19) -- workflow and in-app label in place; `eas update:configure` (runtime policy, update URL,
+`production` channel) still to run with access to the EAS project.  
+**Context:** A JS-only bug fix had to wait for a full Play Store review. EAS Update can ship JS/asset changes to installed apps,
+but an update only reaches builds with the same runtime version, and the app `version` can't change in an update (it is a native
+fingerprint input).  
+**Decision:**
+
+- `runtimeVersion: { policy: "fingerprint" }`: the runtime is a hash of the native inputs (app config, autolinked native
+  dependencies, `modules/`), so it changes exactly when a store build is needed.
+- OTAs are published only by the manual **Publish OTA** GitHub workflow (`.github/workflows/publish-ota.yml`, from `main`). It
+  runs tsc/lint/i18n/vault tests, then `scripts/ota-guard.sh` (also `yarn ota:check` locally): the current Android fingerprint
+  must match a finished build on the `production` channel, or the code has native changes and the run fails instead of
+  publishing an update no installed app can receive.
+- Each OTA is tagged `vX.Y.Z+ota.N` (N-th OTA on top of store version X.Y.Z, restarting at 1 on a store release) with a GitHub
+  Release created `--latest=false`, and N is inlined as `EXPO_PUBLIC_OTA_REVISION`: the app shows "X.Y.Z · OTA N" in Information
+  and sends it with bug reports (`getDisplayAppVersion`).
+
+**Rationale:**
+
+- Manual dispatch keeps a human decision in front of every update that hits all users (same model as the Quido apps).
+- The revision lives in the JS bundle, not in `app.config.ts` `extra`: the app config is a fingerprint input, so a per-OTA value
+  there would give every update its own runtime and orphan it. `eas update` passes the shell environment to the export (EAS
+  environment variables win on conflict; `.env` files are ignored with `--environment`).
+- `--latest=false` keeps `releases/latest` on the store/desktop release: the website version API and the Tauri updater read it.
+- eas-cli is pinned (workflow + guard): the fingerprint is computed inside it, a different version could hash differently.
+
+**Trade-offs:**
+
+- Updates apply on the launch after the one that downloads them (default `fallbackToCacheTimeout: 0`): fast startup, one launch
+  of delay.
+- Android only: the iOS app isn't distributed through this flow.
+- Local and EAS fingerprints are assumed equal (the gitignored `android/` is already excluded as `bareNativeDir`); the guard
+  surfaces any divergence as a failed run, never as an orphaned update.
