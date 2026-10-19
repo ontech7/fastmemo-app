@@ -12,6 +12,7 @@ import SearchInput from "@/components/inputs/SearchInput";
 import QuickNoteBar, { QUICK_NOTE_BAR_RESERVED } from "@/components/notes/QuickNoteBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
+import WebViewWarmup from "@/components/WebViewWarmup";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
@@ -484,6 +485,8 @@ export default function HomeScreen() {
 
           <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
         </Animated.View>
+
+        <WebViewWarmup />
 
         <AddNoteOverlayButton
           isDeleteMode={isDeleteMode}
