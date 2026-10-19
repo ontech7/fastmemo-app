@@ -78,6 +78,11 @@ broke note visibility on a real device (see LL-003 updated entry and LL-022). Th
 rehydrate path in a way that wasn't captured by the model. Any future attempt must start from an empirical audit of AsyncStorage
 contents on an installed device.
 
+**Update (2026-10-19):** After that audit (see LL-003), the notes are no longer double-persisted: their copy in `persist:root`
+is folded into the notes storage once (`legacyRootNotes.ts`) and `notes` is then blacklisted from the root config. The root
+layer is kept for categories and settings, where the duplication costs a few KB. Removing it entirely is no longer worth the
+migration risk.
+
 ---
 
 ## ADR-004: On-Device AI (llama.rn) over Cloud AI APIs
@@ -121,6 +126,14 @@ costs.
 - WebView adds a layer of indirection and communication overhead
 - Two-way state sync between React Native and CodeMirror requires message passing
 - The editor HTML is base64-encoded into a generated TypeScript file (`codemirror-html.ts`)
+
+**Update (2026-10-19):** Language packs are dynamic `import()`s in `src/editor/codemirror-entry.js`; in the single esbuild IIFE
+they become lazily initialized modules, so opening a code note no longer builds every grammar's parse tables. Language and
+read-only mode are `Compartment`s reconfigured in place (switching no longer rebuilds the view), and `setCode` replaces the
+`EditorState` so undo never crosses into another tab (`{ undoable: true }` for in-document edits such as AI comments). Measured
+on the 419-note emulator dataset, time-to-ready of a code note did not change (~0.4-0.7 s): it is dominated by a fresh WebView
+loading and parsing the ~1 MB inline bundle on every open, which only reusing a live editor document would avoid. The raw-code
+cover keeps the content visible meanwhile (~50 ms after the tap).
 
 ---
 
@@ -292,7 +305,9 @@ Firestore + outbox plumbing from ADR-007.
   yields a frame so the spinner paints -- see LL-025/LL-026). Iteration count is stored in the vault doc so it can be raised
   later without breaking old vaults.
 - Note **titles** and metadata (id/type/dates/category) remain plaintext for sync keying/ordering; full title encryption is a
-  deferred follow-up.
+  deferred follow-up. Verified 2026-10-19 on a test project: titles, category names, todo `checked` flags and dates are readable
+  in Firestore. Sync keys on ids and timestamps, never on titles, so encrypting them is possible; until then the UI copy ("only
+  you can read your notes, not us and not Google") overstates what is protected.
 - AES-CBC + an app-level marker is weaker than authenticated AES-GCM, chosen deliberately for cross-platform synchronous
   interop; the marker covers the data-loss concern, not tamper-proofing.
 - Lose both password **and** recovery key => data is unrecoverable by design (true E2E).
@@ -300,3 +315,28 @@ Firestore + outbox plumbing from ADR-007.
   gated on.
 
 ---
+
+---
+
+## ADR-013: Batched Editor Commits with Explicit Flush Points
+
+**Status:** Accepted (2026-10-19)  
+**Context:** Every committed edit makes redux-persist serialize and rewrite the whole notes slice (and re-encrypt the note for
+the cloud outbox). Committing per keystroke made typing lag with many notes (LL-031).  
+**Decision:** `useNoteEditor` keeps edits in local state and commits them to Redux in batches: after a pause (500ms native /
+300ms web) and at least every 2s / 1s during continuous typing. Batches are also committed right away on blur, unmount, back,
+before actions on the stored note (`flushNote`), and when the app leaves the foreground, the page is hidden or a desktop window
+closes (`flushOnExit`, which also flushes the persistor).
+
+**Rationale:**
+
+- Persistence and encryption cost becomes proportional to pauses in typing, not to keystrokes
+- One choke point (`registerPendingFlush` / `flushPending`) instead of per-editor lifecycle code
+- Shorter windows on web/Tauri, where serializing is cheaper and a window can close without page events
+
+**Trade-offs:**
+
+- The store lags the editor by up to the debounce: code that reads the stored note must flush first (CONVENTIONS ALWAYS #15)
+- On Android, JS timers stop in background, so background edits are written synchronously (LL-032)
+- Tauri v1's native Quit (Cmd+Q, Dock) terminates without `onCloseRequested`; the last sub-second batch can be lost there until
+  the app handles the exit itself (custom Quit menu item or Tauri 2's `ExitRequested`)

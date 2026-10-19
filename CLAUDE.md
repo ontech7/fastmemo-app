@@ -4,8 +4,8 @@
 
 ## Project Summary
 
-FastMemo is a cross-platform note-taking app (Android, Web, Desktop via Tauri) built with Expo SDK 56, React Native 0.85, React
-19, and TypeScript 5.8. It supports four note types (text, todo, kanban, code), on-device AI (llama.rn with Qwen 2.5 GGUF
+FastMemo is a cross-platform note-taking app (Android, Web, Desktop via Tauri) built with Expo SDK 58, React Native 0.88, React
+19, and TypeScript 6.0. It supports four note types (text, todo, kanban, code), on-device AI (llama.rn with Qwen 2.5 GGUF
 models), encrypted cloud sync (Firebase), biometric protection, webhooks, voice recognition, and 7-language localization.
 Desktop builds use Tauri 1.x (Rust).
 
@@ -89,6 +89,10 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 19. **Never read authoritative cross-device state with cache-eligible `getDoc`/`getDocs`** -- vault presence, DEK staleness, and
     any "has another device changed this?" check must use `getDocFromServer`/`getDocsFromServer`. The Firestore local cache can
     serve stale data and survives restarts. Treat offline/error as "unknown -> skip", not as an answer. See LL-027
+20. **Never import icons from the `react-native-heroicons` barrels** -- use the deep path
+    (`react-native-heroicons/outline/XIcon`); each barrel evaluates ~300 icons at startup (LL-034)
+21. **Never keep the same id in two sync queues** (local outbox `add`/`delete`, or a device doc's `addNotes`/`deleteNotes`/
+    `detachNotes`) -- the latest operation replaces the others (`exclusiveQueueEntry`, `dequeueProcessed`). See LL-033
 
 ### ALWAYS Do
 
@@ -102,22 +106,25 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 7. **Always wrap memoized components** (NoteCard, TodoItem, OrderedCategoryCard, etc.) with `memo()` from react
 8. **Always add translations for all 7 locales** when adding new UI strings (en, it, es, fr, de, zh, ja)
 9. **Always test on both web and native** when touching platform-split files
+10. **Always call `flushNote()`** before acting on a note's stored copy (delete, detach, sync, change category): editors
+    commit to Redux in batches (ADR-013, LL-031)
+11. **Always set `timeout: 0`** on a redux-persist config: a timed-out read rehydrates empty state and wipes storage (LL-029)
 
 ## Tech Stack (Quick Reference)
 
 | Layer      | Technology                                                                                     |
 | ---------- | ---------------------------------------------------------------------------------------------- |
-| Framework  | Expo SDK 56, React Native 0.85, React 19.2                                                       |
-| Language   | TypeScript 5.8 (path alias `@/*` -> `./src/*`)                                                 |
-| Routing    | expo-router 5.1 (file-based, typed routes)                                                     |
+| Framework  | Expo SDK 58, React Native 0.88 (New Architecture, Hermes V1), React 19.3                       |
+| Language   | TypeScript 6.0 (path alias `@/*` -> `./src/*`)                                                 |
+| Routing    | expo-router 58 (file-based, typed routes)                                                      |
 | State      | Redux Toolkit 2.8 + Redux Persist (filesystem for notes, AsyncStorage for settings/categories) |
 | Desktop    | Tauri 1.x (Rust)                                                                               |
 | Cloud      | Firebase Firestore (per-vault E2E encryption, envelope DEK/KEK -- ADR-012)                     |
 | AI         | llama.rn 0.12 (Qwen 2.5 GGUF, on-device)                                                       |
 | Editor     | CodeMirror 6 (via WebView)                                                                     |
 | i18n       | i18next + react-i18next (7 languages, single namespace)                                        |
-| Animations | react-native-reanimated 3.17                                                                   |
-| Lists      | @shopify/flash-list 2.0                                                                        |
+| Animations | react-native-reanimated 4.7 (+ react-native-worklets)                                          |
+| Lists      | @shopify/flash-list 2.3                                                                        |
 | Monitoring | Sentry                                                                                         |
 
 ## Directory Map
