@@ -40,6 +40,8 @@ export default function SelectableCardList<T extends string>({ items, selectedId
             onPress={() => !disabled && onSelect(item.id)}
             activeOpacity={disabled ? 1 : 0.7}
             disabled={disabled}
+            accessibilityRole="radio"
+            aria-checked={isSelected}
           >
             <View style={{ flex: 1 }}>
               <View style={styles.header}>

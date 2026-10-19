@@ -279,6 +279,21 @@ const fr = {
     deleteDevices: "Gérer les appareils",
     handshakeFailed: "Échec de la tentative de connexion",
     handshakeFailedDesc: "Impossible de se connecter au serveur Firebase.",
+    provider: {
+      title: "Synchroniser avec",
+      firebase: "Google Firebase",
+      firebase_desc: "Votre propre projet Firebase : gratuit et rapide à configurer, hébergé par Google.",
+      server: "FastMemo Server",
+      server_desc: "Votre propre serveur (PC, NAS, Raspberry Pi, VPS) : vos notes restent chez vous.",
+    },
+    server: {
+      url: "Adresse du serveur",
+      key: "Clé d'accès",
+      http_warning:
+        "Cette adresse n'est pas chiffrée (HTTP) : utilisez-la uniquement sur votre réseau domestique. Vos notes restent chiffrées de bout en bout, mais la clé d'accès et les titres circulent en clair.",
+      handshake_failed_desc:
+        "Impossible de joindre le serveur, ou la clé d'accès est incorrecte. Vérifiez l'adresse (par ex. https://notes.exemple.fr ou http://192.168.1.10:8787), la clé, et que le serveur est allumé.",
+    },
     vault: {
       setup_title: "Protégez vos notes",
       setup_desc:

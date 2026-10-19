@@ -278,6 +278,21 @@ const en = {
     deleteDevices: "Manage devices",
     handshakeFailed: "Connection attempt failed",
     handshakeFailedDesc: "Unable to connect to the Firebase server.",
+    provider: {
+      title: "Sync with",
+      firebase: "Google Firebase",
+      firebase_desc: "Your own Firebase project: free and quick to set up, hosted by Google.",
+      server: "FastMemo Server",
+      server_desc: "Your own server (PC, NAS, Raspberry Pi, VPS): your notes never leave your hands.",
+    },
+    server: {
+      url: "Server address",
+      key: "Access key",
+      http_warning:
+        "This address isn't encrypted (HTTP): use it only on your home network. Your notes stay end-to-end encrypted, but the access key and the titles travel in the clear.",
+      handshake_failed_desc:
+        "Couldn't reach the server, or the access key is wrong. Check the address (e.g. https://notes.example.com or http://192.168.1.10:8787), the key, and that the server is running.",
+    },
     vault: {
       setup_title: "Protect your notes",
       setup_desc:

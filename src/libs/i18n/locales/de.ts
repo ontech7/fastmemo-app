@@ -279,6 +279,21 @@ const de = {
     deleteDevices: "Geräte verwalten",
     handshakeFailed: "Verbindungsversuch fehlgeschlagen",
     handshakeFailedDesc: "Es konnte keine Verbindung zum Firebase-Server hergestellt werden.",
+    provider: {
+      title: "Synchronisieren mit",
+      firebase: "Google Firebase",
+      firebase_desc: "Ihr eigenes Firebase-Projekt: kostenlos und schnell eingerichtet, gehostet von Google.",
+      server: "FastMemo Server",
+      server_desc: "Ihr eigener Server (PC, NAS, Raspberry Pi, VPS): Ihre Notizen bleiben bei Ihnen.",
+    },
+    server: {
+      url: "Serveradresse",
+      key: "Zugangsschlüssel",
+      http_warning:
+        "Diese Adresse ist nicht verschlüsselt (HTTP): Verwenden Sie sie nur in Ihrem Heimnetz. Ihre Notizen bleiben Ende-zu-Ende-verschlüsselt, aber der Zugangsschlüssel und die Titel werden unverschlüsselt übertragen.",
+      handshake_failed_desc:
+        "Der Server ist nicht erreichbar oder der Zugangsschlüssel ist falsch. Prüfen Sie die Adresse (z. B. https://notizen.beispiel.de oder http://192.168.1.10:8787), den Schlüssel und ob der Server läuft.",
+    },
     vault: {
       setup_title: "Schützen Sie Ihre Notizen",
       setup_desc:

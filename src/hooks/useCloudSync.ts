@@ -1,10 +1,9 @@
-import { configs } from "@/configs";
-import type { CloudSettings } from "@/types";
+import type { CloudProvider, CloudSettings } from "@/types";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 
-import { cloud, getDeviceUuid, getThisDevice } from "@/libs/cloud";
+import { cloud, cloudScope, getDeviceUuid, getThisDevice, normalizeServerUrl, providerOf } from "@/libs/cloud";
 import { getSyncEngine, syncNow } from "@/libs/cloud/sync";
 import { useRouter } from "@/hooks/useRouter";
 import { storeVaultContinuation } from "@/libs/registry";
@@ -44,12 +43,25 @@ export const useCloudSync = () => {
   const selectorCloudConnected = useSelector(getCloudConnected);
 
   const [cloudSettings, setLocalCloudSettings] = useState<CloudSettings>(selectorCloudSettings);
-  const firestoreSettings: CloudSettings = {
-    ...cloudSettings,
-    authDomain: (cloudSettings.projectId ?? "") + ".firebaseapp.com",
-    storageBucket: (cloudSettings.projectId ?? "") + ".appspot.com",
-    messagingSenderId: cloudSettings.appId.split(":")?.[1] ?? "",
-  };
+  const provider = providerOf(cloudSettings);
+  /** The settings as the connection uses them (and as they're saved). */
+  const connectionSettings: CloudSettings =
+    provider === "server"
+      ? {
+          ...cloudSettings,
+          provider,
+          serverUrl: normalizeServerUrl(cloudSettings.serverUrl ?? ""),
+          serverKey: (cloudSettings.serverKey ?? "").trim(),
+        }
+      : {
+          ...cloudSettings,
+          provider,
+          authDomain: (cloudSettings.projectId ?? "") + ".firebaseapp.com",
+          storageBucket: (cloudSettings.projectId ?? "") + ".appspot.com",
+          messagingSenderId: cloudSettings.appId.split(":")?.[1] ?? "",
+        };
+  /** What this device's vault key is cached under (the vault screens get it as `projectId`). */
+  const scope = cloudScope(connectionSettings);
 
   const [isCloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(selectorCloudSyncEnabled);
   const [isConnected, setIsConnected] = useState<boolean>(selectorCloudConnected);
@@ -77,7 +89,7 @@ export const useCloudSync = () => {
 
         // forget the cached DEK for this device, but leave the cloud vault intact
         // so reconnecting (or another device) can still unlock with the passphrase
-        if (cloudSettings.projectId) await forgetDeviceVault(cloudSettings.projectId);
+        if (scope) await forgetDeviceVault(scope);
 
         await cloud.dispose();
       } catch (e) {
@@ -94,19 +106,23 @@ export const useCloudSync = () => {
     dispatch(setIsCloudSyncEnabled(!isCloudSyncEnabled));
   };
 
-  const setCloudSetting = (name: keyof CloudSettings, value: string): void => {
+  const setCloudSetting = (name: Exclude<keyof CloudSettings, "provider">, value: string): void => {
     setLocalCloudSettings({
       ...cloudSettings,
-      // Firebase identifiers never contain whitespace, but a paste can carry some along.
+      // Identifiers, addresses and keys never contain whitespace, but a paste can carry some along.
       [name]: value.trim(),
     });
+  };
+
+  const setCloudProvider = (next: CloudProvider): void => {
+    setLocalCloudSettings({ ...cloudSettings, provider: next });
   };
 
   const saveCloudSettings = async (): Promise<void> => {
     setIsConnecting({ loading: true });
     setIsLoading(true);
 
-    cloud.init(firestoreSettings);
+    cloud.init(connectionSettings);
 
     const ok = await cloud.verify();
     setIsConnecting({ loading: false, code: ok ? Handshake.Success : Handshake.Fail });
@@ -123,7 +139,7 @@ export const useCloudSync = () => {
    * no vault has ever been created. On success it just resyncs.
    */
   const requestVaultAccess = async (): Promise<void> => {
-    const projectId = cloudSettings.projectId;
+    const projectId = scope;
 
     // Probe first: on an unverifiable read, do NOT route to create (it could
     // overwrite an existing vault). Ask the user to retry instead.
@@ -156,7 +172,7 @@ export const useCloudSync = () => {
     storeVaultContinuation(async () => {
       await syncCloudData(false);
     });
-    const target = { pathname: "/settings/cloud-sync/vault-reset", params: { projectId: cloudSettings.projectId } } as const;
+    const target = { pathname: "/settings/cloud-sync/vault-reset", params: { projectId: scope } } as const;
     if (useReplace) {
       router.replace(target);
     } else {
@@ -202,13 +218,13 @@ export const useCloudSync = () => {
 
           const me = await getDeviceUuid();
           const others = cloudDevices.filter((device) => device.uuid !== me);
-          if (others.length >= configs.cloud.deviceLimit) {
+          if (others.length >= cloud.deviceLimit) {
             setIsLoading(false);
             toast(t("devicesLimitReached"));
             return;
           }
 
-          const projectId = firestoreSettings.projectId;
+          const projectId = scope;
 
           // Finalize the connection once the vault has been unlocked/created and
           // the DEK is in the session (the vault screen runs this continuation).
@@ -216,10 +232,10 @@ export const useCloudSync = () => {
             const device = await getThisDevice();
             if (!device || !(await cloud.registerDevice(device))) throw new Error("device registration failed");
             await syncCloudData(true);
-            await AsyncStorage.setItem("@cloudSync", JSON.stringify(firestoreSettings));
+            await AsyncStorage.setItem("@cloudSync", JSON.stringify(connectionSettings));
             setIsConnected(true);
             dispatch(setCloudConnected(true));
-            dispatch(setCloudSettings(firestoreSettings));
+            dispatch(setCloudSettings(connectionSettings));
             setIsLoading(false);
           };
 
@@ -271,6 +287,7 @@ export const useCloudSync = () => {
     methods: {
       toggleCloudSync,
       setCloudSetting,
+      setCloudProvider,
       saveCloudSettings,
       editCloudSettings,
       requestVaultAccess,
@@ -287,5 +304,6 @@ export const useCloudSync = () => {
       handshakeFailed,
     },
     cloudSettings,
+    provider,
   };
 };

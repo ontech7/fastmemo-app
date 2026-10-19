@@ -277,6 +277,20 @@ const zh = {
     deleteDevices: "管理设备",
     handshakeFailed: "连接尝试失败",
     handshakeFailedDesc: "无法连接到 Firebase 服务器。",
+    provider: {
+      title: "同步到",
+      firebase: "Google Firebase",
+      firebase_desc: "您自己的 Firebase 项目：免费、设置快捷，由 Google 托管。",
+      server: "FastMemo 服务器",
+      server_desc: "您自己的服务器（电脑、NAS、树莓派、VPS）：笔记始终掌握在您手中。",
+    },
+    server: {
+      url: "服务器地址",
+      key: "访问密钥",
+      http_warning: "此地址未加密（HTTP）：请仅在家庭网络中使用。笔记仍保持端到端加密，但访问密钥和标题以明文传输。",
+      handshake_failed_desc:
+        "无法连接到服务器，或访问密钥错误。请检查地址（例如 https://notes.example.com 或 http://192.168.1.10:8787）、密钥，以及服务器是否正在运行。",
+    },
     vault: {
       setup_title: "保护您的笔记",
       setup_desc: "您正在为云同步开启端到端加密。请选择一个加密密码——它是保护您笔记隐私的钥匙。",

@@ -278,6 +278,21 @@ const ja = {
     deleteDevices: "デバイスを管理",
     handshakeFailed: "接続試行に失敗しました",
     handshakeFailedDesc: "Firebaseサーバーに接続できませんでした。",
+    provider: {
+      title: "同期先",
+      firebase: "Google Firebase",
+      firebase_desc: "あなた専用の Firebase プロジェクト：無料ですぐに設定でき、Google がホストします。",
+      server: "FastMemo サーバー",
+      server_desc: "あなた自身のサーバー（PC、NAS、Raspberry Pi、VPS）：ノートがあなたの手元から出ることはありません。",
+    },
+    server: {
+      url: "サーバーのアドレス",
+      key: "アクセスキー",
+      http_warning:
+        "このアドレスは暗号化されていません（HTTP）。自宅のネットワーク内だけで使ってください。ノートはエンドツーエンドで暗号化されたままですが、アクセスキーとタイトルは暗号化されずに送信されます。",
+      handshake_failed_desc:
+        "サーバーに接続できないか、アクセスキーが間違っています。アドレス（例：https://notes.example.com や http://192.168.1.10:8787）、キー、サーバーが起動しているかを確認してください。",
+    },
     vault: {
       setup_title: "ノートを保護する",
       setup_desc:

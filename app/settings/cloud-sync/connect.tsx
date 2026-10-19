@@ -1,5 +1,6 @@
 import BackButton from "@/components/buttons/BackButton";
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
+import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
@@ -12,10 +13,12 @@ import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
 import { useVaultProgress } from "@/hooks/useVaultProgress";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
+import { isCloudSettingsComplete as settingsComplete, isPlainHttp } from "@/libs/cloud";
 import { probeVault } from "@/libs/vaultManager";
+import type { CloudProvider } from "@/types";
 import { openUrl } from "@/utils/openUrl";
 import { toast } from "@/utils/toast";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
@@ -37,7 +40,15 @@ export default function CloudSyncScreen() {
   const vaultUnlocked = useVaultUnlocked();
   const progress = useVaultProgress();
 
-  const { methods, state, cloudSettings } = useCloudSync();
+  const { methods, state, cloudSettings, provider } = useCloudSync();
+
+  const providerItems = useMemo<SelectableCardItem<CloudProvider>[]>(
+    () => [
+      { id: "firebase", label: t("cloudsync.provider.firebase"), description: t("cloudsync.provider.firebase_desc") },
+      { id: "server", label: t("cloudsync.provider.server"), description: t("cloudsync.provider.server_desc") },
+    ],
+    [t]
+  );
 
   // When connected but no key is loaded yet, find out whether encryption has
   // ever been set up, so the action reads "Unlock" (vault exists) vs "Turn on
@@ -58,7 +69,8 @@ export default function CloudSyncScreen() {
     };
   }, [state.isConnected, vaultUnlocked, netInfo?.isConnected]);
 
-  const isCloudSettingsComplete = cloudSettings.apiKey != "" && cloudSettings.projectId != "" && cloudSettings.appId != "";
+  const isCloudSettingsComplete = settingsComplete(cloudSettings);
+  const plainHttp = provider === "server" && !!cloudSettings.serverUrl && isPlainHttp(cloudSettings.serverUrl);
 
   const toggleCloudSync = () => {
     if (!netInfo?.isConnected) {
@@ -104,7 +116,7 @@ export default function CloudSyncScreen() {
         open={state.handshakeFailed}
         adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.yellow} style={{ marginBottom: -3 }} />}
         title={t("cloudsync.handshakeFailed")}
-        description={t("cloudsync.handshakeFailedDesc")}
+        description={t(provider === "server" ? "cloudsync.server.handshake_failed_desc" : "cloudsync.handshakeFailedDesc")}
         confirm={{
           label: t("confirm"),
           handler: () => methods.dismissHandshakeFailed(),
@@ -122,7 +134,11 @@ export default function CloudSyncScreen() {
 
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => openUrl(`${configs.app.websiteUrl}/${t("languageCode")}/guides/google-firebase`)}
+            onPress={() =>
+              openUrl(
+                `${configs.app.websiteUrl}/${t("languageCode")}/guides/${provider === "server" ? "self-hosting" : "google-firebase"}`
+              )
+            }
             accessibilityRole="link"
             accessibilityLabel={t("a11y.open_guide")}
           >
@@ -159,66 +175,130 @@ export default function CloudSyncScreen() {
               <>
                 <View style={styles.sectionWrapper}>
                   <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionHeaderTitle}>API Key</Text>
+                    <Text style={styles.sectionHeaderTitle}>{t("cloudsync.provider.title")}</Text>
                   </View>
 
-                  <View style={styles.textInputContainer}>
-                    <TextInput
-                      editable={state.isEditable}
-                      style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
-                      cursorColor={COLOR.textPrimary}
-                      placeholderTextColor={COLOR.textMuted}
-                      placeholder="e.g.: AIzaF0Ba0wDdkde893DR9rkfAE03"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      spellCheck={false}
-                      onChangeText={(text: string) => methods.setCloudSetting("apiKey", text)}
-                      value={!state.isConnected ? cloudSettings.apiKey : "***********"}
-                    />
-                  </View>
+                  <SelectableCardList<CloudProvider>
+                    // Connected: only the cloud in use (edit the settings to switch).
+                    items={state.isEditable ? providerItems : providerItems.filter((item) => item.id === provider)}
+                    selectedId={provider}
+                    onSelect={(id) => state.isEditable && methods.setCloudProvider(id)}
+                  />
                 </View>
 
-                <View style={styles.sectionWrapper}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionHeaderTitle}>Project Id</Text>
-                  </View>
+                {provider === "server" ? (
+                  <>
+                    <View style={styles.sectionWrapper}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderTitle}>{t("cloudsync.server.url")}</Text>
+                      </View>
 
-                  <View style={styles.textInputContainer}>
-                    <TextInput
-                      editable={state.isEditable}
-                      style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
-                      cursorColor={COLOR.textPrimary}
-                      placeholderTextColor={COLOR.textMuted}
-                      placeholder="e.g.: fastmemo-xyzw"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      spellCheck={false}
-                      onChangeText={(text: string) => methods.setCloudSetting("projectId", text)}
-                      value={!state.isConnected ? cloudSettings.projectId : "***********"}
-                    />
-                  </View>
-                </View>
+                      <View style={styles.textInputContainer}>
+                        <TextInput
+                          editable={state.isEditable}
+                          style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                          cursorColor={COLOR.textPrimary}
+                          placeholderTextColor={COLOR.textMuted}
+                          placeholder="e.g.: https://notes.example.com"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          keyboardType="url"
+                          onChangeText={(text: string) => methods.setCloudSetting("serverUrl", text)}
+                          value={cloudSettings.serverUrl ?? ""}
+                        />
+                      </View>
 
-                <View style={[styles.sectionWrapper, { marginBottom: PADDING_MARGIN.lg }]}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionHeaderTitle}>App Id</Text>
-                  </View>
+                      {plainHttp && <Text style={styles.fieldWarning}>{t("cloudsync.server.http_warning")}</Text>}
+                    </View>
 
-                  <View style={styles.textInputContainer}>
-                    <TextInput
-                      editable={state.isEditable}
-                      style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
-                      cursorColor={COLOR.textPrimary}
-                      placeholderTextColor={COLOR.textMuted}
-                      placeholder="e.g.: 1:2137892387:web:9g7a6s6f8gf8df878787s6"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      spellCheck={false}
-                      onChangeText={(text: string) => methods.setCloudSetting("appId", text)}
-                      value={!state.isConnected ? cloudSettings.appId : "***********"}
-                    />
-                  </View>
-                </View>
+                    <View style={[styles.sectionWrapper, { marginBottom: PADDING_MARGIN.lg }]}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderTitle}>{t("cloudsync.server.key")}</Text>
+                      </View>
+
+                      <View style={styles.textInputContainer}>
+                        <TextInput
+                          editable={state.isEditable}
+                          style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                          cursorColor={COLOR.textPrimary}
+                          placeholderTextColor={COLOR.textMuted}
+                          placeholder="e.g.: 3kQ9-x7Lm2P..."
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          onChangeText={(text: string) => methods.setCloudSetting("serverKey", text)}
+                          value={!state.isConnected ? (cloudSettings.serverKey ?? "") : "***********"}
+                        />
+                      </View>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.sectionWrapper}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderTitle}>API Key</Text>
+                      </View>
+
+                      <View style={styles.textInputContainer}>
+                        <TextInput
+                          editable={state.isEditable}
+                          style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                          cursorColor={COLOR.textPrimary}
+                          placeholderTextColor={COLOR.textMuted}
+                          placeholder="e.g.: AIzaF0Ba0wDdkde893DR9rkfAE03"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          onChangeText={(text: string) => methods.setCloudSetting("apiKey", text)}
+                          value={!state.isConnected ? cloudSettings.apiKey : "***********"}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.sectionWrapper}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderTitle}>Project Id</Text>
+                      </View>
+
+                      <View style={styles.textInputContainer}>
+                        <TextInput
+                          editable={state.isEditable}
+                          style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                          cursorColor={COLOR.textPrimary}
+                          placeholderTextColor={COLOR.textMuted}
+                          placeholder="e.g.: fastmemo-xyzw"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          onChangeText={(text: string) => methods.setCloudSetting("projectId", text)}
+                          value={!state.isConnected ? cloudSettings.projectId : "***********"}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={[styles.sectionWrapper, { marginBottom: PADDING_MARGIN.lg }]}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderTitle}>App Id</Text>
+                      </View>
+
+                      <View style={styles.textInputContainer}>
+                        <TextInput
+                          editable={state.isEditable}
+                          style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                          cursorColor={COLOR.textPrimary}
+                          placeholderTextColor={COLOR.textMuted}
+                          placeholder="e.g.: 1:2137892387:web:9g7a6s6f8gf8df878787s6"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          onChangeText={(text: string) => methods.setCloudSetting("appId", text)}
+                          value={!state.isConnected ? cloudSettings.appId : "***********"}
+                        />
+                      </View>
+                    </View>
+                  </>
+                )}
 
                 {state.isEditable && (
                   <View style={styles.sectionWrapper}>
@@ -533,6 +613,13 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     backgroundColor: COLOR.darkImportant,
+  },
+  fieldWarning: {
+    marginTop: PADDING_MARGIN.sm,
+    color: COLOR.yellow,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    lineHeight: 18,
   },
   encryptionHint: {
     marginTop: PADDING_MARGIN.md,
