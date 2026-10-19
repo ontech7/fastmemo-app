@@ -12,7 +12,7 @@ import { webhook } from "@/utils/webhook";
 import type { Href } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, StyleSheet, TextInput, type TextInputInstance, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, type TextInputInstance, type TextInputKeyPressEvent, View } from "react-native";
 import ArrowsPointingOutIcon from "react-native-heroicons/outline/ArrowsPointingOutIcon";
 import PaperAirplaneIcon from "react-native-heroicons/outline/PaperAirplaneIcon";
 import PencilSquareIcon from "react-native-heroicons/outline/PencilSquareIcon";
@@ -142,6 +142,21 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
     inputRef.current?.blur();
   }, [flush]);
 
+  // Desktop shortcut: ⌘/Ctrl+Enter saves, a plain Enter keeps adding lines. Only react-native-web
+  // reports the modifiers on key events, so this never fires on native keyboards.
+  const handleKeyPress = useCallback(
+    (event: TextInputKeyPressEvent) => {
+      const { key, metaKey, ctrlKey } = event.nativeEvent as TextInputKeyPressEvent["nativeEvent"] & {
+        metaKey?: boolean;
+        ctrlKey?: boolean;
+      };
+      if (key !== "Enter" || !(metaKey || ctrlKey)) return;
+      event.preventDefault();
+      handleSend();
+    },
+    [handleSend]
+  );
+
   // Carry whatever's typed into the full editor: persist it, then open that note
   // (or a fresh one if nothing was typed yet) so the user can format / add media.
   const handleExpand = useCallback(() => {
@@ -166,6 +181,7 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
           style={styles.input}
           value={text}
           onChangeText={onChangeText}
+          onKeyPress={handleKeyPress}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder={t("home.quickNote")}
