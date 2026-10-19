@@ -186,9 +186,9 @@ The Firestore backend, outbox pattern, and boundary-encryption placement from th
 
 ## ADR-008: Tauri over Electron for Desktop
 
-**Status:** Accepted  
+**Status:** Accepted (on Tauri 2 since 2026-10, see ADR-015)  
 **Context:** Need a desktop app for macOS, Windows, and Linux.  
-**Decision:** Tauri 1.x (Rust backend) wrapping the web build.  
+**Decision:** Tauri (Rust backend) wrapping the web build.  
 **Rationale:**
 
 - Tauri produces significantly smaller binaries than Electron (~10-20 MB vs ~100+ MB)
@@ -198,8 +198,8 @@ The Firestore backend, outbox pattern, and boundary-encryption placement from th
 
 **Trade-offs:**
 
-- Tauri 1.x is less mature than Electron's ecosystem
-- Some web APIs differ in WebView context (Tauri provides polyfills via `@tauri-apps/api`)
+- Tauri is less mature than Electron's ecosystem
+- Some web APIs differ in WebView context (native features go through `@tauri-apps/api` and the official plugins)
 - Platform detection needed (`isTauri()` in `utils/platform.ts`)
 - Desktop-specific features require Rust-side development
 
@@ -345,8 +345,8 @@ closes (`flushOnExit`, which also flushes the persistor).
 
 - The store lags the editor by up to the debounce: code that reads the stored note must flush first (CONVENTIONS ALWAYS #15)
 - On Android, JS timers stop in background, so background edits are written synchronously (LL-032)
-- Tauri v1's native Quit (Cmd+Q, Dock) terminates without `onCloseRequested`; the last sub-second batch can be lost there until
-  the app handles the exit itself (custom Quit menu item or Tauri 2's `ExitRequested`)
+- ~~Tauri v1's native Quit (Cmd+Q, Dock) terminates without `onCloseRequested`~~: since Tauri 2 (ADR-015) the window close and
+  the app menu's Quit (Cmd+Q) wait for the flush; Dock Quit, logout and OS session end still don't
 
 ---
 
@@ -391,3 +391,48 @@ it.
   policy (which would let an update reach a build with different native code).
 - Local and EAS fingerprints are assumed equal (the gitignored `android/` is already excluded as `bareNativeDir`); the guard
   surfaces any divergence as a failed run, never as an orphaned update.
+
+---
+
+## ADR-015: Tauri 2, Migrated in Place (Same Identifier, Data and Update Channel)
+
+**Status:** Accepted (2026-10-19)  
+**Context:** Tauri 1 is in maintenance. Its built-in updater dialog (`dialog: true`) could hang the app, a native Quit (Cmd+Q)
+skipped the exit flush (ADR-013), and the white-flash/titlebar fixes needed per-platform native code pinned to Tauri 1's
+crates.  
+**Decision:** Migrate to Tauri 2 without changing anything an installed app depends on:
+
+- **Same data:** identifier `com.ontech7.fastmemo` and WebView data folders are unchanged, and
+  `app.windows[].useHttpsScheme: true` keeps the Windows origin `https://tauri.localhost` (Tauri 2's default `http://` is a
+  different origin: empty IndexedDB).
+- **Same update channel:** `bundle.createUpdaterArtifacts: "v1Compatible"` produces Tauri 1's archive names (`.app.tar.gz`,
+  `.msi.zip`, `.nsis.zip`, `.AppImage.tar.gz`) signed with the same key, so 1.x installs update to the first 2.x release through
+  the same `latest.json`; `mainBinaryName` keeps the binary name (`Fast Memo`, and `fast-memo` on Linux via
+  `tauri.linux.conf.json`, as 1.x kebab-cased it there).
+- **Least privilege:** one capability (`src-tauri/capabilities/default.json`) grants only what the frontend calls: event
+  listen/unlisten, resource close and bundle type (no `core:default`), dialog open/save, fs read/write text and write binary (no
+  static scope: the dialog plugin scopes the picked path), opener for http(s)/mailto/tel, updater, process restart. Clipboard,
+  notification and the v1 fs scope were unused and are gone.
+- **Exit flush in Rust:** a quit from the window (`WindowEvent::CloseRequested`: close button, Cmd+W) or from the app menu is
+  held, the frontend is asked to flush (`fastmemo://flush-before-exit`) and the app exits on its `exit_after_flush` or after 2s.
+  On macOS the app menu is Tauri's default with its own Quit item (Cmd+Q): the predefined one sends `terminate:`, which tao
+  turns straight into an exit with no event to hold. No JS close listener, so no window permission is needed (LL-038).
+- **Updater UI in the app:** `AppUpdateProvider` checks once per launch (retried on reconnect) and from Settings, asks with the
+  app's own dialog, then downloads, flushes, installs, flushes and relaunches (neither the install nor the restart goes through
+  the exit flush). No native dialog. deb/rpm installs are never offered an update (the updater only has the AppImage for them):
+  they update through their package manager.
+- **Single instance** (`tauri-plugin-single-instance`): a second launch focuses the running window instead of opening a second
+  writer on the same stored notes. Its lock is keyed by identifier: a `tauri dev` without the test config (same identifier as
+  the installed app) exits at once while the installed app runs, and uses its data. Develop with
+  `-c src-tauri/tauri.test.conf.json`.
+- **No native code:** `backgroundColor` (window and webview layer on every platform: wry turns off WKWebView's `drawsBackground`
+  for it) + macOS `titleBarStyle: "Transparent"` replace all the cocoa/webview2/webkit2gtk code.
+
+**Trade-offs:**
+
+- The first 2.x update is installed by the 1.x updater (its native dialog, once more); from then on the in-app flow is used.
+- `useHttpsScheme` must never be removed on Windows without a data migration.
+- Test builds (`tauri.test.conf.json`) have no updater endpoints: they never update (and can't be offered the real app).
+- Quits that bypass the event loop still skip the flush and can lose the edit batch still open (≤1s of typing on desktop): macOS
+  Dock → Quit and logout (`terminate:` → `applicationWillTerminate`), a Windows session ending (`WM_ENDSESSION`), Linux SIGTERM.
+  Holding those needs `applicationShouldTerminate:` / `WM_QUERYENDSESSION` hooks tao doesn't expose.

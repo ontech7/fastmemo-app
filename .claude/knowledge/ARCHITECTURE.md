@@ -12,12 +12,13 @@ platforms: Android (primary), Web, and Desktop (Tauri).
 | -------- | ------------------------------------ | ------------ | --------------- |
 | Android  | React Native 0.85 (New Architecture) | EAS Build    | Active (v3.2.0) |
 | Web      | Expo Web (React DOM)                 | Expo/Webpack | Active          |
-| Desktop  | Tauri 1.x (Rust + WebView)           | tauri-action | Active (v1.2.0) |
+| Desktop  | Tauri 2.x (Rust + WebView)           | tauri-action | Active (v1.2.0) |
 | iOS      | React Native                         | -            | Dismissed       |
 
 ## Source Directory Structure
 
-> As of v3.2.0 / Expo SDK 56, `app/` and `assets/` live at the **project root** (moved out of `src/`). The tree below still reflects their internal layout.
+> As of v3.2.0 / Expo SDK 56, `app/` and `assets/` live at the **project root** (moved out of `src/`). The tree below still
+> reflects their internal layout.
 
 ```
 src/
@@ -244,8 +245,10 @@ notes copy from `persist:root` into the notes storage (backup under `backup:root
 and only then `persistor.persist()`. If the fold can't finish, notes keep persisting in the root blob for that session.
 
 Edits reach the store in batches (`useNoteEditor`: debounce 500ms / max 2s native, 300ms / 1s web). Pending batches register in
-`registry.ts`; `flushOnExit` (installed in `_layout`) flushes them plus `persistor.flush()` on AppState background, page hide, or
-Tauri `onCloseRequested`.
+`registry.ts`; `flushOnExit` (installed in `_layout`) flushes them plus `persistor.flush()` on AppState background, page hide,
+or a desktop quit: the Rust shell (`src-tauri/src/lib.rs`) holds a quit from the window (close button, Cmd+W) or the app menu
+(Cmd+Q), emits `fastmemo://flush-before-exit`, and exits on the frontend's `exit_after_flush` or after 2s (Dock Quit, logout and
+OS session end aren't held: ADR-015).
 
 ### Screen Navigation Flow
 

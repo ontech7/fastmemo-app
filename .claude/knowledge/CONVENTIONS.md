@@ -497,7 +497,7 @@ inside function bodies, and (3) it defeats TypeScript and tree-shaking clarity.
 Legitimate remaining uses of dynamic `require`:
 
 - **Metro asset imports:** `require("../assets/foo.png")` -- this is Metro's asset syntax, not a module require.
-- **Inside an already-web file, for Tauri-only paths:** e.g. `await import("@tauri-apps/api/fs")` inside an `if (isTauri())`
+- **Inside an already-web file, for Tauri-only paths:** e.g. `await import("@tauri-apps/plugin-fs")` inside an `if (isTauri())`
   branch of a `.web.ts` file. Tauri shares the web bundle, so this is runtime detection, not bundle-time resolution.
 
 If a module genuinely has no web equivalent (e.g. `expo-local-authentication`, `@react-native-community/netinfo`, `llama.rn`),

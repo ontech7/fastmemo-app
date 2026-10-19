@@ -39,7 +39,7 @@ Update **all** files for each track being released. Keep them in lockstep — a 
 | File                        | Field                                     | Notes                                                                |
 | --------------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
 | `src-tauri/Cargo.toml`      | `[package] version`                       |                                                                      |
-| `src-tauri/tauri.conf.json` | `package.version`                         |                                                                      |
+| `src-tauri/tauri.conf.json` | top-level `version`                       | Tauri 2 layout (was `package.version` in Tauri 1)                    |
 | `src-tauri/Cargo.lock`      | the `name = "fastmemo"` entry's `version` | keep in sync with Cargo.toml or the next `cargo` run will rewrite it |
 | `src/configs/index.ts`      | `app.version.web`                         | "web" == desktop track                                               |
 

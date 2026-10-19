@@ -1,14 +1,14 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
-  "package": {
-    "productName": "Fast Memo Test"
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Fast Memo Test",
+  "mainBinaryName": "Fast Memo Test",
+  "identifier": "com.ontech7.fastmemo.test",
+  "bundle": {
+    "createUpdaterArtifacts": false
   },
-  "tauri": {
-    "bundle": {
-      "identifier": "com.ontech7.fastmemo.test"
-    },
+  "plugins": {
     "updater": {
-      "active": false
+      "endpoints": []
     }
   }
 }

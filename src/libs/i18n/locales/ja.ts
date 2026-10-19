@@ -423,6 +423,8 @@ const ja = {
     checking_updates: "確認中...",
     update_available: "アップデートあり",
     update_confirm: "今すぐインストールしますか？",
+    update_installing: "アップデートをダウンロード中です。インストール後にアプリが再起動します。",
+    update_install: "インストール",
     no_updates: "最新バージョンを使用しています。",
     feedback_and_help: "フィードバックとヘルプ",
     help: "ヘルプ",

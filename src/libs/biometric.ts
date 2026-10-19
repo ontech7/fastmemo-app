@@ -26,7 +26,7 @@ export const isBiometricSupported = (): boolean => isTauri() && isSupportedDeskt
 export const authenticateBiometric = async (reason: string): Promise<boolean> => {
   if (!isTauri()) return false;
   try {
-    const { invoke } = await import("@tauri-apps/api/tauri");
+    const { invoke } = await import("@tauri-apps/api/core");
     return await invoke<boolean>("biometric_authenticate", { reason });
   } catch {
     return false;
