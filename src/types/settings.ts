@@ -27,13 +27,22 @@ export interface VoiceRecognitionSettings {
   language: string;
 }
 
+/** Where the notes sync: the user's own Firebase project, or a self-hosted FastMemo server (ADR-017). */
+export type CloudProvider = "firebase" | "server";
+
 export interface CloudSettings {
+  /** Missing in settings saved before the self-hosted server existed: Firebase. Read it with `providerOf()`. */
+  provider?: CloudProvider;
   apiKey: string;
   authDomain: string;
   projectId: string;
   storageBucket: string;
   messagingSenderId: string;
   appId: string;
+  /** The FastMemo server's address (e.g. https://notes.example.com). */
+  serverUrl?: string;
+  /** Its access key: enrolls this device (which then gets its own token). */
+  serverKey?: string;
 }
 
 export interface AIAssistantSettings {

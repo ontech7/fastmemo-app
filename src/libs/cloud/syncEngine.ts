@@ -5,7 +5,7 @@ import type { VaultDoc } from "@/utils/vault";
 
 import { createPlanner, isEmptyPlan, reconcileCategories, type LocalNotes, type SyncPlan } from "./merge";
 import { deletionStub, forUpload, noteRev, TOMBSTONE_TTL_MS } from "./revision";
-import type { ChangeSet, CloudBackend, CloudDevice, DevicesSnapshot, NoteRef, PushOps } from "./types";
+import type { ChangeSet, CloudBackend, CloudDevice, DevicesSnapshot, NoteRef, Pacing, PushOps } from "./types";
 
 /*
  * The sync engine (ADR-016): listens to the device docs and the vault, merges what other devices queued for this one,
@@ -111,13 +111,7 @@ export interface SyncEngineOptions {
   conflictSuffix(): string;
   events: SyncEvents;
   /** Overrides the waits (tests). */
-  timing?: Partial<Timing>;
-}
-
-interface Timing {
-  pushMinInterval: number;
-  ackQuiet: number;
-  ackMaxWait: number;
+  timing?: Partial<Pacing>;
 }
 
 const isRef = (entry: Note | NoteRef): entry is NoteRef => (entry as NoteRef).ref === true;
@@ -194,15 +188,18 @@ export class SyncEngine {
 
   private lastOutbox: unknown[] = [];
 
-  private readonly timing: Timing;
-
   constructor(options: SyncEngineOptions) {
     this.o = options;
-    this.timing = {
+  }
+
+  /** The waits: the defaults, the backend's own (it can change with the settings), then the test overrides. */
+  private get timing(): Pacing {
+    return {
       pushMinInterval: PUSH_MIN_INTERVAL_MS,
       ackQuiet: ACK_QUIET_MS,
       ackMaxWait: ACK_MAX_WAIT_MS,
-      ...options.timing,
+      ...this.o.backend.pacing,
+      ...this.o.timing,
     };
   }
 

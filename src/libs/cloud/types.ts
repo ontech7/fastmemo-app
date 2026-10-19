@@ -2,11 +2,16 @@ import type { Category, CloudSettings, Note } from "@/types";
 import type { VaultDoc } from "@/utils/vault";
 
 /**
- * The cloud as the sync engine sees it (ADR-016). `FirebaseBackend` implements it on Firestore; the self-hosted server
- * (phase 4) implements the same contract. Reads that drive a decision return `null` (or `"error"`) when they fail, never
+ * The cloud as the sync engine sees it (ADR-016). `FirebaseBackend` implements it on Firestore, `ServerBackend` on a
+ * self-hosted FastMemo server (ADR-017). Reads that drive a decision return `null` (or `"error"`) when they fail, never
  * an empty value: "couldn't read" must not look like "nothing there" (LL-023).
  */
 export interface CloudBackend {
+  /** How many devices may be connected at once (this one included). */
+  readonly deviceLimit: number;
+  /** The engine's pacing for this cloud (unset: the defaults, sized for Firestore's costs). */
+  readonly pacing?: Partial<Pacing>;
+
   /** (Re)initialises the connection for these settings. */
   init(settings: CloudSettings): void;
   /** Whether a connection is initialised (not whether it's reachable). */
@@ -79,6 +84,13 @@ export interface CloudBackend {
 }
 
 export type Unsubscribe = () => void;
+
+/** How often the engine pushes and acknowledges (see syncEngine.ts). */
+export interface Pacing {
+  pushMinInterval: number;
+  ackQuiet: number;
+  ackMaxWait: number;
+}
 
 export interface DeviceInfo {
   uuid: string;

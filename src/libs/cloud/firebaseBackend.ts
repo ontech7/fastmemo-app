@@ -1,7 +1,7 @@
 import { configs } from "@/configs";
 import { defaultCategory } from "@/configs/default";
 import type { Category, CloudSettings, Note } from "@/types";
-import { isVaultDoc, VAULT_VERSION, type VaultDoc } from "@/utils/vault";
+import type { VaultDoc } from "@/utils/vault";
 import { deleteApp, getApp, getApps, initializeApp } from "firebase/app";
 import {
   collection,
@@ -45,6 +45,7 @@ import type {
   VaultRead,
 } from "./types";
 import { NOTE_REF_TEXT } from "./types";
+import { toVaultRead } from "./vaultRead";
 
 /*
  * Firestore layout (unchanged since 1.x/3.x, so older installs keep syncing):
@@ -171,15 +172,6 @@ const toDevicesSnapshot = (me: string, docs: QueryDocumentSnapshot[], fromServer
   return { devices, incoming, fromServer };
 };
 
-const toVaultRead = (data: DocumentData | undefined): VaultRead => {
-  if (!data) return { status: "absent", vault: null };
-  // A malformed doc, or one written by a newer app version (a KDF/format this build can't handle), is an error: never
-  // unlock against it nor overwrite it.
-  if (!isVaultDoc(data)) return { status: "error", vault: null };
-  if (typeof data.version === "number" && data.version > VAULT_VERSION) return { status: "error", vault: null };
-  return { status: "present", vault: data };
-};
-
 /** One outbox entry, as it will be written. */
 export interface Entry {
   queue: Queue;
@@ -295,6 +287,9 @@ export const planFanout = (data: DocumentData, applied: Entry[], recipients: str
 };
 
 export class FirebaseBackend implements CloudBackend {
+  /** Every device's push is read by every other one: the free quota bounds how many there can be. */
+  readonly deviceLimit = configs.cloud.deviceLimit;
+
   /** The error callbacks of the open device listeners: told when the app they listen on goes away. */
   private readonly listening = new Set<(error: unknown) => void>();
 
