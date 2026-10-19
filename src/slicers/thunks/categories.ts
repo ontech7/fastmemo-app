@@ -3,7 +3,14 @@ import { createAction, createAsyncThunk } from "@reduxjs/toolkit";
 import type { Category } from "@/types";
 import type { AppRootState } from "@/slicers/store";
 
-import { COLLECTIONS, deleteCollectionInCloud, deleteElementInCloud, setElementInCloud } from "@/libs/firebase";
+import {
+  COLLECTIONS,
+  deleteCollectionInCloud,
+  deleteElementInCloud,
+  exclusiveQueueEntry,
+  setElementInCloud,
+  updateLastSyncInCloud,
+} from "@/libs/firebase";
 
 /**
  * Pure action that resets local categories back to the default one.
@@ -28,6 +35,8 @@ interface SyncWithDevicesParams {
   payload: Category;
 }
 
+const CATEGORY_QUEUES = ["addCategories", "deleteCategories"] as const;
+
 const getCategoryPayload = (category: Category): Category => ({
   ...category,
   index: category.index ?? false,
@@ -45,12 +54,11 @@ const syncWithDevices = async ({
     collection: COLLECTIONS.various.connectedDevices,
     identifier: deviceUuid,
     payload: {
-      [dataKey]: {
-        [elementId]: payload,
-      },
+      ...exclusiveQueueEntry(CATEGORY_QUEUES, dataKey, elementId, payload),
       devicesToSync,
     },
     merge: true,
+    noUpdateLastSync: true,
   });
 };
 
@@ -68,6 +76,7 @@ export const addCloudCategoriesAsync = createAsyncThunk<Record<string, Category>
         collection: COLLECTIONS.data.categories,
         identifier: category.icon,
         payload,
+        noUpdateLastSync: true,
       });
 
       let isDoneAll = true;
@@ -85,6 +94,9 @@ export const addCloudCategoriesAsync = createAsyncThunk<Record<string, Category>
         elementsAdded[category.icon] = category;
       }
     }
+
+    // Once per batch rather than after every write: it's only shown in the devices list.
+    if (Object.keys(elementsAdded).length > 0) await updateLastSyncInCloud();
 
     return elementsAdded;
   }
@@ -106,6 +118,7 @@ export const deleteCloudCategoriesAsync = createAsyncThunk<Record<string, Catego
       const isDoneOne = await deleteElementInCloud({
         collection: COLLECTIONS.data.categories,
         identifier: category.icon,
+        noUpdateLastSync: true,
       });
 
       let isDoneAll = true;
@@ -123,6 +136,9 @@ export const deleteCloudCategoriesAsync = createAsyncThunk<Record<string, Catego
         elementsDeleted[category.icon] = category;
       }
     }
+
+    // Once per batch rather than after every write: it's only shown in the devices list.
+    if (Object.keys(elementsDeleted).length > 0) await updateLastSyncInCloud();
 
     return elementsDeleted;
   }

@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, original } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSelector } from "reselect";
 
@@ -42,6 +42,9 @@ const queueCloudAdd = (state: NotesState, note: Note): void => {
   only_if_cloudConnected(() => {
     if (!isVaultUnlocked()) return;
     state.cloud.items.add[note.id] = CryptNote.encrypt(note);
+    // The upload supersedes a pending deletion (e.g. trashed, then restored while offline): uploads
+    // run before deletions, so keeping both would delete the restored note from the cloud.
+    delete state.cloud.items.delete[note.id];
   });
 };
 
@@ -65,6 +68,18 @@ const queueCloudDelete = (state: NotesState, note: Note): void => {
   if (note.local) return;
   only_if_cloudConnected(() => {
     state.cloud.items.delete[note.id] = deletionStub(note);
+    delete state.cloud.items.add[note.id];
+  });
+};
+
+/**
+ * Dequeues what a cloud thunk processed — unless a newer entry replaced it while it was in flight:
+ * that one still has to go out (dropping it lost the last edits made during an upload).
+ */
+const dequeueProcessed = (queue: Record<string, Note>, processed: Record<string, Note>): void => {
+  const base = original(queue);
+  Object.entries(processed).forEach(([id, note]) => {
+    if (base?.[id] === note) delete queue[id];
   });
 };
 
@@ -470,20 +485,14 @@ const notesSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(addCloudNotesAsync.fulfilled, (state, action: PayloadAction<Record<string, Note>>) => {
-        Object.keys(action.payload).forEach((id) => {
-          delete state.cloud.items.add[id];
-        });
+        dequeueProcessed(state.cloud.items.add, action.payload);
       })
       .addCase(deleteCloudNotesAsync.fulfilled, (state, action: PayloadAction<Record<string, Note>>) => {
-        Object.keys(action.payload).forEach((id) => {
-          delete state.cloud.items.delete[id];
-        });
+        dequeueProcessed(state.cloud.items.delete, action.payload);
       })
       .addCase(detachCloudNotesAsync.fulfilled, (state, action: PayloadAction<Record<string, Note>>) => {
         if (!state.cloud.items.detach) return;
-        Object.keys(action.payload).forEach((id) => {
-          delete state.cloud.items.detach[id];
-        });
+        dequeueProcessed(state.cloud.items.detach, action.payload);
       })
       .addCase(wipeNotes, (state) => {
         state.items = [];
