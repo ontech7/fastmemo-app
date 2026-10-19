@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  type TextInputInstance,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
@@ -146,7 +147,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   // Mount-time autoFocus is frequently dropped while the screen transition is
   // still running, so re-focus the seeded row imperatively once it settles.
   const transitionDone = useScreenTransitionEnd();
-  const focusInputRef = useRef<TextInput>(null);
+  const focusInputRef = useRef<TextInputInstance>(null);
   const didFocusRef = useRef(false);
 
   useEffect(() => {

@@ -2,7 +2,7 @@ import DragIcon from "@/components/icons/DragIcon";
 import Haptics from "@/libs/haptics";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useRef, useState, type RefObject } from "react";
-import { Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { TrashIcon } from "react-native-heroicons/outline";
 import Animated, { runOnJS, useAnimatedStyle } from "react-native-reanimated";
@@ -21,7 +21,7 @@ interface Props {
   // Forwarded to the card's text input so the board can focus it imperatively
   // once the screen transition settles (mount-time autoFocus alone is dropped
   // mid-transition on native).
-  inputRef?: RefObject<TextInput | null>;
+  inputRef?: RefObject<TextInputInstance | null>;
 }
 
 export default function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, inputRef }: Props) {

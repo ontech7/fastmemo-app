@@ -1,7 +1,7 @@
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Platform, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View, ViewStyle } from "react-native";
 import { ChevronDownIcon, ChevronUpIcon, XMarkIcon } from "react-native-heroicons/outline";
 import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
 
@@ -36,7 +36,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
   const [currentMatch, setCurrentMatch] = useState(0);
   const [showReplace, setShowReplace] = useState(false);
 
-  const searchInputRef = useRef<TextInput>(null);
+  const searchInputRef = useRef<TextInputInstance>(null);
 
   const wasVisibleRef = useRef(false);
   useEffect(() => {

@@ -2,7 +2,7 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MAR
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
 import KanbanCard from "./KanbanCard";
 
@@ -22,7 +22,7 @@ interface Props {
   moveColumn: (columnId: string, direction: "left" | "right") => void;
   disabled: boolean;
   autoFocusCardId?: string | null;
-  autoFocusCardInputRef?: RefObject<TextInput | null>;
+  autoFocusCardInputRef?: RefObject<TextInputInstance | null>;
 }
 
 export default function KanbanColumn({

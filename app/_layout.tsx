@@ -1,6 +1,8 @@
 // Must be first: installs global.crypto.getRandomValues (secure RNG) so crypto-js
 // can generate IVs/salts on native (Hermes), where there is no WebCrypto global.
 import "react-native-get-random-values";
+// Before anything renders a draggable list: re-provides InteractionManager (removed in RN 0.87).
+import "@/libs/polyfills/interactionManager";
 
 import "@/styles/global.css";
 
@@ -34,7 +36,7 @@ enableFreeze(true);
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export const unstable_settings = {
-  initialRouteName: "index",
+  anchor: "index",
 };
 
 ErrorUtils.setGlobalHandler((error: Error, isFatal: boolean) => {
@@ -145,7 +147,9 @@ export default Sentry.wrap(function RootLayout() {
                   <WebViewWarmup />
                   <View style={styles.root} onLayout={onLayoutRootView}>
                     <AppBackground style={StyleSheet.absoluteFill} />
-                    <Stack screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
+                    {/* `id={undefined}` is the runtime default; expo-router 58's navigator
+                        types only demand it because strictNullChecks is off. */}
+                    <Stack id={undefined} screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
                       <Stack.Screen name="index" options={{ headerShown: false, animation: "none" }} />
                       <Stack.Screen name="intro" options={{ headerShown: false, animation: "fade" }} />
                       <Stack.Screen name="home" options={{ headerShown: false, animation: "fade" }} />

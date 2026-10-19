@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { createContext, useContext, useRef, useState } from "react";
-import type { LayoutChangeEvent } from "react-native";
+import type { LayoutChangeEvent, ViewInstance } from "react-native";
 import { Dimensions, Modal, Platform, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,7 +40,7 @@ interface PopupMenuProps {
  */
 export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH }: PopupMenuProps) {
   const insets = useSafeAreaInsets();
-  const triggerRef = useRef<View>(null);
+  const triggerRef = useRef<ViewInstance>(null);
   const lastHeight = useRef(0);
   const openedRef = useRef(false);
 

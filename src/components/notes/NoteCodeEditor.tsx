@@ -18,7 +18,16 @@ import { isStringEmpty } from "@/utils/string";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Platform,
+  ScrollView,
+  type ScrollViewInstance,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PlusIcon } from "react-native-heroicons/outline";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -43,7 +52,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
 
   const aiSettings = useSelector(selectorAIAssistant);
 
-  const tabScrollRef = useRef<ScrollView>(null);
+  const tabScrollRef = useRef<ScrollViewInstance>(null);
   const editorRef = useRef<CodeEditorWebViewRef>(null);
 
   // The CodeMirror WebView mounts immediately (never gated behind an idle timer)

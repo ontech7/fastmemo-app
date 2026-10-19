@@ -12,7 +12,7 @@ import { webhook } from "@/utils/webhook";
 import type { Href } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, type TextInputInstance, View } from "react-native";
 import { ArrowsPointingOutIcon, PaperAirplaneIcon, PencilSquareIcon } from "react-native-heroicons/outline";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
@@ -66,7 +66,7 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
   const { progress } = useReanimatedKeyboardAnimation();
   const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
 
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   // Mirror of `text` read by the flush handlers, so saving never trips on a stale
   // closure: it's cleared synchronously before any follow-up press can re-enter.
   const textRef = useRef("");

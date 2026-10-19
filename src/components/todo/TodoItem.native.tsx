@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
 import { CheckIcon, TrashIcon } from "react-native-heroicons/outline";
 import Animated, {
   Easing,
@@ -36,7 +36,7 @@ interface Props {
   // Forwarded to the row's text input so the parent can focus it imperatively
   // once the screen transition settles (mount-time autoFocus alone is dropped
   // mid-transition on native).
-  inputRef?: RefObject<TextInput | null>;
+  inputRef?: RefObject<TextInputInstance | null>;
   stepMode?: boolean;
   stepStatus?: StepStatus;
   stepNumber?: number;

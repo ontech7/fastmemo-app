@@ -1,6 +1,6 @@
 import { CODEMIRROR_HTML } from "@/generated/codemirror-html";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
-import { Platform, StyleSheet, TextInput } from "react-native";
+import { Platform, StyleSheet, TextInput, type TextInputInstance } from "react-native";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
 
 const isWeb = Platform.OS === "web";
@@ -25,8 +25,10 @@ interface Props {
 
 const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
   ({ initialCode, language, readOnly, onChange, onReady }, ref) => {
-    const webViewRef = useRef<WebView>(null);
-    const hiddenInputRef = useRef<TextInput>(null);
+    // `WebView<object>`, not bare `WebView`: v14 defaults the props generic to
+    // `undefined`, which collapses the props type to `undefined` under strict: false.
+    const webViewRef = useRef<WebView<object>>(null);
+    const hiddenInputRef = useRef<TextInputInstance>(null);
     const isReady = useRef(false);
     const pendingMessages = useRef<string[]>([]);
 
