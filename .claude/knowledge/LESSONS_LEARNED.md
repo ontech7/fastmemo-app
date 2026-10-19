@@ -1121,6 +1121,32 @@ against the code of the oldest version still installed.
 
 ---
 
+### LL-042: An undefined field made Firestore refuse a note for good
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Caught in a two-browser test before release: an edit of a synced note made in its open editor never left the
+device, so the other device's open editor never updated. `addNote` copied the store's `syncedRev`/`local` onto the editor's copy
+as explicit keys, so every note that isn't device-only got `local: undefined`. Firestore refuses an undefined field value as
+`invalid-argument`, which the push treats as permanent (like a note over the size limit): the note was skipped until the next
+app start. The unit tests passed because the in-memory backend clones through JSON, which drops undefined.
+
+**Root cause:** Firestore rejects undefined values by default, while JSON (the persisted state, the test fake) silently drops
+them: the bad note only existed in memory, between an edit and the next restart, and no test exercised the real write path with
+it.
+
+**Fix:** `initializeFirestore(..., { ignoreUndefinedProperties: true })`, so an undefined field is dropped as JSON would, and
+`addNote` writes no undefined keys. The `CloudBackend` contract states that an undefined field is never a reason to reject.
+Covered against real Firestore in `scripts/sync-firestore.test.mjs`, and in `scripts/sync.test.mjs`.  
+**Rule:** A test double must refuse what the real backend refuses, or the case needs a test against the real one. A "permanent"
+rejection is only for what the data itself can never fix (size): anything the app produced is a bug to fix at the source.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/sync-backend`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

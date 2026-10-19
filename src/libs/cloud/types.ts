@@ -61,7 +61,8 @@ export interface CloudBackend {
   /**
    * Applies the outbox (all or nothing per batch) and fans it out to `recipients`. An upload or deletion the cloud has a
    * newer version of than the push is based on isn't applied: that version comes back as `superseded`, to be merged first.
-   * Returns what was committed, and what was rejected for good (e.g. a note over the size limit).
+   * Returns what was committed, and what was rejected for good (e.g. a note over the size limit). An undefined field is
+   * left out, as JSON would, never a reason to reject.
    */
   push(me: string, ops: PushOps, recipients: string[], onProgress?: (done: number, total: number) => void): Promise<PushResult>;
 }

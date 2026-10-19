@@ -188,6 +188,12 @@ try {
   result = await backend.push(A, ops([], [{ id: n1.id, rev: r1 + 9, deletedAt: r1 + 9 }]), []);
   ok("a newer deletion applies", result.committed.notes.delete.includes(n1.id) && (await backend.fetchNote(n1.id)) === null);
 
+  console.log("\nundefined fields");
+  const loose = note("loose", Date.now(), { local: undefined });
+  created.add(loose.id);
+  result = await backend.push(A, ops([loose]), []);
+  ok("an undefined field is dropped, not a rejected write", result.committed.notes.add.includes(loose.id), result.rejected);
+
   console.log("\nsize limits");
   const big = note("big", Date.now(), { text: "x".repeat(650_000) });
   created.add(big.id);

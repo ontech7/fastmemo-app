@@ -202,8 +202,10 @@ export class FirebaseBackend implements CloudBackend {
     const app = initializeApp(settings, configs.firebase.appName);
     // Auto-detected long polling: the default WebChannel stream wedges inside the OS WebViews Tauri runs in (after sleep or
     // a network switch) and never recovers; long polling survives there, and the faster stream is kept where it works.
+    // An undefined field is dropped, as JSON does, instead of failing the whole write as an invalid argument (which the
+    // push treats as permanent: the note would never sync again until restart).
     // Must run before any getFirestore().
-    initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+    initializeFirestore(app, { experimentalAutoDetectLongPolling: true, ignoreUndefinedProperties: true });
   }
 
   isActive(): boolean {

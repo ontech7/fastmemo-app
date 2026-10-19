@@ -98,6 +98,12 @@ const dequeuePushed = (queue: Record<string, Note>, pushed: NotesPushed["add"]):
   });
 };
 
+/** The sync bookkeeping the store keeps for a note, with no undefined keys (Firestore refuses an undefined field). */
+const storeOwned = ({ syncedRev, local }: Note): Pick<Note, "syncedRev" | "local"> => ({
+  ...(syncedRev !== undefined && { syncedRev }),
+  ...(local !== undefined && { local }),
+});
+
 /** The cloud now has `rev` of this note (a draft). */
 const markSynced = (note: Note | undefined, rev: number): void => {
   if (note && !note.local) note.syncedRev = Math.max(note.syncedRev ?? 0, rev);
@@ -134,7 +140,7 @@ const notesSlice = createSlice({
         const note = {
           ...created,
           rev: nextRev(trashed ?? action.payload),
-          ...(trashed ? { syncedRev: trashed.syncedRev, local: trashed.local } : {}),
+          ...(trashed && storeOwned(trashed)),
         } as Note;
         if ((state.filters?.order ?? "desc") === "desc") {
           state.items.unshift(note);
@@ -146,12 +152,8 @@ const notesSlice = createSlice({
         // The payload is an editor's copy: the sync bookkeeping, and whether the note is device-only, are the store's
         // (an incoming change or a detach may have updated them since the editor loaded the note).
         const stored = state.items[idx];
-        const note = {
-          ...action.payload,
-          rev: nextRev(stored),
-          syncedRev: stored.syncedRev,
-          local: stored.local,
-        } as Note;
+        const { syncedRev: _syncedRev, local: _local, ...edited } = action.payload;
+        const note = { ...edited, rev: nextRev(stored), ...storeOwned(stored) } as Note;
         state.items[idx] = note;
 
         const dirtyId = retrieveDirtyNoteId();

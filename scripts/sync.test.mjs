@@ -644,6 +644,11 @@ await scenario("propagation", async ({ cloud, add, settle }) => {
   );
 
   edit(a, "n1", "hello world");
+  ok(
+    "an edit leaves no undefined fields on the note (Firestore refuses them)",
+    !Object.values(a.get("n1")).includes(undefined),
+    a.get("n1")
+  );
   await settle();
   ok("an edit reaches the other device", b.get("n1")?.text === "hello world");
   ok(
