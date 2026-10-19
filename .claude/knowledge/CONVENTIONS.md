@@ -394,7 +394,9 @@ t("ai.feedback.note_created", { title }) -> with interpolation
 
 When adding a new UI string:
 
-1. Add the key to ALL 7 locale files: `en.ts`, `it.ts`, `es.ts`, `fr.ts`, `de.ts`, `zh.ts`, `ja.ts`
+1. Add the key to ALL 7 locale files: `en.ts`, `it.ts`, `es.ts`, `fr.ts`, `de.ts`, `zh.ts`, `ja.ts` (a missing key silently
+   falls back to English: the whole vault UI shipped untranslated in 5 locales that way). Never translate the key name itself
+   (`es` once had `título:` instead of `title:`)
 2. Place it in the correct section (or create a new section if it's a new feature)
 3. Use interpolation for dynamic values: `"Created {{count}} notes"`
 4. Use `useTranslation()` hook in the component: `const { t } = useTranslation();`

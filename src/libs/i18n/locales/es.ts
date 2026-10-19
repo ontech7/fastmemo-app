@@ -268,9 +268,84 @@ const es = {
     save: "Guardar ajustes",
     edit: "Editar ajustes",
     resync: "Resincronizar datos",
+    resync_confirm_title: "¿Resincronizar datos?",
+    resync_confirm_desc:
+      "Esto sube tus notas y categorías a la nube y descarga las que ya están guardadas allí, combinando ambas. ¿Quieres continuar?",
     deleteDevices: "Administrar dispositivos",
     handshakeFailed: "Error en el intento de conexión",
     handshakeFailedDesc: "No se pudo conectar al servidor de Firebase.",
+    vault: {
+      setup_title: "Protege tus notas",
+      setup_desc:
+        "Vas a activar el cifrado de extremo a extremo para la sincronización en la nube. Elige una contraseña de cifrado: es la clave que mantiene tus notas privadas.",
+      migrate_title: "Activar el cifrado",
+      migrate_desc:
+        "Estamos actualizando tu sincronización en la nube al cifrado de extremo a extremo. Elige una contraseña de cifrado: las notas que ya están en tu nube se volverán a cifrar con ella, y la introducirás una vez en cada dispositivo.",
+      point_private: "Solo tú puedes leer tus notas: ni nosotros ni Google. Se cifran en tu dispositivo antes de subirse.",
+      point_password: "Tus notas están protegidas por una contraseña de cifrado que eliges tú y que solo tú conoces.",
+      point_devices: "Introducirás esta contraseña una vez en cada dispositivo que sincronices.",
+      point_norecover:
+        "No podemos restablecerla por ti. Si la olvidas, necesitarás la clave de recuperación que te mostramos a continuación, así que guárdala en un lugar seguro.",
+      unlock_title: "Desbloquea tus notas",
+      unlock_desc: "Introduce tu contraseña de cifrado para leer y sincronizar tus notas en este dispositivo.",
+      unlock_action: "Desbloquear",
+      recover_title: "Recupera tu acceso",
+      recover_desc: "¿Perdiste tu contraseña? Introduce tu clave de recuperación y elige una nueva contraseña de cifrado.",
+      recovery_title: "Clave de recuperación",
+      recovery_desc:
+        "Anótala y guárdala en un lugar seguro. Es la única forma de volver a acceder a tus notas si alguna vez olvidas tu contraseña, y no volveremos a mostrarla.",
+      recovery_saved: "Ya la he guardado",
+      change_title: "Cambiar contraseña",
+      change_desc:
+        "Introduce tu contraseña actual y elige una nueva. Tus notas siguen cifradas y no se modifican, y los dispositivos ya desbloqueados siguen funcionando: solo cambia la contraseña. A partir de ahora, cualquier dispositivo nuevo necesitará la nueva contraseña para desbloquearse.",
+      change_action: "Cambiar contraseña",
+      change_success: "Contraseña de cifrado cambiada",
+      changePassphrase: "Cambiar contraseña",
+      reset_title: "Restablecer el cifrado",
+      reset_desc:
+        "Úsalo solo si has perdido tanto tu contraseña como tu clave de recuperación. Elimina las notas cifradas de la nube y empieza de cero. Las notas de este dispositivo se conservan y se vuelven a subir con una nueva contraseña.",
+      reset_action: "Restablecer el cifrado",
+      resetVault: "Restablecer el cifrado",
+      passphrase_placeholder: "Contraseña de cifrado",
+      passphrase_confirm_placeholder: "Confirmar contraseña",
+      current_passphrase_placeholder: "Contraseña actual",
+      new_passphrase_placeholder: "Nueva contraseña",
+      recovery_key_placeholder: "Clave de recuperación",
+      passphrase_too_short: "Usa al menos 8 caracteres",
+      passphrase_mismatch: "Las contraseñas no coinciden",
+      wrong_passphrase: "Contraseña incorrecta, inténtalo de nuevo",
+      wrong_recovery_key: "Esa clave de recuperación no es válida",
+      forgot_passphrase: "Olvidé la contraseña",
+      continue: "Continuar",
+      creating: "Configurando el cifrado…",
+      migrating: "Cifrando tus notas…",
+      unlocking: "Desbloqueando…",
+      saving: "Guardando…",
+      finishing: "Terminando…",
+      uploading: "Cifrando y subiendo tus notas…",
+      resetting: "Restableciendo…",
+      error_generic: "Algo salió mal. Inténtalo de nuevo.",
+      verify_failed: "No se pudo comprobar el estado del cifrado. Revisa tu conexión e inténtalo de nuevo.",
+      locked_prompt: "Tus notas están bloqueadas: desbloquéalas en los ajustes de la nube para sincronizar.",
+      setup_prompt:
+        "Configura el cifrado de extremo a extremo en los ajustes de la nube para proteger y sincronizar tus notas.",
+      setup_action: "Activar el cifrado",
+      setup_cta_hint:
+        "Tus notas aún no están cifradas. Activa el cifrado de extremo a extremo para protegerlas: solo lleva un momento.",
+      locked_cta_title: "La sincronización está en pausa",
+      locked_cta_hint:
+        "Tus notas están cifradas y bloqueadas en este dispositivo, por lo que la sincronización en la nube está en espera. Introduce tu contraseña de cifrado para desbloquearlas y reanudar la sincronización.",
+      enable_hint:
+        "La sincronización en la nube está cifrada de extremo a extremo: solo tú puedes leer tus notas, ni nosotros ni Google.",
+      prompt_title: "Sincronización en pausa",
+      prompt_desc:
+        "Tus notas aún no se están sincronizando. Termina de configurar el cifrado en los ajustes de la nube para volver a activar la sincronización.",
+      prompt_close: "Cerrar",
+      prompt_go: "Ir a Cloud Sync",
+      backup_hint:
+        "Consejo: exporta una copia de seguridad cifrada de tus notas antes de continuar. Es opcional, pero es una alternativa segura por si algo sale mal.",
+      backup_action: "Copia de seguridad rápida",
+    },
   },
   synceddevices: {
     title: "Dispositivos conectados",
@@ -304,7 +379,7 @@ const es = {
     },
   },
   webhooks: {
-    título: "Webhooks",
+    title: "Webhooks",
     addTextNote: "Agregar nota de texto",
     addTodoNote: "Agregar Nota Todo",
     addKanbanNote: "Agregar Nota Kanban",

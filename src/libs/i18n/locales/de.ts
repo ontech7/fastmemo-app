@@ -268,9 +268,88 @@ const de = {
     save: "Einstellungen speichern",
     edit: "Einstellungen bearbeiten",
     resync: "Daten erneut sync",
+    resync_confirm_title: "Daten erneut synchronisieren?",
+    resync_confirm_desc:
+      "Dabei werden Ihre Notizen und Kategorien in die Cloud hochgeladen und die dort bereits gespeicherten heruntergeladen, sodass beide zusammengeführt werden. Möchten Sie fortfahren?",
     deleteDevices: "Geräte verwalten",
     handshakeFailed: "Verbindungsversuch fehlgeschlagen",
     handshakeFailedDesc: "Es konnte keine Verbindung zum Firebase-Server hergestellt werden.",
+    vault: {
+      setup_title: "Schützen Sie Ihre Notizen",
+      setup_desc:
+        "Sie aktivieren die Ende-zu-Ende-Verschlüsselung für Cloud Sync. Wählen Sie ein Verschlüsselungspasswort – es ist der Schlüssel, der Ihre Notizen privat hält.",
+      migrate_title: "Verschlüsselung aktivieren",
+      migrate_desc:
+        "Wir stellen Ihre Cloud-Synchronisierung auf Ende-zu-Ende-Verschlüsselung um. Wählen Sie ein Verschlüsselungspasswort – die bereits in Ihrer Cloud gespeicherten Notizen werden damit neu verschlüsselt, und Sie geben dieses Passwort auf jedem Gerät einmal ein.",
+      point_private:
+        "Nur Sie können Ihre Notizen lesen – nicht wir, nicht Google. Sie werden auf Ihrem Gerät verschlüsselt, bevor sie hochgeladen werden.",
+      point_password:
+        "Ihre Notizen sind durch ein Verschlüsselungspasswort geschützt, das Sie selbst wählen und nur Sie kennen.",
+      point_devices: "Sie geben dieses Passwort auf jedem Gerät, das Sie synchronisieren, einmal ein.",
+      point_norecover:
+        "Wir können es nicht für Sie zurücksetzen. Wenn Sie es vergessen, benötigen Sie den Wiederherstellungsschlüssel, den wir Ihnen als Nächstes zeigen – bewahren Sie ihn also sicher auf.",
+      unlock_title: "Notizen entsperren",
+      unlock_desc:
+        "Geben Sie Ihr Verschlüsselungspasswort ein, um Ihre Notizen auf diesem Gerät zu lesen und zu synchronisieren.",
+      unlock_action: "Entsperren",
+      recover_title: "Zugriff wiederherstellen",
+      recover_desc:
+        "Passwort verloren? Geben Sie Ihren Wiederherstellungsschlüssel ein und wählen Sie ein neues Verschlüsselungspasswort.",
+      recovery_title: "Wiederherstellungsschlüssel",
+      recovery_desc:
+        "Notieren Sie ihn und bewahren Sie ihn sicher auf. Er ist der einzige Weg zurück zu Ihren Notizen, falls Sie Ihr Passwort einmal vergessen – und wir zeigen ihn nicht noch einmal an.",
+      recovery_saved: "Ich habe ihn gespeichert",
+      change_title: "Passwort ändern",
+      change_desc:
+        "Geben Sie Ihr aktuelles Passwort ein und wählen Sie ein neues. Ihre Notizen bleiben verschlüsselt und unverändert, und bereits entsperrte Geräte funktionieren weiter – nur das Passwort selbst ändert sich. Ab jetzt benötigt jedes neue Gerät das neue Passwort zum Entsperren.",
+      change_action: "Passwort ändern",
+      change_success: "Verschlüsselungspasswort geändert",
+      changePassphrase: "Passwort ändern",
+      reset_title: "Verschlüsselung zurücksetzen",
+      reset_desc:
+        "Verwenden Sie dies nur, wenn Sie sowohl Ihr Passwort als auch Ihren Wiederherstellungsschlüssel verloren haben. Dabei werden die verschlüsselten Notizen in der Cloud gelöscht und alles beginnt von vorn. Die Notizen auf diesem Gerät bleiben erhalten und werden mit einem neuen Passwort erneut hochgeladen.",
+      reset_action: "Verschlüsselung zurücksetzen",
+      resetVault: "Verschlüsselung zurücksetzen",
+      passphrase_placeholder: "Verschlüsselungspasswort",
+      passphrase_confirm_placeholder: "Passwort bestätigen",
+      current_passphrase_placeholder: "Aktuelles Passwort",
+      new_passphrase_placeholder: "Neues Passwort",
+      recovery_key_placeholder: "Wiederherstellungsschlüssel",
+      passphrase_too_short: "Verwenden Sie mindestens 8 Zeichen",
+      passphrase_mismatch: "Die Passwörter stimmen nicht überein",
+      wrong_passphrase: "Falsches Passwort, bitte erneut versuchen",
+      wrong_recovery_key: "Dieser Wiederherstellungsschlüssel ist ungültig",
+      forgot_passphrase: "Passwort vergessen?",
+      continue: "Weiter",
+      creating: "Verschlüsselung wird eingerichtet…",
+      migrating: "Ihre Notizen werden verschlüsselt…",
+      unlocking: "Wird entsperrt…",
+      saving: "Wird gespeichert…",
+      finishing: "Wird abgeschlossen…",
+      uploading: "Ihre Notizen werden verschlüsselt und hochgeladen…",
+      resetting: "Wird zurückgesetzt…",
+      error_generic: "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+      verify_failed:
+        "Der Verschlüsselungsstatus konnte nicht geprüft werden. Überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      locked_prompt: "Ihre Notizen sind gesperrt – entsperren Sie sie in den Cloud-Einstellungen, um zu synchronisieren.",
+      setup_prompt:
+        "Richten Sie in den Cloud-Einstellungen die Ende-zu-Ende-Verschlüsselung ein, um Ihre Notizen zu schützen und zu synchronisieren.",
+      setup_action: "Verschlüsselung aktivieren",
+      setup_cta_hint:
+        "Ihre Notizen sind noch nicht verschlüsselt. Aktivieren Sie die Ende-zu-Ende-Verschlüsselung, um sie zu schützen – es dauert nur einen Moment.",
+      locked_cta_title: "Synchronisierung pausiert",
+      locked_cta_hint:
+        "Ihre Notizen sind auf diesem Gerät verschlüsselt und gesperrt, daher ist die Cloud-Synchronisierung angehalten. Geben Sie Ihr Verschlüsselungspasswort ein, um sie zu entsperren und die Synchronisierung fortzusetzen.",
+      enable_hint: "Cloud Sync ist Ende-zu-Ende-verschlüsselt – nur Sie können Ihre Notizen lesen, nicht wir und nicht Google.",
+      prompt_title: "Synchronisierung pausiert",
+      prompt_desc:
+        "Ihre Notizen werden noch nicht synchronisiert. Schließen Sie die Einrichtung der Verschlüsselung in den Cloud-Einstellungen ab, um die Synchronisierung wieder zu aktivieren.",
+      prompt_close: "Schließen",
+      prompt_go: "Zu Cloud Sync",
+      backup_hint:
+        "Tipp: Exportieren Sie vor dem Fortfahren eine verschlüsselte Sicherung Ihrer Notizen. Das ist optional, aber eine sichere Rückfallebene, falls etwas schiefgeht.",
+      backup_action: "Schnelle Sicherung",
+    },
   },
   synceddevices: {
     title: "Verbundene Geräte",

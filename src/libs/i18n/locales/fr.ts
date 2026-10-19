@@ -268,9 +268,87 @@ const fr = {
     save: "Enregistrer les paramètres",
     edit: "Modifier les paramètres",
     resync: "Resync les données",
+    resync_confirm_title: "Resynchroniser les données ?",
+    resync_confirm_desc:
+      "Cela envoie vos notes et catégories vers le cloud et télécharge celles qui y sont déjà stockées, en fusionnant les deux. Voulez-vous continuer ?",
     deleteDevices: "Gérer les appareils",
     handshakeFailed: "Échec de la tentative de connexion",
     handshakeFailedDesc: "Impossible de se connecter au serveur Firebase.",
+    vault: {
+      setup_title: "Protégez vos notes",
+      setup_desc:
+        "Vous activez le chiffrement de bout en bout pour la synchronisation cloud. Choisissez un mot de passe de chiffrement : c'est la clé qui garde vos notes privées.",
+      migrate_title: "Activer le chiffrement",
+      migrate_desc:
+        "Nous faisons passer votre synchronisation cloud au chiffrement de bout en bout. Choisissez un mot de passe de chiffrement : les notes déjà présentes dans votre cloud seront rechiffrées avec celui-ci, et vous le saisirez une fois sur chaque appareil.",
+      point_private:
+        "Vous seul pouvez lire vos notes — ni nous, ni Google. Elles sont chiffrées sur votre appareil avant d'être envoyées.",
+      point_password:
+        "Vos notes sont protégées par un mot de passe de chiffrement que vous choisissez et que vous seul connaissez.",
+      point_devices: "Vous saisirez ce mot de passe une fois sur chaque appareil que vous synchronisez.",
+      point_norecover:
+        "Nous ne pouvons pas le réinitialiser pour vous. Si vous l'oubliez, vous aurez besoin de la clé de récupération que nous vous montrons ensuite — conservez-la donc en lieu sûr.",
+      unlock_title: "Déverrouillez vos notes",
+      unlock_desc: "Saisissez votre mot de passe de chiffrement pour lire et synchroniser vos notes sur cet appareil.",
+      unlock_action: "Déverrouiller",
+      recover_title: "Récupérez votre accès",
+      recover_desc:
+        "Mot de passe perdu ? Saisissez votre clé de récupération et choisissez un nouveau mot de passe de chiffrement.",
+      recovery_title: "Clé de récupération",
+      recovery_desc:
+        "Notez-la et conservez-la en lieu sûr. C'est le seul moyen de retrouver vos notes si vous oubliez un jour votre mot de passe — et nous ne l'afficherons plus.",
+      recovery_saved: "Je l'ai enregistrée",
+      change_title: "Changer le mot de passe",
+      change_desc:
+        "Saisissez votre mot de passe actuel et choisissez-en un nouveau. Vos notes restent chiffrées et ne sont pas modifiées, et les appareils déjà déverrouillés continuent de fonctionner — seul le mot de passe change. Désormais, tout nouvel appareil aura besoin du nouveau mot de passe pour se déverrouiller.",
+      change_action: "Changer le mot de passe",
+      change_success: "Mot de passe de chiffrement modifié",
+      changePassphrase: "Changer le mot de passe",
+      reset_title: "Réinitialiser le chiffrement",
+      reset_desc:
+        "À n'utiliser que si vous avez perdu à la fois votre mot de passe et votre clé de récupération. Cela supprime les notes chiffrées du cloud et repart de zéro. Les notes de cet appareil sont conservées et renvoyées avec un nouveau mot de passe.",
+      reset_action: "Réinitialiser le chiffrement",
+      resetVault: "Réinitialiser le chiffrement",
+      passphrase_placeholder: "Mot de passe de chiffrement",
+      passphrase_confirm_placeholder: "Confirmer le mot de passe",
+      current_passphrase_placeholder: "Mot de passe actuel",
+      new_passphrase_placeholder: "Nouveau mot de passe",
+      recovery_key_placeholder: "Clé de récupération",
+      passphrase_too_short: "Utilisez au moins 8 caractères",
+      passphrase_mismatch: "Les mots de passe ne correspondent pas",
+      wrong_passphrase: "Mot de passe incorrect, réessayez",
+      wrong_recovery_key: "Cette clé de récupération n'est pas valide",
+      forgot_passphrase: "Mot de passe oublié ?",
+      continue: "Continuer",
+      creating: "Configuration du chiffrement…",
+      migrating: "Chiffrement de vos notes…",
+      unlocking: "Déverrouillage…",
+      saving: "Enregistrement…",
+      finishing: "Finalisation…",
+      uploading: "Chiffrement et envoi de vos notes…",
+      resetting: "Réinitialisation…",
+      error_generic: "Une erreur s'est produite. Veuillez réessayer.",
+      verify_failed: "Impossible de vérifier l'état du chiffrement. Vérifiez votre connexion et réessayez.",
+      locked_prompt: "Vos notes sont verrouillées — déverrouillez-les dans les paramètres Cloud pour synchroniser.",
+      setup_prompt:
+        "Configurez le chiffrement de bout en bout dans les paramètres Cloud pour protéger et synchroniser vos notes.",
+      setup_action: "Activer le chiffrement",
+      setup_cta_hint:
+        "Vos notes ne sont pas encore chiffrées. Activez le chiffrement de bout en bout pour les protéger — cela ne prend qu'un instant.",
+      locked_cta_title: "La synchronisation est en pause",
+      locked_cta_hint:
+        "Vos notes sont chiffrées et verrouillées sur cet appareil, la synchronisation cloud est donc suspendue. Saisissez votre mot de passe de chiffrement pour les déverrouiller et reprendre la synchronisation.",
+      enable_hint:
+        "La synchronisation cloud est chiffrée de bout en bout — vous seul pouvez lire vos notes, ni nous ni Google.",
+      prompt_title: "Synchronisation en pause",
+      prompt_desc:
+        "Vos notes ne sont pas encore synchronisées. Terminez la configuration du chiffrement dans les paramètres Cloud pour réactiver la synchronisation.",
+      prompt_close: "Fermer",
+      prompt_go: "Aller à Cloud Sync",
+      backup_hint:
+        "Conseil : exportez une sauvegarde chiffrée de vos notes avant de continuer. C'est facultatif, mais c'est une solution de repli sûre en cas de problème.",
+      backup_action: "Sauvegarde rapide",
+    },
   },
   synceddevices: {
     title: "Des appareils connectés",
