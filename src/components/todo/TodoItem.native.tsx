@@ -111,6 +111,9 @@ export default function TodoItem({
             disabled={disabled}
             style={{ marginRight: PADDING_MARGIN.sm }}
             onPress={handleCheck}
+            accessibilityRole="checkbox"
+            accessibilityLabel={item.text || t("a11y.item")}
+            aria-checked={item.checked}
           >
             <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked]}>
               {item.checked && (
@@ -133,7 +136,14 @@ export default function TodoItem({
             autoFocus={autoFocus}
           />
 
-          <TouchableOpacity activeOpacity={0.7} disabled={disabled} style={styles.drag} onPressIn={drag}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            disabled={disabled}
+            style={styles.drag}
+            onPressIn={drag}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.drag_to_reorder")}
+          >
             <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
           </TouchableOpacity>
         </View>
@@ -143,6 +153,8 @@ export default function TodoItem({
           disabled={disabled}
           style={styles.deleteButton}
           onPress={() => deleteItem(item.id)}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.delete_item")}
         >
           <View style={styles.deleteChip}>
             <TrashIcon size={16} color={COLOR.textMuted} />
@@ -162,7 +174,14 @@ export default function TodoItem({
       {/* left rail: connector line + tappable numbered circle (checkbox) + Ongoing label */}
 
       <View style={[styles.stepColumn, { pointerEvents: "box-none" }]}>
-        <TouchableOpacity activeOpacity={0.7} disabled={disabled} onPress={handleCheck}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          disabled={disabled}
+          onPress={handleCheck}
+          accessibilityRole="checkbox"
+          accessibilityLabel={item.text || t("a11y.item")}
+          aria-checked={isStepDone}
+        >
           <View style={[styles.stepCircle, { borderColor: circleBorderColor }, isStepDone && styles.stepCircleDone]}>
             <Animated.View
               style={[StyleSheet.absoluteFill, styles.stepCircleFill, circleFillStyle, { pointerEvents: "none" }]}
@@ -207,7 +226,14 @@ export default function TodoItem({
 
       {/* delete */}
 
-      <TouchableOpacity activeOpacity={0.7} disabled={disabled} style={styles.stepDelete} onPress={() => deleteItem(item.id)}>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        disabled={disabled}
+        style={styles.stepDelete}
+        onPress={() => deleteItem(item.id)}
+        accessibilityRole="button"
+        accessibilityLabel={t("a11y.delete_item")}
+      >
         <View style={styles.deleteChip}>
           <TrashIcon size={16} color={COLOR.textMuted} />
         </View>

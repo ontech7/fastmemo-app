@@ -343,6 +343,8 @@ export default function AIEditorActions({
         style={[styles.aiButton, style]}
         activeOpacity={0.7}
         onPress={feedback === "processing" ? handleCancel : toggleMenu}
+        accessibilityRole="button"
+        accessibilityLabel={feedback === "processing" ? t("cancel") : t("generalsettings.ai_assistant")}
         disabled={disabled}
       >
         {feedback === "processing" ? (
@@ -363,7 +365,12 @@ export default function AIEditorActions({
               <SparklesIcon size={16} color={styles.outputTitle.color} />
               <Text style={styles.outputTitle}>AI Result</Text>
             </View>
-            <TouchableOpacity onPress={() => setOutputText(null)} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={() => setOutputText(null)}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.close")}
+              activeOpacity={0.7}
+            >
               <XMarkIcon size={18} color={COLOR.lightBlue} />
             </TouchableOpacity>
           </View>

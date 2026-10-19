@@ -65,6 +65,8 @@ export default function WebhooksScreen() {
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => openUrl(`${configs.app.websiteUrl}/${t("languageCode")}/guides/webhooks`)}
+          accessibilityRole="link"
+          accessibilityLabel={t("a11y.open_guide")}
         >
           <IconChip>
             <InformationCircleIcon size={20} color={COLOR.softWhite} />

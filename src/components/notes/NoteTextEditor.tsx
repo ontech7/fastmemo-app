@@ -13,6 +13,7 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/co
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
+import i18n from "@/libs/i18n";
 import {
   selectorAIAssistant,
   selectorDeveloperMode,
@@ -26,7 +27,8 @@ import { voiceTextToHtml } from "@/utils/voiceTranscript";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactElement } from "react";
+import { cloneElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
@@ -44,6 +46,42 @@ interface Props {
 // least the real height so the bar parks fully below the screen while the keyboard
 // is down (and so the editor reserves enough room for it while the keyboard is up).
 const BAR_HEIGHT_ESTIMATE = 76;
+
+const TOOLBAR_LABEL_KEYS: Record<string, string> = {
+  [actions.undo]: "a11y.format.undo",
+  [actions.redo]: "a11y.format.redo",
+  [actions.insertImage]: "a11y.format.image",
+  [actions.heading1]: "a11y.format.heading",
+  [actions.setBold]: "a11y.format.bold",
+  [actions.setItalic]: "a11y.format.italic",
+  [actions.setStrikethrough]: "a11y.format.strikethrough",
+  [actions.setUnderline]: "a11y.format.underline",
+  [actions.alignLeft]: "a11y.format.align_left",
+  [actions.alignCenter]: "a11y.format.align_center",
+  [actions.setSubscript]: "a11y.format.subscript",
+  [actions.setSuperscript]: "a11y.format.superscript",
+  [actions.insertBulletsList]: "a11y.format.bullet_list",
+  [actions.insertOrderedList]: "a11y.format.numbered_list",
+  [actions.code]: "a11y.format.code",
+};
+
+const renderToolbarAction = (
+  RichToolbar.prototype as unknown as {
+    _defaultRenderAction(action: string, selected: boolean): ReactElement;
+  }
+)._defaultRenderAction;
+
+// RichToolbar renders its action buttons with no role or name and has no prop to add them, so decorate the
+// buttons its default renderer returns (`_renderAction` calls it through `this`, so the override is used).
+class LabeledRichToolbar extends RichToolbar {
+  _defaultRenderAction(action: string, selected: boolean) {
+    return cloneElement(renderToolbarAction.call(this, action, selected), {
+      accessibilityRole: "button",
+      accessibilityLabel: TOOLBAR_LABEL_KEYS[action] ? i18n.t(TOOLBAR_LABEL_KEYS[action]) : undefined,
+      "aria-selected": selected,
+    });
+  }
+}
 
 export default function NoteTextEditor({ initialNote }: Props) {
   const { t } = useTranslation();
@@ -268,7 +306,13 @@ export default function NoteTextEditor({ initialNote }: Props) {
               />
             </View>
 
-            <TouchableOpacity style={styles.searchToggle} onPress={() => setShowFindReplace((prev) => !prev)}>
+            <TouchableOpacity
+              style={styles.searchToggle}
+              onPress={() => setShowFindReplace((prev) => !prev)}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.search_in_note")}
+              aria-expanded={showFindReplace}
+            >
               <IconChip>
                 <MagnifyingGlassIcon size={20} color={showFindReplace ? COLOR.accentSoft : COLOR.softWhite} />
               </IconChip>
@@ -383,7 +427,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
             KeyboardStickyView outside the KAV (see below) so it can stick to the
             keyboard's edge. */}
           {Platform.OS === "web" && (
-            <RichToolbar
+            <LabeledRichToolbar
               style={[styles.richToolbarContainer, styles.richToolbarContainerDesktop]}
               // On web, capping the inner list at the bar width (rather than pinning it to
               // 100%) lets it keep its intrinsic width when the icons fit — so the bar's
@@ -411,7 +455,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
             {Platform.OS === "ios" && (
               <DismissKeyboardButton showKeyboardDismiss onPress={() => richTextEditor.current?.dismissKeyboard()} />
             )}
-            <RichToolbar
+            <LabeledRichToolbar
               style={styles.richToolbarContainer}
               editor={richTextEditor}
               onPressAddImage={pickImage}

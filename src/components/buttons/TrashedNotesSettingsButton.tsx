@@ -121,6 +121,7 @@ export default function TrashedNotesSettingsButton({
       />
 
       <PopupMenu
+        accessibilityLabel={t("a11y.more_options")}
         trigger={
           <IconChip>
             <EllipsisVerticalIcon size={20} color={COLOR.softWhite} />

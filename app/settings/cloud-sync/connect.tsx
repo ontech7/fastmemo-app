@@ -120,6 +120,8 @@ export default function CloudSyncScreen() {
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => openUrl(`${configs.app.websiteUrl}/${t("languageCode")}/guides/google-firebase`)}
+            accessibilityRole="link"
+            accessibilityLabel={t("a11y.open_guide")}
           >
             <IconChip>
               <InformationCircleIcon size={20} color={COLOR.softWhite} />
@@ -221,6 +223,8 @@ export default function CloudSyncScreen() {
                       <Text style={styles.saveSettingsText}>{t("cloudsync.save")}</Text>
 
                       <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel={t("cloudsync.save")}
                         activeOpacity={0.7}
                         disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
                         style={[
@@ -282,6 +286,8 @@ export default function CloudSyncScreen() {
                         <Text style={styles.saveSettingsText}>{t("cloudsync.edit")}</Text>
 
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={t("cloudsync.edit")}
                           activeOpacity={0.7}
                           disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
                           style={[
@@ -301,6 +307,8 @@ export default function CloudSyncScreen() {
                         <Text style={styles.saveSettingsText}>{t("cloudsync.resync")}</Text>
 
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={t("cloudsync.resync")}
                           activeOpacity={0.7}
                           disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected || !vaultUnlocked}
                           style={[
@@ -321,6 +329,8 @@ export default function CloudSyncScreen() {
                           <Text style={styles.saveSettingsText}>{t("cloudsync.vault.changePassphrase")}</Text>
 
                           <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={t("cloudsync.vault.changePassphrase")}
                             activeOpacity={0.7}
                             disabled={state.isLoading || !netInfo?.isConnected}
                             style={[
@@ -348,6 +358,8 @@ export default function CloudSyncScreen() {
                         <Text style={styles.saveSettingsText}>{t("cloudsync.deleteDevices")}</Text>
 
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={t("cloudsync.deleteDevices")}
                           activeOpacity={0.7}
                           disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
                           style={[
@@ -376,6 +388,8 @@ export default function CloudSyncScreen() {
                           <Text style={styles.saveSettingsText}>{t("cloudsync.vault.resetVault")}</Text>
 
                           <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={t("cloudsync.vault.resetVault")}
                             activeOpacity={0.7}
                             disabled={state.isLoading || !netInfo?.isConnected}
                             style={[

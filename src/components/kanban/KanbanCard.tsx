@@ -2,6 +2,7 @@ import DragIcon from "@/components/icons/DragIcon";
 import Haptics from "@/libs/haptics";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useRef, useState, type RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
@@ -25,6 +26,8 @@ interface Props {
 }
 
 export default function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, inputRef }: Props) {
+  const { t } = useTranslation();
+
   const [height, setHeight] = useState(40);
 
   const { startDrag, updateDragPosition, endDrag, isDragging, draggedItem } = useKanbanDrag();
@@ -119,6 +122,8 @@ export default function KanbanCard({ item, columnId, setText, deleteItem, disabl
           disabled={disabled}
           style={styles.deleteButton}
           onPress={() => deleteItem(item.id)}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.delete_item")}
         >
           <View style={styles.deleteChip}>
             <TrashIcon size={16} color={COLOR.textMuted} />

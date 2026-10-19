@@ -72,7 +72,7 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
 
   return (
     <Animated.View style={animatedStyle}>
-      <TouchableOpacity style={styles.noteTypeButton} activeOpacity={0.7} onPress={onPress}>
+      <TouchableOpacity style={styles.noteTypeButton} activeOpacity={0.7} onPress={onPress} accessibilityRole="button">
         <Text style={styles.noteTypeLabel}>{label}</Text>
         <View style={styles.noteTypeIconContainer}>
           <Icon size={28} color={COLOR.softWhite} />
@@ -227,6 +227,8 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
           { paddingBottom: (bottomOffset ?? 60) + 70, pointerEvents: isOverlayOpen ? "auto" : "none" },
         ]}
         onPress={closeOverlay}
+        accessible={false}
+        aria-hidden={!isOverlayOpen}
       >
         <View style={styles.overlayContainer}>
           {NOTE_TYPES.map((noteType, index) => (
@@ -250,14 +252,27 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
         style={[styles.fabGroup, { bottom: bottomOffset ?? 60, pointerEvents: "box-none" }]}
       >
         <Animated.View style={[secondaryFabAnimatedStyle, { pointerEvents: isDeleteMode ? "none" : "auto" }]}>
-          <TouchableOpacity style={styles.fabSecondary} activeOpacity={0.7} onPress={toggleOverlay}>
+          <TouchableOpacity
+            style={styles.fabSecondary}
+            activeOpacity={0.7}
+            onPress={toggleOverlay}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.note_types")}
+            aria-expanded={isOverlayOpen}
+          >
             <Animated.View style={chevronAnimatedStyle}>
               <ChevronUpIcon size={20} color={COLOR.softWhite} />
             </Animated.View>
           </TouchableOpacity>
         </Animated.View>
 
-        <TouchableOpacity style={styles.fab} activeOpacity={0.7} onPress={createDirect}>
+        <TouchableOpacity
+          style={styles.fab}
+          activeOpacity={0.7}
+          onPress={createDirect}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.new_note")}
+        >
           <Animated.View style={closeIconAnimatedStyle}>
             <PlusIcon size={28} color={COLOR.softWhite} />
           </Animated.View>

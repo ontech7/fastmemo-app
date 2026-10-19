@@ -245,6 +245,8 @@ export default function SyncedDevicesScreen() {
                           activeOpacity={0.7}
                           disabled={syncing || !netInfo?.isConnected}
                           onPress={syncCurrentDevice}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("a11y.sync_device")}
                         >
                           <View style={[styles.syncChip, (syncing || !netInfo?.isConnected) && styles.syncChipDisabled]}>
                             <ArrowPathIcon size={16} color={COLOR.accentSoft} />
@@ -253,7 +255,12 @@ export default function SyncedDevicesScreen() {
                         <Animated.View style={[styles.currentDeviceDot, blinkStyle]} />
                       </View>
                     ) : (
-                      <TouchableOpacity activeOpacity={0.7} onPress={() => deleteDeviceFromCloud(connectedDevice.uuid)}>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => deleteDeviceFromCloud(connectedDevice.uuid)}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("a11y.remove_device")}
+                      >
                         <View style={styles.deleteChip}>
                           <TrashIcon size={16} color={COLOR.textMuted} />
                         </View>

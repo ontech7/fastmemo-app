@@ -106,9 +106,11 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 7. **Always wrap memoized components** (NoteCard, TodoItem, OrderedCategoryCard, etc.) with `memo()` from react
 8. **Always add translations for all 7 locales** when adding new UI strings (en, it, es, fr, de, zh, ja)
 9. **Always test on both web and native** when touching platform-split files
-10. **Always call `flushNote()`** before acting on a note's stored copy (delete, detach, sync, change category): editors
-    commit to Redux in batches (ADR-013, LL-031)
+10. **Always call `flushNote()`** before acting on a note's stored copy (delete, detach, sync, change category): editors commit
+    to Redux in batches (ADR-013, LL-031)
 11. **Always set `timeout: 0`** on a redux-persist config: a timed-out read rehydrates empty state and wipes storage (LL-029)
+12. **Always give an icon-only pressable `accessibilityRole` + `accessibilityLabel`** (i18n, `a11y.*`), with state as
+    `aria-checked`/`aria-selected`/`aria-expanded` -- not `role`/`accessibilityState`, which one platform drops (CONVENTIONS)
 
 ## Tech Stack (Quick Reference)
 

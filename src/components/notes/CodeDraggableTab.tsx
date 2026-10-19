@@ -121,6 +121,8 @@ export default function CodeDraggableTab({
             <TouchableOpacity
               style={styles.tabDeleteButton}
               onPress={() => setShowDeleteConfirm(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("code.delete_tab")}
               activeOpacity={0.7}
               hitSlop={{ top: 6, bottom: 6, right: 6, left: 4 }}
             >

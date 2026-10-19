@@ -1,5 +1,6 @@
 import { CODE_LANGUAGES, LANGUAGE_LABELS } from "@/constants/code-languages";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, MONOSPACE_FONT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { useTranslation } from "react-i18next";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 
@@ -12,13 +13,15 @@ interface Props {
 }
 
 export default function CodeLanguagePickerModal({ visible, selectedLanguage, onSelect, onClose, title }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t("a11y.close")}>
               <XMarkIcon size={22} color={COLOR.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -30,6 +33,8 @@ export default function CodeLanguagePickerModal({ visible, selectedLanguage, onS
                   key={lang}
                   style={[styles.languageItem, isSelected && styles.languageItemSelected]}
                   onPress={() => onSelect(lang)}
+                  accessibilityRole="button"
+                  aria-selected={isSelected}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.languageItemText, isSelected && styles.languageItemTextSelected]}>

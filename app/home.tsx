@@ -498,7 +498,7 @@ export default function HomeScreen() {
           </View>
         </SafeAreaView>
 
-        <Animated.View style={[styles.editModeToolbar, animatedTranslate, animatedOpacity]}>
+        <Animated.View style={[styles.editModeToolbar, animatedTranslate, animatedOpacity]} aria-hidden={!isDeleteMode}>
           <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} />
 
           <ProtectNotesButton onPressProtect={toggleProtectedNotesFromItems} />

@@ -334,6 +334,8 @@ export default function ReportScreen() {
                     <TouchableOpacity
                       activeOpacity={0.7}
                       onPress={() => removeAttachment(attachment.filename)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("a11y.remove_attachment")}
                       style={styles.removeImageOrVideo}
                     >
                       <XMarkIcon size={14} color={COLOR.softWhite} />

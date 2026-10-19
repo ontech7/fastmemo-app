@@ -116,6 +116,8 @@ export default function IntroScreen() {
             <TouchableOpacity
               style={[styles.navButton, styles.navButtonLeft, !canScrollPrev && styles.navButtonDisabled]}
               onPress={scrollPrev}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.previous")}
               disabled={!canScrollPrev}
             >
               <ChevronLeftIcon size={28} color={canScrollPrev ? COLOR.textPrimary : COLOR.textMuted} />
@@ -157,6 +159,8 @@ export default function IntroScreen() {
             <TouchableOpacity
               style={[styles.navButton, styles.navButtonRight, !canScrollNext && styles.navButtonDisabled]}
               onPress={scrollNext}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.next")}
               disabled={!canScrollNext}
             >
               <ChevronRightIcon size={28} color={canScrollNext ? COLOR.textPrimary : COLOR.textMuted} />
@@ -169,6 +173,9 @@ export default function IntroScreen() {
             <TouchableOpacity
               key={index}
               onPress={() => emblaApi?.scrollTo(index)}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.page", { page: index + 1 })}
+              aria-selected={index === activeIndex}
               style={[styles.carouselDot, index !== activeIndex && styles.inactiveCarouselDot]}
             />
           ))}

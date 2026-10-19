@@ -65,7 +65,12 @@ export default function ChangeCategoryScreen() {
 
         <Text style={styles.headerTitle}>{t("changecategory.title")}</Text>
 
-        <TouchableOpacity activeOpacity={0.7} onPress={updateExistentCategory}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={updateExistentCategory}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.save")}
+        >
           <IconChip>
             <CheckIcon size={20} color={COLOR.softWhite} />
           </IconChip>

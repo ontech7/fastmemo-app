@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
 
@@ -8,8 +9,16 @@ interface Props {
 }
 
 export default function ReadOnlyNotesButton({ onPressReadOnly }: Props) {
+  const { t } = useTranslation();
+
   return (
-    <TouchableOpacity activeOpacity={0.7} style={styles.readOnlyNoteButton} onPress={onPressReadOnly}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      style={styles.readOnlyNoteButton}
+      onPress={onPressReadOnly}
+      accessibilityRole="button"
+      accessibilityLabel={t("note.settings.readonly")}
+    >
       <BookOpenIcon size={16} color={COLOR.softWhite} />
     </TouchableOpacity>
   );

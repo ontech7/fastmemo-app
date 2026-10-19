@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import CloudArrowDownIcon from "react-native-heroicons/solid/CloudArrowDownIcon";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
@@ -13,6 +14,8 @@ import { COLOR, PADDING_MARGIN } from "@/constants/styles";
  * Rendered outside the scrollable category list, so it never overlaps it.
  */
 export default function UpdateAppButton() {
+  const { t } = useTranslation();
+
   const { updateAvailable, openUpdate } = useAppUpdate();
 
   const appear = useSharedValue(0);
@@ -36,7 +39,13 @@ export default function UpdateAppButton() {
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
-      <TouchableOpacity style={styles.button} activeOpacity={0.7} onPress={openUpdate}>
+      <TouchableOpacity
+        style={styles.button}
+        activeOpacity={0.7}
+        onPress={openUpdate}
+        accessibilityRole="button"
+        accessibilityLabel={t("generalsettings.update_available")}
+      >
         <CloudArrowDownIcon size={24} color={COLOR.accentSoft} />
       </TouchableOpacity>
     </Animated.View>

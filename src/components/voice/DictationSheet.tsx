@@ -85,6 +85,8 @@ export default function DictationSheet({
               activeOpacity={0.7}
               style={[styles.micButton, listening && styles.micButtonActive]}
               onPress={onToggleListening}
+              accessibilityRole="button"
+              accessibilityLabel={listening ? t("a11y.stop_listening") : t("a11y.start_listening")}
             >
               {listening ? <View style={styles.stopIcon} /> : <MicrophoneIcon size={22} color={COLOR.softWhite} />}
             </TouchableOpacity>

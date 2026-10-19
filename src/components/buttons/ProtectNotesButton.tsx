@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import KeyIcon from "react-native-heroicons/outline/KeyIcon";
 
@@ -8,8 +9,16 @@ interface Props {
 }
 
 export default function ProtectNotesButton({ onPressProtect }: Props) {
+  const { t } = useTranslation();
+
   return (
-    <TouchableOpacity activeOpacity={0.7} style={styles.protectNoteButton} onPress={onPressProtect}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      style={styles.protectNoteButton}
+      onPress={onPressProtect}
+      accessibilityRole="button"
+      accessibilityLabel={t("note.settings.protect")}
+    >
       <KeyIcon size={16} color={COLOR.softWhite} />
     </TouchableOpacity>
   );

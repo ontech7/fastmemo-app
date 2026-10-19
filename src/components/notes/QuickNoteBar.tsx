@@ -195,13 +195,25 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
             input, and a `focused`-gated button would unmount between mousedown and click —
             so its press never fires. `hasText` survives the blur, so the tap lands. */}
         {hasText && (
-          <Pressable onPress={handleExpand} hitSlop={8} style={styles.iconButton}>
+          <Pressable
+            onPress={handleExpand}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.open_full_note")}
+            hitSlop={8}
+            style={styles.iconButton}
+          >
             <ArrowsPointingOutIcon size={18} color={COLOR.textSecondary} />
           </Pressable>
         )}
 
         {hasText && (
-          <Pressable onPress={handleSend} hitSlop={8} style={styles.sendButton}>
+          <Pressable
+            onPress={handleSend}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.save_note")}
+            hitSlop={8}
+            style={styles.sendButton}
+          >
             <PaperAirplaneIcon size={18} color={COLOR.softWhite} />
           </Pressable>
         )}

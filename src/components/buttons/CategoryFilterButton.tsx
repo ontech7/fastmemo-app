@@ -119,6 +119,9 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
           style={[styles.button, selected && styles.selectedButton, rotateAnimStyle]}
           activeOpacity={0.7}
           onPress={swapFavoriteCategory}
+          accessibilityRole="button"
+          accessibilityLabel={index ? t("All") : name}
+          aria-selected={selected}
           onLongPress={toggleDeleteMode}
         >
           {index ? (
@@ -133,6 +136,8 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
             activeOpacity={0.7}
             style={styles.deleteButton}
             onPress={() => setShowDeleteFavoriteCategoryDialog(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.delete_category")}
           >
             <XMarkIcon size={14} color={COLOR.softWhite} />
           </TouchableOpacity>

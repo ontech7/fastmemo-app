@@ -73,6 +73,8 @@ export default function KanbanColumn({
           activeOpacity={0.7}
           disabled={disabled}
           onPress={cycleColor}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.change_column_color")}
           style={[styles.colorIndicator, { backgroundColor: column.color }]}
         />
 
@@ -91,6 +93,8 @@ export default function KanbanColumn({
           activeOpacity={0.7}
           disabled={disabled || columnIndex === 0}
           onPress={() => moveColumn(column.id, "left")}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.move_column_left")}
           style={styles.headerButton}
         >
           <ChevronLeftIcon size={18} color={!disabled && columnIndex > 0 ? COLOR.textPrimary : COLOR.textMuted} />
@@ -100,6 +104,8 @@ export default function KanbanColumn({
           activeOpacity={0.7}
           disabled={disabled || columnIndex === totalColumns - 1}
           onPress={() => moveColumn(column.id, "right")}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.move_column_right")}
           style={[styles.headerButton, { marginRight: PADDING_MARGIN.md }]}
         >
           <ChevronRightIcon
@@ -112,6 +118,8 @@ export default function KanbanColumn({
           activeOpacity={0.7}
           disabled={disabled}
           onPress={() => deleteColumn(column.id)}
+          accessibilityRole="button"
+          accessibilityLabel={t("kanban.delete_column")}
           style={styles.headerButton}
         >
           <TrashIcon size={18} color={COLOR.textSecondary} />

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import StarIcon from "react-native-heroicons/outline/StarIcon";
 
@@ -8,8 +9,16 @@ interface Props {
 }
 
 export default function FavoriteNotesButton({ onPressSave }: Props) {
+  const { t } = useTranslation();
+
   return (
-    <TouchableOpacity activeOpacity={0.7} style={styles.saveNoteButton} onPress={onPressSave}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      style={styles.saveNoteButton}
+      onPress={onPressSave}
+      accessibilityRole="button"
+      accessibilityLabel={t("note.settings.important")}
+    >
       <StarIcon size={16} color={COLOR.softWhite} />
     </TouchableOpacity>
   );

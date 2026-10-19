@@ -52,6 +52,7 @@ export default function NoteFiltersButton({ filters }: Props) {
 
   return (
     <PopupMenu
+      accessibilityLabel={t("a11y.sort_filter")}
       trigger={
         <GlassSurface radius={BORDER.big} style={styles.trigger}>
           <FunnelIcon size={20} color={COLOR.softWhite} />

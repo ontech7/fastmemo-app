@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import ArchiveBoxXMarkIcon from "react-native-heroicons/outline/ArchiveBoxXMarkIcon";
 
@@ -6,11 +7,15 @@ import { useRouter } from "@/hooks/useRouter";
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 export default function TemporaryTrashButton() {
+  const { t } = useTranslation();
+
   const router = useRouter();
 
   return (
     <View style={styles.container}>
       <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={t("trashednotes.title")}
         style={styles.button}
         activeOpacity={0.7}
         onPress={() => {

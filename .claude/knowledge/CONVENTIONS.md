@@ -100,6 +100,24 @@ The standard interactive element is `TouchableOpacity` with `activeOpacity={0.7}
 </TouchableOpacity>
 ```
 
+**Accessibility:** a pressable with no visible text (icon only) MUST have a screen-reader name:
+
+```tsx
+<TouchableOpacity
+  onPress={toggle}
+  accessibilityRole="checkbox" // or "button"
+  accessibilityLabel={t("a11y.delete_item")} // i18n, reuse an existing key when one fits
+  aria-checked={checked} // state: aria-checked / aria-selected / aria-expanded
+>
+```
+
+- Use `accessibilityRole` (not `role`): native `TouchableOpacity` silently drops `role`.
+- Use `aria-checked`/`aria-selected`/`aria-expanded` for state (not `accessibilityState`): react-native-web ignores
+  `accessibilityState` except `disabled`. `disabled` already maps on both platforms.
+- Content that is only hidden visually (opacity 0, translated off-screen, closed overlays) gets `aria-hidden` while inactive, or
+  screen readers still reach it.
+- Generic screen-reader names live under `a11y.*`.
+
 ### SafeAreaView
 
 Always use the project's custom `@/components/SafeAreaView`, not the one from `react-native-safe-area-context` directly.

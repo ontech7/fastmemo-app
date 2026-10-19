@@ -313,7 +313,13 @@ export default function NoteTodoEditor({ initialNote }: Props) {
             />
           </View>
 
-          <TouchableOpacity activeOpacity={0.7} style={styles.addButton} onPress={addListItem}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.addButton}
+            onPress={addListItem}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.add_item")}
+          >
             <PlusIcon size={28} color={COLOR.softWhite} />
           </TouchableOpacity>
         </EditorActionDock>

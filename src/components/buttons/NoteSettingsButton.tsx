@@ -193,6 +193,7 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
   return (
     <>
       <PopupMenu
+        accessibilityLabel={t("a11y.more_options")}
         trigger={
           <IconChip>
             <EllipsisVerticalIcon size={20} color={COLOR.softWhite} />

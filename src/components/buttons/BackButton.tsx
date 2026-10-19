@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { ViewStyle } from "react-native";
 import { Keyboard, TouchableOpacity } from "react-native";
 import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
@@ -14,6 +15,8 @@ interface Props {
 }
 
 export default function BackButton({ callback = null, style = {}, chip = false }: Props) {
+  const { t } = useTranslation();
+
   const router = useRouter();
 
   const onPress = () => {
@@ -23,7 +26,13 @@ export default function BackButton({ callback = null, style = {}, chip = false }
   };
 
   return (
-    <TouchableOpacity style={style} activeOpacity={0.7} onPress={onPress}>
+    <TouchableOpacity
+      style={style}
+      activeOpacity={0.7}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t("a11y.back")}
+    >
       {chip ? (
         <IconChip>
           <ChevronLeftIcon size={20} color={COLOR.softWhite} />

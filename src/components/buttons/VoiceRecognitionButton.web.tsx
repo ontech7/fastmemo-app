@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import MicrophoneIcon from "react-native-heroicons/outline/MicrophoneIcon";
 import { useSelector } from "react-redux";
@@ -23,6 +24,8 @@ interface Props {
 }
 
 export default function VoiceRecognitionButton({ onInsert, style = {} }: Props) {
+  const { t } = useTranslation();
+
   const selectors = useSelector(selectorVoiceRecognition);
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -154,7 +157,13 @@ export default function VoiceRecognitionButton({ onInsert, style = {} }: Props) 
   return (
     <>
       <View style={[styles.wrapper, style]}>
-        <TouchableOpacity activeOpacity={0.7} style={styles.button} onPress={openDictation}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.button}
+          onPress={openDictation}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.dictate")}
+        >
           <MicrophoneIcon size={24} color={COLOR.softWhite} />
         </TouchableOpacity>
       </View>

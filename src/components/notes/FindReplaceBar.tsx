@@ -224,10 +224,22 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
           onSubmitEditing={() => navigateMatch("next")}
         />
         <Text style={styles.matchCount}>{matchCount > 0 ? `${currentMatch}/${matchCount}` : "0/0"}</Text>
-        <TouchableOpacity style={styles.iconButton} onPress={() => navigateMatch("prev")} disabled={matchCount === 0}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => navigateMatch("prev")}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.previous_match")}
+          disabled={matchCount === 0}
+        >
           <ChevronUpIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.textMuted} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton} onPress={() => navigateMatch("next")} disabled={matchCount === 0}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => navigateMatch("next")}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.next_match")}
+          disabled={matchCount === 0}
+        >
           <ChevronDownIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton} onPress={() => setShowReplace(!showReplace)}>
@@ -235,7 +247,12 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
             {t("note.find_replace.replace_short")}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton} onPress={onClose}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.close")}
+        >
           <XMarkIcon size={18} color={COLOR.softWhite} />
         </TouchableOpacity>
       </View>

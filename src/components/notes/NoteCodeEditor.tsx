@@ -259,7 +259,13 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   />
                 ))}
                 {note.tabs.length < MAX_TABS && !note.readOnly && (
-                  <TouchableOpacity style={styles.addTabButton} onPress={addTab} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    style={styles.addTabButton}
+                    onPress={addTab}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("code.add_tab")}
+                    activeOpacity={0.7}
+                  >
                     <PlusIcon size={16} color={COLOR.textSecondary} />
                   </TouchableOpacity>
                 )}

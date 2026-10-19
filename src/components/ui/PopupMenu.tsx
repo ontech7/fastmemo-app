@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { createContext, useContext, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { LayoutChangeEvent, ViewInstance } from "react-native";
 import { Dimensions, Modal, Platform, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -31,6 +32,8 @@ interface PopupMenuProps {
   trigger: ReactNode;
   children: ReactNode;
   width?: number;
+  /** Screen-reader name of the trigger (it is usually just an icon). */
+  accessibilityLabel?: string;
 }
 
 /**
@@ -38,7 +41,8 @@ interface PopupMenuProps {
  * react-native-popup-menu. Anchors right-aligned just below its trigger and
  * opens as a dropdown that expands from zero height to its content height.
  */
-export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH }: PopupMenuProps) {
+export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH, accessibilityLabel }: PopupMenuProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const triggerRef = useRef<ViewInstance>(null);
   const lastHeight = useRef(0);
@@ -104,13 +108,26 @@ export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH }: 
 
   return (
     <>
-      <Pressable ref={triggerRef} onPress={open} hitSlop={8} style={styles.trigger}>
+      <Pressable
+        ref={triggerRef}
+        onPress={open}
+        hitSlop={8}
+        style={styles.trigger}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        aria-expanded={visible}
+      >
         {trigger}
       </Pressable>
 
       <Modal visible={visible} transparent statusBarTranslucent animationType="none" onRequestClose={close}>
         <Animated.View style={[styles.backdrop, backdropStyle]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={close}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.close")}
+          />
         </Animated.View>
 
         <Animated.View style={[styles.cardShadow, { width, top: anchor.top, left: anchor.left }, cardStyle]}>
@@ -143,6 +160,8 @@ export function PopupMenuOption({ label, onSelect, disabled, selected, leading, 
   return (
     <Pressable
       disabled={disabled}
+      accessibilityRole="menuitem"
+      aria-selected={selected}
       onPress={() => {
         onSelect?.();
         close();

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
 
@@ -8,8 +9,16 @@ interface Props {
 }
 
 export default function HiddenNotesButton({ onPressHidden }: Props) {
+  const { t } = useTranslation();
+
   return (
-    <TouchableOpacity activeOpacity={0.7} style={styles.hiddenNoteButton} onPress={onPressHidden}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      style={styles.hiddenNoteButton}
+      onPress={onPressHidden}
+      accessibilityRole="button"
+      accessibilityLabel={t("note.settings.hide")}
+    >
       <EyeSlashIcon size={16} color={COLOR.softWhite} />
     </TouchableOpacity>
   );

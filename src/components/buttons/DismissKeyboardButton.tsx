@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Keyboard, StyleSheet, TouchableOpacity } from "react-native";
 import { Path, Svg } from "react-native-svg";
 
@@ -12,8 +13,12 @@ interface Props {
 }
 
 export default function DismissKeyboardButton({ showKeyboardDismiss = false, onPress = null, style = {} }: Props) {
+  const { t } = useTranslation();
+
   return (
     <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={t("a11y.hide_keyboard")}
       activeOpacity={0.7}
       onPress={() => {
         if (onPress) {
