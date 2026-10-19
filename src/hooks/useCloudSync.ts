@@ -106,7 +106,8 @@ export const useCloudSync = () => {
   const setCloudSetting = (name: keyof CloudSettings, value: string): void => {
     setLocalCloudSettings({
       ...cloudSettings,
-      [name]: value,
+      // Firebase identifiers never contain whitespace, but a paste can carry some along.
+      [name]: value.trim(),
     });
   };
 

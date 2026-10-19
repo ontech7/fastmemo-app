@@ -45,6 +45,10 @@ function WebhookItem({ title, webhook, setWebhookUrl, toggleWebhook }: Props) {
           textAlignVertical="center"
           onChangeText={setWebhookUrl}
           value={webhook.url}
+          keyboardType="url"
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
           placeholder="https://"
           placeholderTextColor={COLOR.textMuted}
           cursorColor={COLOR.textPrimary}

@@ -164,6 +164,9 @@ export default function CloudSyncScreen() {
                       cursorColor={COLOR.textPrimary}
                       placeholderTextColor={COLOR.textMuted}
                       placeholder="e.g.: AIzaF0Ba0wDdkde893DR9rkfAE03"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      spellCheck={false}
                       onChangeText={(text: string) => methods.setCloudSetting("apiKey", text)}
                       value={!state.isConnected ? cloudSettings.apiKey : "***********"}
                     />
@@ -182,6 +185,9 @@ export default function CloudSyncScreen() {
                       cursorColor={COLOR.textPrimary}
                       placeholderTextColor={COLOR.textMuted}
                       placeholder="e.g.: fastmemo-xyzw"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      spellCheck={false}
                       onChangeText={(text: string) => methods.setCloudSetting("projectId", text)}
                       value={!state.isConnected ? cloudSettings.projectId : "***********"}
                     />
@@ -200,6 +206,9 @@ export default function CloudSyncScreen() {
                       cursorColor={COLOR.textPrimary}
                       placeholderTextColor={COLOR.textMuted}
                       placeholder="e.g.: 1:2137892387:web:9g7a6s6f8gf8df878787s6"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      spellCheck={false}
                       onChangeText={(text: string) => methods.setCloudSetting("appId", text)}
                       value={!state.isConnected ? cloudSettings.appId : "***********"}
                     />
