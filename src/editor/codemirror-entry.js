@@ -1,61 +1,56 @@
 import { EditorView, lineNumbers, highlightActiveLine, highlightActiveLineGutter, keymap } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
+import { Compartment, EditorState } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { syntaxHighlighting, defaultHighlightStyle, indentOnInput, bracketMatching, foldGutter } from "@codemirror/language";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { highlightSelectionMatches } from "@codemirror/search";
 import { oneDark } from "@codemirror/theme-one-dark";
 
-import { javascript } from "@codemirror/lang-javascript";
-import { python } from "@codemirror/lang-python";
-import { html } from "@codemirror/lang-html";
-import { css } from "@codemirror/lang-css";
-import { json } from "@codemirror/lang-json";
-import { xml } from "@codemirror/lang-xml";
-import { markdown } from "@codemirror/lang-markdown";
-import { sql } from "@codemirror/lang-sql";
-import { java } from "@codemirror/lang-java";
-import { cpp } from "@codemirror/lang-cpp";
-import { rust } from "@codemirror/lang-rust";
-import { php } from "@codemirror/lang-php";
-import { go } from "@codemirror/lang-go";
-import { yaml } from "@codemirror/lang-yaml";
-
-const LANG_MAP = {
-  javascript: () => javascript(),
-  typescript: () => javascript({ typescript: true }),
-  jsx: () => javascript({ jsx: true }),
-  tsx: () => javascript({ jsx: true, typescript: true }),
-  python: () => python(),
-  html: () => html(),
-  css: () => css(),
-  scss: () => css(),
-  json: () => json(),
-  xml: () => xml(),
-  markdown: () => markdown(),
-  sql: () => sql(),
-  java: () => java(),
-  c: () => cpp(),
-  cpp: () => cpp(),
-  csharp: () => cpp(),
-  objectivec: () => cpp(),
-  rust: () => rust(),
-  php: () => php(),
-  go: () => go(),
-  yaml: () => yaml(),
-  swift: () => cpp(),
-  kotlin: () => java(),
-  dart: () => cpp(),
-  scala: () => java(),
+// Grammars load on demand: esbuild bundles each dynamically imported language as a module that is
+// only initialized when first imported, so opening a code note no longer builds the parse tables of
+// every supported language.
+const LANG_LOADERS = {
+  javascript: () => import("@codemirror/lang-javascript").then((m) => m.javascript()),
+  typescript: () => import("@codemirror/lang-javascript").then((m) => m.javascript({ typescript: true })),
+  jsx: () => import("@codemirror/lang-javascript").then((m) => m.javascript({ jsx: true })),
+  tsx: () => import("@codemirror/lang-javascript").then((m) => m.javascript({ jsx: true, typescript: true })),
+  python: () => import("@codemirror/lang-python").then((m) => m.python()),
+  html: () => import("@codemirror/lang-html").then((m) => m.html()),
+  css: () => import("@codemirror/lang-css").then((m) => m.css()),
+  scss: () => import("@codemirror/lang-css").then((m) => m.css()),
+  json: () => import("@codemirror/lang-json").then((m) => m.json()),
+  xml: () => import("@codemirror/lang-xml").then((m) => m.xml()),
+  markdown: () => import("@codemirror/lang-markdown").then((m) => m.markdown()),
+  sql: () => import("@codemirror/lang-sql").then((m) => m.sql()),
+  java: () => import("@codemirror/lang-java").then((m) => m.java()),
+  c: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
+  cpp: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
+  csharp: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
+  objectivec: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
+  rust: () => import("@codemirror/lang-rust").then((m) => m.rust()),
+  php: () => import("@codemirror/lang-php").then((m) => m.php()),
+  go: () => import("@codemirror/lang-go").then((m) => m.go()),
+  yaml: () => import("@codemirror/lang-yaml").then((m) => m.yaml()),
+  swift: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
+  kotlin: () => import("@codemirror/lang-java").then((m) => m.java()),
+  dart: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
+  scala: () => import("@codemirror/lang-java").then((m) => m.java()),
 };
 
-function getLangExtension(lang) {
-  const factory = LANG_MAP[lang];
-  const ext = factory ? factory() : null;
-  return ext ? [ext] : [];
+const loadedLanguages = {};
+
+function loadLanguage(lang) {
+  const load = LANG_LOADERS[lang];
+  if (!load) return Promise.resolve([]);
+  return load().then((ext) => (loadedLanguages[lang] = [ext]));
 }
 
-function getBaseExtensions(readOnly) {
+// Language and read-only mode are reconfigured in place, which keeps the undo history (rebuilding
+// the view to switch them used to drop it).
+const languageConf = new Compartment();
+const readOnlyConf = new Compartment();
+
+function getBaseExtensions() {
   return [
     lineNumbers(),
     highlightActiveLine(),
@@ -69,16 +64,13 @@ function getBaseExtensions(readOnly) {
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     oneDark,
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, indentWithTab]),
-    EditorView.lineWrapping ? undefined : undefined,
-    EditorState.readOnly.of(readOnly),
-  ].filter(Boolean);
+  ];
 }
 
 // Read initial config from a global set before this script runs
 const config = window.__EDITOR_CONFIG__ || {};
 let currentLang = config.language || "javascript";
 let currentReadOnly = config.readOnly || false;
-let view;
 let suppressChange = false;
 
 // Helper: send messages back to React on both native and web/Tauri
@@ -104,43 +96,51 @@ const changeListener = EditorView.updateListener.of((update) => {
   }
 });
 
-view = new EditorView({
-  doc: config.code || "",
-  extensions: [...getBaseExtensions(currentReadOnly), changeListener, ...getLangExtension(currentLang)],
+// A fresh state per document (initial content, tab switch), so undo never crosses into another tab.
+function createState(doc) {
+  return EditorState.create({
+    doc,
+    extensions: [
+      ...getBaseExtensions(),
+      readOnlyConf.of(EditorState.readOnly.of(currentReadOnly)),
+      languageConf.of(loadedLanguages[currentLang] || []),
+      changeListener,
+    ],
+  });
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  loadLanguage(lang).then((ext) => {
+    if (currentLang === lang) view.dispatch({ effects: languageConf.reconfigure(ext) });
+  });
+}
+
+const view = new EditorView({
+  state: createState(config.code || ""),
   parent: document.getElementById("editor"),
 });
+setLanguage(currentLang);
 
 window.handleMessage = function (msgStr) {
   try {
     const msg = JSON.parse(msgStr);
     if (msg.type === "setCode") {
-      suppressChange = true;
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: msg.code } });
-      suppressChange = false;
+      if (msg.undoable) {
+        // An edit of the current document (e.g. AI-commented code): one undo step.
+        suppressChange = true;
+        view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: msg.code } });
+        suppressChange = false;
+      } else {
+        view.setState(createState(msg.code));
+      }
     } else if (msg.type === "focus") {
       view.focus();
     } else if (msg.type === "setLanguage" && msg.language !== currentLang) {
-      currentLang = msg.language;
-      const doc = view.state.doc.toString();
-      const sel = view.state.selection;
-      view.destroy();
-      view = new EditorView({
-        doc,
-        selection: sel,
-        extensions: [...getBaseExtensions(currentReadOnly), changeListener, ...getLangExtension(currentLang)],
-        parent: document.getElementById("editor"),
-      });
+      setLanguage(msg.language);
     } else if (msg.type === "setReadOnly") {
       currentReadOnly = msg.readOnly;
-      const doc = view.state.doc.toString();
-      const sel = view.state.selection;
-      view.destroy();
-      view = new EditorView({
-        doc,
-        selection: sel,
-        extensions: [...getBaseExtensions(currentReadOnly), changeListener, ...getLangExtension(currentLang)],
-        parent: document.getElementById("editor"),
-      });
+      view.dispatch({ effects: readOnlyConf.reconfigure(EditorState.readOnly.of(currentReadOnly)) });
     }
   } catch (e) {}
 };

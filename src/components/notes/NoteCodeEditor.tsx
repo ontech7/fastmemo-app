@@ -317,7 +317,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                       tab.id === note.activeTabId ? { ...tab, code: commentedCode } : tab
                     );
                     setNoteAsync({ ...note, tabs: updatedTabs });
-                    editorRef.current?.setCode(commentedCode);
+                    editorRef.current?.setCode(commentedCode, { undoable: true });
                   }}
                   style={dockButtonStyle}
                   menuBottomOffset={110}

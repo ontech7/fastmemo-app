@@ -8,7 +8,11 @@ const isWeb = Platform.OS === "web";
 const EDITOR_BG = "#282c34";
 
 export interface CodeEditorWebViewRef {
-  setCode: (code: string) => void;
+  /**
+   * Replaces the document. By default as a new document with its own undo history (e.g. a tab
+   * switch); `undoable` makes it an edit of the current one instead (e.g. AI-commented code).
+   */
+  setCode: (code: string, options?: { undoable?: boolean }) => void;
   setLanguage: (language: string) => void;
   setReadOnly: (readOnly: boolean) => void;
   focus: () => void;
@@ -60,7 +64,8 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
     );
 
     useImperativeHandle(ref, () => ({
-      setCode: (code: string) => sendMessage(JSON.stringify({ type: "setCode", code })),
+      setCode: (code: string, options?: { undoable?: boolean }) =>
+        sendMessage(JSON.stringify({ type: "setCode", code, undoable: !!options?.undoable })),
       setLanguage: (lang: string) => sendMessage(JSON.stringify({ type: "setLanguage", language: lang })),
       setReadOnly: (ro: boolean) => sendMessage(JSON.stringify({ type: "setReadOnly", readOnly: ro })),
       focus: () => {
