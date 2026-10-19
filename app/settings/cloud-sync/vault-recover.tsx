@@ -70,7 +70,10 @@ export default function VaultRecoverScreen() {
     <>
       <LoadingSpinner visible={loading} color={COLOR.accentSoft} text={t("cloudsync.vault.unlocking")} />
 
-      <VaultScreen title={t("cloudsync.vault.recover_title")}>
+      <VaultScreen
+        title={t("cloudsync.vault.recover_title")}
+        footer={<VaultButton label={t("cloudsync.vault.continue")} onPress={submit} disabled={loading} />}
+      >
         <VaultDescription>{t("cloudsync.vault.recover_desc")}</VaultDescription>
 
         <VaultLabel>{t("cloudsync.vault.recovery_key_placeholder")}</VaultLabel>
@@ -95,13 +98,13 @@ export default function VaultRecoverScreen() {
           placeholder={t("cloudsync.vault.passphrase_confirm_placeholder")}
           value={confirm}
           onChangeText={setConfirm}
+          returnKeyType="done"
+          onSubmitEditing={submit}
         />
 
         <VaultError message={error} />
 
         <VaultBackupButton />
-
-        <VaultButton label={t("cloudsync.vault.continue")} onPress={submit} disabled={loading} />
       </VaultScreen>
     </>
   );

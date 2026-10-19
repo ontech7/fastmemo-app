@@ -50,7 +50,10 @@ export default function VaultRecoveryScreen() {
         progress={progress}
       />
 
-      <VaultScreen title={t("cloudsync.vault.recovery_title")}>
+      <VaultScreen
+        title={t("cloudsync.vault.recovery_title")}
+        footer={<VaultButton label={t("cloudsync.vault.recovery_saved")} onPress={confirm} disabled={loading} />}
+      >
         <VaultDescription>{t("cloudsync.vault.recovery_desc")}</VaultDescription>
 
         <View style={styles.keyBox}>
@@ -58,8 +61,6 @@ export default function VaultRecoveryScreen() {
             {recoveryKey}
           </Text>
         </View>
-
-        <VaultButton label={t("cloudsync.vault.recovery_saved")} onPress={confirm} disabled={loading} />
       </VaultScreen>
     </>
   );

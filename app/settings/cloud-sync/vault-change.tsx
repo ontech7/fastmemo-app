@@ -66,7 +66,10 @@ export default function VaultChangeScreen() {
     <>
       <LoadingSpinner visible={loading} color={COLOR.accentSoft} text={t("cloudsync.vault.saving")} />
 
-      <VaultScreen title={t("cloudsync.vault.change_title")}>
+      <VaultScreen
+        title={t("cloudsync.vault.change_title")}
+        footer={<VaultButton label={t("cloudsync.vault.change_action")} onPress={submit} disabled={loading} />}
+      >
         <VaultDescription>{t("cloudsync.vault.change_desc")}</VaultDescription>
 
         <VaultLabel>{t("cloudsync.vault.current_passphrase_placeholder")}</VaultLabel>
@@ -91,11 +94,11 @@ export default function VaultChangeScreen() {
           placeholder={t("cloudsync.vault.passphrase_confirm_placeholder")}
           value={confirm}
           onChangeText={setConfirm}
+          returnKeyType="done"
+          onSubmitEditing={submit}
         />
 
         <VaultError message={error} />
-
-        <VaultButton label={t("cloudsync.vault.change_action")} onPress={submit} disabled={loading} />
       </VaultScreen>
     </>
   );

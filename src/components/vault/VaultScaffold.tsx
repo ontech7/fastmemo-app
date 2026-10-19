@@ -8,8 +8,11 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
-/** Shared chrome for the vault flow screens (set/unlock/recover/change/reset). */
-export function VaultScreen({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * Shared chrome for the vault flow screens (set/unlock/recover/change/reset). `footer` holds the
+ * screen's actions, pinned under the content so they're never below the fold.
+ */
+export function VaultScreen({ title, footer, children }: { title: string; footer?: ReactNode; children: ReactNode }) {
   return (
     <SafeAreaView style={styles.container}>
       <AppBackground style={StyleSheet.absoluteFill} />
@@ -30,6 +33,8 @@ export function VaultScreen({ title, children }: { title: string; children: Reac
       >
         {children}
       </KeyboardAwareScrollView>
+
+      {footer && <View style={styles.footer}>{footer}</View>}
     </SafeAreaView>
   );
 }
@@ -132,7 +137,8 @@ const styles = StyleSheet.create({
   },
   headerSpacer: { width: 40 },
   scroll: { paddingHorizontal: PADDING_MARGIN.lg },
-  scrollContent: { paddingBottom: PADDING_MARGIN.xl },
+  scrollContent: { paddingBottom: PADDING_MARGIN.lg },
+  footer: { paddingHorizontal: PADDING_MARGIN.lg, paddingBottom: PADDING_MARGIN.md },
   description: {
     color: COLOR.textSecondary,
     fontFamily: FONT.regular,
