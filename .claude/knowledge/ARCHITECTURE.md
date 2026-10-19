@@ -246,8 +246,9 @@ and only then `persistor.persist()`. If the fold can't finish, notes keep persis
 
 Edits reach the store in batches (`useNoteEditor`: debounce 500ms / max 2s native, 300ms / 1s web). Pending batches register in
 `registry.ts`; `flushOnExit` (installed in `_layout`) flushes them plus `persistor.flush()` on AppState background, page hide,
-or a desktop quit: the Rust shell (`src-tauri/src/lib.rs`) holds every quit (close button, Cmd+Q), emits
-`fastmemo://flush-before-exit`, and exits on the frontend's `exit_after_flush` or after 2s.
+or a desktop quit: the Rust shell (`src-tauri/src/lib.rs`) holds a quit from the window (close button, Cmd+W) or the app menu
+(Cmd+Q), emits `fastmemo://flush-before-exit`, and exits on the frontend's `exit_after_flush` or after 2s (Dock Quit, logout and
+OS session end aren't held: ADR-015).
 
 ### Screen Navigation Flow
 
