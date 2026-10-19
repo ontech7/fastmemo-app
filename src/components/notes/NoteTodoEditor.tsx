@@ -62,7 +62,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
+  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
     defaultType: "todo",
     addWebhookSelector: selectorWebhook_addTodoNote,
@@ -262,7 +262,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                 maxLength={96}
               />
 
-              <NoteSettingsButton note={note} setNote={setNoteAsync} />
+              <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
 
             <View style={styles.subtitleWrapper}>

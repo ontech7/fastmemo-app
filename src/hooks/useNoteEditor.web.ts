@@ -1,4 +1,4 @@
-import { storeDirtyNoteId } from "@/libs/registry";
+import { registerPendingFlush, storeDirtyNoteId } from "@/libs/registry";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
   selectorWebhook_deleteNote,
@@ -8,10 +8,19 @@ import {
 import { formatDateTime } from "@/utils/date";
 import { deriveNoteTitle } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import type { Note, NoteType, RootState, WebhookPayload } from "@/types";
+
+/**
+ * Batched commits, as on native (see `useNoteEditor.ts`), but shorter: a desktop window can be
+ * closed in ways that give the page no chance to flush (e.g. quitting the app), and serializing
+ * the notes costs far less on a desktop CPU.
+ */
+const COMMIT_DEBOUNCE_MS = 300;
+const COMMIT_MAX_WAIT_MS = 1000;
 
 interface UseNoteEditorOptions<T extends Note> {
   initialNote: T;
@@ -28,6 +37,7 @@ interface UseNoteEditorResult<T extends Note> {
   note: T;
   setNote: React.Dispatch<React.SetStateAction<T>>;
   setNoteAsync: (currNote: T) => void;
+  flushNote: () => void;
   updateNoteWebhook: () => Promise<void>;
   /** Title derived from content while a new note is untitled; shown as the field placeholder. */
   autoTitle: string;
@@ -111,7 +121,7 @@ export function useNoteEditor<T extends Note>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNewlyCreated]);
 
-  /* --- Dirty tracking + wrapped setter --- */
+  /* --- Dirty tracking + batched commits --- */
 
   const dirtyRef = useRef(false);
 
@@ -125,19 +135,18 @@ export function useNoteEditor<T extends Note>({
     };
   }, []);
 
-  const setNoteAsync = useCallback(
+  const commitNote = useCallback(
     (currNote: T) => {
-      if (!dirtyRef.current) {
-        storeDirtyNoteId(currNote.id);
-        dirtyRef.current = true;
-      }
-
-      setNote(currNote);
-
       if (isEmpty(currNote)) {
         dispatch(temporaryDeleteNote(currNote.id));
         dispatch(deleteNote(currNote.id));
         return;
+      }
+
+      // Marked right before the upsert that consumes it, so no other commit can take it in between.
+      if (!dirtyRef.current) {
+        storeDirtyNoteId(currNote.id);
+        dirtyRef.current = true;
       }
 
       // Persist a content-derived title only while the user hasn't named this
@@ -161,9 +170,54 @@ export function useNoteEditor<T extends Note>({
     [dispatch, isEmpty, defaultType]
   );
 
+  const commitNoteRef = useRef(commitNote);
+  useEffect(() => {
+    commitNoteRef.current = commitNote;
+  }, [commitNote]);
+
+  const pendingNoteRef = useRef<T | null>(null);
+  const pendingSinceRef = useRef(0);
+  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushNote = useCallback(() => {
+    if (commitTimerRef.current) {
+      clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = null;
+    }
+
+    const pending = pendingNoteRef.current;
+    if (!pending) return;
+
+    pendingNoteRef.current = null;
+    commitNoteRef.current(pending);
+  }, []);
+
+  const setNoteAsync = useCallback(
+    (currNote: T) => {
+      setNote(currNote);
+
+      const now = Date.now();
+      if (!pendingNoteRef.current) pendingSinceRef.current = now;
+      pendingNoteRef.current = currNote;
+
+      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+      const untilMaxWait = pendingSinceRef.current + COMMIT_MAX_WAIT_MS - now;
+      commitTimerRef.current = setTimeout(flushNote, Math.max(0, Math.min(COMMIT_DEBOUNCE_MS, untilMaxWait)));
+    },
+    [flushNote]
+  );
+
+  useEffect(() => () => flushNote(), [flushNote]);
+
+  useFocusEffect(useCallback(() => () => flushNote(), [flushNote]));
+
+  useEffect(() => registerPendingFlush(flushNote), [flushNote]);
+
   /* --- Explicit back button handler (no hardwareBackPress on web) --- */
 
   const updateNoteWebhook = useCallback(async () => {
+    flushNote();
+
     if (isEmpty(note)) {
       await webhook(webhook_temporaryDeleteNote, {
         action: "note/temporaryDeleteNote",
@@ -180,7 +234,7 @@ export function useNoteEditor<T extends Note>({
       action: "note/updateNote",
       ...buildWebhookPayload(note),
     });
-  }, [note, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, isEmpty, buildWebhookPayload]);
+  }, [note, flushNote, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, isEmpty, buildWebhookPayload]);
 
-  return { note, setNote, setNoteAsync, updateNoteWebhook, autoTitle };
+  return { note, setNote, setNoteAsync, flushNote, updateNoteWebhook, autoTitle };
 }

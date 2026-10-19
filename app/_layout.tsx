@@ -12,6 +12,7 @@ import AppBackground from "@/components/ui/AppBackground";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { usePreventBackspaceNav } from "@/hooks/usePreventBackspaceNav";
+import { installFlushOnExit } from "@/libs/flushOnExit";
 import i18n from "@/libs/i18n";
 import AppUpdateProvider from "@/providers/AppUpdateProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
@@ -32,6 +33,8 @@ import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 
 enableFreeze(true);
+
+installFlushOnExit();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 

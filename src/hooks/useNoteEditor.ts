@@ -1,4 +1,5 @@
-import { storeDirtyNoteId } from "@/libs/registry";
+import { flushNow } from "@/libs/flushOnExit";
+import { registerPendingFlush, storeDirtyNoteId } from "@/libs/registry";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
   selectorWebhook_deleteNote,
@@ -10,11 +11,22 @@ import { deriveNoteTitle } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler, Keyboard } from "react-native";
+import { AppState, BackHandler, Keyboard } from "react-native";
 import { KeyboardController } from "react-native-keyboard-controller";
 import { useDispatch, useSelector } from "react-redux";
 
 import type { Note, NoteType, RootState, WebhookPayload } from "@/types";
+
+/**
+ * Edits land in local state at once, but reach Redux in batches: every commit makes redux-persist
+ * re-serialize and rewrite the whole notes state (and re-encrypts the note for the cloud outbox),
+ * which per keystroke made typing lag with many notes. A batch is committed once input pauses for
+ * COMMIT_DEBOUNCE_MS, at least every COMMIT_MAX_WAIT_MS during continuous input, and right away
+ * when the editor loses focus or unmounts, the app leaves the foreground (`flushOnExit`), an edit
+ * arrives while it's in the background, or `flushNote` is called.
+ */
+const COMMIT_DEBOUNCE_MS = 500;
+const COMMIT_MAX_WAIT_MS = 2000;
 
 interface UseNoteEditorOptions<T extends Note> {
   /** The initial note coming from props. Used to detect "newly created" notes. */
@@ -46,8 +58,10 @@ interface UseNoteEditorResult<T extends Note> {
   note: T;
   /** Raw state setter. Prefer `setNoteAsync` to keep webhook + dirty tracking in sync. */
   setNote: React.Dispatch<React.SetStateAction<T>>;
-  /** Persists the note (Redux add or temp+delete), stores the dirty id and updates local state. */
+  /** Updates local state and schedules the note's batched commit to Redux (add, or temp+delete when empty). */
   setNoteAsync: (currNote: T) => void;
+  /** Commits the pending batch now, if any. Call before acting on the stored note (delete, detach, ...). */
+  flushNote: () => void;
   /** Called on hardware back press / explicit back button press. Fires the update/delete webhook. */
   updateNoteWebhook: () => Promise<void>;
   /**
@@ -65,7 +79,7 @@ interface UseNoteEditorResult<T extends Note> {
  * - common webhook selectors (update / delete / temporary delete)
  * - "newly created" add webhook fire-once effect
  * - dirty-id tracking via the registry
- * - local note state + `setNoteAsync` that also dispatches to Redux
+ * - local note state + `setNoteAsync` that commits it to Redux in batches (see COMMIT_DEBOUNCE_MS)
  * - hardware back handler that triggers the update/delete webhook (native only)
  * - keyboard dismissal on focus loss (native only)
  *
@@ -144,7 +158,7 @@ export function useNoteEditor<T extends Note>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNewlyCreated]);
 
-  /* --- Dirty tracking + wrapped setter --- */
+  /* --- Dirty tracking + batched commits --- */
 
   const dirtyRef = useRef(false);
 
@@ -158,19 +172,18 @@ export function useNoteEditor<T extends Note>({
     };
   }, []);
 
-  const setNoteAsync = useCallback(
+  const commitNote = useCallback(
     (currNote: T) => {
-      if (!dirtyRef.current) {
-        storeDirtyNoteId(currNote.id);
-        dirtyRef.current = true;
-      }
-
-      setNote(currNote);
-
       if (isEmpty(currNote)) {
         dispatch(temporaryDeleteNote(currNote.id));
         dispatch(deleteNote(currNote.id));
         return;
+      }
+
+      // Marked right before the upsert that consumes it, so no other commit can take it in between.
+      if (!dirtyRef.current) {
+        storeDirtyNoteId(currNote.id);
+        dirtyRef.current = true;
       }
 
       // Persist a content-derived title only while the user hasn't named this
@@ -194,9 +207,61 @@ export function useNoteEditor<T extends Note>({
     [dispatch, isEmpty, defaultType]
   );
 
+  const commitNoteRef = useRef(commitNote);
+  useEffect(() => {
+    commitNoteRef.current = commitNote;
+  }, [commitNote]);
+
+  const pendingNoteRef = useRef<T | null>(null);
+  const pendingSinceRef = useRef(0);
+  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushNote = useCallback(() => {
+    if (commitTimerRef.current) {
+      clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = null;
+    }
+
+    const pending = pendingNoteRef.current;
+    if (!pending) return;
+
+    pendingNoteRef.current = null;
+    commitNoteRef.current(pending);
+  }, []);
+
+  const setNoteAsync = useCallback(
+    (currNote: T) => {
+      setNote(currNote);
+
+      const now = Date.now();
+      if (!pendingNoteRef.current) pendingSinceRef.current = now;
+      pendingNoteRef.current = currNote;
+
+      // Timers don't fire in the background, where the app may also be killed at any time: an edit
+      // landing there (a late editor message, an AI or voice result) is written right away.
+      if (AppState.currentState !== "active") {
+        flushNow();
+        return;
+      }
+
+      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+      const untilMaxWait = pendingSinceRef.current + COMMIT_MAX_WAIT_MS - now;
+      commitTimerRef.current = setTimeout(flushNote, Math.max(0, Math.min(COMMIT_DEBOUNCE_MS, untilMaxWait)));
+    },
+    [flushNote]
+  );
+
+  // Never leave a batch behind: the editor goes away, or the app may be killed once in background.
+  useEffect(() => () => flushNote(), [flushNote]);
+
+  useEffect(() => registerPendingFlush(flushNote), [flushNote]);
+
   /* --- Back/webhook handler --- */
 
   const updateNoteWebhook = useCallback(async () => {
+    // Commit before leaving, so the list is already up to date as it comes back into view.
+    flushNote();
+
     if (isEmpty(note)) {
       await webhook(webhook_temporaryDeleteNote, {
         action: "note/temporaryDeleteNote",
@@ -213,7 +278,7 @@ export function useNoteEditor<T extends Note>({
       action: "note/updateNote",
       ...buildWebhookPayload(note),
     });
-  }, [note, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, isEmpty, buildWebhookPayload]);
+  }, [note, flushNote, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, isEmpty, buildWebhookPayload]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -226,16 +291,17 @@ export function useNoteEditor<T extends Note>({
     return () => backHandler.remove();
   }, [updateNoteWebhook]);
 
-  /* --- Keyboard dismissal on focus loss --- */
+  /* --- Commit + keyboard dismissal on focus loss --- */
 
   useFocusEffect(
     useCallback(() => {
       return () => {
+        flushNote();
         KeyboardController.dismiss();
         Keyboard.dismiss();
       };
-    }, [])
+    }, [flushNote])
   );
 
-  return { note, setNote, setNoteAsync, updateNoteWebhook, autoTitle };
+  return { note, setNote, setNoteAsync, flushNote, updateNoteWebhook, autoTitle };
 }

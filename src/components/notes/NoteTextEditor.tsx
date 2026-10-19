@@ -59,7 +59,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const isEmpty = useCallback((n: TextNote) => isStringEmpty(n.title) && isStringEmpty(n.text), []);
   const buildPayloadExtras = useCallback((n: TextNote) => ({ text: n.text }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<TextNote>({
+  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TextNote>({
     initialNote: memoInitialNote,
     defaultType: "text",
     addWebhookSelector: selectorWebhook_addTextNote,
@@ -274,7 +274,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
               </IconChip>
             </TouchableOpacity>
 
-            <NoteSettingsButton note={note} setNote={setNoteAsync} />
+            <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
           </View>
 
           <View style={styles.subtitleWrapper}>

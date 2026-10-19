@@ -94,7 +94,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: CodeNote) => ({ tabs: n.tabs, activeTabId: n.activeTabId }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
+  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
     initialNote: memoInitialNote,
     defaultType: "code",
     addWebhookSelector: selectorWebhook_addCodeNote,
@@ -228,7 +228,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   maxLength={96}
                 />
               </View>
-              <NoteSettingsButton note={note} setNote={setNoteAsync} />
+              <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
           </View>
 
