@@ -1037,7 +1037,8 @@ unhandled, in the background.
 
 **Fix:** `"window": { "close": true }` in the allowlist, `window-close` in the `tauri` features.  
 **Rule:** Registering `onCloseRequested` makes JS responsible for closing the window: grant the permission that close needs
-(Tauri 2: the capability for `destroy`/`close`) and test that the X button still closes it.
+(Tauri 2: `core:window:allow-destroy`) and test that the X button still closes it. Since Tauri 2 (ADR-015) the app has no JS
+close listener: the Rust shell holds the quit and the frontend only flushes.
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
 `feat/ota-pbkdf2-a11y`
