@@ -1019,6 +1019,29 @@ native path runs (e.g. per-thread CPU time), not only that the feature works.
 
 ---
 
+### LL-038: A JS close-requested listener left desktop windows impossible to close
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Platform  
+**What happened:** To flush pending note edits before the desktop window closes (ADR-013), `flushOnExit.web.ts` registered
+`appWindow.onCloseRequested`. Caught in review before release: with it, the window's X button and Alt+F4 flushed the notes but
+left the window open. On Windows/Linux there was no other normal way to quit.
+
+**Root cause:** Tauri 1 cancels the close itself as soon as a JS close-requested listener exists (`manager.rs`
+`api.prevent_close()`), and the JS API closes the window again after the handler resolves with `appWindow.close()`. That call
+needs the `window > close` allowlist entry (and the `window-close` Cargo feature); without it, it rejects (`ApiNotAllowlisted`)
+unhandled, in the background.
+
+**Fix:** `"window": { "close": true }` in the allowlist, `window-close` in the `tauri` features.  
+**Rule:** Registering `onCloseRequested` makes JS responsible for closing the window: grant the permission that close needs
+(Tauri 2: the capability for `destroy`/`close`) and test that the X button still closes it.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/ota-pbkdf2-a11y`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
