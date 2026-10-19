@@ -1,5 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { StyleSheet, TouchableOpacity } from "react-native";
-import { CheckIcon } from "react-native-heroicons/outline";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 
 import { BORDER, COLOR, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
@@ -9,8 +10,16 @@ interface Props {
 }
 
 export default function SaveButton({ onPress, color = null }: Props) {
+  const { t } = useTranslation();
+
   return (
-    <TouchableOpacity activeOpacity={0.7} style={styles.addBtn} onPress={onPress}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      style={styles.addBtn}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t("a11y.save")}
+    >
       <CheckIcon size={28} color={color || COLOR.softWhite} />
     </TouchableOpacity>
   );

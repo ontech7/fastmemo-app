@@ -21,12 +21,13 @@ export default function VaultResetScreen() {
   };
 
   return (
-    <VaultScreen title={t("cloudsync.vault.reset_title")}>
+    <VaultScreen
+      title={t("cloudsync.vault.reset_title")}
+      footer={<VaultButton label={t("cloudsync.vault.reset_action")} onPress={confirm} danger />}
+    >
       <VaultDescription>{t("cloudsync.vault.reset_desc")}</VaultDescription>
 
       <VaultBackupButton />
-
-      <VaultButton label={t("cloudsync.vault.reset_action")} onPress={confirm} danger />
     </VaultScreen>
   );
 }

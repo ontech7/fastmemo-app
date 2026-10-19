@@ -1,6 +1,6 @@
 import { CODEMIRROR_HTML } from "@/generated/codemirror-html";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
-import { Platform, StyleSheet, TextInput } from "react-native";
+import { Platform, StyleSheet, TextInput, type TextInputInstance } from "react-native";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
 
 const isWeb = Platform.OS === "web";
@@ -8,7 +8,11 @@ const isWeb = Platform.OS === "web";
 const EDITOR_BG = "#282c34";
 
 export interface CodeEditorWebViewRef {
-  setCode: (code: string) => void;
+  /**
+   * Replaces the document. By default as a new document with its own undo history (e.g. a tab
+   * switch); `undoable` makes it an edit of the current one instead (e.g. AI-commented code).
+   */
+  setCode: (code: string, options?: { undoable?: boolean }) => void;
   setLanguage: (language: string) => void;
   setReadOnly: (readOnly: boolean) => void;
   focus: () => void;
@@ -25,8 +29,10 @@ interface Props {
 
 const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
   ({ initialCode, language, readOnly, onChange, onReady }, ref) => {
-    const webViewRef = useRef<WebView>(null);
-    const hiddenInputRef = useRef<TextInput>(null);
+    // `WebView<object>`, not bare `WebView`: v14 defaults the props generic to
+    // `undefined`, which collapses the props type to `undefined` under strict: false.
+    const webViewRef = useRef<WebView<object>>(null);
+    const hiddenInputRef = useRef<TextInputInstance>(null);
     const isReady = useRef(false);
     const pendingMessages = useRef<string[]>([]);
 
@@ -58,7 +64,8 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
     );
 
     useImperativeHandle(ref, () => ({
-      setCode: (code: string) => sendMessage(JSON.stringify({ type: "setCode", code })),
+      setCode: (code: string, options?: { undoable?: boolean }) =>
+        sendMessage(JSON.stringify({ type: "setCode", code, undoable: !!options?.undoable })),
       setLanguage: (lang: string) => sendMessage(JSON.stringify({ type: "setLanguage", language: lang })),
       setReadOnly: (ro: boolean) => sendMessage(JSON.stringify({ type: "setReadOnly", readOnly: ro })),
       focus: () => {
@@ -96,16 +103,14 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
       [sendToEditor]
     );
 
+    // Not gated on isReady: sendMessage queues until the editor is up, so a change made while it
+    // loads still lands (the editor ignores a language it already has).
     useEffect(() => {
-      if (isReady.current) {
-        sendMessage(JSON.stringify({ type: "setLanguage", language }));
-      }
+      sendMessage(JSON.stringify({ type: "setLanguage", language }));
     }, [language, sendMessage]);
 
     useEffect(() => {
-      if (isReady.current) {
-        sendMessage(JSON.stringify({ type: "setReadOnly", readOnly }));
-      }
+      sendMessage(JSON.stringify({ type: "setReadOnly", readOnly }));
     }, [readOnly, sendMessage]);
 
     // Compute HTML ONCE on mount — never changes, never causes WebView reload

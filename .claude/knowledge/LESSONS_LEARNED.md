@@ -111,7 +111,18 @@ into the per-slice keys _before_ purging.
 **Rule:** When modifying persistence layout, never assume storage contents -- verify empirically on a device with real user
 data. Any "orphaned key" cleanup must be gated on first confirming the data has been migrated to its new home.
 
-**Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/20 **Status:** Open (first attempt reverted, see LL-022)
+**Update (2026-10-19):** The audit was done empirically (emulator, release build, staged AsyncStorage + FS contents: real legacy
+data, divergent copies, missing/truncated FS file, a `persist:root` row over Android's 2MB CursorWindow). Findings: both copies
+of the notes were live -- whichever REHYDRATE landed last won -- and every edit re-serialized all notes into the `persist:root`
+AsyncStorage row (2.5MB: ~4s per write, an 81s write queue while typing; past 2MB Android can't even read it back). The notes
+are now **folded** out of the outer blob before the first persist (`src/libs/storage/legacyRootNotes.ts`): the blob's copy is
+saved under `backup:root-notes`, merged into the notes storage (stored notes win; the copy only adds missing ids and newer
+`updatedAt` versions; its outbox is ignored), then dropped from `persist:root`; a marker makes it run once. Only after that is
+`notes` blacklisted from the root config (`dropLegacyRootNotes` migrate guards against a downgrade re-adding them). The outer
+layer still persists `categories`/`settings` (KB-sized, deliberately kept). Still to do: verify on a **real device with real
+user data** before release (LL-022 rule 1). **Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/20 **Status:**
+Resolved for notes (outer layer kept for categories/settings) **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/upgrade-expo-58`
 
 ---
 
@@ -450,6 +461,10 @@ principle (see LL-002).
 be pure and fast. Side effects and deterministic transformations of data belong in middleware, thunks, or selectors with
 memoization.
 
+**Update (2026-10-19):** Mitigated, not fixed: editors now commit to Redux in batches (LL-032), so `addNote` -- and the
+encryption it triggers -- runs once per pause in typing (at most every 2s) instead of per keystroke. Encryption still lives in
+reducers.
+
 **Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/47 **Status:** Open
 
 ---
@@ -499,7 +514,11 @@ sizes.
 - Provide `getItemType` when rows render structurally different layouts (e.g. per note type).
 - All handlers flowing into the row must be `useCallback`-stable.
 
-**Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/50 **Status:** Open
+**Update (2026-10-19):** `home.tsx` fixed: `useCallback` renderItem, `useMemo` extraData, module-level `keyExtractor` (the other
+sites are still open). With 400 notes this matters most on home, which re-renders on every focus change and quick-note bar
+resize.
+
+**Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/50 **Status:** Open (home fixed)
 
 ---
 
@@ -547,7 +566,11 @@ Document the estimated op count reduction in the PR description per CONVENTIONS.
 **Rule:** Already documented as NEVER #11 / CONVENTIONS rule #16 ("never waste Firestore operations"). This LL entry reiterates
 the rule after finding widespread violations. Every PR touching a Firestore write path must estimate the op count delta.
 
-**Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/49 **Status:** Open
+**Update (2026-10-19):** Partial fix: the note/category push thunks write with `noUpdateLastSync` and bump `lastSync` once per
+batch (`lastSync` is only displayed in the devices list). A synced note now costs 2 writes with other devices (note doc +
+fan-out entry) instead of 4, 1 instead of 2 alone, plus 1 per batch. `writeBatch` is still not adopted.
+
+**Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/49 **Status:** Open (lastSync part fixed)
 
 ---
 
@@ -669,9 +692,9 @@ missing global was the real reason all native vault ops failed.
 **Root cause:** `crypto-js` was adopted (over WebCrypto/native GCM) because note encryption must be synchronous (ADR-012), but
 it silently depends on a Web Crypto global that RN's JS engine lacks.
 
-**Fix:** Added `react-native-get-random-values@1.11.0` and imported it as the **first line** of `app/_layout.tsx` (before
-any crypto-using module), which installs `global.crypto.getRandomValues` backed by the OS CSPRNG. It is a **native module**, so
-it requires a dev-client rebuild (`npx expo prebuild` + rebuild) -- the same constraint as `expo-crypto`.
+**Fix:** Added `react-native-get-random-values@1.11.0` and imported it as the **first line** of `app/_layout.tsx` (before any
+crypto-using module), which installs `global.crypto.getRandomValues` backed by the OS CSPRNG. It is a **native module**, so it
+requires a dev-client rebuild (`npx expo prebuild` + rebuild) -- the same constraint as `expo-crypto`.
 
 **Rule:** A pure-JS crypto library running on Hermes is not automatically self-contained -- it may depend on Web Crypto globals
 that RN lacks. When adding such a library, install the `react-native-get-random-values` polyfill at the app entry point and
@@ -777,6 +800,273 @@ key, or you silently drop the data the migration exists to preserve.
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-05-27 **Resolved in:** dev (per-vault E2E
 work)
+
+---
+
+### LL-029: redux-persist's default 5s `timeout` rehydrates an empty state that then overwrites storage
+
+**Date:** 2026-10-19  
+**Severity:** Critical  
+**Category:** Bug  
+**What happened:** No config set `timeout`, so redux-persist v6 used its default of 5000ms. If reading a key takes longer (2.5MB
+of notes took 0.6s on a loaded emulator; tens of MB of notes with inline images on a low-end phone, or a busy JS thread at boot,
+can exceed 5s), `persistReducer` rehydrates `undefined` -- the empty initial state -- and seals itself, so the real data that
+arrives later is ignored. The persistoid then writes that empty state over the stored notes on the next change: total data loss,
+silently.
+
+**Root cause:** `persistReducer` treats a timeout like "nothing stored" (`_rehydrate(undefined, err)`), and rehydrated state is
+written back like any other.
+
+**Fix:** `timeout: 0` on every persist config in `store.ts` (wait for the read however long it takes).  
+**Rule:** Every `PersistConfig` must set `timeout: 0`. A slow read must never be treated as an empty one.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/upgrade-expo-58`
+
+---
+
+### LL-030: Non-atomic file writes: a process kill mid-write truncates the notes file, and the next write erases everything
+
+**Date:** 2026-10-19  
+**Severity:** Critical  
+**Category:** Bug  
+**What happened:** The vendored `FSStorage` wrote `persist:root_notes` in place. A kill during the write (OOM killer, swipe from
+recents, crash) leaves truncated JSON; redux-persist can't parse it, rehydrates the empty state, and its next write replaces the
+file with no notes. redux-persist also issues overlapping `setItem`s for the same key without waiting.
+
+**Root cause:** In-place writes plus no per-key ordering in the storage adapter.
+
+**Fix:** `src/libs/storage/fsStorage.ts`: write `<file>.tmp`, then `moveAsync` over the file (atomic rename on Android; on iOS a
+remove+move, where the complete `.tmp` survives an interruption); per-key operation queue that skips superseded writes;
+`getItem` falls back to a complete `.tmp`, and sets an unreadable file aside as `.corrupt-<ts>` instead of returning garbage.
+Verified on the emulator: 8 type-then-SIGKILL runs always left valid JSON; a truncated file + valid `.tmp` recovers the
+`.tmp`.  
+**Rule:** Persisted state that redux-persist rewrites wholesale must be written atomically (temp file + rename) and serialized
+per key. Never trust that the previous write completed.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/upgrade-expo-58`
+
+---
+
+### LL-031: Every keystroke re-serialized and rewrote all notes
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Performance  
+**What happened:** Editors dispatched `addNote` per keystroke. With 400 notes (2.5MB), 30 typed characters caused 120
+`JSON.stringify` calls of ~2.5MB (1.4s of JS), 30 FS writes and 20 AsyncStorage writes of 2.5MB (the latter queued for 81s),
+with 20 JS stalls over 50ms. Right after every boot redux-persist also re-serialized and rewrote all notes, though nothing
+changed.
+
+**Root cause:** Per-keystroke commits, the double persist (LL-003), and redux-persist writing every key back after rehydrate.
+
+**Fix:** `useNoteEditor` (`.ts` / `.web.ts`) keeps edits in local state and commits them in batches (debounce 500ms / max wait
+2s on native, 300ms / 1s on web), and right away on blur, unmount, back, leaving the foreground and before any action on the
+stored note (`flushNote`). The notes persist config reuses the JSON a value was rehydrated from (`serializeNotes` /
+`deserializeNotes` in `store.ts`), and `FSStorage` skips the first write if it would only rewrite the bytes it just read. Result
+(same 30 keystrokes): 4 big stringifies, 2 FS writes, a single 2KB AsyncStorage write; JS stalls over 50ms 20 (1.75s) -> 7-10
+(0.8-1.2s), none while idle; boot to home frame 2.7-3.3s -> 1.7-2.2s. What is left is the cost of one commit (stringify and
+write all notes, 100-300ms at 2.5MB), which grows with the total size of the notes, not with the edit.  
+**Rule:** Never dispatch a persisted-slice update per keystroke. Editors use `setNoteAsync` (batched), and any code that acts on
+the stored note (delete, detach, sync, change category, webhook) calls `flushNote()` first.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/upgrade-expo-58`
+
+---
+
+### LL-032: JS timers don't fire while an Android app is in the background
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Platform  
+**What happened:** With batched commits (LL-031), an edit that reached JS after the app was backgrounded (a late WebView
+message, an AI or voice result) scheduled its commit with `setTimeout` -- which React Native doesn't run while the host is
+paused (timers are driven by frame callbacks). If the OS then killed the app, the edit was lost. Reproduced by typing and
+pressing HOME in the same instant: the editor message arrived ~0.5s after `onHostPause`, after the AppState flush had already
+run.
+
+**Root cause:** Debounced work assumes timers keep running; on Android they don't in the background.
+
+**Fix:** `src/libs/flushOnExit.ts` (installed in `_layout`) flushes pending editor batches (`registerPendingFlush` /
+`flushPending` in `registry.ts`) and `persistor.flush()` when the app leaves the foreground; `setNoteAsync` commits and flushes
+at once (`flushNow`) when an edit arrives while the app isn't active. `flushOnExit.web.ts` does the same on `visibilitychange` /
+`pagehide`, and on Tauri waits for the writes in `onCloseRequested` (max 2s).  
+**Known limit:** the flush still rewrites all notes, so the batch typed just before leaving is safe only once that write lands
+(0.3-1.2s at 2.5MB on the emulator, much less on real flash). A kill 1s after HOME, 0.3s after the last key, lost that last
+batch in 2 of 3 runs (the rest of the note was always intact); 2s after HOME it was kept. Writing only the changed note would
+close the window.  
+**Rule:** Never rely on a timer for work that must complete before the process may die. Flush synchronously on background, and
+treat "edit while not active" as "write now".
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/upgrade-expo-58`
+
+---
+
+### LL-033: Cloud outbox dequeued newer versions, and fan-out queues replayed a restore as a trash
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Three sync bugs, all reproduced end-to-end (Android + web on a test Firebase project):
+
+1. Lost update: the `fulfilled` handlers removed processed ids from the outbox, including a newer version queued while the
+   upload was in flight -- that edit was never uploaded.
+2. A note could sit in both the local `add` and `delete` queues; both were processed.
+3. Fan-out: the device doc kept the same id in `addNotes` and `deleteNotes`; receivers apply adds before deletes, so trashing
+   then restoring a note before another device synced left it **in that device's trash** while it was alive everywhere else (no
+   self-heal: the queues are then cleared).
+
+**Root cause:** Queue entries keyed by id with no "latest operation wins" rule, at each of the three levels.
+
+**Fix:** (1) `dequeueProcessed` only removes an entry if it is still the object that was uploaded
+(`original(queue)[id] === note`). (2) `queueCloudAdd` / `queueCloudDelete` remove the id from the opposite queue. (3)
+`exclusiveQueueEntry` (`libs/firebase.ts`) publishes the id in its queue and `deleteField()`s it from the others in the same
+write (notes and categories). Old app versions still write non-exclusive queues until updated. (1) and (2) were first done for
+notes only; the categories outbox got the same helpers in review (`feat/ota-pbkdf2-a11y`), plus a delete of the old icon's
+document when an edit changes a category's icon (the cloud keys categories by icon).  
+**Rule:** A queued sync operation must be exclusive per id at every level (local outbox, fan-out doc): the latest operation
+replaces the others, never coexists with them. Never dequeue by id alone after an async upload.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/upgrade-expo-58`
+
+---
+
+### LL-034: Barrel imports evaluate every module (heroicons cost ~100ms of boot)
+
+**Date:** 2026-10-19  
+**Severity:** Medium  
+**Category:** Performance  
+**What happened:** Metro doesn't tree-shake and Expo's default `inlineRequires` is off, so
+`import { XIcon } from "react-native-heroicons/outline"` evaluates all ~300 icons of the barrel at startup. Measured with a
+module probe on the emulator: outline 52-71ms + solid 49-80ms.
+
+**Root cause:** Named imports from package barrels.
+
+**Fix:** Deep imports everywhere (`import XIcon from "react-native-heroicons/outline/XIcon"`, 68 files + `constants/icons.ts`).
+Also cached the `Intl.DateTimeFormat` used by `formatDateTime` (constructing one per card is expensive on Hermes).  
+**Rule:** Import icons by their deep path, never from the `outline` / `solid` barrels. Check any new barrel-style dependency for
+its startup cost.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/upgrade-expo-58`
+
+---
+
+### LL-035: Composed translations break word order (and a misspelled key hid it)
+
+**Date:** 2026-10-19  
+**Severity:** Medium  
+**Category:** Convention  
+**What happened:** The todo progress line was built as `t("note.completed") + count + t("note.on") + total`. It read "completed
+0 on 1" in English, used nonsense in Chinese ("完全的 … 上に", a Japanese word) and Japanese ("オン"), and in Spanish and German
+showed English, because the key there was misspelled `completati` and i18next fell back to `en`.
+
+**Root cause:** Translating sentence fragments forces one language's word order on all of them, and missing keys fail silently
+to the fallback language.
+
+**Fix:** One interpolated key per locale (`note.progress`, e.g. `"<hl>{{done}}</hl> of {{total}} completed"`) rendered with
+`<Trans>`, the count styled through the `hl` component. Also fixed 25 Italian `a'`/`e'` accent typos.  
+**Rule:** A sentence containing values is one key with interpolation (`<Trans>` when part of it is styled), never concatenated
+fragments. When adding a key, add it with the **same name** to all 7 locales.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/upgrade-expo-58`
+
+---
+
+### LL-036: Raw DOM elements in `.web.tsx` don't get react-native-web's `border-box`
+
+**Date:** 2026-10-19  
+**Severity:** Low  
+**Category:** Platform  
+**What happened:** The web/desktop intro carousel (Embla, raw `<div>` slides with `flex: 0 0 100%` and 20px padding) rendered
+off-center: each slide was 40px wider than the viewport, and `containScroll: "trimSnaps"` aligned the first one to the left
+edge. The width also came from a module-level `Dimensions.get("window")`, frozen at load on a resizable desktop window.
+
+**Root cause:** react-native-web applies `box-sizing: border-box` to its own views only; a raw `<div>` keeps `content-box`.
+
+**Fix:** `boxSizing: "border-box"` on the slides and `useWindowDimensions()` in the component (`app/intro.web.tsx`).  
+**Rule:** Raw DOM nodes in web files set `boxSizing: "border-box"` explicitly when sized with padding. Never read window
+dimensions at module scope in UI that can be resized (web/Tauri); use `useWindowDimensions()`.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/upgrade-expo-58`
+
+---
+
+### LL-037: An unanchored `.gitignore` rule hid a native module's source from git and EAS
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Platform  
+**What happened:** The new local Expo module `modules/fastmemo-crypto` (native PBKDF2) built and worked locally, but its
+`android/` and `ios/` folders never appeared in `git status`. A commit would have left them out, and EAS Build (which uploads
+what git doesn't ignore) would have produced binaries without the module. Nothing would have failed: the vault falls back to the
+pure-JS PBKDF2 when the module is missing, so the regression would only have shown up as a slow unlock.
+
+**Root cause:** The CNG rules `android` and `ios` in `.gitignore` match a directory with that name at any depth, including a
+module's native source folders.
+
+**Fix:** Root-anchored `/android` and `/ios`, plus `modules/*/android/build/` for the module's Gradle output.  
+**Rule:** Ignore rules for generated native projects are root-anchored. After adding native code, check
+`git status --untracked-files=all` lists it. A graceful fallback can hide a missing native module: verify on a device that the
+native path runs (e.g. per-thread CPU time), not only that the feature works.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/ota-pbkdf2-a11y`
+
+---
+
+### LL-038: A JS close-requested listener left desktop windows impossible to close
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Platform  
+**What happened:** To flush pending note edits before the desktop window closes (ADR-013), `flushOnExit.web.ts` registered
+`appWindow.onCloseRequested`. Caught in review before release: with it, the window's X button and Alt+F4 flushed the notes but
+left the window open. On Windows/Linux there was no other normal way to quit.
+
+**Root cause:** Tauri 1 cancels the close itself as soon as a JS close-requested listener exists (`manager.rs`
+`api.prevent_close()`), and the JS API closes the window again after the handler resolves with `appWindow.close()`. That call
+needs the `window > close` allowlist entry (and the `window-close` Cargo feature); without it, it rejects (`ApiNotAllowlisted`)
+unhandled, in the background.
+
+**Fix:** `"window": { "close": true }` in the allowlist, `window-close` in the `tauri` features.  
+**Rule:** Registering `onCloseRequested` makes JS responsible for closing the window: grant the permission that close needs
+(Tauri 2: the capability for `destroy`/`close`) and test that the X button still closes it.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/ota-pbkdf2-a11y`
+
+---
+
+### LL-039: A storage read that throws wipes the notes, like a timed-out one
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Found in review, never observed: LL-029 closed the timeout path, but a read that _throws_ (an I/O error, an
+out-of-memory error reading a huge notes file on a low-RAM phone, IndexedDB's "connection lost" in WebKit) took the same route.
+redux-persist rehydrated the empty initial state and its persistoid wrote it straight back over every stored note. Separately, a
+one-off read error on the legacy root blob passed for "no legacy copy": the fold was marked done and the blob rewritten without
+its notes (LL-022), with no backup.
+
+**Root cause:** redux-persist treats every failed read as "nothing stored" (`_rehydrate(undefined, err)`), then persists
+whatever state results.
+
+**Fix:** `store.ts` wraps the notes storage: once a read (or `deserialize`, or the AsyncStorage migration read) fails, writes of
+the notes are dropped for the rest of the session and the next launch reads them again. `fsStorage` treats only a `SyntaxError`
+as a broken file (anything else is a failed read, not a reason to set the file aside). `foldLegacyRootNotes` retries the blob
+read before giving it up as unreadable (a row past Android's 2MB cursor window fails every time).  
+**Rule:** A failed read is "unknown", never "empty" (same as LL-023 for the cloud): after one, don't write over what couldn't be
+read.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/ota-pbkdf2-a11y`
 
 ---
 

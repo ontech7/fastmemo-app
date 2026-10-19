@@ -4,8 +4,8 @@
 
 ## Project Summary
 
-FastMemo is a cross-platform note-taking app (Android, Web, Desktop via Tauri) built with Expo SDK 56, React Native 0.85, React
-19, and TypeScript 5.8. It supports four note types (text, todo, kanban, code), on-device AI (llama.rn with Qwen 2.5 GGUF
+FastMemo is a cross-platform note-taking app (Android, Web, Desktop via Tauri) built with Expo SDK 58, React Native 0.88, React
+19, and TypeScript 6.0. It supports four note types (text, todo, kanban, code), on-device AI (llama.rn with Qwen 2.5 GGUF
 models), encrypted cloud sync (Firebase), biometric protection, webhooks, voice recognition, and 7-language localization.
 Desktop builds use Tauri 1.x (Rust).
 
@@ -25,13 +25,13 @@ Before making changes, read the relevant knowledge files under `.claude/knowledg
 **Always check and load the relevant skills before starting work.** Skills contain domain-specific rules and patterns that
 prevent common mistakes. Load a skill when your task matches its trigger conditions.
 
-| Skill                         | When to Load                                                                                                                              | Content                                                                                                                                                                         |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `frontend-design/`            | **Any visual/frontend work** — building or restyling components/screens, colors, gradients, glass/blur, fonts, spacing, layout, redesigns | Design system + UI rework rules: tokens, Geist, accent solid+glow, deep-bg + corner glow, glass/blur perf guardrails, layout & safe-area conventions, reusable `ui/` primitives |
-| `vercel-react-native-skills/` | Building/modifying components, optimizing lists, animations, or any React Native UI work                                                  | 36 performance rules across 13 categories (list perf, animations, state, UI patterns, navigation)                                                                               |
-| `redux-toolkit/`              | Working on Redux slices, selectors, thunks, or state management logic                                                                     | RTK best practices, slice structure, async thunks, memoized selectors, TypeScript integration                                                                                   |
-| `tauri-v2/`                   | Touching anything under `src-tauri/`, desktop-specific features, Rust commands, IPC, or desktop builds                                    | Tauri v2 commands, capabilities, permissions, IPC patterns, plugin setup, troubleshooting                                                                                       |
-| `release/`                    | Preparing a release — bumping versions and writing changelogs/translations                                                               | Two-track (mobile/desktop) versioning across 6 files, verbose developer changelogs (`docs/`) vs concise user changelogs (`changelog.tsx` + 7 i18n locales), README badges       |
+| Skill                         | When to Load                                                                                                                              | Content                                                                                                                                                                             |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `frontend-design/`            | **Any visual/frontend work** — building or restyling components/screens, colors, gradients, glass/blur, fonts, spacing, layout, redesigns | Design system + UI rework rules: tokens, Geist, accent solid+glow, deep-bg + corner glow, glass/blur perf guardrails, layout & safe-area conventions, reusable `ui/` primitives     |
+| `vercel-react-native-skills/` | Building/modifying components, optimizing lists, animations, or any React Native UI work                                                  | 36 performance rules across 13 categories (list perf, animations, state, UI patterns, navigation)                                                                                   |
+| `redux-toolkit/`              | Working on Redux slices, selectors, thunks, or state management logic                                                                     | RTK best practices, slice structure, async thunks, memoized selectors, TypeScript integration                                                                                       |
+| `tauri-v2/`                   | Touching anything under `src-tauri/`, desktop-specific features, Rust commands, IPC, or desktop builds                                    | Tauri v2 commands, capabilities, permissions, IPC patterns, plugin setup, troubleshooting                                                                                           |
+| `prepare-release/`            | Preparing a release — bumping versions and writing changelogs/translations — or shipping an OTA update                                    | Two-track (mobile/desktop) versioning across 6 files, verbose developer changelogs (`docs/`) vs concise user changelogs (`changelog.tsx` + 7 i18n locales), README badges, OTA flow |
 
 Skills are in `.claude/skills/`. Each has a `SKILL.md` with full instructions.
 
@@ -89,6 +89,10 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 19. **Never read authoritative cross-device state with cache-eligible `getDoc`/`getDocs`** -- vault presence, DEK staleness, and
     any "has another device changed this?" check must use `getDocFromServer`/`getDocsFromServer`. The Firestore local cache can
     serve stale data and survives restarts. Treat offline/error as "unknown -> skip", not as an answer. See LL-027
+20. **Never import icons from the `react-native-heroicons` barrels** -- use the deep path
+    (`react-native-heroicons/outline/XIcon`); each barrel evaluates ~300 icons at startup (LL-034)
+21. **Never keep the same id in two sync queues** (local outbox `add`/`delete`, or a device doc's `addNotes`/`deleteNotes`/
+    `detachNotes`) -- the latest operation replaces the others (`exclusiveQueueEntry`, `dequeueProcessed`). See LL-033
 
 ### ALWAYS Do
 
@@ -102,29 +106,38 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 7. **Always wrap memoized components** (NoteCard, TodoItem, OrderedCategoryCard, etc.) with `memo()` from react
 8. **Always add translations for all 7 locales** when adding new UI strings (en, it, es, fr, de, zh, ja)
 9. **Always test on both web and native** when touching platform-split files
+10. **Always call `flushNote()`** before acting on a note's stored copy (delete, detach, sync, change category): editors commit
+    to Redux in batches (ADR-013, LL-031)
+11. **Always set `timeout: 0`** on a redux-persist config: a timed-out read rehydrates empty state and wipes storage (LL-029). A
+    read that throws does the same: never write a key back after its read failed (LL-039)
+12. **Always give an icon-only pressable `accessibilityRole` + `accessibilityLabel`** (i18n, `a11y.*`), with state as
+    `aria-checked` (checkbox/radio), `aria-selected` (tab only) or `aria-expanded` -- not `role`/`accessibilityState`, which one
+    platform drops; hidden content gets `aria-hidden` + `focusable={false}` (CONVENTIONS)
 
 ## Tech Stack (Quick Reference)
 
 | Layer      | Technology                                                                                     |
 | ---------- | ---------------------------------------------------------------------------------------------- |
-| Framework  | Expo SDK 56, React Native 0.85, React 19.2                                                       |
-| Language   | TypeScript 5.8 (path alias `@/*` -> `./src/*`)                                                 |
-| Routing    | expo-router 5.1 (file-based, typed routes)                                                     |
+| Framework  | Expo SDK 58, React Native 0.88 (New Architecture, Hermes V1), React 19.3                       |
+| Language   | TypeScript 6.0 (path alias `@/*` -> `./src/*`)                                                 |
+| Routing    | expo-router 58 (file-based, typed routes)                                                      |
 | State      | Redux Toolkit 2.8 + Redux Persist (filesystem for notes, AsyncStorage for settings/categories) |
 | Desktop    | Tauri 1.x (Rust)                                                                               |
 | Cloud      | Firebase Firestore (per-vault E2E encryption, envelope DEK/KEK -- ADR-012)                     |
 | AI         | llama.rn 0.12 (Qwen 2.5 GGUF, on-device)                                                       |
 | Editor     | CodeMirror 6 (via WebView)                                                                     |
 | i18n       | i18next + react-i18next (7 languages, single namespace)                                        |
-| Animations | react-native-reanimated 3.17                                                                   |
-| Lists      | @shopify/flash-list 2.0                                                                        |
+| Animations | react-native-reanimated 4.7 (+ react-native-worklets)                                          |
+| Lists      | @shopify/flash-list 2.3                                                                        |
 | Monitoring | Sentry                                                                                         |
+| OTA        | EAS Update (Android, fingerprint runtime, manual `Publish OTA` workflow -- ADR-014)            |
 
 ## Directory Map
 
 ```
 app/            -> Screens (expo-router file-based routing, at project root)
 assets/         -> Static assets (images, lottie animations, at project root)
+modules/        -> Local Expo native modules, autolinked (fastmemo-crypto: native PBKDF2, see ADR-012)
 src/
   components/   -> UI components (domain-grouped: buttons/, cards/, notes/, kanban/, settings/, etc.)
   slicers/      -> Redux slices (notesSlice, categoriesSlice, settingsSlice) + thunks/

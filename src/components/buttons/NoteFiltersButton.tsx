@@ -1,12 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { StyleSheet } from "react-native";
-import {
-  ArrowLongDownIcon,
-  ArrowLongUpIcon,
-  CheckIcon,
-  DocumentMagnifyingGlassIcon,
-  FunnelIcon,
-} from "react-native-heroicons/outline";
+import ArrowLongDownIcon from "react-native-heroicons/outline/ArrowLongDownIcon";
+import ArrowLongUpIcon from "react-native-heroicons/outline/ArrowLongUpIcon";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import DocumentMagnifyingGlassIcon from "react-native-heroicons/outline/DocumentMagnifyingGlassIcon";
+import FunnelIcon from "react-native-heroicons/outline/FunnelIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import GlassSurface from "@/components/ui/GlassSurface";
@@ -54,6 +52,7 @@ export default function NoteFiltersButton({ filters }: Props) {
 
   return (
     <PopupMenu
+      accessibilityLabel={t("a11y.sort_filter")}
       trigger={
         <GlassSurface radius={BORDER.big} style={styles.trigger}>
           <FunnelIcon size={20} color={COLOR.softWhite} />

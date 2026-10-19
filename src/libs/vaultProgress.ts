@@ -3,7 +3,7 @@
  * vault operation — re-encrypting and uploading every note/category under the
  * (new) DEK during setup / migration / reset.
  *
- * The PBKDF2 key derivation is a synchronous freeze and cannot report progress;
+ * The PBKDF2 key derivation takes a fixed, short time and reports no progress;
  * the per-item upload loop, however, scales with the number of notes and can
  * take several seconds, so it drives a determinate bar instead of a blind
  * spinner. Same pub/sub shape as [[vaultPrompt]] / vaultSession.

@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ChevronRightIcon } from "react-native-heroicons/outline";
+import ChevronRightIcon from "react-native-heroicons/outline/ChevronRightIcon";
 
 import { useRouter } from "@/hooks/useRouter";
 

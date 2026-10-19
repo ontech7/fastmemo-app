@@ -12,8 +12,10 @@ import { webhook } from "@/utils/webhook";
 import type { Href } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
-import { ArrowsPointingOutIcon, PaperAirplaneIcon, PencilSquareIcon } from "react-native-heroicons/outline";
+import { Pressable, StyleSheet, TextInput, type TextInputInstance, type TextInputKeyPressEvent, View } from "react-native";
+import ArrowsPointingOutIcon from "react-native-heroicons/outline/ArrowsPointingOutIcon";
+import PaperAirplaneIcon from "react-native-heroicons/outline/PaperAirplaneIcon";
+import PencilSquareIcon from "react-native-heroicons/outline/PencilSquareIcon";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useDispatch, useSelector } from "react-redux";
@@ -66,7 +68,7 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
   const { progress } = useReanimatedKeyboardAnimation();
   const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
 
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   // Mirror of `text` read by the flush handlers, so saving never trips on a stale
   // closure: it's cleared synchronously before any follow-up press can re-enter.
   const textRef = useRef("");
@@ -140,6 +142,21 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
     inputRef.current?.blur();
   }, [flush]);
 
+  // Desktop shortcut: ⌘/Ctrl+Enter saves, a plain Enter keeps adding lines. Only react-native-web
+  // reports the modifiers on key events, so this never fires on native keyboards.
+  const handleKeyPress = useCallback(
+    (event: TextInputKeyPressEvent) => {
+      const { key, metaKey, ctrlKey } = event.nativeEvent as TextInputKeyPressEvent["nativeEvent"] & {
+        metaKey?: boolean;
+        ctrlKey?: boolean;
+      };
+      if (key !== "Enter" || !(metaKey || ctrlKey)) return;
+      event.preventDefault();
+      handleSend();
+    },
+    [handleSend]
+  );
+
   // Carry whatever's typed into the full editor: persist it, then open that note
   // (or a fresh one if nothing was typed yet) so the user can format / add media.
   const handleExpand = useCallback(() => {
@@ -164,6 +181,7 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
           style={styles.input}
           value={text}
           onChangeText={onChangeText}
+          onKeyPress={handleKeyPress}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder={t("home.quickNote")}
@@ -177,13 +195,25 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
             input, and a `focused`-gated button would unmount between mousedown and click —
             so its press never fires. `hasText` survives the blur, so the tap lands. */}
         {hasText && (
-          <Pressable onPress={handleExpand} hitSlop={8} style={styles.iconButton}>
+          <Pressable
+            onPress={handleExpand}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.open_full_note")}
+            hitSlop={8}
+            style={styles.iconButton}
+          >
             <ArrowsPointingOutIcon size={18} color={COLOR.textSecondary} />
           </Pressable>
         )}
 
         {hasText && (
-          <Pressable onPress={handleSend} hitSlop={8} style={styles.sendButton}>
+          <Pressable
+            onPress={handleSend}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.save_note")}
+            hitSlop={8}
+            style={styles.sendButton}
+          >
             <PaperAirplaneIcon size={18} color={COLOR.softWhite} />
           </Pressable>
         )}

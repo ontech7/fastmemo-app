@@ -72,7 +72,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
     [isNewNote, initialNote.readOnly, memoInitialNote]
   );
 
-  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<KanbanNote>({
+  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<KanbanNote>({
     initialNote: memoInitialNote,
     defaultType: "kanban",
     addWebhookSelector: selectorWebhook_addKanbanNote,
@@ -167,7 +167,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
                 maxLength={96}
               />
 
-              <NoteSettingsButton note={note} setNote={setNoteAsync} />
+              <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
           </View>
 

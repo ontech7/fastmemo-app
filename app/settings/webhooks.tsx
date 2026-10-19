@@ -3,7 +3,7 @@ import { FlashList } from "@shopify/flash-list";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { openUrl } from "@/utils/openUrl";
-import { InformationCircleIcon } from "react-native-heroicons/outline";
+import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import type { WebhookPayload } from "@/types";
@@ -65,6 +65,8 @@ export default function WebhooksScreen() {
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => openUrl(`${configs.app.websiteUrl}/${t("languageCode")}/guides/webhooks`)}
+          accessibilityRole="link"
+          accessibilityLabel={t("a11y.open_guide")}
         >
           <IconChip>
             <InformationCircleIcon size={20} color={COLOR.softWhite} />

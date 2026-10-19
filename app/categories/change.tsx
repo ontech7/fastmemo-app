@@ -2,7 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { CheckIcon } from "react-native-heroicons/outline";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import type { Category } from "@/types";
@@ -65,7 +65,12 @@ export default function ChangeCategoryScreen() {
 
         <Text style={styles.headerTitle}>{t("changecategory.title")}</Text>
 
-        <TouchableOpacity activeOpacity={0.7} onPress={updateExistentCategory}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={updateExistentCategory}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.save")}
+        >
           <IconChip>
             <CheckIcon size={20} color={COLOR.softWhite} />
           </IconChip>

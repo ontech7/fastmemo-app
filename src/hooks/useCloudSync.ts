@@ -1,7 +1,7 @@
 import { configs } from "@/configs";
 import type { Category, CloudSettings, Note } from "@/types";
 import type { Firestore } from "firebase/firestore";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, getDocsFromServer, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
@@ -106,7 +106,8 @@ export const useCloudSync = () => {
   const setCloudSetting = (name: keyof CloudSettings, value: string): void => {
     setLocalCloudSettings({
       ...cloudSettings,
-      [name]: value,
+      // Firebase identifiers never contain whitespace, but a paste can carry some along.
+      [name]: value.trim(),
     });
   };
 
@@ -241,7 +242,7 @@ export const useCloudSync = () => {
 
     try {
       const q_categories = query(collection(db, COLLECTIONS.data.categories), orderBy("order", "asc"));
-      const querySnapshot_categories = await getDocs(q_categories);
+      const querySnapshot_categories = await getDocsFromServer(q_categories);
       querySnapshot_categories.forEach((doc) => {
         const category = doc.data();
         if (category.index) return;
@@ -261,7 +262,7 @@ export const useCloudSync = () => {
 
     try {
       const q_notes = query(collection(db, COLLECTIONS.data.notes), orderBy("createdAt", "desc"));
-      const querySnapshot_notes = await getDocs(q_notes);
+      const querySnapshot_notes = await getDocsFromServer(q_notes);
       querySnapshot_notes.forEach((doc) => {
         const note = doc.data() as Note;
 
@@ -311,7 +312,7 @@ export const useCloudSync = () => {
   const getCloudNotesMeta = async (db: Firestore | null): Promise<Record<string, number>> => {
     if (!db) return {};
 
-    const snapshot = await getDocs(collection(db, COLLECTIONS.data.notes));
+    const snapshot = await getDocsFromServer(collection(db, COLLECTIONS.data.notes));
 
     const meta: Record<string, number> = {};
     snapshot.forEach((doc) => {
@@ -324,7 +325,7 @@ export const useCloudSync = () => {
   const getCloudCategoriesMeta = async (db: Firestore | null): Promise<Record<string, Category>> => {
     if (!db) return {};
 
-    const snapshot = await getDocs(collection(db, COLLECTIONS.data.categories));
+    const snapshot = await getDocsFromServer(collection(db, COLLECTIONS.data.categories));
 
     const meta: Record<string, Category> = {};
     snapshot.forEach((doc) => {
@@ -414,22 +415,27 @@ export const useCloudSync = () => {
 
     if (!loadingMethodDisabled) setIsLoading(true);
 
-    const { db } = retrieveFirebase();
+    try {
+      const { db } = retrieveFirebase();
 
-    // snapshot cloud versions before our upload overwrites them, so we can fan out
-    // exactly what this device contributes to the other devices
-    const cloudNotesBefore = await getCloudNotesMeta(db);
-    const cloudCategoriesBefore = await getCloudCategoriesMeta(db);
+      // snapshot cloud versions before our upload overwrites them, so we can fan out
+      // exactly what this device contributes to the other devices. Like every read
+      // here, it goes to the server (LL-027): a cache-served snapshot taken offline
+      // would diff and replace against stale cloud state. Offline, it throws before
+      // anything is uploaded or replaced.
+      const cloudNotesBefore = await getCloudNotesMeta(db);
+      const cloudCategoriesBefore = await getCloudCategoriesMeta(db);
 
-    await uploadCloudData();
-    await fanOutLocalDiff(cloudNotesBefore, cloudCategoriesBefore);
-    await retrieveCloudData(db);
+      await uploadCloudData();
+      await fanOutLocalDiff(cloudNotesBefore, cloudCategoriesBefore);
+      await retrieveCloudData(db);
 
-    // update sync timestamp in cloud and in local
+      // update sync timestamp in cloud and in local
 
-    await updateLastSyncInCloud();
-
-    if (!loadingMethodDisabled) setIsLoading(false);
+      await updateLastSyncInCloud();
+    } finally {
+      if (!loadingMethodDisabled) setIsLoading(false);
+    }
   };
 
   useEffect(() => {

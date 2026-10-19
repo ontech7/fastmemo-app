@@ -18,20 +18,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  ChatBubbleLeftRightIcon,
-  CheckBadgeIcon,
-  CodeBracketIcon,
-  DocumentTextIcon,
-  FolderIcon,
-  LanguageIcon,
-  ListBulletIcon,
-  ScissorsIcon,
-  SparklesIcon,
-  TagIcon,
-  XMarkIcon,
-} from "react-native-heroicons/outline";
-import { CheckCircleIcon, ExclamationCircleIcon } from "react-native-heroicons/solid";
+import ChatBubbleLeftRightIcon from "react-native-heroicons/outline/ChatBubbleLeftRightIcon";
+import CheckBadgeIcon from "react-native-heroicons/outline/CheckBadgeIcon";
+import CodeBracketIcon from "react-native-heroicons/outline/CodeBracketIcon";
+import DocumentTextIcon from "react-native-heroicons/outline/DocumentTextIcon";
+import FolderIcon from "react-native-heroicons/outline/FolderIcon";
+import LanguageIcon from "react-native-heroicons/outline/LanguageIcon";
+import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
+import ScissorsIcon from "react-native-heroicons/outline/ScissorsIcon";
+import SparklesIcon from "react-native-heroicons/outline/SparklesIcon";
+import TagIcon from "react-native-heroicons/outline/TagIcon";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
+import CheckCircleIcon from "react-native-heroicons/solid/CheckCircleIcon";
+import ExclamationCircleIcon from "react-native-heroicons/solid/ExclamationCircleIcon";
 import type { SharedValue } from "react-native-reanimated";
 import Animated, {
   Easing,
@@ -145,7 +144,9 @@ export default function AIEditorActions({
   const [outputText, setOutputText] = useState<string | null>(null);
   // Staged result of a content-modifying action: shown as a before/after preview
   // and applied only when the user confirms (nothing is overwritten automatically).
-  const [preview, setPreview] = useState<{ title: string; before: string; after: string; apply: () => void } | null>(null);
+  // It holds the result, not a callback: applying goes through the current props, so
+  // it never writes back a note snapshot taken when the action started.
+  const [preview, setPreview] = useState<{ action: EditorAction; title: string; before: string; after: string } | null>(null);
   // Left edge (window coords) of the trigger, so the menu opens exactly from the button.
   const [menuLeft, setMenuLeft] = useState(40);
 
@@ -226,9 +227,9 @@ export default function AIEditorActions({
         if (result.success) {
           // Stage a before/after preview for anything that overwrites existing
           // content; apply lightweight/additive results directly.
-          const stage = (after: string, apply: () => void) => {
+          const stage = (after: string) => {
             setFeedback("idle");
-            setPreview({ title: t(`ai.editor.${action}`), before: rawContent, after, apply });
+            setPreview({ action, title: t(`ai.editor.${action}`), before: rawContent, after });
           };
 
           switch (action) {
@@ -246,26 +247,16 @@ export default function AIEditorActions({
               break;
             case "generate_title":
               if (result.text) {
-                const after = result.text;
                 setFeedback("idle");
-                setPreview({
-                  title: t("ai.editor.generate_title"),
-                  before: noteTitle,
-                  after,
-                  apply: () => onTitleGenerated(after),
-                });
+                setPreview({ action, title: t("ai.editor.generate_title"), before: noteTitle, after: result.text });
               }
               break;
             case "summarize":
-              if (result.text) stage(result.text, () => onSummaryGenerated?.(result.text!));
-              break;
             case "fix_grammar":
             case "shorten":
             case "translate":
-              if (result.text) stage(result.text, () => onTextRewritten?.(result.text!));
-              break;
             case "add_comments":
-              if (result.text) stage(result.text, () => onCodeCommented?.(result.text!));
+              if (result.text) stage(result.text);
               break;
           }
         } else {
@@ -282,20 +273,36 @@ export default function AIEditorActions({
         toast(t("ai.editor.error"));
       }
     },
-    [
-      getContent,
-      noteTitle,
-      aiSettings.selectedModel,
-      onTitleGenerated,
-      onSummaryGenerated,
-      onItemsSuggested,
-      onCategorySuggested,
-      onTextRewritten,
-      onCodeCommented,
-      t,
-      closeMenu,
-    ]
+    [getContent, noteTitle, aiSettings.selectedModel, onItemsSuggested, onCategorySuggested, t, closeMenu]
   );
+
+  const applyPreview = () => {
+    if (!preview) return;
+    const { action, before, after } = preview;
+    setPreview(null);
+
+    // The model takes seconds and the note stays editable meanwhile: if what it read has
+    // changed since (new edits, another code tab), applying would overwrite those changes.
+    const current = action === "generate_title" ? noteTitle : getContent();
+    if (current !== before) {
+      toast(t("ai.editor.content_changed"));
+      return;
+    }
+
+    switch (action) {
+      case "generate_title":
+        onTitleGenerated(after);
+        break;
+      case "summarize":
+        onSummaryGenerated?.(after);
+        break;
+      case "add_comments":
+        onCodeCommented?.(after);
+        break;
+      default:
+        onTextRewritten?.(after);
+    }
+  };
 
   const handleCancel = useCallback(() => {
     cancelledRef.current = true;
@@ -344,6 +351,9 @@ export default function AIEditorActions({
         style={[styles.aiButton, style]}
         activeOpacity={0.7}
         onPress={feedback === "processing" ? handleCancel : toggleMenu}
+        accessibilityRole="button"
+        accessibilityLabel={feedback === "processing" ? t("cancel") : t("generalsettings.ai_assistant")}
+        aria-expanded={isMenuOpen}
         disabled={disabled}
       >
         {feedback === "processing" ? (
@@ -364,7 +374,12 @@ export default function AIEditorActions({
               <SparklesIcon size={16} color={styles.outputTitle.color} />
               <Text style={styles.outputTitle}>AI Result</Text>
             </View>
-            <TouchableOpacity onPress={() => setOutputText(null)} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={() => setOutputText(null)}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.close")}
+              activeOpacity={0.7}
+            >
               <XMarkIcon size={18} color={COLOR.lightBlue} />
             </TouchableOpacity>
           </View>
@@ -411,14 +426,7 @@ export default function AIEditorActions({
               >
                 <Text style={styles.previewCancelLabel}>{t("cancel")}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.previewAction, styles.previewApply]}
-                onPress={() => {
-                  preview?.apply();
-                  setPreview(null);
-                }}
-              >
+              <TouchableOpacity activeOpacity={0.7} style={[styles.previewAction, styles.previewApply]} onPress={applyPreview}>
                 <Text style={styles.previewApplyLabel}>{t("ai.editor.apply")}</Text>
               </TouchableOpacity>
             </View>

@@ -1,8 +1,10 @@
 import useEmblaCarousel from "embla-carousel-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Dimensions, Image, type ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon } from "react-native-heroicons/outline";
+import { Image, type ImageSourcePropType, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import ArrowRightIcon from "react-native-heroicons/outline/ArrowRightIcon";
+import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
+import ChevronRightIcon from "react-native-heroicons/outline/ChevronRightIcon";
 
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
@@ -19,11 +21,11 @@ import step6 from "~/assets/intro/step6.png";
 import step7 from "~/assets/intro/step7.png";
 import step8 from "~/assets/intro/step8.png";
 
-const { width: WINDOW_WIDTH } = Dimensions.get("window");
-
 export default function IntroScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  // Live, so a resized desktop window re-lays the carousel out.
+  const { width: WINDOW_WIDTH } = useWindowDimensions();
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: false,
@@ -114,6 +116,8 @@ export default function IntroScreen() {
             <TouchableOpacity
               style={[styles.navButton, styles.navButtonLeft, !canScrollPrev && styles.navButtonDisabled]}
               onPress={scrollPrev}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.previous")}
               disabled={!canScrollPrev}
             >
               <ChevronLeftIcon size={28} color={canScrollPrev ? COLOR.textPrimary : COLOR.textMuted} />
@@ -133,6 +137,9 @@ export default function IntroScreen() {
                 <div
                   key={index}
                   style={{
+                    // Raw DOM nodes don't get react-native-web's border-box reset: with content-box the
+                    // padding made every slide 40px wider than the viewport and pushed it off-center.
+                    boxSizing: "border-box",
                     flex: "0 0 100%",
                     minWidth: 0,
                     display: "flex",
@@ -152,6 +159,8 @@ export default function IntroScreen() {
             <TouchableOpacity
               style={[styles.navButton, styles.navButtonRight, !canScrollNext && styles.navButtonDisabled]}
               onPress={scrollNext}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.next")}
               disabled={!canScrollNext}
             >
               <ChevronRightIcon size={28} color={canScrollNext ? COLOR.textPrimary : COLOR.textMuted} />
@@ -159,11 +168,14 @@ export default function IntroScreen() {
           )}
         </View>
 
-        <View style={styles.paginationContainer}>
+        <View style={styles.paginationContainer} accessibilityRole="tablist">
           {carouselSteps.map((_, index) => (
             <TouchableOpacity
               key={index}
               onPress={() => emblaApi?.scrollTo(index)}
+              accessibilityRole="tab"
+              accessibilityLabel={t("a11y.page", { page: index + 1 })}
+              aria-selected={index === activeIndex}
               style={[styles.carouselDot, index !== activeIndex && styles.inactiveCarouselDot]}
             />
           ))}

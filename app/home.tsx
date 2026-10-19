@@ -12,6 +12,7 @@ import SearchInput from "@/components/inputs/SearchInput";
 import QuickNoteBar, { QUICK_NOTE_BAR_RESERVED } from "@/components/notes/QuickNoteBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
+import WebViewWarmup from "@/components/WebViewWarmup";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
@@ -47,7 +48,8 @@ import { useIsFocused, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
-import { DocumentMagnifyingGlassIcon } from "react-native-heroicons/outline";
+import type { LayoutChangeEvent } from "react-native";
+import DocumentMagnifyingGlassIcon from "react-native-heroicons/outline/DocumentMagnifyingGlassIcon";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -214,6 +216,32 @@ export default function HomeScreen() {
           });
     }
   }, [filterText, deepFilterText, showDeepSearch, notes]);
+
+  // Wide windows (tablets, desktop) lay the notes out in columns rather than stretching every card.
+  const [numColumns, setNumColumns] = useState(1);
+  const onListLayout = useCallback((event: LayoutChangeEvent) => {
+    const columns = Math.floor(event.nativeEvent.layout.width / MIN_COLUMN_WIDTH);
+    setNumColumns(Math.min(MAX_COLUMNS, Math.max(1, columns)));
+  }, []);
+
+  // Stable across unrelated re-renders (focus changes, quick-note bar height, ...), so FlashList
+  // only re-renders its cells when the selection or delete mode actually change (LL-019).
+  const renderNote = useCallback(
+    ({ item }: { item: Note }) => {
+      const card = (
+        <NoteCard
+          content={item}
+          isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
+          selectNote={selectNote}
+          isDeleteMode={isDeleteMode}
+          toggleDeleteMode={toggleDeleteMode}
+        />
+      );
+      return numColumns > 1 ? <View style={styles.gridCell}>{card}</View> : card;
+    },
+    [selectedNotes, selectNote, isDeleteMode, toggleDeleteMode, numColumns]
+  );
+  const listExtraData = useMemo(() => ({ isDeleteMode, selectedNotes }), [isDeleteMode, selectedNotes]);
 
   // hardware back for resetting deleteMode
   useEffect(() => {
@@ -437,8 +465,11 @@ export default function HomeScreen() {
                 />
               </View>
 
-              <View style={styles.listWrapper}>
+              <View style={styles.listWrapper} onLayout={onListLayout}>
                 <FlashList
+                  key={numColumns}
+                  numColumns={numColumns}
+                  style={numColumns > 1 ? styles.grid : undefined}
                   maintainVisibleContentPosition={{
                     disabled: true,
                   }}
@@ -446,17 +477,9 @@ export default function HomeScreen() {
                   keyboardShouldPersistTaps="handled"
                   keyboardDismissMode="on-drag"
                   data={filteredNotes}
-                  extraData={{ isDeleteMode }}
-                  renderItem={({ item }) => (
-                    <NoteCard
-                      content={item}
-                      isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
-                      selectNote={selectNote}
-                      isDeleteMode={isDeleteMode}
-                      toggleDeleteMode={toggleDeleteMode}
-                    />
-                  )}
-                  keyExtractor={(item) => item.id}
+                  extraData={listExtraData}
+                  renderItem={renderNote}
+                  keyExtractor={keyExtractor}
                 />
               </View>
 
@@ -475,15 +498,18 @@ export default function HomeScreen() {
           </View>
         </SafeAreaView>
 
-        <Animated.View style={[styles.editModeToolbar, animatedTranslate, animatedOpacity]}>
-          <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} />
+        <Animated.View style={[styles.editModeToolbar, animatedTranslate, animatedOpacity]} aria-hidden={!isDeleteMode}>
+          {/* aria-hidden keeps the hidden toolbar from screen readers; focusable keeps it out of the web tab order */}
+          <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} focusable={isDeleteMode} />
 
-          <ProtectNotesButton onPressProtect={toggleProtectedNotesFromItems} />
+          <ProtectNotesButton onPressProtect={toggleProtectedNotesFromItems} focusable={isDeleteMode} />
 
-          <HiddenNotesButton onPressHidden={toggleHiddenNotesFromItems} />
+          <HiddenNotesButton onPressHidden={toggleHiddenNotesFromItems} focusable={isDeleteMode} />
 
-          <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
+          <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} focusable={isDeleteMode} />
         </Animated.View>
+
+        <WebViewWarmup />
 
         <AddNoteOverlayButton
           isDeleteMode={isDeleteMode}
@@ -495,6 +521,11 @@ export default function HomeScreen() {
   );
 }
 
+const keyExtractor = (note: Note) => note.id;
+
+const MIN_COLUMN_WIDTH = 380;
+const MAX_COLUMNS = 3;
+
 /* STYLES */
 
 const styles = StyleSheet.create({
@@ -504,6 +535,13 @@ const styles = StyleSheet.create({
   },
   listWrapper: {
     flex: 1,
+  },
+  // Half a gap on each side of every cell; the list's negative margin keeps the outer edges aligned.
+  grid: {
+    marginHorizontal: -PADDING_MARGIN.md / 2,
+  },
+  gridCell: {
+    paddingHorizontal: PADDING_MARGIN.md / 2,
   },
   safe: {
     flex: 1,

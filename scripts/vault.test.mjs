@@ -1,6 +1,8 @@
 // Standalone correctness test for the vault crypto core.
 // Run: node scripts/vault.test.mjs
 // It bundles src/utils/vault.ts (incl. react-native-crypto-js) with esbuild, then exercises every flow.
+// The vault is bundled twice: with the WebCrypto PBKDF2 of modules/fastmemo-crypto (what web/Tauri run;
+// Node has WebCrypto) and with no native module (the pure-JS fallback), and each must open the other's vaults.
 
 import { build } from "esbuild";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -11,7 +13,10 @@ import os from "node:os";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const src = join(__dirname, "..", "src");
 const out = join(os.tmpdir(), "vault.bundle.mjs");
+const jsOnlyOut = join(os.tmpdir(), "vault.jsonly.bundle.mjs");
 const cryptOut = join(os.tmpdir(), "crypt.bundle.mjs");
+const webKdfOut = join(os.tmpdir(), "fastmemo-crypto.web.bundle.mjs");
+const webKdfSrc = join(__dirname, "..", "modules", "fastmemo-crypto", "src", "FastmemoCryptoModule.web.ts");
 
 // native-only modules; stub them so the bundles load under node
 const alias = {
@@ -20,15 +25,29 @@ const alias = {
   "expo-secure-store": join(__dirname, "_expo-secure-store-stub.js"),
 };
 
-await build({
-  entryPoints: [join(src, "utils", "vault.ts")],
-  bundle: true,
-  platform: "node",
-  format: "esm",
-  outfile: out,
-  logLevel: "error",
-  alias,
+// resolves `~/modules/fastmemo-crypto` (the vault's PBKDF2) to the given implementation
+const kdfModule = (target) => ({
+  name: "fastmemo-crypto",
+  setup(b) {
+    b.onResolve({ filter: /^~\/modules\/fastmemo-crypto$/ }, () => ({ path: target }));
+  },
 });
+
+for (const [outfile, kdf] of [
+  [out, webKdfSrc],
+  [jsOnlyOut, join(__dirname, "_fastmemo-crypto-stub.js")],
+]) {
+  await build({
+    entryPoints: [join(src, "utils", "vault.ts")],
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    outfile,
+    logLevel: "error",
+    alias,
+    plugins: [kdfModule(kdf)],
+  });
+}
 
 await build({
   entryPoints: [join(src, "utils", "crypt.ts")],
@@ -40,7 +59,11 @@ await build({
   alias,
 });
 
+// the WebCrypto PBKDF2 on its own, to compare it with crypto-js directly
+await build({ entryPoints: [webKdfSrc], bundle: true, platform: "node", format: "esm", outfile: webKdfOut, logLevel: "error" });
+
 const V = await import(pathToFileURL(out).href);
+const VJs = await import(pathToFileURL(jsOnlyOut).href);
 const Crypt = await import(pathToFileURL(cryptOut).href);
 
 let passed = 0;
@@ -56,63 +79,121 @@ const ok = (name, cond) => {
 };
 
 console.log("\n[1] Create vault + unlock with correct passphrase");
-const { vault, dek, recoveryKey } = V.createVault("correct horse battery staple");
+const { vault, dek, recoveryKey } = await V.createVault("correct horse battery staple");
 ok("createVault returns a 64-hex DEK", /^[0-9a-f]{64}$/.test(dek));
 ok("recovery key is grouped Base32", /^[0-9A-HJKMNP-TV-Z]{4}(-[0-9A-HJKMNP-TV-Z]{4})+$/.test(recoveryKey));
 ok("vault has version 2", vault.version === 2);
-const unlocked = V.unlockVaultWithPassphrase(vault, "correct horse battery staple");
+const unlocked = await V.unlockVaultWithPassphrase(vault, "correct horse battery staple");
 ok("correct passphrase returns the SAME dek", unlocked === dek);
 
 console.log("\n[2] Wrong passphrase is rejected (never a false unlock)");
-ok("wrong passphrase -> null", V.unlockVaultWithPassphrase(vault, "wrong passphrase") === null);
-ok("empty passphrase -> null", V.unlockVaultWithPassphrase(vault, "") === null);
+ok("wrong passphrase -> null", (await V.unlockVaultWithPassphrase(vault, "wrong passphrase")) === null);
+ok("empty passphrase -> null", (await V.unlockVaultWithPassphrase(vault, "")) === null);
 // brute a bunch of near-misses; a correct passphrase must NEVER be wrongly rejected and wrong ones never accepted
 let falseAccept = 0;
 for (let i = 0; i < 200; i++) {
-  if (V.unlockVaultWithPassphrase(vault, "correct horse battery staple" + i) !== null) falseAccept++;
+  if ((await V.unlockVaultWithPassphrase(vault, "correct horse battery staple" + i)) !== null) falseAccept++;
 }
 ok("200 near-miss passphrases all rejected", falseAccept === 0);
 let falseReject = 0;
 for (let i = 0; i < 50; i++) {
-  const v = V.createVault("p@ss" + i);
-  if (V.unlockVaultWithPassphrase(v.vault, "p@ss" + i) !== v.dek) falseReject++;
+  const v = await V.createVault("p@ss" + i);
+  if ((await V.unlockVaultWithPassphrase(v.vault, "p@ss" + i)) !== v.dek) falseReject++;
 }
 ok("50 fresh vaults all unlock with their own passphrase", falseReject === 0);
 
 console.log("\n[3] Recovery key recovers the DEK");
-ok("correct recovery key returns the same dek", V.unlockVaultWithRecoveryKey(vault, recoveryKey) === dek);
+ok("correct recovery key returns the same dek", (await V.unlockVaultWithRecoveryKey(vault, recoveryKey)) === dek);
 ok(
   "recovery key is case/format-insensitive",
-  V.unlockVaultWithRecoveryKey(vault, recoveryKey.toLowerCase().replace(/-/g, " ")) === dek
+  (await V.unlockVaultWithRecoveryKey(vault, recoveryKey.toLowerCase().replace(/-/g, " "))) === dek
 );
-ok("wrong recovery key -> null", V.unlockVaultWithRecoveryKey(vault, "ABCD-EFGH-JKMN-PQRS-TVWX-YZ23") === null);
+ok("wrong recovery key -> null", (await V.unlockVaultWithRecoveryKey(vault, "ABCD-EFGH-JKMN-PQRS-TVWX-YZ23")) === null);
 
 console.log("\n[4] Change passphrase: DEK unchanged, old passphrase dies, new works");
-const rewrapped = V.rewrapWithNewPassphrase(vault, dek, "my new passphrase");
+const rewrapped = await V.rewrapWithNewPassphrase(vault, dek, "my new passphrase");
 ok(
   "old passphrase no longer unlocks the re-wrapped vault",
-  V.unlockVaultWithPassphrase(rewrapped, "correct horse battery staple") === null
+  (await V.unlockVaultWithPassphrase(rewrapped, "correct horse battery staple")) === null
 );
-ok("new passphrase unlocks and returns the SAME dek", V.unlockVaultWithPassphrase(rewrapped, "my new passphrase") === dek);
-ok("recovery key STILL works after passphrase change", V.unlockVaultWithRecoveryKey(rewrapped, recoveryKey) === dek);
+ok(
+  "new passphrase unlocks and returns the SAME dek",
+  (await V.unlockVaultWithPassphrase(rewrapped, "my new passphrase")) === dek
+);
+ok("recovery key STILL works after passphrase change", (await V.unlockVaultWithRecoveryKey(rewrapped, recoveryKey)) === dek);
 ok(
   "a device that cached the dek is unaffected (dek identical)",
-  V.unlockVaultWithPassphrase(rewrapped, "my new passphrase") === dek
+  (await V.unlockVaultWithPassphrase(rewrapped, "my new passphrase")) === dek
 );
 
 console.log("\n[5] Recover then re-wrap recovery key");
-const recoveredDek = V.unlockVaultWithRecoveryKey(vault, recoveryKey);
-const newPassVault = V.rewrapWithNewPassphrase(vault, recoveredDek, "post-recovery pass");
-const { vault: rotatedRecVault, recoveryKey: newRecoveryKey } = V.rewrapRecovery(newPassVault, recoveredDek);
-ok("post-recovery passphrase unlocks", V.unlockVaultWithPassphrase(rotatedRecVault, "post-recovery pass") === dek);
-ok("new recovery key works", V.unlockVaultWithRecoveryKey(rotatedRecVault, newRecoveryKey) === dek);
-ok("old recovery key no longer works", V.unlockVaultWithRecoveryKey(rotatedRecVault, recoveryKey) === null);
+const recoveredDek = await V.unlockVaultWithRecoveryKey(vault, recoveryKey);
+const newPassVault = await V.rewrapWithNewPassphrase(vault, recoveredDek, "post-recovery pass");
+const { vault: rotatedRecVault, recoveryKey: newRecoveryKey } = await V.rewrapRecovery(newPassVault, recoveredDek);
+ok("post-recovery passphrase unlocks", (await V.unlockVaultWithPassphrase(rotatedRecVault, "post-recovery pass")) === dek);
+ok("new recovery key works", (await V.unlockVaultWithRecoveryKey(rotatedRecVault, newRecoveryKey)) === dek);
+ok("old recovery key no longer works", (await V.unlockVaultWithRecoveryKey(rotatedRecVault, recoveryKey)) === null);
 
 console.log("\n[6] Cross-device interop: vault doc serialized through JSON (Firestore) round-trips");
 const wire = JSON.parse(JSON.stringify(vault));
-ok("vault survives JSON round-trip", V.unlockVaultWithPassphrase(wire, "correct horse battery staple") === dek);
+ok("vault survives JSON round-trip", (await V.unlockVaultWithPassphrase(wire, "correct horse battery staple")) === dek);
 ok("isVaultDoc recognizes a real vault", V.isVaultDoc(wire) === true);
 ok("isVaultDoc rejects junk", V.isVaultDoc({ foo: 1 }) === false);
+
+console.log("\n[6b] Native/WebCrypto and pure-JS PBKDF2 open each other's vaults");
+for (const passphrase of ["correct horse battery staple", "pässwörd àèìòù ✓ 密码", ""]) {
+  const fast = await V.createVault(passphrase);
+  const slow = await VJs.createVault(passphrase);
+  const label = JSON.stringify(passphrase);
+  ok(
+    `${label}: WebCrypto vault unlocks with pure JS`,
+    (await VJs.unlockVaultWithPassphrase(fast.vault, passphrase)) === fast.dek
+  );
+  ok(
+    `${label}: pure-JS vault unlocks with WebCrypto`,
+    (await V.unlockVaultWithPassphrase(slow.vault, passphrase)) === slow.dek
+  );
+  ok(
+    `${label}: recovery key works across implementations`,
+    (await VJs.unlockVaultWithRecoveryKey(fast.vault, fast.recoveryKey)) === fast.dek &&
+      (await V.unlockVaultWithRecoveryKey(slow.vault, slow.recoveryKey)) === slow.dek
+  );
+}
+// 6b alone would also pass if the module silently fell back to crypto-js (its self-check failing): compare
+// the module's own output, so a broken WebCrypto path can't ship as a quiet return of the 1-2s freeze.
+const { default: WebKdf } = await import(pathToFileURL(webKdfOut).href);
+const { default: CryptoJS6c } = await import("crypto-js"); // what vault.ts uses
+const pbkdf2Js = (secret, saltHex, iterations) =>
+  CryptoJS6c.PBKDF2(secret, CryptoJS6c.enc.Hex.parse(saltHex), {
+    keySize: 32 / 4,
+    iterations,
+    hasher: CryptoJS6c.algo.SHA256,
+  }).toString(CryptoJS6c.enc.Hex);
+ok("the WebCrypto module is available under node", WebKdf !== null);
+for (const [secret, saltHex, iterations] of [
+  ["pässwörd ✓ 密码 🔑", "00112233445566778899aabbccddeeff", 1000],
+  ["long passphrase ".repeat(5), "00112233445566778899AABBCCDDEEFF", 2],
+  ["", "deadbeefdeadbeefdeadbeefdeadbeef", 1],
+]) {
+  ok(
+    `WebCrypto PBKDF2 = crypto-js (${JSON.stringify(secret).slice(0, 24)}, ${iterations} it.)`,
+    (await WebKdf.pbkdf2Sha256Async(secret, saltHex, iterations, 32)) === pbkdf2Js(secret, saltHex, iterations)
+  );
+}
+const halfEmoji = "pass\ud83d";
+let halfEmojiThrows = false;
+try {
+  await V.createVault(halfEmoji);
+} catch {
+  halfEmojiThrows = true;
+}
+ok("half an emoji fails on the native/WebCrypto build like in pure JS (no key only one path can derive)", halfEmojiThrows);
+
+const rewrappedJs = await VJs.rewrapWithNewPassphrase(vault, dek, "cambiata in JS");
+ok(
+  "a passphrase changed in pure JS unlocks with WebCrypto",
+  (await V.unlockVaultWithPassphrase(rewrappedJs, "cambiata in JS")) === dek
+);
 
 console.log("\n[7] Note payload encrypted with DEK on 'device A' decrypts on 'device B' holding same DEK");
 import("react-native-crypto-js").then((m) => {

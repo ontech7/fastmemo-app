@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { MicrophoneIcon, SparklesIcon } from "react-native-heroicons/outline";
+import MicrophoneIcon from "react-native-heroicons/outline/MicrophoneIcon";
+import SparklesIcon from "react-native-heroicons/outline/SparklesIcon";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -72,7 +73,7 @@ export default function DictationSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onCancel}>
-      <Pressable style={styles.backdrop} onPress={onCancel} />
+      <Pressable style={styles.backdrop} onPress={onCancel} accessibilityRole="button" accessibilityLabel={t("a11y.close")} />
 
       <View style={styles.sheet}>
         <View style={styles.handle} />
@@ -84,6 +85,8 @@ export default function DictationSheet({
               activeOpacity={0.7}
               style={[styles.micButton, listening && styles.micButtonActive]}
               onPress={onToggleListening}
+              accessibilityRole="button"
+              accessibilityLabel={listening ? t("a11y.stop_listening") : t("a11y.start_listening")}
             >
               {listening ? <View style={styles.stopIcon} /> : <MicrophoneIcon size={22} color={COLOR.softWhite} />}
             </TouchableOpacity>

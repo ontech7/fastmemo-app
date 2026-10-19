@@ -1,15 +1,17 @@
 // Must be first: installs global.crypto.getRandomValues (secure RNG) so crypto-js
 // can generate IVs/salts on native (Hermes), where there is no WebCrypto global.
 import "react-native-get-random-values";
+// Before anything renders a draggable list: re-provides InteractionManager (removed in RN 0.87).
+import "@/libs/polyfills/interactionManager";
 
 import "@/styles/global.css";
 
 import WebToaster from "@/components/WebToaster";
-import WebViewWarmup from "@/components/WebViewWarmup";
 import AppBackground from "@/components/ui/AppBackground";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { usePreventBackspaceNav } from "@/hooks/usePreventBackspaceNav";
+import { installFlushOnExit } from "@/libs/flushOnExit";
 import i18n from "@/libs/i18n";
 import AppUpdateProvider from "@/providers/AppUpdateProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
@@ -31,10 +33,12 @@ import { PersistGate } from "redux-persist/integration/react";
 
 enableFreeze(true);
 
+installFlushOnExit();
+
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export const unstable_settings = {
-  initialRouteName: "index",
+  anchor: "index",
 };
 
 ErrorUtils.setGlobalHandler((error: Error, isFatal: boolean) => {
@@ -63,12 +67,14 @@ export default Sentry.wrap(function RootLayout() {
 
   // Never get stuck on the splash if fonts fail or hang to load — e.g. on
   // Tauri/web the font asset URLs can resolve differently in the webview.
-  // After a short grace period, proceed anyway (system-font fallback).
+  // After a short grace period, proceed anyway (system-font fallback). Only armed while still
+  // waiting: firing after the fonts loaded would re-render the whole app for nothing.
   const [fontWaitElapsed, setFontWaitElapsed] = useState(false);
   useEffect(() => {
+    if (fontsLoaded || fontError) return;
     const id = setTimeout(() => setFontWaitElapsed(true), 2500);
     return () => clearTimeout(id);
-  }, []);
+  }, [fontsLoaded, fontError]);
 
   // On web/Tauri the native expo splash doesn't exist and the font loader can
   // hang in the WebView (asset URLs resolve differently), so blocking the first
@@ -142,10 +148,11 @@ export default Sentry.wrap(function RootLayout() {
                 <RootSiblingParent>
                   <StatusBar style="light" />
                   <WebToaster />
-                  <WebViewWarmup />
                   <View style={styles.root} onLayout={onLayoutRootView}>
                     <AppBackground style={StyleSheet.absoluteFill} />
-                    <Stack screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
+                    {/* `id={undefined}` is the runtime default; expo-router 58's navigator
+                        types only demand it because strictNullChecks is off. */}
+                    <Stack id={undefined} screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
                       <Stack.Screen name="index" options={{ headerShown: false, animation: "none" }} />
                       <Stack.Screen name="intro" options={{ headerShown: false, animation: "fade" }} />
                       <Stack.Screen name="home" options={{ headerShown: false, animation: "fade" }} />

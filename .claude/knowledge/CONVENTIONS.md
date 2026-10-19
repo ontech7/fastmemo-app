@@ -100,6 +100,33 @@ The standard interactive element is `TouchableOpacity` with `activeOpacity={0.7}
 </TouchableOpacity>
 ```
 
+**Accessibility:** a pressable with no visible text (icon only) MUST have a screen-reader name:
+
+```tsx
+<TouchableOpacity
+  onPress={toggle}
+  accessibilityRole="checkbox" // or "button"
+  accessibilityLabel={t("a11y.delete_item")} // i18n, reuse an existing key when one fits
+  aria-checked={checked} // state: aria-checked / aria-selected / aria-expanded
+>
+```
+
+- The state attribute must be valid for the role (the web exposes it to assistive tech as is): an on/off control is a `checkbox`
+  with `aria-checked` (format toggles, a selectable note card in delete mode, a menu option with a `selected` state); one choice
+  out of a set is a `radio` with `aria-checked` (icon picker, language picker), or a `tab` with `aria-selected` when it switches
+  what's shown (category filter, carousel dots in a `tablist`). Never `aria-selected` on a `button` or `menuitem`. Something
+  that opens/closes a panel is a `button` with `aria-expanded`.
+- A control's name follows what it does now (the FAB is "New note", or "Exit selection" in delete mode).
+- A control that only reacts to `onPressIn` (a drag handle) is `accessible={false}`: a screen reader can't drive it.
+
+- Use `accessibilityRole` (not `role`): native `TouchableOpacity` silently drops `role`.
+- Use `aria-checked`/`aria-selected`/`aria-expanded` for state (not `accessibilityState`): react-native-web ignores
+  `accessibilityState` except `disabled`. `disabled` already maps on both platforms.
+- Content that is only hidden visually (opacity 0, translated off-screen, closed overlays) gets `aria-hidden` while inactive, or
+  screen readers still reach it, and its pressables `focusable={false}`: on web `aria-hidden` doesn't remove them from the
+  keyboard tab order (react-native-web has no `inert`).
+- Generic screen-reader names live under `a11y.*`.
+
 ### SafeAreaView
 
 Always use the project's custom `@/components/SafeAreaView`, not the one from `react-native-safe-area-context` directly.
@@ -107,6 +134,10 @@ Always use the project's custom `@/components/SafeAreaView`, not the one from `r
 ### Icons
 
 All icons come from `react-native-heroicons/outline` (outline variant only). Standard size is 28.
+
+Import each icon by its **deep path**, never from the barrel: `import XIcon from "react-native-heroicons/outline/XIcon"`. Metro
+doesn't tree-shake, so a named import from `react-native-heroicons/outline` evaluates all ~300 icons at startup (~50-80ms per
+barrel, see LL-034).
 
 ---
 
@@ -269,6 +300,23 @@ loading/error state to the user (banners, toasts, status fields). The offline-fi
 
 If observability is needed for a new cloud-sync feature, use Sentry breadcrumbs inside the thunk, not Redux state. See LL-004.
 
+**Queue entries are exclusive per id** (LL-033): `queueCloudAdd` / `queueCloudDelete` drop the id from the opposite queue;
+fulfilled handlers dequeue with `dequeueProcessed` (only if the entry is still the uploaded object, so a newer version queued
+meanwhile survives); fan-out writes to a device doc go through `exclusiveQueueEntry` from `@/libs/firebase`, which drops the id
+from the device's other queues in the same write.
+
+### Note Editor Commits and Persistence
+
+- Editors change notes through `setNoteAsync` from `useNoteEditor`: edits stay in local state and reach Redux in batches
+  (debounce 500ms / max wait 2s on native, 300ms / 1s on web). Never dispatch `addNote` per keystroke (LL-031).
+- Before acting on the **stored** note (delete, detach, make offline, sync, change category, fire a webhook, navigate away
+  programmatically), call `flushNote()` so the action sees the latest edits.
+- `flushOnExit` (installed once in `_layout`) flushes pending batches and `persistor.flush()` when the app leaves the
+  foreground, the page is hidden, or a desktop window closes; edits that arrive while the app is in the background are written
+  at once (JS timers don't run there, LL-032). New editors must register through `useNoteEditor`, not their own timers.
+- Every `PersistConfig` sets `timeout: 0`: a slow read must never rehydrate the empty initial state (LL-029). Notes persist only
+  to their own storage (FS on native, IndexedDB on web), written atomically by `FSStorage` (LL-030).
+
 ### Dispatching Actions
 
 Components use `useDispatch()` from `react-redux`:
@@ -373,7 +421,9 @@ t("ai.feedback.note_created", { title }) -> with interpolation
 
 When adding a new UI string:
 
-1. Add the key to ALL 7 locale files: `en.ts`, `it.ts`, `es.ts`, `fr.ts`, `de.ts`, `zh.ts`, `ja.ts`
+1. Add the key to ALL 7 locale files: `en.ts`, `it.ts`, `es.ts`, `fr.ts`, `de.ts`, `zh.ts`, `ja.ts` (a missing key silently
+   falls back to English: the whole vault UI shipped untranslated in 5 locales that way). Never translate the key name itself
+   (`es` once had `título:` instead of `title:`)
 2. Place it in the correct section (or create a new section if it's a new feature)
 3. Use interpolation for dynamic values: `"Created {{count}} notes"`
 4. Use `useTranslation()` hook in the component: `const { t } = useTranslation();`
@@ -386,6 +436,16 @@ t("trashednotes.countdown", { days: 3, hours: 12, minutes: 30 });
 ```
 
 Note: Pluralization currently uses manual "(s)" pattern rather than i18next's built-in plural system.
+
+A sentence that contains values is **one key** with interpolation, never translated fragments concatenated in code (word order
+differs per language, see LL-035). When part of the sentence is styled, use `<Trans>` with a component placeholder:
+
+```tsx
+// en: progress: "<hl>{{done}}</hl> of {{total}} completed"   zh: progress: "已完成 <hl>{{done}}</hl>/{{total}}"
+<Text style={styles.subtitle}>
+  <Trans t={t} i18nKey="note.progress" values={{ done, total }} components={{ hl: <Text style={styles.count} /> }} />
+</Text>
+```
 
 ---
 
@@ -459,6 +519,12 @@ src/hooks/useNetInfo.web.ts     // web -- polls fetch() + visibilitychange
 ```
 
 Consumers keep writing `import useNetInfo from "@/hooks/useNetInfo"` and Metro/Webpack picks the correct file at bundle time.
+
+### Raw DOM Elements in Web Files
+
+Raw DOM nodes (`<div>` in a `.web.tsx`, e.g. for Embla) don't get react-native-web's `box-sizing: border-box`; set
+`boxSizing: "border-box"` when they're sized with padding. UI that can be resized (web, Tauri windows) reads dimensions with
+`useWindowDimensions()`, never `Dimensions.get()` at module scope (LL-036).
 
 ### Never Import with Explicit Platform Suffix
 
@@ -596,16 +662,20 @@ reads, writes, and deletes.
 10. **Test with Firestore usage monitoring.** During development of cloud-related features, check the Firebase console usage tab
     to verify that operations are within expected ranges.
 
+11. **One `lastSync` write per batch.** `setElementInCloud` / `deleteElementInCloud` bump the device's `lastSync` after every
+    write unless `noUpdateLastSync: true`; batch loops pass it and call `updateLastSyncInCloud()` once at the end (it's only
+    displayed in the devices list, see LL-021).
+
 ### Operation Cost Examples
 
-| User Action                     | Expected Firestore Operations     |
-| ------------------------------- | --------------------------------- |
-| Create a note (synced)          | 1 write (add to cloud)            |
-| Edit a note (synced, debounced) | 1 write (update in cloud)         |
-| Delete a note (synced)          | 1 delete                          |
-| Open app with sync enabled      | 1-2 reads (check pending changes) |
-| Full initial sync (100 notes)   | ~100 reads + ~100 writes          |
-| Wipe all notes from cloud       | N deletes (1 per note)            |
+| User Action                     | Expected Firestore Operations                                                |
+| ------------------------------- | ---------------------------------------------------------------------------- |
+| Create a note (synced)          | 1 write (+1 fan-out write with other devices) + 1 `lastSync` write per batch |
+| Edit a note (synced, debounced) | 1 write (+1 fan-out write with other devices) + 1 `lastSync` write per batch |
+| Delete a note (synced)          | 1 delete                                                                     |
+| Open app with sync enabled      | 1-2 reads (check pending changes)                                            |
+| Full initial sync (100 notes)   | ~100 reads + ~100 writes                                                     |
+| Wipe all notes from cloud       | N deletes (1 per note)                                                       |
 
 ### End-to-End Encryption (per-vault) -- safety rules
 
@@ -692,6 +762,10 @@ hard rules (each maps to a lesson learned):
 | 25  | Never let an errored/empty cloud read drive a destructive write                           | Reads are tri-state (present/absent/error); skip-and-keep-local on doubt, a missed sync self-heals (see LL-023)                  |
 | 26  | Never trust a decrypt that didn't throw                                                   | AES-CBC yields valid-looking garbage on the wrong key; verify the `CONTENT_MAGIC` marker before using output (see LL-024)        |
 | 27  | Never read authoritative cross-device state with cache-eligible `getDoc`/`getDocs`        | Use `getDocFromServer`/`getDocsFromServer`; the Firestore cache serves stale data and survives restarts (see LL-027)             |
+| 28  | Never import icons from the `react-native-heroicons` barrels                              | Each barrel evaluates ~300 icons at startup; use deep imports (see LL-034)                                                       |
+| 29  | Never dispatch a persisted-slice update per keystroke                                     | Every commit re-serializes the whole slice; editors batch through `setNoteAsync` (see LL-031)                                    |
+| 30  | Never rely on a JS timer for work that must finish before the app may be killed           | Android pauses timers in background; flush synchronously (see LL-032)                                                            |
+| 31  | Never concatenate translated fragments into a sentence                                    | Word order differs per language; one interpolated key, `<Trans>` for styled parts (see LL-035)                                   |
 
 ### ALWAYS
 
@@ -711,3 +785,6 @@ hard rules (each maps to a lesson learned):
 | 12  | Always place `/* STYLES */` comment above StyleSheet     | Visual separator convention                                   |
 | 13  | Always make new fields optional with defaults            | Backward compat: old persisted data must load without crashes |
 | 14  | Always estimate Firestore ops for cloud-related features | Document reads/writes/deletes per user action in the PR       |
+| 15  | Always call `flushNote()` before acting on a stored note | Delete/detach/sync/category change must see the latest edits  |
+| 16  | Always set `timeout: 0` on a `PersistConfig`             | A timed-out read rehydrates empty state and wipes storage     |
+| 17  | Always keep sync queue entries exclusive per id          | Latest operation replaces the others (see LL-033)             |

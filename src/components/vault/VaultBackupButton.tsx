@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ArrowDownTrayIcon } from "react-native-heroicons/outline";
+import ArrowDownTrayIcon from "react-native-heroicons/outline/ArrowDownTrayIcon";
 
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import SecretPassphraseDialog from "@/components/dialogs/SecretPassphraseDialog";

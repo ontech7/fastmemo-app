@@ -3,7 +3,14 @@ import { createAction, createAsyncThunk } from "@reduxjs/toolkit";
 import type { Note } from "@/types";
 import type { AppRootState } from "@/slicers/store";
 
-import { COLLECTIONS, deleteCollectionInCloud, deleteElementInCloud, setElementInCloud } from "@/libs/firebase";
+import {
+  COLLECTIONS,
+  deleteCollectionInCloud,
+  deleteElementInCloud,
+  exclusiveQueueEntry,
+  setElementInCloud,
+  updateLastSyncInCloud,
+} from "@/libs/firebase";
 
 /**
  * Pure action that wipes all local notes (live + trash).
@@ -26,6 +33,8 @@ interface CloudSyncParams {
   devicesToSync: string[];
   areMoreThanOneDevice: boolean;
 }
+
+const NOTE_QUEUES = ["addNotes", "deleteNotes", "detachNotes"] as const;
 
 const getTimestampedNote = (note: Note): Note => ({
   ...note,
@@ -53,6 +62,7 @@ const processNotes = async ({
         collection: COLLECTIONS.data.notes,
         identifier: note.id,
         payload,
+        noUpdateLastSync: true,
       });
     } else if (operation === "delete" || operation === "detach") {
       // detach also removes the note from the cloud; the difference is the
@@ -61,6 +71,7 @@ const processNotes = async ({
       primaryDone = await deleteElementInCloud({
         collection: COLLECTIONS.data.notes,
         identifier: note.id,
+        noUpdateLastSync: true,
       });
     }
 
@@ -69,12 +80,11 @@ const processNotes = async ({
         collection: COLLECTIONS.various.connectedDevices,
         identifier: deviceUuid,
         payload: {
-          [`${operation}Notes`]: {
-            [note.id]: payload,
-          },
+          ...exclusiveQueueEntry(NOTE_QUEUES, `${operation}Notes`, note.id, payload),
           devicesToSync,
         },
         merge: true,
+        noUpdateLastSync: true,
       });
     }
 
@@ -82,6 +92,9 @@ const processNotes = async ({
       results[note.id] = note;
     }
   }
+
+  // Once per batch rather than after every write: it's only shown in the devices list.
+  if (Object.keys(results).length > 0) await updateLastSyncInCloud();
 
   return results;
 };

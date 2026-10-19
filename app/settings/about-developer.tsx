@@ -7,8 +7,8 @@ import { openUrl } from "@/utils/openUrl";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ArrowTopRightOnSquareIcon } from "react-native-heroicons/outline";
-import { StarIcon } from "react-native-heroicons/solid";
+import ArrowTopRightOnSquareIcon from "react-native-heroicons/outline/ArrowTopRightOnSquareIcon";
+import StarIcon from "react-native-heroicons/solid/StarIcon";
 
 const DEVELOPER_NAME = "Andrea Losavio";
 const LINKEDIN_URL = "https://www.linkedin.com/in/andrea-losavio/";

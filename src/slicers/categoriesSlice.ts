@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, original } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSelector } from "reselect";
 
@@ -23,6 +23,28 @@ const initialState: CategoriesState = {
   },
 };
 
+type CloudQueue = CategoriesState["cloud"]["items"]["add"];
+
+// An id is in one queue only, the latest operation (LL-033): uploads run before deletions, so a
+// category deleted and then re-created would otherwise be deleted again right after its upload.
+const queueCloudAdd = (state: CategoriesState, category: Category): void => {
+  state.cloud.items.add[category.icon] = category;
+  delete state.cloud.items.delete[category.icon];
+};
+
+const queueCloudDelete = (state: CategoriesState, category: Category): void => {
+  state.cloud.items.delete[category.icon] = category;
+  delete state.cloud.items.add[category.icon];
+};
+
+/** Drops what a cloud batch processed, unless the entry was replaced meanwhile (that one still has to go out). */
+const dequeueProcessed = (queue: CloudQueue, processed: CloudQueue): void => {
+  const base = original(queue);
+  Object.entries(processed).forEach(([id, category]) => {
+    if (base?.[id] === category) delete queue[id];
+  });
+};
+
 const categoriesSlice = createSlice({
   name: "categories",
   initialState,
@@ -39,7 +61,7 @@ const categoriesSlice = createSlice({
       state.items.push(category);
 
       only_if_cloudConnected(() => {
-        state.cloud.items.add[category.icon] = category;
+        queueCloudAdd(state, category);
       });
     },
 
@@ -59,7 +81,7 @@ const categoriesSlice = createSlice({
         if (category.icon !== icon) {
           category.order = order++;
           only_if_cloudConnected(() => {
-            state.cloud.items.add[category.icon] = category;
+            queueCloudAdd(state, category);
           });
           return true;
         }
@@ -67,7 +89,7 @@ const categoriesSlice = createSlice({
       });
 
       only_if_cloudConnected(() => {
-        state.cloud.items.delete[icon] = action.payload;
+        queueCloudDelete(state, action.payload);
       });
     },
 
@@ -79,7 +101,7 @@ const categoriesSlice = createSlice({
       if (!fromSync) {
         only_if_cloudConnected(() => {
           state.items.forEach((category) => {
-            state.cloud.items.add[category.icon] = category;
+            queueCloudAdd(state, category);
           });
         });
       }
@@ -101,11 +123,14 @@ const categoriesSlice = createSlice({
 
       const category = state.items.find((cat) => cat.icon === prevCategory.icon);
       if (category) {
+        const previous = { ...category };
         category.name = nextCategory.name;
         category.icon = nextCategory.icon;
 
         only_if_cloudConnected(() => {
-          state.cloud.items.add[category.icon] = category;
+          // The cloud keys a category by its icon: a new icon is a new document, so the old one goes.
+          if (previous.icon !== category.icon) queueCloudDelete(state, previous);
+          queueCloudAdd(state, category);
         });
       }
     },
@@ -143,14 +168,10 @@ const categoriesSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(addCloudCategoriesAsync.fulfilled, (state, action: PayloadAction<Record<string, Category>>) => {
-        Object.keys(action.payload).forEach((id) => {
-          delete state.cloud.items.add[id];
-        });
+        dequeueProcessed(state.cloud.items.add, action.payload);
       })
       .addCase(deleteCloudCategoriesAsync.fulfilled, (state, action: PayloadAction<Record<string, Category>>) => {
-        Object.keys(action.payload).forEach((id) => {
-          delete state.cloud.items.delete[id];
-        });
+        dequeueProcessed(state.cloud.items.delete, action.payload);
       })
       .addCase(wipeCategories, (state) => {
         state.items = [defaultCategory];

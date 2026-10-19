@@ -15,9 +15,7 @@ export const configs: AppConfigs = {
     bundle: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "com.ontech7.FastMemoApp" : "com.ontech7.fastmemoapptest",
     icon: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "./assets/images/icon.png" : "./assets/images/test/icon.png",
     adaptiveIcon:
-      process.env.EXPO_PUBLIC_ENV !== "DEV"
-        ? "./assets/images/adaptive-icon.png"
-        : "./assets/images/test/adaptive-icon.png",
+      process.env.EXPO_PUBLIC_ENV !== "DEV" ? "./assets/images/adaptive-icon.png" : "./assets/images/test/adaptive-icon.png",
     favicon: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "./assets/images/favicon.png" : "./assets/images/test/favicon.png",
     backgroundColor: "#020e35",
 

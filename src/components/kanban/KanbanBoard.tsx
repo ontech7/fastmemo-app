@@ -13,11 +13,11 @@ import type {
   MouseEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  ScrollView as ScrollViewType,
-  TextInput as TextInputType,
+  ScrollViewInstance,
+  TextInputInstance,
 } from "react-native";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { PlusIcon } from "react-native-heroicons/outline";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { useSelector } from "react-redux";
 import uuid from "react-uuid";
 import KanbanDragOverlay from "./KanbanDragOverlay";
@@ -29,7 +29,7 @@ interface Props {
   setNoteAsync: (note: KanbanNote) => void;
   columnWidth: number;
   snapInterval: number;
-  scrollViewRef: RefObject<ScrollViewType | null>;
+  scrollViewRef: RefObject<ScrollViewInstance | null>;
   /** Card id to autofocus on mount (only set for brand-new notes). */
   initialFocusCardId?: string | null;
 }
@@ -65,7 +65,7 @@ export default function KanbanBoard({
   // still running, so re-focus the seeded first card imperatively once it
   // settles.
   const transitionDone = useScreenTransitionEnd();
-  const cardInputRef = useRef<TextInputType>(null);
+  const cardInputRef = useRef<TextInputInstance>(null);
   const didFocusRef = useRef(false);
 
   useEffect(() => {
@@ -108,8 +108,9 @@ export default function KanbanBoard({
     (event: MouseEvent) => {
       if (!isWeb || isDragging) return;
 
-      // Only start drag on left mouse button
-      if (event.nativeEvent.button !== 0) return;
+      // Only start drag on left mouse button (RN's MouseEvent type omits `button`;
+      // react-native-web forwards the DOM event, which has it)
+      if ((event.nativeEvent as unknown as { button: number }).button !== 0) return;
 
       setIsDraggingScroll(true);
       dragStartX.current = event.nativeEvent.pageX;

@@ -20,7 +20,8 @@
 - Platform-specific code still needed for ~10 file pairs (.web.tsx / .native.tsx)
 - Some libraries require native-side patching (metro.config.js has WebView + Sentry patches)
 
-**Updated (June 2026):** upgraded to Expo SDK 56 / React Native 0.85 (React 19.2). The decision stands; only the baseline versions moved. See `docs/CHANGELOG_MOBILE.md` v3.2.0.
+**Updated (June 2026):** upgraded to Expo SDK 56 / React Native 0.85 (React 19.2). The decision stands; only the baseline
+versions moved. See `docs/CHANGELOG_MOBILE.md` v3.2.0.
 
 ---
 
@@ -78,6 +79,11 @@ broke note visibility on a real device (see LL-003 updated entry and LL-022). Th
 rehydrate path in a way that wasn't captured by the model. Any future attempt must start from an empirical audit of AsyncStorage
 contents on an installed device.
 
+**Update (2026-10-19):** After that audit (see LL-003), the notes are no longer double-persisted: their copy in `persist:root`
+is folded into the notes storage once (`legacyRootNotes.ts`) and `notes` is then blacklisted from the root config. The root
+layer is kept for categories and settings, where the duplication costs a few KB. Removing it entirely is no longer worth the
+migration risk.
+
 ---
 
 ## ADR-004: On-Device AI (llama.rn) over Cloud AI APIs
@@ -121,6 +127,14 @@ costs.
 - WebView adds a layer of indirection and communication overhead
 - Two-way state sync between React Native and CodeMirror requires message passing
 - The editor HTML is base64-encoded into a generated TypeScript file (`codemirror-html.ts`)
+
+**Update (2026-10-19):** Language packs are dynamic `import()`s in `src/editor/codemirror-entry.js`; in the single esbuild IIFE
+they become lazily initialized modules, so opening a code note no longer builds every grammar's parse tables. Language and
+read-only mode are `Compartment`s reconfigured in place (switching no longer rebuilds the view), and `setCode` replaces the
+`EditorState` so undo never crosses into another tab (`{ undoable: true }` for in-document edits such as AI comments). Measured
+on the 419-note emulator dataset, time-to-ready of a code note did not change (~0.4-0.7 s): it is dominated by a fresh WebView
+loading and parsing the ~1 MB inline bundle on every open, which only reusing a live editor document would avoid. The raw-code
+cover keeps the content visible meanwhile (~50 ms after the tap).
 
 ---
 
@@ -275,10 +289,16 @@ Firestore + outbox plumbing from ADR-007.
 
 **Rationale:**
 
-- **Crypto must be synchronous.** Note encryption runs inside Redux reducers (see LL-017), and the queue path is synchronous.
-  WebCrypto is async and absent on native RN; a native AES-GCM module would not run in the Tauri WebView. So we use
-  **`crypto-js`** (pure-JS, identical on iOS/Android/web/Tauri) for PBKDF2-SHA256 + AES, with secure randomness from
-  `@/utils/secureRandom` (OS CSPRNG), never CryptoJS's `Math.random`-backed `WordArray.random`.
+- **Note crypto must be synchronous.** Note encryption runs inside Redux reducers (see LL-017), and the queue path is
+  synchronous. WebCrypto is async and absent on native RN; a native AES-GCM module would not run in the Tauri WebView. So we use
+  **`crypto-js`** (pure-JS, identical on iOS/Android/web/Tauri) for AES, with secure randomness from `@/utils/secureRandom` (OS
+  CSPRNG), never CryptoJS's `Math.random`-backed `WordArray.random`.
+- **The KDF doesn't have to be.** PBKDF2 only runs at setup/unlock/password-change, so it is async and off the JS thread: the
+  local Expo module `modules/fastmemo-crypto` (Kotlin `javax.crypto.Mac` / Swift CommonCrypto, WebCrypto on web/Tauri). Its
+  output must stay byte-identical to `crypto-js` `PBKDF2(password, Hex.parse(salt), SHA256)`, which remains the reference and
+  the fallback: `vault.ts` checks the module against crypto-js once per launch and uses crypto-js when the module is missing (a
+  binary older than the module, under an OTA update), throws, or disagrees. `scripts/vault.test.mjs` checks WebCrypto/crypto-js
+  interop; the Kotlin and Swift code were checked against the same vectors (RFC 7914, unicode, empty password) when written.
 - **Authenticated by a marker, not by the cipher.** AES-CBC is unauthenticated, so a wrong key decrypts to valid-looking garbage
   ~90% of the time without throwing. `CryptNote.encrypt` prepends `CONTENT_MAGIC = "=FMV1=enc="` before AES; `tryDecryptNote`
   requires the marker, making wrong-key / foreign-DEK content reliably detectable so it is **skipped, never stored or
@@ -288,11 +308,13 @@ Firestore + outbox plumbing from ADR-007.
 
 **Trade-offs:**
 
-- Pure-JS PBKDF2 at 100k iters blocks the JS thread ~1-2s on unlock/setup/password-change (acceptable: not per-note, and the UI
-  yields a frame so the spinner paints -- see LL-025/LL-026). Iteration count is stored in the vault doc so it can be raised
-  later without breaking old vaults.
+- PBKDF2 at 100k iters takes ~75ms off the JS thread with the native module (measured on the Android emulator, 2026-10-19). Only
+  the pure-JS fallback blocks the JS thread (~1-2s; the UI yields a frame first so the spinner paints -- LL-025/LL-026).
+  Iteration count is stored in the vault doc so it can be raised later without breaking old vaults.
 - Note **titles** and metadata (id/type/dates/category) remain plaintext for sync keying/ordering; full title encryption is a
-  deferred follow-up.
+  deferred follow-up. Verified 2026-10-19 on a test project: titles, category names, todo `checked` flags and dates are readable
+  in Firestore. Sync keys on ids and timestamps, never on titles, so encrypting them is possible; until then the UI copy ("only
+  you can read your notes, not us and not Google") overstates what is protected.
 - AES-CBC + an app-level marker is weaker than authenticated AES-GCM, chosen deliberately for cross-platform synchronous
   interop; the marker covers the data-loss concern, not tamper-proofing.
 - Lose both password **and** recovery key => data is unrecoverable by design (true E2E).
@@ -300,3 +322,72 @@ Firestore + outbox plumbing from ADR-007.
   gated on.
 
 ---
+
+---
+
+## ADR-013: Batched Editor Commits with Explicit Flush Points
+
+**Status:** Accepted (2026-10-19)  
+**Context:** Every committed edit makes redux-persist serialize and rewrite the whole notes slice (and re-encrypt the note for
+the cloud outbox). Committing per keystroke made typing lag with many notes (LL-031).  
+**Decision:** `useNoteEditor` keeps edits in local state and commits them to Redux in batches: after a pause (500ms native /
+300ms web) and at least every 2s / 1s during continuous typing. Batches are also committed right away on blur, unmount, back,
+before actions on the stored note (`flushNote`), and when the app leaves the foreground, the page is hidden or a desktop window
+closes (`flushOnExit`, which also flushes the persistor).
+
+**Rationale:**
+
+- Persistence and encryption cost becomes proportional to pauses in typing, not to keystrokes
+- One choke point (`registerPendingFlush` / `flushPending`) instead of per-editor lifecycle code
+- Shorter windows on web/Tauri, where serializing is cheaper and a window can close without page events
+
+**Trade-offs:**
+
+- The store lags the editor by up to the debounce: code that reads the stored note must flush first (CONVENTIONS ALWAYS #15)
+- On Android, JS timers stop in background, so background edits are written synchronously (LL-032)
+- Tauri v1's native Quit (Cmd+Q, Dock) terminates without `onCloseRequested`; the last sub-second batch can be lost there until
+  the app handles the exit itself (custom Quit menu item or Tauri 2's `ExitRequested`)
+
+---
+
+## ADR-014: OTA Updates (EAS Update) for Android, Counted on Top of the Store Version
+
+**Status:** Accepted (2026-10-19). The v3.2.0 store build predates it: OTAs start with the first production build that embeds
+the `production` channel and the fingerprint runtime.  
+**Context:** A JS-only bug fix had to wait for a full Play Store review. EAS Update can ship JS/asset changes to installed apps,
+but an update only reaches builds with the same runtime version, and the app `version` is the binary's: an update can't change
+it.  
+**Decision:**
+
+- `runtimeVersion: { policy: "fingerprint" }`: the runtime is a hash of the native inputs (app config, autolinked native
+  dependencies, `modules/`), so it changes exactly when a store build is needed.
+- OTAs are published only by the manual **Publish OTA** GitHub workflow (`.github/workflows/publish-ota.yml`, from `main`). It
+  runs tsc/lint/i18n/vault tests, then `scripts/ota-guard.sh` (also `yarn ota:check` locally): the current Android fingerprint
+  must match a finished build on the `production` channel **of the same app version**, or the code has native changes (or a new
+  version) and the run fails instead of publishing an update no installed app can receive. The version is checked on its own:
+  the default fingerprint preset leaves `version`/`versionCode` out of the hash, so after a bump with no native change an OTA
+  would otherwise reach the previous version's builds, labelled with the new version.
+- Each OTA is tagged `vX.Y.Z+ota.N` (N-th OTA on top of store version X.Y.Z, restarting at 1 on a store release) with a GitHub
+  Release created `--latest=false`, and N is inlined as `EXPO_PUBLIC_OTA_REVISION`: the app shows "X.Y.Z · OTA N" in Information
+  and sends it with bug reports (`getDisplayAppVersion`).
+
+**Rationale:**
+
+- Manual dispatch keeps a human decision in front of every update that hits all users (same model as the Quido apps).
+- The revision lives in the JS bundle, not in `app.config.ts` `extra`: the app config is a fingerprint input, so a per-OTA value
+  there would give every update its own runtime and orphan it. `eas update` passes the shell environment to the export (EAS
+  environment variables win on conflict; `.env` files are ignored with `--environment`).
+- `--latest=false` keeps `releases/latest` on the store/desktop release: the website version API and the Tauri updater read it.
+- eas-cli is pinned (workflow + guard): the guard depends on its flags and `--json` output. `EXPO_TOKEN` reaches only the guard
+  and publish steps, not the dependency install or the checks.
+
+**Trade-offs:**
+
+- Updates apply on the launch after the one that downloads them (default `fallbackToCacheTimeout: 0`): fast startup, one launch
+  of delay.
+- Android only: the iOS app isn't distributed through this flow.
+- `app.config.ts` is dynamic, so `eas update:configure` can't write it: `updates.url`, `runtimeVersion` and the `eas.json`
+  channels (named after the profiles) were added by hand from its output, with `fingerprint` instead of its default `appVersion`
+  policy (which would let an update reach a build with different native code).
+- Local and EAS fingerprints are assumed equal (the gitignored `android/` is already excluded as `bareNativeDir`); the guard
+  surfaces any divergence as a failed run, never as an orphaned update.

@@ -12,7 +12,7 @@ import i18n from "i18next";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ArrowPathIcon } from "react-native-heroicons/outline";
+import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
 import { useDispatch } from "react-redux";
 import CodeInput from "@/components/inputs/CodeInput";
 import { setSecretCode } from "@/slicers/settingsSlice";
@@ -102,7 +102,12 @@ export default function SetupSecretCodeScreen() {
 
         <Text style={styles.headerTitle}>{t("setupcode.title")}</Text>
 
-        <TouchableOpacity activeOpacity={0.7} onPress={redoInsert}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={redoInsert}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.start_over")}
+        >
           <IconChip>
             <ArrowPathIcon size={20} color={COLOR.softWhite} />
           </IconChip>

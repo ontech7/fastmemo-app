@@ -18,9 +18,18 @@ import { isStringEmpty } from "@/utils/string";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Platform,
+  ScrollView,
+  type ScrollViewInstance,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PlusIcon } from "react-native-heroicons/outline";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSelector } from "react-redux";
 import uuid from "react-uuid";
@@ -43,7 +52,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
 
   const aiSettings = useSelector(selectorAIAssistant);
 
-  const tabScrollRef = useRef<ScrollView>(null);
+  const tabScrollRef = useRef<ScrollViewInstance>(null);
   const editorRef = useRef<CodeEditorWebViewRef>(null);
 
   // The CodeMirror WebView mounts immediately (never gated behind an idle timer)
@@ -85,7 +94,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: CodeNote) => ({ tabs: n.tabs, activeTabId: n.activeTabId }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
+  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
     initialNote: memoInitialNote,
     defaultType: "code",
     addWebhookSelector: selectorWebhook_addCodeNote,
@@ -219,7 +228,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   maxLength={96}
                 />
               </View>
-              <NoteSettingsButton note={note} setNote={setNoteAsync} />
+              <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
           </View>
 
@@ -250,7 +259,13 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   />
                 ))}
                 {note.tabs.length < MAX_TABS && !note.readOnly && (
-                  <TouchableOpacity style={styles.addTabButton} onPress={addTab} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    style={styles.addTabButton}
+                    onPress={addTab}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("code.add_tab")}
+                    activeOpacity={0.7}
+                  >
                     <PlusIcon size={16} color={COLOR.textSecondary} />
                   </TouchableOpacity>
                 )}
@@ -308,7 +323,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                       tab.id === note.activeTabId ? { ...tab, code: commentedCode } : tab
                     );
                     setNoteAsync({ ...note, tabs: updatedTabs });
-                    editorRef.current?.setCode(commentedCode);
+                    editorRef.current?.setCode(commentedCode, { undoable: true });
                   }}
                   style={dockButtonStyle}
                   menuBottomOffset={110}

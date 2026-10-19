@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ElementRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
-import { ArrowsRightLeftIcon, ArrowsUpDownIcon, ListBulletIcon } from "react-native-heroicons/outline";
+import ArrowsRightLeftIcon from "react-native-heroicons/outline/ArrowsRightLeftIcon";
+import ArrowsUpDownIcon from "react-native-heroicons/outline/ArrowsUpDownIcon";
+import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
 import Animated, {
   Easing,
   Extrapolation,
@@ -71,7 +73,7 @@ function AnimatedMenuItem({ option, index, totalItems, menuProgress, label, onPr
 
   return (
     <Animated.View style={animatedStyle}>
-      <TouchableOpacity style={styles.optionButton} activeOpacity={0.7} onPress={onPress}>
+      <TouchableOpacity style={styles.optionButton} activeOpacity={0.7} onPress={onPress} accessibilityRole="button">
         <View style={styles.optionIconContainer}>
           <Icon size={24} color={COLOR.softWhite} />
         </View>
@@ -148,7 +150,15 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
       </Modal>
 
       <View style={[styles.fabGroup, !style && { bottom: insets.bottom + 38 }, style, { pointerEvents: "box-none" }]}>
-        <TouchableOpacity ref={triggerRef} style={styles.fab} activeOpacity={0.7} onPress={toggleOverlay}>
+        <TouchableOpacity
+          ref={triggerRef}
+          style={styles.fab}
+          activeOpacity={0.7}
+          onPress={toggleOverlay}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.list_mode")}
+          aria-expanded={isOpen}
+        >
           <ArrowsRightLeftIcon size={24} color={COLOR.softWhite} />
         </TouchableOpacity>
       </View>

@@ -1,6 +1,7 @@
 import { memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { BackspaceIcon } from "react-native-heroicons/outline";
+import BackspaceIcon from "react-native-heroicons/outline/BackspaceIcon";
 
 import { BORDER, COLOR, FONT, GLASS, SIZE } from "@/constants/styles";
 
@@ -31,6 +32,7 @@ const NumberKey = memo(function NumberKey({
         style={({ pressed }) => [styles.keyboard_input, pressed && styles.keyboard_input_pressed]}
         onPress={handlePress}
         disabled={disabled}
+        accessibilityRole="button"
       >
         <Text style={styles.keyboard_text}>{value}</Text>
       </Pressable>
@@ -39,9 +41,13 @@ const NumberKey = memo(function NumberKey({
 });
 
 const BackspaceKey = memo(function BackspaceKey({ onPress, disabled }: { onPress: () => void; disabled: boolean }) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.keyboard_input_wrapper}>
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t("a11y.delete_digit")}
         style={({ pressed }) => [styles.keyboard_input, pressed && styles.keyboard_input_pressed]}
         onPress={onPress}
         disabled={disabled}

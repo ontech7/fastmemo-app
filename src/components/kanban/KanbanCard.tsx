@@ -2,9 +2,10 @@ import DragIcon from "@/components/icons/DragIcon";
 import Haptics from "@/libs/haptics";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useRef, useState, type RefObject } from "react";
-import { Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Platform, StyleSheet, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { TrashIcon } from "react-native-heroicons/outline";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import Animated, { runOnJS, useAnimatedStyle } from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
@@ -21,10 +22,12 @@ interface Props {
   // Forwarded to the card's text input so the board can focus it imperatively
   // once the screen transition settles (mount-time autoFocus alone is dropped
   // mid-transition on native).
-  inputRef?: RefObject<TextInput | null>;
+  inputRef?: RefObject<TextInputInstance | null>;
 }
 
 export default function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, inputRef }: Props) {
+  const { t } = useTranslation();
+
   const [height, setHeight] = useState(40);
 
   const { startDrag, updateDragPosition, endDrag, isDragging, draggedItem } = useKanbanDrag();
@@ -119,6 +122,8 @@ export default function KanbanCard({ item, columnId, setText, deleteItem, disabl
           disabled={disabled}
           style={styles.deleteButton}
           onPress={() => deleteItem(item.id)}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.delete_item")}
         >
           <View style={styles.deleteChip}>
             <TrashIcon size={16} color={COLOR.textMuted} />

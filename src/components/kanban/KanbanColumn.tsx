@@ -2,8 +2,11 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MAR
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
+import { ScrollView, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
+import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
+import ChevronRightIcon from "react-native-heroicons/outline/ChevronRightIcon";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import KanbanCard from "./KanbanCard";
 
 import type { KanbanColumn as KanbanColumnType } from "@/types";
@@ -22,7 +25,7 @@ interface Props {
   moveColumn: (columnId: string, direction: "left" | "right") => void;
   disabled: boolean;
   autoFocusCardId?: string | null;
-  autoFocusCardInputRef?: RefObject<TextInput | null>;
+  autoFocusCardInputRef?: RefObject<TextInputInstance | null>;
 }
 
 export default function KanbanColumn({
@@ -70,6 +73,8 @@ export default function KanbanColumn({
           activeOpacity={0.7}
           disabled={disabled}
           onPress={cycleColor}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.change_column_color")}
           style={[styles.colorIndicator, { backgroundColor: column.color }]}
         />
 
@@ -88,6 +93,8 @@ export default function KanbanColumn({
           activeOpacity={0.7}
           disabled={disabled || columnIndex === 0}
           onPress={() => moveColumn(column.id, "left")}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.move_column_left")}
           style={styles.headerButton}
         >
           <ChevronLeftIcon size={18} color={!disabled && columnIndex > 0 ? COLOR.textPrimary : COLOR.textMuted} />
@@ -97,6 +104,8 @@ export default function KanbanColumn({
           activeOpacity={0.7}
           disabled={disabled || columnIndex === totalColumns - 1}
           onPress={() => moveColumn(column.id, "right")}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.move_column_right")}
           style={[styles.headerButton, { marginRight: PADDING_MARGIN.md }]}
         >
           <ChevronRightIcon
@@ -109,6 +118,8 @@ export default function KanbanColumn({
           activeOpacity={0.7}
           disabled={disabled}
           onPress={() => deleteColumn(column.id)}
+          accessibilityRole="button"
+          accessibilityLabel={t("kanban.delete_column")}
           style={styles.headerButton}
         >
           <TrashIcon size={18} color={COLOR.textSecondary} />

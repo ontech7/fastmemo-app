@@ -1,16 +1,21 @@
+import { useTranslation } from "react-i18next";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { RectangleGroupIcon } from "react-native-heroicons/outline";
+import RectangleGroupIcon from "react-native-heroicons/outline/RectangleGroupIcon";
 
 import { useRouter } from "@/hooks/useRouter";
 
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 export default function ReorganizeButton() {
+  const { t } = useTranslation();
+
   const router = useRouter();
 
   return (
     <View style={styles.container}>
       <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={t("a11y.organize_categories")}
         style={styles.button}
         activeOpacity={0.7}
         onPress={() => {

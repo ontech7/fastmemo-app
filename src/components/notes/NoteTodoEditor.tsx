@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import {
   Keyboard,
   Platform,
   StyleSheet,
   Text,
   TextInput,
+  type TextInputInstance,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
 import DraggableFlatList from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PlusIcon } from "react-native-heroicons/outline";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import uuid from "react-uuid";
 
@@ -61,7 +62,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
+  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
     defaultType: "todo",
     addWebhookSelector: selectorWebhook_addTodoNote,
@@ -146,7 +147,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   // Mount-time autoFocus is frequently dropped while the screen transition is
   // still running, so re-focus the seeded row imperatively once it settles.
   const transitionDone = useScreenTransitionEnd();
-  const focusInputRef = useRef<TextInput>(null);
+  const focusInputRef = useRef<TextInputInstance>(null);
   const didFocusRef = useRef(false);
 
   useEffect(() => {
@@ -261,20 +262,21 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                 maxLength={96}
               />
 
-              <NoteSettingsButton note={note} setNote={setNoteAsync} />
+              <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
 
             <View style={styles.subtitleWrapper}>
               <Text style={[styles.subtitle, { flexGrow: 1 }]}>
-                {t("note.completed")}{" "}
-                <Text
-                  style={{
-                    color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon,
+                <Trans
+                  t={t}
+                  i18nKey="note.progress"
+                  values={{ done: numberOfCheckedItems, total: numberOfAllItems }}
+                  components={{
+                    hl: (
+                      <Text style={{ color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon }} />
+                    ),
                   }}
-                >
-                  {numberOfCheckedItems}
-                </Text>{" "}
-                {t("note.on")} {numberOfAllItems}
+                />
               </Text>
             </View>
           </View>
@@ -365,7 +367,13 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                 />
               </View>
 
-              <TouchableOpacity activeOpacity={0.7} style={styles.addButton} onPress={addListItem}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.addButton}
+                onPress={addListItem}
+                accessibilityRole="button"
+                accessibilityLabel={t("a11y.add_item")}
+              >
                 <PlusIcon size={28} color={COLOR.softWhite} />
               </TouchableOpacity>
             </EditorActionDock>

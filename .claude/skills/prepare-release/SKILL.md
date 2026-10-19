@@ -1,9 +1,10 @@
 ---
 name: prepare-release
 description:
-  "Prepare a FastMemo release: bump versions and write the changelogs + translations. Use whenever the user wants to cut/prepare
-  a release, bump the app/desktop version, or update changelogs for a new version. Triggers on: release, prepara la release,
-  prepare the release, bump version, version bump, new version, changelog, aggiorna i changelog, 3.2.0, 1.2.0."
+  "Prepare a FastMemo release: bump versions and write the changelogs + translations, or ship an OTA update between releases.
+  Use whenever the user wants to cut/prepare a release, bump the app/desktop version, or update changelogs for a new version.
+  Triggers on: release, prepara la release, prepare the release, bump version, version bump, new version, changelog, aggiorna i
+  changelog, 3.2.0, 1.2.0, OTA, OTA update, eas update, hotfix."
 metadata:
   origin: extracted from the (removed) github-issue-workflow release section + the v3.2.0 / v1.2.0 release
 ---
@@ -150,10 +151,26 @@ Skip this step for a pure feature/fix release that didn't move files or bump the
 ```bash
 npx tsc --noEmit                 # locale .ts + changelog.tsx must still type-check
 npx prettier --check "src/libs/i18n/locales/*.ts" app/changelog.tsx
+node scripts/i18n.test.mjs       # every locale has exactly the keys of en.ts
 ```
 
-Grep that every new `description_X_Y_Z` key exists in all 7 locales and is referenced in `changelog.tsx`. A missing locale key
-renders as the raw key in-app.
+Check that every new `description_X_Y_Z` key is referenced in `changelog.tsx`. A key missing from a locale silently renders in
+English (missing from `en` too: the raw key).
+
+---
+
+## Between releases: OTA updates (mobile, Android)
+
+A JS-only fix can reach installed apps without a store release (ADR-014). It is **not** a release: no version bump, no changelog
+entry, no README badge.
+
+1. Merge the fix to `main`, then `yarn ota:check`: it must say a production build has the current fingerprint. If it fails the
+   change is native (new native dependency, config plugin, permission, native field in `app.config.ts`, `modules/`): do a store
+   release instead.
+2. Publish with the **Publish OTA** workflow (Actions tab, from `main`) or
+   `gh workflow run publish-ota.yml --ref main -f message="<what it fixes>"`. Publishing to production needs the user's explicit
+   go-ahead.
+3. The run tags it `vX.Y.Z+ota.N` and the app shows "X.Y.Z · OTA N". The next store release (new X.Y.Z) restarts N at 1.
 
 ---
 

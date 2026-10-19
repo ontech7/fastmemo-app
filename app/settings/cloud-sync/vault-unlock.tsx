@@ -39,7 +39,7 @@ export default function VaultUnlockScreen() {
 
     setError(null);
     setLoading(true);
-    await yieldToUI(); // paint the spinner before the synchronous PBKDF2 freeze
+    await yieldToUI(); // paint the spinner first: the key derivation freezes the JS thread on the pure-JS fallback
 
     try {
       const ok = await unlockWithPassphrase(projectId!, passphrase);
@@ -68,7 +68,18 @@ export default function VaultUnlockScreen() {
         progress={progress}
       />
 
-      <VaultScreen title={t("cloudsync.vault.unlock_title")}>
+      <VaultScreen
+        title={t("cloudsync.vault.unlock_title")}
+        footer={
+          <>
+            <VaultButton label={t("cloudsync.vault.unlock_action")} onPress={submit} disabled={loading} />
+            <VaultLink
+              label={t("cloudsync.vault.forgot_passphrase")}
+              onPress={() => router.replace({ pathname: "/settings/cloud-sync/vault-recover", params: { projectId } })}
+            />
+          </>
+        }
+      >
         <VaultDescription>{t("cloudsync.vault.unlock_desc")}</VaultDescription>
 
         <VaultInput
@@ -76,19 +87,13 @@ export default function VaultUnlockScreen() {
           placeholder={t("cloudsync.vault.passphrase_placeholder")}
           value={passphrase}
           onChangeText={setPassphrase}
+          returnKeyType="done"
           onSubmitEditing={submit}
         />
 
         <VaultError message={error} />
 
         <VaultBackupButton />
-
-        <VaultButton label={t("cloudsync.vault.unlock_action")} onPress={submit} disabled={loading} />
-
-        <VaultLink
-          label={t("cloudsync.vault.forgot_passphrase")}
-          onPress={() => router.replace({ pathname: "/settings/cloud-sync/vault-recover", params: { projectId } })}
-        />
       </VaultScreen>
     </>
   );

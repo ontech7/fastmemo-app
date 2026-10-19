@@ -70,3 +70,22 @@ export function retrieveVaultRecoveryKey(): string | null {
   if (key) registry.delete("vaultRecoveryKey");
   return key;
 }
+
+/* PENDING WRITES */
+
+const pendingFlushes = new Set<() => void>();
+
+/**
+ * Work that must be committed before the app goes to the background or is closed, e.g. a note
+ * editor's batch of not yet committed edits (see `flushOnExit`). Returns the unregister function.
+ */
+export function registerPendingFlush(flush: () => void): () => void {
+  pendingFlushes.add(flush);
+  return () => {
+    pendingFlushes.delete(flush);
+  };
+}
+
+export function flushPending(): void {
+  pendingFlushes.forEach((flush) => flush());
+}

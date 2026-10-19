@@ -68,7 +68,7 @@ src/
     # Standalone: CategoryIcon, LoadingSpinner, SafeAreaView, Sidebar, VirtualNumberKeyboard
 
   slicers/             # Redux state management
-    store.ts           # Store configuration (double-persist, typed hooks)
+    store.ts           # Store configuration (nested persist, notes JSON reuse, legacy fold, typed hooks)
     notesSlice.ts      # Notes state: CRUD, trash, filters, cloud sync queue (27 reducers)
     categoriesSlice.ts # Categories state: CRUD, reorder, cloud sync queue (9 reducers)
     settingsSlice.ts   # App settings: language, security, cloud, AI, dev mode (12 reducers)
@@ -105,9 +105,11 @@ src/
       index.web.ts     # No-op stubs for web
     haptics/           # Platform-split: native (expo-haptics) / web (no-op stubs)
     i18n/              # i18next setup + 7 locale files
-    storage/           # Platform-split: native (fs-storage) / web (localforage/IndexedDB)
+    storage/           # Platform-split: native (fsStorage: atomic tmp+rename writes) / web (localforage/IndexedDB)
+                       #   + legacyRootNotes.ts: one-shot fold of the notes copy out of `persist:root`
+    flushOnExit.ts     # Platform-split: flush pending editor batches + persistor on background / hide / window close
     firebase.ts        # Firestore CRUD, device management, handshake, cloud sync, vault doc CRUD
-    registry.ts        # In-memory Map for passing non-serializable data between screens (+ vault continuation / recovery-key transport)
+    registry.ts        # In-memory Map for passing non-serializable data between screens (+ vault continuation / recovery-key transport, pending editor flushes)
     localization.ts    # Locale detection wrapper (expo-localization + web fallback)
     secureStore.ts     # Platform-split (.web.ts): expo-secure-store / localforage key-value
     vaultSession.ts    # In-memory DEK + pub/sub; persist/load/wipe via secureStore (namespaced by projectId)
@@ -218,13 +220,14 @@ Firestore write succeeds (retry — see thunks/notes.ts).
 ### Persistence Architecture
 
 ```
-Redux Persist (double-layer -- see DECISIONS.md)
-================================================
+Redux Persist (nested -- see DECISIONS.md ADR-003)
+==================================================
 
-Root persistReducer (key: "root")
+Root persistReducer (key: "root", AsyncStorage)      blacklist ["notes"] once the legacy copy is folded
   |
   +-- notesSlice persistReducer (key: "root_notes")
-  |     Storage: FSStorage (expo-fs-storage / IndexedDB on web)
+  |     Storage: FSStorage (files/reduxPersist/, atomic .tmp + rename) / IndexedDB on web
+  |     serialize/deserialize reuse the JSON the state was rehydrated from (no rewrite after boot)
   |     Migration: legacy AsyncStorage -> FSStorage
   |
   +-- categoriesSlice persistReducer (key: "root_categories")
@@ -232,7 +235,17 @@ Root persistReducer (key: "root")
   |
   +-- settingsSlice persistReducer (key: "root_settings")
         Storage: AsyncStorage
+
+All configs: timeout 0 (never rehydrate empty state on a slow read, LL-029).
 ```
+
+Boot order (`store.ts`): `persistStore(store, { manualPersist: true })`, then `foldLegacyRootNotes(notesStorage)` merges the old
+notes copy from `persist:root` into the notes storage (backup under `backup:root-notes`, marker `fastmemo:root-notes-folded`),
+and only then `persistor.persist()`. If the fold can't finish, notes keep persisting in the root blob for that session.
+
+Edits reach the store in batches (`useNoteEditor`: debounce 500ms / max 2s native, 300ms / 1s web). Pending batches register in
+`registry.ts`; `flushOnExit` (installed in `_layout`) flushes them plus `persistor.flush()` on AppState background, page hide, or
+Tauri `onCloseRequested`.
 
 ### Screen Navigation Flow
 
@@ -274,6 +287,7 @@ I18nextProvider
         Redux Provider
           PersistGate
             SyncOnProvider (headless, returns null)
+            (WebViewWarmup is rendered by home, 1s after mount + idle -- not here: it competed with first paint)
             RootSiblingParent (toast overlays)
               StatusBar
               WebToaster (web only, conditional require)

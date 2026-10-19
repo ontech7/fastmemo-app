@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { CheckCircleIcon } from "react-native-heroicons/solid";
+import CheckCircleIcon from "react-native-heroicons/solid/CheckCircleIcon";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 

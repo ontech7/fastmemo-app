@@ -22,7 +22,7 @@ const it = {
 
       description_1_1_1: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
 • Riconoscimento vocale 2.0: dettatura vocale migliorata con pulizia automatica tramite AI.
-• L'Assistente AI ora puo' suggerire una categoria a partire dal titolo della nota.
+• L'Assistente AI ora può suggerire una categoria a partire dal titolo della nota.
 • Aggiunti annulla/ripeti e barrato nell'editor di testo.
 • Lo sblocco desktop ora supporta Touch ID e Windows Hello.
 • Fix varie.`,
@@ -31,7 +31,7 @@ const it = {
 • Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.
 • Onboarding ridisegnato con nuovi step introduttivi.
 • Aggiunte impostazioni di creazione nota per personalizzare i valori predefiniti.
-• Aggiunta modalita' a step per le note To-Do.
+• Aggiunta modalità a step per le note To-Do.
 • Fix varie.`,
 
       description_0_3_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
@@ -39,7 +39,7 @@ const it = {
 • Aggiunta esportazione note.
 • Fix varie.`,
 
-      description_0_2_0: `• Aggiunta possibilita' di spostare le colonne kanban.
+      description_0_2_0: `• Aggiunta possibilità di spostare le colonne kanban.
 • Migliorate animazioni.
 • Fix varie.`,
 
@@ -57,14 +57,14 @@ const it = {
 
       description_3_1_1: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
 • Riconoscimento vocale 2.0: dettatura vocale migliorata con pulizia automatica tramite AI.
-• L'Assistente AI ora puo' suggerire una categoria a partire dal titolo della nota.
+• L'Assistente AI ora può suggerire una categoria a partire dal titolo della nota.
 • Aggiunti annulla/ripeti e barrato nell'editor di testo.
 • Fix varie.`,
 
       description_3_0_0: `• Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.
 • Onboarding ridisegnato con nuovi step introduttivi.
 • Aggiunte impostazioni di creazione nota per personalizzare i valori predefiniti.
-• Aggiunta modalita' a step per le note To-Do.
+• Aggiunta modalità a step per le note To-Do.
 • Rinnovate icona dell'app e schermata di avvio.
 • Fix varie.`,
 
@@ -74,8 +74,8 @@ const it = {
 • Aggiunta esportazione note.
 • Fix varie.`,
 
-      description_2_8_0: `• Aggiunta AI Assistant self-hosted nel cellulare (Qwen 2.5) con funzionalita' smart per le note. Configuralo in Impostazioni -> Assistente AI.
-• Aggiunta possibilita' di spostare le colonne kanban.
+      description_2_8_0: `• Aggiunta AI Assistant self-hosted nel cellulare (Qwen 2.5) con funzionalità smart per le note. Configuralo in Impostazioni -> Assistente AI.
+• Aggiunta possibilità di spostare le colonne kanban.
 • Migliorate animazioni.
 • Fix varie.`,
 
@@ -190,8 +190,7 @@ const it = {
     description_placeholder: "Scrivi qualcosa qui…",
     no_items: "Non sono presenti elementi.\nAggiungine uno premendo il tasto in basso a destra.",
     characters: "caratteri",
-    completed: "completati",
-    on: "su",
+    progress: "<hl>{{done}}</hl> su {{total}} completati",
     mode_free: "Lista",
     mode_steps: "Step",
     ongoing: "In corso",
@@ -478,11 +477,11 @@ const it = {
     download_model: "Scarica modello",
     cancel: "Annulla",
     delete_model: "Elimina modello",
-    info: "L'assistente AI funziona interamente sul tuo dispositivo. Nessun dato viene inviato a server esterni. Il modello deve essere scaricato una volta (~400 MB) e verra' salvato localmente.",
-    model_light: "Veloce, qualita' base. 3GB+ RAM richiesti.",
-    model_powerful: "Buon equilibrio tra velocita' e qualita'. 4GB+ RAM richiesti.",
-    model_advanced: "Alta qualita'. 6GB+ RAM richiesti.",
-    model_pro: "Qualita' massima, vicino a un desktop. 8GB+ RAM richiesti.",
+    info: "L'assistente AI funziona interamente sul tuo dispositivo. Nessun dato viene inviato a server esterni. Il modello deve essere scaricato una volta (~400 MB) e verrà salvato localmente.",
+    model_light: "Veloce, qualità base. 3GB+ RAM richiesti.",
+    model_powerful: "Buon equilibrio tra velocità e qualità. 4GB+ RAM richiesti.",
+    model_advanced: "Alta qualità. 6GB+ RAM richiesti.",
+    model_pro: "Qualità massima, vicino a un desktop. 8GB+ RAM richiesti.",
     model_unavailable: "RAM insufficiente su questo dispositivo",
     capabilities_title: "Cosa posso fare?",
     cap: {
@@ -497,7 +496,7 @@ const it = {
       explain_code: "Spiega cosa fa il codice",
       add_comments: "Aggiungi commenti inline al codice",
     },
-    unavailable_web: "L'Assistente AI e' disponibile solo su dispositivi mobili.",
+    unavailable_web: "L'Assistente AI è disponibile solo su dispositivi mobili.",
     native_rebuild_needed: "L'Assistente AI richiede una rebuild nativa.\nEsegui: npx expo run:android",
     voice_only: "Solo voce",
     voice_only_hint: "Interagisci con l'assistente usando solo la voce",
@@ -519,16 +518,16 @@ const it = {
       category_switched: 'Passato a "{{name}}"',
       no_notes_found: "Nessuna nota trovata",
       category_not_found: "Categoria non trovata",
-      not_todo_note: "Quella nota non e' una lista",
-      category_exists: "La categoria esiste gia'",
+      not_todo_note: "Quella nota non è una lista",
+      category_exists: "La categoria esiste già",
       note_converted: 'Nota "{{title}}" convertita',
       notes_merged: 'Note unite in "{{title}}"',
       setting_changed: "Impostazione aggiornata",
       help_message:
         'Posso creare note, liste e board, eliminare, rinominare, convertire e unire note, e altro.\nProva: "Fammi una lista della spesa con latte e pane"\nVedi tutto in Impostazioni > Assistente AI.',
-      same_type: "La nota e' gia' di quel tipo",
+      same_type: "La nota è già di quel tipo",
       not_understood: "Posso solo aiutarti con le note",
-      error: "Qualcosa e' andato storto, riprova",
+      error: "Qualcosa è andato storto, riprova",
       voice_unavailable: "Voce non disponibile",
     },
     editor: {
@@ -545,6 +544,7 @@ const it = {
       before: "Prima",
       after: "Dopo",
       apply: "Applica",
+      content_changed: "La nota è cambiata mentre l'AI lavorava: riprova.",
       no_content: "Scrivi qualcosa prima",
       no_category_match: "Nessuna categoria corrispondente",
       error: "Impossibile generare, riprova",
@@ -882,7 +882,7 @@ const it = {
       text_2_0: "Per configurarlo, vai in Impostazioni -> Assistente AI, scegli un modello e scaricalo.",
       text_3_0:
         "Una volta attivato, un bottone a forma di stella appare dentro ogni editor. Toccalo per accedere ad azioni smart come: genera titolo, riassumi, continua a scrivere, formatta testo, suggerisci elementi checklist o suggerisci categoria.",
-      text_4_0: "L'AI funziona offline e supporta piu' lingue.",
+      text_4_0: "L'AI funziona offline e supporta più lingue.",
     },
   },
   report: {
@@ -946,6 +946,64 @@ const it = {
     generic_success_description: "L'operazione è andata a buon fine.",
   },
 
+  a11y: {
+    back: "Indietro",
+    close: "Chiudi",
+    save: "Salva",
+    edit: "Modifica",
+    discard_changes: "Annulla modifiche",
+    previous: "Precedente",
+    next: "Successivo",
+    previous_match: "Risultato precedente",
+    next_match: "Risultato successivo",
+    sync_device: "Sincronizza questo dispositivo",
+    remove_device: "Rimuovi dispositivo",
+    remove_attachment: "Rimuovi allegato",
+    start_over: "Ricomincia",
+    delete_digit: "Cancella cifra",
+    new_note: "Nuova nota",
+    exit_selection: "Esci dalla selezione",
+    note_types: "Scegli il tipo di nota",
+    organize_categories: "Organizza categorie",
+    delete_category: "Elimina categoria",
+    dictate: "Detta",
+    start_listening: "Avvia ascolto",
+    stop_listening: "Interrompi ascolto",
+    clear_search: "Cancella ricerca",
+    delete_item: "Elimina elemento",
+    change_column_color: "Cambia colore colonna",
+    move_column_left: "Sposta colonna a sinistra",
+    move_column_right: "Sposta colonna a destra",
+    search_in_note: "Cerca nella nota",
+    add_item: "Aggiungi elemento",
+    open_full_note: "Apri come nota completa",
+    save_note: "Salva nota",
+    list_mode: "Modalità lista",
+    more_options: "Altre opzioni",
+    sort_filter: "Ordina e filtra",
+    hide_keyboard: "Nascondi tastiera",
+    open_guide: "Apri la guida",
+    page: "Pagina {{page}}",
+    item: "Elemento",
+    format: {
+      undo: "Annulla",
+      redo: "Ripeti",
+      image: "Inserisci immagine",
+      heading: "Titolo",
+      bold: "Grassetto",
+      italic: "Corsivo",
+      strikethrough: "Barrato",
+      underline: "Sottolineato",
+      align_left: "Allinea a sinistra",
+      align_center: "Centra",
+      subscript: "Pedice",
+      superscript: "Apice",
+      bullet_list: "Elenco puntato",
+      numbered_list: "Elenco numerato",
+      code: "Codice",
+    },
+  },
+
   /* generic */
   All: "Tutte",
   delete_and_move: "Elimina e Sposta",
@@ -983,9 +1041,9 @@ const it = {
   noInternetConnection: "Nessuna connessione a internet",
   devicesLimitReached: "Limite dispositivi superato",
   noteLimitReached: "Limite nota raggiunto",
-  developerModeActivated: "Modalita' sviluppatore attivata!",
-  developerModeAlready: "La modalita' sviluppatore e' gia' attiva",
-  developerModeTaps: "{{remaining}} tap per attivare la modalita' sviluppatore",
+  developerModeActivated: "Modalità sviluppatore attivata!",
+  developerModeAlready: "La modalità sviluppatore è già attiva",
+  developerModeTaps: "{{remaining}} tap per attivare la modalità sviluppatore",
 
   empty_title: "(Senza titolo)",
 };

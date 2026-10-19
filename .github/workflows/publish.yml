@@ -27,7 +27,8 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Expo SDK 58 / React Native 0.88 need Node >= 22.13
+          node-version: 22
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -102,9 +103,10 @@ jobs:
           # Tauri signing
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          # App config
-          EXPO_PUBLIC_ENV: ${{ env.EXPO_PUBLIC_ENV }}
-          EXPO_PUBLIC_API_URL: ${{ env.EXPO_PUBLIC_API_URL }}
+          # App config — GitHub variables of the `production` environment (the `env` context is never
+          # set in this workflow, so these used to be inlined as empty strings)
+          EXPO_PUBLIC_ENV: ${{ vars.EXPO_PUBLIC_ENV || 'PROD' }}
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
           # Sentry
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         with:

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
-import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
+import ExclamationTriangleIcon from "react-native-heroicons/outline/ExclamationTriangleIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";

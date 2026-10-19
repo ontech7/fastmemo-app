@@ -1,7 +1,8 @@
 import { useEffect, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { CheckIcon, TrashIcon } from "react-native-heroicons/outline";
+import { Platform, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import Animated, {
   Easing,
   FadeIn,
@@ -36,7 +37,7 @@ interface Props {
   // Forwarded to the row's text input so the parent can focus it imperatively
   // once the screen transition settles (mount-time autoFocus alone is dropped
   // mid-transition on native).
-  inputRef?: RefObject<TextInput | null>;
+  inputRef?: RefObject<TextInputInstance | null>;
   stepMode?: boolean;
   stepStatus?: StepStatus;
   stepNumber?: number;
@@ -110,6 +111,9 @@ export default function TodoItem({
             disabled={disabled}
             style={{ marginRight: PADDING_MARGIN.sm }}
             onPress={handleCheck}
+            accessibilityRole="checkbox"
+            accessibilityLabel={item.text || t("a11y.item")}
+            aria-checked={item.checked}
           >
             <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked]}>
               {item.checked && (
@@ -132,7 +136,14 @@ export default function TodoItem({
             autoFocus={autoFocus}
           />
 
-          <TouchableOpacity activeOpacity={0.7} disabled={disabled} style={styles.drag} onPressIn={drag}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            disabled={disabled}
+            style={styles.drag}
+            onPressIn={drag}
+            // A drag starts on touch-down, which a screen reader's double tap can't drive
+            accessible={false}
+          >
             <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
           </TouchableOpacity>
         </View>
@@ -142,6 +153,8 @@ export default function TodoItem({
           disabled={disabled}
           style={styles.deleteButton}
           onPress={() => deleteItem(item.id)}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.delete_item")}
         >
           <View style={styles.deleteChip}>
             <TrashIcon size={16} color={COLOR.textMuted} />
@@ -161,7 +174,14 @@ export default function TodoItem({
       {/* left rail: connector line + tappable numbered circle (checkbox) + Ongoing label */}
 
       <View style={[styles.stepColumn, { pointerEvents: "box-none" }]}>
-        <TouchableOpacity activeOpacity={0.7} disabled={disabled} onPress={handleCheck}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          disabled={disabled}
+          onPress={handleCheck}
+          accessibilityRole="checkbox"
+          accessibilityLabel={item.text || t("a11y.item")}
+          aria-checked={isStepDone}
+        >
           <View style={[styles.stepCircle, { borderColor: circleBorderColor }, isStepDone && styles.stepCircleDone]}>
             <Animated.View
               style={[StyleSheet.absoluteFill, styles.stepCircleFill, circleFillStyle, { pointerEvents: "none" }]}
@@ -206,7 +226,14 @@ export default function TodoItem({
 
       {/* delete */}
 
-      <TouchableOpacity activeOpacity={0.7} disabled={disabled} style={styles.stepDelete} onPress={() => deleteItem(item.id)}>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        disabled={disabled}
+        style={styles.stepDelete}
+        onPress={() => deleteItem(item.id)}
+        accessibilityRole="button"
+        accessibilityLabel={t("a11y.delete_item")}
+      >
         <View style={styles.deleteChip}>
           <TrashIcon size={16} color={COLOR.textMuted} />
         </View>

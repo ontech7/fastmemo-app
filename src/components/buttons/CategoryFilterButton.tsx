@@ -1,7 +1,9 @@
 import { memo, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { ExclamationTriangleIcon, Squares2X2Icon, XMarkIcon } from "react-native-heroicons/outline";
+import ExclamationTriangleIcon from "react-native-heroicons/outline/ExclamationTriangleIcon";
+import Squares2X2Icon from "react-native-heroicons/outline/Squares2X2Icon";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -117,6 +119,9 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
           style={[styles.button, selected && styles.selectedButton, rotateAnimStyle]}
           activeOpacity={0.7}
           onPress={swapFavoriteCategory}
+          accessibilityRole="tab"
+          accessibilityLabel={index ? t("All") : name}
+          aria-selected={selected}
           onLongPress={toggleDeleteMode}
         >
           {index ? (
@@ -131,6 +136,8 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
             activeOpacity={0.7}
             style={styles.deleteButton}
             onPress={() => setShowDeleteFavoriteCategoryDialog(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.delete_category")}
           >
             <XMarkIcon size={14} color={COLOR.softWhite} />
           </TouchableOpacity>

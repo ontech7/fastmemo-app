@@ -9,6 +9,7 @@ import { deleteApp, getApp, getApps, initializeApp } from "firebase/app";
 import {
   collection as collectionFirestore,
   deleteDoc,
+  deleteField,
   disableNetwork,
   doc,
   enableNetwork,
@@ -571,6 +572,15 @@ export const setElementInCloud = async ({
     return false;
   }
 };
+
+/**
+ * A device's fan-out queues (e.g. addNotes / deleteNotes / detachNotes) with `id` published in
+ * `queue` and dropped from the others, all in the same write. Other devices apply the queues in a
+ * fixed order (adds first), so an id left in two of them is replayed out of order: a note trashed and
+ * then restored would end up trashed on them.
+ */
+export const exclusiveQueueEntry = (queues: readonly string[], queue: string, id: string, value: DocumentData): DocumentData =>
+  Object.fromEntries(queues.map((name) => [name, { [id]: name === queue ? value : deleteField() }]));
 
 /**
  * delete one element in the cloud
