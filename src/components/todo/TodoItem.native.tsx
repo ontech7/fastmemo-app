@@ -1,7 +1,8 @@
 import { useEffect, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
-import { CheckIcon, TrashIcon } from "react-native-heroicons/outline";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import Animated, {
   Easing,
   FadeIn,

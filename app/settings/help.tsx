@@ -12,25 +12,23 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  AdjustmentsHorizontalIcon,
-  CheckIcon,
-  ChevronDownIcon,
-  CloudIcon,
-  Cog6ToothIcon,
-  DocumentTextIcon,
-  EllipsisVerticalIcon,
-  FolderPlusIcon,
-  ListBulletIcon,
-  PencilSquareIcon,
-  PlusIcon,
-  QuestionMarkCircleIcon,
-  RectangleGroupIcon,
-  ShieldCheckIcon,
-  SparklesIcon,
-  TrashIcon,
-  XMarkIcon,
-} from "react-native-heroicons/outline";
+import AdjustmentsHorizontalIcon from "react-native-heroicons/outline/AdjustmentsHorizontalIcon";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
+import CloudIcon from "react-native-heroicons/outline/CloudIcon";
+import Cog6ToothIcon from "react-native-heroicons/outline/Cog6ToothIcon";
+import DocumentTextIcon from "react-native-heroicons/outline/DocumentTextIcon";
+import EllipsisVerticalIcon from "react-native-heroicons/outline/EllipsisVerticalIcon";
+import FolderPlusIcon from "react-native-heroicons/outline/FolderPlusIcon";
+import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
+import PencilSquareIcon from "react-native-heroicons/outline/PencilSquareIcon";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
+import QuestionMarkCircleIcon from "react-native-heroicons/outline/QuestionMarkCircleIcon";
+import RectangleGroupIcon from "react-native-heroicons/outline/RectangleGroupIcon";
+import ShieldCheckIcon from "react-native-heroicons/outline/ShieldCheckIcon";
+import SparklesIcon from "react-native-heroicons/outline/SparklesIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import { useSelector } from "react-redux";
 
 import type { TFunction } from "i18next";

@@ -20,7 +20,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { PlusIcon } from "react-native-heroicons/outline";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import uuid from "react-uuid";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";

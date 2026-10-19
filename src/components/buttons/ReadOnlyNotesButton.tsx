@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity } from "react-native";
-import { BookOpenIcon } from "react-native-heroicons/outline";
+import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
 
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 

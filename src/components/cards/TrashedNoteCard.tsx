@@ -1,7 +1,12 @@
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, SignalSlashIcon, StarIcon } from "react-native-heroicons/outline";
+import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
+import KeyIcon from "react-native-heroicons/outline/KeyIcon";
+import SignalSlashIcon from "react-native-heroicons/outline/SignalSlashIcon";
+import StarIcon from "react-native-heroicons/outline/StarIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import { formatDateTime, reverseDate } from "@/utils/date";

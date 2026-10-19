@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity } from "react-native";
-import { CheckIcon } from "react-native-heroicons/outline";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 
 import { BORDER, COLOR, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 

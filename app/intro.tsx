@@ -14,7 +14,7 @@ import Carousel, { Pagination } from "@ontech7/react-native-snap-carousel";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dimensions, Image, type ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ArrowRightIcon } from "react-native-heroicons/outline";
+import ArrowRightIcon from "react-native-heroicons/outline/ArrowRightIcon";
 
 const { width: WINDOW_WIDTH, height: WINDOW_HEIGHT } = Dimensions.get("window");
 

@@ -1,14 +1,12 @@
 import { Dialog, DialogAction, DialogBody, DialogFooter, DialogHeader, DialogTitle } from "@ontech7/react-native-dialog";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
-import {
-  BookOpenIcon,
-  EyeSlashIcon,
-  InformationCircleIcon,
-  KeyIcon,
-  SignalSlashIcon,
-  StarIcon,
-} from "react-native-heroicons/outline";
+import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
+import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
+import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
+import KeyIcon from "react-native-heroicons/outline/KeyIcon";
+import SignalSlashIcon from "react-native-heroicons/outline/SignalSlashIcon";
+import StarIcon from "react-native-heroicons/outline/StarIcon";
 
 import { NOTE_TYPES } from "@/constants/note-types";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";

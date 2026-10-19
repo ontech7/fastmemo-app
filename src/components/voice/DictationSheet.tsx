@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { MicrophoneIcon, SparklesIcon } from "react-native-heroicons/outline";
+import MicrophoneIcon from "react-native-heroicons/outline/MicrophoneIcon";
+import SparklesIcon from "react-native-heroicons/outline/SparklesIcon";
 import Animated, {
   Easing,
   useAnimatedStyle,

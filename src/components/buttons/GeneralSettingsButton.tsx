@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { Cog8ToothIcon } from "react-native-heroicons/outline";
+import Cog8ToothIcon from "react-native-heroicons/outline/Cog8ToothIcon";
 
 import { useRouter } from "@/hooks/useRouter";
 

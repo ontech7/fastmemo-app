@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { RectangleGroupIcon } from "react-native-heroicons/outline";
+import RectangleGroupIcon from "react-native-heroicons/outline/RectangleGroupIcon";
 
 import { useRouter } from "@/hooks/useRouter";
 

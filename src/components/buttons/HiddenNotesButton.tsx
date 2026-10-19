@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity } from "react-native";
-import { EyeSlashIcon } from "react-native-heroicons/outline";
+import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
 
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 

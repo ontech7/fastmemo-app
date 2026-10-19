@@ -2,7 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { CheckIcon } from "react-native-heroicons/outline";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import type { Category } from "@/types";

@@ -3,7 +3,10 @@ import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, TrashIcon } from "react-native-heroicons/outline";
+import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
+import ChevronRightIcon from "react-native-heroicons/outline/ChevronRightIcon";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import KanbanCard from "./KanbanCard";
 
 import type { KanbanColumn as KanbanColumnType } from "@/types";

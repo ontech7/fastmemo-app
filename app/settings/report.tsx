@@ -6,7 +6,9 @@ import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { CheckIcon, PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import { useDispatch, useStore } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";

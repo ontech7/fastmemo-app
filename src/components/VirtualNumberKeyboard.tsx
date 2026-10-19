@@ -1,6 +1,6 @@
 import { memo, useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { BackspaceIcon } from "react-native-heroicons/outline";
+import BackspaceIcon from "react-native-heroicons/outline/BackspaceIcon";
 
 import { BORDER, COLOR, FONT, GLASS, SIZE } from "@/constants/styles";
 

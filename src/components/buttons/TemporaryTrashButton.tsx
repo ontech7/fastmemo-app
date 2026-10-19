@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { ArchiveBoxXMarkIcon } from "react-native-heroicons/outline";
+import ArchiveBoxXMarkIcon from "react-native-heroicons/outline/ArchiveBoxXMarkIcon";
 
 import { useRouter } from "@/hooks/useRouter";
 

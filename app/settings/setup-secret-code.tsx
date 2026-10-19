@@ -12,7 +12,7 @@ import i18n from "i18next";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ArrowPathIcon } from "react-native-heroicons/outline";
+import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
 import { useDispatch } from "react-redux";
 import CodeInput from "@/components/inputs/CodeInput";
 import { setSecretCode } from "@/slicers/settingsSlice";

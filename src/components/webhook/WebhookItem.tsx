@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { CheckIcon } from "react-native-heroicons/outline";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";

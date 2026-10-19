@@ -47,7 +47,7 @@ import { useIsFocused, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
-import { DocumentMagnifyingGlassIcon } from "react-native-heroicons/outline";
+import DocumentMagnifyingGlassIcon from "react-native-heroicons/outline/DocumentMagnifyingGlassIcon";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

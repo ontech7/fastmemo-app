@@ -5,7 +5,7 @@ import { isStringEmpty } from "@/utils/string";
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { XMarkIcon } from "react-native-heroicons/outline";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
 interface Props {

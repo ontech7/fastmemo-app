@@ -3,7 +3,7 @@ import * as Localization from "expo-localization";
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Keyboard, StyleSheet, TouchableOpacity, View } from "react-native";
-import { MicrophoneIcon } from "react-native-heroicons/outline";
+import MicrophoneIcon from "react-native-heroicons/outline/MicrophoneIcon";
 import { useSelector } from "react-redux";
 
 import DictationSheet from "@/components/voice/DictationSheet";

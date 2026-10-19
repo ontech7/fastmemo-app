@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
-import { ChevronUpIcon, PlusIcon } from "react-native-heroicons/outline";
+import ChevronUpIcon from "react-native-heroicons/outline/ChevronUpIcon";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import Animated, {
   Easing,
   Extrapolation,

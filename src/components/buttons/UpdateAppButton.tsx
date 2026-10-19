@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
-import { CloudArrowDownIcon } from "react-native-heroicons/solid";
+import CloudArrowDownIcon from "react-native-heroicons/solid/CloudArrowDownIcon";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 
 import { useAppUpdate } from "@/providers/AppUpdateProvider";

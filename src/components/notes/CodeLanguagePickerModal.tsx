@@ -1,7 +1,7 @@
 import { CODE_LANGUAGES, LANGUAGE_LABELS } from "@/constants/code-languages";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, MONOSPACE_FONT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { XMarkIcon } from "react-native-heroicons/outline";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 
 interface Props {
   visible: boolean;

@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity } from "react-native";
-import { KeyIcon } from "react-native-heroicons/outline";
+import KeyIcon from "react-native-heroicons/outline/KeyIcon";
 
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 

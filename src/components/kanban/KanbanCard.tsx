@@ -4,7 +4,7 @@ import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useRef, useState, type RefObject } from "react";
 import { Platform, StyleSheet, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { TrashIcon } from "react-native-heroicons/outline";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import Animated, { runOnJS, useAnimatedStyle } from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";

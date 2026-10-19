@@ -2,7 +2,9 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constant
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View, ViewStyle } from "react-native";
-import { ChevronDownIcon, ChevronUpIcon, XMarkIcon } from "react-native-heroicons/outline";
+import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
+import ChevronUpIcon from "react-native-heroicons/outline/ChevronUpIcon";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
 
 /**

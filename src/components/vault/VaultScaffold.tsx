@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Keyboard, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { CheckCircleIcon } from "react-native-heroicons/outline";
+import CheckCircleIcon from "react-native-heroicons/outline/CheckCircleIcon";
 
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";

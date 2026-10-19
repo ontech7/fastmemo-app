@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { MicrophoneIcon } from "react-native-heroicons/outline";
+import MicrophoneIcon from "react-native-heroicons/outline/MicrophoneIcon";
 import { useSelector } from "react-redux";
 
 import DictationSheet from "@/components/voice/DictationSheet";

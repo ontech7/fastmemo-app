@@ -17,7 +17,7 @@ import type {
   TextInputInstance,
 } from "react-native";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { PlusIcon } from "react-native-heroicons/outline";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { useSelector } from "react-redux";
 import uuid from "react-uuid";
 import KanbanDragOverlay from "./KanbanDragOverlay";

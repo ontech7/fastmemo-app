@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import DraggableFlatList from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PlusIcon } from "react-native-heroicons/outline";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import uuid from "react-uuid";
 

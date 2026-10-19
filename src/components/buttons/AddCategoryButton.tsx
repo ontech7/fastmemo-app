@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity } from "react-native";
-import { FolderPlusIcon } from "react-native-heroicons/outline";
+import FolderPlusIcon from "react-native-heroicons/outline/FolderPlusIcon";
 
 import { useRouter } from "@/hooks/useRouter";
 

@@ -18,17 +18,15 @@ import { toast } from "@/utils/toast";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
-import {
-  ArrowPathIcon,
-  CheckIcon,
-  DevicePhoneMobileIcon,
-  ExclamationTriangleIcon,
-  InformationCircleIcon,
-  KeyIcon,
-  LockOpenIcon,
-  PencilIcon,
-  ShieldCheckIcon,
-} from "react-native-heroicons/outline";
+import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import DevicePhoneMobileIcon from "react-native-heroicons/outline/DevicePhoneMobileIcon";
+import ExclamationTriangleIcon from "react-native-heroicons/outline/ExclamationTriangleIcon";
+import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
+import KeyIcon from "react-native-heroicons/outline/KeyIcon";
+import LockOpenIcon from "react-native-heroicons/outline/LockOpenIcon";
+import PencilIcon from "react-native-heroicons/outline/PencilIcon";
+import ShieldCheckIcon from "react-native-heroicons/outline/ShieldCheckIcon";
 
 export default function CloudSyncScreen() {
   const { t } = useTranslation();

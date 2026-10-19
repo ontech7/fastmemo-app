@@ -1,5 +1,5 @@
 import { TouchableOpacity } from "react-native";
-import { TrashIcon } from "react-native-heroicons/outline";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 
 import IconChip from "@/components/ui/IconChip";
 import { COLOR } from "@/constants/styles";

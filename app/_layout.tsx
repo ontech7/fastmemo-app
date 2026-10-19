@@ -65,12 +65,14 @@ export default Sentry.wrap(function RootLayout() {
 
   // Never get stuck on the splash if fonts fail or hang to load — e.g. on
   // Tauri/web the font asset URLs can resolve differently in the webview.
-  // After a short grace period, proceed anyway (system-font fallback).
+  // After a short grace period, proceed anyway (system-font fallback). Only armed while still
+  // waiting: firing after the fonts loaded would re-render the whole app for nothing.
   const [fontWaitElapsed, setFontWaitElapsed] = useState(false);
   useEffect(() => {
+    if (fontsLoaded || fontError) return;
     const id = setTimeout(() => setFontWaitElapsed(true), 2500);
     return () => clearTimeout(id);
-  }, []);
+  }, [fontsLoaded, fontError]);
 
   // On web/Tauri the native expo splash doesn't exist and the font loader can
   // hang in the WebView (asset URLs resolve differently), so blocking the first

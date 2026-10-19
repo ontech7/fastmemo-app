@@ -29,7 +29,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
+import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
 import { KeyboardAvoidingView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
 import { useSelector } from "react-redux";

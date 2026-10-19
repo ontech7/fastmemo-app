@@ -2,7 +2,9 @@ import useEmblaCarousel from "embla-carousel-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dimensions, Image, type ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon } from "react-native-heroicons/outline";
+import ArrowRightIcon from "react-native-heroicons/outline/ArrowRightIcon";
+import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
+import ChevronRightIcon from "react-native-heroicons/outline/ChevronRightIcon";
 
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";

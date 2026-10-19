@@ -1,6 +1,6 @@
 import type { ViewStyle } from "react-native";
 import { Keyboard, TouchableOpacity } from "react-native";
-import { ChevronLeftIcon } from "react-native-heroicons/outline";
+import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
 
 import IconChip from "@/components/ui/IconChip";
 import { COLOR } from "@/constants/styles";

@@ -1,5 +1,5 @@
 import { Image, View } from "react-native";
-import { DevicePhoneMobileIcon } from "react-native-heroicons/outline";
+import DevicePhoneMobileIcon from "react-native-heroicons/outline/DevicePhoneMobileIcon";
 
 import androidImage from "./android.png";
 

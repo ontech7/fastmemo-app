@@ -21,7 +21,9 @@ import { toast } from "@/utils/toast";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ArrowPathIcon, ComputerDesktopIcon, TrashIcon } from "react-native-heroicons/outline";
+import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
+import ComputerDesktopIcon from "react-native-heroicons/outline/ComputerDesktopIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import Animated, {
   cancelAnimation,
   Easing,

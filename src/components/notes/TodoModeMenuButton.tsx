@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ElementRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
-import { ArrowsRightLeftIcon, ArrowsUpDownIcon, ListBulletIcon } from "react-native-heroicons/outline";
+import ArrowsRightLeftIcon from "react-native-heroicons/outline/ArrowsRightLeftIcon";
+import ArrowsUpDownIcon from "react-native-heroicons/outline/ArrowsUpDownIcon";
+import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
 import Animated, {
   Easing,
   Extrapolation,

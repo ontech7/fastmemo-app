@@ -1,5 +1,5 @@
 import { TouchableOpacity } from "react-native";
-import { XMarkIcon } from "react-native-heroicons/outline";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 
 import IconChip from "@/components/ui/IconChip";
 import { useRouter } from "@/hooks/useRouter";

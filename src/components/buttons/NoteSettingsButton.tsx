@@ -1,18 +1,16 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ArrowUpTrayIcon,
-  BookOpenIcon,
-  CheckIcon,
-  EllipsisVerticalIcon,
-  EyeSlashIcon,
-  InformationCircleIcon,
-  KeyIcon,
-  SignalSlashIcon,
-  StarIcon,
-  TagIcon,
-  TrashIcon,
-} from "react-native-heroicons/outline";
+import ArrowUpTrayIcon from "react-native-heroicons/outline/ArrowUpTrayIcon";
+import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import EllipsisVerticalIcon from "react-native-heroicons/outline/EllipsisVerticalIcon";
+import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
+import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
+import KeyIcon from "react-native-heroicons/outline/KeyIcon";
+import SignalSlashIcon from "react-native-heroicons/outline/SignalSlashIcon";
+import StarIcon from "react-native-heroicons/outline/StarIcon";
+import TagIcon from "react-native-heroicons/outline/TagIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import { useDispatch, useSelector, useStore } from "react-redux";
 import uuid from "react-uuid";
 

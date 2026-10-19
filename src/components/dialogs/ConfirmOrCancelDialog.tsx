@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
+import ExclamationTriangleIcon from "react-native-heroicons/outline/ExclamationTriangleIcon";
 
 import { COLOR } from "@/constants/styles";
 

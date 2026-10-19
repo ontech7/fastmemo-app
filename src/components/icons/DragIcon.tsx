@@ -1,5 +1,5 @@
 import { View, ViewProps } from "react-native";
-import { EllipsisVerticalIcon } from "react-native-heroicons/outline";
+import EllipsisVerticalIcon from "react-native-heroicons/outline/EllipsisVerticalIcon";
 
 import type { SvgProps, NumberProp } from "react-native-svg";
 

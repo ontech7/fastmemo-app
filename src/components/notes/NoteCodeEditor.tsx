@@ -29,7 +29,7 @@ import {
   View,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PlusIcon } from "react-native-heroicons/outline";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSelector } from "react-redux";
 import uuid from "react-uuid";

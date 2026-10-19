@@ -3,7 +3,7 @@ import { FlashList } from "@shopify/flash-list";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { openUrl } from "@/utils/openUrl";
-import { InformationCircleIcon } from "react-native-heroicons/outline";
+import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import type { WebhookPayload } from "@/types";

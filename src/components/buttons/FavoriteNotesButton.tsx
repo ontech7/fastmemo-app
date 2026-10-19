@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity } from "react-native";
-import { StarIcon } from "react-native-heroicons/outline";
+import StarIcon from "react-native-heroicons/outline/StarIcon";
 
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 

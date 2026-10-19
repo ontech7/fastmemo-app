@@ -18,20 +18,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  ChatBubbleLeftRightIcon,
-  CheckBadgeIcon,
-  CodeBracketIcon,
-  DocumentTextIcon,
-  FolderIcon,
-  LanguageIcon,
-  ListBulletIcon,
-  ScissorsIcon,
-  SparklesIcon,
-  TagIcon,
-  XMarkIcon,
-} from "react-native-heroicons/outline";
-import { CheckCircleIcon, ExclamationCircleIcon } from "react-native-heroicons/solid";
+import ChatBubbleLeftRightIcon from "react-native-heroicons/outline/ChatBubbleLeftRightIcon";
+import CheckBadgeIcon from "react-native-heroicons/outline/CheckBadgeIcon";
+import CodeBracketIcon from "react-native-heroicons/outline/CodeBracketIcon";
+import DocumentTextIcon from "react-native-heroicons/outline/DocumentTextIcon";
+import FolderIcon from "react-native-heroicons/outline/FolderIcon";
+import LanguageIcon from "react-native-heroicons/outline/LanguageIcon";
+import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
+import ScissorsIcon from "react-native-heroicons/outline/ScissorsIcon";
+import SparklesIcon from "react-native-heroicons/outline/SparklesIcon";
+import TagIcon from "react-native-heroicons/outline/TagIcon";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
+import CheckCircleIcon from "react-native-heroicons/solid/CheckCircleIcon";
+import ExclamationCircleIcon from "react-native-heroicons/solid/ExclamationCircleIcon";
 import type { SharedValue } from "react-native-reanimated";
 import Animated, {
   Easing,

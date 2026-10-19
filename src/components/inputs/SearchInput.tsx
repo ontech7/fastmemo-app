@@ -1,7 +1,8 @@
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
 import type { ReactNode } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
-import { MagnifyingGlassIcon, XMarkIcon } from "react-native-heroicons/outline";
+import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 
 import { BORDER, COLOR, FONT, PADDING_MARGIN } from "@/constants/styles";
 import GlassSurface from "@/components/ui/GlassSurface";
