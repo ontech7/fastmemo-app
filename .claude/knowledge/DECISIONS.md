@@ -352,8 +352,8 @@ closes (`flushOnExit`, which also flushes the persistor).
 
 ## ADR-014: OTA Updates (EAS Update) for Android, Counted on Top of the Store Version
 
-**Status:** Accepted (2026-10-19) -- workflow and in-app label in place; `eas update:configure` (runtime policy, update URL,
-`production` channel) still to run with access to the EAS project.  
+**Status:** Accepted (2026-10-19). The v3.2.0 store build predates it: OTAs start with the first production build that embeds
+the `production` channel and the fingerprint runtime.  
 **Context:** A JS-only bug fix had to wait for a full Play Store review. EAS Update can ship JS/asset changes to installed apps,
 but an update only reaches builds with the same runtime version, and the app `version` can't change in an update (it is a native
 fingerprint input).  
@@ -383,5 +383,8 @@ fingerprint input).
 - Updates apply on the launch after the one that downloads them (default `fallbackToCacheTimeout: 0`): fast startup, one launch
   of delay.
 - Android only: the iOS app isn't distributed through this flow.
+- `app.config.ts` is dynamic, so `eas update:configure` can't write it: `updates.url`, `runtimeVersion` and the `eas.json`
+  channels (named after the profiles) were added by hand from its output, with `fingerprint` instead of its default `appVersion`
+  policy (which would let an update reach a build with different native code).
 - Local and EAS fingerprints are assumed equal (the gitignored `android/` is already excluded as `bareNativeDir`); the guard
   surfaces any divergence as a failed run, never as an orphaned update.

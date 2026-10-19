@@ -30,6 +30,9 @@ const adaptiveIcon = isDev ? "./assets/images/test/adaptive-icon.png" : "./asset
 const favicon = isDev ? "./assets/images/test/favicon.png" : "./assets/images/favicon.png";
 const backgroundColor = "#05091A";
 
+// The production EAS project (the old DEV project is no longer used).
+const EAS_PROJECT_ID = "44c5f162-d9f8-40db-ae28-269fe48982ca";
+
 export default ({ config }: ConfigContext): ExpoConfig =>
   withLlamaProguardRules({
     ...config,
@@ -37,6 +40,10 @@ export default ({ config }: ConfigContext): ExpoConfig =>
     name: appName,
     slug: appSlug,
     version: "3.2.0",
+    // OTA updates (EAS Update, ADR-014). The runtime is the native fingerprint, so an update only reaches the builds whose
+    // native code it was built against; native changes need a store build.
+    runtimeVersion: { policy: "fingerprint" },
+    updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
     orientation: "portrait",
     icon: appIcon,
     scheme: appSlug,
@@ -105,7 +112,7 @@ export default ({ config }: ConfigContext): ExpoConfig =>
     },
     extra: {
       eas: {
-        projectId: "44c5f162-d9f8-40db-ae28-269fe48982ca", // DEV
+        projectId: EAS_PROJECT_ID,
       },
     },
   });
