@@ -429,6 +429,7 @@ const fr = {
     checking_updates: "Vérification...",
     update_available: "Mise à jour disponible",
     update_confirm: "Voulez-vous l'installer maintenant?",
+    update_installing: "Téléchargement de la mise à jour : l'app redémarre une fois installée.",
     no_updates: "Vous utilisez la dernière version.",
     feedback_and_help: "Commentaires et Aide",
     help: "Aider",

@@ -426,6 +426,7 @@ const it = {
     checking_updates: "Controllo...",
     update_available: "Aggiornamento disponibile",
     update_confirm: "Vuoi installarlo adesso?",
+    update_installing: "Download dell'aggiornamento: l'app si riavvia appena è installato.",
     no_updates: "Stai utilizzando l'ultima versione.",
     feedback_and_help: "Feedback e Assistenza",
     help: "Aiuto",

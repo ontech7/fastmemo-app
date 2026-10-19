@@ -2,6 +2,7 @@ import { configs } from "@/configs";
 import { useAppUpdate } from "@/providers/AppUpdateProvider";
 import { openUrl } from "@/utils/openUrl";
 import { isTauri } from "@/utils/platform";
+import { toast } from "@/utils/toast";
 import { selectorDeveloperMode } from "@/slicers/settingsSlice";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,7 +19,7 @@ interface Props {
 
 export default function SectionItem_CheckUpdates({ isLast }: Props) {
   const { t } = useTranslation();
-  const { updateAvailable } = useAppUpdate();
+  const { updateAvailable, checkDesktopUpdate } = useAppUpdate();
   const [isChecking, setIsChecking] = useState(false);
 
   // SectionItem_DeveloperOptions is the only entry after this one in SECTION_INFO,
@@ -33,26 +34,11 @@ export default function SectionItem_CheckUpdates({ isLast }: Props) {
     if (isTauri()) {
       setIsChecking(true);
       try {
-        const { checkUpdate, installUpdate } = await import("@tauri-apps/api/updater");
-        const { relaunch } = await import("@tauri-apps/api/process");
-
-        const { shouldUpdate, manifest } = await checkUpdate();
-
-        if (shouldUpdate && manifest) {
-          const userConfirmed = window.confirm(
-            `${t("generalsettings.update_available")}: v${manifest.version}\n\n${t("generalsettings.update_confirm")}`
-          );
-
-          if (userConfirmed) {
-            await installUpdate();
-            await relaunch();
-          }
-        } else {
-          window.alert(t("generalsettings.no_updates"));
-        }
-      } catch (error: any) {
+        // A found update opens the install prompt (AppUpdateProvider).
+        if (!(await checkDesktopUpdate())) toast(t("generalsettings.no_updates"));
+      } catch (error) {
         console.error("Update check failed:", error);
-        window.alert(`${t("error")}: ${error.message || error}`);
+        toast(`${t("error")}: ${error instanceof Error ? error.message : String(error)}`);
       } finally {
         setIsChecking(false);
       }

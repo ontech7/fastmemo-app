@@ -424,6 +424,7 @@ const en = {
     checking_updates: "Checking...",
     update_available: "Update available",
     update_confirm: "Do you want to install it now?",
+    update_installing: "Downloading the update: the app restarts when it's installed.",
     no_updates: "You are using the latest version.",
     feedback_and_help: "Feedback and Help",
     help: "Help",

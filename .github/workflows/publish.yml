@@ -40,7 +40,8 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          # Tauri 2 builds against WebKitGTK 4.1 (4.0 was Tauri 1's).
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: install frontend dependencies
         run: yarn install
@@ -100,9 +101,9 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Tauri signing
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          # Tauri signing (Tauri 2's variable names; same key and secrets as before, so v1 installs accept the update)
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           # App config — GitHub variables of the `production` environment (the `env` context is never
           # set in this workflow, so these used to be inlined as empty strings)
           EXPO_PUBLIC_ENV: ${{ vars.EXPO_PUBLIC_ENV || 'PROD' }}
@@ -131,7 +132,7 @@ jobs:
 
       - name: get updater version from tauri.conf.json
         id: tauri_version
-        run: echo "version=$(jq -r '.package.version' src-tauri/tauri.conf.json)" >> $GITHUB_OUTPUT
+        run: echo "version=$(jq -r '.version' src-tauri/tauri.conf.json)" >> $GITHUB_OUTPUT
 
       - name: extract user-facing changelog from en.ts
         id: desktop_notes
@@ -181,7 +182,8 @@ jobs:
           mkdir -p /tmp/sigs
           gh release download "$tag" -p "*.sig" -D /tmp/sigs 2>/dev/null || true
 
-          # Identify updater artifacts per platform
+          # Identify updater artifacts per platform. `bundle.createUpdaterArtifacts: "v1Compatible"` keeps Tauri 1's
+          # archive names: installs still on 1.x can only install those, and Tauri 2 reads them too.
           mac_arm_name=$(echo "$assets_json" | jq -r '
             [.[] | select(.name | endswith(".app.tar.gz"))
                  | select(.name | contains("x64") | not)]

@@ -8,7 +8,7 @@ export { htmlToMarkdown, wrapHtmlForPdf } from "@/utils/html";
 
 /**
  * Save content to a file on web.
- * - Tauri: uses native Save dialog via @tauri-apps/api
+ * - Tauri: uses the native Save dialog (dialog + fs plugins)
  * - Browser: uses <a download> fallback
  */
 async function saveFileWeb(
@@ -17,8 +17,8 @@ async function saveFileWeb(
   filters?: { name: string; extensions: string[] }[]
 ): Promise<void> {
   if (isTauri()) {
-    const { save } = await import("@tauri-apps/api/dialog");
-    const { writeTextFile, writeBinaryFile } = await import("@tauri-apps/api/fs");
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { writeTextFile, writeFile } = await import("@tauri-apps/plugin-fs");
 
     const filePath = await save({
       defaultPath: defaultFilename,
@@ -30,7 +30,7 @@ async function saveFileWeb(
       await writeTextFile(filePath, content);
     } else {
       const buffer = await content.arrayBuffer();
-      await writeBinaryFile(filePath, new Uint8Array(buffer));
+      await writeFile(filePath, new Uint8Array(buffer));
     }
     return;
   }
@@ -81,8 +81,8 @@ export async function exportAsPdf(title: string, htmlContent: string): Promise<{
   }
 
   if (isTauri()) {
-    const { save } = await import("@tauri-apps/api/dialog");
-    const { writeBinaryFile } = await import("@tauri-apps/api/fs");
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { writeFile } = await import("@tauri-apps/plugin-fs");
 
     const defaultName = `${(title || "note").replace(/[^a-zA-Z0-9-_ ]/g, "").substring(0, 50)}.pdf`;
     const filePath = await save({
@@ -92,7 +92,7 @@ export async function exportAsPdf(title: string, htmlContent: string): Promise<{
     if (!filePath) return null;
 
     const pdfBytes = pdf.output("arraybuffer");
-    await writeBinaryFile(filePath, new Uint8Array(pdfBytes));
+    await writeFile(filePath, new Uint8Array(pdfBytes));
   } else {
     pdf.save(`${(title || "note").replace(/[^a-zA-Z0-9-_ ]/g, "")}.pdf`);
   }
