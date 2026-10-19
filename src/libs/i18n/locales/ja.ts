@@ -541,6 +541,7 @@ const ja = {
       before: "変更前",
       after: "変更後",
       apply: "適用",
+      content_changed: "AI の処理中にノートが変更されました。もう一度実行してください。",
       no_content: "まず何か書いてください",
       no_category_match: "該当するカテゴリが見つかりません",
       error: "生成できませんでした。もう一度お試しください",

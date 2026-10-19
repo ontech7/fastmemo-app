@@ -103,16 +103,14 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
       [sendToEditor]
     );
 
+    // Not gated on isReady: sendMessage queues until the editor is up, so a change made while it
+    // loads still lands (the editor ignores a language it already has).
     useEffect(() => {
-      if (isReady.current) {
-        sendMessage(JSON.stringify({ type: "setLanguage", language }));
-      }
+      sendMessage(JSON.stringify({ type: "setLanguage", language }));
     }, [language, sendMessage]);
 
     useEffect(() => {
-      if (isReady.current) {
-        sendMessage(JSON.stringify({ type: "setReadOnly", readOnly }));
-      }
+      sendMessage(JSON.stringify({ type: "setReadOnly", readOnly }));
     }, [readOnly, sendMessage]);
 
     // Compute HTML ONCE on mount — never changes, never causes WebView reload

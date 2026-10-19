@@ -532,6 +532,7 @@ const zh = {
       before: "之前",
       after: "之后",
       apply: "应用",
+      content_changed: "AI 处理期间笔记已更改，请重新运行。",
       no_content: "请先写点内容",
       no_category_match: "未找到匹配的类别",
       error: "无法生成，请重试",

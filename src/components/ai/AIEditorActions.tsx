@@ -144,7 +144,9 @@ export default function AIEditorActions({
   const [outputText, setOutputText] = useState<string | null>(null);
   // Staged result of a content-modifying action: shown as a before/after preview
   // and applied only when the user confirms (nothing is overwritten automatically).
-  const [preview, setPreview] = useState<{ title: string; before: string; after: string; apply: () => void } | null>(null);
+  // It holds the result, not a callback: applying goes through the current props, so
+  // it never writes back a note snapshot taken when the action started.
+  const [preview, setPreview] = useState<{ action: EditorAction; title: string; before: string; after: string } | null>(null);
   // Left edge (window coords) of the trigger, so the menu opens exactly from the button.
   const [menuLeft, setMenuLeft] = useState(40);
 
@@ -225,9 +227,9 @@ export default function AIEditorActions({
         if (result.success) {
           // Stage a before/after preview for anything that overwrites existing
           // content; apply lightweight/additive results directly.
-          const stage = (after: string, apply: () => void) => {
+          const stage = (after: string) => {
             setFeedback("idle");
-            setPreview({ title: t(`ai.editor.${action}`), before: rawContent, after, apply });
+            setPreview({ action, title: t(`ai.editor.${action}`), before: rawContent, after });
           };
 
           switch (action) {
@@ -245,26 +247,16 @@ export default function AIEditorActions({
               break;
             case "generate_title":
               if (result.text) {
-                const after = result.text;
                 setFeedback("idle");
-                setPreview({
-                  title: t("ai.editor.generate_title"),
-                  before: noteTitle,
-                  after,
-                  apply: () => onTitleGenerated(after),
-                });
+                setPreview({ action, title: t("ai.editor.generate_title"), before: noteTitle, after: result.text });
               }
               break;
             case "summarize":
-              if (result.text) stage(result.text, () => onSummaryGenerated?.(result.text!));
-              break;
             case "fix_grammar":
             case "shorten":
             case "translate":
-              if (result.text) stage(result.text, () => onTextRewritten?.(result.text!));
-              break;
             case "add_comments":
-              if (result.text) stage(result.text, () => onCodeCommented?.(result.text!));
+              if (result.text) stage(result.text);
               break;
           }
         } else {
@@ -281,20 +273,36 @@ export default function AIEditorActions({
         toast(t("ai.editor.error"));
       }
     },
-    [
-      getContent,
-      noteTitle,
-      aiSettings.selectedModel,
-      onTitleGenerated,
-      onSummaryGenerated,
-      onItemsSuggested,
-      onCategorySuggested,
-      onTextRewritten,
-      onCodeCommented,
-      t,
-      closeMenu,
-    ]
+    [getContent, noteTitle, aiSettings.selectedModel, onItemsSuggested, onCategorySuggested, t, closeMenu]
   );
+
+  const applyPreview = () => {
+    if (!preview) return;
+    const { action, before, after } = preview;
+    setPreview(null);
+
+    // The model takes seconds and the note stays editable meanwhile: if what it read has
+    // changed since (new edits, another code tab), applying would overwrite those changes.
+    const current = action === "generate_title" ? noteTitle : getContent();
+    if (current !== before) {
+      toast(t("ai.editor.content_changed"));
+      return;
+    }
+
+    switch (action) {
+      case "generate_title":
+        onTitleGenerated(after);
+        break;
+      case "summarize":
+        onSummaryGenerated?.(after);
+        break;
+      case "add_comments":
+        onCodeCommented?.(after);
+        break;
+      default:
+        onTextRewritten?.(after);
+    }
+  };
 
   const handleCancel = useCallback(() => {
     cancelledRef.current = true;
@@ -417,14 +425,7 @@ export default function AIEditorActions({
               >
                 <Text style={styles.previewCancelLabel}>{t("cancel")}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.previewAction, styles.previewApply]}
-                onPress={() => {
-                  preview?.apply();
-                  setPreview(null);
-                }}
-              >
+              <TouchableOpacity activeOpacity={0.7} style={[styles.previewAction, styles.previewApply]} onPress={applyPreview}>
                 <Text style={styles.previewApplyLabel}>{t("ai.editor.apply")}</Text>
               </TouchableOpacity>
             </View>

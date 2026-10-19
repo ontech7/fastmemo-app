@@ -35,6 +35,8 @@ export const deriveNoteTitle = (source: string, maxLength = 60): string => {
   if (text.length <= maxLength) return text;
 
   const lastSpace = text.lastIndexOf(" ", maxLength);
-  const cut = lastSpace > maxLength / 2 ? text.slice(0, lastSpace) : text.slice(0, maxLength);
+  // A hard cut must not split an emoji's surrogate pair (it would render as "�").
+  const hardCut = /[\uD800-\uDBFF]/.test(text[maxLength - 1]) ? maxLength - 1 : maxLength;
+  const cut = lastSpace > maxLength / 2 ? text.slice(0, lastSpace) : text.slice(0, hardCut);
   return cut.replace(/[\s,;:.\-–—]+$/, "");
 };

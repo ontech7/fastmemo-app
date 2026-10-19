@@ -544,6 +544,7 @@ const it = {
       before: "Prima",
       after: "Dopo",
       apply: "Applica",
+      content_changed: "La nota è cambiata mentre l'AI lavorava: riprova.",
       no_content: "Scrivi qualcosa prima",
       no_category_match: "Nessuna categoria corrispondente",
       error: "Impossibile generare, riprova",

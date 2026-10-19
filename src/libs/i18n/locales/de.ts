@@ -548,6 +548,7 @@ const de = {
       before: "Vorher",
       after: "Nachher",
       apply: "Anwenden",
+      content_changed: "Die Notiz hat sich geändert, während die KI gearbeitet hat: Bitte erneut ausführen.",
       no_content: "Schreibe zuerst etwas",
       no_category_match: "Keine passende Kategorie gefunden",
       error: "Konnte nicht generieren, versuche es erneut",

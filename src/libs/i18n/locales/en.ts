@@ -542,6 +542,7 @@ const en = {
       before: "Before",
       after: "After",
       apply: "Apply",
+      content_changed: "The note changed while the AI was working: run it again.",
       no_content: "Write something first",
       no_category_match: "No matching category found",
       error: "Could not generate, try again",

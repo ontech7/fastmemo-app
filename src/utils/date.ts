@@ -15,7 +15,8 @@ export const getReversedDateTime = (dateFormatted: string): number => {
 };
 
 // Building an Intl.DateTimeFormat is expensive on Hermes, and every note card formats a date.
-let dateTimeFormat: { languageTag: string; formatter: Intl.DateTimeFormat } | null = null;
+// Keyed by time zone too: the formatter captures the zone it was built in.
+let dateTimeFormat: { key: string; formatter: Intl.DateTimeFormat } | null = null;
 
 export const formatDateTime = (timestamp: number | null = null): string => {
   const date = new Date(timestamp || Date.now());
@@ -28,9 +29,11 @@ export const formatDateTime = (timestamp: number | null = null): string => {
     languageTag = locale.languageTag;
   }
 
-  if (dateTimeFormat?.languageTag !== languageTag) {
+  const key = `${languageTag}|${date.getTimezoneOffset()}`;
+
+  if (dateTimeFormat?.key !== key) {
     dateTimeFormat = {
-      languageTag,
+      key,
       formatter: new Intl.DateTimeFormat(languageTag, {
         weekday: "short",
         day: "2-digit",

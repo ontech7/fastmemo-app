@@ -547,6 +547,7 @@ const fr = {
       before: "Avant",
       after: "Après",
       apply: "Appliquer",
+      content_changed: "La note a changé pendant que l'IA travaillait : relancez-la.",
       no_content: "Ecrivez quelque chose d'abord",
       no_category_match: "Aucune categorie correspondante",
       error: "Impossible de generer, reessayez",

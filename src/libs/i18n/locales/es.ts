@@ -544,6 +544,7 @@ const es = {
       before: "Antes",
       after: "Después",
       apply: "Aplicar",
+      content_changed: "La nota cambió mientras la IA trabajaba: vuelve a ejecutarla.",
       no_content: "Escribe algo primero",
       no_category_match: "No se encontro una categoria",
       error: "No se pudo generar, intenta de nuevo",
