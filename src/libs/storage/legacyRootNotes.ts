@@ -62,6 +62,22 @@ const mergeNotes = (stored: PersistedNotes | undefined, legacy: PersistedNotes) 
 };
 
 /**
+ * Retries a failed read before the blob counts as unreadable: a one-off error would otherwise pass
+ * for "no legacy copy", and the blob is rewritten without its notes right after (LL-023). A row past
+ * Android's 2MB cursor window fails every time, and then is given up on.
+ */
+const readRootBlob = async (): Promise<string | null> => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await AsyncStorage.getItem(ROOT_KEY);
+    } catch (error) {
+      if (attempt === 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+    }
+  }
+};
+
+/**
  * Folds the legacy copy of the notes out of `persist:root` (see above). Resolves to the number of
  * notes it added, or `null` if it couldn't finish: notes must then keep being persisted in the
  * outer blob too for this session, so that copy isn't dropped.
@@ -75,10 +91,11 @@ export async function foldLegacyRootNotes(notesStorage: Storage): Promise<number
 
   let root: Record<string, string> | null = null;
   try {
-    root = JSON.parse((await AsyncStorage.getItem(ROOT_KEY)) ?? "null");
-  } catch {
+    root = JSON.parse((await readRootBlob()) ?? "null");
+  } catch (error) {
     // Unreadable (e.g. a row over Android's 2MB cursor window) or corrupt: rehydrate couldn't read
     // it either, so that copy was never what the user saw.
+    Sentry.captureException(error);
   }
 
   try {

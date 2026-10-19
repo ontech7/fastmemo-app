@@ -1042,6 +1042,32 @@ unhandled, in the background.
 
 ---
 
+### LL-039: A storage read that throws wipes the notes, like a timed-out one
+
+**Date:** 2026-10-19  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** Found in review, never observed: LL-029 closed the timeout path, but a read that _throws_ (an I/O error, an
+out-of-memory error reading a huge notes file on a low-RAM phone, IndexedDB's "connection lost" in WebKit) took the same route.
+redux-persist rehydrated the empty initial state and its persistoid wrote it straight back over every stored note. Separately, a
+one-off read error on the legacy root blob passed for "no legacy copy": the fold was marked done and the blob rewritten without
+its notes (LL-022), with no backup.
+
+**Root cause:** redux-persist treats every failed read as "nothing stored" (`_rehydrate(undefined, err)`), then persists
+whatever state results.
+
+**Fix:** `store.ts` wraps the notes storage: once a read (or `deserialize`, or the AsyncStorage migration read) fails, writes of
+the notes are dropped for the rest of the session and the next launch reads them again. `fsStorage` treats only a `SyntaxError`
+as a broken file (anything else is a failed read, not a reason to set the file aside). `foldLegacyRootNotes` retries the blob
+read before giving it up as unreadable (a row past Android's 2MB cursor window fails every time).  
+**Rule:** A failed read is "unknown", never "empty" (same as LL-023 for the cloud): after one, don't write over what couldn't be
+read.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-19 **Resolved in:** branch
+`feat/ota-pbkdf2-a11y`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

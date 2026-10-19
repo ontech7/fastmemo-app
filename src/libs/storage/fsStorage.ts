@@ -18,8 +18,10 @@ const isCompleteJson = (value: string) => {
   try {
     JSON.parse(value);
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    // Only a syntax error means a broken file: anything else (out of memory) is a failed read.
+    if (err instanceof SyntaxError) return false;
+    throw err;
   }
 };
 

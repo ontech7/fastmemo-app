@@ -15,7 +15,23 @@ import type { CategoriesState, NotesState, SettingsState } from "@/types";
 
 type PersistedState = { _persist: { version: number; rehydrated: boolean } } | undefined;
 
-const notesStorage = FSStorage();
+// A read that throws (I/O error, out of memory on a huge file, IndexedDB connection lost) makes
+// redux-persist rehydrate the empty initial state and write it straight back over every stored note.
+// After one, the notes aren't written for the rest of the session: the next launch reads them again.
+let notesReadFailed = false;
+
+const failedNotesRead = (err: unknown): never => {
+  notesReadFailed = true;
+  console.warn("redux-persist: reading the notes failed, not writing them this session", err);
+  throw err;
+};
+
+const baseNotesStorage = FSStorage();
+const notesStorage = baseNotesStorage && {
+  getItem: (key: string) => baseNotesStorage.getItem(key).catch(failedNotesRead),
+  setItem: (key: string, value: string) => (notesReadFailed ? Promise.resolve() : baseNotesStorage.setItem(key, value)),
+  removeItem: (key: string) => baseNotesStorage.removeItem(key),
+};
 
 // redux-persist serializes every key again right after rehydrating it: all notes, on every boot,
 // though nothing changed. Rehydrated values remember the JSON they came from, reused for as long as
@@ -29,7 +45,12 @@ const isPersistedFile = (value: object): value is Record<string, string> =>
   typeof (value as { _persist?: unknown })._persist === "string";
 
 const deserializeNotes = (json: string): unknown => {
-  const value = JSON.parse(json);
+  let value: unknown;
+  try {
+    value = JSON.parse(json);
+  } catch (err) {
+    failedNotesRead(err);
+  }
   if (value !== null && typeof value === "object") {
     rehydratedJson.set(value, json);
     if (isPersistedFile(value)) rehydratedFile = { keys: value, json };
@@ -76,7 +97,7 @@ const notesPersistConfig: PersistConfig<NotesState> = {
       const asyncState = await getStoredState({
         key: "root_notes",
         storage: AsyncStorage,
-      });
+      }).catch(failedNotesRead);
       return asyncState as PersistedState;
     }
     return state;
@@ -134,7 +155,8 @@ const dropLegacyRootNotes: PersistMigrate = async (state) => {
 // Notes persist only to their own storage once their legacy copy has been folded out of the root
 // blob (see foldLegacyRootNotes). Until then, nothing persists. redux-persist reads `blacklist` and
 // `migrate` when persisting starts, so the root config can still be switched over here.
-foldLegacyRootNotes(notesStorage).then((added) => {
+// The fold handles its own read errors (it then reports `null`), so it gets the unguarded storage.
+foldLegacyRootNotes(baseNotesStorage).then((added) => {
   if (added !== null) {
     rootPersistConfig.blacklist = ["notes"];
     rootPersistConfig.migrate = dropLegacyRootNotes;
