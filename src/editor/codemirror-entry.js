@@ -72,6 +72,8 @@ const config = window.__EDITOR_CONFIG__ || {};
 let currentLang = config.language || "javascript";
 let currentReadOnly = config.readOnly || false;
 let suppressChange = false;
+// The last document React sent (see CodeEditorWebView's docRef): changes report it.
+let currentDoc = 0;
 
 // Helper: send messages back to React on both native and web/Tauri
 function sendToReact(data) {
@@ -92,7 +94,7 @@ window.addEventListener("message", function (event) {
 
 const changeListener = EditorView.updateListener.of((update) => {
   if (update.docChanged && !suppressChange) {
-    sendToReact(JSON.stringify({ type: "change", code: update.state.doc.toString() }));
+    sendToReact(JSON.stringify({ type: "change", code: update.state.doc.toString(), doc: currentDoc }));
   }
 });
 
@@ -126,6 +128,7 @@ window.handleMessage = function (msgStr) {
   try {
     const msg = JSON.parse(msgStr);
     if (msg.type === "setCode") {
+      currentDoc = msg.doc ?? currentDoc;
       if (msg.remote) {
         // Another device's edit of this document: only the span that differs is replaced, so the cursor and selection
         // map through it, and it stays out of the undo history (undo reverts this device's own edits).

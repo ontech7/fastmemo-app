@@ -44,8 +44,10 @@ export function useLiveNote(noteId: string, handlers: LiveNoteHandlers): void {
   useEffect(() => {
     let engine: SyncEngine | null = null;
     let mounted = true;
+    // Only a note the others have: not a device-only one (theirs, with the same id, is another note), nor one not saved yet.
+    const shared = () => store.getState().notes.items.some((note) => note.id === noteId && !note.local);
     const show = (open: boolean) => {
-      if (open) engine?.setPresence(noteId);
+      if (open && shared()) engine?.setPresence(noteId);
       else engine?.releasePresence(noteId);
     };
 
@@ -60,5 +62,5 @@ export function useLiveNote(noteId: string, handlers: LiveNoteHandlers): void {
       subscription.remove();
       show(false);
     };
-  }, [noteId]);
+  }, [noteId, store]);
 }

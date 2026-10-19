@@ -79,6 +79,11 @@ interface UseNoteEditorResult<T extends Note> {
   setNote: React.Dispatch<React.SetStateAction<T>>;
   /** Updates local state and schedules the note's batched commit to Redux (add, or temp+delete when empty). */
   setNoteAsync: (currNote: T) => void;
+  /**
+   * `setNoteAsync` for an update computed from the note later (e.g. an AI result): applied to the current copy, which
+   * may have been reloaded with another device's change meanwhile.
+   */
+  updateNoteAsync: (update: (current: T) => T) => void;
   /** Commits the pending batch now, if any. Call before acting on the stored note (delete, detach, ...). */
   flushNote: () => void;
   /** Called on hardware back press / explicit back button press. Fires the update/delete webhook. */
@@ -281,6 +286,8 @@ export function useNoteEditor<T extends Note>({
     [flushNote]
   );
 
+  const updateNoteAsync = useCallback((update: (current: T) => T) => setNoteAsync(update(currentRef.current)), [setNoteAsync]);
+
   // Never leave a batch behind: the editor goes away, or the app may be killed once in background.
   useEffect(() => () => flushNote(), [flushNote]);
 
@@ -296,7 +303,12 @@ export function useNoteEditor<T extends Note>({
       pendingNoteRef.current = null;
 
       const previous = currentRef.current;
-      const next = keepOnRemote ? keepOnRemote(stored as T, previous) : (stored as T);
+      let next = keepOnRemote ? keepOnRemote(stored as T, previous) : (stored as T);
+      // Still untitled here: the stored title is the one derived from the content (see auto-title), not a name.
+      const deriveFrom = getTitleSourceRef.current;
+      if (wasNewRef.current && !previous.title.trim() && deriveFrom && next.title === deriveNoteTitle(deriveFrom(next))) {
+        next = { ...next, title: "" };
+      }
       currentRef.current = next;
       setNote(next);
       onRemoteChange?.(next, previous);
@@ -351,5 +363,5 @@ export function useNoteEditor<T extends Note>({
     }, [flushNote])
   );
 
-  return { note, setNote, setNoteAsync, flushNote, updateNoteWebhook, autoTitle };
+  return { note, setNote, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle };
 }

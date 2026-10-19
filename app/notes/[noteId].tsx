@@ -72,8 +72,10 @@ export default function NoteScreen() {
     } else {
       return currentNote;
     }
+    // By the category's icon, not its object: a sync rebuilds the category objects, and a new note's id (with what was
+    // typed in it) must not change under the editor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, currentCategory]);
+  }, [noteId, currentCategory?.icon]);
 
   useEffect(() => {
     if (noteIdRef.current !== noteId) {

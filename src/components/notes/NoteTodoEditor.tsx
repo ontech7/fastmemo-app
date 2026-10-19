@@ -63,7 +63,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
 
-  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
     defaultType: "todo",
     addWebhookSelector: selectorWebhook_addTodoNote,
@@ -326,18 +326,18 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                       .join(", ")
                   }
                   noteTitle={note.title}
-                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                  onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                   onItemsSuggested={(items) => {
                     const newItems = items.map((text) => ({
                       id: uuid(),
                       text: capitalize(text),
                       checked: false,
                     }));
-                    setNoteAsync({ ...note, list: [...note.list, ...newItems] });
+                    updateNoteAsync((current) => ({ ...current, list: [...current.list, ...newItems] }));
                   }}
                   onCategorySuggested={(name) => {
                     const cat = findCategoryByName(name);
-                    if (cat) setNoteAsync({ ...note, category: cat });
+                    if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                   }}
                   style={dockButtonStyle}
                   menuBottomOffset={110}

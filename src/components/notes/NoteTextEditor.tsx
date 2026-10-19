@@ -69,27 +69,60 @@ const TOOLBAR_LABEL_KEYS: Record<string, string> = {
 // Run inside the editor's page (`command`, where `$` is its document) around a reload with another device's change:
 // a focused editor's caret keeps its place in the text, shifted by what changed before it, instead of jumping to the
 // start. The page handles messages in order, so the save sees the old content and the restore the new one.
-const SAVE_CARET = `
+
+// The content as text with a line break before each line (block) and for each <br>, so the end of a line and the start
+// of the next are different positions; `points` maps positions back into the DOM.
+const LINEAR_TEXT = `
+  function linear(root) {
+    var text = "", points = [], blocks = /^(DIV|P|LI|H[1-6]|PRE|BLOCKQUOTE|UL|OL)$/;
+    (function walk(node) {
+      for (var child = node.firstChild; child; child = child.nextSibling) {
+        if (child.nodeType === 3) {
+          points.push({ node: child, start: text.length });
+          text += child.data;
+        } else if (child.nodeName === "BR") {
+          text += "\\n";
+        } else if (child.nodeType === 1) {
+          var block = blocks.test(child.nodeName);
+          if (block && text) text += "\\n";
+          if (block) points.push({ node: child, start: text.length, block: true });
+          walk(child);
+        }
+      }
+    })(root);
+    return { text: text, points: points };
+  }
+`;
+const SAVE_CARET = `${LINEAR_TEXT}
   var c = $.querySelector(".pell-content"), s = $.getSelection();
   window.__fmCaret = null;
   if (!c || !$.hasFocus() || !s.rangeCount || !c.contains(s.focusNode)) return;
   var r = $.createRange();
   r.selectNodeContents(c);
   r.setEnd(s.focusNode, s.focusOffset);
-  window.__fmCaret = { at: r.toString().length, text: c.textContent };
+  var before = $.createElement("div");
+  before.appendChild(r.cloneContents());
+  window.__fmCaret = { at: linear(before).text.length, text: linear(c).text };
 `;
-const RESTORE_CARET = `
+/** The page's message that a reload is on screen. */
+const RELOAD_SHOWN = "FASTMEMO_RELOAD_SHOWN";
+/** Tells the screen that reload `reload` is on the page (see `reloadsSentRef`), then restores the caret. */
+const restoreCaret = (reload: number) => `${LINEAR_TEXT}
+  (window.ReactNativeWebView || window.parent).postMessage(JSON.stringify({ type: "${RELOAD_SHOWN}", data: ${reload} }));
   var saved = window.__fmCaret, c = $.querySelector(".pell-content");
   window.__fmCaret = null;
   if (!saved || !c) return;
-  var old = saved.text, text = c.textContent, from = 0, tail = 0;
+  var now = linear(c), old = saved.text, text = now.text, from = 0, tail = 0;
   while (from < old.length && from < text.length && old[from] === text[from]) from++;
   while (tail < old.length - from && tail < text.length - from && old[old.length - 1 - tail] === text[text.length - 1 - tail]) tail++;
   var at = saved.at <= from ? saved.at : saved.at >= old.length - tail ? saved.at + text.length - old.length : text.length - tail;
-  var walker = $.createTreeWalker(c, NodeFilter.SHOW_TEXT), node;
-  while ((node = walker.nextNode()) && at > node.length) at -= node.length;
+  var point = null;
+  for (var i = 0; i < now.points.length && now.points[i].start <= at; i++) {
+    var p = now.points[i];
+    if (p.block ? p.start === at : at <= p.start + p.node.length) point = p;
+  }
   var s = $.getSelection();
-  if (node) s.collapse(node, at);
+  if (point) s.collapse(point.node, point.block ? 0 : at - point.start);
   else { s.selectAllChildren(c); s.collapseToEnd(); }
 `;
 
@@ -133,8 +166,20 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const [noteTextSize, setNoteTextSize] = useState(() => getTextSize(memoInitialNote.text));
 
   const richTextEditor = useRef(null);
+  const editorReadyRef = useRef(false);
 
-  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TextNote>({
+  // Reloads sent to the editor's page, and the last one it has on screen: until it does, what the page reports was typed
+  // over the content the reload replaces, and would undo the other device's change.
+  const reloadsSentRef = useRef(0);
+  const reloadsShownRef = useRef(0);
+  const showRemote = useCallback((html: string) => {
+    const reload = ++reloadsSentRef.current;
+    richTextEditor.current?.command(SAVE_CARET);
+    richTextEditor.current?.setContentHTML(html);
+    richTextEditor.current?.command(restoreCaret(reload));
+  }, []);
+
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TextNote>({
     initialNote: memoInitialNote,
     defaultType: "text",
     addWebhookSelector: selectorWebhook_addTextNote,
@@ -142,11 +187,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
     isEmpty,
     buildPayloadExtras,
     getTitleSource: (n) => stripHtml(n.text),
-    // Changed on another device while open here: the WebView editor holds its own copy of the content.
-    onRemoteChange: (remote) => {
-      richTextEditor.current?.command(SAVE_CARET);
-      richTextEditor.current?.setContentHTML(remote.text);
-      richTextEditor.current?.command(RESTORE_CARET);
+    // Changed on another device while open here: the WebView editor holds its own copy of the content (a page still
+    // loading gets it once it's up).
+    onRemoteChange: (remote, previous) => {
+      if (remote.text === previous.text) return;
+      if (editorReadyRef.current) showRemote(remote.text);
       setNoteTextLength(getTextLength(remote.text));
       setNoteTextSize(getTextSize(remote.text));
     },
@@ -258,6 +303,26 @@ export default function NoteTextEditor({ initialNote }: Props) {
     },
     [setNoteAsync, t]
   );
+
+  const onEditorChange = useCallback(
+    (html: string) => {
+      // Typed over the content a reload has replaced since (see reloadsSentRef).
+      if (reloadsShownRef.current !== reloadsSentRef.current) return;
+      setText(html);
+    },
+    [setText]
+  );
+
+  const onEditorMessage = useCallback((message: { type?: string; data?: unknown }) => {
+    if (message?.type === RELOAD_SHOWN) reloadsShownRef.current = message.data as number;
+  }, []);
+
+  const onEditorInitialized = useCallback(() => {
+    editorReadyRef.current = true;
+    setEditorInitialized(true);
+    // Changed on another device while the page was loading: it loaded the text the screen opened with.
+    if (noteRef.current.text !== initialNote.text) showRemote(noteRef.current.text);
+  }, [initialNote.text, showRemote]);
 
   // The formatting toolbar rides on top of the keyboard in a KeyboardStickyView
   // (see render): it stays glued to the keyboard's top edge and slides off-screen
@@ -406,12 +471,13 @@ export default function NoteTextEditor({ initialNote }: Props) {
               disabled={note.readOnly}
               ref={richTextEditor}
               allowFileAccess={true}
-              onChange={setText}
+              onChange={onEditorChange}
+              onMessage={onEditorMessage}
               initialContentHTML={initialNote.text}
               placeholder={t("note.description_placeholder")}
               pasteAsPlainText
               editorStyle={editorStyle}
-              editorInitializedCallback={() => setEditorInitialized(true)}
+              editorInitializedCallback={onEditorInitialized}
             />
           </Animated.View>
 
@@ -427,14 +493,14 @@ export default function NoteTextEditor({ initialNote }: Props) {
                     noteType="text"
                     getContent={() => stripHtml(note.text)}
                     noteTitle={note.title}
-                    onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                    onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                     onSummaryGenerated={(summary) => {
                       richTextEditor.current?.setContentHTML(summary);
                       setText(summary);
                     }}
                     onCategorySuggested={(name) => {
                       const cat = findCategoryByName(name);
-                      if (cat) setNoteAsync({ ...note, category: cat });
+                      if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                     }}
                     onTextRewritten={(rewritten) => {
                       const html = voiceTextToHtml(rewritten, { leadingSpace: false });

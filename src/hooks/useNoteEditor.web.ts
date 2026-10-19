@@ -56,6 +56,8 @@ interface UseNoteEditorResult<T extends Note> {
   note: T;
   setNote: React.Dispatch<React.SetStateAction<T>>;
   setNoteAsync: (currNote: T) => void;
+  /** As on native: an update computed from the current copy. */
+  updateNoteAsync: (update: (current: T) => T) => void;
   flushNote: () => void;
   updateNoteWebhook: () => Promise<void>;
   /** Title derived from content while a new note is untitled; shown as the field placeholder. */
@@ -236,6 +238,8 @@ export function useNoteEditor<T extends Note>({
     [flushNote]
   );
 
+  const updateNoteAsync = useCallback((update: (current: T) => T) => setNoteAsync(update(currentRef.current)), [setNoteAsync]);
+
   useEffect(() => () => flushNote(), [flushNote]);
 
   useFocusEffect(useCallback(() => () => flushNote(), [flushNote]));
@@ -251,7 +255,12 @@ export function useNoteEditor<T extends Note>({
       pendingNoteRef.current = null;
 
       const previous = currentRef.current;
-      const next = keepOnRemote ? keepOnRemote(stored as T, previous) : (stored as T);
+      let next = keepOnRemote ? keepOnRemote(stored as T, previous) : (stored as T);
+      // Still untitled here: the stored title is the one derived from the content (see auto-title), not a name.
+      const deriveFrom = getTitleSourceRef.current;
+      if (wasNewRef.current && !previous.title.trim() && deriveFrom && next.title === deriveNoteTitle(deriveFrom(next))) {
+        next = { ...next, title: "" };
+      }
       currentRef.current = next;
       setNote(next);
       onRemoteChange?.(next, previous);
@@ -282,5 +291,5 @@ export function useNoteEditor<T extends Note>({
     });
   }, [note, flushNote, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, isEmpty, buildWebhookPayload]);
 
-  return { note, setNote, setNoteAsync, flushNote, updateNoteWebhook, autoTitle };
+  return { note, setNote, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle };
 }

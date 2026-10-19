@@ -41,6 +41,9 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
     const hiddenInputRef = useRef<TextInputInstance>(null);
     const isReady = useRef(false);
     const pendingMessages = useRef<string[]>([]);
+    // Documents sent to the editor: a change it reports carries the one it was made in, and one made in a document
+    // replaced since (a keystroke on its way as another device's edit or a tab switch arrives) would undo the new one.
+    const docRef = useRef(0);
 
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
@@ -71,7 +74,15 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
 
     useImperativeHandle(ref, () => ({
       setCode: (code: string, options?: SetCodeOptions) =>
-        sendMessage(JSON.stringify({ type: "setCode", code, undoable: !!options?.undoable, remote: !!options?.remote })),
+        sendMessage(
+          JSON.stringify({
+            type: "setCode",
+            code,
+            doc: ++docRef.current,
+            undoable: !!options?.undoable,
+            remote: !!options?.remote,
+          })
+        ),
       setLanguage: (lang: string) => sendMessage(JSON.stringify({ type: "setLanguage", language: lang })),
       setReadOnly: (ro: boolean) => sendMessage(JSON.stringify({ type: "setReadOnly", readOnly: ro })),
       focus: () => {
@@ -101,7 +112,7 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
             }
             pendingMessages.current = [];
             onReadyRef.current?.();
-          } else if (data.type === "change") {
+          } else if (data.type === "change" && (data.doc ?? 0) === docRef.current) {
             onChangeRef.current(data.code);
           }
         } catch {}

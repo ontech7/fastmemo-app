@@ -73,7 +73,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
     [isNewNote, initialNote.readOnly, memoInitialNote]
   );
 
-  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<KanbanNote>({
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<KanbanNote>({
     initialNote: memoInitialNote,
     defaultType: "kanban",
     addWebhookSelector: selectorWebhook_addKanbanNote,
@@ -213,10 +213,10 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
                       .join(". ")
                   }
                   noteTitle={note.title}
-                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                  onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                   onCategorySuggested={(name) => {
                     const cat = findCategoryByName(name);
-                    if (cat) setNoteAsync({ ...note, category: cat });
+                    if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                   }}
                   style={dockButtonStyle}
                   menuBottomOffset={110}

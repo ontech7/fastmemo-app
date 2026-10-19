@@ -109,7 +109,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
     editorRef.current?.setLanguage(tab?.language || "plaintext");
   }, []);
 
-  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
     initialNote: memoInitialNote,
     defaultType: "code",
     addWebhookSelector: selectorWebhook_addCodeNote,
@@ -331,10 +331,10 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   noteType="code"
                   getContent={() => activeTab?.code || ""}
                   noteTitle={note.title}
-                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                  onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                   onCategorySuggested={(name) => {
                     const cat = findCategoryByName(name);
-                    if (cat) setNoteAsync({ ...note, category: cat });
+                    if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                   }}
                   onCodeCommented={(commentedCode) => {
                     const updatedTabs = note.tabs.map((tab) =>
