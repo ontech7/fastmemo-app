@@ -15,6 +15,8 @@ const src = join(__dirname, "..", "src");
 const out = join(os.tmpdir(), "vault.bundle.mjs");
 const jsOnlyOut = join(os.tmpdir(), "vault.jsonly.bundle.mjs");
 const cryptOut = join(os.tmpdir(), "crypt.bundle.mjs");
+const webKdfOut = join(os.tmpdir(), "fastmemo-crypto.web.bundle.mjs");
+const webKdfSrc = join(__dirname, "..", "modules", "fastmemo-crypto", "src", "FastmemoCryptoModule.web.ts");
 
 // native-only modules; stub them so the bundles load under node
 const alias = {
@@ -32,7 +34,7 @@ const kdfModule = (target) => ({
 });
 
 for (const [outfile, kdf] of [
-  [out, join(__dirname, "..", "modules", "fastmemo-crypto", "src", "FastmemoCryptoModule.web.ts")],
+  [out, webKdfSrc],
   [jsOnlyOut, join(__dirname, "_fastmemo-crypto-stub.js")],
 ]) {
   await build({
@@ -56,6 +58,9 @@ await build({
   logLevel: "error",
   alias,
 });
+
+// the WebCrypto PBKDF2 on its own, to compare it with crypto-js directly
+await build({ entryPoints: [webKdfSrc], bundle: true, platform: "node", format: "esm", outfile: webKdfOut, logLevel: "error" });
 
 const V = await import(pathToFileURL(out).href);
 const VJs = await import(pathToFileURL(jsOnlyOut).href);
@@ -154,6 +159,36 @@ for (const passphrase of ["correct horse battery staple", "pässwörd àèìòù
       (await V.unlockVaultWithRecoveryKey(slow.vault, slow.recoveryKey)) === slow.dek
   );
 }
+// 6b alone would also pass if the module silently fell back to crypto-js (its self-check failing): compare
+// the module's own output, so a broken WebCrypto path can't ship as a quiet return of the 1-2s freeze.
+const { default: WebKdf } = await import(pathToFileURL(webKdfOut).href);
+const { default: CryptoJS6c } = await import("crypto-js"); // what vault.ts uses
+const pbkdf2Js = (secret, saltHex, iterations) =>
+  CryptoJS6c.PBKDF2(secret, CryptoJS6c.enc.Hex.parse(saltHex), {
+    keySize: 32 / 4,
+    iterations,
+    hasher: CryptoJS6c.algo.SHA256,
+  }).toString(CryptoJS6c.enc.Hex);
+ok("the WebCrypto module is available under node", WebKdf !== null);
+for (const [secret, saltHex, iterations] of [
+  ["pässwörd ✓ 密码 🔑", "00112233445566778899aabbccddeeff", 1000],
+  ["long passphrase ".repeat(5), "00112233445566778899AABBCCDDEEFF", 2],
+  ["", "deadbeefdeadbeefdeadbeefdeadbeef", 1],
+]) {
+  ok(
+    `WebCrypto PBKDF2 = crypto-js (${JSON.stringify(secret).slice(0, 24)}, ${iterations} it.)`,
+    (await WebKdf.pbkdf2Sha256Async(secret, saltHex, iterations, 32)) === pbkdf2Js(secret, saltHex, iterations)
+  );
+}
+const halfEmoji = "pass\ud83d";
+let halfEmojiThrows = false;
+try {
+  await V.createVault(halfEmoji);
+} catch {
+  halfEmojiThrows = true;
+}
+ok("half an emoji fails on the native/WebCrypto build like in pure JS (no key only one path can derive)", halfEmojiThrows);
+
 const rewrappedJs = await VJs.rewrapWithNewPassphrase(vault, dek, "cambiata in JS");
 ok(
   "a passphrase changed in pure JS unlocks with WebCrypto",

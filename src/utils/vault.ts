@@ -137,8 +137,8 @@ const deriveKEKHexJs = (secret: string, saltHex: string, iterations: number, key
 
 /**
  * Whether the native PBKDF2 can be trusted, decided once: it must reproduce crypto-js' output (a
- * cheap 2-iteration check, an accented and an empty passphrase), or a vault created on one platform
- * could not be unlocked on another.
+ * cheap 2-iteration check: multi-byte UTF-8 up to an emoji, a passphrase longer than the 64-byte HMAC
+ * block, an empty one), or a vault created on one platform could not be unlocked on another.
  */
 let nativeKdfVerified: Promise<boolean> | null = null;
 
@@ -147,7 +147,7 @@ const isNativeKdfUsable = (): Promise<boolean> => {
     if (!FastmemoCrypto) return false;
     const saltHex = "00112233445566778899aabbccddeeff";
     try {
-      for (const secret of ["pässwörd ✓ 密码", ""]) {
+      for (const secret of ["pässwörd ✓ 密码 🔑", "long passphrase ".repeat(5), ""]) {
         const native = await FastmemoCrypto.pbkdf2Sha256Async(secret, saltHex, 2, KEK_BYTES);
         if (native !== deriveKEKHexJs(secret, saltHex, 2)) return false;
       }
@@ -159,8 +159,13 @@ const isNativeKdfUsable = (): Promise<boolean> => {
   return nativeKdfVerified;
 };
 
+// Half an emoji (a lone UTF-16 surrogate) has no UTF-8 form: crypto-js throws on it, while WebCrypto and
+// the native code would hash U+FFFD instead, a key the JS path could never reproduce. Such a secret
+// takes the JS path, so it fails the same way everywhere (as it did before the native path existed).
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+
 const deriveKEKHex = async (secret: string, saltHex: string, iterations: number): Promise<string> => {
-  if (await isNativeKdfUsable()) {
+  if (!LONE_SURROGATE.test(secret) && (await isNativeKdfUsable())) {
     try {
       return await FastmemoCrypto!.pbkdf2Sha256Async(secret, saltHex, iterations, KEK_BYTES);
     } catch {
