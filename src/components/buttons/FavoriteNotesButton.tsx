@@ -6,9 +6,10 @@ import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
   onPressSave: () => void;
+  focusable?: boolean;
 }
 
-export default function FavoriteNotesButton({ onPressSave }: Props) {
+export default function FavoriteNotesButton({ onPressSave, focusable }: Props) {
   const { t } = useTranslation();
 
   return (
@@ -16,6 +17,7 @@ export default function FavoriteNotesButton({ onPressSave }: Props) {
       activeOpacity={0.7}
       style={styles.saveNoteButton}
       onPress={onPressSave}
+      focusable={focusable}
       accessibilityRole="button"
       accessibilityLabel={t("note.settings.important")}
     >

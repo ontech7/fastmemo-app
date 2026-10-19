@@ -499,13 +499,14 @@ export default function HomeScreen() {
         </SafeAreaView>
 
         <Animated.View style={[styles.editModeToolbar, animatedTranslate, animatedOpacity]} aria-hidden={!isDeleteMode}>
-          <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} />
+          {/* aria-hidden keeps the hidden toolbar from screen readers; focusable keeps it out of the web tab order */}
+          <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} focusable={isDeleteMode} />
 
-          <ProtectNotesButton onPressProtect={toggleProtectedNotesFromItems} />
+          <ProtectNotesButton onPressProtect={toggleProtectedNotesFromItems} focusable={isDeleteMode} />
 
-          <HiddenNotesButton onPressHidden={toggleHiddenNotesFromItems} />
+          <HiddenNotesButton onPressHidden={toggleHiddenNotesFromItems} focusable={isDeleteMode} />
 
-          <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
+          <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} focusable={isDeleteMode} />
         </Animated.View>
 
         <WebViewWarmup />

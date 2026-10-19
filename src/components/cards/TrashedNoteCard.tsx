@@ -113,6 +113,8 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
         ]}
         onPress={onPressHandler}
         onLongPress={onLongPressHandler}
+        accessibilityRole={isDeleteMode ? "checkbox" : "button"}
+        aria-checked={isDeleteMode ? isSelected : undefined}
       >
         {isDeleteMode ? (
           <View

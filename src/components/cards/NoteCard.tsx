@@ -110,6 +110,8 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
       ]}
       onPress={onPressHandler}
       onLongPress={onLongPressHandler}
+      accessibilityRole={isDeleteMode ? "checkbox" : "button"}
+      aria-checked={isDeleteMode ? isSelected : undefined}
     >
       {isDeleteMode ? (
         <View

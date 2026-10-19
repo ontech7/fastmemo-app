@@ -6,9 +6,10 @@ import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
   onPressProtect: () => void;
+  focusable?: boolean;
 }
 
-export default function ProtectNotesButton({ onPressProtect }: Props) {
+export default function ProtectNotesButton({ onPressProtect, focusable }: Props) {
   const { t } = useTranslation();
 
   return (
@@ -16,6 +17,7 @@ export default function ProtectNotesButton({ onPressProtect }: Props) {
       activeOpacity={0.7}
       style={styles.protectNoteButton}
       onPress={onPressProtect}
+      focusable={focusable}
       accessibilityRole="button"
       accessibilityLabel={t("note.settings.protect")}
     >

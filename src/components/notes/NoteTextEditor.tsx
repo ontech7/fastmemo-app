@@ -65,6 +65,9 @@ const TOOLBAR_LABEL_KEYS: Record<string, string> = {
   [actions.code]: "a11y.format.code",
 };
 
+// Every other action is a format the cursor's text either has or not.
+const NON_TOGGLE_ACTIONS = new Set<string>([actions.undo, actions.redo, actions.insertImage]);
+
 const renderToolbarAction = (
   RichToolbar.prototype as unknown as {
     _defaultRenderAction(action: string, selected: boolean): ReactElement;
@@ -75,10 +78,11 @@ const renderToolbarAction = (
 // buttons its default renderer returns (`_renderAction` calls it through `this`, so the override is used).
 class LabeledRichToolbar extends RichToolbar {
   _defaultRenderAction(action: string, selected: boolean) {
+    const isToggle = !NON_TOGGLE_ACTIONS.has(action);
     return cloneElement(renderToolbarAction.call(this, action, selected), {
-      accessibilityRole: "button",
+      accessibilityRole: isToggle ? "checkbox" : "button",
       accessibilityLabel: TOOLBAR_LABEL_KEYS[action] ? i18n.t(TOOLBAR_LABEL_KEYS[action]) : undefined,
-      "aria-selected": selected,
+      "aria-checked": isToggle ? selected : undefined,
     });
   }
 }

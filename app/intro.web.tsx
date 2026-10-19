@@ -168,12 +168,12 @@ export default function IntroScreen() {
           )}
         </View>
 
-        <View style={styles.paginationContainer}>
+        <View style={styles.paginationContainer} accessibilityRole="tablist">
           {carouselSteps.map((_, index) => (
             <TouchableOpacity
               key={index}
               onPress={() => emblaApi?.scrollTo(index)}
-              accessibilityRole="button"
+              accessibilityRole="tab"
               accessibilityLabel={t("a11y.page", { page: index + 1 })}
               aria-selected={index === activeIndex}
               style={[styles.carouselDot, index !== activeIndex && styles.inactiveCarouselDot]}

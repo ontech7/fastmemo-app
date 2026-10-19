@@ -321,7 +321,12 @@ export default function ReportScreen() {
               </View>
 
               {/* device info */}
-              <TouchableOpacity activeOpacity={0.7} onPress={toggleSendDeviceInfo}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={toggleSendDeviceInfo}
+                accessibilityRole="checkbox"
+                aria-checked={sendDeviceInfo}
+              >
                 <View style={[styles.sendDeviceInfoCheckbox, sendDeviceInfo && styles.sendDeviceInfoCheckboxChecked]}>
                   <CheckIcon size={18} color={COLOR.softWhite} style={{ opacity: sendDeviceInfo ? 1 : 0 }} />
                 </View>

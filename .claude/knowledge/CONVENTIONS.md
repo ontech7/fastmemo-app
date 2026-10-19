@@ -111,11 +111,20 @@ The standard interactive element is `TouchableOpacity` with `activeOpacity={0.7}
 >
 ```
 
+- The state attribute must be valid for the role (the web exposes it to assistive tech as is): an on/off control is a `checkbox`
+  with `aria-checked` (format toggles, a selectable note card in delete mode, a menu option with a `selected` state); one choice
+  out of a set is a `radio` with `aria-checked` (icon picker, language picker), or a `tab` with `aria-selected` when it switches
+  what's shown (category filter, carousel dots in a `tablist`). Never `aria-selected` on a `button` or `menuitem`. Something
+  that opens/closes a panel is a `button` with `aria-expanded`.
+- A control's name follows what it does now (the FAB is "New note", or "Exit selection" in delete mode).
+- A control that only reacts to `onPressIn` (a drag handle) is `accessible={false}`: a screen reader can't drive it.
+
 - Use `accessibilityRole` (not `role`): native `TouchableOpacity` silently drops `role`.
 - Use `aria-checked`/`aria-selected`/`aria-expanded` for state (not `accessibilityState`): react-native-web ignores
   `accessibilityState` except `disabled`. `disabled` already maps on both platforms.
 - Content that is only hidden visually (opacity 0, translated off-screen, closed overlays) gets `aria-hidden` while inactive, or
-  screen readers still reach it.
+  screen readers still reach it, and its pressables `focusable={false}`: on web `aria-hidden` doesn't remove them from the
+  keyboard tab order (react-native-web has no `inert`).
 - Generic screen-reader names live under `a11y.*`.
 
 ### SafeAreaView

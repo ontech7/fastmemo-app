@@ -73,7 +73,7 @@ export default function DictationSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onCancel}>
-      <Pressable style={styles.backdrop} onPress={onCancel} />
+      <Pressable style={styles.backdrop} onPress={onCancel} accessibilityRole="button" accessibilityLabel={t("a11y.close")} />
 
       <View style={styles.sheet}>
         <View style={styles.handle} />

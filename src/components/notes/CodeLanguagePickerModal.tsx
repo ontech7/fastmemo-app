@@ -33,8 +33,8 @@ export default function CodeLanguagePickerModal({ visible, selectedLanguage, onS
                   key={lang}
                   style={[styles.languageItem, isSelected && styles.languageItemSelected]}
                   onPress={() => onSelect(lang)}
-                  accessibilityRole="button"
-                  aria-selected={isSelected}
+                  accessibilityRole="radio"
+                  aria-checked={isSelected}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.languageItemText, isSelected && styles.languageItemTextSelected]}>

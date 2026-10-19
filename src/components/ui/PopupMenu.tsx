@@ -160,8 +160,9 @@ export function PopupMenuOption({ label, onSelect, disabled, selected, leading, 
   return (
     <Pressable
       disabled={disabled}
-      accessibilityRole="menuitem"
-      aria-selected={selected}
+      // aria-selected isn't valid on a menuitem: an option with an on/off state is a checkbox
+      accessibilityRole={selected === undefined ? "menuitem" : "checkbox"}
+      aria-checked={selected}
       onPress={() => {
         onSelect?.();
         close();

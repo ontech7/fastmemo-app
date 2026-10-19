@@ -242,7 +242,12 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
         >
           <ChevronDownIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.textMuted} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton} onPress={() => setShowReplace(!showReplace)}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => setShowReplace(!showReplace)}
+          accessibilityRole="button"
+          aria-expanded={showReplace}
+        >
           <Text style={[styles.toggleText, showReplace && { color: COLOR.accentSoft }]}>
             {t("note.find_replace.replace_short")}
           </Text>

@@ -353,6 +353,7 @@ export default function AIEditorActions({
         onPress={feedback === "processing" ? handleCancel : toggleMenu}
         accessibilityRole="button"
         accessibilityLabel={feedback === "processing" ? t("cancel") : t("generalsettings.ai_assistant")}
+        aria-expanded={isMenuOpen}
         disabled={disabled}
       >
         {feedback === "processing" ? (

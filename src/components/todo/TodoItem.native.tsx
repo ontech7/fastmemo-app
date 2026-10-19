@@ -141,8 +141,8 @@ export default function TodoItem({
             disabled={disabled}
             style={styles.drag}
             onPressIn={drag}
-            accessibilityRole="button"
-            accessibilityLabel={t("a11y.drag_to_reorder")}
+            // A drag starts on touch-down, which a screen reader's double tap can't drive
+            accessible={false}
           >
             <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
           </TouchableOpacity>

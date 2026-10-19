@@ -6,9 +6,10 @@ import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
   onPressHidden: () => void;
+  focusable?: boolean;
 }
 
-export default function HiddenNotesButton({ onPressHidden }: Props) {
+export default function HiddenNotesButton({ onPressHidden, focusable }: Props) {
   const { t } = useTranslation();
 
   return (
@@ -16,6 +17,7 @@ export default function HiddenNotesButton({ onPressHidden }: Props) {
       activeOpacity={0.7}
       style={styles.hiddenNoteButton}
       onPress={onPressHidden}
+      focusable={focusable}
       accessibilityRole="button"
       accessibilityLabel={t("note.settings.hide")}
     >

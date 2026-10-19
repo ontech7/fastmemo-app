@@ -119,7 +119,7 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
           style={[styles.button, selected && styles.selectedButton, rotateAnimStyle]}
           activeOpacity={0.7}
           onPress={swapFavoriteCategory}
-          accessibilityRole="button"
+          accessibilityRole="tab"
           accessibilityLabel={index ? t("All") : name}
           aria-selected={selected}
           onLongPress={toggleDeleteMode}

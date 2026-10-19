@@ -46,9 +46,10 @@ interface MenuItemProps {
   menuProgress: SharedValue<number>;
   onPress: () => void;
   label: string;
+  focusable: boolean;
 }
 
-function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, label }: MenuItemProps) {
+function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, label, focusable }: MenuItemProps) {
   const reverseIndex = totalItems - 1 - index;
   const Icon = noteType.icon;
 
@@ -72,7 +73,13 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
 
   return (
     <Animated.View style={animatedStyle}>
-      <TouchableOpacity style={styles.noteTypeButton} activeOpacity={0.7} onPress={onPress} accessibilityRole="button">
+      <TouchableOpacity
+        style={styles.noteTypeButton}
+        activeOpacity={0.7}
+        onPress={onPress}
+        accessibilityRole="button"
+        focusable={focusable}
+      >
         <Text style={styles.noteTypeLabel}>{label}</Text>
         <View style={styles.noteTypeIconContainer}>
           <Icon size={28} color={COLOR.softWhite} />
@@ -228,6 +235,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
         ]}
         onPress={closeOverlay}
         accessible={false}
+        focusable={false}
         aria-hidden={!isOverlayOpen}
       >
         <View style={styles.overlayContainer}>
@@ -240,6 +248,8 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
               menuProgress={menuProgress}
               onPress={() => handleNoteTypePress(noteType)}
               label={t(noteType.labelKey)}
+              // aria-hidden doesn't take a closed menu out of the web tab order
+              focusable={isOverlayOpen}
             />
           ))}
         </View>
@@ -251,11 +261,15 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
         offset={{ closed: 0, opened: insets.bottom }}
         style={[styles.fabGroup, { bottom: bottomOffset ?? 60, pointerEvents: "box-none" }]}
       >
-        <Animated.View style={[secondaryFabAnimatedStyle, { pointerEvents: isDeleteMode ? "none" : "auto" }]}>
+        <Animated.View
+          style={[secondaryFabAnimatedStyle, { pointerEvents: isDeleteMode ? "none" : "auto" }]}
+          aria-hidden={isDeleteMode}
+        >
           <TouchableOpacity
             style={styles.fabSecondary}
             activeOpacity={0.7}
             onPress={toggleOverlay}
+            focusable={!isDeleteMode}
             accessibilityRole="button"
             accessibilityLabel={t("a11y.note_types")}
             aria-expanded={isOverlayOpen}
@@ -271,7 +285,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
           activeOpacity={0.7}
           onPress={createDirect}
           accessibilityRole="button"
-          accessibilityLabel={t("a11y.new_note")}
+          accessibilityLabel={isDeleteMode ? t("a11y.exit_selection") : t("a11y.new_note")}
         >
           <Animated.View style={closeIconAnimatedStyle}>
             <PlusIcon size={28} color={COLOR.softWhite} />

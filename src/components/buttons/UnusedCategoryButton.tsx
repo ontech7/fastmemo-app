@@ -17,9 +17,9 @@ function UnusedCategoryButton({ name, selected, toggleCategoryIcon }: Props) {
       activeOpacity={0.7}
       style={[styles.button, selected && styles.selectedButton]}
       onPress={() => toggleCategoryIcon(name)}
-      accessibilityRole="button"
+      accessibilityRole="radio"
       accessibilityLabel={name}
-      aria-selected={selected}
+      aria-checked={selected}
     >
       <CategoryIcon name={name} color={selected ? COLOR.softWhite : COLOR.textPrimary} />
     </TouchableOpacity>

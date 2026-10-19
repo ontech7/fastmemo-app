@@ -643,7 +643,13 @@ const Accordion = ({ title, children, defaultOpen = false }: AccordionProps) => 
 
   return (
     <View style={styles.sectionWrapper}>
-      <TouchableOpacity activeOpacity={0.7} style={styles.sectionHeader} onPress={toggleAccordion}>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={styles.sectionHeader}
+        onPress={toggleAccordion}
+        accessibilityRole="button"
+        aria-expanded={isOpenAccordion}
+      >
         <Text style={styles.sectionHeaderTitle}>{title}</Text>
 
         <ChevronDownIcon
