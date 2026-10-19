@@ -70,9 +70,9 @@ export const useCloudSync = () => {
 
         const me = await getDeviceUuid();
         if (me) {
-          // Nobody waits for this device's acks anymore, or their queues would never clear.
-          await cloud.dropRecipient(me);
+          // Removed first, so the others stop making it a recipient; then nobody waits for its acks anymore.
           await cloud.unregisterDevice(me);
+          await cloud.dropRecipient(me);
         }
 
         // forget the cached DEK for this device, but leave the cloud vault intact

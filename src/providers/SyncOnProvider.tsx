@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { AppState, Platform } from "react-native";
 import { useSelector } from "react-redux";
 
-import { useAppDispatch } from "@/slicers/store";
+import { notesLoaded, useAppDispatch } from "@/slicers/store";
 import { cloud, getDeviceUuid } from "@/libs/cloud";
 import { clearPresenceDevices, setPresenceDevices } from "@/libs/cloud/presence";
 import { getSyncEngine, onSyncEvent, syncIfDue } from "@/libs/cloud/sync";
@@ -71,7 +71,8 @@ export default function SyncOnProvider(): null {
   // The engine runs while connected and unlocked. Offline it keeps running: the listeners resume by themselves and the
   // outbox waits.
   useEffect(() => {
-    if (!isCloudConnected || !vaultUnlocked) return;
+    // Notes that couldn't be read at launch aren't written this session either (LL-039): nothing would stay merged.
+    if (!isCloudConnected || !vaultUnlocked || !notesLoaded()) return;
 
     let stopped = false;
     let stop = () => {};

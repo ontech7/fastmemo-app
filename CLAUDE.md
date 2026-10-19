@@ -97,6 +97,9 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 22. **Never touch the cloud outside the `CloudBackend`** -- only `src/libs/cloud/firebaseBackend.ts` imports `firebase/*`;
     everything else uses `cloud` from `@/libs/cloud` or the sync engine. Merge rules live in `libs/cloud/merge.ts`, tested by
     `scripts/sync.test.mjs` (ADR-016)
+23. **Never write a cloud document other devices listen to when nothing changed** (`connectedDevices`, `vault`): each write
+    costs a read on every listener and can wake the loop that writes again. Size anything that accumulates in one Firestore
+    document by bytes **and** index entries (40,000 max, ~50 per queued note). See LL-043, LL-044
 
 ### ALWAYS Do
 

@@ -4,7 +4,6 @@ import type { Category, CloudSettings, Note } from "@/types";
 import { isVaultDoc, VAULT_VERSION, type VaultDoc } from "@/utils/vault";
 import { deleteApp, getApp, getApps, initializeApp } from "firebase/app";
 import {
-  arrayUnion,
   collection,
   deleteDoc,
   deleteField,
@@ -21,10 +20,12 @@ import {
   query,
   runTransaction,
   setDoc,
+  updateDoc,
   where,
   writeBatch,
   type DocumentData,
   type Firestore,
+  type DocumentSnapshot,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
 
@@ -40,6 +41,7 @@ import type {
   Presence,
   PushOps,
   PushResult,
+  Tombstone,
   VaultRead,
 } from "./types";
 import { NOTE_REF_TEXT } from "./types";
@@ -52,10 +54,15 @@ import { NOTE_REF_TEXT } from "./types";
  *   handshake/123              write+delete probe
  *   connectedDevices/{uuid}    a device: info, lastSync, presence, and the fan-out queues it publishes for the devices in
  *                              `devicesToSync` (addNotes / deleteNotes / detachNotes / addCategories / deleteCategories)
+ * Added by this version (older ones ignore them):
+ *   tombstones/{id}            a deleted or detached note's revision, for full syncs (ADR-016)
+ *   connectedDevices/{uuid}.fullSyncDue / .presence
  */
 const NOTES = "notes";
 const CATEGORIES = "categories";
 const DEVICES = "connectedDevices";
+const TOMBSTONES = "tombstones";
+const FULL_SYNC_DUE = "fullSyncDue";
 const VAULT = "vault";
 const VAULT_DOC_ID = "config";
 const HANDSHAKE = "handshake";
@@ -63,23 +70,21 @@ const HANDSHAKE = "handshake";
 const NOTE_QUEUES = ["addNotes", "deleteNotes", "detachNotes"] as const;
 const CATEGORY_QUEUES = ["addCategories", "deleteCategories"] as const;
 const QUEUES = [...NOTE_QUEUES, ...CATEGORY_QUEUES] as const;
-/** Set on a device doc when its queues ran out of room: the receivers run a full sync. Older app versions ignore it. */
-const RESYNC = "resync";
-/** Everything an ack clears once no recipient is left. */
-const QUEUED_FIELDS = [...QUEUES, RESYNC] as const;
 
 type Queue = (typeof QUEUES)[number];
 
 /*
- * Firestore caps a document at 1 MiB, and a device doc holds its queues until every recipient pulled them (one offline for
- * weeks included). Full notes are queued while the queues stay under FANOUT_FULL_BUDGET, references (the receiver fetches the
- * note) up to FANOUT_MAX_BUDGET, and past that uploads aren't queued: the receivers are told to run a full sync instead.
- * Deletions can't be left to a full sync (absence never deletes), so their stubs (~100 bytes) get the room left up to
- * FANOUT_HARD_LIMIT.
+ * Firestore caps a document at 1 MiB and 40,000 index entries (every field of every queued note is indexed: ~50 entries
+ * for a note, ~12 for a reference or a stub), and a device doc holds its queues until every recipient pulled them (one
+ * offline for weeks included). Full notes are queued within the FULL budget, references (the receiver fetches the note)
+ * within MAX, deletion stubs within HARD. Past that the queues start over: the devices that hadn't pulled them get
+ * `fullSyncDue` (a full sync brings them everything, deletions included, see tombstones).
  */
-const FANOUT_FULL_BUDGET = 600_000;
-const FANOUT_MAX_BUDGET = 900_000;
-const FANOUT_HARD_LIMIT = 1_000_000;
+const FANOUT_BUDGET = {
+  full: { bytes: 600_000, entries: 20_000 },
+  max: { bytes: 900_000, entries: 30_000 },
+  hard: { bytes: 1_000_000, entries: 36_000 },
+};
 /** Per transaction: Firestore allows 500 writes and a 10 MiB request. */
 const BATCH_MAX_ENTRIES = 200;
 const BATCH_MAX_BYTES = 4_000_000;
@@ -90,6 +95,13 @@ const HANDSHAKE_TIMEOUT_MS = 5000;
 const PERMANENT_ERRORS = new Set(["invalid-argument", "out-of-range"]);
 
 const errorCode = (e: unknown): string => (e && typeof e === "object" && "code" in e ? String(e.code) : "");
+
+/** Roughly how many index entries a value adds to a document (two per value, one per array element), rounded up. */
+export const indexEntries = (value: unknown): number => {
+  if (value === null || typeof value !== "object") return 2;
+  if (Array.isArray(value)) return value.reduce((n: number, item) => n + 1 + indexEntries(item), 2);
+  return Object.values(value).reduce((n: number, item) => n + indexEntries(item), 2);
+};
 
 /** Roughly what a value weighs in a document: its JSON, UTF-8 encoded (non-ASCII counted as 3 bytes). */
 const byteSize = (value: unknown): number => {
@@ -103,11 +115,20 @@ const countKeys = (o: unknown) => (o && typeof o === "object" ? Object.keys(o).l
 
 const asMap = <T>(o: unknown): Record<string, T> => (o && typeof o === "object" ? (o as Record<string, T>) : {});
 
-const toDevice = (data: DocumentData): CloudDevice => ({
-  uuid: data.uuid,
+/**
+ * A registered device's doc. A doc without `uuid` was re-created by a write landing after the device was removed (older app
+ * versions merge `lastSync` or an ack into it): not a device.
+ */
+const isDevice = (snap: DocumentSnapshot): boolean => snap.exists() && typeof snap.data().uuid === "string";
+
+const toDevice = (snap: DocumentSnapshot): CloudDevice => toDeviceData(snap.id, snap.data() ?? {});
+
+const toDeviceData = (id: string, data: DocumentData): CloudDevice => ({
+  uuid: id,
   modelName: data.modelName,
   brand: data.brand,
   lastSync: data.lastSync,
+  fullSyncDue: typeof data[FULL_SYNC_DUE] === "number" ? data[FULL_SYNC_DUE] : null,
   devicesToSync: Array.isArray(data.devicesToSync) ? data.devicesToSync : [],
   pendingNotes: countKeys(data.addNotes) + countKeys(data.deleteNotes) + countKeys(data.detachNotes),
   pendingCategories: countKeys(data.addCategories) + countKeys(data.deleteCategories),
@@ -118,14 +139,13 @@ const toDevice = (data: DocumentData): CloudDevice => ({
 });
 
 /** The queues a device doc carries, as a token: an ack only commits if they're still the applied ones. */
-const queueToken = (data: DocumentData): string => contentToken(QUEUED_FIELDS.map((field) => data[field] ?? null));
+const queueToken = (data: DocumentData): string => contentToken(QUEUES.map((field) => data[field] ?? null));
 
-const clearQueues = () => Object.fromEntries(QUEUED_FIELDS.map((field) => [field, deleteField()]));
+const clearQueues = () => Object.fromEntries(QUEUES.map((field) => [field, deleteField()]));
 
-const toChangeSet = (data: DocumentData): ChangeSet => ({
-  source: data.uuid,
+const toChangeSet = (id: string, data: DocumentData): ChangeSet => ({
+  source: id,
   token: queueToken(data),
-  resync: data[RESYNC] != null,
   notes: {
     add: asMap<Note | NoteRef>(data.addNotes),
     delete: asMap<Note>(data.deleteNotes),
@@ -141,10 +161,11 @@ const toDevicesSnapshot = (me: string, docs: QueryDocumentSnapshot[], fromServer
   const devices: CloudDevice[] = [];
   const incoming: ChangeSet[] = [];
   for (const snap of docs) {
+    if (!isDevice(snap)) continue;
     const data = snap.data();
-    devices.push(toDevice(data));
-    if (data.uuid !== me && Array.isArray(data.devicesToSync) && data.devicesToSync.includes(me)) {
-      incoming.push(toChangeSet(data));
+    devices.push(toDeviceData(snap.id, data));
+    if (snap.id !== me && Array.isArray(data.devicesToSync) && data.devicesToSync.includes(me)) {
+      incoming.push(toChangeSet(snap.id, data));
     }
   }
   return { devices, incoming, fromServer };
@@ -160,7 +181,7 @@ const toVaultRead = (data: DocumentData | undefined): VaultRead => {
 };
 
 /** One outbox entry, as it will be written. */
-interface Entry {
+export interface Entry {
   queue: Queue;
   key: string;
   /** The note or category (encrypted note, stub, category). */
@@ -180,7 +201,103 @@ const entriesOf = (ops: PushOps): Entry[] => [
 /** Whether an entry only applies over older cloud versions (uploads and deletions of notes). */
 const isGuarded = (entry: Entry) => entry.queue === "addNotes" || entry.queue === "deleteNotes";
 
+/** The update of the pushing device's doc, as field paths and values, and the devices to tell to run a full sync. */
+interface Fanout {
+  updates: [string | FieldPath, unknown][];
+  flag: string[];
+}
+
+/** A queue entry as it would be written, and its weight. */
+interface Sized {
+  value: DocumentData;
+  bytes: number;
+  entries: number;
+}
+
+const sized = (value: DocumentData): Sized => ({ value, bytes: byteSize(value), entries: indexEntries(value) + 2 });
+
+/** The doc's weight without its queues. */
+const withoutQueues = (data: DocumentData) => {
+  const rest = Object.fromEntries(Object.entries(data).filter(([field]) => !(QUEUES as readonly string[]).includes(field)));
+  return { bytes: byteSize(rest), entries: indexEntries(rest) };
+};
+
+/**
+ * How `applied` is fanned out (see FANOUT_BUDGET). Every push makes the current recipients the ones waiting, which also
+ * drops ids of devices removed since. When an entry doesn't fit, the queues start over with this push's entries, and the
+ * devices that were still waiting for what they held get a full sync instead; if this push alone doesn't fit (or
+ * `queueing` is off), nothing is queued and every recipient gets one.
+ */
+export const planFanout = (data: DocumentData, applied: Entry[], recipients: string[], queueing: boolean): Fanout => {
+  const updates: Fanout["updates"] = [["lastSync", `${Date.now()}`]];
+  const waiting: string[] = Array.isArray(data.devicesToSync) ? data.devicesToSync : [];
+  const hasQueued = QUEUES.some((queue) => countKeys(data[queue]) > 0);
+  const restart = (): Fanout => {
+    updates.push(...QUEUES.map((queue): [string, unknown] => [queue, deleteField()]), ["devicesToSync", []]);
+    return { updates, flag: [] };
+  };
+  // Nobody to deliver to: what's still queued isn't for anyone either.
+  if (recipients.length === 0) return hasQueued || waiting.length > 0 ? restart() : { updates, flag: [] };
+
+  const place = (usage: { bytes: number; entries: number }): { entry: Entry; item: Sized }[] | null => {
+    const placed: { entry: Entry; item: Sized }[] = [];
+    const fits = (budget: { bytes: number; entries: number }, item: Sized) =>
+      usage.bytes + item.bytes <= budget.bytes && usage.entries + item.entries <= budget.entries;
+    for (const entry of applied) {
+      let item: Sized | null = sized(entry.value);
+      if (entry.queue === "addNotes" && !fits(FANOUT_BUDGET.full, item)) {
+        item = sized({
+          id: entry.key,
+          type: "text",
+          text: NOTE_REF_TEXT,
+          rev: noteRev(entry.value as Note),
+          ref: true,
+        } satisfies NoteRef);
+      }
+      const budget = entry.queue === "addNotes" || entry.queue === "addCategories" ? FANOUT_BUDGET.max : FANOUT_BUDGET.hard;
+      if (!fits(budget, item)) return null;
+      usage.bytes += item.bytes;
+      usage.entries += item.entries;
+      placed.push({ entry, item });
+    }
+    return placed;
+  };
+
+  let placed = queueing ? place({ bytes: byteSize(data), entries: indexEntries(data) }) : null;
+  if (placed) {
+    // An id is in one queue only (LL-033): the latest operation replaces the others. A field path replaces the whole entry
+    // (a merge would keep the fields the previous version had and this one doesn't).
+    for (const { entry, item } of placed) {
+      const group = isNoteQueue(entry.queue) ? NOTE_QUEUES : CATEGORY_QUEUES;
+      for (const queue of group)
+        updates.push([new FieldPath(queue, entry.key), queue === entry.queue ? item.value : deleteField()]);
+    }
+    updates.push(["devicesToSync", recipients]);
+    return { updates, flag: [] };
+  }
+
+  // Out of room: the queues start over.
+  const flag = new Set(waiting.filter((id) => recipients.includes(id)));
+  placed = queueing ? place(withoutQueues(data)) : null;
+  if (!placed) {
+    recipients.forEach((id) => flag.add(id));
+    return { updates: restart().updates, flag: [...flag] };
+  }
+  const queues: Record<string, Record<string, DocumentData>> = Object.fromEntries(QUEUES.map((queue) => [queue, {}]));
+  for (const { entry, item } of placed) {
+    const group = isNoteQueue(entry.queue) ? NOTE_QUEUES : CATEGORY_QUEUES;
+    group.forEach((queue) => delete queues[queue][entry.key]);
+    queues[entry.queue][entry.key] = item.value;
+  }
+  // Whole fields: an update replaces the map (unlike a merge).
+  updates.push(...Object.entries(queues), ["devicesToSync", recipients]);
+  return { updates, flag: [...flag] };
+};
+
 export class FirebaseBackend implements CloudBackend {
+  /** The error callbacks of the open device listeners: told when the app they listen on goes away. */
+  private readonly listening = new Set<(error: unknown) => void>();
+
   private get db(): Firestore | null {
     try {
       return getFirestore(getApp(configs.firebase.appName));
@@ -206,6 +323,14 @@ export class FirebaseBackend implements CloudBackend {
     // push treats as permanent: the note would never sync again until restart).
     // Must run before any getFirestore().
     initializeFirestore(app, { experimentalAutoDetectLongPolling: true, ignoreUndefinedProperties: true });
+    this.dropListeners();
+  }
+
+  /** Listeners on a deleted app stop without a word: their owners are told, and listen again (on the new one). */
+  private dropListeners(): void {
+    const owners = [...this.listening];
+    this.listening.clear();
+    owners.forEach((onError) => onError(new Error("cloud re-initialised")));
   }
 
   isActive(): boolean {
@@ -233,6 +358,7 @@ export class FirebaseBackend implements CloudBackend {
   async dispose(): Promise<boolean> {
     try {
       await deleteApp(getApp(configs.firebase.appName));
+      this.dropListeners();
       return true;
     } catch {
       return false;
@@ -255,7 +381,7 @@ export class FirebaseBackend implements CloudBackend {
   async listDevices(): Promise<CloudDevice[] | null> {
     try {
       const snapshot = await getDocsFromServer(collection(this.requireDb(), DEVICES));
-      return snapshot.docs.map((snap) => toDevice(snap.data()));
+      return snapshot.docs.filter(isDevice).map(toDevice);
     } catch (e) {
       console.log("listDevices:", e);
       return null;
@@ -294,6 +420,7 @@ export class FirebaseBackend implements CloudBackend {
   }
 
   async dropRecipient(uuid: string): Promise<boolean> {
+    if (!uuid) return false;
     try {
       const db = this.requireDb();
       const senders = await getDocsFromServer(query(collection(db, DEVICES), where("devicesToSync", "array-contains", uuid)));
@@ -314,7 +441,7 @@ export class FirebaseBackend implements CloudBackend {
 
   async touchLastSync(uuid: string): Promise<boolean> {
     try {
-      await setDoc(doc(this.requireDb(), DEVICES, uuid), { lastSync: `${Date.now()}` }, { merge: true });
+      await updateDoc(doc(this.requireDb(), DEVICES, uuid), { lastSync: `${Date.now()}` });
       return true;
     } catch (e) {
       console.log("touchLastSync:", e);
@@ -324,10 +451,25 @@ export class FirebaseBackend implements CloudBackend {
 
   async setPresence(uuid: string, presence: Presence): Promise<boolean> {
     try {
-      await setDoc(doc(this.requireDb(), DEVICES, uuid), { presence }, { merge: true });
+      await updateDoc(doc(this.requireDb(), DEVICES, uuid), { presence });
       return true;
     } catch (e) {
       console.log("setPresence:", e);
+      return false;
+    }
+  }
+
+  async clearFullSyncDue(me: string, due: number): Promise<boolean> {
+    try {
+      const db = this.requireDb();
+      const ref = doc(db, DEVICES, me);
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref);
+        if (snap.exists() && snap.data()[FULL_SYNC_DUE] === due) tx.update(ref, { [FULL_SYNC_DUE]: deleteField() });
+      });
+      return true;
+    } catch (e) {
+      console.log("clearFullSyncDue:", e);
       return false;
     }
   }
@@ -338,14 +480,26 @@ export class FirebaseBackend implements CloudBackend {
       onError(new Error("cloud not initialised"));
       return () => {};
     }
-    return onSnapshot(
+    this.listening.add(onError);
+    const unsubscribe = onSnapshot(
       collection(db, DEVICES),
       { includeMetadataChanges: true },
       // Server-confirmed only: not the cache (LL-027), nor this client's own writes before the server has them.
       (snapshot) =>
         onDevices(toDevicesSnapshot(me, snapshot.docs, !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites)),
-      onError
+      (error) => {
+        this.listening.delete(onError);
+        onError(error);
+      }
     );
+    return () => {
+      this.listening.delete(onError);
+      try {
+        unsubscribe();
+      } catch {
+        // its app was deleted
+      }
+    };
   }
 
   async pullDevices(me: string): Promise<DevicesSnapshot | null> {
@@ -453,6 +607,37 @@ export class FirebaseBackend implements CloudBackend {
     }
   }
 
+  async fetchTombstones(): Promise<Record<string, Tombstone> | null> {
+    try {
+      const snapshot = await getDocsFromServer(collection(this.requireDb(), TOMBSTONES));
+      const tombstones: Record<string, Tombstone> = {};
+      for (const snap of snapshot.docs) {
+        const data = snap.data();
+        if (typeof data.rev === "number")
+          tombstones[snap.id] = { rev: data.rev, ...(data.detach === true && { detach: true }) };
+      }
+      return tombstones;
+    } catch (e) {
+      console.log("fetchTombstones:", e);
+      return null;
+    }
+  }
+
+  async pruneTombstones(ids: string[]): Promise<boolean> {
+    try {
+      const db = this.requireDb();
+      for (let i = 0; i < ids.length; i += BATCH_MAX_ENTRIES) {
+        const batch = writeBatch(db);
+        for (const id of ids.slice(i, i + BATCH_MAX_ENTRIES)) batch.delete(doc(db, TOMBSTONES, id));
+        await batch.commit();
+      }
+      return true;
+    } catch (e) {
+      console.log("pruneTombstones:", e);
+      return false;
+    }
+  }
+
   async fetchNote(id: string): Promise<Note | null | undefined> {
     try {
       const snap = await getDocFromServer(doc(this.requireDb(), NOTES, id));
@@ -501,6 +686,7 @@ export class FirebaseBackend implements CloudBackend {
   async wipeNotes(): Promise<boolean> {
     try {
       await this.wipeCollection(NOTES);
+      await this.wipeCollection(TOMBSTONES);
       return true;
     } catch (e) {
       console.log("wipeNotes:", e);
@@ -549,8 +735,11 @@ export class FirebaseBackend implements CloudBackend {
       else committed.categories.delete.push(entry.key);
     };
 
-    /** One transaction: the guarded entries go through only over older cloud versions. Returns what was superseded. */
-    const commit = (chunk: Entry[]) =>
+    /**
+     * One transaction: the guarded entries go through only over older cloud versions, the rest is fanned out to the
+     * recipients (`queueing` false: nothing is queued, they all get `fullSyncDue`). Returns what was committed and superseded.
+     */
+    const commit = (chunk: Entry[], queueing: boolean) =>
       runTransaction(db, async (tx) => {
         const deviceRef = doc(db, DEVICES, me);
         const guarded = chunk.filter(isGuarded);
@@ -561,13 +750,11 @@ export class FirebaseBackend implements CloudBackend {
         // Removed from the cloud: nothing to fan out to, and the engine disconnects on the next snapshot.
         if (!device.exists()) throw Object.assign(new Error("device not registered"), { code: "not-found" });
 
-        const cloudRevs = new Map(guarded.map((entry, i) => [entry.key, current[i]]));
+        const cloudVersions = new Map(guarded.map((entry, i) => [entry.key, current[i]]));
         const applied: Entry[] = [];
-        const already: Entry[] = [];
         const superseded: Note[] = [];
-
         for (const entry of chunk) {
-          const snap = cloudRevs.get(entry.key);
+          const snap = cloudVersions.get(entry.key);
           if (!snap?.exists()) {
             applied.push(entry);
             continue;
@@ -575,79 +762,47 @@ export class FirebaseBackend implements CloudBackend {
           const cloud = snap.data() as Note;
           const cloudRev = noteRev(cloud);
           const rev = noteRev(entry.value as Note);
-          if (entry.queue === "addNotes") {
-            // Already there: an earlier push committed it, or another device made the same conflict copy.
-            if (cloudRev === rev) already.push(entry);
-            else if (cloudRev <= (ops.bases[entry.key] ?? rev)) applied.push(entry);
-            else superseded.push(cloud);
-          } else if (cloudRev <= rev) {
-            applied.push(entry);
-          } else {
-            superseded.push(cloud);
-          }
+          const goesThrough =
+            entry.queue === "addNotes"
+              ? // The same revision may be other content (an older app version doesn't renew it for every change): the
+                // engine compares them.
+                cloudRev !== rev && cloudRev <= (ops.bases[entry.key] ?? rev)
+              : cloudRev <= rev;
+          if (goesThrough) applied.push(entry);
+          else superseded.push(cloud);
         }
+        // Nothing to write: no write to this device's doc either (it would wake every device's listener for nothing).
+        if (applied.length === 0) return { committed: [], superseded };
 
-        const deviceData = device.data();
-        let queued = byteSize(QUEUED_FIELDS.map((field) => deviceData[field] ?? null));
-        let resync = false;
-        // field path, value, field path, value...
-        const deviceUpdate: unknown[] = ["lastSync", `${Date.now()}`];
+        const fanout = planFanout(device.data(), applied, recipients, queueing);
+        const flagged = await Promise.all(fanout.flag.map((id) => tx.get(doc(db, DEVICES, id))));
 
         for (const entry of applied) {
           const ref = doc(db, isNoteQueue(entry.queue) ? NOTES : CATEGORIES, entry.key);
           if (entry.queue === "addNotes" || entry.queue === "addCategories") tx.set(ref, entry.value);
           else tx.delete(ref);
-
-          if (recipients.length === 0) continue;
-
-          // An id is in one queue only (LL-033): the latest operation replaces the others. A field path replaces the whole
-          // entry (a merge would keep the fields the previous version had and this one doesn't).
-          const group = isNoteQueue(entry.queue) ? NOTE_QUEUES : CATEGORY_QUEUES;
-
-          let fanout = entry.value;
-          let size = byteSize(fanout);
-          if (entry.queue === "addNotes" && queued + size > FANOUT_FULL_BUDGET) {
-            fanout = {
-              id: entry.key,
-              type: "text",
-              text: NOTE_REF_TEXT,
+          if (entry.queue === "deleteNotes" || entry.queue === "detachNotes") {
+            const tombstone: Tombstone = {
               rev: noteRev(entry.value as Note),
-              ref: true,
-            } satisfies NoteRef;
-            size = byteSize(fanout);
-          }
-          const isUpload = entry.queue === "addNotes" || entry.queue === "addCategories";
-          if (queued + size > (isUpload ? FANOUT_MAX_BUDGET : FANOUT_HARD_LIMIT)) {
-            // Not queued: the full sync brings it. An older operation on the id mustn't be replayed instead.
-            resync = true;
-            for (const queue of group) deviceUpdate.push(new FieldPath(queue, entry.key), deleteField());
-            continue;
-          }
-          queued += size;
-
-          for (const queue of group) {
-            deviceUpdate.push(new FieldPath(queue, entry.key), queue === entry.queue ? fanout : deleteField());
+              ...(entry.queue === "detachNotes" && { detach: true }),
+            };
+            tx.set(doc(db, TOMBSTONES, entry.key), tombstone);
           }
         }
-
-        const waiting = Array.isArray(deviceData.devicesToSync) && deviceData.devicesToSync.length > 0;
-        if (recipients.length > 0 && applied.length > 0) {
-          deviceUpdate.push("devicesToSync", arrayUnion(...recipients));
+        for (const snap of flagged) {
+          if (isDevice(snap)) tx.update(snap.ref, { [FULL_SYNC_DUE]: Date.now() });
         }
-        if (resync) deviceUpdate.push(RESYNC, Date.now());
-        // Everyone pulled the queues since it was set: an older app version acknowledging last doesn't clear it.
-        else if (!waiting && deviceData[RESYNC] != null) deviceUpdate.push(RESYNC, deleteField());
-        const [field, value, ...more] = deviceUpdate;
-        tx.update(deviceRef, field as string | FieldPath, value, ...more);
+        const [[field, value], ...more] = fanout.updates;
+        tx.update(deviceRef, field, value, ...more.flat());
 
-        return { committed: [...applied, ...already], superseded };
+        return { committed: applied, superseded };
       });
 
     let done = 0;
     /** Isolates what a permanent error is about: halves the chunk until the culprit is alone. False: retry later. */
-    const commitIsolating = async (chunk: Entry[]): Promise<boolean> => {
+    const commitIsolating = async (chunk: Entry[], queueing = true): Promise<boolean> => {
       try {
-        const { committed, superseded } = await commit(chunk);
+        const { committed, superseded } = await commit(chunk, queueing);
         committed.forEach(record);
         result.superseded.push(...superseded);
         done += chunk.length;
@@ -658,15 +813,20 @@ export class FirebaseBackend implements CloudBackend {
           console.log("push:", e);
           return false;
         }
-        if (chunk.length === 1) {
-          console.log(`push: "${chunk[0].key}" rejected:`, e);
-          result.rejected.push(chunk[0].key);
-          done += 1;
-          onProgress?.(done, entries.length);
-          return true;
+        if (chunk.length > 1) {
+          const half = Math.ceil(chunk.length / 2);
+          return (
+            (await commitIsolating(chunk.slice(0, half), queueing)) && (await commitIsolating(chunk.slice(half), queueing))
+          );
         }
-        const half = Math.ceil(chunk.length / 2);
-        return (await commitIsolating(chunk.slice(0, half))) && (await commitIsolating(chunk.slice(half)));
+        // Refused alone: maybe for this device's doc (its queues outgrew what the budgets estimate), not the entry. Once more
+        // without queueing; refused again, it's the entry (e.g. a note over the 1 MiB document limit).
+        if (queueing) return commitIsolating(chunk, false);
+        console.log(`push: "${chunk[0].key}" rejected:`, e);
+        result.rejected.push(`${chunk[0].queue}:${chunk[0].key}`);
+        done += 1;
+        onProgress?.(done, entries.length);
+        return true;
       }
     };
 

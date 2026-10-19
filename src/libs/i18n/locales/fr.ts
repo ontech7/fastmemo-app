@@ -262,7 +262,8 @@ const fr = {
   },
   cloudsync: {
     conflict_suffix: "(conflit)",
-    conflict_copies: "Modifiée sur deux appareils avant la synchronisation : l'autre version a été gardée en copie",
+    conflict_copies:
+      "Modifiée sur deux appareils avant la synchronisation : les deux versions ont été gardées (l'une en copie)",
     open_on: "Ouverte sur {{devices}}",
     note_deleted_elsewhere: "Cette note a été mise à la corbeille sur un autre appareil. La modifier la restaure.",
     title: "Cloud Sync",

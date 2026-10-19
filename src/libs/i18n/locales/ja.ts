@@ -262,7 +262,7 @@ const ja = {
   },
   cloudsync: {
     conflict_suffix: "（競合）",
-    conflict_copies: "同期前に2台のデバイスで編集されました：もう一方のバージョンはコピーとして保持されています",
+    conflict_copies: "同期前に2台のデバイスで編集されました：両方のバージョンを保持しました（一方はコピー）",
     open_on: "{{devices}} で開いています",
     note_deleted_elsewhere: "このメモは別のデバイスでゴミ箱に移動されました。編集すると元に戻ります。",
     title: "クラウド同期",

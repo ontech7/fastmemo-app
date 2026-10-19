@@ -6,8 +6,8 @@ import type { Note } from "@/types";
 import { flushPending } from "@/libs/registry";
 import { getDEK } from "@/libs/vaultSession";
 import { addLocalCategories, applyCategoriesPlan, categoriesPushed, deleteLocalCategories } from "@/slicers/categoriesSlice";
-import { applyNotesPlan, dropNoteUploads, notesPushed } from "@/slicers/notesSlice";
-import { persistor, store } from "@/slicers/store";
+import { adoptLegacyOutbox, applyNotesPlan, dropNoteUploads, notesPushed } from "@/slicers/notesSlice";
+import { notesPersisted, persistor, store } from "@/slicers/store";
 import { CryptNote, tryDecryptNote } from "@/utils/crypt";
 import { dekMatchesVault } from "@/utils/vault";
 
@@ -51,6 +51,7 @@ export const getSyncEngine = async (): Promise<SyncEngine | null> => {
       applyNotesPlan,
       notesPushed,
       dropNoteUploads,
+      adoptLegacyOutbox,
       applyCategoriesPlan,
       categoriesPushed,
       addLocalCategories,
@@ -64,10 +65,13 @@ export const getSyncEngine = async (): Promise<SyncEngine | null> => {
       },
       matches: (vault) => {
         const dek = getDEK();
-        return !!dek && dekMatchesVault(vault, dek);
+        return dek ? dekMatchesVault(vault, dek) : null;
       },
     },
-    persist: () => persistor.flush(),
+    persist: async () => {
+      await persistor.flush();
+      if (!notesPersisted()) throw new Error("the notes couldn't be written");
+    },
     flushEditors: flushPending,
     conflictSuffix: () => t("cloudsync.conflict_suffix"),
     events: {
@@ -88,6 +92,8 @@ const FULL_SYNC_DUE = "@cloudFullSyncDue";
 
 /** Runs a full sync now (connect, unlock, "sync now"). False if it couldn't complete: it then runs again on the next start. */
 export const syncNow = async (onProgress?: (done: number, total: number) => void): Promise<boolean> => {
+  // Locked: nothing can be read or sealed (the vault screens unlock first).
+  if (!getDEK()) return false;
   const sync = await getSyncEngine();
   if (!sync) return false;
   await AsyncStorage.setItem(FULL_SYNC_DUE, "1").catch(() => {});

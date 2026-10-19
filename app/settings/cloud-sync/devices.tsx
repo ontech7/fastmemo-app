@@ -11,6 +11,7 @@ import useNetInfo from "@/hooks/useNetInfo";
 import { useTimeoutTask } from "@/hooks/useTimeoutTask";
 import { cloud, getDeviceUuid, type CloudDevice } from "@/libs/cloud";
 import { onSyncEvent, syncNow } from "@/libs/cloud/sync";
+import { isVaultUnlocked } from "@/libs/vaultSession";
 import { toast } from "@/utils/toast";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -92,10 +93,10 @@ export default function SyncedDevicesScreen() {
   // retrieve devices
 
   const deleteDeviceFromCloud = async (uuid: string) => {
-    // Nobody waits for the removed device's acks anymore (their queues would never clear), then it goes.
-    if (!(await cloud.dropRecipient(uuid)) || !(await cloud.unregisterDevice(uuid))) {
-      return;
-    }
+    // Removed first, so the others stop making it a recipient; then nobody waits for its acks anymore (their queues
+    // would only clear at their next push otherwise).
+    if (!(await cloud.unregisterDevice(uuid))) return;
+    await cloud.dropRecipient(uuid);
 
     setConnectedDevices((prevConnectedDevices) =>
       prevConnectedDevices.filter((prevConnectedDevice) => prevConnectedDevice.uuid != uuid)
@@ -139,6 +140,10 @@ export default function SyncedDevicesScreen() {
   const syncCurrentDevice = async () => {
     if (!netInfo?.isConnected) {
       toast(t("noInternetConnection"));
+      return;
+    }
+    if (!isVaultUnlocked()) {
+      toast(t("cloudsync.vault.locked_prompt"));
       return;
     }
     setSyncing(true);

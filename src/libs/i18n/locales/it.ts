@@ -263,7 +263,8 @@ const it = {
   },
   cloudsync: {
     conflict_suffix: "(conflitto)",
-    conflict_copies: "Modificata su due dispositivi prima della sincronizzazione: l'altra versione è stata tenuta come copia",
+    conflict_copies:
+      "Modificata su due dispositivi prima della sincronizzazione: sono state tenute entrambe le versioni (una come copia)",
     open_on: "Aperta su {{devices}}",
     note_deleted_elsewhere: "Questa nota è stata spostata nel cestino su un altro dispositivo. Modificarla la ripristina.",
     title: "Sincronizzazione Cloud",

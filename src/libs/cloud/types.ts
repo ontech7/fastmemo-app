@@ -26,8 +26,11 @@ export interface CloudBackend {
   unregisterDevice(uuid: string): Promise<boolean>;
   /** Removes `uuid` from every device's recipients (a removed device will never pull them). */
   dropRecipient(uuid: string): Promise<boolean>;
+  /** Updates a registered device (never re-creates a removed one). */
   touchLastSync(uuid: string): Promise<boolean>;
   setPresence(uuid: string, presence: Presence): Promise<boolean>;
+  /** Clears `me`'s `fullSyncDue` once that full sync ran, unless another device set it again since. */
+  clearFullSyncDue(me: string, due: number): Promise<boolean>;
   /** Live device list, with the changes queued for `me`. `onError` fires when the listener dies (call again to resume). */
   subscribeDevices(me: string, onSnapshot: (snapshot: DevicesSnapshot) => void, onError: (error: unknown) => void): Unsubscribe;
   /** One-off server read of the same data (fallback when a listener is silently dead). */
@@ -50,19 +53,27 @@ export interface CloudBackend {
 
   /** Every stored note (encrypted), or null when the read failed. */
   fetchNotes(): Promise<Note[] | null>;
+  /** The deletions and detaches recorded by `push` (id -> tombstone), or null when the read failed. */
+  fetchTombstones(): Promise<Record<string, Tombstone> | null>;
+  /** Removes tombstones (expired ones). */
+  pruneTombstones(ids: string[]): Promise<boolean>;
   /** One stored note (encrypted): null when it doesn't exist, undefined when the read failed. */
   fetchNote(id: string): Promise<Note | null | undefined>;
   fetchCategories(): Promise<Category[] | null>;
   /** Writes notes as they are, without fan-out (vault migration). */
   writeNotes(notes: Note[]): Promise<boolean>;
+  /** Deletes every note, and the tombstones with them. */
   wipeNotes(): Promise<boolean>;
   /** Deletes every category but the default one. */
   wipeCategories(): Promise<boolean>;
   /**
-   * Applies the outbox (all or nothing per batch) and fans it out to `recipients`. An upload or deletion the cloud has a
-   * newer version of than the push is based on isn't applied: that version comes back as `superseded`, to be merged first.
-   * Returns what was committed, and what was rejected for good (e.g. a note over the size limit). An undefined field is
-   * left out, as JSON would, never a reason to reject.
+   * Applies the outbox (all or nothing per batch), records a tombstone for each deletion and detach, and fans it out to
+   * `recipients`: every other registered device, which become the ones waiting for this device's queues. An upload or
+   * deletion the cloud has a newer version of than the push is based on (or the same revision: it may be other content)
+   * isn't applied: that version comes back as `superseded`, to be merged first. When the queues run out of room, the
+   * devices that haven't pulled them get `fullSyncDue` instead and the queues start over. Returns what was committed, and
+   * what was rejected for good (e.g. a note over the size limit). An undefined field is left out, as JSON would, never a
+   * reason to reject.
    */
   push(me: string, ops: PushOps, recipients: string[], onProgress?: (done: number, total: number) => void): Promise<PushResult>;
 }
@@ -83,6 +94,8 @@ export interface Presence {
 
 export interface CloudDevice extends DeviceInfo {
   lastSync: string;
+  /** Set by another device that couldn't queue its changes for this one (its queues ran out of room): run a full sync. */
+  fullSyncDue: number | null;
   /** Devices that still have to pull this device's queued changes. */
   devicesToSync: string[];
   /** Queued note ops (add/delete/detach) this device published for others to apply. */
@@ -112,8 +125,6 @@ export interface ChangeSet {
   source: string;
   /** Identifies the exact queue content applied, for `ackChanges`. */
   token: string;
-  /** The sender's queue outgrew its budget and some changes weren't queued: the receiver runs a full sync. */
-  resync: boolean;
   notes: {
     add: Record<string, Note | NoteRef>;
     delete: Record<string, Note>;
@@ -131,6 +142,13 @@ export interface DevicesSnapshot {
   incoming: ChangeSet[];
   /** False for a snapshot from the local cache or with this client's unconfirmed writes: never act on it (LL-027). */
   fromServer: boolean;
+}
+
+/** A deletion (or detach) recorded in the cloud, so a full sync tells it from a note the cloud lost. */
+export interface Tombstone {
+  rev: number;
+  /** Made device-only rather than deleted. */
+  detach?: boolean;
 }
 
 export type VaultRead = { status: "present"; vault: VaultDoc } | { status: "absent" | "error"; vault: null };

@@ -5,6 +5,8 @@
 // queue (they're never recipients), but would see the notes in a full sync run while the test is running.
 
 import { build } from "esbuild";
+import { getApp } from "firebase/app";
+import { deleteDoc, doc, getDoc, getFirestore, setDoc, updateDoc } from "firebase/firestore";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -27,7 +29,7 @@ const STUBS = {
 
 await build({
   stdin: {
-    contents: `export { FirebaseBackend } from "@/libs/cloud/firebaseBackend"; export { noteRev } from "@/libs/cloud/revision";`,
+    contents: `export { FirebaseBackend, planFanout, indexEntries } from "@/libs/cloud/firebaseBackend"; export { noteRev } from "@/libs/cloud/revision";`,
     resolveDir: src,
     loader: "ts",
   },
@@ -49,7 +51,7 @@ await build({
   ],
 });
 
-const { FirebaseBackend, noteRev } = await import(pathToFileURL(out).href);
+const { FirebaseBackend, planFanout, indexEntries, noteRev } = await import(pathToFileURL(out).href);
 
 let passed = 0;
 let failed = 0;
@@ -92,20 +94,67 @@ const ops = (add = [], del = [], bases = {}) => ({
   bases,
 });
 
-const backend = new FirebaseBackend();
-backend.init({
+const settings = {
   apiKey: FIRESTORE_API_KEY,
   projectId: FIRESTORE_PROJECT_ID,
   appId: FIRESTORE_APP_ID,
   authDomain: `${FIRESTORE_PROJECT_ID}.firebaseapp.com`,
   storageBucket: `${FIRESTORE_PROJECT_ID}.appspot.com`,
   messagingSenderId: FIRESTORE_APP_ID.split(":")[1] ?? "",
-});
+};
+const backend = new FirebaseBackend();
+backend.init(settings);
+/** The adapter's Firestore, to write what only another app version (or a race) would. */
+const db = () => getFirestore(getApp("fastmemo"));
 
 const created = new Set();
 const unsubscribers = [];
 
 try {
+  console.log("\nfan-out planning");
+  {
+    const small = (i) => ({ queue: "addNotes", key: `n${i}`, value: note(`n${i}`, 1000 + i) });
+    const perNote = indexEntries(small(0).value);
+    ok(
+      "a small note is estimated at ~50 index entries (Firestore's limit is 40,000 per doc)",
+      perNote >= 40 && perNote <= 70,
+      perNote
+    );
+
+    const queued = Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`q${i}`, note(`q${i}`, 1)]));
+    const doc0 = { uuid: "A", devicesToSync: ["B"], addNotes: queued };
+    let plan = planFanout(doc0, [small(1)], ["B", "C"], true);
+    const path = (f) => (typeof f === "string" ? f : f._internalPath.toArray().join("."));
+    const value = (field) => plan.updates.find(([f]) => path(f) === field)?.[1];
+    ok(
+      "within budget: queued in full, for the current recipients",
+      plan.flag.length === 0 &&
+        value("addNotes.n1")?.text !== undefined &&
+        JSON.stringify(value("devicesToSync")) === JSON.stringify(["B", "C"])
+    );
+
+    const many = Object.fromEntries(Array.from({ length: 500 }, (_, i) => [`q${i}`, note(`q${i}`, 1)]));
+    plan = planFanout({ uuid: "A", devicesToSync: ["B"], addNotes: many }, [small(1)], ["B", "C"], true);
+    ok("past the full budget: queued as a reference", value("addNotes.n1")?.ref === true && plan.flag.length === 0);
+
+    // A doc an older version filled up (LL-040), still waiting for B.
+    const full = Object.fromEntries(Array.from({ length: 2000 }, (_, i) => [`q${i}`, note(`q${i}`, 1)]));
+    plan = planFanout({ uuid: "A", devicesToSync: ["B"], addNotes: full }, [small(1)], ["B", "C"], true);
+    const fresh = value("addNotes");
+    ok("out of room: the queues start over with this push", fresh && Object.keys(fresh).length === 1 && fresh.n1);
+    ok("...and the device that hadn't pulled them gets a full sync", JSON.stringify(plan.flag) === JSON.stringify(["B"]));
+
+    const huge = Array.from({ length: 3000 }, (_, i) => small(i));
+    plan = planFanout({ uuid: "A", devicesToSync: [] }, huge, ["B", "C"], true);
+    ok(
+      "a push that alone doesn't fit: nothing queued, every recipient gets a full sync",
+      plan.flag.length === 2 && JSON.stringify(value("devicesToSync")) === "[]"
+    );
+
+    plan = planFanout({ uuid: "A", devicesToSync: ["X"], addNotes: { old: { id: "old" } } }, [small(1)], [], true);
+    ok("no recipient left: the queues are cleared", JSON.stringify(value("devicesToSync")) === "[]" && plan.flag.length === 0);
+  }
+
   console.log("\nconnection");
   ok("verify (write + delete round trip)", await backend.verify());
   const vault = await backend.readVault();
@@ -176,7 +225,10 @@ try {
   );
   ok("...and the cloud keeps the newer one", (await backend.fetchNote(n1.id))?.rev === r1);
   result = await backend.push(A, ops([n1], [], { [n1.id]: r1 - 10 }), []);
-  ok("re-pushing the version already there counts as committed", result.committed.notes.add.includes(n1.id));
+  ok(
+    "the same revision comes back as the cloud's version (the engine compares content)",
+    result.superseded.some((n) => n.id === n1.id && noteRev(n) === r1) && !result.committed.notes.add.includes(n1.id)
+  );
   const n1b = note("n1", r1 + 5, { text: "newer" });
   result = await backend.push(A, ops([n1b], [], { [n1.id]: r1 }), []);
   ok("an upload based on the cloud's version goes through", result.committed.notes.add.includes(n1.id));
@@ -187,6 +239,16 @@ try {
   );
   result = await backend.push(A, ops([], [{ id: n1.id, rev: r1 + 9, deletedAt: r1 + 9 }]), []);
   ok("a newer deletion applies", result.committed.notes.delete.includes(n1.id) && (await backend.fetchNote(n1.id)) === null);
+  let tombstones = await backend.fetchTombstones();
+  ok("...and leaves a tombstone with its revision", tombstones?.[n1.id]?.rev === r1 + 9 && !tombstones[n1.id].detach);
+  const writesBefore = (await backend.listDevices())?.find((d) => d.uuid === A)?.lastSync;
+  await sleep(5);
+  result = await backend.push(A, ops([note("n2", r1 - 20)], [], { [n2.id]: r1 - 30 }), [B]);
+  await sleep(500);
+  ok(
+    "a push that applies nothing doesn't write the device doc",
+    result.superseded.length === 1 && (await backend.listDevices())?.find((d) => d.uuid === A)?.lastSync === writesBefore
+  );
 
   console.log("\nundefined fields");
   const loose = note("loose", Date.now(), { local: undefined });
@@ -212,8 +274,58 @@ try {
   created.add(tooBig.id);
   created.add(small.id);
   result = await backend.push(A, ops([tooBig, small]), []);
-  ok("a note over 1 MiB is rejected for good", result.rejected.includes(tooBig.id), result.rejected);
+  ok("a note over 1 MiB is rejected for good", result.rejected.includes(`addNotes:${tooBig.id}`), result.rejected);
   ok("...without blocking the other one", result.committed.notes.add.includes(small.id) && result.complete);
+
+  console.log("\nrecipients and full syncs");
+  await updateDoc(doc(db(), "connectedDevices", A), { devicesToSync: [B, `${tag}-gone`] });
+  const n3 = note("n3", Date.now());
+  created.add(n3.id);
+  await backend.push(A, ops([n3]), [B]);
+  const onlyB = (d) => JSON.stringify(d?.devicesToSync) === JSON.stringify([B]);
+  let afterPush = null;
+  for (let i = 0; i < 25 && !onlyB(afterPush); i++) {
+    if (i > 0) await sleep(200);
+    afterPush = (await backend.listDevices())?.find((d) => d.uuid === A);
+  }
+  ok("a push makes the current devices its recipients (a removed one's id goes)", onlyB(afterPush), afterPush?.devicesToSync);
+  change = await incomingFrom(A, (c) => !!c.notes.add[n3.id]);
+  await backend.ackChanges(B, change);
+
+  await updateDoc(doc(db(), "connectedDevices", B), { fullSyncDue: 123 });
+  await backend.clearFullSyncDue(B, 456);
+  ok("clearFullSyncDue leaves a newer request", (await getDoc(doc(db(), "connectedDevices", B))).data()?.fullSyncDue === 123);
+  await backend.clearFullSyncDue(B, 123);
+  ok(
+    "...and clears the one that was handled",
+    (await getDoc(doc(db(), "connectedDevices", B))).data()?.fullSyncDue === undefined
+  );
+
+  // What an older version's write leaves after its device was removed: a doc without uuid.
+  const ghost = `${tag}-ghost`;
+  await setDoc(doc(db(), "connectedDevices", ghost), { lastSync: "1", devicesToSync: [B] });
+  ok("a doc without uuid isn't listed as a device", !(await backend.listDevices())?.some((d) => d.uuid === ghost));
+  ok("...nor brings changes", !(await backend.pullDevices(B))?.incoming.some((c) => c.source === ghost));
+  await deleteDoc(doc(db(), "connectedDevices", ghost));
+  ok(
+    "presence for a removed device doesn't re-create its doc",
+    !(await backend.setPresence(ghost, { noteId: null, at: 1 })) &&
+      !(await getDoc(doc(db(), "connectedDevices", ghost))).exists()
+  );
+
+  console.log("\nqueue near the budget, for real");
+  const bulk = Array.from({ length: 600 }, (_, i) => note(`bulk${i}`, Date.now() + i));
+  bulk.forEach((n) => created.add(n.id));
+  result = await backend.push(A, ops(bulk), [B]);
+  ok(
+    "Firestore takes a queue past the full budget (no rejection)",
+    result.complete && result.rejected.length === 0,
+    result.rejected.slice(0, 3)
+  );
+  change = await incomingFrom(A, (c) => !!c.notes.add[bulk[599].id], 20000);
+  const refs = Object.values(change?.notes.add ?? {}).filter((e) => e.ref).length;
+  ok("...the rest went out as references", refs > 0, refs);
+  await backend.ackChanges(B, change);
 
   console.log("\npresence");
   ok("setPresence", await backend.setPresence(A, { noteId: small.id, at: Date.now() }));
@@ -224,6 +336,31 @@ try {
     if (!seen) await sleep(200);
   }
   ok("others see it live", !!seen);
+
+  console.log("\nre-initialising");
+  let told = 0;
+  unsubscribers.push(
+    backend.subscribeDevices(
+      A,
+      () => {},
+      () => told++
+    )
+  );
+  backend.init(settings);
+  ok("open listeners are told (so they listen again on the new connection)", told === 1);
+  latest = null;
+  unsubscribers.push(
+    backend.subscribeDevices(
+      B,
+      (snap) => snap.fromServer && (latest = snap),
+      () => {}
+    )
+  );
+  await sleep(2000);
+  ok(
+    "listening again works",
+    latest?.devices.some((d) => d.uuid === A)
+  );
 
   console.log("\ncleanup");
   await backend.push(A, ops([n2, small]), [B]);
@@ -240,6 +377,7 @@ try {
   const stubs = [...created].map((noteId) => ({ id: noteId, rev: far, deletedAt: far }));
   const cleanup = await backend.push(A, ops([], stubs), []);
   ok("test notes deleted", cleanup.committed.notes.delete.length === stubs.length, cleanup);
+  ok("...and their tombstones", await backend.pruneTombstones([...created]));
   ok("test devices removed", (await backend.unregisterDevice(A)) && (await backend.unregisterDevice(B)));
   await backend.dispose();
 }

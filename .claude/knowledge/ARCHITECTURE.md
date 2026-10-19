@@ -70,9 +70,9 @@ src/
 
   slicers/             # Redux state management
     store.ts           # Store configuration (nested persist, notes JSON reuse, legacy fold, typed hooks)
-    notesSlice.ts      # Notes state: CRUD, trash, filters, revisions, cloud outbox, sync plans/pushes (28 reducers)
-    categoriesSlice.ts # Categories state: CRUD, reorder, cloud outbox, sync plans/pushes (8 reducers)
-    settingsSlice.ts   # App settings: language, security, cloud, AI, dev mode (12 reducers)
+    notesSlice.ts      # Notes state: CRUD, trash, filters, revisions, cloud outbox, sync plans/pushes (29 reducers)
+    categoriesSlice.ts # Categories state: CRUD, reorder, cloud outbox, sync plans/pushes (9 reducers)
+    settingsSlice.ts   # App settings: language, security, cloud, AI, dev mode (14 reducers)
     thunks/
       notes.ts         # wipeNotes (+ the cloud collection)
       categories.ts    # wipeCategories (+ the cloud collection)
@@ -114,9 +114,9 @@ src/
       types.ts         # CloudBackend contract (devices, vault, data, push, listeners, ack, presence)
       firebaseBackend.ts # The Firestore implementation: the ONLY importer of firebase/*
       index.ts         # Active backend (`cloud`), isCloudConnected / only_if_cloudConnected, device uuid
-      revision.ts      # noteRev / nextRev / touchNote, deletion stubs, tombstone pruning (pure)
+      revision.ts      # noteRev / nextRev / touchNote / baseOf, deletion stubs, tombstone pruning (pure)
       merge.ts         # Merge rules: planner for incoming versions, full-sync reconcile, categories (pure)
-      syncEngine.ts    # Listeners -> merge -> persist -> ack; serialized pushes with backoff; poll; presence
+      syncEngine.ts    # Listeners -> merge -> persist -> debounced ack; throttled pushes with backoff; poll; presence
       sync.ts          # The app's engine (bound to the store) + event bus (applied/devices/removed/vaultStale)
       presence.ts      # useNoteOpenElsewhere(): which other device has a note open
       token.ts         # contentToken(): stable hash of queue content (guards the ack)
@@ -132,6 +132,7 @@ src/
     sort.ts            # Sort comparators for Timestamped/Ordered items
     string.ts          # String validation, formatting, size computation
     date.ts            # Date formatting with locale awareness
+    dateParse.ts       # Stored date string -> timestamp (pure, no i18n: imported by libs/cloud/revision)
     crypt.ts           # Note encryption/decryption (CryptNote); reads DEK from vaultSession, CONTENT_MAGIC auth marker
     vault.ts           # Envelope-encryption primitives (createVault/unlock/recover/rewrap, canary, PBKDF2 via crypto-js)
     secureRandom.ts    # OS CSPRNG bytes (WebCrypto getRandomValues, expo-crypto fallback)
@@ -167,7 +168,7 @@ src/
 
         +------------------+  +-----------------------+  +------------------+
         |   notesSlice     |  |   categoriesSlice     |  |  settingsSlice   |
-        |  (27 reducers)   |  |    (9 reducers)       |  |  (12 reducers)   |
+        |  (29 reducers)   |  |    (9 reducers)       |  |  (14 reducers)   |
         |                  |  |                       |  |                  |
         | items: Note[]    |  | items: Category[]     |  | language, secret |
         | temporaryItems[] |  | cloud.items.add {}    |  | cloud, webhooks  |
@@ -194,9 +195,10 @@ src/
                v
         +------------------------------------------+
         |   CloudBackend (FirebaseBackend)          |
-        |  notes/, categories/, vault/config,       |
-        |  connectedDevices/{uuid}: fan-out queues, |
-        |  devicesToSync, lastSync, presence        |
+        |  notes/, categories/, tombstones/,        |
+        |  vault/config, connectedDevices/{uuid}:   |
+        |  fan-out queues, devicesToSync,           |
+        |  fullSyncDue, lastSync, presence          |
         |  onSnapshot devices + vault; guarded      |
         |  transactional push and ack               |
         +------------------------------------------+
@@ -234,20 +236,25 @@ lock/create). A note is never lost to slow encryption/upload: it is written to l
 ### Cloud Sync Engine (ADR-016)
 
 ```
-other device push -> connectedDevices/{sender}: queues + devicesToSync += me
+other device push -> connectedDevices/{sender}: queues + devicesToSync = every other device
   -> onSnapshot (server) -> SyncEngine.processDevices
        removed from the list? -> onRemoved (disconnect)
        per sender ChangeSet: readVersions (fetch references, decrypt; unreadable -> vault check)
          -> flushPending() -> createPlanner(state).add/remove/detach -> applyNotesPlan
-         -> persistor.flush() -> ackChanges (transaction: only if the queues are still the merged ones)
+         -> persistor.flush() -> ackChanges once the sender is quiet 5 s (max 30 s; transaction: only if the queues
+            are still the merged ones)
          -> onApplied {changed, conflicts} -> toast + open editor reloads (useLiveNote)
-local change -> reducer: touchNote (rev) + outbox -> store.subscribe -> kick (200 ms)
-  -> pushOutbox: encrypt the stored note now, base = syncedRev
-  -> backend.push (transaction per chunk: guarded writes, exclusive fan-out entries, arrayUnion recipients)
+local change -> reducer: touchNote (rev) + outbox -> store.subscribe -> kick (200 ms, >= 2 s after the last push)
+  -> pushOutbox: adoptLegacyOutbox, encrypt the stored note now, base = baseOf(note)
+  -> backend.push (transaction per chunk: guarded writes, exclusive fan-out entries, tombstones, recipients = the
+     other devices; queues over budget (bytes + index entries) -> start over, laggards get fullSyncDue; nothing
+     applied -> no write)
        committed -> notesPushed (dequeue if unchanged, syncedRev = pushed rev)
-       superseded (cloud newer than base) -> merged as incoming, then pushed again
+       superseded (cloud newer than base, or equal) -> merged as incoming, then pushed again
        rejected (e.g. > 1 MiB) -> kept queued, skipped until next launch
-full sync (connect/unlock/"sync now"/overflow) -> pull queues -> reconcile(fetchNotes) -> push; due again until it completes
+full sync (connect/unlock/"sync now"/fullSyncDue) -> pull queues -> reconcile(fetchNotes, fetchTombstones)
+  -> clearFullSyncDue -> push; due again until it completes
+every 5 min / resume -> reconnect the transport (if idle or stuck > 60 s) -> pullDevices
 presence: editor open -> setPresence(noteId) (debounced, 5 min heartbeat) -> others: useNoteOpenElsewhere
 ```
 

@@ -284,7 +284,8 @@ queueCloudAdd(state, note); // only_if_cloudConnected + isVaultUnlocked; the eng
 **Every reducer that changes a synced note calls `touchNote()`** (or `trashNote` / `untrashNote`, which do), and never writes
 `syncedRev` itself: that is the sync engine's bookkeeping (`applyNotesPlan`, `notesPushed`). A change without a new revision is
 ignored by the other devices (their copy looks as new). `addNote` takes `rev`, `syncedRev` and `local` from the stored note, not
-from the editor's copy.
+from the editor's copy. A note last written by an older app version has no `rev`: `touchNote` records its own version as the
+base (`baseOf`), and outbox entries an older version left are stamped by `adoptLegacyOutbox` before the first push.
 
 `CryptNote.encrypt` takes no key argument anymore -- it reads the per-vault DEK from `vaultSession` and **fails closed** if the
 vault is locked (never emits plaintext). The old global `secretKey` argument and build-time `SECRET_KEY` are superseded by
@@ -646,10 +647,13 @@ reads, writes, and deletes.
    `getDocs()` with collection queries for bulk operations (initial sync, device handshake).
 
 4. **Listen, don't poll.** The engine keeps one listener on `connectedDevices` and one on the vault doc (a changed doc costs one
-   read per listening device); its fallback server poll runs every 5 min and on resume. Don't add intervals that read the cloud.
+   read per listening device); every 5 min and on resume it re-opens the transport and reads the device docs (a read "from the
+   server" of a listened collection is answered by the listener, so it can't replace this). Don't add intervals that read the
+   cloud.
 
-5. **Debounce rapid changes.** Editors commit in batches (`useNoteEditor`) and the engine pushes 200ms after the outbox changes,
-   one transaction per batch of up to 200 entries -- do not bypass either.
+5. **Debounce rapid changes.** Editors commit in batches (`useNoteEditor`); the engine pushes 200ms after the outbox changes and
+   at most every 2 s, one transaction per batch of up to 200 entries; receivers ack once the sender is quiet for 5 s (at most 30
+   s). Do not bypass any of them: each push and each ack also costs a read on every listening device.
 
 6. **Delete operations are cheap but not free.** The 20K delete limit is generous, but bulk operations (wipe all notes, wipe
    categories) should still use batch deletes and warn the user if the operation is large.
@@ -663,11 +667,15 @@ reads, writes, and deletes.
    Document the estimate in the PR description.
 
 8. **Avoid redundant device sync.** A push writes each note doc and one merged update of the sender's device doc (queues,
-   recipients, `lastSync`) per transaction. When adding new sync logic, verify that you are not duplicating writes to the same
+   recipients, `lastSync`) per transaction, and nothing when the cloud took none of it. Never write a document others listen to
+   (`connectedDevices`, `vault`) when nothing changed: a no-op write still wakes every listener (one read each), and a write
+   that triggers the next one loops. When adding new sync logic, verify that you are not duplicating writes to the same
    document.
 
 9. **Never store large blobs in Firestore.** Notes with embedded images should store references (URLs or base64 within the
-   encrypted note body), not separate Firestore documents per image. Firestore documents have a 1 MB size limit.
+   encrypted note body), not separate Firestore documents per image. Firestore documents have a 1 MiB size limit and 40,000
+   index entries (every field of every nested map counts: a queued note is ~50), whichever comes first: size anything that
+   accumulates in one document (the fan-out queues, `planFanout`) by both.
 
 10. **Test with Firestore usage monitoring.** During development of cloud-related features, check the Firebase console usage tab
     to verify that operations are within expected ranges.
@@ -677,15 +685,16 @@ reads, writes, and deletes.
 
 ### Operation Cost Examples
 
-| User Action                   | Expected Firestore Operations                                              |
-| ----------------------------- | -------------------------------------------------------------------------- |
-| Create / edit a note (synced) | 2 reads (note + device doc, in the guard transaction) + 2 writes per batch |
-| ...on each other device       | 1 listener read + ack transaction (1 read + 1 write)                       |
-| Delete a note (synced)        | 2 reads + 1 delete + 1 write per batch                                     |
-| Open app with sync enabled    | N device docs + 1 vault read (listeners' first snapshot)                   |
-| Idle, app open                | N + 1 reads every 5 min (fallback poll); presence: 1 write per open/close  |
-| Full sync (100 notes)         | ~100 reads + writes only for what this device has newer                    |
-| Wipe all notes from cloud     | N deletes (batched, 200 per batch)                                         |
+| User Action                   | Expected Firestore Operations                                                                 |
+| ----------------------------- | --------------------------------------------------------------------------------------------- |
+| Create / edit a note (synced) | 2 reads (note + device doc, in the guard transaction) + 2 writes per push (at most every 2 s) |
+| ...on each other device       | 1 listener read per push; 1 ack (1 read + 1 write) after 5 s quiet, read by every device      |
+| Delete a note (synced)        | 2 reads + 1 delete + 2 writes (device doc + tombstone) per push                               |
+| Open app with sync enabled    | N device docs + 1 vault read (listeners' first snapshot)                                      |
+| Idle, app open                | N device docs every 5 min; presence: 1 write per open/close, 1 per 5 min while a note is open |
+| Typing for an hour, 3 devices | ~9k reads + ~3.7k writes                                                                      |
+| Full sync (100 notes)         | ~100 reads + 1 per tombstone + writes only for what this device has newer                     |
+| Wipe all notes from cloud     | N deletes, tombstones included (batched, 200 per batch)                                       |
 
 ### End-to-End Encryption (per-vault) -- safety rules
 
@@ -776,6 +785,8 @@ hard rules (each maps to a lesson learned):
 | 29  | Never dispatch a persisted-slice update per keystroke                                     | Every commit re-serializes the whole slice; editors batch through `setNoteAsync` (see LL-031)                                    |
 | 30  | Never rely on a JS timer for work that must finish before the app may be killed           | Android pauses timers in background; flush synchronously (see LL-032)                                                            |
 | 31  | Never concatenate translated fragments into a sentence                                    | Word order differs per language; one interpolated key, `<Trans>` for styled parts (see LL-035)                                   |
+| 32  | Never write a cloud document other devices listen to when nothing changed                 | Each write costs a read per listener and can wake the loop that writes again (see LL-044)                                        |
+| 33  | Never size what accumulates in one Firestore document by bytes alone                      | The 40,000 index-entry limit comes first (~50 per queued note); budget both (see LL-043)                                         |
 
 ### ALWAYS
 

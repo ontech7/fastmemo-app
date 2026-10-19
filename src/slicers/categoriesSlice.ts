@@ -140,8 +140,8 @@ const categoriesSlice = createSlice({
     /** Incoming from another device. Which category is selected stays this device's choice. */
     addLocalCategories: (state, action: PayloadAction<Record<string, Category>>) => {
       Object.values(action.payload).forEach((cloudCategory) => {
-        // Deleted here meanwhile (the deletion is still to go out): a replayed older add mustn't bring it back.
-        if (cloudCategory.icon in state.cloud.items.delete) return;
+        // Changed or deleted here meanwhile (still to go out): this device's change is the later one, and goes out next.
+        if (cloudCategory.icon in state.cloud.items.add || cloudCategory.icon in state.cloud.items.delete) return;
         const idx = state.items.findIndex((localCategory) => localCategory.icon === cloudCategory.icon);
         if (idx === -1) {
           state.items.push({ ...cloudCategory, selected: false });
@@ -154,12 +154,17 @@ const categoriesSlice = createSlice({
 
     deleteLocalCategories: (state, action: PayloadAction<Record<string, Category>>) => {
       Object.values(action.payload).forEach((cloudCategory) => {
-        if (cloudCategory.selected) {
+        // Changed here meanwhile (still to go out): this device's change is the later one.
+        if (cloudCategory.icon in state.cloud.items.add) return;
+        const removed = state.items.find((localCategory) => localCategory.icon === cloudCategory.icon);
+        if (!removed) return;
+        state.items = state.items.filter((localCategory) => localCategory !== removed);
+        // The one shown here: back to all notes.
+        if (removed.selected) {
           state.items.forEach((category) => {
             category.selected = category.icon === defaultCategory.icon;
           });
         }
-        state.items = state.items.filter((localCategory) => localCategory.icon !== cloudCategory.icon);
       });
       state.items.sort(order_asc_sort);
     },

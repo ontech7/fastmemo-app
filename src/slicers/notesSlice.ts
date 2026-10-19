@@ -12,7 +12,7 @@ import type { NotesPushed } from "@/libs/cloud/syncEngine";
 import { configs } from "@/configs";
 import { defaultCategory } from "@/configs/default";
 import { only_if_cloudConnected } from "@/libs/cloud";
-import { deletionStub, forUpload, nextRev, noteRev, pruneTombstones, touchNote } from "@/libs/cloud/revision";
+import { baseOf, deletionStub, forUpload, nextRev, noteRev, pruneTombstones, touchNote } from "@/libs/cloud/revision";
 import { isVaultUnlocked } from "@/libs/vaultSession";
 import { CryptNote } from "@/utils/crypt";
 import { wipeNotes } from "./thunks/notes";
@@ -98,11 +98,14 @@ const dequeuePushed = (queue: Record<string, Note>, pushed: NotesPushed["add"]):
   });
 };
 
-/** The sync bookkeeping the store keeps for a note, with no undefined keys (Firestore refuses an undefined field). */
-const storeOwned = ({ syncedRev, local }: Note): Pick<Note, "syncedRev" | "local"> => ({
-  ...(syncedRev !== undefined && { syncedRev }),
-  ...(local !== undefined && { local }),
-});
+/**
+ * The sync bookkeeping the store keeps for a note, with no undefined keys (Firestore refuses an undefined field). A change
+ * to a note an older app version wrote records what it builds on (see `baseOf`).
+ */
+const storeOwned = (stored: Note): Pick<Note, "syncedRev" | "local"> => {
+  const syncedRev = baseOf(stored);
+  return { ...(syncedRev !== undefined && { syncedRev }), ...(stored.local !== undefined && { local: stored.local }) };
+};
 
 /** The cloud now has `rev` of this note (a draft). */
 const markSynced = (note: Note | undefined, rev: number): void => {
@@ -320,7 +323,10 @@ const notesSlice = createSlice({
       sortNotes(state.items, state.filters);
     },
 
-    /** Replaces the notes (import). They keep their revisions: newer cloud versions still win, the rest is uploaded. */
+    /**
+     * Replaces the notes (import). They keep their revisions, and count as changes made here: where the cloud has another
+     * version of a note, both are kept (one as a conflict copy).
+     */
     setNotes: (state, action: PayloadAction<{ notes: Note[] }>) => {
       // Another device's (or an older) sync bookkeeping means nothing here.
       state.items = action.payload.notes.map(({ syncedRev: _syncedRev, ...note }) => note as Note);
@@ -545,6 +551,21 @@ const notesSlice = createSlice({
     dropNoteUploads: (state, action: PayloadAction<string[]>) => {
       action.payload.forEach((id) => delete state.cloud.items.add[id]);
     },
+
+    /**
+     * Uploads an older app version queued before this one took over: they're stamped with a revision, on top of the
+     * version they change (an older app doesn't renew it for every change, and the cloud would take the same revision for
+     * the version it already has). One also queued for deletion (an older version could leave both) is live: it's the
+     * upload that counts.
+     */
+    adoptLegacyOutbox: (state, action: PayloadAction<string[]>) => {
+      action.payload.forEach((id) => {
+        const note = state.items.find((n) => n.id === id);
+        if (!note) return;
+        if (note.rev === undefined && note.syncedRev === undefined && !note.local) touchNote(note);
+        delete state.cloud.items.delete[id];
+      });
+    },
   },
 
   extraReducers: (builder) => {
@@ -585,6 +606,7 @@ export const {
   applyNotesPlan,
   notesPushed,
   dropNoteUploads,
+  adoptLegacyOutbox,
 } = notesSlice.actions;
 
 // Selectors
