@@ -4,7 +4,10 @@
   "description": "What the app's window may call: only the APIs the frontend uses.",
   "windows": ["main"],
   "permissions": [
-    "core:default",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:resources:allow-close",
+    "core:app:allow-bundle-type",
     "dialog:allow-open",
     "dialog:allow-save",
     "fs:allow-read-text-file",

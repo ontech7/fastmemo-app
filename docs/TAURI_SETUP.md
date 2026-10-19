@@ -15,11 +15,16 @@
 
 ```
 src-tauri/
-├── Cargo.toml          # Rust dependencies and build profiles
-├── tauri.conf.json     # Tauri configuration (updater, window, bundle)
+├── Cargo.toml              # Rust dependencies and build profiles
+├── tauri.conf.json         # Tauri 2 configuration (window, bundle, plugins.updater)
+├── tauri.linux.conf.json   # Linux override: keeps the `fast-memo` binary name of 1.x
+├── tauri.test.conf.json    # Test identity (com.ontech7.fastmemo.test), no updates
+├── capabilities/
+│   └── default.json        # What the window may call (least privilege)
 ├── src/
-│   └── main.rs         # Rust entry point
-└── icons/              # Icons for all platforms
+│   ├── lib.rs              # The app: commands, plugins, menu, exit flush
+│   └── main.rs             # Entry point, calls lib.rs
+└── icons/                  # Icons for all platforms
 ```
 
 ---
@@ -31,7 +36,7 @@ Keys are required to sign updates. **NEVER share the private key.**
 ### Key locations
 
 - **Private key:** `~/.tauri/fastmemo.key`
-- **Public key:** In `tauri.conf.json` → `tauri.updater.pubkey`
+- **Public key:** In `tauri.conf.json` → `plugins.updater.pubkey`
 
 ### Regenerate keys (if needed)
 
@@ -50,8 +55,10 @@ You'll be asked for a password (optional). Save the **public key** shown in outp
 Copy the public key to `tauri.conf.json`:
 
 ```json
-"updater": {
-  "pubkey": "YOUR_PUBLIC_KEY_HERE"
+"plugins": {
+  "updater": {
+    "pubkey": "YOUR_PUBLIC_KEY_HERE"
+  }
 }
 ```
 
@@ -93,20 +100,24 @@ src-tauri/target/release/bundle/
 
 ### How it works
 
-1. On startup, the app checks the configured endpoint for `latest.json`
-2. If a newer version is found, it shows a dialog
-3. User can accept → downloads, verifies signature, installs, restarts
+1. On startup (and from Settings → Check updates), the app checks the configured endpoint for `latest.json`
+   (`AppUpdateProvider`; skipped for deb/rpm installs, which update through their package manager)
+2. If a newer version is found, it shows the app's own dialog
+3. User can accept → downloads, verifies the signature, writes pending notes, installs, restarts
+
+`bundle.createUpdaterArtifacts: "v1Compatible"` keeps the 1.x archive names (`.app.tar.gz`, `.msi.zip`, `.nsis.zip`,
+`.AppImage.tar.gz`), so installs still on 1.x can update from the same `latest.json` (see ADR-015).
 
 ### Configuration in tauri.conf.json
 
 ```json
-"updater": {
-  "active": true,
-  "dialog": true,
-  "pubkey": "YOUR_PUBLIC_KEY",
-  "endpoints": [
-    "https://github.com/ontech7/fastmemo-app/releases/latest/download/latest.json"
-  ]
+"plugins": {
+  "updater": {
+    "pubkey": "YOUR_PUBLIC_KEY",
+    "endpoints": [
+      "https://github.com/ontech7/fastmemo-app/releases/latest/download/latest.json"
+    ]
+  }
 }
 ```
 
@@ -165,13 +176,13 @@ ngrok http 8080
 
 Change version in **both** files:
 
-- `tauri.conf.json` → `package.version`
+- `tauri.conf.json` → `version`
 - `Cargo.toml` → `version`
 
 ### Step 2: Build with signing
 
 ```bash
-TAURI_PRIVATE_KEY=$(cat ~/.tauri/fastmemo.key) yarn tauri:build
+TAURI_SIGNING_PRIVATE_KEY=$(cat ~/.tauri/fastmemo.key) yarn tauri:build
 ```
 
 ### Step 3: Prepare files
@@ -211,7 +222,7 @@ cargo install tauri-cli
 ### "A public key has been found, but no private key"
 
 ```bash
-export TAURI_PRIVATE_KEY="your-private-key"
+export TAURI_SIGNING_PRIVATE_KEY="your-private-key"   # Tauri 2's name (1.x used TAURI_PRIVATE_KEY)
 ```
 
 ### "The configured updater endpoint must use the `https` protocol"
@@ -238,5 +249,8 @@ For the automated workflow, configure these secrets in the repository:
 | -------------------- | -------------------------- |
 | `TAURI_PRIVATE_KEY`  | Contents of `fastmemo.key` |
 | `TAURI_KEY_PASSWORD` | Key password (if set)      |
+
+The secret names are the 1.x ones: `publish.yml` passes them to the build as `TAURI_SIGNING_PRIVATE_KEY` /
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Locally, `.env` uses the Tauri 2 names directly.
 
 **Path:** Repository → Settings → Secrets and variables → Actions → New repository secret

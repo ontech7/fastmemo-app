@@ -7,10 +7,11 @@ license = "GNU Affero General Public License v3.0"
 repository = "http://github.com/ontech7/fastmemo-app"
 edition = "2021"
 
-# Desktop only, but split per Tauri 2's layout: everything lives in lib.rs, main.rs only calls `run()`.
+# Split per Tauri 2's layout: everything lives in lib.rs, main.rs only calls `run()`. Desktop only, so just the rlib
+# (staticlib/cdylib are for mobile targets and would triple the fat-LTO link of every release build).
 [lib]
 name = "fastmemo_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -33,12 +34,6 @@ serde_json = "1.0"
 # src/libs/biometric.ts and the cfg'd `biometric_authenticate` stub in lib.rs).
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 robius-authentication = "0.1.1"
-
-# macOS: the transparent WKWebView that kills the white launch flash (`clear_webview_background` in lib.rs; Tauri's
-# `backgroundColor` doesn't reach the webview layer there). The versions Tauri itself uses, so nothing extra compiles.
-[target.'cfg(target_os = "macos")'.dependencies]
-objc2 = "0.6"
-objc2-foundation = { version = "0.3", features = ["NSString", "NSValue"] }
 
 [profile.dev]
 incremental = true

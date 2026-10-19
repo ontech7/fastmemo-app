@@ -9,9 +9,15 @@ export interface DesktopUpdate {
   close(): Promise<void>;
 }
 
-/** A newer signed desktop build, or null (also outside Tauri). Rejects when the check fails. */
+/**
+ * A newer signed desktop build, or null (also outside Tauri, and for deb/rpm installs: those update through their package
+ * manager, and the updater would only offer them an AppImage it can't install). Rejects when the check fails.
+ */
 export async function checkDesktopUpdate(): Promise<DesktopUpdate | null> {
   if (!isTauri()) return null;
+  const { BundleType, getBundleType } = await import("@tauri-apps/api/app");
+  const bundleType = await getBundleType();
+  if (bundleType === BundleType.Deb || bundleType === BundleType.Rpm) return null;
   const { check } = await import("@tauri-apps/plugin-updater");
   return check();
 }

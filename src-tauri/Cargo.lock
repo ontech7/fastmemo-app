@@ -955,8 +955,6 @@ dependencies = [
 name = "fastmemo"
 version = "1.2.0"
 dependencies = [
- "objc2 0.6.5",
- "objc2-foundation 0.3.2",
  "robius-authentication",
  "serde",
  "serde_json",

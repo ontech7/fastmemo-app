@@ -54,8 +54,10 @@ async fn biometric_authenticate(_reason: String) -> Result<bool, String> {
 }
 
 // Note edits are committed to storage in batches (ADR-013), so the latest ones may only be in the webview's memory when
-// the app quits. Every quit (window close button, Cmd+Q, the OS ending the session) first asks the frontend to flush
+// the app quits. A quit from the window (close button, Cmd+W) or the app menu (Cmd+Q) first asks the frontend to flush
 // (`src/libs/flushOnExit.web.ts`) and exits once it reports back, or after FLUSH_TIMEOUT if a write hangs.
+// Not covered: quits that bypass the event loop (macOS Dock Quit and logout, a Windows/Linux session ending) exit at once,
+// losing at most the edit batch still open (ADR-015).
 
 /// The event the frontend flushes on.
 const FLUSH_EVENT: &str = "fastmemo://flush-before-exit";
@@ -88,30 +90,89 @@ fn exit_after_flush(app: AppHandle) {
     app.exit(0);
 }
 
-/// macOS: WKWebView paints white until the first frame, and Tauri's `backgroundColor` doesn't reach the webview layer
-/// there. Turning off its (KVC-only) `drawsBackground` lets the window's #05091A show through until the page paints, so
-/// launch never flashes white. A no-op if the WebView handle can't be reached.
+/// The app menu's Quit item.
 #[cfg(target_os = "macos")]
-fn clear_webview_background(window: &tauri::WebviewWindow) {
-    use objc2::{msg_send, runtime::AnyObject};
-    use objc2_foundation::{NSNumber, NSString};
+const QUIT_MENU_ID: &str = "quit";
 
-    let _ = window.with_webview(|webview| {
-        let wk = webview.inner() as *mut AnyObject;
-        if wk.is_null() {
-            return;
-        }
-        unsafe {
-            let no = NSNumber::new_bool(false);
-            let key = NSString::from_str("drawsBackground");
-            let _: () = msg_send![&*wk, setValue: &*no, forKey: &*key];
-        }
-    });
+/// macOS: Tauri's default menu, except Quit. Its predefined Quit (Cmd+Q) sends `terminate:`, which ends the process
+/// without any event the app could hold, so this one is a plain item that goes through `flush_then_exit`.
+#[cfg(target_os = "macos")]
+fn macos_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    use tauri::menu::{
+        AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu, HELP_SUBMENU_ID, WINDOW_SUBMENU_ID,
+    };
+
+    let name = app.package_info().name.clone();
+    let about = AboutMetadata {
+        name: Some(name.clone()),
+        version: Some(app.package_info().version.to_string()),
+        copyright: app.config().bundle.copyright.clone(),
+        ..Default::default()
+    };
+
+    Menu::with_items(
+        app,
+        &[
+            &Submenu::with_items(
+                app,
+                &name,
+                true,
+                &[
+                    &PredefinedMenuItem::about(app, None, Some(about))?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::services(app, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::hide(app, None)?,
+                    &PredefinedMenuItem::hide_others(app, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &MenuItem::with_id(app, QUIT_MENU_ID, format!("Quit {name}"), true, Some("CmdOrCtrl+Q"))?,
+                ],
+            )?,
+            &Submenu::with_items(app, "File", true, &[&PredefinedMenuItem::close_window(app, None)?])?,
+            &Submenu::with_items(
+                app,
+                "Edit",
+                true,
+                &[
+                    &PredefinedMenuItem::undo(app, None)?,
+                    &PredefinedMenuItem::redo(app, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::cut(app, None)?,
+                    &PredefinedMenuItem::copy(app, None)?,
+                    &PredefinedMenuItem::paste(app, None)?,
+                    &PredefinedMenuItem::select_all(app, None)?,
+                ],
+            )?,
+            &Submenu::with_items(app, "View", true, &[&PredefinedMenuItem::fullscreen(app, None)?])?,
+            &Submenu::with_id_and_items(
+                app,
+                WINDOW_SUBMENU_ID,
+                "Window",
+                true,
+                &[
+                    &PredefinedMenuItem::minimize(app, None)?,
+                    &PredefinedMenuItem::maximize(app, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::close_window(app, None)?,
+                ],
+            )?,
+            &Submenu::with_id_and_items(app, HELP_SUBMENU_ID, "Help", true, &[])?,
+        ],
+    )
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(macos_menu).on_menu_event(|app, event| {
+        if event.id() == QUIT_MENU_ID {
+            flush_then_exit(app);
+        }
+    });
+
+    builder
         // First: a second launch only focuses the running window. Two instances would share (and overwrite) the same
         // stored notes.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -134,20 +195,10 @@ pub fn run() {
                 flush_then_exit(window.app_handle());
             }
         })
-        .setup(|app| {
-            #[cfg(target_os = "macos")]
-            if let Some(main) = app.get_webview_window("main") {
-                clear_webview_background(&main);
-            }
-            #[cfg(not(target_os = "macos"))]
-            let _ = app;
-            Ok(())
-        })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            // `code` is None when the user quits (Cmd+Q, the OS ending the session); `app.exit()` comes back here with
-            // Some and goes through.
+            // `code` is None when the last window is gone; `app.exit()` comes back here with Some and goes through.
             if let RunEvent::ExitRequested { code: None, api, .. } = event {
                 api.prevent_exit();
                 flush_then_exit(app);
