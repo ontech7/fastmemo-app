@@ -21,7 +21,7 @@ export function getCurrentAppVersion(): string {
 
 /**
  * How many OTA updates (EAS Update) the running mobile bundle sits on top of its store version. An OTA cannot bump the
- * app version (it's a native fingerprint input), so the OTA workflow injects the count at publish time; the bundle
+ * app version (it's the binary's), so the OTA workflow injects the count at publish time; the bundle
  * embedded in a store build has none (0).
  */
 export const OTA_REVISION = Number(process.env.EXPO_PUBLIC_OTA_REVISION) || 0;

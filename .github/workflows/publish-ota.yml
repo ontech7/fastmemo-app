@@ -2,8 +2,9 @@
 # "Publish OTA" → Run workflow (from main), or `gh workflow run publish-ota.yml --ref main -f message="…"`.
 #
 # It refuses to publish code with native changes (no production build has its fingerprint, see scripts/ota-guard.sh):
-# those need a store build. An OTA cannot bump the app version (a fingerprint input), so each one is counted on top of
-# the store version instead: tag vX.Y.Z+ota.N, shown in-app as "X.Y.Z · OTA N" (EXPO_PUBLIC_OTA_REVISION).
+# those need a store build. An OTA lands on top of a store version (the guard also requires a build of this exact
+# version), so each one is counted on top of it: tag vX.Y.Z+ota.N, shown in-app as "X.Y.Z · OTA N"
+# (EXPO_PUBLIC_OTA_REVISION).
 #
 # Needs the EXPO_TOKEN repository secret (expo.dev → Account settings → Access tokens).
 
@@ -29,16 +30,20 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # the vX.Y.Z+ota.N tag and its GitHub Release
-    env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    # EXPO_TOKEN can publish to every installed app: only the guard and publish steps get it, never the dependency
+    # install or the checks (a compromised package's scripts run there).
     steps:
       - name: Guard ref is main
         if: github.ref_name != 'main'
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          echo "::error::Production OTAs ship from main (this run is on '${{ github.ref_name }}')."
+          echo "::error::Production OTAs ship from main (this run is on '$REF_NAME')."
           exit 1
 
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -47,10 +52,8 @@ jobs:
 
       - uses: expo/expo-github-action@v8
         with:
-          # Pinned: the fingerprint (runtimeVersion) is computed inside eas-cli, and a version hashing differently would
-          # fail the guard on every OTA until a rebuild. Bump it deliberately, together with scripts/ota-guard.sh.
+          # Pinned, like scripts/ota-guard.sh: the guard depends on its flags and JSON output. Bump both together.
           eas-version: 25.2.0
-          token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
@@ -65,6 +68,8 @@ jobs:
           node scripts/vault.test.mjs
 
       - name: Guard against native changes
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: EAS=eas bash scripts/ota-guard.sh
 
       - name: Resolve version, revision and message
@@ -76,9 +81,18 @@ jobs:
           version=$(jq -r .version package.json)
           # N-th OTA on top of store version X.Y.Z: the first free vX.Y.Z+ota.N tag (it restarts at 1 on a store release).
           revision=1
-          while git ls-remote --exit-code --tags origin "refs/tags/v$version+ota.$revision" >/dev/null; do
+          # --exit-code: 0 the tag exists, 2 it doesn't. Anything else (network, auth) must stop the run, not pass for
+          # "free" and reuse a published revision number.
+          while true; do
+            status=0
+            git ls-remote --exit-code --tags origin "refs/tags/v$version+ota.$revision" >/dev/null || status=$?
+            [ "$status" = 0 ] || break
             revision=$((revision + 1))
           done
+          if [ "$status" != 2 ]; then
+            echo "::error::Could not look up the existing OTA tags (git ls-remote exited $status)."
+            exit 1
+          fi
           message="$INPUT_MESSAGE"
           [ -n "$message" ] || message=$(git log -1 --pretty=%s)
           {
@@ -86,13 +100,16 @@ jobs:
             echo "revision=$revision"
             echo "tag=v$version+ota.$revision"
             echo "sha=$(git rev-parse HEAD)"
-            echo "message<<__EOF__"
+            # A random delimiter: a fixed one inside the message could end the value early and set other outputs.
+            delimiter="EOF_$(openssl rand -hex 16)"
+            echo "message<<$delimiter"
             echo "$message"
-            echo "__EOF__"
+            echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
 
       - name: Publish OTA
         env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           # Inlined into the bundle (not into app.config.ts: that would change the fingerprint and orphan the update).
           EXPO_PUBLIC_OTA_REVISION: ${{ steps.meta.outputs.revision }}
           TAG: ${{ steps.meta.outputs.tag }}
@@ -138,6 +155,6 @@ jobs:
             else
               echo "### ❌ OTA not published"
               echo
-              echo "See the failed step. \"No production build has this fingerprint\" means native changes: ship a store build."
+              echo "See the failed step. \"No production build of vX.Y.Z has this fingerprint\" means native changes or a new version: ship a store build."
             fi
           } >> "$GITHUB_STEP_SUMMARY"

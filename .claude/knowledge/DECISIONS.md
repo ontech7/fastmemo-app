@@ -355,16 +355,18 @@ closes (`flushOnExit`, which also flushes the persistor).
 **Status:** Accepted (2026-10-19). The v3.2.0 store build predates it: OTAs start with the first production build that embeds
 the `production` channel and the fingerprint runtime.  
 **Context:** A JS-only bug fix had to wait for a full Play Store review. EAS Update can ship JS/asset changes to installed apps,
-but an update only reaches builds with the same runtime version, and the app `version` can't change in an update (it is a native
-fingerprint input).  
+but an update only reaches builds with the same runtime version, and the app `version` is the binary's: an update can't change
+it.  
 **Decision:**
 
 - `runtimeVersion: { policy: "fingerprint" }`: the runtime is a hash of the native inputs (app config, autolinked native
   dependencies, `modules/`), so it changes exactly when a store build is needed.
 - OTAs are published only by the manual **Publish OTA** GitHub workflow (`.github/workflows/publish-ota.yml`, from `main`). It
   runs tsc/lint/i18n/vault tests, then `scripts/ota-guard.sh` (also `yarn ota:check` locally): the current Android fingerprint
-  must match a finished build on the `production` channel, or the code has native changes and the run fails instead of
-  publishing an update no installed app can receive.
+  must match a finished build on the `production` channel **of the same app version**, or the code has native changes (or a new
+  version) and the run fails instead of publishing an update no installed app can receive. The version is checked on its own:
+  the default fingerprint preset leaves `version`/`versionCode` out of the hash, so after a bump with no native change an OTA
+  would otherwise reach the previous version's builds, labelled with the new version.
 - Each OTA is tagged `vX.Y.Z+ota.N` (N-th OTA on top of store version X.Y.Z, restarting at 1 on a store release) with a GitHub
   Release created `--latest=false`, and N is inlined as `EXPO_PUBLIC_OTA_REVISION`: the app shows "X.Y.Z · OTA N" in Information
   and sends it with bug reports (`getDisplayAppVersion`).
@@ -376,7 +378,8 @@ fingerprint input).
   there would give every update its own runtime and orphan it. `eas update` passes the shell environment to the export (EAS
   environment variables win on conflict; `.env` files are ignored with `--environment`).
 - `--latest=false` keeps `releases/latest` on the store/desktop release: the website version API and the Tauri updater read it.
-- eas-cli is pinned (workflow + guard): the fingerprint is computed inside it, a different version could hash differently.
+- eas-cli is pinned (workflow + guard): the guard depends on its flags and `--json` output. `EXPO_TOKEN` reaches only the guard
+  and publish steps, not the dependency install or the checks.
 
 **Trade-offs:**
 
