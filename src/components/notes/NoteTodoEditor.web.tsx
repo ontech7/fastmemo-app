@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useCallback, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import uuid from "react-uuid";
@@ -218,15 +218,14 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
         <View style={styles.subtitleWrapper}>
           <Text style={[styles.subtitle, { flexGrow: 1 }]}>
-            {t("note.completed")}{" "}
-            <Text
-              style={{
-                color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon,
+            <Trans
+              t={t}
+              i18nKey="note.progress"
+              values={{ done: numberOfCheckedItems, total: numberOfAllItems }}
+              components={{
+                hl: <Text style={{ color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon }} />,
               }}
-            >
-              {numberOfCheckedItems}
-            </Text>{" "}
-            {t("note.on")} {numberOfAllItems}
+            />
           </Text>
         </View>
       </View>
