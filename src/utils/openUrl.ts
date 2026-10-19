@@ -1,15 +1,6 @@
-import { isTauri } from "@/utils/platform";
 import { Linking } from "react-native";
 
-/**
- * Opens a URL in the default browser.
- * Uses the Tauri opener plugin on desktop, Linking.openURL on mobile/web.
- */
+/** Opens a URL in the default browser (the `.web` sibling handles the desktop app). */
 export async function openUrl(url: string): Promise<void> {
-  if (isTauri()) {
-    const { openUrl: openWithDefaultApp } = await import("@tauri-apps/plugin-opener");
-    await openWithDefaultApp(url);
-  } else {
-    await Linking.openURL(url);
-  }
+  await Linking.openURL(url);
 }

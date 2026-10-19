@@ -431,6 +431,7 @@ const de = {
     update_available: "Update verfügbar",
     update_confirm: "Möchten Sie es jetzt installieren?",
     update_installing: "Update wird heruntergeladen: Die App startet nach der Installation neu.",
+    update_install: "Installieren",
     no_updates: "Sie verwenden die neueste Version.",
     feedback_and_help: "Feedback und Hilfe",
     help: "Hilfe",

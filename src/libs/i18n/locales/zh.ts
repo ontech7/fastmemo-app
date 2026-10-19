@@ -416,6 +416,7 @@ const zh = {
     update_available: "有可用更新",
     update_confirm: "您想现在安装吗？",
     update_installing: "正在下载更新：安装后应用将重新启动。",
+    update_install: "安装",
     no_updates: "您正在使用最新版本。",
     feedback_and_help: "反馈和帮助",
     help: "帮助",

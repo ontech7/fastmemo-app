@@ -29,9 +29,11 @@ export function installFlushOnExit(): void {
     Promise.all([import("@tauri-apps/api/event"), import("@tauri-apps/api/core")])
       .then(([{ listen }, { invoke }]) =>
         listen("fastmemo://flush-before-exit", async () => {
-          await Promise.race([flushNow(), new Promise<void>((resolve) => setTimeout(resolve, EXIT_FLUSH_TIMEOUT_MS))]).catch(
-            () => {}
-          );
+          // flushNow goes through a promise, so a synchronous throw can't skip the exit call below.
+          await Promise.race([
+            Promise.resolve().then(flushNow),
+            new Promise<void>((resolve) => setTimeout(resolve, EXIT_FLUSH_TIMEOUT_MS)),
+          ]).catch(() => {});
           await invoke("exit_after_flush");
         })
       )
