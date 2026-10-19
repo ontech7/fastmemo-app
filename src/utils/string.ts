@@ -26,9 +26,15 @@ export const capitalize = (str: string = ""): string => {
 
 /**
  * Builds a fallback note title from the note's own content: whitespace collapsed to
- * single spaces, trimmed, and capped at `maxLength` characters. Used to auto-title
- * brand-new notes the user never named, so notes never land in the list untitled.
+ * single spaces, trimmed, and capped at `maxLength` characters, cut at a word boundary
+ * (the list ellipsizes what doesn't fit). Used to auto-title brand-new notes the user
+ * never named, so notes never land in the list untitled.
  */
-export const deriveNoteTitle = (source: string, maxLength = 32): string => {
-  return source.replace(/\s+/g, " ").trim().slice(0, maxLength).trim();
+export const deriveNoteTitle = (source: string, maxLength = 60): string => {
+  const text = source.replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text;
+
+  const lastSpace = text.lastIndexOf(" ", maxLength);
+  const cut = lastSpace > maxLength / 2 ? text.slice(0, lastSpace) : text.slice(0, maxLength);
+  return cut.replace(/[\s,;:.\-–—]+$/, "");
 };
