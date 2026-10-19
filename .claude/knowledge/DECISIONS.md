@@ -493,9 +493,12 @@ behind an interface.
   come back (as before), but nothing is ever dropped. A full sync that doesn't complete (offline, app closed) stays due and runs
   again when the engine next starts: it's what brings a newly connected device the notes no queue carries.
 - **Presence and live notes:** a device writes `presence: { noteId, at }` on its own doc when a note opens/closes (+ a 5 min
-  heartbeat); others show "open on <device>" on the card and in the editor (stale after 10 min). After applying incoming changes
-  the engine signals the open editor, which reloads the note (it was flushed first, so a local edit is already in the merge: at
-  worst it becomes the conflict copy).
+  heartbeat); others show "open on <device>" on the card and in the editor (stale after 10 min). A presence its device left
+  behind (page reloaded, app killed) is cleared by that device's next session as soon as it sees it. After applying incoming
+  changes the engine signals the open editor, which reloads the note in place (it was flushed first, so a local edit is already
+  in the merge: at worst it becomes the conflict copy). The caret keeps its place in the text (the code editor applies only the
+  span that changed, outside its undo history), and a change to the open note alone shows no "synced" toast: it would repeat
+  every few seconds while another device types.
 
 **Trade-offs:**
 

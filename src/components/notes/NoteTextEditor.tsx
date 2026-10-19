@@ -66,6 +66,33 @@ const TOOLBAR_LABEL_KEYS: Record<string, string> = {
   [actions.code]: "a11y.format.code",
 };
 
+// Run inside the editor's page (`command`, where `$` is its document) around a reload with another device's change:
+// a focused editor's caret keeps its place in the text, shifted by what changed before it, instead of jumping to the
+// start. The page handles messages in order, so the save sees the old content and the restore the new one.
+const SAVE_CARET = `
+  var c = $.querySelector(".pell-content"), s = $.getSelection();
+  window.__fmCaret = null;
+  if (!c || !$.hasFocus() || !s.rangeCount || !c.contains(s.focusNode)) return;
+  var r = $.createRange();
+  r.selectNodeContents(c);
+  r.setEnd(s.focusNode, s.focusOffset);
+  window.__fmCaret = { at: r.toString().length, text: c.textContent };
+`;
+const RESTORE_CARET = `
+  var saved = window.__fmCaret, c = $.querySelector(".pell-content");
+  window.__fmCaret = null;
+  if (!saved || !c) return;
+  var old = saved.text, text = c.textContent, from = 0, tail = 0;
+  while (from < old.length && from < text.length && old[from] === text[from]) from++;
+  while (tail < old.length - from && tail < text.length - from && old[old.length - 1 - tail] === text[text.length - 1 - tail]) tail++;
+  var at = saved.at <= from ? saved.at : saved.at >= old.length - tail ? saved.at + text.length - old.length : text.length - tail;
+  var walker = $.createTreeWalker(c, NodeFilter.SHOW_TEXT), node;
+  while ((node = walker.nextNode()) && at > node.length) at -= node.length;
+  var s = $.getSelection();
+  if (node) s.collapse(node, at);
+  else { s.selectAllChildren(c); s.collapseToEnd(); }
+`;
+
 // Every other action is a format the cursor's text either has or not.
 const NON_TOGGLE_ACTIONS = new Set<string>([actions.undo, actions.redo, actions.insertImage]);
 
@@ -117,7 +144,9 @@ export default function NoteTextEditor({ initialNote }: Props) {
     getTitleSource: (n) => stripHtml(n.text),
     // Changed on another device while open here: the WebView editor holds its own copy of the content.
     onRemoteChange: (remote) => {
+      richTextEditor.current?.command(SAVE_CARET);
       richTextEditor.current?.setContentHTML(remote.text);
+      richTextEditor.current?.command(RESTORE_CARET);
       setNoteTextLength(getTextLength(remote.text));
       setNoteTextSize(getTextSize(remote.text));
     },

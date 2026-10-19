@@ -101,7 +101,9 @@ export default function SyncOnProvider(): null {
           case "applied":
             if (event.conflicts.length > 0) {
               toast(t("cloudsync.conflict_copies"));
-            } else if (!event.full && (event.changed.length > 0 || event.categories)) {
+            } else if (!event.full && (event.changed.some((id) => id !== event.openNote) || event.categories)) {
+              // The open note's editor shows its changes as they come: they need no toast (it'd repeat while another
+              // device types).
               toast(t("dataSynced"));
             }
             break;

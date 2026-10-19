@@ -43,8 +43,11 @@ interface UseNoteEditorOptions<T extends Note> {
   buildPayloadExtras: (note: T) => Record<string, unknown>;
   /** Text a brand-new, still-untitled note derives its title from. Omit to disable. */
   getTitleSource?: (note: T) => string;
-  /** Another device changed the open note: the hook now holds the stored version (load it into a WebView editor). */
-  onRemoteChange?: (note: T) => void;
+  /**
+   * Another device changed the open note: the hook now holds the stored version (load it into a WebView editor);
+   * `previous` is the version it was showing.
+   */
+  onRemoteChange?: (note: T, previous: T) => void;
   /** What of the editor's current state survives a reload from another device's change. */
   keepOnRemote?: (remote: T, current: T) => T;
 }
@@ -247,10 +250,11 @@ export function useNoteEditor<T extends Note>({
       commitTimerRef.current = null;
       pendingNoteRef.current = null;
 
-      const next = keepOnRemote ? keepOnRemote(stored as T, currentRef.current) : (stored as T);
+      const previous = currentRef.current;
+      const next = keepOnRemote ? keepOnRemote(stored as T, previous) : (stored as T);
       currentRef.current = next;
       setNote(next);
-      onRemoteChange?.(next);
+      onRemoteChange?.(next, previous);
     },
     onDeleted: () => toast(t("cloudsync.note_deleted_elsewhere")),
   });

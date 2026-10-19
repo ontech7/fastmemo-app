@@ -154,6 +154,11 @@ export class SyncEngine {
     return this.running;
   }
 
+  /** The note open in an editor here (null: none), as set by `setPresence`. */
+  get openNote(): string | null {
+    return this.presence;
+  }
+
   /** Starts listening and pushing. */
   start(): void {
     if (this.running) return;
@@ -339,10 +344,16 @@ export class SyncEngine {
     this.devices = snapshot.devices;
     this.o.events.onDevices(snapshot.devices);
 
-    if (!snapshot.devices.some((device) => device.uuid === this.o.me)) {
+    const mine = snapshot.devices.find((device) => device.uuid === this.o.me);
+    if (!mine) {
       this.stop();
       this.o.events.onRemoved();
       return false;
+    }
+    // A presence left by a session that ended without clearing it (page reloaded, app killed): cleared now, rather than
+    // shown to the others until it expires. Not while a change of it is about to go out.
+    if (this.running && mine.presence?.noteId && mine.presence.noteId !== this.presence && !this.presenceTimer) {
+      this.sendPresence();
     }
 
     if (!this.vaultOk && !(await this.checkVault())) return false;

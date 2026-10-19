@@ -66,9 +66,9 @@ interface UseNoteEditorOptions<T extends Note> {
   getTitleSource?: (note: T) => string;
   /**
    * Another device changed the open note (ADR-016): the hook now holds the stored version. Editors that keep their own
-   * copy of the content (a WebView) load it from here.
+   * copy of the content (a WebView) load it from here; `previous` is the version they were showing.
    */
-  onRemoteChange?: (note: T) => void;
+  onRemoteChange?: (note: T, previous: T) => void;
   /** What of the editor's current state survives a reload from another device's change (e.g. the selected code tab). */
   keepOnRemote?: (remote: T, current: T) => T;
 }
@@ -295,10 +295,11 @@ export function useNoteEditor<T extends Note>({
       commitTimerRef.current = null;
       pendingNoteRef.current = null;
 
-      const next = keepOnRemote ? keepOnRemote(stored as T, currentRef.current) : (stored as T);
+      const previous = currentRef.current;
+      const next = keepOnRemote ? keepOnRemote(stored as T, previous) : (stored as T);
       currentRef.current = next;
       setNote(next);
-      onRemoteChange?.(next);
+      onRemoteChange?.(next, previous);
     },
     onDeleted: () => toast(t("cloudsync.note_deleted_elsewhere")),
   });

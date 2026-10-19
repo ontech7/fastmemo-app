@@ -967,5 +967,31 @@ await scenario("editing a note in the trash brings it back (no duplicate)", asyn
   ok("...and no longer in the trash", !a.trash().some((n) => n.id === "n1"));
 });
 
+await scenario("presence", async ({ cloud, add, settle }) => {
+  const a = await add("A");
+  a.engine.start();
+  await settle();
+  const shown = () => cloud.devices.get("A").presence?.noteId ?? null;
+
+  a.engine.setPresence("n1");
+  await settle();
+  ok("an open note is shown to the others", shown() === "n1");
+  a.engine.releasePresence("n1");
+  await settle();
+  ok("...and cleared once closed", shown() === null);
+
+  // The page was reloaded (or the app killed) with a note open: nothing cleared it.
+  cloud.devices.get("A").presence = { noteId: "n9", at: Date.now() };
+  cloud.changed();
+  await settle();
+  ok("a presence left over from an ended session is cleared", shown() === null);
+
+  a.engine.setPresence("n2");
+  cloud.devices.get("A").presence = { noteId: "n9", at: Date.now() };
+  cloud.changed();
+  await settle();
+  ok("...without overriding a note opened meanwhile", shown() === "n2");
+});
+
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed === 0 ? 0 : 1);

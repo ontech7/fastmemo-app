@@ -17,7 +17,8 @@ import type { CloudDevice } from "./types";
 
 /** What the sync engine reports to the app (UI, editors, presence). */
 export type SyncEvent =
-  | ({ type: "applied" } & Parameters<SyncEvents["onApplied"]>[0])
+  // `openNote`: the note open in an editor here, which shows its changes live.
+  | ({ type: "applied"; openNote: string | null } & Parameters<SyncEvents["onApplied"]>[0])
   | { type: "devices"; devices: CloudDevice[] }
   | { type: "removed" }
   | { type: "vaultStale" };
@@ -70,7 +71,7 @@ export const getSyncEngine = async (): Promise<SyncEngine | null> => {
     flushEditors: flushPending,
     conflictSuffix: () => t("cloudsync.conflict_suffix"),
     events: {
-      onApplied: (result) => emit({ type: "applied", ...result }),
+      onApplied: (result) => emit({ type: "applied", ...result, openNote: engine?.openNote ?? null }),
       onDevices: (devices) => emit({ type: "devices", devices }),
       onRemoved: () => emit({ type: "removed" }),
       onVaultStale: () => emit({ type: "vaultStale" }),

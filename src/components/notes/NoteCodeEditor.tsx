@@ -102,9 +102,10 @@ export default function NoteCodeEditor({ initialNote }: Props) {
       remote.tabs.some((tab) => tab.id === current.activeTabId) ? { ...remote, activeTabId: current.activeTabId } : remote,
     []
   );
-  const onRemoteChange = useCallback((remote: CodeNote) => {
+  const onRemoteChange = useCallback((remote: CodeNote, previous: CodeNote) => {
     const tab = remote.tabs.find((candidate) => candidate.id === remote.activeTabId) ?? remote.tabs[0];
-    editorRef.current?.setCode(tab?.code || "");
+    // Same tab: an edit of the document on screen (the cursor stays). Another tab: a new document.
+    editorRef.current?.setCode(tab?.code || "", { remote: tab?.id === previous.activeTabId });
     editorRef.current?.setLanguage(tab?.language || "plaintext");
   }, []);
 
