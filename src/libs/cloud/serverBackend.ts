@@ -23,10 +23,11 @@ import { toVaultRead } from "./vaultRead";
  * A self-hosted FastMemo server (ADR-017; the fastmemo-server repo, API /v1). The same contract as the Firestore adapter,
  * served differently:
  *   - incoming changes come from the server's change feed, a page at a time, as one change set (source "server") whose
- *     token is the page's last sequence number: acknowledging it moves this device's cursor there;
+ *     token is the page's id and its last sequence number: acknowledging it moves this device's cursor there;
  *   - live updates by long polling (one request waits on the server until something changes): plain HTTP;
  *   - the device enrolls with the server's access key and then uses its own token (kept in secure storage), so removing
- *     it on the server revokes it.
+ *     it on the server revokes it. Only the server refusing the token this device holds means "removed": a token that
+ *     can't be read now, or a refusal of one replaced meanwhile, is retried.
  * Every failure is answered the way the contract asks (null, false, "error"): the engine retries.
  */
 
@@ -39,8 +40,13 @@ const HANDSHAKE_TIMEOUT_MS = 5000;
 const POLL_WAIT_S = 25;
 const POLL_RETRY_MIN_MS = 1000;
 const POLL_RETRY_MAX_MS = 30_000;
-/** Per push request (the server takes up to 64 MB). */
+/**
+ * Per push request (the server takes up to 64 MB) and per page of every note (the server sends 8 MB at most). A request
+ * that times out (a slow link) halves its size for the next ones, down to the minimum.
+ */
 const PUSH_CHUNK_BYTES = 4_000_000;
+const NOTES_PAGE_BYTES = 8_000_000;
+const MIN_CHUNK_BYTES = 256_000;
 const PUSH_CHUNK_ENTRIES = 500;
 const IMPORT_CHUNK_BYTES = 4_000_000;
 const PRUNE_CHUNK = 500;
@@ -59,16 +65,19 @@ type Queue = "addNotes" | "deleteNotes" | "detachNotes" | "addCategories" | "del
 class ServerError extends Error {
   readonly status: number;
   readonly code: string;
+  /** The device token the request carried (null: none). */
+  readonly token: string | null;
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, token: string | null) {
     super(`${status} ${code}: ${message}`);
     this.status = status;
     this.code = code;
+    this.token = token;
   }
 }
 
-/** The server doesn't know this device's token: it was removed (or the server's data was reset). */
-const isUnknownDevice = (e: unknown) => e instanceof ServerError && e.status === 401 && e.code === "device_unknown";
+/** No answer in time: the link may be slow rather than down. */
+class TimeoutError extends Error {}
 
 interface ServerChange {
   token: string;
@@ -110,9 +119,13 @@ const tokenKey = (scope: string) => `serverToken_${scope}`.replace(/[^\w.-]/g, "
 
 const isSame = (change: ServerChange | { same: true }): change is { same: true } => "same" in change;
 
+/**
+ * The page id names the exact content (a server restored from a backup counts its sequence numbers again, its pages have
+ * other ids); the sequence number after the last "|" is what the acknowledgement sends.
+ */
 const toChangeSet = (change: ServerChange): ChangeSet => ({
   source: FEED_SOURCE,
-  token: change.token,
+  token: `${change.page}|${change.token}`,
   notes: change.notes,
   categories: change.categories,
 });
@@ -168,11 +181,21 @@ export class ServerBackend implements CloudBackend {
 
   private readonly fetchImpl: typeof fetch;
   private readonly storage: TokenStorage;
+  private readonly longTimeout: number;
   private url: string | null = null;
   private key = "";
   private scope = "";
+  /** This device's token, once `tokenKnown` (null: none stored). */
   private token: string | null = null;
-  private tokenLoaded: Promise<void> = Promise.resolve();
+  /** Whether `token` was read: false until then, and after a read that failed (read again on the next request). */
+  private tokenKnown = false;
+  private tokenLoading: Promise<void> | null = null;
+  /** Token writes and removals, in order (a removal can't land after a newer token's write). */
+  private tokenWrites: Promise<unknown> = Promise.resolve();
+  /** A registration is replacing the token: a refusal of the old one doesn't mean "removed". */
+  private registering = 0;
+  private pushBytes = PUSH_CHUNK_BYTES;
+  private pageBytes = NOTES_PAGE_BYTES;
   /** This device (from its registration or its subscription). */
   private me: string | null = null;
   private limit = 10;
@@ -193,9 +216,11 @@ export class ServerBackend implements CloudBackend {
   private readonly deviceListeners = new Set<DeviceListener>();
   private readonly vaultListeners = new Set<(read: VaultRead) => void>();
 
-  constructor(options: { fetch?: typeof fetch; storage?: TokenStorage } = {}) {
+  /** `longTimeout`: tests make a slow link quick to simulate. */
+  constructor(options: { fetch?: typeof fetch; storage?: TokenStorage; longTimeout?: number } = {}) {
     this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init));
     this.storage = options.storage ?? secureStorage;
+    this.longTimeout = options.longTimeout ?? LONG_REQUEST_TIMEOUT_MS;
   }
 
   get deviceLimit(): number {
@@ -209,17 +234,15 @@ export class ServerBackend implements CloudBackend {
     this.key = (settings.serverKey ?? "").trim();
     this.scope = cloudScope(settings);
     this.token = null;
+    this.tokenKnown = false;
+    this.tokenLoading = null;
     this.me = null;
     this.version = null;
     this.lastChange = null;
     this.lastVault = null;
-    const scope = this.scope;
-    this.tokenLoaded = this.storage
-      .get(tokenKey(scope))
-      .then((token) => {
-        if (this.scope === scope && this.token === null) this.token = token;
-      })
-      .catch((e) => console.log("server token:", e));
+    this.pushBytes = PUSH_CHUNK_BYTES;
+    this.pageBytes = NOTES_PAGE_BYTES;
+    void this.loadToken();
     this.dropListeners();
   }
 
@@ -276,14 +299,19 @@ export class ServerBackend implements CloudBackend {
   }
 
   async registerDevice({ uuid, modelName, brand }: DeviceInfo): Promise<boolean> {
+    const { generation, scope } = this;
+    this.registering++;
     try {
       const { token } = await this.request<{ token: string }>("POST", "/v1/devices", {
         auth: "key",
         body: { uuid, modelName: modelName || "web", brand: brand || "web" },
       });
-      // Kept first: a token the next launch can't find makes the device look removed.
-      await this.storage.set(tokenKey(this.scope), token);
+      // Kept first: a token the next launch can't find makes the device look removed. Under the server it's for, even if
+      // the connection moved on meanwhile.
+      await this.writeToken(scope, token);
+      if (generation !== this.generation) return false;
       this.token = token;
+      this.tokenKnown = true;
       this.me = uuid;
       this.version = null;
       this.lastChange = null;
@@ -292,13 +320,15 @@ export class ServerBackend implements CloudBackend {
     } catch (e) {
       console.log("registerDevice:", e);
       return false;
+    } finally {
+      this.registering--;
     }
   }
 
   async unregisterDevice(uuid: string): Promise<boolean> {
     try {
       await this.request("DELETE", `/v1/devices/${encodeURIComponent(uuid)}`, { auth: "member" });
-      if (uuid === this.me) await this.forgetToken();
+      if (uuid === this.me && this.token) this.dropToken(this.token);
       return true;
     } catch (e) {
       console.log("unregisterDevice:", e);
@@ -345,7 +375,7 @@ export class ServerBackend implements CloudBackend {
       return { devices: snapshot.devices, incoming: change, fromServer: true };
     } catch (e) {
       // Removed: an empty list tells the engine.
-      if (isUnknownDevice(e)) return { devices: [], incoming: [], fromServer: true };
+      if (this.refusedToken(e)) return { devices: [], incoming: [], fromServer: true };
       console.log("pullDevices:", e);
       return null;
     }
@@ -353,7 +383,8 @@ export class ServerBackend implements CloudBackend {
 
   async ackChanges(_me: string, change: ChangeSet): Promise<"acked" | "changed" | "error"> {
     try {
-      await this.request("POST", "/v1/ack", { auth: "device", body: { token: change.token } });
+      const seq = change.token.slice(change.token.lastIndexOf("|") + 1);
+      await this.request("POST", "/v1/ack", { auth: "device", body: { token: seq } });
       return "acked";
     } catch (e) {
       console.log("ackChanges:", e);
@@ -401,7 +432,27 @@ export class ServerBackend implements CloudBackend {
 
   async fetchNotes(): Promise<Note[] | null> {
     try {
-      return await this.request<Note[]>("GET", "/v1/notes", { auth: "member", timeout: LONG_REQUEST_TIMEOUT_MS });
+      // In pages (the server bounds each by count and size). A note changed between two pages comes again in a later
+      // one, newer: the later read wins.
+      const notes = new Map<string, Note>();
+      let after: string | null = "0";
+      while (after !== null) {
+        let page: { notes: Note[]; next: string | null };
+        try {
+          page = await this.request("GET", `/v1/notes?after=${after}&bytes=${this.pageBytes}`, {
+            auth: "member",
+            timeout: this.longTimeout,
+          });
+        } catch (e) {
+          // A slow link: the same page again, smaller.
+          if (!(e instanceof TimeoutError) || this.pageBytes <= MIN_CHUNK_BYTES) throw e;
+          this.pageBytes = Math.max(MIN_CHUNK_BYTES, Math.floor(this.pageBytes / 2));
+          continue;
+        }
+        for (const note of page.notes) notes.set(note.id, note);
+        after = page.next;
+      }
+      return [...notes.values()];
     } catch (e) {
       console.log("fetchNotes:", e);
       return null;
@@ -455,7 +506,7 @@ export class ServerBackend implements CloudBackend {
         await this.request("POST", "/v1/notes/import", {
           auth: "member",
           body: { notes: chunk.map((item) => item.note) },
-          timeout: LONG_REQUEST_TIMEOUT_MS,
+          timeout: this.longTimeout,
         });
       }
       return true;
@@ -503,7 +554,7 @@ export class ServerBackend implements CloudBackend {
         const reply = await this.request<PushResult>("POST", "/v1/push", {
           auth: "device",
           body: opsOf(chunk, ops.bases),
-          timeout: LONG_REQUEST_TIMEOUT_MS,
+          timeout: this.longTimeout,
         });
         const { committed } = result;
         committed.notes.add.push(...reply.committed.notes.add);
@@ -518,6 +569,8 @@ export class ServerBackend implements CloudBackend {
       } catch (e) {
         if (!(e instanceof ServerError && e.status === 413)) {
           console.log("push:", e);
+          // A slow link: smaller requests from the next try on (this one may have gone through: a retry is harmless).
+          if (e instanceof TimeoutError) this.pushBytes = Math.max(MIN_CHUNK_BYTES, Math.floor(this.pushBytes / 2));
           return false;
         }
         if (chunk.length > 1) {
@@ -531,7 +584,7 @@ export class ServerBackend implements CloudBackend {
       }
     };
 
-    for (const chunk of chunked(entries, PUSH_CHUNK_ENTRIES, PUSH_CHUNK_BYTES)) {
+    for (const chunk of chunked(entries, PUSH_CHUNK_ENTRIES, this.pushBytes)) {
       if (!(await send(chunk))) {
         result.complete = false;
         break;
@@ -547,12 +600,19 @@ export class ServerBackend implements CloudBackend {
     path: string,
     options: { auth: Auth; body?: unknown; timeout?: number; signal?: AbortSignal }
   ): Promise<T> {
+    const { generation } = this;
+    if (!this.url) throw new Error("cloud not initialised");
+    if (options.auth !== "key") {
+      await this.loadToken();
+      // Re-initialised meanwhile: this request was for the other server (its key and token mustn't go to this one).
+      if (generation !== this.generation || !this.url) throw new Error("cloud re-initialised");
+      if (options.auth === "device" && !this.tokenKnown) throw new Error("the device token can't be read now");
+    }
     const base = this.url;
-    if (!base) throw new Error("cloud not initialised");
-    if (options.auth !== "key") await this.tokenLoaded;
+    const token = options.auth !== "key" && this.tokenKnown ? this.token : null;
     const headers: Record<string, string> = { Accept: "application/json" };
     if (options.auth !== "device" && this.key) headers["X-Access-Key"] = this.key;
-    if (options.auth !== "key" && this.token) headers.Authorization = `Bearer ${this.token}`;
+    if (token) headers.Authorization = `Bearer ${token}`;
     let body: string | undefined;
     if (options.body !== undefined) {
       body = JSON.stringify(options.body);
@@ -560,13 +620,24 @@ export class ServerBackend implements CloudBackend {
     }
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), options.timeout ?? REQUEST_TIMEOUT_MS);
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, options.timeout ?? REQUEST_TIMEOUT_MS);
     const abort = () => controller.abort();
     if (options.signal?.aborted) controller.abort();
     options.signal?.addEventListener("abort", abort);
     try {
-      const res = await this.fetchImpl(base + path, { method, headers, body, signal: controller.signal });
-      const text = await res.text();
+      let res: Response;
+      let text: string;
+      try {
+        res = await this.fetchImpl(base + path, { method, headers, body, signal: controller.signal });
+        text = await res.text();
+      } catch (e) {
+        if (timedOut) throw new TimeoutError(`${method} ${path}: no answer in time`);
+        throw e;
+      }
       let data: unknown;
       try {
         data = text ? JSON.parse(text) : undefined;
@@ -575,7 +646,7 @@ export class ServerBackend implements CloudBackend {
       }
       if (!res.ok) {
         const error = (data ?? {}) as { error?: string; message?: string };
-        throw new ServerError(res.status, error.error ?? "", error.message ?? text.slice(0, 200));
+        throw new ServerError(res.status, error.error ?? "", error.message ?? text.slice(0, 200), token);
       }
       return data as T;
     } finally {
@@ -595,9 +666,53 @@ export class ServerBackend implements CloudBackend {
     }
   }
 
-  private async forgetToken(): Promise<void> {
+  /** Reads this device's token (once per connection; again after a read that failed). */
+  private loadToken(): Promise<void> {
+    if (this.tokenKnown) return Promise.resolve();
+    if (!this.tokenLoading) {
+      const { generation, scope } = this;
+      this.tokenLoading = this.tokenWrites
+        .then(() => this.storage.get(tokenKey(scope)))
+        .then(
+          (token) => {
+            // A registration meanwhile set a newer one.
+            if (generation === this.generation && !this.tokenKnown) {
+              this.token = token;
+              this.tokenKnown = true;
+            }
+          },
+          // Not "no token": that would read as removed. Unknown, and read again.
+          (e) => console.log("server token:", e)
+        )
+        .finally(() => {
+          if (generation === this.generation) this.tokenLoading = null;
+        });
+    }
+    return this.tokenLoading;
+  }
+
+  /** Stores (or with null removes) the token of the server `scope` points to. */
+  private writeToken(scope: string, token: string | null): Promise<void> {
+    const key = tokenKey(scope);
+    const write = this.tokenWrites.then(() => (token ? this.storage.set(key, token) : this.storage.remove(key)));
+    this.tokenWrites = write.catch(() => {});
+    return write;
+  }
+
+  /** The server no longer knows `token`: forgotten, unless it was replaced meanwhile. */
+  private dropToken(token: string): void {
+    if (this.token !== token) return;
     this.token = null;
-    await this.storage.remove(tokenKey(this.scope)).catch(() => {});
+    void this.writeToken(this.scope, null).catch((e) => console.log("server token:", e));
+  }
+
+  /**
+   * Whether `e` is the server refusing the token this device holds (it was removed, or the server's data was reset). Not
+   * a refusal of a token a registration replaced meanwhile, nor one while a registration runs.
+   */
+  private refusedToken(e: unknown): boolean {
+    if (!(e instanceof ServerError && e.status === 401 && e.code === "device_unknown")) return false;
+    return e.token !== null && e.token === this.token && this.registering === 0;
   }
 
   private hasListeners(): boolean {
@@ -637,12 +752,32 @@ export class ServerBackend implements CloudBackend {
 
   private async pollLoop(generation: number): Promise<void> {
     let delay = 0;
+    const backoff = async () => {
+      delay = Math.min(Math.max(delay * 2, POLL_RETRY_MIN_MS), POLL_RETRY_MAX_MS);
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, delay);
+        this.wake = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+      });
+      this.wake = null;
+    };
     try {
       while (generation === this.generation && this.hasListeners()) {
-        await this.tokenLoaded;
-        if (generation !== this.generation) break;
+        await this.loadToken();
+        if (generation !== this.generation || !this.hasListeners()) break;
+        if (!this.tokenKnown) {
+          await backoff();
+          continue;
+        }
         if (!this.token) {
-          this.removed();
+          // None stored for this server: this device isn't (or no longer) enrolled. Unless a registration is storing it.
+          if (this.registering > 0) {
+            await backoff();
+            continue;
+          }
+          this.removed(null);
           break;
         }
         const query = new URLSearchParams({ wait: String(POLL_WAIT_S) });
@@ -662,21 +797,13 @@ export class ServerBackend implements CloudBackend {
           this.deliver(snapshot);
         } catch (e) {
           if (generation !== this.generation || !this.hasListeners()) break;
-          if (isUnknownDevice(e)) {
-            this.removed();
+          if (this.refusedToken(e)) {
+            this.removed((e as ServerError).token);
             break;
           }
           if (this.restart) continue;
           console.log("sync poll:", e);
-          delay = Math.min(Math.max(delay * 2, POLL_RETRY_MIN_MS), POLL_RETRY_MAX_MS);
-          await new Promise<void>((resolve) => {
-            const timer = setTimeout(resolve, delay);
-            this.wake = () => {
-              clearTimeout(timer);
-              resolve();
-            };
-          });
-          this.wake = null;
+          await backoff();
         } finally {
           if (this.poll === controller) this.poll = null;
         }
@@ -716,8 +843,8 @@ export class ServerBackend implements CloudBackend {
   }
 
   /** The server doesn't know this device anymore: an empty device list tells the engine (it disconnects). */
-  private removed(): void {
-    void this.forgetToken();
+  private removed(token: string | null): void {
+    if (token) this.dropToken(token);
     [...this.deviceListeners].forEach((listener) => listener.onDevices({ devices: [], incoming: [], fromServer: true }));
   }
 }

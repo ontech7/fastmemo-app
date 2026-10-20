@@ -309,6 +309,7 @@ try {
       "...as one change set from the feed",
       change.source === "server" && Object.keys(change.notes.add).sort().join() === "n1,n2"
     );
+    ok("...named by its page and its last sequence number", /^.+\|\d+$/.test(change.token), change.token);
     ok("the pusher doesn't get its own change", (await a.backend.pullDevices("A")).incoming.length === 0);
     ok(
       "a device that has someone's changes pending is in its devicesToSync",
@@ -367,17 +368,28 @@ try {
 
   log("\nServerBackend: data");
   {
-    const a = makeBackend(server.url);
+    // Its own server: pruning depends on what every device registered has read.
+    const dataServer = await newServer();
+    const a = makeBackend(dataServer.url);
     await a.backend.registerDevice({ uuid: "A", modelName: "Mac", brand: "Apple" });
+    const lagging = makeBackend(dataServer.url);
+    await lagging.backend.registerDevice({ uuid: "L", modelName: "Pixel", brand: "Google" });
     await a.backend.push(
       "A",
-      ops([], [{ id: "n2", type: "text", rev: 500, updatedAt: 500 }], {}, [{ id: "d1", type: "text", rev: 10, updatedAt: 10 }]),
+      ops([note("n1", 1)], [{ id: "n2", type: "text", rev: 500, updatedAt: 500 }], {}, [
+        { id: "d1", type: "text", rev: 10, updatedAt: 10 },
+      ]),
       []
     );
     const tombstones = await a.backend.fetchTombstones();
     ok("tombstones: deleted and detached", tombstones.n2?.rev === 500 && tombstones.d1?.detach === true);
     ok(
-      "pruned",
+      "pruning keeps a marker another device hasn't read yet (here it's that device's only news of the deletion)",
+      (await a.backend.pruneTombstones(["n2", "d1"])) && Object.keys(await a.backend.fetchTombstones()).length === 2
+    );
+    await a.backend.unregisterDevice("L");
+    ok(
+      "...and drops it once every device has",
       (await a.backend.pruneTombstones(["n2", "d1"])) && Object.keys(await a.backend.fetchTombstones()).length === 0
     );
     ok("fetchNote: a missing note is null", (await a.backend.fetchNote("nope")) === null);
@@ -405,6 +417,11 @@ try {
     ok(
       "wipeCategories keeps only the default one",
       (await a.backend.wipeCategories()) && (await a.backend.fetchCategories()).map((c) => c.icon).join() === "none"
+    );
+    await a.backend.writeNotes(Array.from({ length: 1250 }, (_, i) => note(`many-${i}`, 1)));
+    ok(
+      "fetchNotes reads every page (the server pages by 500 notes / ~8 MB)",
+      (await a.backend.fetchNotes()).filter((n) => n.id.startsWith("many-")).length === 1250
     );
     ok("wipeNotes", (await a.backend.wipeNotes()) && (await a.backend.fetchNotes()).length === 0);
 
@@ -465,6 +482,158 @@ try {
       "dispose tells the listeners (they subscribe again on the new connection)",
       errors.length === 1 && !a.backend.isActive()
     );
+  }
+
+  log("\nServerBackend: the token is only gone when the server refuses it");
+  {
+    // Storage that fails to read for a while (a locked keystore, a busy disk): not the same as "no token".
+    const b = makeBackend(server.url);
+    await b.backend.registerDevice({ uuid: "TB", modelName: "Pixel", brand: "Google" });
+    let readable = false;
+    const flaky = new M.ServerBackend({
+      storage: {
+        get: async (k) => {
+          if (!readable) throw new Error("keystore locked");
+          return b.tokens.get(k) ?? null;
+        },
+        set: async (k, v) => void b.tokens.set(k, v),
+        remove: async (k) => void b.tokens.delete(k),
+      },
+    });
+    flaky.init(settingsFor(server.url));
+    const snapshots = [];
+    flaky.subscribeDevices(
+      "TB",
+      (snapshot) => snapshots.push(snapshot),
+      () => {}
+    );
+    await sleep(1500);
+    ok("an unreadable token isn't taken for a removal", snapshots.length === 0 && b.tokens.size === 1);
+    ok("...a pull is an error to retry, not an empty list", (await flaky.pullDevices("TB")) === null);
+    readable = true;
+    ok(
+      "...and once it reads, the device syncs",
+      await until(() => snapshots.at(-1)?.devices.some((d) => d.uuid === "TB"), 4000)
+    );
+    await flaky.dispose();
+
+    // Registering again replaces the token: a request that still carried the old one is refused, which isn't a removal.
+    const c = makeBackend(server.url);
+    await c.backend.registerDevice({ uuid: "TC", modelName: "Mac", brand: "Apple" });
+    const seen = [];
+    c.backend.subscribeDevices(
+      "TC",
+      (snapshot) => seen.push(snapshot),
+      () => {}
+    );
+    await until(() => seen.length > 0, 2000);
+    const old = [...c.tokens.values()][0];
+    const stale = new M.ServerBackend({
+      storage: { get: async () => old, set: async () => {}, remove: async () => {} },
+    });
+    stale.init(settingsFor(server.url));
+    ok("re-registered", await c.backend.registerDevice({ uuid: "TC", modelName: "Mac", brand: "Apple" }));
+    const fresh = [...c.tokens.values()][0];
+    ok("...with a new token", fresh !== old && c.tokens.size === 1);
+    ok("the old token is refused", (await stale.pullDevices("TC"))?.devices.length === 0);
+    await sleep(800);
+    ok(
+      "...but the device holding the new one isn't removed, nor its token forgotten",
+      seen.every((snapshot) => snapshot.devices.length > 0) && c.tokens.get([...c.tokens.keys()][0]) === fresh
+    );
+    await c.backend.dispose();
+    await stale.dispose();
+
+    // A request waiting for the token when the connection moves to another server never goes out to the old one with the
+    // new server's key.
+    const sent = [];
+    let release;
+    const gate = new Promise((resolve) => (release = resolve));
+    const moving = new M.ServerBackend({
+      fetch: (input, init) => {
+        sent.push({ url: String(input), key: init.headers["X-Access-Key"] });
+        return fetch(input, init);
+      },
+      storage: {
+        get: async () => {
+          await gate;
+          return null;
+        },
+        set: async () => {},
+        remove: async () => {},
+      },
+    });
+    moving.init(settingsFor(server.url, KEY));
+    const pending = moving.fetchNotes();
+    moving.init(settingsFor("http://127.0.0.1:9", "the-other-servers-key"));
+    release();
+    ok("a request across a re-init fails (retried by the engine)", (await pending) === null);
+    ok(
+      "...and nothing reached the first server with the second one's key",
+      sent.every((r) => !(r.url.startsWith(server.url) && r.key === "the-other-servers-key")),
+      sent
+    );
+    await moving.dispose();
+  }
+
+  log("\nServerBackend: a slow link");
+  {
+    // Requests over `limit` bytes never answer (a link too slow for them): they time out.
+    const slow = (limit, match) => (input, init) => {
+      const url = String(input);
+      const size = match(url, init);
+      if (size > limit) {
+        return new Promise((_, reject) =>
+          init.signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")))
+        );
+      }
+      return fetch(input, init);
+    };
+    const tokens = new Map();
+    const storage = {
+      get: async (k) => tokens.get(k) ?? null,
+      set: async (k, v) => void tokens.set(k, v),
+      remove: async (k) => void tokens.delete(k),
+    };
+    const pushes = new M.ServerBackend({
+      longTimeout: 300,
+      storage,
+      fetch: slow(450_000, (url, init) => (url.endsWith("/v1/push") ? (init.body?.length ?? 0) : 0)),
+    });
+    pushes.init(settingsFor(server.url));
+    await pushes.registerDevice({ uuid: "SL", modelName: "Pixel", brand: "Google" });
+    const heavy = ["h1", "h2", "h3"].map((id) => note(id, 1, { text: "x".repeat(200_000) }));
+    let tries = 0;
+    let pushed;
+    do {
+      tries++;
+      pushed = await pushes.push("SL", ops(heavy), []);
+    } while (!pushed.complete && tries < 8);
+    ok(
+      "a push that times out is retried in smaller requests until they go through",
+      pushed.complete && tries === 4 && pushed.committed.notes.add.length > 0,
+      { tries, complete: pushed.complete }
+    );
+
+    const asked = [];
+    const pages = new M.ServerBackend({
+      longTimeout: 300,
+      storage,
+      fetch: slow(1_000_000, (url) => {
+        const bytes = Number(new URL(url).searchParams.get("bytes") ?? 0);
+        if (url.includes("/v1/notes?")) asked.push(bytes);
+        return bytes;
+      }),
+    });
+    pages.init(settingsFor(server.url));
+    const all = await pages.fetchNotes();
+    ok(
+      "pages that time out are asked for again, smaller",
+      all?.filter((n) => n.id.startsWith("h")).length === 3 && asked.slice(0, 4).join() === "8000000,4000000,2000000,1000000",
+      asked
+    );
+    await pushes.dispose();
+    await pages.dispose();
   }
 
   log("\nServerBackend: a request over the server's size limit");
