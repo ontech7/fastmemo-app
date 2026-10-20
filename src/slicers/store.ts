@@ -1,3 +1,4 @@
+import { adoptLegacySyncState } from "@/libs/cloud/revision";
 import FSStorage from "@/libs/storage/fsStorage";
 import { foldLegacyRootNotes } from "@/libs/storage/legacyRootNotes";
 import { noteStore, notesNeedSorting } from "@/libs/storage/notes";
@@ -62,25 +63,37 @@ export const notesPersisted = (): boolean => !notesReadFailed && !notesWriteFail
 // Every config waits for its read however long it takes (`timeout: 0`): on timeout redux-persist
 // rehydrates the empty initial state, and its next write replaces what was stored with it.
 
+// 1: the notes carry this device's sync bookkeeping (ADR-016). Older versions stored -1 (redux-persist's default).
+const NOTES_VERSION = 1;
+
+/** The notes as an older version left them, made ready for the sync engine. A failure keeps them as they were. */
+const fromOlderVersion = (state: PersistedState): PersistedState => {
+  if (state === undefined || (state._persist?.version ?? -1) >= NOTES_VERSION) return state;
+  try {
+    return adoptLegacySyncState(state as NonNullable<PersistedState> & Partial<NotesState>);
+  } catch (err) {
+    console.warn("redux-persist: adopting the older version's notes failed", err);
+    return state;
+  }
+};
+
 const notesPersistConfig: PersistConfig<NotesState> = {
   key: "root_notes",
   storage: notesStorage,
   timeout: 0,
+  version: NOTES_VERSION,
   // The note store takes and gives the slice as it is: it stores each note on its own.
   serialize: false,
   deserialize: false,
   migrate: async (state: PersistedState): Promise<PersistedState> => {
-    if (Platform.OS === "web") {
-      return state;
-    }
-    if (state === undefined) {
+    if (Platform.OS !== "web" && state === undefined) {
       const asyncState = await getStoredState({
         key: "root_notes",
         storage: AsyncStorage,
       }).catch(failedNotesRead);
-      return asyncState as PersistedState;
+      return fromOlderVersion(asyncState as PersistedState);
     }
-    return state;
+    return fromOlderVersion(state);
   },
 };
 

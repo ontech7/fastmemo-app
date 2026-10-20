@@ -43,7 +43,7 @@ await build({
       export * as categories from "@/slicers/categoriesSlice";
       export { default as categoriesReducer } from "@/slicers/categoriesSlice";
       export { createPlanner, reconcileCategories } from "@/libs/cloud/merge";
-      export { noteRev, nextRev } from "@/libs/cloud/revision";
+      export { noteRev, nextRev, adoptLegacySyncState } from "@/libs/cloud/revision";
       export { contentToken } from "@/libs/cloud/token";
       export { SyncEngine } from "@/libs/cloud/syncEngine";
     `,
@@ -217,6 +217,58 @@ const local = (items = [], trash = [], extra = {}) => ({
   q.add(note("a", 400));
   ok("legacy note: newer remote replaces it", p.plan().put.length === 1 && p.plan().conflicts.length === 0);
   ok("legacy note with a waiting upload: both kept", q.plan().conflicts.length === 1);
+}
+{
+  // An older app version keeps the revision of a note a newer one wrote (it stores what it receives), but no syncedRev.
+  const received = note("a", 300, { updatedAt: 299 });
+  const editedThere = note("b", 300, { updatedAt: 450, text: "old app edit" });
+  const waiting = note("c", 300, { updatedAt: 299 });
+  const state = {
+    items: [
+      received,
+      editedThere,
+      waiting,
+      legacy("d", 200),
+      note("e", 300, { local: true }),
+      note("f", 500, { syncedRev: 400 }),
+    ],
+    cloud: { items: { add: { c: {} } } },
+  };
+  const adopted = M.adoptLegacySyncState(state).items;
+  const byId = Object.fromEntries(adopted.map((n) => [n.id, n]));
+  ok("taking over an older version's notes: a received revision counts as synced", byId.a.syncedRev === 300);
+  ok("...also under a later edit made there (still a change)", byId.b.syncedRev === 300 && M.noteRev(byId.b) > 300);
+  ok(
+    "...but not for a note with an upload waiting, one without a revision, a device-only one, or one already synced",
+    byId.c.syncedRev === undefined &&
+      byId.d.syncedRev === undefined &&
+      byId.e.syncedRev === undefined &&
+      byId.f.syncedRev === 400
+  );
+  const without = ({ syncedRev: _syncedRev, ...rest }) => JSON.stringify(rest);
+  ok(
+    "...and nothing else changes",
+    adopted.every((n, i) => without(n) === without(state.items[i]))
+  );
+  ok("...nor the state it was given", state.items[0].syncedRev === undefined);
+  ok(
+    "a state with nothing to take over is returned as it is",
+    M.adoptLegacySyncState({ items: [legacy("d", 200)] }).items[0].syncedRev === undefined
+  );
+
+  const p = M.createPlanner(local([byId.a]), "(c)");
+  p.add(note("a", 400));
+  ok(
+    "a newer version then replaces it, without a conflict copy",
+    p.plan().put.length === 1 && p.plan().conflicts.length === 0,
+    p.plan()
+  );
+  const q = M.createPlanner(local([byId.b]), "(c)");
+  q.add(note("a", 500, { id: "b" }));
+  ok("one edited on the older version: both kept", q.plan().conflicts.length === 1);
+  const r = M.createPlanner(local([received]), "(c)");
+  r.add(note("a", 400));
+  ok("(without taking it over, it was taken for a change: the copy this fixes)", r.plan().conflicts.length === 1);
 }
 {
   // An older app version only bumps updatedAt (its rev is the one it received).
@@ -1225,6 +1277,40 @@ await scenario("notes from an older version: concurrent offline edits keep both"
   });
   ok("so does B's", everywhere(cloud, [a, b]).includes("edit on B (later)"));
 });
+
+await scenario(
+  "a note an older version received from a newer one: no conflict copy after the update",
+  async ({ cloud, add, settle }) => {
+    // N (updated) wrote both notes; U, still on the older version, stored them with their revisions and no syncedRev.
+    // U had also edited n2 there (updatedAt only) without an upload waiting (locked, or not connected at the time).
+    const t = Date.now() - 100000;
+    const n1 = note("n1", t, { text: "from N", updatedAt: t - 1 });
+    const n2 = note("n2", t, { text: "from N", updatedAt: t - 1 });
+    cloud.notes.set("n1", { ...n1, sealed: "k1" });
+    cloud.notes.set("n2", { ...n2, sealed: "k1" });
+    const synced = (n) => ({ ...n, syncedRev: n.rev });
+    const updated = preloaded([n1, { ...n2, text: "edited on the older version", updatedAt: t + 10 }]);
+    // What the notes' persist migration does on the first launch of the update.
+    const u = await add("U", { preloadedState: { ...updated, notes: M.adoptLegacySyncState(updated.notes) } });
+    const n = await add("N", { preloadedState: preloaded([synced(n1), synced(n2)]) });
+    u.engine.start();
+    n.engine.start();
+    await settle();
+
+    edit(n, "n1", "N's next edit");
+    edit(n, "n2", "N's next edit");
+    await settle();
+    const copies = (d) => d.live().filter((x) => x.id.includes("~"));
+    ok("U takes N's next edit", u.get("n1")?.text === "N's next edit");
+    ok("...without a conflict copy of the version it had", !copies(u).some((x) => x.id.startsWith("n1~")), contents(u));
+    ok("the note U edited on the older version keeps both", everywhere(cloud, [u, n]).includes("edited on the older version"), {
+      U: contents(u),
+      N: contents(n),
+    });
+    ok("...and N's edit", u.get("n2")?.text === "N's next edit" || copies(u).some((x) => x.text === "N's next edit"));
+    ok("both devices end up with the same notes", contents(u) === contents(n), { U: contents(u), N: contents(n) });
+  }
+);
 
 await scenario(
   "an upload an older version left queued goes out, on top of the version it changes",

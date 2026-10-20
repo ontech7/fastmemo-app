@@ -24,6 +24,26 @@ export const nextRev = (note: Versioned | undefined, now: number = Date.now()): 
 export const baseOf = (note: Note): number | undefined =>
   note.syncedRev ?? (note.rev === undefined && !note.local ? noteRev(note) : undefined);
 
+/**
+ * The notes as an app version without revisions stored them, taken over on this version's first launch. Those versions
+ * never stamp a revision: a note with one got it from the cloud (a newer version wrote it), so that's the revision it last
+ * synced. Without it, every later version from the cloud would find a change here and keep this one as a conflict copy.
+ * A note with an upload waiting stays as it is: that's a change (see `isDirty` in the merge).
+ */
+export const adoptLegacySyncState = <T extends { items?: Note[]; cloud?: { items?: { add?: Record<string, unknown> } } }>(
+  state: T
+): T => {
+  if (!Array.isArray(state.items)) return state;
+  const pending = state.cloud?.items?.add ?? {};
+  let adopted = 0;
+  const items = state.items.map((note) => {
+    if (note.rev === undefined || note.syncedRev !== undefined || note.local || note.id in pending) return note;
+    adopted++;
+    return { ...note, syncedRev: Number(note.rev) || 0 };
+  });
+  return adopted > 0 ? { ...state, items } : state;
+};
+
 /** Stamps a synced change on a note (a draft, inside a reducer). */
 export const touchNote = (note: Note, now: number = Date.now()): void => {
   const base = baseOf(note);
