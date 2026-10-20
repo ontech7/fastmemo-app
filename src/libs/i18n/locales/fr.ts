@@ -591,6 +591,7 @@ const fr = {
       content_changed: "La note a changé pendant que l'IA travaillait : relancez-la.",
       no_content: "Ecrivez quelque chose d'abord",
       no_category_match: "Aucune categorie correspondante",
+      no_improvement: "L'IA n'a pas pu améliorer ce texte : il n'a pas changé.",
       error: "Impossible de generer, reessayez",
     },
   },

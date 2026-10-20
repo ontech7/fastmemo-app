@@ -26,7 +26,10 @@ interface Props {
   aiAvailable?: boolean;
   /** AI cleanup is running. */
   processing?: boolean;
+  /** A short message under the transcript (the AI cleanup gave nothing usable). */
+  notice?: string | null;
   onToggleListening: () => void;
+  /** Closes the sheet; while `processing`, stops the AI instead. */
   onCancel: () => void;
   onConfirm: () => void;
   /** Confirm, but run the transcript through AI cleanup before inserting. */
@@ -40,6 +43,7 @@ export default function DictationSheet({
   languageLabel,
   aiAvailable = false,
   processing = false,
+  notice,
   onToggleListening,
   onCancel,
   onConfirm,
@@ -112,6 +116,12 @@ export default function DictationSheet({
           </Text>
         </ScrollView>
 
+        {!!notice && (
+          <Text style={styles.notice} accessibilityLiveRegion="polite">
+            {notice}
+          </Text>
+        )}
+
         <View style={styles.footer}>
           {aiAvailable && onConfirmWithAI && (
             <TouchableOpacity
@@ -130,12 +140,8 @@ export default function DictationSheet({
           )}
 
           <View style={styles.footerRow}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={[styles.action, styles.cancelAction, processing && styles.actionDisabled]}
-              onPress={onCancel}
-              disabled={processing}
-            >
+            {/* While the AI works, Cancel stops it and keeps the dictation (the parent decides). */}
+            <TouchableOpacity activeOpacity={0.7} style={[styles.action, styles.cancelAction]} onPress={onCancel}>
               <Text style={styles.cancelLabel}>{t("voicerecognition.dictation.cancel")}</Text>
             </TouchableOpacity>
 
@@ -257,6 +263,12 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
     lineHeight: 24,
+  },
+  notice: {
+    marginTop: PADDING_MARGIN.sm,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
   },
   transcriptHint: {
     color: COLOR.textSecondary,

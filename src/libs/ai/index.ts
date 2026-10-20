@@ -3,6 +3,7 @@ export {
   generateEditorContent,
   searchHelpByIntent,
   initContext,
+  prewarmContext,
   releaseContext,
   downloadModel,
   deleteModel,
@@ -18,7 +19,7 @@ export {
 } from "./context";
 export { runAIEval } from "./eval";
 export type { EvalReport, EvalResult } from "./eval";
-export { findCategoryByName, stripHtml } from "./helpers";
+export { completedJsonStrings, createTextStream, findCategoryByName, stripHtml } from "./helpers";
 export {
   AI_MODELS,
   DEFAULT_MODEL_ID,

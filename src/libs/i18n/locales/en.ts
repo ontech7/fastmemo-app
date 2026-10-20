@@ -585,6 +585,7 @@ const en = {
       content_changed: "The note changed while the AI was working: run it again.",
       no_content: "Write something first",
       no_category_match: "No matching category found",
+      no_improvement: "The AI couldn't improve this text: it's unchanged.",
       error: "Could not generate, try again",
     },
   },

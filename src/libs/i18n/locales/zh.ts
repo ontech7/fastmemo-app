@@ -574,6 +574,7 @@ const zh = {
       content_changed: "AI 处理期间笔记已更改，请重新运行。",
       no_content: "请先写点内容",
       no_category_match: "未找到匹配的类别",
+      no_improvement: "AI 无法改进这段文字，内容保持不变。",
       error: "无法生成，请重试",
     },
   },

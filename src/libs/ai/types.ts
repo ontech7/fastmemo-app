@@ -26,7 +26,8 @@ export type EditorAction =
   | "fix_grammar"
   | "shorten"
   | "translate"
-  | "clean_transcript";
+  | "clean_transcript"
+  | "transcript_to_items";
 
 /** What a completion cost, from llama.rn's timings (the eval screen shows them). */
 export interface AITimings {
@@ -41,6 +42,8 @@ export interface EditorActionResult {
   text?: string;
   items?: string[];
   error?: string;
+  /** A rewrite the guard threw away (the eval reports it; the app never shows it). */
+  discarded?: string;
   timings?: AITimings;
 }
 

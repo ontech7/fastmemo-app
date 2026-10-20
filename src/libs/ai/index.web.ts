@@ -9,7 +9,7 @@
 import type { EvalReport, EvalResult } from "./eval";
 import type { AIModelId, AIModelStatus, EditorActionOptions, EditorActionResult, HelpCatalogEntry } from "./types";
 
-export { findCategoryByName, stripHtml } from "./helpers";
+export { completedJsonStrings, createTextStream, findCategoryByName, stripHtml } from "./helpers";
 export {
   AI_MODELS,
   DEFAULT_MODEL_ID,
@@ -67,6 +67,8 @@ export async function deleteModel(_modelId?: AIModelId): Promise<void> {}
 export async function initContext(_modelId?: AIModelId): Promise<boolean> {
   return false;
 }
+
+export function prewarmContext(_modelId?: AIModelId): void {}
 
 export async function cancelCommand(): Promise<void> {}
 

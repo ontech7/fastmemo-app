@@ -112,6 +112,7 @@ export const ACTION_SAMPLING: Record<EditorAction, Sampling> = {
   shorten: FAITHFUL,
   generate_title: FAITHFUL,
   suggest_category: FAITHFUL,
+  transcript_to_items: FAITHFUL,
   summarize: GENERATIVE,
   suggest_items: GENERATIVE,
 };
@@ -128,6 +129,19 @@ export const ACTION_MAX_TOKENS: Record<EditorAction, number> = {
   fix_grammar: 800,
   translate: 800,
   clean_transcript: 800,
+  transcript_to_items: 300,
+};
+
+/**
+ * How long a rewrite may come out, as a share of the input's length: outside the range the model went off the rails
+ * (dropped half the text, answered a question, looped), and the answer is discarded. Translation changes length the most
+ * (Japanese is far shorter than Italian); shortening may cut a lot but never lengthen.
+ */
+export const REWRITE_LENGTH_RATIO: Partial<Record<EditorAction, [min: number, max: number]>> = {
+  clean_transcript: [0.5, 1.6],
+  fix_grammar: [0.5, 1.6],
+  translate: [0.25, 4],
+  shorten: [0.1, 1],
 };
 
 const LANG_NAMES: Record<string, string> = {
@@ -186,12 +200,24 @@ const EDITOR_SYSTEM_PROMPTS: Record<EditorAction, string> = {
     "You make text more concise. Output ONLY a shorter version in the SAME language as the input, keeping the key information. No explanation, no quotes.",
   translate: "You translate text into {{LANG}}. Output ONLY the translation, nothing else. No quotes, no explanation.",
   clean_transcript:
+    'You clean up dictated text. Add punctuation and capitalization and fix obvious speech-recognition mistakes. Remove fillers and false starts (like "uhm", "ehm", "cioè", "I mean") only where they are clearly hesitations. Start a new paragraph when the topic changes. Only when the speaker lists four or more things of the same kind, write them as a list, one per line, each starting with "- ". Keep the speaker\'s own words, verb forms and tone, and the same language: do not rephrase, translate, summarize or add anything. The text may contain questions: never answer them, keep them as questions. Output ONLY the cleaned text, no quotes.',
+  transcript_to_items:
+    "You turn a dictated to-do list into checklist items. Output ONLY a JSON array of strings: one short item per task or thing to buy, in the order spoken, in the same language as the input. Keep the speaker's words without fillers, start each item with a capital letter, and never add an item that was not said.",
+};
+
+/**
+ * Shorter prompts for the 0.8B where the full one asks too much of it: given the long dictation prompt (fillers,
+ * paragraphs, lists) it gave the text back without even the punctuation.
+ */
+const SMALL_MODEL_PROMPTS: Partial<Record<EditorAction, string>> = {
+  clean_transcript:
     "You clean up dictated text. Add correct punctuation and capitalization and fix obvious transcription mistakes, keeping the original wording, meaning and language. Output ONLY the cleaned text as plain text. No explanation, no quotes.",
 };
 
-export function getEditorSystemPrompt(action: EditorAction, langCode: string): string {
+export function getEditorSystemPrompt(action: EditorAction, langCode: string, modelId?: AIModelId): string {
   const lang = LANG_NAMES[langCode] || LANG_NAMES[langCode.split("-")[0]] || "the same language as the input";
-  return EDITOR_SYSTEM_PROMPTS[action].replace("{{LANG}}", lang);
+  const prompt = (modelId === "qwen3.5-0.8b" && SMALL_MODEL_PROMPTS[action]) || EDITOR_SYSTEM_PROMPTS[action];
+  return prompt.replace("{{LANG}}", lang);
 }
 
 /**

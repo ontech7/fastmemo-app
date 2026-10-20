@@ -63,7 +63,7 @@ export async function runAIEval(
       lang: fixture.lang,
       ms: Date.now() - start,
       success: answer.success,
-      output: answer.items ? JSON.stringify(answer.items) : (answer.text ?? ""),
+      output: answer.items ? JSON.stringify(answer.items) : (answer.text ?? answer.discarded ?? ""),
       error: answer.error,
       timings: answer.timings,
       expect: fixture.expect,

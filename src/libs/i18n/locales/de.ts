@@ -593,6 +593,7 @@ const de = {
       content_changed: "Die Notiz hat sich geändert, während die KI gearbeitet hat: Bitte erneut ausführen.",
       no_content: "Schreibe zuerst etwas",
       no_category_match: "Keine passende Kategorie gefunden",
+      no_improvement: "Die KI konnte diesen Text nicht verbessern: Er bleibt unverändert.",
       error: "Konnte nicht generieren, versuche es erneut",
     },
   },

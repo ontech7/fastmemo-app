@@ -45,6 +45,29 @@ export const EVAL_FIXTURES: EvalFixture[] = [
     input: "えっと明日は朝九時に歯医者に行ってそのあと銀行で振込をしてお昼は田中さんとランチの予定です",
     expect: "Japanese punctuation (、。), same content.",
   },
+  {
+    id: "transcript-it-list",
+    action: "clean_transcript",
+    lang: "it",
+    input:
+      "allora per la festa di sabato devo prendere le bibite i piatti di carta i palloncini e la torta e poi mandare l'invito a tutti entro giovedì",
+    expect: "The four things as a '- ' list (or a clean sentence), the invite kept as its own sentence.",
+  },
+  // Dictation into a checklist.
+  {
+    id: "voice-items-it",
+    action: "transcript_to_items",
+    lang: "it",
+    input: "Comprare latte, pane, poi chiamare Marco e prenotare il dentista",
+    expect: "4 items: latte, pane, chiamare Marco, prenotare il dentista (Italian, nothing added).",
+  },
+  {
+    id: "voice-items-en",
+    action: "transcript_to_items",
+    lang: "en",
+    input: "um I need to pick up the dry cleaning buy dog food and uh call the plumber about the kitchen sink",
+    expect: "3 items: pick up the dry cleaning, buy dog food, call the plumber about the kitchen sink.",
+  },
   // Grammar.
   {
     id: "grammar-en",

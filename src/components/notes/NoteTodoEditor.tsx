@@ -365,6 +365,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                     setNoteAsync({ ...note, list: mutableList });
                   }}
                   aiCleanup
+                  asItems
                   style={dockButtonStyle}
                 />
               </View>

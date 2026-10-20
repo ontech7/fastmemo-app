@@ -138,7 +138,8 @@ export default function AIAssistantScreen() {
 
     setIsDownloading(false);
     setModelDownloaded(success);
-    dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: success, enabled: success ? aiSettings.enabled : false }));
+    // Downloading a model is asking for the AI: switching models turned it off, a finished download turns it back on.
+    dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: success, enabled: success }));
     // A download clears the old models' files.
     oldModelsBytes().then(setOldBytes);
   }, [aiSettings, selectedModelId, dispatch]);
@@ -463,13 +464,19 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.small,
   },
   modelExtra: {
-    alignItems: "flex-end",
-    gap: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
   },
   recommended: {
     color: COLOR.accentSoft,
     fontFamily: FONT.semiBold,
     fontSize: FONTSIZE.small,
+    paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER.rounded,
+    backgroundColor: GLASS.fill,
+    overflow: "hidden",
   },
   oldModelsCard: {
     backgroundColor: COLOR.surface,

@@ -1,7 +1,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import * as Localization from "expo-localization";
 import { initLlama, type LlamaContext } from "llama.rn";
-import { NativeModules } from "react-native";
+import { AppState, NativeModules } from "react-native";
 
 import { store } from "@/slicers/store";
 import {
@@ -16,7 +16,7 @@ import {
   normalizeModelId,
   truncateForAction,
 } from "./constants";
-import { stripThinking } from "./helpers";
+import { cleanSuggestedItems, isPlausibleRewrite, stripThinking } from "./helpers";
 import type {
   AIModelId,
   AIModelInfo,
@@ -252,6 +252,56 @@ export async function deleteModel(modelId?: AIModelId): Promise<void> {
 
 let _activeModelId: AIModelId | null = null;
 
+/*
+ * Loading takes seconds, so a loaded model stays: it is released 3 minutes after the last use, and when the app goes to
+ * the background (its RAM is the system's to take back). Never under a running completion: `_busy` counts them.
+ */
+const IDLE_RELEASE_MS = 3 * 60 * 1000;
+let _busy = 0;
+let _idleTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearIdleRelease() {
+  if (_idleTimer) clearTimeout(_idleTimer);
+  _idleTimer = null;
+}
+
+function scheduleRelease() {
+  clearIdleRelease();
+  if (!_context || _busy > 0) return;
+  if (AppState.currentState === "background") {
+    void releaseContext();
+    return;
+  }
+  _idleTimer = setTimeout(() => {
+    _idleTimer = null;
+    if (_busy === 0) void releaseContext();
+  }, IDLE_RELEASE_MS);
+}
+
+AppState.addEventListener("change", (state) => {
+  if (state === "background") scheduleRelease();
+});
+
+/** Runs `work` with the context marked busy, then restarts the idle countdown. */
+async function whileBusy<T>(work: () => Promise<T>): Promise<T> {
+  _busy++;
+  clearIdleRelease();
+  try {
+    return await work();
+  } finally {
+    _busy--;
+    scheduleRelease();
+  }
+}
+
+/**
+ * Starts loading the model without waiting for it, where an action is likely to follow (the dictation sheet opens, the AI
+ * menu opens): by the time the user taps, the load is done or under way.
+ */
+export function prewarmContext(modelId?: AIModelId): void {
+  void initContext(modelId ?? selectedModelId());
+}
+
 export async function initContext(modelId?: AIModelId): Promise<boolean> {
   const targetId = normalizeModelId(modelId);
 
@@ -293,6 +343,7 @@ export async function initContext(modelId?: AIModelId): Promise<boolean> {
 
       _activeModelId = targetId;
       notifyListeners("ready");
+      scheduleRelease();
       return true;
     } catch (error) {
       console.error("[AI] Init context failed:", error);
@@ -330,14 +381,17 @@ export async function cancelCommand(): Promise<void> {
 }
 
 export async function releaseContext(): Promise<void> {
+  clearIdleRelease();
   if (_context) {
+    // Detached first: an action starting during the release loads a fresh context instead of using this one.
+    const context = _context;
+    _activeModelId = null;
+    _context = null;
     try {
-      await _context.release();
+      await context.release();
     } catch {
       // Ignore release errors
     }
-    _activeModelId = null;
-    _context = null;
     notifyListeners("idle");
   }
 }
@@ -373,11 +427,20 @@ const CHAT_TEMPLATE = { jinja: true, enable_thinking: false, reasoning_format: "
  * Generate content for in-editor AI actions (title, summary, rewrites, category suggestion, item suggestions, dictation
  * cleanup).
  */
-export async function generateEditorContent(
+export function generateEditorContent(
   action: EditorAction,
   content: string,
   onToken?: (token: string) => void,
   options: EditorActionOptions = {}
+): Promise<EditorActionResult> {
+  return whileBusy(() => runEditorAction(action, content, onToken, options));
+}
+
+async function runEditorAction(
+  action: EditorAction,
+  content: string,
+  onToken: ((token: string) => void) | undefined,
+  options: EditorActionOptions
 ): Promise<EditorActionResult> {
   if (!_context) {
     const initialized = await initContext(selectedModelId());
@@ -387,7 +450,7 @@ export async function generateEditorContent(
   }
 
   const langCode = options.lang ?? resolveLanguage();
-  const isJsonOutput = action === "suggest_items";
+  const isJsonOutput = action === "suggest_items" || action === "transcript_to_items";
 
   // Cap input length for gist-only actions so long notes don't blow up prefill latency.
   content = truncateForAction(action, content);
@@ -400,7 +463,7 @@ export async function generateEditorContent(
   }
 
   try {
-    const systemPrompt = getEditorSystemPrompt(action, langCode);
+    const systemPrompt = getEditorSystemPrompt(action, langCode, _activeModelId ?? undefined);
 
     const result = await _context!.completion(
       {
@@ -426,19 +489,19 @@ export async function generateEditorContent(
     if (!text) return { success: false, error: "No response", timings };
 
     if (isJsonOutput) {
+      let raw: string[] | null = null;
       try {
-        const items = JSON.parse(text);
-        if (Array.isArray(items)) {
-          return { success: true, items: items.map(String), timings };
-        }
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) raw = parsed.map(String);
       } catch {
         // Fallback: extract quoted strings
         const matches = text.match(/"([^"]+)"/g);
-        if (matches) {
-          return { success: true, items: matches.map((m) => m.replace(/"/g, "")), timings };
-        }
+        if (matches) raw = matches.map((m) => m.replace(/"/g, ""));
       }
-      return { success: false, error: "Invalid response format", timings };
+      if (!raw) return { success: false, error: "Invalid response format", timings };
+      // suggestions leave out what the list (title, then one item per line) already has
+      const items = cleanSuggestedItems(raw, action === "suggest_items" ? content.split("\n") : []);
+      return items.length ? { success: true, items, timings } : { success: false, error: "No items", timings };
     }
 
     // Clean common artifacts from free-text output (multilingual prefixes)
@@ -470,6 +533,12 @@ export async function generateEditorContent(
       return { success: false, error: "no_category_match", timings };
     }
 
+    // A rewrite that lost half the text, or grew far beyond it, is not shown (the caller keeps the original).
+    if (!isPlausibleRewrite(action, content, cleaned)) {
+      console.log("[AI] Rewrite discarded:", action, content.length, "->", cleaned.length);
+      return { success: false, error: "implausible_output", discarded: cleaned, timings };
+    }
+
     return { success: true, text: cleaned, timings };
   } catch (error) {
     console.error("[AI] Editor content generation failed:", error);
@@ -488,7 +557,10 @@ export async function generateEditorContent(
  */
 export async function searchHelpByIntent(query: string, catalog: HelpCatalogEntry[]): Promise<string[]> {
   if (!query.trim() || catalog.length === 0) return [];
+  return whileBusy(() => runHelpSearch(query, catalog));
+}
 
+async function runHelpSearch(query: string, catalog: HelpCatalogEntry[]): Promise<string[]> {
   if (!_context) {
     const initialized = await initContext(selectedModelId());
     if (!initialized) return [];

@@ -1,6 +1,13 @@
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import type { AIModelId, EditorAction } from "@/libs/ai";
-import { cancelCommand, generateEditorContent, initContext, isModelSufficient, MODEL_SHORT_LABEL } from "@/libs/ai";
+import {
+  cancelCommand,
+  createTextStream,
+  generateEditorContent,
+  isModelSufficient,
+  MODEL_SHORT_LABEL,
+  prewarmContext,
+} from "@/libs/ai";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
 import type { NoteType } from "@/types/note";
 import { toast } from "@/utils/toast";
@@ -48,6 +55,9 @@ const FEEDBACK_DURATION = 1500;
 const AI_COLOR = "#6C63FF";
 
 type FeedbackState = "idle" | "processing" | "success" | "error";
+
+/** Actions whose answer replaces something the user wrote: it streams into a before/after preview and waits for Apply. */
+const PREVIEW_ACTIONS = new Set<EditorAction>(["generate_title", "summarize", "fix_grammar", "shorten", "translate"]);
 
 interface ActionDef {
   id: EditorAction;
@@ -138,12 +148,21 @@ export default function AIEditorActions({
   // and applied only when the user confirms (nothing is overwritten automatically).
   // It holds the result, not a callback: applying goes through the current props, so
   // it never writes back a note snapshot taken when the action started.
-  const [preview, setPreview] = useState<{ action: EditorAction; title: string; before: string; after: string } | null>(null);
+  // `streaming`: the model is still writing `after` (Apply waits, Cancel stops it).
+  const [preview, setPreview] = useState<{
+    action: EditorAction;
+    title: string;
+    before: string;
+    after: string;
+    streaming: boolean;
+  } | null>(null);
   // Left edge (window coords) of the trigger, so the menu opens exactly from the button.
   const [menuLeft, setMenuLeft] = useState(40);
 
   const menuProgress = useSharedValue(0);
-  const cancelledRef = useRef(false);
+  // Each action run gets a number: a cancelled one (or one the user left behind) never writes into the UI.
+  const runRef = useRef(0);
+  const runningRef = useRef(false);
   const triggerRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -156,9 +175,19 @@ export default function AIEditorActions({
     Keyboard.dismiss();
     if (!isMenuOpen) {
       triggerRef.current?.measureInWindow((x) => setMenuLeft(x));
+      // the model loads while the user picks an action
+      prewarmContext(aiSettings.selectedModel);
     }
     setIsMenuOpen((prev) => !prev);
-  }, [feedback, isMenuOpen]);
+  }, [feedback, isMenuOpen, aiSettings.selectedModel]);
+
+  // Leaving the note mid-action stops the model.
+  useEffect(
+    () => () => {
+      if (runningRef.current) cancelCommand();
+    },
+    []
+  );
 
   useEffect(() => {
     menuProgress.value = withTiming(isMenuOpen ? 1 : 0, {
@@ -201,70 +230,84 @@ export default function AIEditorActions({
           .filter(Boolean)
           .join("\n");
       } else {
-        // Include the note title as context for actions that benefit from it
-        const needsTitle = action !== "generate_title";
+        // The title gives context to a summary and to suggestions; never to a rewrite, whose answer replaces the content
+        // (the title would end up in the text).
+        const needsTitle = action === "summarize" || action === "suggest_items";
         content = needsTitle && hasTitle ? `${noteTitle}\n${rawContent}` : rawContent;
       }
 
-      setFeedback("processing");
-      cancelledRef.current = false;
+      const run = ++runRef.current;
+      runningRef.current = true;
+      const staged = PREVIEW_ACTIONS.has(action);
+      // A rewrite opens its preview at once and fills it as the model writes; the others show the spinner.
+      const stream = staged
+        ? createTextStream((text) => {
+            if (run === runRef.current) setPreview((p) => (p ? { ...p, after: text } : p));
+          })
+        : null;
+      if (staged) {
+        setPreview({
+          action,
+          title: t(`ai.editor.${action}`),
+          before: action === "generate_title" ? noteTitle : rawContent,
+          after: "",
+          streaming: true,
+        });
+      } else {
+        setFeedback("processing");
+      }
 
-      initContext(aiSettings.selectedModel);
+      const fail = (msg: string) => {
+        setPreview(null);
+        setFeedback("error");
+        toast(msg);
+      };
 
       try {
-        const result = await generateEditorContent(action, content);
+        const result = await generateEditorContent(action, content, stream?.push);
+        stream?.stop();
+        if (run !== runRef.current) return;
+        runningRef.current = false;
 
-        if (cancelledRef.current) return;
-
-        if (result.success) {
-          // Stage a before/after preview for anything that overwrites existing
-          // content; apply lightweight/additive results directly.
-          const stage = (after: string) => {
-            setFeedback("idle");
-            setPreview({ action, title: t(`ai.editor.${action}`), before: rawContent, after });
-          };
-
-          switch (action) {
-            case "suggest_items":
-              setFeedback("success");
-              if (result.items?.length) onItemsSuggested?.(result.items);
-              break;
-            case "suggest_category":
-              setFeedback("success");
-              if (result.text) onCategorySuggested?.(result.text);
-              break;
-            case "generate_title":
-              if (result.text) {
-                setFeedback("idle");
-                setPreview({ action, title: t("ai.editor.generate_title"), before: noteTitle, after: result.text });
-              }
-              break;
-            case "summarize":
-            case "fix_grammar":
-            case "shorten":
-            case "translate":
-              if (result.text) stage(result.text);
-              break;
-          }
-        } else {
-          setFeedback("error");
-          const msg =
+        if (!result.success) {
+          fail(
             action === "suggest_category" && result.error === "no_category_match"
               ? t("ai.editor.no_category_match")
-              : t("ai.editor.error");
-          toast(msg);
+              : result.error === "implausible_output"
+                ? t("ai.editor.no_improvement")
+                : t("ai.editor.error")
+          );
+          return;
+        }
+
+        switch (action) {
+          case "suggest_items":
+            setFeedback("success");
+            if (result.items?.length) onItemsSuggested?.(result.items);
+            break;
+          case "suggest_category":
+            setFeedback("success");
+            if (result.text) onCategorySuggested?.(result.text);
+            break;
+          default: {
+            // the final answer (cleaned of prefixes and quotes) replaces what streamed in
+            const after = result.text;
+            if (after) setPreview((p) => (p ? { ...p, after, streaming: false } : p));
+            else fail(t("ai.editor.error"));
+          }
         }
       } catch {
-        if (cancelledRef.current) return;
-        setFeedback("error");
-        toast(t("ai.editor.error"));
+        stream?.stop();
+        if (run !== runRef.current) return;
+        runningRef.current = false;
+        fail(t("ai.editor.error"));
       }
     },
-    [getContent, noteTitle, aiSettings.selectedModel, onItemsSuggested, onCategorySuggested, t, closeMenu]
+    [getContent, noteTitle, onItemsSuggested, onCategorySuggested, t, closeMenu]
   );
 
   const applyPreview = () => {
-    if (!preview) return;
+    if (!preview || preview.streaming) return;
     const { action, before, after } = preview;
     setPreview(null);
 
@@ -289,10 +332,18 @@ export default function AIEditorActions({
   };
 
   const handleCancel = useCallback(() => {
-    cancelledRef.current = true;
+    runRef.current++;
+    runningRef.current = false;
     cancelCommand();
     setFeedback("idle");
+    setPreview(null);
   }, []);
+
+  // Closing a preview the model is still writing stops the model too.
+  const closePreview = useCallback(() => {
+    if (preview?.streaming) handleCancel();
+    else setPreview(null);
+  }, [preview?.streaming, handleCancel]);
 
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: menuProgress.value,
@@ -350,13 +401,7 @@ export default function AIEditorActions({
         )}
       </TouchableOpacity>
 
-      <Modal
-        visible={preview !== null}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setPreview(null)}
-      >
+      <Modal visible={preview !== null} transparent animationType="fade" statusBarTranslucent onRequestClose={closePreview}>
         <View style={styles.previewBackdrop}>
           <View style={styles.previewCard}>
             <View style={styles.previewHeader}>
@@ -373,19 +418,26 @@ export default function AIEditorActions({
               </View>
               <View>
                 <Text style={[styles.previewLabel, { color: AI_COLOR }]}>{t("ai.editor.after")}</Text>
-                <Text style={[styles.previewBlock, styles.previewAfter]}>{preview?.after}</Text>
+                {preview?.streaming && !preview.after ? (
+                  <View style={[styles.previewBlock, styles.previewAfter]}>
+                    <ActivityIndicator size="small" color={AI_COLOR} />
+                  </View>
+                ) : (
+                  <Text style={[styles.previewBlock, styles.previewAfter]}>{preview?.after}</Text>
+                )}
               </View>
             </ScrollView>
 
             <View style={styles.previewFooter}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.previewAction, styles.previewCancel]}
-                onPress={() => setPreview(null)}
-              >
+              <TouchableOpacity activeOpacity={0.7} style={[styles.previewAction, styles.previewCancel]} onPress={closePreview}>
                 <Text style={styles.previewCancelLabel}>{t("cancel")}</Text>
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} style={[styles.previewAction, styles.previewApply]} onPress={applyPreview}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.previewAction, styles.previewApply, preview?.streaming && styles.previewApplyWaiting]}
+                onPress={applyPreview}
+                disabled={preview?.streaming}
+              >
                 <Text style={styles.previewApplyLabel}>{t("ai.editor.apply")}</Text>
               </TouchableOpacity>
             </View>
@@ -580,6 +632,9 @@ const styles = StyleSheet.create({
   },
   previewApply: {
     backgroundColor: AI_COLOR,
+  },
+  previewApplyWaiting: {
+    opacity: 0.4,
   },
   previewCancelLabel: {
     color: COLOR.lightBlue,

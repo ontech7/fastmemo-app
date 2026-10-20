@@ -584,6 +584,7 @@ const ja = {
       content_changed: "AI の処理中にノートが変更されました。もう一度実行してください。",
       no_content: "まず何か書いてください",
       no_category_match: "該当するカテゴリが見つかりません",
+      no_improvement: "AI はこのテキストを改善できませんでした。変更はありません。",
       error: "生成できませんでした。もう一度お試しください",
     },
   },

@@ -589,6 +589,7 @@ const it = {
       content_changed: "La nota è cambiata mentre l'AI lavorava: riprova.",
       no_content: "Scrivi qualcosa prima",
       no_category_match: "Nessuna categoria corrispondente",
+      no_improvement: "L'AI non è riuscita a migliorare questo testo: è rimasto com'era.",
       error: "Impossibile generare, riprova",
     },
   },
