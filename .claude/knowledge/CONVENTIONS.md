@@ -696,6 +696,38 @@ reads, writes, and deletes.
 | Full sync (100 notes)         | ~100 reads + 1 per tombstone + writes only for what this device has newer                     |
 | Wipe all notes from cloud     | N deletes, tombstones included (batched, 200 per batch)                                       |
 
+### FastMemo Server (self-hosted, ADR-017)
+
+The server has no quota, but its dashboard counts operations the way Firestore bills them, and the same code paths serve both
+clouds, so the rules above still apply. In addition:
+
+1. **Nothing above `CloudBackend` knows which cloud it is.** Ask `cloud` for what differs (`deviceLimit`, `pacing`), key
+   per-cloud data with `cloudScope(settings)` (the DEK cache, the server token), and keep user-facing texts provider-neutral
+   ("whoever stores them", not "Google"). `configs.cloud.deviceLimit` is the Firebase backend's own value (LL-048).
+2. **The server's protocol only grows.** `/v1` keeps working for every app version that speaks it: add optional fields; anything
+   else is a new protocol number, which older apps refuse at the handshake.
+3. **Same guard on both sides.** A change to the push guard or the merge rules is made in the app's adapters and in the server
+   (`fastmemo-server/src/service.ts`) together, and `scripts/sync-server.test.mjs` passes against the real server.
+4. **An id a client caches must not repeat across a restore.** Restoring a backup rewinds the server's counters; tie such ids to
+   the boot (the feed's page ids do, LL-049).
+5. **HTTPS outside a test.** Android release builds refuse cleartext and an `https://` page can't call `http://`; never suggest
+   a plain-HTTP server address in UI copy for phones.
+6. **"Removed" is the server refusing the token held now.** Never a token that can't be read (read it again), nor a refusal of a
+   token a registration replaced; write and remove tokens in order (LL-050).
+7. **Settings changes don't re-enroll.** New settings are proven with `cloud.check` (its own connection) before the working one
+   is touched; the same cloud then only takes them, another cloud is left first. Change the connection only with the engine
+   stopped and `idle()`; a task that outlived `stop()` must not act (`outlived`) (LL-050).
+8. **A request carries the connection it started on.** Re-check after every `await` that the backend wasn't re-initialised
+   before reading its URL, key or token: another server's key must never go to this one.
+9. **An error the client acts on must be readable.** The server drains an oversized body before its `413`; the client never
+   retries a timeout at the same size forever (LL-051).
+
+| User Action (server)          | Server operations                                                           |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| Create / edit a note (synced) | 1 push (1 read + 1 write per note), every other device: 1 sync read + 1 ack |
+| Idle, app open                | 1 long poll every 25 s per device, counted as 1 read (the vault check)      |
+| Full sync (100 notes)         | ~100 reads + 1 per tombstone + writes only for what this device has newer   |
+
 ### End-to-End Encryption (per-vault) -- safety rules
 
 Cloud encryption uses a per-vault envelope scheme (ADR-012). The encryption key (DEK) lives only in `libs/vaultSession`
@@ -787,6 +819,7 @@ hard rules (each maps to a lesson learned):
 | 31  | Never concatenate translated fragments into a sentence                                    | Word order differs per language; one interpolated key, `<Trans>` for styled parts (see LL-035)                                   |
 | 32  | Never write a cloud document other devices listen to when nothing changed                 | Each write costs a read per listener and can wake the loop that writes again (see LL-044)                                        |
 | 33  | Never size what accumulates in one Firestore document by bytes alone                      | The 40,000 index-entry limit comes first (~50 per queued note); budget both (see LL-043)                                         |
+| 34  | Never read a per-cloud value from config, or name a provider, above `CloudBackend`        | Two clouds: ask `cloud` (`deviceLimit`, `pacing`), key by `cloudScope`, keep texts neutral (see LL-048)                          |
 
 ### ALWAYS
 

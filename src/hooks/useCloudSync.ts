@@ -1,11 +1,11 @@
-import { configs } from "@/configs";
-import type { CloudSettings } from "@/types";
+import type { CloudProvider, CloudSettings } from "@/types";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 
-import { cloud, getDeviceUuid, getThisDevice } from "@/libs/cloud";
+import { cloud, cloudScope, getDeviceUuid, getThisDevice, normalizeServerUrl, providerOf } from "@/libs/cloud";
 import { getSyncEngine, syncNow } from "@/libs/cloud/sync";
+import type { SyncEngine } from "@/libs/cloud/syncEngine";
 import { useRouter } from "@/hooks/useRouter";
 import { storeVaultContinuation } from "@/libs/registry";
 import { isVaultUnlocked } from "@/libs/vaultSession";
@@ -14,6 +14,7 @@ import { forgetDeviceVault, probeVault } from "@/libs/vaultManager";
 import { toast } from "@/utils/toast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { store } from "@/slicers/store";
 import {
   getCloudConnected,
   getCloudSettings,
@@ -34,6 +35,28 @@ interface ConnectingState {
   code?: number;
 }
 
+/** Leaving a cloud is best effort: a step that doesn't answer in time (offline, a captive portal) is given up on. */
+const CLEANUP_TIMEOUT_MS = 8000;
+
+const bounded = async (step: Promise<unknown>): Promise<void> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    step.catch((e) => console.log("cloud cleanup:", e)),
+    new Promise((resolve) => (timer = setTimeout(resolve, CLEANUP_TIMEOUT_MS))),
+  ]);
+  clearTimeout(timer);
+};
+
+/** Stops the engine and waits (bounded) for the task it was running: nothing it does then lands on another connection. */
+const stopEngine = async (): Promise<{ engine: SyncEngine; wasRunning: boolean } | null> => {
+  const engine = await getSyncEngine();
+  if (!engine) return null;
+  const wasRunning = engine.isRunning;
+  engine.stop();
+  await bounded(engine.idle());
+  return { engine, wasRunning };
+};
+
 export const useCloudSync = () => {
   const { t } = useTranslation();
 
@@ -44,12 +67,25 @@ export const useCloudSync = () => {
   const selectorCloudConnected = useSelector(getCloudConnected);
 
   const [cloudSettings, setLocalCloudSettings] = useState<CloudSettings>(selectorCloudSettings);
-  const firestoreSettings: CloudSettings = {
-    ...cloudSettings,
-    authDomain: (cloudSettings.projectId ?? "") + ".firebaseapp.com",
-    storageBucket: (cloudSettings.projectId ?? "") + ".appspot.com",
-    messagingSenderId: cloudSettings.appId.split(":")?.[1] ?? "",
-  };
+  const provider = providerOf(cloudSettings);
+  /** The settings as the connection uses them (and as they're saved). */
+  const connectionSettings: CloudSettings =
+    provider === "server"
+      ? {
+          ...cloudSettings,
+          provider,
+          serverUrl: normalizeServerUrl(cloudSettings.serverUrl ?? ""),
+          serverKey: (cloudSettings.serverKey ?? "").trim(),
+        }
+      : {
+          ...cloudSettings,
+          provider,
+          authDomain: (cloudSettings.projectId ?? "") + ".firebaseapp.com",
+          storageBucket: (cloudSettings.projectId ?? "") + ".appspot.com",
+          messagingSenderId: cloudSettings.appId.split(":")?.[1] ?? "",
+        };
+  /** What this device's vault key is cached under (the vault screens get it as `projectId`). */
+  const scope = cloudScope(connectionSettings);
 
   const [isCloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(selectorCloudSyncEnabled);
   const [isConnected, setIsConnected] = useState<boolean>(selectorCloudConnected);
@@ -59,57 +95,106 @@ export const useCloudSync = () => {
 
   const dispatch = useDispatch();
 
-  const toggleCloudSync = async (): Promise<void> => {
-    if (isCloudSyncEnabled) {
-      // Best-effort cloud cleanup. If a call rejects (transient/offline) we still
-      // disconnect locally below, so the user never gets stuck in a half-on state
-      // with no way to toggle off.
-      try {
-        // Stopped first: removing this device would otherwise read as "removed by another device".
-        (await getSyncEngine())?.stop();
+  /**
+   * Leaves the connected cloud: this device is removed from it and forgets its vault key there (`scopes`: the saved
+   * connection's, and the form's when it differs). The cloud vault stays, so reconnecting (or another device) can still
+   * unlock it with the passphrase. Best effort: a call that fails (offline) still disconnects here, so the user never gets
+   * stuck half on.
+   */
+  const leaveCloud = async (scopes: string[]): Promise<void> => {
+    try {
+      // Stopped first, its task over: removing this device would otherwise read as "removed by another device".
+      await stopEngine();
 
-        const me = await getDeviceUuid();
-        if (me) {
-          // Removed first, so the others stop making it a recipient; then nobody waits for its acks anymore.
-          await cloud.unregisterDevice(me);
-          await cloud.dropRecipient(me);
-        }
-
-        // forget the cached DEK for this device, but leave the cloud vault intact
-        // so reconnecting (or another device) can still unlock with the passphrase
-        if (cloudSettings.projectId) await forgetDeviceVault(cloudSettings.projectId);
-
-        await cloud.dispose();
-      } catch (e) {
-        console.log("toggleCloudSync cleanup error:", e);
+      const me = await getDeviceUuid();
+      if (me) {
+        // Removed first, so the others stop making it a recipient; then nobody waits for its acks anymore.
+        await bounded(
+          (async () => {
+            await cloud.unregisterDevice(me);
+            await cloud.dropRecipient(me);
+          })()
+        );
       }
 
-      setIsConnected(false);
-      dispatch(setCloudConnected(false));
+      for (const forgotten of new Set(scopes)) if (forgotten) await forgetDeviceVault(forgotten);
 
-      AsyncStorage.setItem("@cloudSync", JSON.stringify({}));
+      await bounded(cloud.dispose());
+    } catch (e) {
+      console.log("cloud cleanup error:", e);
     }
+
+    setIsConnected(false);
+    dispatch(setCloudConnected(false));
+
+    await AsyncStorage.setItem("@cloudSync", JSON.stringify({})).catch(() => {});
+  };
+
+  const toggleCloudSync = async (): Promise<void> => {
+    if (isCloudSyncEnabled) await leaveCloud([cloudScope(selectorCloudSettings), scope]);
 
     setCloudSyncEnabled(!isCloudSyncEnabled);
     dispatch(setIsCloudSyncEnabled(!isCloudSyncEnabled));
   };
 
-  const setCloudSetting = (name: keyof CloudSettings, value: string): void => {
+  const setCloudSetting = (name: Exclude<keyof CloudSettings, "provider">, value: string): void => {
     setLocalCloudSettings({
       ...cloudSettings,
-      // Firebase identifiers never contain whitespace, but a paste can carry some along.
+      // Identifiers, addresses and keys never contain whitespace, but a paste can carry some along.
       [name]: value.trim(),
     });
+  };
+
+  const setCloudProvider = (next: CloudProvider): void => {
+    setLocalCloudSettings({ ...cloudSettings, provider: next });
   };
 
   const saveCloudSettings = async (): Promise<void> => {
     setIsConnecting({ loading: true });
     setIsLoading(true);
 
-    cloud.init(firestoreSettings);
+    if (selectorCloudConnected) {
+      await changeCloudSettings(selectorCloudSettings);
+      return;
+    }
+
+    cloud.init(connectionSettings);
 
     const ok = await cloud.verify();
     setIsConnecting({ loading: false, code: ok ? Handshake.Success : Handshake.Fail });
+  };
+
+  /**
+   * New settings on a connected device, checked first on a connection of their own: if they don't work, the device stays
+   * connected as it was (the dialog explains, the form keeps them to correct). Another cloud is then left, as turning sync
+   * off does, and connected as usual. The same cloud with new credentials (a rotated access key, a new API key) only takes
+   * them: no re-registration, no vault flow.
+   */
+  const changeCloudSettings = async (saved: CloudSettings): Promise<void> => {
+    if (!(await cloud.check(connectionSettings))) {
+      setIsConnecting({ loading: false });
+      setIsLoading(false);
+      setHandshakeFailed(true);
+      return;
+    }
+
+    if (cloudScope(saved) !== scope || providerOf(saved) !== provider) {
+      await leaveCloud([cloudScope(saved)]);
+      cloud.init(connectionSettings);
+      // Checked above: on to the device limit and the vault.
+      setIsConnecting({ loading: false, code: Handshake.Success });
+      return;
+    }
+
+    const stopped = await stopEngine();
+    cloud.init(connectionSettings);
+    await AsyncStorage.setItem("@cloudSync", JSON.stringify(connectionSettings));
+    dispatch(setCloudSettings(connectionSettings));
+    // Again if it ran, unless the device was disconnected or locked meanwhile (the provider starts it when that changes).
+    if (stopped?.wasRunning && store.getState().settings?.cloudConnected && isVaultUnlocked()) stopped.engine.start();
+    setIsConnected(true);
+    setIsConnecting({ loading: false });
+    setIsLoading(false);
   };
 
   const editCloudSettings = (): void => {
@@ -123,7 +208,7 @@ export const useCloudSync = () => {
    * no vault has ever been created. On success it just resyncs.
    */
   const requestVaultAccess = async (): Promise<void> => {
-    const projectId = cloudSettings.projectId;
+    const projectId = scope;
 
     // Probe first: on an unverifiable read, do NOT route to create (it could
     // overwrite an existing vault). Ask the user to retry instead.
@@ -156,7 +241,7 @@ export const useCloudSync = () => {
     storeVaultContinuation(async () => {
       await syncCloudData(false);
     });
-    const target = { pathname: "/settings/cloud-sync/vault-reset", params: { projectId: cloudSettings.projectId } } as const;
+    const target = { pathname: "/settings/cloud-sync/vault-reset", params: { projectId: scope } } as const;
     if (useReplace) {
       router.replace(target);
     } else {
@@ -202,13 +287,13 @@ export const useCloudSync = () => {
 
           const me = await getDeviceUuid();
           const others = cloudDevices.filter((device) => device.uuid !== me);
-          if (others.length >= configs.cloud.deviceLimit) {
+          if (others.length >= cloud.deviceLimit) {
             setIsLoading(false);
             toast(t("devicesLimitReached"));
             return;
           }
 
-          const projectId = firestoreSettings.projectId;
+          const projectId = scope;
 
           // Finalize the connection once the vault has been unlocked/created and
           // the DEK is in the session (the vault screen runs this continuation).
@@ -216,10 +301,10 @@ export const useCloudSync = () => {
             const device = await getThisDevice();
             if (!device || !(await cloud.registerDevice(device))) throw new Error("device registration failed");
             await syncCloudData(true);
-            await AsyncStorage.setItem("@cloudSync", JSON.stringify(firestoreSettings));
+            await AsyncStorage.setItem("@cloudSync", JSON.stringify(connectionSettings));
             setIsConnected(true);
             dispatch(setCloudConnected(true));
-            dispatch(setCloudSettings(firestoreSettings));
+            dispatch(setCloudSettings(connectionSettings));
             setIsLoading(false);
           };
 
@@ -271,6 +356,7 @@ export const useCloudSync = () => {
     methods: {
       toggleCloudSync,
       setCloudSetting,
+      setCloudProvider,
       saveCloudSettings,
       editCloudSettings,
       requestVaultAccess,
@@ -287,5 +373,6 @@ export const useCloudSync = () => {
       handshakeFailed,
     },
     cloudSettings,
+    provider,
   };
 };

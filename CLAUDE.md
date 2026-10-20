@@ -95,8 +95,8 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
     `detachNotes`) -- the latest operation replaces the others (`queueCloudAdd`/`queueCloudDelete`, the backend's push,
     `notesPushed`). See LL-033
 22. **Never touch the cloud outside the `CloudBackend`** -- only `src/libs/cloud/firebaseBackend.ts` imports `firebase/*`;
-    everything else uses `cloud` from `@/libs/cloud` or the sync engine. Merge rules live in `libs/cloud/merge.ts`, tested by
-    `scripts/sync.test.mjs` (ADR-016)
+    everything else uses `cloud` from `@/libs/cloud` or the sync engine; `serverBackend.ts` is the only code speaking the
+    FastMemo server's API (ADR-017). Merge rules live in `libs/cloud/merge.ts`, tested by `scripts/sync.test.mjs` (ADR-016)
 23. **Never write a cloud document other devices listen to when nothing changed** (`connectedDevices`, `vault`): each write
     costs a read on every listener and can wake the loop that writes again. Size anything that accumulates in one Firestore
     document by bytes **and** index entries (40,000 max, ~50 per queued note). See LL-043, LL-044
@@ -125,21 +125,21 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 
 ## Tech Stack (Quick Reference)
 
-| Layer      | Technology                                                                                     |
-| ---------- | ---------------------------------------------------------------------------------------------- |
-| Framework  | Expo SDK 58, React Native 0.88 (New Architecture, Hermes V1), React 19.3                       |
-| Language   | TypeScript 6.0 (path alias `@/*` -> `./src/*`)                                                 |
-| Routing    | expo-router 58 (file-based, typed routes)                                                      |
-| State      | Redux Toolkit 2.8 + Redux Persist (filesystem for notes, AsyncStorage for settings/categories) |
-| Desktop    | Tauri 2.x (Rust, capabilities in `src-tauri/capabilities/`)                                    |
-| Cloud      | Firestore behind `CloudBackend` (live sync, revisions -- ADR-016), per-vault E2E (ADR-012)     |
-| AI         | llama.rn 0.12 (Qwen 2.5 GGUF, on-device)                                                       |
-| Editor     | CodeMirror 6 (via WebView)                                                                     |
-| i18n       | i18next + react-i18next (7 languages, single namespace)                                        |
-| Animations | react-native-reanimated 4.7 (+ react-native-worklets)                                          |
-| Lists      | @shopify/flash-list 2.3                                                                        |
-| Monitoring | Sentry                                                                                         |
-| OTA        | EAS Update (Android, fingerprint runtime, manual `Publish OTA` workflow -- ADR-014)            |
+| Layer      | Technology                                                                                         |
+| ---------- | -------------------------------------------------------------------------------------------------- |
+| Framework  | Expo SDK 58, React Native 0.88 (New Architecture, Hermes V1), React 19.3                           |
+| Language   | TypeScript 6.0 (path alias `@/*` -> `./src/*`)                                                     |
+| Routing    | expo-router 58 (file-based, typed routes)                                                          |
+| State      | Redux Toolkit 2.8 + Redux Persist (filesystem for notes, AsyncStorage for settings/categories)     |
+| Desktop    | Tauri 2.x (Rust, capabilities in `src-tauri/capabilities/`)                                        |
+| Cloud      | Firestore or a self-hosted FastMemo server behind `CloudBackend` (ADR-016, ADR-017), E2E (ADR-012) |
+| AI         | llama.rn 0.12 (Qwen 2.5 GGUF, on-device)                                                           |
+| Editor     | CodeMirror 6 (via WebView)                                                                         |
+| i18n       | i18next + react-i18next (7 languages, single namespace)                                            |
+| Animations | react-native-reanimated 4.7 (+ react-native-worklets)                                              |
+| Lists      | @shopify/flash-list 2.3                                                                            |
+| Monitoring | Sentry                                                                                             |
+| OTA        | EAS Update (Android, fingerprint runtime, manual `Publish OTA` workflow -- ADR-014)                |
 
 ## Directory Map
 

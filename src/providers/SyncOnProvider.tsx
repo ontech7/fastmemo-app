@@ -6,7 +6,7 @@ import { AppState, Platform } from "react-native";
 import { useSelector } from "react-redux";
 
 import { notesLoaded, useAppDispatch } from "@/slicers/store";
-import { cloud, getDeviceUuid } from "@/libs/cloud";
+import { cloud, cloudScope, getDeviceUuid } from "@/libs/cloud";
 import { clearPresenceDevices, setPresenceDevices } from "@/libs/cloud/presence";
 import { getSyncEngine, onSyncEvent, syncIfDue } from "@/libs/cloud/sync";
 import { isVaultUnlocked, lockVault, wipePersistedDEK } from "@/libs/vaultSession";
@@ -27,7 +27,8 @@ export default function SyncOnProvider(): null {
 
   const isCloudConnected = useSelector(getCloudConnected);
   const cloudSettings = useSelector(getCloudSettings);
-  const projectId = cloudSettings?.projectId;
+  // What this device's vault key is cached under: the Firebase project, or the server's address.
+  const projectId = cloudScope(cloudSettings);
   const netInfo = useNetInfo();
   const isOnline = !!netInfo?.isConnected;
 

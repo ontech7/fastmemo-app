@@ -146,7 +146,7 @@ const fr = {
     step5: "Prenez note de vos snippets.",
     step6: "Créez votre propre catégorie selon vos besoins.",
     step7: "Insérez un code secret pour masquer vos notes.",
-    step8: "Synchronisez vos notes sur Google Firebase.",
+    step8: "Synchronisez vos notes entre vos appareils : sur votre Firebase ou votre propre serveur.",
     title: "Qu'est-ce que Fast Memo?",
     continue: "Continue",
   },
@@ -279,6 +279,22 @@ const fr = {
     deleteDevices: "Gérer les appareils",
     handshakeFailed: "Échec de la tentative de connexion",
     handshakeFailedDesc: "Impossible de se connecter au serveur Firebase.",
+    example: "ex. : {{value}}",
+    provider: {
+      title: "Synchroniser avec",
+      firebase: "Google Firebase",
+      firebase_desc: "Votre propre projet Firebase : gratuit et rapide à configurer, hébergé par Google.",
+      server: "FastMemo Server",
+      server_desc: "Votre propre serveur (PC, NAS, Raspberry Pi, VPS) : vos notes restent sous votre contrôle.",
+    },
+    server: {
+      url: "Adresse du serveur",
+      key: "Clé d'accès",
+      http_warning:
+        "Cette adresse n'est pas chiffrée (HTTP). Les téléphones et l'application web ne se connectent qu'en HTTPS (le guide montre une solution gratuite, avec Tailscale) : réservez HTTP aux essais sur cet ordinateur. Vos notes restent chiffrées de bout en bout, mais la clé d'accès et les titres circuleraient en clair.",
+      handshake_failed_desc:
+        "Impossible de joindre le serveur, ou la clé d'accès est incorrecte. Vérifiez l'adresse (par ex. https://notes.exemple.fr), la clé, et que le serveur est allumé. Les téléphones et l'application web exigent une adresse HTTPS.",
+    },
     vault: {
       setup_title: "Protégez vos notes",
       setup_desc:
@@ -287,7 +303,7 @@ const fr = {
       migrate_desc:
         "Nous faisons passer votre synchronisation cloud au chiffrement de bout en bout. Choisissez un mot de passe de chiffrement : les notes déjà présentes dans votre cloud seront rechiffrées avec celui-ci, et vous le saisirez une fois sur chaque appareil.",
       point_private:
-        "Vous seul pouvez lire vos notes — ni nous, ni Google. Elles sont chiffrées sur votre appareil avant d'être envoyées.",
+        "Vous seul pouvez lire vos notes — ni nous, ni celui qui les héberge. Elles sont chiffrées sur votre appareil avant d'être envoyées.",
       point_password:
         "Vos notes sont protégées par un mot de passe de chiffrement que vous choisissez et que vous seul connaissez.",
       point_devices: "Vous saisirez ce mot de passe une fois sur chaque appareil que vous synchronisez.",
@@ -344,7 +360,7 @@ const fr = {
       locked_cta_hint:
         "Vos notes sont chiffrées et verrouillées sur cet appareil, la synchronisation cloud est donc suspendue. Saisissez votre mot de passe de chiffrement pour les déverrouiller et reprendre la synchronisation.",
       enable_hint:
-        "La synchronisation cloud est chiffrée de bout en bout — vous seul pouvez lire vos notes, ni nous ni Google.",
+        "La synchronisation cloud est chiffrée de bout en bout — vous seul pouvez lire vos notes, ni nous ni celui qui les héberge.",
       prompt_title: "Synchronisation en pause",
       prompt_desc:
         "Vos notes ne sont pas encore synchronisées. Terminez la configuration du chiffrement dans les paramètres Cloud pour réactiver la synchronisation.",
@@ -773,7 +789,7 @@ const fr = {
     what_cloud_sync: {
       title: "Qu'est-ce que la synchronisation cloud ?",
       text_1_0:
-        "Vous pouvez synchroniser vos notes entre appareils en connectant votre propre projet Google Firebase et en activant la synchronisation. Il n'y a pas de serveur central Fast Memo — vos données vivent uniquement dans votre Firebase.",
+        "Vous pouvez synchroniser vos notes entre appareils en connectant votre propre projet Google Firebase ou votre propre FastMemo Server (sur un PC, un NAS, un Raspberry Pi ou un VPS) et en activant la synchronisation. Il n'y a pas de serveur central Fast Memo — vos données vivent uniquement là où vous le choisissez.",
       text_2_0:
         "Vos notes sont chiffrées de bout en bout sur votre appareil avant d'être envoyées, de sorte que personne d'autre que vous ne peut les lire.",
       text_link: "Lire le guide pas à pas pour configurer Google Firebase →",
@@ -783,7 +799,7 @@ const fr = {
       text_1_0:
         "La synchronisation cloud utilise le chiffrement de bout en bout. Lors de la première configuration, vous choisissez un mot de passe de chiffrement, et votre appareil en dérive la clé qui protège vos notes.",
       text_2_0:
-        "La clé ne quitte jamais votre appareil et n'est jamais stockée dans le cloud : même une personne ayant accès à votre Firebase ne peut pas lire le contenu de vos notes sans votre mot de passe.",
+        "La clé ne quitte jamais votre appareil et n'est jamais stockée dans le cloud : même une personne ayant accès à votre Firebase ou à votre serveur ne peut pas lire le contenu de vos notes sans votre mot de passe.",
       text_3_0:
         "Le contenu des notes est chiffré ; les titres et les dates restent lisibles pour que l'application puisse les trier et les synchroniser.",
     },
@@ -893,7 +909,8 @@ const fr = {
       title: "Où puis-je utiliser Fast Memo ?",
       text_1_0:
         "Fast Memo fonctionne à la fois sur mobile et sur ordinateur (Windows, macOS et Linux), ainsi qu'en version web.",
-      text_2_0: "Connectez le même projet Google Firebase sur chaque appareil et vos notes restent synchronisées partout.",
+      text_2_0:
+        "Connectez chaque appareil au même projet Google Firebase ou au même FastMemo Server et vos notes restent synchronisées partout.",
     },
     what_ai_assistant: {
       title: "Qu'est-ce que l'Assistant IA ?",

@@ -1,7 +1,7 @@
 import { configs } from "@/configs";
 import { defaultCategory } from "@/configs/default";
 import type { Category, CloudSettings, Note } from "@/types";
-import { isVaultDoc, VAULT_VERSION, type VaultDoc } from "@/utils/vault";
+import type { VaultDoc } from "@/utils/vault";
 import { deleteApp, getApp, getApps, initializeApp } from "firebase/app";
 import {
   collection,
@@ -45,6 +45,7 @@ import type {
   VaultRead,
 } from "./types";
 import { NOTE_REF_TEXT } from "./types";
+import { toVaultRead } from "./vaultRead";
 
 /*
  * Firestore layout (unchanged since 1.x/3.x, so older installs keep syncing):
@@ -171,15 +172,6 @@ const toDevicesSnapshot = (me: string, docs: QueryDocumentSnapshot[], fromServer
   return { devices, incoming, fromServer };
 };
 
-const toVaultRead = (data: DocumentData | undefined): VaultRead => {
-  if (!data) return { status: "absent", vault: null };
-  // A malformed doc, or one written by a newer app version (a KDF/format this build can't handle), is an error: never
-  // unlock against it nor overwrite it.
-  if (!isVaultDoc(data)) return { status: "error", vault: null };
-  if (typeof data.version === "number" && data.version > VAULT_VERSION) return { status: "error", vault: null };
-  return { status: "present", vault: data };
-};
-
 /** One outbox entry, as it will be written. */
 export interface Entry {
   queue: Queue;
@@ -294,7 +286,40 @@ export const planFanout = (data: DocumentData, applied: Entry[], recipients: str
   return { updates, flag: [...flag] };
 };
 
+/**
+ * A Firebase app and its Firestore. Auto-detected long polling: the default WebChannel stream wedges inside the OS WebViews
+ * Tauri runs in (after sleep or a network switch) and never recovers; long polling survives there, and the faster stream is
+ * kept where it works. An undefined field is dropped, as JSON does, instead of failing the whole write as an invalid
+ * argument (which the push treats as permanent: the note would never sync again until restart). `initializeFirestore` must
+ * run before any `getFirestore()`.
+ */
+const openFirestore = (settings: CloudSettings, name: string): Firestore =>
+  initializeFirestore(initializeApp(settings, name), {
+    experimentalAutoDetectLongPolling: true,
+    ignoreUndefinedProperties: true,
+  });
+
+/** Proves the settings work with a write + delete round trip (false after HANDSHAKE_TIMEOUT_MS). */
+const handshake = async (db: Firestore): Promise<boolean> => {
+  const probe = (async () => {
+    const ref = doc(db, HANDSHAKE, "123");
+    await setDoc(ref, { done: "true" });
+    await deleteDoc(ref);
+    return true;
+  })();
+  const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), HANDSHAKE_TIMEOUT_MS));
+  try {
+    return await Promise.race([probe, timeout]);
+  } catch (e) {
+    console.log("handshake:", e);
+    return false;
+  }
+};
+
 export class FirebaseBackend implements CloudBackend {
+  /** Every device's push is read by every other one: the free quota bounds how many there can be. */
+  readonly deviceLimit = configs.cloud.deviceLimit;
+
   /** The error callbacks of the open device listeners: told when the app they listen on goes away. */
   private readonly listening = new Set<(error: unknown) => void>();
 
@@ -313,16 +338,10 @@ export class FirebaseBackend implements CloudBackend {
   }
 
   init(settings: CloudSettings): void {
-    if (getApps().length) {
-      deleteApp(getApp(configs.firebase.appName)).catch((error) => console.log("Error deleting app:", error));
-    }
-    const app = initializeApp(settings, configs.firebase.appName);
-    // Auto-detected long polling: the default WebChannel stream wedges inside the OS WebViews Tauri runs in (after sleep or
-    // a network switch) and never recovers; long polling survives there, and the faster stream is kept where it works.
-    // An undefined field is dropped, as JSON does, instead of failing the whole write as an invalid argument (which the
-    // push treats as permanent: the note would never sync again until restart).
-    // Must run before any getFirestore().
-    initializeFirestore(app, { experimentalAutoDetectLongPolling: true, ignoreUndefinedProperties: true });
+    // By name: a settings check's own app may exist alongside.
+    const current = getApps().find((app) => app.name === configs.firebase.appName);
+    if (current) deleteApp(current).catch((error) => console.log("Error deleting app:", error));
+    openFirestore(settings, configs.firebase.appName);
     this.dropListeners();
   }
 
@@ -339,19 +358,22 @@ export class FirebaseBackend implements CloudBackend {
 
   async verify(): Promise<boolean> {
     const db = this.db;
-    if (!db) return false;
-    const probe = (async () => {
-      const ref = doc(db, HANDSHAKE, "123");
-      await setDoc(ref, { done: "true" });
-      await deleteDoc(ref);
-      return true;
-    })();
-    const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), HANDSHAKE_TIMEOUT_MS));
+    return db ? handshake(db) : false;
+  }
+
+  /** On an app of its own, deleted afterwards: the connection in use isn't touched. */
+  async check(settings: CloudSettings): Promise<boolean> {
+    const name = `${configs.firebase.appName}-check`;
+    const left = getApps().find((app) => app.name === name);
+    if (left) await deleteApp(left).catch(() => {});
     try {
-      return await Promise.race([probe, timeout]);
+      return await handshake(openFirestore(settings, name));
     } catch (e) {
-      console.log("handshake:", e);
+      console.log("settings check:", e);
       return false;
+    } finally {
+      const app = getApps().find((candidate) => candidate.name === name);
+      if (app) await deleteApp(app).catch((error) => console.log("Error deleting app:", error));
     }
   }
 

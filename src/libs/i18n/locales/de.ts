@@ -146,7 +146,7 @@ const de = {
     step5: "Halten Sie Ihre Snippets fest.",
     step6: "Erstellen Sie Ihre eigene Kategorie entsprechend Ihren Anforderungen.",
     step7: "Geben Sie einen Geheimcode ein, um Ihre Notizen zu verbergen.",
-    step8: "Synchronisieren Sie Ihre Notizen auf Google Firebase.",
+    step8: "Synchronisieren Sie Ihre Notizen zwischen Ihren Geräten: über Ihr Firebase oder Ihren eigenen Server.",
     title: "Was ist Fast Memo?",
     continue: "Geht weiter",
   },
@@ -279,6 +279,22 @@ const de = {
     deleteDevices: "Geräte verwalten",
     handshakeFailed: "Verbindungsversuch fehlgeschlagen",
     handshakeFailedDesc: "Es konnte keine Verbindung zum Firebase-Server hergestellt werden.",
+    example: "z. B.: {{value}}",
+    provider: {
+      title: "Synchronisieren mit",
+      firebase: "Google Firebase",
+      firebase_desc: "Ihr eigenes Firebase-Projekt: kostenlos und schnell eingerichtet, gehostet von Google.",
+      server: "FastMemo Server",
+      server_desc: "Ihr eigener Server (PC, NAS, Raspberry Pi, VPS): Ihre Notizen bleiben bei Ihnen.",
+    },
+    server: {
+      url: "Serveradresse",
+      key: "Zugangsschlüssel",
+      http_warning:
+        "Diese Adresse ist nicht verschlüsselt (HTTP). Smartphones und die Web-App verbinden sich nur über HTTPS (die Anleitung zeigt einen kostenlosen Weg mit Tailscale): Verwenden Sie HTTP nur für Tests auf diesem Computer. Ihre Notizen bleiben Ende-zu-Ende-verschlüsselt, aber der Zugangsschlüssel und die Titel würden unverschlüsselt übertragen.",
+      handshake_failed_desc:
+        "Der Server ist nicht erreichbar oder der Zugangsschlüssel ist falsch. Prüfen Sie die Adresse (z. B. https://notizen.beispiel.de), den Schlüssel und ob der Server läuft. Smartphones und die Web-App benötigen eine HTTPS-Adresse.",
+    },
     vault: {
       setup_title: "Schützen Sie Ihre Notizen",
       setup_desc:
@@ -287,7 +303,7 @@ const de = {
       migrate_desc:
         "Wir stellen Ihre Cloud-Synchronisierung auf Ende-zu-Ende-Verschlüsselung um. Wählen Sie ein Verschlüsselungspasswort – die bereits in Ihrer Cloud gespeicherten Notizen werden damit neu verschlüsselt, und Sie geben dieses Passwort auf jedem Gerät einmal ein.",
       point_private:
-        "Nur Sie können Ihre Notizen lesen – nicht wir, nicht Google. Sie werden auf Ihrem Gerät verschlüsselt, bevor sie hochgeladen werden.",
+        "Nur Sie können Ihre Notizen lesen – nicht wir und nicht der, der sie speichert. Sie werden auf Ihrem Gerät verschlüsselt, bevor sie hochgeladen werden.",
       point_password:
         "Ihre Notizen sind durch ein Verschlüsselungspasswort geschützt, das Sie selbst wählen und nur Sie kennen.",
       point_devices: "Sie geben dieses Passwort auf jedem Gerät, das Sie synchronisieren, einmal ein.",
@@ -345,7 +361,8 @@ const de = {
       locked_cta_title: "Synchronisierung pausiert",
       locked_cta_hint:
         "Ihre Notizen sind auf diesem Gerät verschlüsselt und gesperrt, daher ist die Cloud-Synchronisierung angehalten. Geben Sie Ihr Verschlüsselungspasswort ein, um sie zu entsperren und die Synchronisierung fortzusetzen.",
-      enable_hint: "Cloud Sync ist Ende-zu-Ende-verschlüsselt – nur Sie können Ihre Notizen lesen, nicht wir und nicht Google.",
+      enable_hint:
+        "Cloud Sync ist Ende-zu-Ende-verschlüsselt – nur Sie können Ihre Notizen lesen, nicht wir und nicht der, der sie speichert.",
       prompt_title: "Synchronisierung pausiert",
       prompt_desc:
         "Ihre Notizen werden noch nicht synchronisiert. Schließen Sie die Einrichtung der Verschlüsselung in den Cloud-Einstellungen ab, um die Synchronisierung wieder zu aktivieren.",
@@ -777,7 +794,7 @@ const de = {
     what_cloud_sync: {
       title: "Was ist Cloud Sync?",
       text_1_0:
-        "Sie können Ihre Notizen geräteübergreifend synchronisieren, indem Sie Ihr eigenes Google-Firebase-Projekt verbinden und die Synchronisierung aktivieren. Es gibt keinen zentralen Fast-Memo-Server — Ihre Daten liegen nur in Ihrem Firebase.",
+        "Sie können Ihre Notizen geräteübergreifend synchronisieren, indem Sie Ihr eigenes Google-Firebase-Projekt oder Ihren eigenen FastMemo Server (auf einem PC, NAS, Raspberry Pi oder VPS) verbinden und die Synchronisierung aktivieren. Es gibt keinen zentralen Fast-Memo-Server — Ihre Daten liegen nur dort, wo Sie es wählen.",
       text_2_0:
         "Ihre Notizen werden auf Ihrem Gerät Ende-zu-Ende verschlüsselt, bevor sie hochgeladen werden, sodass niemand außer Ihnen sie lesen kann.",
       text_link: "Schritt-für-Schritt-Anleitung zur Einrichtung von Google Firebase lesen →",
@@ -787,7 +804,7 @@ const de = {
       text_1_0:
         "Cloud Sync verwendet Ende-zu-Ende-Verschlüsselung. Bei der ersten Einrichtung wählen Sie ein Verschlüsselungspasswort, aus dem Ihr Gerät den Schlüssel ableitet, der Ihre Notizen schützt.",
       text_2_0:
-        "Der Schlüssel verlässt nie Ihr Gerät und wird nie in der Cloud gespeichert, sodass selbst jemand mit Zugriff auf Ihr Firebase den Inhalt Ihrer Notizen ohne Ihr Passwort nicht lesen kann.",
+        "Der Schlüssel verlässt nie Ihr Gerät und wird nie in der Cloud gespeichert, sodass selbst jemand mit Zugriff auf Ihr Firebase oder Ihren Server den Inhalt Ihrer Notizen ohne Ihr Passwort nicht lesen kann.",
       text_3_0:
         "Der Inhalt der Notizen wird verschlüsselt; Titel und Daten bleiben lesbar, damit die App sie sortieren und synchronisieren kann.",
     },
@@ -895,7 +912,8 @@ const de = {
       title: "Wo kann ich Fast Memo nutzen?",
       text_1_0:
         "Fast Memo funktioniert sowohl auf Mobilgeräten als auch auf dem Desktop (Windows, macOS und Linux) sowie als Web-Version.",
-      text_2_0: "Verbinden Sie auf jedem Gerät dasselbe Google-Firebase-Projekt, und Ihre Notizen bleiben überall synchron.",
+      text_2_0:
+        "Verbinden Sie jedes Gerät mit demselben Google-Firebase-Projekt oder demselben FastMemo Server, und Ihre Notizen bleiben überall synchron.",
     },
     what_ai_assistant: {
       title: "Was ist der KI-Assistent?",

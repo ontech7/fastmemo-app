@@ -17,6 +17,7 @@ export type {
   WebhookPayload,
   Webhooks,
   VoiceRecognitionSettings,
+  CloudProvider,
   CloudSettings,
   AIAssistantSettings,
   DeveloperModeSettings,

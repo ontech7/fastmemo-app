@@ -5,7 +5,7 @@ import type { VaultDoc } from "@/utils/vault";
 
 import { createPlanner, isEmptyPlan, reconcileCategories, type LocalNotes, type SyncPlan } from "./merge";
 import { deletionStub, forUpload, noteRev, TOMBSTONE_TTL_MS } from "./revision";
-import type { ChangeSet, CloudBackend, CloudDevice, DevicesSnapshot, NoteRef, PushOps } from "./types";
+import type { ChangeSet, CloudBackend, CloudDevice, DevicesSnapshot, NoteRef, Pacing, PushOps } from "./types";
 
 /*
  * The sync engine (ADR-016): listens to the device docs and the vault, merges what other devices queued for this one,
@@ -111,13 +111,7 @@ export interface SyncEngineOptions {
   conflictSuffix(): string;
   events: SyncEvents;
   /** Overrides the waits (tests). */
-  timing?: Partial<Timing>;
-}
-
-interface Timing {
-  pushMinInterval: number;
-  ackQuiet: number;
-  ackMaxWait: number;
+  timing?: Partial<Pacing>;
 }
 
 const isRef = (entry: Note | NoteRef): entry is NoteRef => (entry as NoteRef).ref === true;
@@ -177,6 +171,9 @@ export class SyncEngine {
   private lastPushAt = 0;
   /** When the running task started, or last made progress (null: idle). */
   private busySince: number | null = null;
+  /** Counts `stop` calls; `taskStops` is the count when the running task started (see `outlived`). */
+  private stops = 0;
+  private taskStops = 0;
 
   /** The store subscription and the cloud listeners. */
   private unsubscribers: (() => void)[] = [];
@@ -194,15 +191,18 @@ export class SyncEngine {
 
   private lastOutbox: unknown[] = [];
 
-  private readonly timing: Timing;
-
   constructor(options: SyncEngineOptions) {
     this.o = options;
-    this.timing = {
+  }
+
+  /** The waits: the defaults, the backend's own (it can change with the settings), then the test overrides. */
+  private get timing(): Pacing {
+    return {
       pushMinInterval: PUSH_MIN_INTERVAL_MS,
       ackQuiet: ACK_QUIET_MS,
       ackMaxWait: ACK_MAX_WAIT_MS,
-      ...options.timing,
+      ...this.o.backend.pacing,
+      ...this.o.timing,
     };
   }
 
@@ -239,6 +239,7 @@ export class SyncEngine {
   }
 
   stop(): void {
+    this.stops++;
     if (!this.running) return;
     this.running = false;
     this.unsubscribers.forEach((unsubscribe) => unsubscribe());
@@ -256,6 +257,11 @@ export class SyncEngine {
     this.merged.clear();
     this.toAck.clear();
     this.ackSince = null;
+  }
+
+  /** Resolves once the task running now, and those queued, are done (after `stop`, the queued ones end at once). */
+  idle(): Promise<void> {
+    return this.tail.then(() => {});
   }
 
   /** The outbox changed: push soon (see PUSH_MIN_INTERVAL_MS). */
@@ -326,6 +332,7 @@ export class SyncEngine {
   private serial<T>(task: () => Promise<T>, force = false): Promise<T> {
     const run = this.tail.then(async () => {
       if (!this.running && !force) return undefined as T;
+      this.taskStops = this.stops;
       this.busySince = Date.now();
       try {
         return await task();
@@ -335,6 +342,15 @@ export class SyncEngine {
     });
     this.tail = run.catch((e) => console.log("sync:", e));
     return run;
+  }
+
+  /**
+   * The running task started before the engine last stopped: the cloud may have been left or switched since, so what it
+   * reads now can come from another connection. It no longer acts on it: no removal, no stale vault, no push, no
+   * acknowledgement (merges stay: what it read before is real, and merging is idempotent).
+   */
+  private get outlived(): boolean {
+    return this.taskStops !== this.stops;
   }
 
   /** See POLL_MS: re-opens the transport (unless a task is making progress over it), then reads the devices again. */
@@ -438,7 +454,7 @@ export class SyncEngine {
     const opens = read.status === "present" ? this.o.crypto.matches(read.vault) : false;
     if (opens === null) return false;
     if (!opens) {
-      this.vaultStale();
+      if (!this.outlived) this.vaultStale();
       return false;
     }
     this.vaultOk = true;
@@ -456,6 +472,7 @@ export class SyncEngine {
 
     const mine = snapshot.devices.find((device) => device.uuid === this.o.me);
     if (!mine) {
+      if (this.outlived) return false;
       this.stop();
       this.o.events.onRemoved();
       return false;
@@ -523,6 +540,7 @@ export class SyncEngine {
     this.ackSince = null;
     let ok = true;
     for (const [source, change] of [...this.toAck]) {
+      if (this.outlived) return false;
       // "changed": the sender queued more meanwhile, its next snapshot brings it.
       const ack = await this.o.backend.ackChanges(this.o.me, change);
       if (ack === "error") {
@@ -770,6 +788,7 @@ export class SyncEngine {
       ops.categories.delete.length;
     if (total === 0) return "nothing";
 
+    if (this.outlived) return "retry";
     const recipients = this.devices.filter((device) => device.uuid !== me).map((device) => device.uuid);
     this.lastPushAt = Date.now();
     const result = await backend.push(me, ops, recipients, (done, all) => {
