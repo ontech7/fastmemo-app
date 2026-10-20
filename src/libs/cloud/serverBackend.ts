@@ -261,7 +261,14 @@ export class ServerBackend implements CloudBackend {
 
   async listDevices(): Promise<CloudDevice[] | null> {
     try {
-      return (await this.request<{ devices: CloudDevice[] }>("GET", "/v1/devices", { auth: "member" })).devices;
+      const { devices, maxDevices } = await this.request<{ devices: CloudDevice[]; maxDevices?: number }>(
+        "GET",
+        "/v1/devices",
+        { auth: "member" }
+      );
+      // Also here, not only in the handshake: after a restart the app doesn't handshake again.
+      if (typeof maxDevices === "number") this.limit = maxDevices;
+      return devices;
     } catch (e) {
       console.log("listDevices:", e);
       return null;

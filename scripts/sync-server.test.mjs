@@ -255,6 +255,12 @@ try {
 
     ok("before registering, the key reads the devices (the connect flow)", Array.isArray(await backend.listDevices()));
     ok("...and the vault", (await backend.readVault()).status === "absent");
+
+    // After a restart the app doesn't handshake again: the device list carries the limit too.
+    const limited = await newServer({ env: { MAX_DEVICES: "4" } });
+    const restarted = makeBackend(limited.url).backend;
+    await restarted.listDevices();
+    ok("the device list brings the server's limit (no handshake after a restart)", restarted.deviceLimit === 4);
   }
 
   log("\nServerBackend: devices, feed, presence");

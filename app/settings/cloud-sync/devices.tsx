@@ -5,7 +5,6 @@ import NoCloudIcon from "@/components/icons/NoCloudIcon";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
-import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useTimeoutTask } from "@/hooks/useTimeoutTask";
@@ -182,11 +181,11 @@ export default function SyncedDevicesScreen() {
               style={[
                 styles.headerSubtitle,
                 {
-                  color: numberOfDevices != configs.cloud.deviceLimit ? COLOR.accentSoft : COLOR.important,
+                  color: numberOfDevices < cloud.deviceLimit ? COLOR.accentSoft : COLOR.important,
                 },
               ]}
             >
-              {t("synceddevices.count", { count: numberOfDevices, limit: configs.cloud.deviceLimit })}
+              {t("synceddevices.count", { count: numberOfDevices, limit: cloud.deviceLimit })}
             </Text>
           </View>
 
