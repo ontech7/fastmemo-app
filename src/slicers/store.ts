@@ -1,9 +1,7 @@
 import FSStorage from "@/libs/storage/fsStorage";
 import { foldLegacyRootNotes } from "@/libs/storage/legacyRootNotes";
-import { createNoteStore } from "@/libs/storage/noteStore";
-import { createNoteStoreBackend } from "@/libs/storage/noteStoreBackend";
+import { noteStore, notesNeedSorting } from "@/libs/storage/notes";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Sentry from "@sentry/react-native";
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import { useDispatch } from "react-redux";
 import { Platform } from "react-native";
@@ -38,18 +36,6 @@ const baseNotesStorage = FSStorage();
 let reorderOnRehydrate = false;
 
 // One stored value per note (ADR-018): a save writes only the notes that changed.
-const noteStore =
-  baseNotesStorage &&
-  createNoteStore(createNoteStoreBackend(), {
-    report: (message, detail) => {
-      console.warn(message, detail ?? "");
-      Sentry.captureMessage(message, { level: "warning", extra: { detail } });
-    },
-    onSortNeeded: () => {
-      reorderOnRehydrate = true;
-    },
-  });
-
 const notesStorage = noteStore && {
   getItem: (key: string) => noteStore.getItem(key).catch(failedNotesRead),
   setItem: (key: string, value: unknown) =>
@@ -134,7 +120,7 @@ export const store = configureStore({
 });
 
 export const persistor = persistStore(store, { manualPersist: true }, () => {
-  if (reorderOnRehydrate) store.dispatch(reorderNotes());
+  if (reorderOnRehydrate || notesNeedSorting()) store.dispatch(reorderNotes());
 });
 
 /** Keeps an outdated copy of the notes in the root blob (e.g. after a downgrade) from replacing them. */

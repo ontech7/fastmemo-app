@@ -5,11 +5,15 @@ import type { NoteStoreBackend } from "./noteStore";
 /*
  * The note store on the web and the desktop: one IndexedDB value per name (`v2:<name>`), next to the single value
  * redux-persist used before (`persist:root_notes`) in the same database. An IndexedDB write is atomic: no spares.
+ * Browser tabs share the database: a Web Lock lets one of them read or write the notes at a time.
  */
 
 const PREFIX = "v2:";
 const LEGACY_KEY = "persist:root_notes";
+/** The copy of the notes legacyRootNotes.ts saved before folding them out of the root value. */
+const ROOT_BACKUP_KEY = "backup:root-notes";
 const ASIDE = "corrupt:";
+const LOCK = "fastmemo-notes";
 
 const storage = () => {
   // On the web it's the localforage instance (fsStorage.web.ts); the types only know the native one.
@@ -46,4 +50,18 @@ export const createNoteStoreBackend = (): NoteStoreBackend => ({
 
   // IndexedDB can't tell when a value changed without reading it: the legacy notes are read only to migrate.
   legacyStamp: () => null,
+
+  removeLegacy: async () => {
+    await storage().removeItem(LEGACY_KEY);
+  },
+
+  removeCopies: async () => {
+    const store = storage();
+    for (const key of await store.keys()) {
+      if (key === LEGACY_KEY || key === ROOT_BACKUP_KEY || key.startsWith(ASIDE)) await store.removeItem(key);
+    }
+  },
+
+  // Without Web Locks (an old browser), tabs aren't kept apart: as before the note store.
+  exclusive: (task) => (typeof navigator !== "undefined" && navigator.locks ? navigator.locks.request(LOCK, task) : task()),
 });

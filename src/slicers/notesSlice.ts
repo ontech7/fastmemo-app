@@ -572,6 +572,8 @@ const notesSlice = createSlice({
     builder.addCase(wipeNotes, (state) => {
       state.items = [];
       state.temporaryItems = [];
+      // Their uploads (sealed copies) go too; deletions waiting to go out stay (stubs, no content).
+      state.cloud.items.add = {};
     });
   },
 });
