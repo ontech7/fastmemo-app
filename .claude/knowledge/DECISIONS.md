@@ -541,3 +541,59 @@ behind an interface.
   free quota is 50k reads and 20k writes a day). Two devices, 100 edits each a day: ~1.5k reads + ~700 writes (3.2.0 polled:
   ~23k reads + ~600 writes, plus a full upload of every note on each connect/unlock). A full sync reads every note, category and
   tombstone.
+
+## ADR-017: A Self-Hosted FastMemo Server as a Second `CloudBackend`
+
+**Status:** Accepted (2026-10-20), implemented on `feat/self-hosted-server` (app) and in the `fastmemo-server` repo  
+**Context:** Firebase asks for a Google account and a project, and its free quota shapes the whole sync design (ADR-016). Users
+who want their notes at home (PC, NAS, Raspberry Pi, VPS) had no option. ADR-016 put the cloud behind `CloudBackend` for this.  
+**Decision:**
+
+- **A separate repo, `fastmemo-server`:** Node >= 22.18 running the TypeScript sources directly (type stripping, no build),
+  `node:http` without a framework, SQLite through `node:sqlite` by default (no native module to compile on a Pi), PostgreSQL
+  through `pg` optionally. One Docker image (node:24-alpine, unprivileged, `/data` volume) and compose files for home, Postgres,
+  Caddy (HTTPS) and Coolify, with a README for non-developers. The API is `/v1` (`docs/PROTOCOL.md` there, `PROTOCOL = 1`): the
+  app refuses a server that isn't `server: "fastmemo-server"` with protocol 1.
+- **A change feed, not fan-out queues:** one row per note/category with its latest state; every write takes the next sequence
+  number; each device has a cursor. A device reads what others wrote after its cursor in pages (<= 500 items, ~2 MB), applies
+  them and acks the page's last seq. Nothing accumulates per sender: no queue budget, no overflow (`fullSyncDue` stays for
+  restores and the dashboard). The engine gets each page as one sender's `ChangeSet` (`ServerBackend.deliver`).
+- **The same merge guard as Firebase:** an upload is applied only over an older live version than its base (never the same
+  revision), a delete only over versions up to its revision, detaches unguarded; refused versions come back to be merged
+  (conflict copies). `scripts/sync-server.test.mjs` runs the adapter and the real engine against a real server (contract,
+  offline, conflicts, multi-page catch-up, restart, removal, stale vault, the server's pacing).
+- **Devices enroll with the access key, then use their own token:** the server keeps only its SHA-256, so removing a device
+  revokes it at once (Firebase can't). The token lives in secure storage under `serverToken_<scope>`, written before it's used
+  (a token the next launch can't find makes the device look removed). What the app reads while connecting (vault, notes,
+  devices) takes the key or a token ("member" routes). Wrong keys are rate-limited per address (20 / 15 min).
+- **Long polling, not WebSockets:** `GET /v1/sync?v=&wait=25` answers when anything devices see changes (or after 25 s) with the
+  devices, the next feed page and the vault: plain HTTP through any proxy, no dependency on either side. A page the device
+  already has comes back as `{ same: true }`; page ids include the server's boot id, so a restored backup (which rewinds the seq
+  counter) can't make an old id match new content.
+- **`CloudRouter`:** `cloud` sends every call to the backend `providerOf(settings)` names (`provider` is new in `CloudSettings`;
+  missing = `firebase`, so existing installs are unchanged). `cloudScope(settings)` (the Firebase project id, or
+  `server:<normalized url>`) keys what belongs to one cloud: the cached DEK, the server token. Backends declare `deviceLimit`
+  (Firebase: 3, from config; the server: its `MAX_DEVICES`, from `/v1/info` and `/v1/devices`) and may set the engine's `pacing`
+  (the server: pushes >= 500 ms apart, ack after 1 s quiet, at most 5 s: no quota to save).
+- **An ops dashboard on the server:** devices (last sync, last request, open note, how far behind), reads/writes/deletes per day
+  over 30 days counted as Firestore bills them, warnings and errors, full sync per device or for all, removal, one-click SQLite
+  backup. Served by the server under a strict CSP, opened with an admin key.
+
+**Trade-offs:**
+
+- **Phones and the hosted web app need HTTPS:** Android release builds refuse cleartext HTTP (no `usesCleartextTraffic`), and an
+  `https://` page can't call an `http://` server. Plain HTTP is for a test on the same computer; the README offers Tailscale
+  Serve (no domain, nothing exposed), Coolify or Caddy. The connect screen warns on `http://`.
+- **The access key is a shared secret** with the reach of Firebase credentials: whoever has it can enroll a device (up to the
+  limit), read the encrypted notes, remove devices or wipe the cloud (vault reset). Notes stay unreadable without the encryption
+  password; titles are plaintext, as on Firebase.
+- **A restored backup needs a full sync on every device** (a dashboard button): devices push only their outbox, so what changed
+  after the backup comes back only when each compares everything.
+- **One process:** a single writer (SQLite behind a mutex, or a Postgres advisory lock), long polls held in memory. Plenty for a
+  person or a family; not a multi-tenant service.
+- Revisions still come from device clocks (ADR-016).
+
+**Verified** (2026-10-20, the Docker image, two browser devices through the app's screens): an edit reached the other device in
+0.6 s, into its open editor too; an offline edit and a concurrent online one ended as the same conflict copy on both; a delete
+showed "moved to the trash" in the other's open editor at once; presence; removal from the dashboard disconnected the device and
+kept its notes; a change made while the server was down went through 12 s after it came back.

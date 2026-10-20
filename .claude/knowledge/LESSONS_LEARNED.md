@@ -1271,6 +1271,51 @@ fails when it's removed isn't tested.
 
 ---
 
+### LL-048: Firebase was assumed outside the backend: a config limit and "not Google"
+
+**Date:** 2026-10-20  
+**Severity:** Low  
+**Category:** Architecture  
+**What happened:** With a FastMemo server allowing 10 devices, the devices screen said "2/3": it read Firebase's limit from
+`configs.cloud.deviceLimit`. After a restart it would have shown the default even once fixed, because the server backend learned
+its limit only in the connect handshake. The vault setup, the cloud screen, the intro and the help told server users that "not
+Google" could read their notes and that their data lived "in your Firebase".
+
+**Root cause:** Code and copy written when Firebase was the only cloud; the backend split (ADR-016) moved the I/O, not the
+assumptions around it.
+
+**Fix:** The screen asks `cloud.deviceLimit`; `GET /v1/devices` carries `maxDevices` and the server backend takes it; the texts
+name both clouds or neither, in all 7 languages. Found by the two-device E2E through the app's screens, not by the adapter
+tests.  
+**Rule:** Above `CloudBackend`, nothing names a provider: per-cloud values come from `cloud`, per-cloud data is keyed by
+`cloudScope`, texts stay neutral (CONVENTIONS #34).
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/self-hosted-server`
+
+---
+
+### LL-049: A restored backup could have made the server tell a device "nothing new" over new changes
+
+**Date:** 2026-10-20  
+**Severity:** Medium  
+**Category:** Bug  
+**What happened:** Writing the README's restore steps showed that the feed's page id (`cursor.lastSeq.count`) can repeat with
+other content once a backup is restored: the seq counter goes back, other devices write again, and the same range gets the same
+id. A device still holding the old page would have sent its id and been answered `{ same: true }`, skipping the new changes
+until something else changed.
+
+**Root cause:** The id is unique only while the counter only grows, which a restore breaks.
+
+**Fix:** Page ids start with the server's boot id (a restore needs a restart), so a page from before never matches; a test
+restarts a server on the same database and checks it. Each device gets its page in full once after a restart.  
+**Rule:** An id a client caches across server restarts must not be derived from counters a restore rewinds alone.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** fastmemo-server
+`dev`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

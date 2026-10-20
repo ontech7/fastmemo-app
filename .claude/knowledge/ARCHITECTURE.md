@@ -110,10 +110,14 @@ src/
     storage/           # Platform-split: native (fsStorage: atomic tmp+rename writes) / web (localforage/IndexedDB)
                        #   + legacyRootNotes.ts: one-shot fold of the notes copy out of `persist:root`
     flushOnExit.ts     # Platform-split: flush pending editor batches + persistor on background / hide / window close
-    cloud/             # Cloud sync (ADR-016)
-      types.ts         # CloudBackend contract (devices, vault, data, push, listeners, ack, presence)
+    cloud/             # Cloud sync (ADR-016, ADR-017)
+      types.ts         # CloudBackend contract (devices, vault, data, push, listeners, ack, presence, deviceLimit, pacing)
       firebaseBackend.ts # The Firestore implementation: the ONLY importer of firebase/*
-      index.ts         # Active backend (`cloud`), isCloudConnected / only_if_cloudConnected, device uuid
+      serverBackend.ts # The fastmemo-server implementation (/v1 over fetch: feed, long poll, device token)
+      router.ts        # CloudRouter: forwards every call to the backend the settings' `provider` names
+      scope.ts         # providerOf, cloudScope (what keys the DEK cache and the token), normalizeServerUrl, isPlainHttp
+      vaultRead.ts     # toVaultRead(): the vault doc check both backends share
+      index.ts         # `cloud` (the router over both backends), isCloudConnected / only_if_cloudConnected, device uuid
       revision.ts      # noteRev / nextRev / touchNote / baseOf, deletion stubs, tombstone pruning (pure)
       merge.ts         # Merge rules: planner for incoming versions, full-sync reconcile, categories (pure)
       syncEngine.ts    # Listeners -> merge -> persist -> debounced ack; throttled pushes with backoff; poll; presence
@@ -256,6 +260,22 @@ full sync (connect/unlock/"sync now"/fullSyncDue) -> pull queues -> reconcile(fe
   -> clearFullSyncDue -> push; due again until it completes
 every 5 min / resume -> reconnect the transport (if idle or stuck > 60 s) -> pullDevices
 presence: editor open -> setPresence(noteId) (debounced, 5 min heartbeat) -> others: useNoteOpenElsewhere
+```
+
+### Self-Hosted Server Backend (ADR-017)
+
+```
+cloud (CloudRouter) -> providerOf(settings): "firebase" (default, also for settings saved before) | "server"
+ServerBackend -> fastmemo-server /v1 (repo ../fastmemo-server, docs/PROTOCOL.md)
+  connect: verify = GET /v1/info with the key (server + protocol 1, maxDevices) -> vault, notes, devices with the key
+           -> once unlocked: POST /v1/devices -> token -> secure storage serverToken_<cloudScope> -> Bearer from now on
+  live:    pollLoop: GET /v1/sync?v=<version>&wait=25&p=<page> -> devices + vault listeners;
+           feed page -> deliver as one ChangeSet -> engine merge -> POST /v1/ack { token: last seq }
+           error -> backoff 1 s .. 30 s; 401 device_unknown -> empty device list -> engine onRemoved
+  push:    POST /v1/push (<= 4 MB / 500 entries per request; 413 -> halve, a single entry -> rejected)
+  pacing:  push >= 500 ms apart, ack after 1 s quiet (<= 5 s)
+server:   items (kind, key, state live|deleted|detached, rev, seq, author, data) + devices (token_hash, cursor)
+          + vault + stats (per day) + events; dashboard at / (admin key)
 ```
 
 ### Persistence Architecture
@@ -430,6 +450,8 @@ providers/SyncOnProvider --> libs/cloud/sync (engine lifecycle + events) + libs/
 libs/cloud/sync --> slicers/store (store, persistor) + slices (plan/push actions) + libs/registry (flushPending)
 libs/cloud/syncEngine, merge, revision --> no app imports (pure; tested by scripts/sync.test.mjs)
 libs/cloud/firebaseBackend --> firebase/* (the only place; tested by scripts/sync-firestore.test.mjs)
+libs/cloud/serverBackend --> fetch + libs/secureStore (token) (tested by scripts/sync-server.test.mjs, real server)
+libs/cloud/router, scope --> settings only (which backend, which scope)
 ```
 
 ## Approximate Scale
@@ -438,10 +460,10 @@ libs/cloud/firebaseBackend --> firebase/* (the only place; tested by scripts/syn
 | --------------------------- | ---------------- |
 | Screens (routes)            | 32               |
 | Components (.tsx)           | ~98              |
-| Redux reducers              | 48 (27 + 9 + 12) |
+| Redux reducers              | 52 (29 + 9 + 14) |
 | Custom hooks                | 8                |
 | Utility files               | 12               |
 | i18n locales                | 7                |
-| Translation keys            | ~670 per locale  |
+| Translation keys            | ~740 per locale  |
 | TypeScript type definitions | 7 files          |
 | Platform-split file pairs   | ~10              |

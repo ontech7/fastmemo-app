@@ -2,6 +2,10 @@
 
 This guide explains how to self-host FastMemo as a web application.
 
+> Looking for a server to **sync your notes** on, instead of Google Firebase? That's
+> [fastmemo-server](https://github.com/ontech7/fastmemo-server) (see [Cloud Sync](CLOUD_SYNC.md#with-a-fastmemo-server)). This
+> page is about serving the app itself.
+
 ## Prerequisites
 
 - **Node.js** (v18 or higher)
@@ -214,13 +218,17 @@ Once deployed, users can set up cloud sync directly in the app:
 
 1. Open Settings in FastMemo
 2. Navigate to "Cloud" section
-3. Enter Firebase credentials:
+3. Choose **Google Firebase** and enter its credentials:
    - **API Key**: Found in Firebase Console > Project Settings
    - **Project ID**: Your Firebase project ID
    - **App ID**: Your Firebase web app ID
-4. Click "Connect" to establish synchronization
 
-Each user provides their own Firebase credentials, making the app fully decentralized.
+   or choose **FastMemo Server** and enter its address and access key.
+
+4. Click "Save settings" to establish synchronization
+
+Each user brings their own Firebase project or server, making the app fully decentralized. A web app served over HTTPS can only
+reach an `https://` server.
 
 ## 8. Environment Variables for Hosting Platforms
 
