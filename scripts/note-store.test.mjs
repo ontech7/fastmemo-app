@@ -461,8 +461,8 @@ const legacyState = (count = 30) => ({
     marker?.notes.length === 31 && marker.notes.some(([id, rev]) => id === "old3" && rev === 1003)
   );
   ok(
-    "...written before the state value",
-    disk.log.findIndex((l) => l.includes("migrated.json")) < disk.log.findIndex((l) => l.includes("state.json"))
+    "...written after the state value",
+    disk.log.findIndex((l) => l.includes("migrated.json")) > disk.log.findIndex((l) => l.includes("state.json"))
   );
 
   await app.dispatch(N.addNote(note("new", 5000)));
@@ -474,20 +474,43 @@ const legacyState = (count = 30) => ({
   ok("...without touching the old value", relaunched.reports.length === 0 && disk.files.get(LEGACY).text === before);
 }
 {
-  // The first write stopped after some notes.
+  // The first write stopped at any point (a file cut in half included), with deletions waiting to go out.
   const disk = new Disk();
-  const legacy = legacyState(10);
+  const base = legacyState(10);
+  const legacy = {
+    ...base,
+    cloud: { items: { ...base.cloud.items, delete: { zap: { id: "zap", rev: 3 } }, detach: { cut: { id: "cut", rev: 4 } } } },
+  };
   disk.files.set(LEGACY, { text: legacyText(legacy), mtime: disk.clock++ });
   const snapshots = [];
-  disk.onStep = (when) => {
-    if (when === "after") snapshots.push(disk.copy());
+  disk.onStep = (when, path, text) => {
+    snapshots.push(when === "partial" ? disk.cutShort(path, text) : disk.copy());
   };
   await launch(disk);
   disk.onStep = null;
+  let queuesKept = true;
+  let completed = true;
+  for (const snapshot of snapshots) {
+    const relaunched = snapshot.copy();
+    const app = await launch(relaunched);
+    const queues = app.notes().cloud?.items ?? {};
+    if (!("zap" in (queues.delete ?? {})) || !("cut" in (queues.detach ?? {}))) queuesKept = false;
+    if (!relaunched.files.has(`${FOLDER}/migrated.json`) || !relaunched.files.has(`${FOLDER}/state.json`)) completed = false;
+  }
+  ok(`...its deletions and detaches waiting still go out, at all ${snapshots.length} points`, queuesKept);
+  ok("...and the migration completes (state value and marker stored)", completed);
   const cut = snapshots.filter((s) => !s.files.has(`${FOLDER}/state.json`) && s.entryFiles().length > 2);
   let allBack = cut.length > 0;
   let outboxKept = true;
   for (const snapshot of cut) {
+    // Without a state value to go by (its spare can be complete: then it's read, in order), the notes are re-sorted.
+    const spare = snapshot.files.get(`${FOLDER}/state.json.tmp`)?.text;
+    let headless = spare === undefined;
+    try {
+      if (spare !== undefined) JSON.parse(spare);
+    } catch {
+      headless = true;
+    }
     const app = await launch(snapshot);
     const { _persist, ...expected } = legacy;
     const v = view(app.notes());
@@ -496,8 +519,6 @@ const legacyState = (count = 30) => ({
       console.error("      lost notes after a first write cut short:", v);
     }
     if (!v.outbox.includes("old1")) outboxKept = false;
-    // Without a state value to go by (its spare can be complete: then it's read, in order), the notes are re-sorted.
-    const headless = !snapshot.files.has(`${FOLDER}/state.json.tmp`);
     if ((headless && !app.sortNeeded) || app.notes().filters?.sortBy !== "createdAt") allBack = false;
   }
   ok(`a first write cut short (${cut.length} points): every note back, settings from the old value, in order`, allBack);
@@ -573,9 +594,11 @@ const legacyState = (count = 30) => ({
 {
   const disk = new Disk();
   disk.files.set(LEGACY, { text: legacyText(legacyState(3)), mtime: disk.clock++ });
+  disk.files.set(ROOT_BACKUP, { text: "[]", mtime: disk.clock++ });
   await launch(disk);
   const head = disk.head();
   ok("the state value records when the notes were migrated", typeof head.migratedAt === "number");
+  disk.files.set(`${FOLDER}/n_3Aold0.json.corrupt-9`, { text: "{", mtime: disk.clock++ });
 
   const fresh = await launch(disk.copy());
   ok("within 14 days the old value stays", fresh.reports.length === 0 && disk.files.has(LEGACY));
@@ -583,12 +606,71 @@ const legacyState = (count = 30) => ({
   disk.files.get(`${FOLDER}/state.json`).text = JSON.stringify({ ...head, migratedAt: Date.now() - 15 * 86400000 });
   const late = await launch(disk);
   ok(
-    "after 14 days it's removed (and its spare), and the state value says so",
-    !disk.files.has(LEGACY) && disk.head().migratedAt === undefined && same(late.notes().items.length, 3)
+    "after 14 days it's removed, with the other copies (backup, values set aside), and the state value says so",
+    !disk.files.has(LEGACY) &&
+      !disk.files.has(ROOT_BACKUP) &&
+      ![...disk.files.keys()].some((p) => p.includes(".corrupt-")) &&
+      disk.head().migratedAt === undefined &&
+      late.notes().items.length === 3
   );
   disk.log = [];
   const next = await launch(disk.copy());
-  ok("...once", next.reports.length === 0 && next.notes().items.length === 3);
+  ok("...once", next.reports.length === 0 && next.notes().items.length === 3 && disk.log.length === 0);
+}
+{
+  // Back after 14 days from a rollback, with notes made in the older version: the launch folds them in and expires the
+  // old value. Wherever it stops, they're stored or still in the old value.
+  const disk = new Disk();
+  const legacy = legacyState(3);
+  disk.files.set(LEGACY, { text: legacyText(legacy), mtime: disk.clock++ });
+  await launch(disk);
+  disk.files.get(`${FOLDER}/state.json`).text = JSON.stringify({ ...disk.head(), migratedAt: Date.now() - 15 * 86400000 });
+  disk.files.set(LEGACY, {
+    text: legacyText({ ...legacy, items: [...legacy.items, note("madeInOld", 9100)] }),
+    mtime: disk.clock++,
+  });
+  const snapshots = [];
+  disk.onStep = (when, path, text) => {
+    snapshots.push(when === "partial" ? disk.cutShort(path, text) : disk.copy());
+  };
+  const back = await launch(disk);
+  disk.onStep = null;
+  let kept = true;
+  for (const snapshot of snapshots) {
+    if (!(await launch(snapshot)).notes().items.some((n) => n.id === "madeInOld")) kept = false;
+  }
+  ok(
+    `expiring the old value in the launch that folds it: its notes kept at all ${snapshots.length} points`,
+    kept && back.notes().items.some((n) => n.id === "madeInOld") && !disk.files.has(LEGACY)
+  );
+}
+{
+  // The marker lost, or cut in half: made again from the old value (unchanged since the migration).
+  for (const [label, damage] of [
+    ["lost", (d) => d.files.delete(`${FOLDER}/migrated.json`)],
+    [
+      "cut in half",
+      (d) => (d.files.get(`${FOLDER}/migrated.json`).text = d.files.get(`${FOLDER}/migrated.json`).text.slice(0, 40)),
+    ],
+    [
+      "only a half-written spare",
+      (d) => {
+        d.files.set(`${FOLDER}/migrated.json.tmp`, {
+          text: d.files.get(`${FOLDER}/migrated.json`).text.slice(0, 40),
+          mtime: 1,
+        });
+        d.files.delete(`${FOLDER}/migrated.json`);
+      },
+    ],
+  ]) {
+    const disk = new Disk();
+    disk.files.set(LEGACY, { text: legacyText(legacyState(3)), mtime: disk.clock++ });
+    await launch(disk);
+    damage(disk);
+    await launch(disk);
+    const marker = JSON.parse(disk.files.get(`${FOLDER}/migrated.json`)?.text ?? "null");
+    ok(`a marker ${label}: made again`, marker?.notes?.length === 4 && !disk.files.has(`${FOLDER}/migrated.json.tmp`));
+  }
 }
 
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -958,23 +1040,33 @@ console.log("\nwrites");
   // A write that a newer one supersedes while it waits: its flush resolves only once that one is stored.
   const disk = new Disk();
   let failWrites = false;
+  let gate = Promise.resolve();
   const slow = (backend) => ({
     ...backend,
     write: async (name, value) => {
-      await sleep(15);
+      await gate;
+      await sleep(5);
       if (failWrites && name === "state") throw new Error("disk full");
       return backend.write(name, value);
     },
   });
+  /** Holds every write until `open()`. */
+  const hold = () => {
+    let open;
+    gate = new Promise((resolve) => (open = resolve));
+    return open;
+  };
   const app = await launch(disk, { wrap: slow });
   for (let i = 0; i < 3; i++) await app.dispatch(N.addNote(note(`s${i}`, 10 + i)));
   point(disk);
+  let open = hold();
   app.store.dispatch(N.addNote({ ...app.notes().items[0], text: "w0" }));
-  await sleep(5); // the edit's write starts
+  await sleep(10); // the edit's write starts, and waits
   app.store.dispatch(N.addNote(note("applied", 99)));
   const flush = app.persistor.flush(); // the sync engine's flush after applying a change
   app.store.dispatch(N.addNote({ ...app.notes().items[1], text: "b" }));
-  await sleep(1); // and another change: its write supersedes the flushed one
+  await sleep(10); // and another change: its write supersedes the flushed one
+  open();
   await flush;
   ok(
     "a superseded write's flush waits for the write that superseded it",
@@ -982,12 +1074,14 @@ console.log("\nwrites");
   );
 
   failWrites = true;
+  open = hold();
   app.store.dispatch(N.addNote({ ...app.notes().items[0], text: "w1" }));
-  await sleep(5);
+  await sleep(10);
   app.store.dispatch(N.addNote(note("applied2", 98)));
   const failing = app.persistor.flush();
   app.store.dispatch(N.addNote({ ...app.notes().items[1], text: "c" }));
-  await sleep(1);
+  await sleep(10);
+  open();
   await failing;
   ok("...and fails with it (the app knows the notes aren't stored)", app.writeFailed);
   failWrites = false;
@@ -1013,6 +1107,26 @@ console.log("\nwrites");
   });
   const app = await launch(disk, { wrap: counting });
   ok(`a bulk write runs a few writes at a time (at most ${most})`, most > 1 && most <= 8 && app.notes().items.length === 200);
+
+  let reading = 0;
+  let mostReads = 0;
+  const countingReads = (backend) => ({
+    ...backend,
+    read: async (name) => {
+      reading++;
+      mostReads = Math.max(mostReads, reading);
+      try {
+        return await backend.read(name);
+      } finally {
+        reading--;
+      }
+    },
+  });
+  const relaunched = await launch(disk.copy(), { wrap: countingReads });
+  ok(
+    `a launch reads more at a time (at most ${mostReads})`,
+    mostReads > 8 && mostReads <= 32 && relaunched.notes().items.length === 200
+  );
 }
 
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -1090,6 +1204,63 @@ console.log("\nweb");
     tab2.reports.length === 0 && tab2.notes().items.length + tab2.notes().temporaryItems.length === 20,
     tab2.reports
   );
+}
+
+{
+  // Tab A's save fails before its state value; tab C opens (and cleans up what nothing lists); A saves again.
+  const idb = new Idb();
+  let failState = false;
+  const flaky = (backend) => ({
+    ...backend,
+    write: async (name, value) => {
+      if (failState && name === "state") throw new Error("quota exceeded");
+      return backend.write(name, value);
+    },
+  });
+  const tabA = await launch(idb, { wrap: flaky });
+  await tabA.dispatch(N.addNote(note("first", 10)));
+  failState = true;
+  await tabA.dispatch(N.addNote(note("NEW", 20)));
+  failState = false;
+  ok("(set-up: the save failed)", tabA.writeFailed);
+  await launch(idb);
+  await tabA.dispatch(N.addNote(note("NEW2", 30)));
+  const next = await launch(idb.copy());
+  ok(
+    "a failed save, another tab's cleanup, a save again: nothing lost",
+    ["first", "NEW", "NEW2"].every((id) => next.notes().items.some((n) => n.id === id)) && next.reports.length === 0,
+    { got: ids(next.notes()), reports: next.reports }
+  );
+}
+{
+  // A tab with nothing of its own to save doesn't put its older view over another tab's save.
+  const idb = new Idb();
+  const tabA = await launch(idb);
+  const tabB = await launch(idb);
+  await tabB.dispatch(N.addNote(note("fromB", 10)));
+  point(idb);
+  await tabA.noteStore.setItem("root_notes", tabA.store.getState().notes);
+  const next = await launch(idb.copy());
+  ok(
+    "a stale tab with no change of its own writes nothing",
+    next.notes().items.some((n) => n.id === "fromB"),
+    ids(next.notes())
+  );
+}
+{
+  // An older tab still open across a deploy keeps saving the old value: its notes come in on the next launch.
+  const idb = new Idb();
+  const legacy = legacyState(3);
+  idb.map.set("persist:root_notes", legacyText(legacy));
+  await launch(idb);
+  idb.map.set("persist:root_notes", legacyText({ ...legacy, items: [...legacy.items, note("fromOldTab", 9000)] }));
+  const next = await launch(idb);
+  ok(
+    "an older tab's later saves are folded in on the web",
+    next.notes().items.some((n) => n.id === "fromOldTab") && next.sortNeeded
+  );
+  const again = await launch(idb.copy());
+  ok("...once", !again.sortNeeded && same(again.notes(), next.notes()));
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

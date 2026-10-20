@@ -1,4 +1,5 @@
 import FSStorage from "@/libs/storage/fsStorage";
+import { hashText } from "@/utils/hash";
 
 import type { NoteStoreBackend } from "./noteStore";
 
@@ -48,11 +49,11 @@ export const createNoteStoreBackend = (): NoteStoreBackend => ({
 
   readLegacy: async () => asText(await storage().getItem(LEGACY_KEY)),
 
-  // IndexedDB can't tell when a value changed without reading it: the legacy notes are read only to migrate.
-  legacyStamp: () => null,
-
-  removeLegacy: async () => {
-    await storage().removeItem(LEGACY_KEY);
+  // IndexedDB can't tell when a value changed without reading it: read in full (only while it's kept), it can be an
+  // older tab still open across a deploy that rewrote it.
+  legacyStamp: async () => {
+    const raw = asText(await storage().getItem(LEGACY_KEY));
+    return raw === undefined ? null : `${raw.length}:${hashText(raw)}`;
   },
 
   removeCopies: async () => {

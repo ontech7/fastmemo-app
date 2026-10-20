@@ -1,3 +1,4 @@
+import { hashText } from "@/utils/hash";
 import * as FileSystem from "expo-file-system/legacy";
 
 import type { NoteStoreBackend } from "./noteStore";
@@ -50,22 +51,8 @@ const unescape = (escaped: string) => {
   }
 };
 
-/** cyrb53: a 53-bit hash, for the names that can't be file names. */
-const hash = (text: string) => {
-  let h1 = 0xdeadbeef;
-  let h2 = 0x41c6ce57;
-  for (let i = 0; i < text.length; i++) {
-    const code = text.charCodeAt(i);
-    h1 = Math.imul(h1 ^ code, 2654435761);
-    h2 = Math.imul(h2 ^ code, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
-};
-
 /** The file name a value is stored under, without its suffix. */
-const baseOf = (name: string) => escape(name) ?? `${HASHED}${hash(name)}`;
+const baseOf = (name: string) => escape(name) ?? `${HASHED}${hashText(name)}`;
 
 /** The value a hashed file holds for `name` (after its first line, which must be that name). */
 const unwrap = (name: string, text: string) => {
@@ -85,10 +72,6 @@ const isCompleteJson = (value: string) => {
 
 const readIfExists = async (uri: string) =>
   (await FileSystem.getInfoAsync(uri)).exists ? await FileSystem.readAsStringAsync(uri) : undefined;
-
-const removeLegacy = async () => {
-  for (const uri of [LEGACY, `${LEGACY}.tmp`]) await FileSystem.deleteAsync(uri, { idempotent: true });
-};
 
 export const createNoteStoreBackend = (): NoteStoreBackend => {
   let listing: Promise<Set<string>> | undefined;
@@ -123,10 +106,8 @@ export const createNoteStoreBackend = (): NoteStoreBackend => {
 
   return {
     read: async (name) => {
-      const present = await files();
-      const base = baseOf(name);
-      for (const file of [base + SUFFIX, base + SPARE]) if (present.has(file)) return readFile(name, file);
-      return undefined;
+      const file = baseOf(name) + SUFFIX;
+      return (await files()).has(file) ? readFile(name, file) : undefined;
     },
 
     spare: async (name) => {
@@ -199,11 +180,10 @@ export const createNoteStoreBackend = (): NoteStoreBackend => {
       return info.exists ? `${info.size}:${info.modificationTime}` : null;
     },
 
-    removeLegacy,
-
     removeCopies: async () => {
-      await removeLegacy();
-      for (const uri of [ROOT_BACKUP, `${ROOT_BACKUP}.tmp`]) await FileSystem.deleteAsync(uri, { idempotent: true });
+      for (const uri of [LEGACY, `${LEGACY}.tmp`, ROOT_BACKUP, `${ROOT_BACKUP}.tmp`]) {
+        await FileSystem.deleteAsync(uri, { idempotent: true });
+      }
       const present = await files();
       for (const file of [...present]) {
         if (!file.includes(ASIDE)) continue;

@@ -17,20 +17,23 @@ import type { Note, NotesState } from "@/types";
  *   value) fails the whole read: the notes are then not written that session (LL-039). So does a state value in a
  *   format this version doesn't know (written by a newer one).
  * - Migration: with no state value, no entries and no marker, the notes come from the previous single value
- *   (redux-persist's layout). The first write stores them here, then the marker (the notes it took, with their
- *   revisions), then the state value. The single value is kept for a rollback (an older version reads it), removed
- *   after KEEP_LEGACY_MS or when the data is wiped. Where the backend can tell an older version rewrote it, its notes
+ *   (redux-persist's layout). The first write stores them here, then the state value, then the marker: the legacy notes
+ *   the store has taken into account, with their revisions (made again from the legacy value if it's lost). The single
+ *   value is kept for a rollback (an older version, or an older tab, reads and writes it). When it changes, its notes
  *   are folded in: newer versions of notes in the same list replace them, and a missing note comes back only if the
- *   marker doesn't hold it at that revision (deleted here since: it stays deleted). A lost state value is rebuilt from
- *   the entries, folded the same way.
- * - Where other writers can share the storage (browser tabs), reads and writes run one at a time across them, and a
- *   write that finds a state value it didn't write rewrites every entry that value doesn't list.
+ *   marker doesn't hold it at that revision (deleted here since: it stays deleted); the marker then takes them in. A
+ *   lost state value is rebuilt from the entries, folded the same way. After KEEP_LEGACY_MS the single value and the
+ *   other copies (backups, values set aside) are removed, after a write stored what was folded; "Wipe data" removes
+ *   them at once.
+ * - Where other writers can share the storage (browser tabs), reads and writes run one at a time across them. A write
+ *   that finds a state value it didn't write rewrites every entry that value doesn't list, or, with nothing of its own
+ *   to store, doesn't write at all (it would put an older view back).
  */
 
 type MaybePromise<T> = T | Promise<T>;
 
 export interface NoteStoreBackend {
-  /** The value, or the spare an interrupted write left in its place; `undefined` if there's neither. Throws if it can't be read. */
+  /** The value; `undefined` if there's none. Throws if it can't be read. */
   read(name: string): MaybePromise<string | undefined>;
   /** The spare an interrupted write left (only where a write isn't atomic). */
   spare(name: string): MaybePromise<string | undefined>;
@@ -46,8 +49,6 @@ export interface NoteStoreBackend {
   readLegacy(): MaybePromise<string | undefined>;
   /** Changes when that value is rewritten; `null` where it can't be told cheaply (then it's read only to migrate). */
   legacyStamp(): MaybePromise<string | null>;
-  /** Removes that value. */
-  removeLegacy(): MaybePromise<void>;
   /** Removes every copy of the notes kept outside the store: that value, older backups, the values set aside. */
   removeCopies(): MaybePromise<void>;
   /** Runs `task` while no other writer of the same storage runs one (browser tabs); absent where there's one writer. */
@@ -69,8 +70,10 @@ const MIGRATED = "migrated";
 const FORMAT = 1;
 /** How long the legacy value is kept after the migration, for a rollback. */
 const KEEP_LEGACY_MS = 14 * 24 * 60 * 60 * 1000;
-/** Values read or written at a time. */
-const CONCURRENCY = 8;
+/** Values read at a time (on a Pixel 10 Pro, 400 notes: 70 ms at 32, 125 ms at 8, 0.8-1 s one by one). */
+const READS = 32;
+/** Values written at a time. */
+const WRITES = 8;
 
 const LISTS = [
   ["items", "n"],
@@ -131,8 +134,8 @@ const notesOf = (state: PersistedNotes | undefined, key: (typeof LISTS)[number][
 const hasUnsyncedChange = (note: Note | undefined) =>
   note !== undefined && !note.local && !(note.syncedRev !== undefined && note.syncedRev >= noteRev(note));
 
-/** `task` over `items`, a few at a time, results in order. After a failure nothing new starts, and it rejects with it. */
-const mapLimited = async <T, R>(items: readonly T[], task: (item: T) => MaybePromise<R>): Promise<R[]> => {
+/** `task` over `items`, `limit` at a time, results in order. After a failure nothing new starts, and it rejects with it. */
+const mapLimited = async <T, R>(items: readonly T[], limit: number, task: (item: T) => MaybePromise<R>): Promise<R[]> => {
   const results = new Array<R>(items.length);
   let next = 0;
   let failure: { error: unknown } | undefined;
@@ -146,7 +149,7 @@ const mapLimited = async <T, R>(items: readonly T[], task: (item: T) => MaybePro
       }
     }
   };
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, items.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   if (failure) throw failure.error;
   return results;
 };
@@ -200,9 +203,9 @@ const listedBy = (raw: string | undefined): Set<string> | null => {
   return new Set([...head.items, ...head.temporaryItems, ...head.outbox.map(outboxName)]);
 };
 
-/** The notes the migration takes, with their revisions (the highest, for an id stored twice). */
-const takenFrom = (legacy: PersistedNotes | undefined): [string, number][] => {
-  const revs = new Map<string, number>();
+/** The legacy notes taken into account: those of `taken`, and the legacy value's (the highest revision of an id). */
+const takenFrom = (legacy: PersistedNotes | undefined, taken?: Map<string, number>): [string, number][] => {
+  const revs = new Map(taken);
   for (const [key] of LISTS) {
     for (const note of notesOf(legacy, key)) revs.set(note.id, Math.max(noteRev(note), revs.get(note.id) ?? -Infinity));
   }
@@ -249,8 +252,10 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
   let legacyStamp: string | null = null;
   /** When the notes were migrated, while the legacy value is kept (recorded in the state value). */
   let migratedAt: number | undefined;
-  /** The marker the migration's first write stores, after the entries and before the state value. */
+  /** A marker to store, after the next state value. */
   let pendingMarker: Marker | undefined;
+  /** The rollback window is over: the next write removes the notes' other copies, once its state value is stored. */
+  let expiring = false;
 
   let queue: Promise<unknown> = Promise.resolve();
   let latestWrite = 0;
@@ -282,31 +287,38 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
       }
     }));
 
-  /** Reads and parses a value, falling back to its spare; `undefined` if neither is readable. */
-  const readValue = async (name: string): Promise<{ value: unknown } | undefined> => {
+  /**
+   * Reads and parses a value, falling back to its spare (`spare`: the value came from it, and is to be written again, into
+   * place); `undefined` if neither is readable.
+   */
+  const readValue = async (name: string): Promise<{ value: unknown; spare: boolean } | undefined> => {
     const raw = await backend.read(name);
     if (raw !== undefined) {
       const parsed = parse(raw);
-      if (parsed.ok) return { value: parsed.value };
+      if (parsed.ok) return { value: parsed.value, spare: false };
     }
     const spare = await backend.spare(name);
     if (spare !== undefined) {
       const parsed = parse(spare);
-      if (parsed.ok) return { value: parsed.value };
+      if (parsed.ok) return { value: parsed.value, spare: true };
     }
     if (raw !== undefined) await backend.setAside(name);
     return undefined;
   };
 
-  /** The migration's marker: `null` if there's none (not migrated). An unreadable one has no `taken`. */
-  const readMarker = async (): Promise<{ taken?: Map<string, number>; at?: number } | null> => {
-    if ((await backend.read(MIGRATED)) === undefined) return null;
-    const marker = (await readValue(MIGRATED))?.value as Marker | undefined;
+  /**
+   * The migration's marker: `null` if there's none (not migrated). An unreadable one has no `taken`; `whole` is false for
+   * one to be written again (unreadable, or read from its spare).
+   */
+  const readMarker = async (): Promise<{ taken?: Map<string, number>; at?: number; whole: boolean } | null> => {
+    if ((await backend.read(MIGRATED)) === undefined && (await backend.spare(MIGRATED)) === undefined) return null;
+    const read = await readValue(MIGRATED);
+    const marker = read?.value as Marker | undefined;
     if (typeof marker?.at !== "number" || !Array.isArray(marker.notes)) {
       options.report("noteStore: the migration marker is unreadable");
-      return {};
+      return { whole: false };
     }
-    return { taken: new Map(marker.notes), at: marker.at };
+    return { taken: new Map(marker.notes), at: marker.at, whole: !read?.spare };
   };
 
   /** A note this store lost, from the legacy notes (any list): an older version beats none. */
@@ -350,6 +362,7 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
         legacyCache = undefined;
         migratedAt = Date.now();
         pendingMarker = { at: migratedAt, notes: takenFrom(legacy) };
+        expiring = false;
         return legacy;
       }
       options.report(
@@ -372,7 +385,8 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
     const entry = async (name: string): Promise<unknown> => {
       const value = await readValue(name);
       if (value !== undefined) {
-        written.set(name, value.value);
+        // From its spare: not marked as written, so the next write puts it in place.
+        if (!value.spare) written.set(name, value.value);
         return value.value;
       }
       recovered = true;
@@ -383,7 +397,7 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
     };
 
     const state: PersistedNotes = { ...head.rest };
-    const notes = await mapLimited([...head.items, ...head.temporaryItems], entry);
+    const notes = await mapLimited([...head.items, ...head.temporaryItems], READS, entry);
     state.items = notes.slice(0, head.items.length).filter(Boolean) as Note[];
     state.temporaryItems = notes.slice(head.items.length).filter(Boolean) as Note[];
 
@@ -396,10 +410,12 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
       state.cloud = { ...cloud, items: { ...cloud.items, add } };
     };
     const listedOutbox = rebuilt ? [] : head.outbox;
-    if (listedOutbox.length > 0 || state.cloud) setOutbox(listedOutbox, await mapLimited(listedOutbox.map(outboxName), entry));
+    if (listedOutbox.length > 0 || state.cloud) {
+      setOutbox(listedOutbox, await mapLimited(listedOutbox.map(outboxName), READS, entry));
+    }
 
     // What's stored now, before anything is taken back or folded in.
-    if (!recovered) writtenHead = encode(state, head.legacy, head.migratedAt).head;
+    if (!recovered && !stored?.spare) writtenHead = encode(state, head.legacy, head.migratedAt).head;
     legacyStamp = head.legacy;
     migratedAt = head.migratedAt;
 
@@ -411,7 +427,7 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
       .filter((name) => name.startsWith("o:") && !listed.has(name.slice(2)))
       .map((name) => name.slice(2))
       .filter((id) => hasUnsyncedChange(byId.get(id)));
-    if (unlisted.length > 0) setOutbox(unlisted, await mapLimited(unlisted.map(outboxName), entry));
+    if (unlisted.length > 0) setOutbox(unlisted, await mapLimited(unlisted.map(outboxName), READS, entry));
 
     if (rebuilt) {
       legacyStamp = await backend.legacyStamp();
@@ -435,20 +451,29 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
         }
         foldLegacy(state, legacy, found?.taken);
       }
-      if (found === null) {
-        // A migration cut short: it completes with this write.
-        migratedAt = Date.now();
-        pendingMarker = { at: migratedAt, notes: takenFrom(legacy) };
-      } else if (legacy) {
-        migratedAt = found.at ?? Date.now();
-      }
+      // No marker: a migration cut short (the marker comes after the first state value), completed with this write.
+      if (found === null) migratedAt = Date.now();
+      else if (legacy) migratedAt = found.at ?? Date.now();
+      if (legacy || found === null) pendingMarker = { at: migratedAt ?? Date.now(), notes: takenFrom(legacy, found?.taken) };
       options.onSortNeeded?.();
     } else {
       const stamp = await backend.legacyStamp();
-      if (stamp !== null && stamp !== head.legacy) {
+      const changed = stamp !== null && stamp !== head.legacy;
+      // While the legacy value is kept, a lost or unreadable marker (a crash before or while it was written) is made again
+      // from it: unchanged, it holds the notes the migration took.
+      const found = changed || migratedAt !== undefined ? await theMarker() : undefined;
+      if (changed) {
         legacyStamp = stamp;
         const legacy = await legacyNotes();
-        if (legacy && foldLegacy(state, legacy, (await theMarker())?.taken) > 0) options.onSortNeeded?.();
+        if (legacy) {
+          if (foldLegacy(state, legacy, found?.taken) > 0) options.onSortNeeded?.();
+          pendingMarker = { at: found?.at ?? migratedAt ?? Date.now(), notes: takenFrom(legacy, found?.taken) };
+        }
+      } else if (migratedAt !== undefined && !found?.taken) {
+        const legacy = await legacyNotes();
+        if (legacy) pendingMarker = { at: found?.at ?? migratedAt, notes: takenFrom(legacy) };
+      } else if (found?.taken && !found.whole) {
+        pendingMarker = { at: found.at ?? Date.now(), notes: [...found.taken] };
       }
     }
     legacyCache = undefined;
@@ -461,21 +486,16 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
     }
 
     if (!recovered) {
-      // Leftovers of a write cut short before its cleanup (every entry the state value lists was just read), and the
-      // legacy value once the rollback window is over.
+      // The rollback window is over: the other copies go with the next write (after it stored what was just folded).
+      expiring = migratedAt !== undefined && Date.now() - migratedAt > KEEP_LEGACY_MS;
+      // Leftovers of a write cut short before its cleanup (every entry the state value lists was just read).
       const leftovers = entryNames.filter((name) => !written.has(name));
-      const expired = migratedAt !== undefined && Date.now() - migratedAt > KEEP_LEGACY_MS;
-      if (leftovers.length > 0 || expired) {
+      if (leftovers.length > 0) {
         enqueue(() =>
           exclusive(async () => {
             // Another writer (tab) stored a state value since: what it lists isn't known here, its next launch cleans up.
             if (backend.exclusive && (await backend.read(STATE)) !== writtenHead) return;
-            await mapLimited(leftovers, (name) => backend.remove(name));
-            if (expired) {
-              await backend.removeLegacy();
-              legacyStamp = null;
-              migratedAt = undefined;
-            }
+            await mapLimited(leftovers, WRITES, (name) => backend.remove(name));
           })
         ).catch((error) => options.report("noteStore: cleanup failed", error));
       }
@@ -484,7 +504,22 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
   };
 
   const write = async (state: PersistedNotes) => {
+    try {
+      await writeState(state);
+    } catch (error) {
+      // What's stored is unknown now (and another tab may clean up what this write left unlisted): the next write
+      // checks the stored state value, as a foreign one.
+      writtenHead = undefined;
+      throw error;
+    }
+  };
+
+  const writeState = async (state: PersistedNotes) => {
     const { entries, head } = encode(state, legacyStamp, migratedAt);
+    const own =
+      head !== writtenHead ||
+      [...entries].some(([name, value]) => written.get(name) !== value) ||
+      [...written.keys()].some((name) => !entries.has(name));
 
     // Another writer stored a state value since (a tab with its own copy of the notes): an entry it doesn't list may
     // have been removed, whatever `written` says. Its own entries are left for the next launch to clean up.
@@ -495,6 +530,8 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
       foreign = stored !== writtenHead;
       if (foreign) listed = listedBy(stored);
     }
+    // With nothing of its own to store, a stale copy mustn't put its older view over the other writer's.
+    if (foreign && !own) return;
     const changed = ([name, value]: [string, unknown]) =>
       written.get(name) !== value || (foreign && (listed === null || !listed.has(name)));
     const store = async ([name, value]: [string, unknown]) => {
@@ -507,27 +544,40 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
     // changed note without it.
     await mapLimited(
       pending.filter(([name]) => name.startsWith("o:")),
+      WRITES,
       store
     );
     await mapLimited(
       pending.filter(([name]) => !name.startsWith("o:")),
+      WRITES,
       store
     );
-    if (pendingMarker) {
-      await backend.write(MIGRATED, JSON.stringify(pendingMarker));
-      pendingMarker = undefined;
-    }
     if (head !== writtenHead || foreign) {
       await backend.write(STATE, head);
       writtenHead = head;
     }
+    // After the state value: a marker means the migration finished (a rebuild then drops the legacy deletion queues).
+    if (pendingMarker) {
+      await backend.write(MIGRATED, JSON.stringify(pendingMarker));
+      pendingMarker = undefined;
+    }
     await mapLimited(
       [...written.keys()].filter((name) => !entries.has(name)),
+      WRITES,
       async (name) => {
         await backend.remove(name);
         written.delete(name);
       }
     );
+    if (expiring) {
+      await backend.removeCopies();
+      expiring = false;
+      legacyStamp = null;
+      migratedAt = undefined;
+      const after = encode(state, legacyStamp, migratedAt).head;
+      await backend.write(STATE, after);
+      writtenHead = after;
+    }
   };
 
   /** redux-persist's storage interface for the notes key, and the wipe's cleanup. */
@@ -559,6 +609,7 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
           // The marker stays: the notes were migrated, the legacy value mustn't come back as if they weren't.
           await mapLimited(
             (await backend.list()).filter((name) => name !== MIGRATED),
+            WRITES,
             (name) => backend.remove(name)
           );
           written.clear();
@@ -572,6 +623,7 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
           await backend.removeCopies();
           legacyStamp = null;
           migratedAt = undefined;
+          expiring = false;
         })
       ).catch((error) => options.report("noteStore: removing the notes' other copies failed", error)),
   };
