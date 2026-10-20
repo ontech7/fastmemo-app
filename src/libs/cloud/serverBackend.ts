@@ -36,6 +36,8 @@ const REQUEST_TIMEOUT_MS = 20_000;
 /** Reads of every note and pushes can carry megabytes. */
 const LONG_REQUEST_TIMEOUT_MS = 120_000;
 const HANDSHAKE_TIMEOUT_MS = 5000;
+/** Secure storage that doesn't answer counts as failed: the token is then unknown, and read again. */
+const STORAGE_TIMEOUT_MS = 10_000;
 /** How long the server holds a long poll (it answers sooner when something changes). */
 const POLL_WAIT_S = 25;
 const POLL_RETRY_MIN_MS = 1000;
@@ -109,6 +111,21 @@ interface TokenStorage {
 }
 
 const secureStorage: TokenStorage = { get: secureStoreGet, set: secureStoreSet, remove: secureStoreRemove };
+
+const timed = <T>(promise: Promise<T>): Promise<T> =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("secure storage didn't answer")), STORAGE_TIMEOUT_MS);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
 
 interface DeviceListener {
   onDevices: (snapshot: DevicesSnapshot) => void;
@@ -265,6 +282,17 @@ export class ServerBackend implements CloudBackend {
     }
   }
 
+  /** On a connection of its own (the access key alone): the one in use is left alone. */
+  async check(settings: CloudSettings): Promise<boolean> {
+    const probe = new ServerBackend({ fetch: this.fetchImpl, storage: this.storage, longTimeout: this.longTimeout });
+    probe.init(settings);
+    try {
+      return await probe.verify();
+    } finally {
+      await probe.dispose();
+    }
+  }
+
   async dispose(): Promise<boolean> {
     this.generation++;
     this.stopPoll();
@@ -326,9 +354,11 @@ export class ServerBackend implements CloudBackend {
   }
 
   async unregisterDevice(uuid: string): Promise<boolean> {
+    // As they were when asked: a connection re-initialised meanwhile has its own token.
+    const { generation, me, token } = this;
     try {
       await this.request("DELETE", `/v1/devices/${encodeURIComponent(uuid)}`, { auth: "member" });
-      if (uuid === this.me && this.token) this.dropToken(this.token);
+      if (uuid === me && token && generation === this.generation) this.dropToken(token);
       return true;
     } catch (e) {
       console.log("unregisterDevice:", e);
@@ -672,7 +702,7 @@ export class ServerBackend implements CloudBackend {
     if (!this.tokenLoading) {
       const { generation, scope } = this;
       this.tokenLoading = this.tokenWrites
-        .then(() => this.storage.get(tokenKey(scope)))
+        .then(() => timed(this.storage.get(tokenKey(scope))))
         .then(
           (token) => {
             // A registration meanwhile set a newer one.
@@ -694,7 +724,7 @@ export class ServerBackend implements CloudBackend {
   /** Stores (or with null removes) the token of the server `scope` points to. */
   private writeToken(scope: string, token: string | null): Promise<void> {
     const key = tokenKey(scope);
-    const write = this.tokenWrites.then(() => (token ? this.storage.set(key, token) : this.storage.remove(key)));
+    const write = this.tokenWrites.then(() => timed(token ? this.storage.set(key, token) : this.storage.remove(key)));
     this.tokenWrites = write.catch(() => {});
     return write;
   }

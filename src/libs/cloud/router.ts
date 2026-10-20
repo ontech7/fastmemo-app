@@ -34,6 +34,8 @@ export class CloudRouter implements CloudBackend {
 
   isActive: CloudBackend["isActive"] = () => this.current.isActive();
   verify: CloudBackend["verify"] = () => this.current.verify();
+  /** By the settings' own cloud, not the current one. */
+  check: CloudBackend["check"] = (settings) => this.backends[providerOf(settings)].check(settings);
   dispose: CloudBackend["dispose"] = () => this.current.dispose();
   reconnect: CloudBackend["reconnect"] = () => this.current.reconnect();
 

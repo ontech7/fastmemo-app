@@ -92,6 +92,12 @@ const ok = (name, cond, detail) => {
 
 const clone = (value) => (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Waits until `cond()` holds, or `ms` passed. */
+const until = async (cond, ms = 4000) => {
+  const deadline = Date.now() + ms;
+  while (!cond() && Date.now() < deadline) await sleep(20);
+  return cond();
+};
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 /* Merge rules                                                                                                         */
@@ -1402,6 +1408,83 @@ await scenario("cost: pushes are spaced, acknowledgements wait for the sender to
   await sleep(500);
   ok("a push that applies nothing doesn't write the device doc", a.backend.deviceWrites === writes);
 });
+
+await scenario(
+  "stop: a task still running doesn't act on what it reads (the cloud may be left or switched)",
+  async ({ add, settle }) => {
+    const a = await add("A");
+    a.engine.start();
+    await settle();
+    // Stopped: no listener snapshot can replace the reads below (a full sync runs anyway).
+    a.engine.stop();
+
+    // A full sync in flight when the engine stops (leaving the cloud), which then reads a list without this device.
+    let release;
+    const gate = new Promise((resolve) => (release = resolve));
+    let reading = false;
+    const gone = { devices: [], incoming: [], fromServer: true };
+    a.backend.pullDevices = async () => {
+      reading = true;
+      await gate;
+      return gone;
+    };
+    const first = a.engine.fullSync();
+    await until(() => reading, 2000);
+    a.engine.stop();
+    let idle = false;
+    const idling = a.engine.idle().then(() => (idle = true));
+    await sleep(50);
+    ok("idle() waits for the running task", reading && !idle);
+    release();
+    await first;
+    await idling;
+    ok("...which, outliving stop(), doesn't take the list it read for a removal", !a.removed);
+
+    // One that reads a vault this key doesn't open (the next cloud's, or none yet): not a stale key either.
+    const b = await add("B");
+    let releaseVault;
+    const vaultGate = new Promise((resolve) => (releaseVault = resolve));
+    let readingVault = false;
+    b.backend.readVault = async () => {
+      readingVault = true;
+      await vaultGate;
+      return { status: "present", vault: { key: "another cloud's" } };
+    };
+    const second = b.engine.fullSync();
+    await until(() => readingVault, 2000);
+    b.engine.stop();
+    releaseVault();
+    await second;
+    ok("...nor the vault it read for a stale key", !b.stale);
+
+    // One with something to push: neither pushed nor acknowledged.
+    const c = await add("C");
+    let releaseSync;
+    const syncGate = new Promise((resolve) => (releaseSync = resolve));
+    let pulling = false;
+    const snapshot = c.backend.pullDevices.bind(c.backend);
+    c.backend.pullDevices = async (me) => {
+      pulling = true;
+      await syncGate;
+      return snapshot(me);
+    };
+    c.dispatch(N.addNote(newNote("late", "written while leaving")));
+    const pushes = c.backend.pushes;
+    const third = c.engine.fullSync();
+    await until(() => pulling, 2000);
+    c.engine.stop();
+    releaseSync();
+    ok("...a full sync that outlived stop() reports it didn't complete", (await third) === false);
+    ok("...and pushed nothing", c.backend.pushes === pushes && !c.backend.cloud.notes.has("late"));
+
+    // Control: not stopped, the same reads are a removal and a stale key.
+    a.backend.pullDevices = async () => gone;
+    await a.engine.fullSync();
+    b.backend.readVault = async () => ({ status: "present", vault: { key: "another cloud's" } });
+    await b.engine.fullSync();
+    ok("(not stopped meanwhile, the same reads are a removal and a stale key)", a.removed && b.stale);
+  }
+);
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed === 0 ? 0 : 1);

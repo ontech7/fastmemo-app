@@ -18,6 +18,8 @@ export interface CloudBackend {
   isActive(): boolean;
   /** Proves the settings work with a write + delete round trip. */
   verify(): Promise<boolean>;
+  /** Whether these settings work, checked on a connection of their own: the one in use is left alone. */
+  check(settings: CloudSettings): Promise<boolean>;
   /** Tears the connection down. */
   dispose(): Promise<boolean>;
   /** Drops and re-opens the transport (recovers a channel wedged by sleep or a network switch). */

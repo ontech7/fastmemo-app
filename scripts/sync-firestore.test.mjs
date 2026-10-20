@@ -5,7 +5,7 @@
 // queue (they're never recipients), but would see the notes in a full sync run while the test is running.
 
 import { build } from "esbuild";
-import { getApp } from "firebase/app";
+import { getApp, getApps } from "firebase/app";
 import { deleteDoc, doc, getDoc, getFirestore, setDoc, updateDoc } from "firebase/firestore";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
@@ -360,6 +360,27 @@ try {
   ok(
     "listening again works",
     latest?.devices.some((d) => d.uuid === A)
+  );
+
+  console.log("\nchecking settings");
+  let errorsDuring = 0;
+  unsubscribers.push(
+    backend.subscribeDevices(
+      B,
+      () => {},
+      () => errorsDuring++
+    )
+  );
+  await sleep(1000);
+  ok("the settings in use check out, on an app of their own", await backend.check(settings));
+  ok("a project that doesn't exist doesn't", !(await backend.check({ ...settings, projectId: `nope-${Date.now()}` })));
+  ok("...and the live connection never noticed", errorsDuring === 0 && (await backend.verify()));
+  ok(
+    "no app left behind",
+    getApps()
+      .map((app) => app.name)
+      .join() === "fastmemo",
+    getApps().map((app) => app.name)
   );
 
   console.log("\ncleanup");

@@ -576,6 +576,34 @@ try {
     await moving.dispose();
   }
 
+  log("\nServerBackend: checking settings leaves the connection alone");
+  {
+    const a = makeBackend(server.url);
+    await a.backend.registerDevice({ uuid: "CK", modelName: "Mac", brand: "Apple" });
+    const errors = [];
+    const snapshots = [];
+    a.backend.subscribeDevices(
+      "CK",
+      (snapshot) => snapshots.push(snapshot),
+      (e) => errors.push(e)
+    );
+    await until(() => snapshots.length > 0, 2000);
+    ok("the right key checks out", await a.backend.check(settingsFor(server.url)));
+    ok("a wrong key doesn't", !(await a.backend.check(settingsFor(server.url, "not-the-key-0123456789"))));
+    ok("nor a server that isn't there", !(await a.backend.check(settingsFor("http://127.0.0.1:9"))));
+    const count = snapshots.length;
+    await a.backend.push("CK", ops([note("ck1", 1)]), []);
+    ok(
+      "...and the live connection never noticed: no listener error, still live",
+      errors.length === 0 && (await until(() => snapshots.length > count, 2000))
+    );
+    ok(
+      "the router checks on the settings' own cloud",
+      await new M.CloudRouter({ firebase: null, server: a.backend }).check(settingsFor(server.url))
+    );
+    await a.backend.dispose();
+  }
+
   log("\nServerBackend: a slow link");
   {
     // Requests over `limit` bytes never answer (a link too slow for them): they time out.
