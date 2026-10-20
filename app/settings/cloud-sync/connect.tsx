@@ -1,5 +1,6 @@
 import BackButton from "@/components/buttons/BackButton";
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
+import CloudProviderIcon from "@/components/icons/CloudProviderIcon";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
@@ -44,8 +45,18 @@ export default function CloudSyncScreen() {
 
   const providerItems = useMemo<SelectableCardItem<CloudProvider>[]>(
     () => [
-      { id: "firebase", label: t("cloudsync.provider.firebase"), description: t("cloudsync.provider.firebase_desc") },
-      { id: "server", label: t("cloudsync.provider.server"), description: t("cloudsync.provider.server_desc") },
+      {
+        id: "firebase",
+        label: t("cloudsync.provider.firebase"),
+        description: t("cloudsync.provider.firebase_desc"),
+        icon: <CloudProviderIcon provider="firebase" />,
+      },
+      {
+        id: "server",
+        label: t("cloudsync.provider.server"),
+        description: t("cloudsync.provider.server_desc"),
+        icon: <CloudProviderIcon provider="server" />,
+      },
     ],
     [t]
   );
