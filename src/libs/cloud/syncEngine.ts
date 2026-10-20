@@ -259,6 +259,11 @@ export class SyncEngine {
     this.ackSince = null;
   }
 
+  /** Resolves once the task running now, and those queued, are done (after `stop`, the queued ones end at once). */
+  idle(): Promise<void> {
+    return this.tail.then(() => {});
+  }
+
   /** The outbox changed: push soon (see PUSH_MIN_INTERVAL_MS). */
   kick(delay: number = PUSH_DEBOUNCE_MS): void {
     if (!this.running) return;
@@ -322,11 +327,6 @@ export class SyncEngine {
   }
 
   // --- Internals ---
-
-  /** Resolves once the task running now, and those queued, are done (after `stop`, the queued ones end at once). */
-  idle(): Promise<void> {
-    return this.tail.then(() => {});
-  }
 
   /** Runs tasks one at a time. `force`: also when the engine isn't started (full sync). */
   private serial<T>(task: () => Promise<T>, force = false): Promise<T> {
