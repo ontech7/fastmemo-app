@@ -1316,6 +1316,59 @@ restarts a server on the same database and checks it. Each device gets its page 
 
 ---
 
+### LL-050: Saving the cloud settings while connected made the device remove itself
+
+**Date:** 2026-10-20  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** The code review of the server backend found that **Edit → Save** on a connected device ran the whole connect
+flow again while the engine ran: re-init, vault screen, `registerDevice`. On a FastMemo server the new registration replaces the
+token, so the long poll still in flight with the old one came back `401 device_unknown`; the backend took that for "removed
+elsewhere", deleted the token from secure storage (the **new** one, just written) and the engine disconnected. A token that
+couldn't be read at launch (a keystore hiccup) was treated the same way. Saving with another server's address left the old one's
+registration and cached key behind. A request waiting for the token when the connection moved to another server could go out to
+the old address with the new server's key.
+
+**Root cause:** "No token" and "the server refused a token" were both read as "removed", without checking which token was
+refused or whether the read had failed; and the edit path predates there being more than one cloud.
+
+**Fix:** The edit path compares the form with the saved connection: the same cloud only verifies and saves the new credentials
+(no re-registration, no vault flow; on failure it goes back to the saved ones and shows the dialog); another cloud is left
+first, as turning sync off does (unregister, forget the key, dispose), then connected as usual. The server backend keeps the
+token tri-state (read / not stored / unreadable, read again), treats `device_unknown` as removal only for the token it holds and
+not during a registration, serializes token writes, and drops a request whose connection changed while it waited. Verified
+through the web app (save unchanged, wrong key, switch servers) and in `scripts/sync-server.test.mjs`.  
+**Rule:** A removal is the server refusing the credential the device holds now, never a failed local read or a refusal of a
+replaced credential (LL-023's tri-state, for tokens). Changing settings on a connected device must not re-enroll it.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/self-hosted-server`
+
+---
+
+### LL-051: An oversized push got a broken connection instead of the 413, and was retried forever
+
+**Date:** 2026-10-20  
+**Severity:** High  
+**Category:** Bug  
+**What happened:** The push splits a request the server refuses with `413` until the oversized note is alone, then drops it. The
+integration test started failing at random: the server answered `413` as soon as it read `Content-Length` and closed the
+connection while the client was still uploading, so the client saw `EPIPE` ("fetch failed"), took it for a network error and
+retried the same request forever: one big note would block the whole outbox.
+
+**Root cause:** Answering before reading the body. Whether the client sees the answer depends on buffer sizes and timing.
+
+**Fix:** The server reads an oversized body to its end (up to 4 × the limit, dropping it) before answering; a server test
+uploads 1.5 MB to a 512 KB limit and fails without the fix. The client also halves its push and page sizes after a timeout (a
+slow link), so a request too big for the link gets through smaller.  
+**Rule:** An HTTP error the client must act on (413) has to be readable: drain the request first. Don't let "no answer" and "the
+answer is no" share a retry path.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** fastmemo-server
+`dev`, branch `feat/self-hosted-server`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

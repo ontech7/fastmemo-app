@@ -557,15 +557,23 @@ who want their notes at home (PC, NAS, Raspberry Pi, VPS) had no option. ADR-016
 - **A change feed, not fan-out queues:** one row per note/category with its latest state; every write takes the next sequence
   number; each device has a cursor. A device reads what others wrote after its cursor in pages (<= 500 items, ~2 MB), applies
   them and acks the page's last seq. Nothing accumulates per sender: no queue budget, no overflow (`fullSyncDue` stays for
-  restores and the dashboard). The engine gets each page as one sender's `ChangeSet` (`ServerBackend.deliver`).
+  restores and the dashboard). The engine gets each page as one sender's `ChangeSet` (`ServerBackend.deliver`), whose token is
+  `<page id>|<last seq>` (the page id names the content; the ack sends the seq). Every note is read in pages too
+  (`GET /v1/notes?after=`, <= 500 notes / 8 MB), and the client halves its push and page sizes after a timeout (a slow link).
+  Deletion markers are pruned only once every device has read past them and they're 200 days old (here the marker _is_ the feed
+  entry).
 - **The same merge guard as Firebase:** an upload is applied only over an older live version than its base (never the same
   revision), a delete only over versions up to its revision, detaches unguarded; refused versions come back to be merged
   (conflict copies). `scripts/sync-server.test.mjs` runs the adapter and the real engine against a real server (contract,
   offline, conflicts, multi-page catch-up, restart, removal, stale vault, the server's pacing).
 - **Devices enroll with the access key, then use their own token:** the server keeps only its SHA-256, so removing a device
-  revokes it at once (Firebase can't). The token lives in secure storage under `serverToken_<scope>`, written before it's used
-  (a token the next launch can't find makes the device look removed). What the app reads while connecting (vault, notes,
-  devices) takes the key or a token ("member" routes). Wrong keys are rate-limited per address (20 / 15 min).
+  revokes it at once (Firebase can't). The token lives in secure storage under `serverToken_<scope>`, written before it's used.
+  Only the server refusing the token the device holds now means "removed": a token storage can't read now is read again, and a
+  refusal of a token a registration replaced is retried (LL-050). What the app reads while connecting (vault, notes, devices)
+  takes the key or a token ("member" routes). Wrong keys are rate-limited per address (20 / 15 min).
+- **Editing the settings of a connected device:** the same cloud (same `cloudScope`) only verifies and saves the new credentials
+  (a rotated access key, a new API key): no re-registration, no vault flow. Another cloud is left first, as turning sync off
+  does (unregister, forget its cached key, dispose), then connected as usual.
 - **Long polling, not WebSockets:** `GET /v1/sync?v=&wait=25` answers when anything devices see changes (or after 25 s) with the
   devices, the next feed page and the vault: plain HTTP through any proxy, no dependency on either side. A page the device
   already has comes back as `{ same: true }`; page ids include the server's boot id, so a restored backup (which rewinds the seq
@@ -586,7 +594,8 @@ who want their notes at home (PC, NAS, Raspberry Pi, VPS) had no option. ADR-016
   Serve (no domain, nothing exposed), Coolify or Caddy. The connect screen warns on `http://`.
 - **The access key is a shared secret** with the reach of Firebase credentials: whoever has it can enroll a device (up to the
   limit), read the encrypted notes, remove devices or wipe the cloud (vault reset). Notes stay unreadable without the encryption
-  password; titles are plaintext, as on Firebase.
+  password; titles are plaintext, as on Firebase. A lost device is locked out by removing it (its token dies); rotating the key
+  only stops new enrolments, the devices already in keep their tokens. A SQLite backup holds the generated key.
 - **A restored backup needs a full sync on every device** (a dashboard button): devices push only their outbox, so what changed
   after the backup comes back only when each compares everything.
 - **One process:** a single writer (SQLite behind a mutex, or a Postgres advisory lock), long polls held in memory. Plenty for a

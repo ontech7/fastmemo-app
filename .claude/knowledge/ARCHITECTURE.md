@@ -269,10 +269,15 @@ cloud (CloudRouter) -> providerOf(settings): "firebase" (default, also for setti
 ServerBackend -> fastmemo-server /v1 (repo ../fastmemo-server, docs/PROTOCOL.md)
   connect: verify = GET /v1/info with the key (server + protocol 1, maxDevices) -> vault, notes, devices with the key
            -> once unlocked: POST /v1/devices -> token -> secure storage serverToken_<cloudScope> -> Bearer from now on
+  edit:    connected + Save: same cloudScope -> verify + save (no re-register); another cloud -> leave it, then connect
+  token:   read / none stored / unreadable (read again); writes serialized; a request whose connection changed is dropped
   live:    pollLoop: GET /v1/sync?v=<version>&wait=25&p=<page> -> devices + vault listeners;
-           feed page -> deliver as one ChangeSet -> engine merge -> POST /v1/ack { token: last seq }
-           error -> backoff 1 s .. 30 s; 401 device_unknown -> empty device list -> engine onRemoved
-  push:    POST /v1/push (<= 4 MB / 500 entries per request; 413 -> halve, a single entry -> rejected)
+           feed page -> deliver as one ChangeSet (token "<page>|<seq>") -> engine merge -> POST /v1/ack { token: seq }
+           error -> backoff 1 s .. 30 s; 401 device_unknown for the token held (no registration running)
+           -> token dropped, empty device list -> engine onRemoved
+  read:    GET /v1/notes?after=<seq>&bytes= -> { notes, next } until next is null (later page wins)
+  push:    POST /v1/push (<= 4 MB / 500 entries per request; 413 -> halve, a single entry -> rejected;
+           a timeout halves the request size for the next tries, down to 256 KB; pages likewise)
   pacing:  push >= 500 ms apart, ack after 1 s quiet (<= 5 s)
 server:   items (kind, key, state live|deleted|detached, rev, seq, author, data) + devices (token_hash, cursor)
           + vault + stats (per day) + events; dashboard at / (admin key)

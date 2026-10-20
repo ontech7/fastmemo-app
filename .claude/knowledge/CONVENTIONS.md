@@ -712,6 +712,14 @@ clouds, so the rules above still apply. In addition:
    the boot (the feed's page ids do, LL-049).
 5. **HTTPS outside a test.** Android release builds refuse cleartext and an `https://` page can't call `http://`; never suggest
    a plain-HTTP server address in UI copy for phones.
+6. **"Removed" is the server refusing the token held now.** Never a token that can't be read (read it again), nor a refusal of a
+   token a registration replaced; write and remove tokens in order (LL-050).
+7. **Settings changes don't re-enroll.** A connected device saving the same cloud's settings verifies and saves; switching
+   clouds leaves the old one first (LL-050).
+8. **A request carries the connection it started on.** Re-check after every `await` that the backend wasn't re-initialised
+   before reading its URL, key or token: another server's key must never go to this one.
+9. **An error the client acts on must be readable.** The server drains an oversized body before its `413`; the client never
+   retries a timeout at the same size forever (LL-051).
 
 | User Action (server)          | Server operations                                                           |
 | ----------------------------- | --------------------------------------------------------------------------- |
