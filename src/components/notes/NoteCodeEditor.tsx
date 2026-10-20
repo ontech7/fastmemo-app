@@ -338,13 +338,6 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                     const cat = findCategoryByName(name);
                     if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                   }}
-                  onCodeCommented={(commentedCode) => {
-                    const updatedTabs = note.tabs.map((tab) =>
-                      tab.id === note.activeTabId ? { ...tab, code: commentedCode } : tab
-                    );
-                    setNoteAsync({ ...note, tabs: updatedTabs });
-                    editorRef.current?.setCode(commentedCode, { undoable: true });
-                  }}
                   style={dockButtonStyle}
                   menuBottomOffset={110}
                 />

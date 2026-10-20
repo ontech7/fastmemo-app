@@ -14,8 +14,9 @@
 7. [Platform-Specific Conventions](#platform-specific-conventions)
 8. [Backward Compatibility & Data Migration](#backward-compatibility--data-migration)
 9. [Cloud Sync & Firestore Budget](#cloud-sync--firestore-budget)
-10. [Naming Conventions](#naming-conventions)
-11. [DO / DON'T Quick Reference](#do--dont-quick-reference)
+10. [On-Device AI](#on-device-ai)
+11. [Naming Conventions](#naming-conventions)
+12. [DO / DON'T Quick Reference](#do--dont-quick-reference)
 
 ---
 
@@ -772,6 +773,30 @@ hard rules (each maps to a lesson learned):
 
 ---
 
+## On-Device AI
+
+Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file that talks to llama.rn.
+
+1. **Every completion passes `CHAT_TEMPLATE`** (`jinja: true, enable_thinking: false, reasoning_format: "none"`) and its
+   action's `ACTION_SAMPLING` + `ACTION_MAX_TOKENS`. A new action adds an entry to both maps, a prompt in
+   `EDITOR_SYSTEM_PROMPTS`, and a fixture in `evalFixtures.ts`.
+2. **Run completions through `whileBusy`** (as `generateEditorContent` and `searchHelpByIntent` do): it queues them (one context
+   runs one completion; a second fails "Context is busy") and the idle/background release never frees a context under a running
+   one. A run takes the cancel generation when it is called and checks it after the queue, after the load and at every token:
+   `stopCompletion` alone is lost while the model loads.
+3. **Nothing the model writes replaces user content without a look.** A rewrite streams into a before/after preview (or the
+   dictation sheet), Apply waits for the end, Cancel stops the model (`cancelCommand`) and keeps the original. A rewrite action
+   gets a `REWRITE_LENGTH_RATIO` range so `isPlausibleRewrite` can discard a runaway answer.
+4. **Number each run** (`runRef`/`aiRunRef`): a cancelled or superseded run never writes into the UI, and unmounting advances
+   the number and calls `cancelCommand`. An interrupted or token-limited answer is never applied (`cancelled` / `too_long`): it
+   is cut short.
+5. **Pre-warm where an action is likely** (`prewarmContext` when the dictation sheet or the AI menu opens), never at app start:
+   a loaded 2B holds over a gigabyte.
+6. **Measure before changing a prompt, sampling or tier**: run Developer options -> AI evaluation on a phone before and after,
+   and compare the saved JSON reports.
+
+---
+
 ## Naming Conventions
 
 | Entity             | Convention                     | Example                                              |
@@ -837,6 +862,7 @@ hard rules (each maps to a lesson learned):
 | 35  | Never put a `%` in a file name given to expo-file-system                                  | `File` segments are encoded (`%` -> `%25`), legacy URIs decoded: either way it names another file (see LL-052)                   |
 | 36  | Never trust a cache of what's stored where another writer can write (browser tabs)        | Check what's there first, under a lock; a write skipped for a newer one settles with it (see LL-053)                             |
 | 37  | Never keep a copy of user data without a wipe path and an end date                        | "Wipe data" must reach it; record migrations instead of inferring them from absent data (see LL-054)                             |
+| 38  | Never apply an AI answer that stopped early, or cancel only the native completion         | Queue completions, check the cancel generation at every step, drop `interrupted`/token-limited answers (see LL-055)              |
 
 ### ALWAYS
 

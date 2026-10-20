@@ -1465,6 +1465,28 @@ end date. Record that a migration happened; never infer it from data being absen
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
 `feat/per-note-storage`
 
+### LL-055: An AI cancel sent while the model loaded was lost, and a cut-off answer counted as an answer
+
+**Date:** 2026-10-20  
+**Severity:** High (caught in review, before release)  
+**Category:** Bug  
+**What happened:** With the model pre-warmed when the AI menu opens, a tap on an action followed by Cancel during the load did
+nothing: `cancelCommand` had no context to stop yet, and llama.rn resets its interrupt flag when a completion starts, so even a
+stop sent just before that was dropped. The completion then ran to its token limit (minutes on the 4B) and every other action
+failed "Context is busy". Leaving the note mid-action could also apply the stopped answer (half a JSON list of items appended to
+the note), and a rewrite cut by `n_predict` passed the length guard, replacing a whole note or dictation with its first part.
+
+**Root cause:** Cancelling was a call into the native completion instead of a state every step of the run checks, nothing
+serialized completions on the one context, and the result flags (`interrupted`, `stopped_limit`, `truncated`) were ignored.  
+**Fix:** A cancel generation taken when the action is called and checked after the queue, after the load and at every token;
+completions queued in `whileBusy`; interrupted answers return `cancelled`, token-limited ones `too_long`; a rewrite's
+`n_predict` is sized from its input's tokens; unmounting advances the run number before cancelling.  
+**Rule:** A cancel must hold across the whole run (queue, load, generation), not only the native call. An answer that stopped
+early is never applied.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/ai-qwen35`
+
 ---
 
 ## Template for New Entries

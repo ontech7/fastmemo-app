@@ -506,15 +506,17 @@ export default function NoteTextEditor({ initialNote }: Props) {
                     noteTitle={note.title}
                     onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                     onSummaryGenerated={(summary) => {
-                      richTextEditor.current?.setContentHTML(summary);
-                      setText(summary);
+                      // the model's text is text, not markup: escaped, line breaks kept
+                      const html = voiceTextToHtml(summary, { leadingSpace: false, lists: true });
+                      richTextEditor.current?.setContentHTML(html);
+                      setText(html);
                     }}
                     onCategorySuggested={(name) => {
                       const cat = findCategoryByName(name);
                       if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                     }}
                     onTextRewritten={(rewritten) => {
-                      const html = voiceTextToHtml(rewritten, { leadingSpace: false });
+                      const html = voiceTextToHtml(rewritten, { leadingSpace: false, lists: true });
                       richTextEditor.current?.setContentHTML(html);
                       setText(html);
                     }}
@@ -526,7 +528,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
                 {showVoiceButton && (
                   <VoiceRecognitionButton
                     onInsert={(text) => {
-                      const html = voiceTextToHtml(text);
+                      const html = voiceTextToHtml(text, { lists: true });
                       // the dictation sheet dismissed the keyboard; refocus so the
                       // text lands at the caret, then insert
                       richTextEditor.current?.focusContentEditor();

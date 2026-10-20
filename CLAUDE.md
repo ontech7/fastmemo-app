@@ -5,7 +5,7 @@
 ## Project Summary
 
 FastMemo is a cross-platform note-taking app (Android, Web, Desktop via Tauri) built with Expo SDK 58, React Native 0.88, React
-19, and TypeScript 6.0. It supports four note types (text, todo, kanban, code), on-device AI (llama.rn with Qwen 2.5 GGUF
+19, and TypeScript 6.0. It supports four note types (text, todo, kanban, code), on-device AI (llama.rn with Qwen3.5 GGUF
 models), encrypted cloud sync (Firebase), biometric protection, webhooks, voice recognition, and 7-language localization.
 Desktop builds use Tauri 2.x (Rust).
 
@@ -133,7 +133,7 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 | State      | Redux Toolkit 2.8 + Redux Persist (notes one value per note: ADR-018; AsyncStorage for the rest)   |
 | Desktop    | Tauri 2.x (Rust, capabilities in `src-tauri/capabilities/`)                                        |
 | Cloud      | Firestore or a self-hosted FastMemo server behind `CloudBackend` (ADR-016, ADR-017), E2E (ADR-012) |
-| AI         | llama.rn 0.12 (Qwen 2.5 GGUF, on-device)                                                           |
+| AI         | llama.rn 0.12 (Qwen3.5 0.8B/2B/4B GGUF, on-device, thinking off -- ADR-004)                        |
 | Editor     | CodeMirror 6 (via WebView)                                                                         |
 | i18n       | i18next + react-i18next (7 languages, single namespace)                                            |
 | Animations | react-native-reanimated 4.7 (+ react-native-worklets)                                              |

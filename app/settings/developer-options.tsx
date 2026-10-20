@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import ChevronRightIcon from "react-native-heroicons/outline/ChevronRightIcon";
 import ExclamationTriangleIcon from "react-native-heroicons/outline/ExclamationTriangleIcon";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -8,6 +9,7 @@ import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { useRouter } from "@/hooks/useRouter";
 import { selectorDeveloperMode, setDeveloperMode } from "@/slicers/settingsSlice";
 import type { DeveloperModeSettings } from "@/types";
 
@@ -15,6 +17,7 @@ export default function DeveloperOptionsScreen() {
   const { t } = useTranslation();
 
   const dispatch = useDispatch();
+  const router = useRouter();
 
   const developerMode = useSelector(selectorDeveloperMode);
 
@@ -91,6 +94,19 @@ export default function DeveloperOptionsScreen() {
                 style={{ height: 25 }}
               />
             </View>
+
+            <TouchableOpacity
+              style={styles.sectionItemList}
+              onPress={() => router.push("/settings/ai-eval")}
+              accessibilityRole="button"
+              activeOpacity={0.7}
+            >
+              <View style={styles.sectionItemContent}>
+                <Text style={styles.sectionItemList_title}>{t("developeroptions.ai_eval")}</Text>
+                <Text style={styles.sectionItemList_desc}>{t("developeroptions.ai_eval_desc")}</Text>
+              </View>
+              <ChevronRightIcon size={20} color={COLOR.textMuted} />
+            </TouchableOpacity>
 
             {/* Change App Icon */}
             <View style={[styles.sectionItemList, styles.sectionItemList_last, { opacity: 0.5 }]}>

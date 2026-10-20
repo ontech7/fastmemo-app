@@ -98,11 +98,13 @@ src/
     useVaultProgress.ts # useSyncExternalStore over vaultProgress (re-upload progress bar)
 
   libs/                # Third-party service wrappers
-    ai/                # On-device LLM (llama.rn)
-      types.ts         # AIModelId, AIModelStatus, EditorAction, EditorActionResult
-      constants.ts     # Model configs, system prompts, GBNF grammar
-      helpers.ts       # Category matching, HTML stripping (platform-agnostic)
-      context.ts       # LLM context lifecycle, model download, text generation (native only)
+    ai/                # On-device LLM (llama.rn, Qwen3.5 0.8B/2B/4B -- ADR-004)
+      types.ts         # AIModelId, AIModelStatus, EditorAction, EditorActionResult, AITimings
+      constants.ts     # Model catalog (pinned GGUFs), legacy id map, per-action sampling/token budget, prompts, GBNF
+      helpers.ts       # Category matching, HTML stripping, think stripping, stream throttle, rewrite guard (tested by
+                       # scripts/ai.test.mjs)
+      context.ts       # LLM context lifecycle (pre-warm, idle/background release), download, generation (native only)
+      eval.ts          # Developer-only evaluation run over evalFixtures.ts (Developer options -> AI evaluation)
       index.ts         # Barrel export (native)
       index.web.ts     # No-op stubs for web
     haptics/           # Platform-split: native (expo-haptics) / web (no-op stubs)

@@ -5,10 +5,12 @@ import { Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View 
 import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
-import { selectorAIAssistant, setAIAssistant } from "@/slicers/settingsSlice";
+import { selectorAIAssistant, selectorAIModelIsLegacy, setAIAssistant } from "@/slicers/settingsSlice";
+import { toast } from "@/utils/toast";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
@@ -18,18 +20,31 @@ import {
   cancelDownload,
   DEFAULT_MODEL_ID,
   deleteModel,
+  deleteOrphanedModelFiles,
   downloadModel,
+  getOrphanedModelFiles,
   isModelDownloaded,
   isNativeModuleAvailable,
   releaseContext,
 } from "@/libs/ai";
+
+const MB = 1024 * 1024;
+const GB = 1024 * MB;
+
+const formatBytes = (bytes: number) => (bytes >= GB ? `${(bytes / GB).toFixed(1)} GB` : `${Math.round(bytes / MB)} MB`);
+
+/** Bytes taken by model files no model of today uses (the Qwen 2.5 ones of earlier versions, partial downloads). */
+const oldModelsBytes = async () => (await getOrphanedModelFiles()).reduce((sum, file) => sum + file.size, 0);
 
 export default function AIAssistantScreen() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
 
   const aiSettings = useSelector(selectorAIAssistant);
+  const storedModelIsLegacy = useSelector(selectorAIModelIsLegacy);
   const selectedModelId = aiSettings.selectedModel || DEFAULT_MODEL_ID;
+  const [oldBytes, setOldBytes] = useState(0);
+  const [confirmDeleteOld, setConfirmDeleteOld] = useState(false);
 
   const [modelDownloaded, setModelDownloaded] = useState(aiSettings.modelDownloaded);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -37,6 +52,8 @@ export default function AIAssistantScreen() {
   const [nativeAvailable, setNativeAvailable] = useState(true);
 
   const deviceRam = Device.totalMemory ?? 0;
+  // The 2B where it runs comfortably (a 6 GB class phone and up), the 0.8B below.
+  const recommendedId: AIModelId = deviceRam >= 5 * GB ? "qwen3.5-2b" : "qwen3.5-0.8b";
 
   const modelCardItems = useMemo<SelectableCardItem<AIModelId>[]>(() => {
     const models = Platform.OS === "web" ? [] : (Object.values(AI_MODELS) as AIModelInfo[]);
@@ -46,12 +63,17 @@ export default function AIAssistantScreen() {
         id: model.id,
         label: model.name,
         description: t(model.description),
-        extra: <Text style={styles.modelSize}>{model.sizeLabel}</Text>,
+        extra: (
+          <View style={styles.modelExtra}>
+            {model.id === recommendedId && canRun && <Text style={styles.recommended}>{t("ai.recommended")}</Text>}
+            <Text style={styles.modelSize}>{model.sizeLabel}</Text>
+          </View>
+        ),
         disabled: !canRun,
         disabledLabel: t("ai.model_unavailable"),
       };
     });
-  }, [deviceRam, t]);
+  }, [deviceRam, recommendedId, t]);
 
   useEffect(() => {
     if (Platform.OS === "web") return;
@@ -64,12 +86,14 @@ export default function AIAssistantScreen() {
     const checkModel = async () => {
       const downloaded = await isModelDownloaded(selectedModelId);
       setModelDownloaded(downloaded);
-      if (downloaded !== aiSettings.modelDownloaded) {
+      // A Qwen 2.5 id stored by an earlier version is stored as the tier replacing it (read so already).
+      if (downloaded !== aiSettings.modelDownloaded || storedModelIsLegacy) {
         dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: downloaded }));
       }
     };
 
     checkModel();
+    oldModelsBytes().then(setOldBytes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedModelId]);
 
@@ -114,7 +138,10 @@ export default function AIAssistantScreen() {
 
     setIsDownloading(false);
     setModelDownloaded(success);
-    dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: success, enabled: success ? aiSettings.enabled : false }));
+    // Downloading a model is asking for the AI: switching models turned it off, a finished download turns it back on.
+    dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: success, enabled: success }));
+    // A download clears the old models' files.
+    oldModelsBytes().then(setOldBytes);
   }, [aiSettings, selectedModelId, dispatch]);
 
   const handleCancelDownload = useCallback(async () => {
@@ -125,6 +152,13 @@ export default function AIAssistantScreen() {
     setDownloadProgress(0);
     setModelDownloaded(false);
   }, []);
+
+  const handleDeleteOld = useCallback(async () => {
+    setConfirmDeleteOld(false);
+    const freed = await deleteOrphanedModelFiles();
+    setOldBytes(await oldModelsBytes());
+    toast(t("ai.old_models_deleted", { size: formatBytes(freed) }));
+  }, [t]);
 
   const handleDelete = useCallback(async () => {
     if (Platform.OS === "web") return;
@@ -162,7 +196,31 @@ export default function AIAssistantScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
+      <ConfirmOrCancelDialog
+        open={confirmDeleteOld}
+        description={t("ai.old_models_confirm", { size: formatBytes(oldBytes) })}
+        confirmLabel={t("ai.old_models_delete")}
+        onConfirm={handleDeleteOld}
+        onCancel={() => setConfirmDeleteOld(false)}
+      />
+
       <ScrollView style={styles.scroll}>
+        {/* The Qwen 2.5 files of earlier versions: dead weight now */}
+        {oldBytes > 0 && !isDownloading && (
+          <View style={[styles.sectionWrapper, styles.oldModelsCard]}>
+            <Text style={styles.oldModelsTitle}>{t("ai.old_models_title", { size: formatBytes(oldBytes) })}</Text>
+            <Text style={styles.oldModelsText}>{t("ai.old_models_desc")}</Text>
+            <TouchableOpacity
+              style={styles.oldModelsButton}
+              onPress={() => setConfirmDeleteOld(true)}
+              accessibilityRole="button"
+              activeOpacity={0.7}
+            >
+              <Text style={styles.deleteText}>{t("ai.old_models_delete")}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Model selection */}
         <View style={styles.sectionWrapper}>
           <View style={styles.sectionHeader}>
@@ -254,15 +312,13 @@ export default function AIAssistantScreen() {
           <View style={styles.sectionList}>
             {[
               { key: "ai.cap.generate_title" },
-              { key: "ai.cap.summarize", min: "1.5B" },
-              { key: "ai.cap.fix_grammar", min: "1.5B" },
-              { key: "ai.cap.shorten", min: "1.5B" },
-              { key: "ai.cap.translate", min: "3B" },
-              { key: "ai.cap.suggest_items" },
+              { key: "ai.cap.summarize", min: "2B" },
+              { key: "ai.cap.fix_grammar", min: "2B" },
+              { key: "ai.cap.shorten", min: "2B" },
+              { key: "ai.cap.translate", min: "2B" },
+              { key: "ai.cap.suggest_items", min: "2B" },
               { key: "ai.cap.suggest_category" },
               { key: "ai.cap.voice_cleanup" },
-              { key: "ai.cap.explain_code", min: "7B" },
-              { key: "ai.cap.add_comments", min: "7B" },
             ].map((item, index, arr) => (
               <View key={item.key} style={[styles.capabilityItem, index === arr.length - 1 && styles.sectionItemList_last]}>
                 <Text style={styles.capabilityText}>{t(item.key)}</Text>
@@ -406,6 +462,44 @@ const styles = StyleSheet.create({
     color: COLOR.textSecondary,
     fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
+  },
+  modelExtra: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+  },
+  recommended: {
+    color: COLOR.accentSoft,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.small,
+    paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER.rounded,
+    backgroundColor: GLASS.fill,
+    overflow: "hidden",
+  },
+  oldModelsCard: {
+    backgroundColor: COLOR.surface,
+    borderRadius: BORDER.normal,
+    borderWidth: 1,
+    borderColor: GLASS.border,
+    padding: PADDING_MARGIN.lg,
+    gap: PADDING_MARGIN.sm,
+  },
+  oldModelsTitle: {
+    color: COLOR.textPrimary,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.paragraph,
+  },
+  oldModelsText: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    lineHeight: 18,
+  },
+  oldModelsButton: {
+    alignSelf: "flex-start",
+    paddingVertical: PADDING_MARGIN.xs,
   },
   capabilityItem: {
     backgroundColor: COLOR.surface,

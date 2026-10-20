@@ -1,6 +1,13 @@
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import type { AIModelId, EditorAction } from "@/libs/ai";
-import { cancelCommand, generateEditorContent, initContext, isModelSufficient, MODEL_SHORT_LABEL } from "@/libs/ai";
+import {
+  cancelCommand,
+  createTextStream,
+  generateEditorContent,
+  isModelSufficient,
+  MODEL_SHORT_LABEL,
+  prewarmContext,
+} from "@/libs/ai";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
 import type { NoteType } from "@/types/note";
 import { toast } from "@/utils/toast";
@@ -18,9 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import ChatBubbleLeftRightIcon from "react-native-heroicons/outline/ChatBubbleLeftRightIcon";
 import CheckBadgeIcon from "react-native-heroicons/outline/CheckBadgeIcon";
-import CodeBracketIcon from "react-native-heroicons/outline/CodeBracketIcon";
 import DocumentTextIcon from "react-native-heroicons/outline/DocumentTextIcon";
 import FolderIcon from "react-native-heroicons/outline/FolderIcon";
 import LanguageIcon from "react-native-heroicons/outline/LanguageIcon";
@@ -28,7 +33,6 @@ import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
 import ScissorsIcon from "react-native-heroicons/outline/ScissorsIcon";
 import SparklesIcon from "react-native-heroicons/outline/SparklesIcon";
 import TagIcon from "react-native-heroicons/outline/TagIcon";
-import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import CheckCircleIcon from "react-native-heroicons/solid/CheckCircleIcon";
 import ExclamationCircleIcon from "react-native-heroicons/solid/ExclamationCircleIcon";
 import type { SharedValue } from "react-native-reanimated";
@@ -52,6 +56,9 @@ const AI_COLOR = "#6C63FF";
 
 type FeedbackState = "idle" | "processing" | "success" | "error";
 
+/** Actions whose answer replaces something the user wrote: it streams into a before/after preview and waits for Apply. */
+const PREVIEW_ACTIONS = new Set<EditorAction>(["generate_title", "summarize", "fix_grammar", "shorten", "translate"]);
+
 interface ActionDef {
   id: EditorAction;
   labelKey: string;
@@ -63,16 +70,17 @@ interface ActionDef {
 const TEXT_ACTIONS: ActionDef[] = [
   { id: "generate_title", labelKey: "ai.editor.generate_title", icon: TagIcon },
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
-  { id: "summarize", labelKey: "ai.editor.summarize", icon: DocumentTextIcon, minModelId: "qwen-1.5b" },
-  { id: "fix_grammar", labelKey: "ai.editor.fix_grammar", icon: CheckBadgeIcon, minModelId: "qwen-1.5b" },
-  { id: "shorten", labelKey: "ai.editor.shorten", icon: ScissorsIcon, minModelId: "qwen-1.5b" },
-  { id: "translate", labelKey: "ai.editor.translate", icon: LanguageIcon, minModelId: "qwen-3b" },
+  { id: "summarize", labelKey: "ai.editor.summarize", icon: DocumentTextIcon, minModelId: "qwen3.5-2b" },
+  { id: "fix_grammar", labelKey: "ai.editor.fix_grammar", icon: CheckBadgeIcon, minModelId: "qwen3.5-2b" },
+  { id: "shorten", labelKey: "ai.editor.shorten", icon: ScissorsIcon, minModelId: "qwen3.5-2b" },
+  { id: "translate", labelKey: "ai.editor.translate", icon: LanguageIcon, minModelId: "qwen3.5-2b" },
 ];
 
+// The 0.8B only repeated the list back (AI evaluation, 2026-10): suggestions start at the 2B.
 const TODO_ACTIONS: ActionDef[] = [
   { id: "generate_title", labelKey: "ai.editor.generate_title", icon: TagIcon },
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
-  { id: "suggest_items", labelKey: "ai.editor.suggest_items", icon: ListBulletIcon },
+  { id: "suggest_items", labelKey: "ai.editor.suggest_items", icon: ListBulletIcon, minModelId: "qwen3.5-2b" },
 ];
 
 const KANBAN_ACTIONS: ActionDef[] = [
@@ -80,11 +88,10 @@ const KANBAN_ACTIONS: ActionDef[] = [
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
 ];
 
+// Code notes store snippets: a title and a category, nothing that rewrites the code.
 const CODE_ACTIONS: ActionDef[] = [
   { id: "generate_title", labelKey: "ai.editor.generate_title", icon: TagIcon },
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
-  { id: "explain_code", labelKey: "ai.editor.explain_code", icon: ChatBubbleLeftRightIcon, minModelId: "qwen-7b" },
-  { id: "add_comments", labelKey: "ai.editor.add_comments", icon: CodeBracketIcon, minModelId: "qwen-7b" },
 ];
 
 function getActionsForType(noteType: NoteType): ActionDef[] {
@@ -112,8 +119,6 @@ interface Props {
   onCategorySuggested?: (categoryName: string) => void;
   /** Called with rewritten text for content-replacing actions (fix_grammar, shorten, translate). */
   onTextRewritten?: (text: string) => void;
-  /** Called with commented code when add_comments succeeds. */
-  onCodeCommented?: (commentedCode: string) => void;
   disabled?: boolean;
   /** Override the floating button position. Default: { bottom: 165, right: 42 } */
   style?: ViewStyle;
@@ -130,7 +135,6 @@ export default function AIEditorActions({
   onItemsSuggested,
   onCategorySuggested,
   onTextRewritten,
-  onCodeCommented,
   disabled = false,
   style,
   menuBottomOffset = 200,
@@ -141,17 +145,25 @@ export default function AIEditorActions({
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>("idle");
-  const [outputText, setOutputText] = useState<string | null>(null);
   // Staged result of a content-modifying action: shown as a before/after preview
   // and applied only when the user confirms (nothing is overwritten automatically).
   // It holds the result, not a callback: applying goes through the current props, so
   // it never writes back a note snapshot taken when the action started.
-  const [preview, setPreview] = useState<{ action: EditorAction; title: string; before: string; after: string } | null>(null);
+  // `streaming`: the model is still writing `after` (Apply waits, Cancel stops it).
+  const [preview, setPreview] = useState<{
+    action: EditorAction;
+    title: string;
+    before: string;
+    after: string;
+    streaming: boolean;
+  } | null>(null);
   // Left edge (window coords) of the trigger, so the menu opens exactly from the button.
   const [menuLeft, setMenuLeft] = useState(40);
 
   const menuProgress = useSharedValue(0);
-  const cancelledRef = useRef(false);
+  // Each action run gets a number: a cancelled one (or one the user left behind) never writes into the UI.
+  const runRef = useRef(0);
+  const runningRef = useRef(false);
   const triggerRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -164,9 +176,20 @@ export default function AIEditorActions({
     Keyboard.dismiss();
     if (!isMenuOpen) {
       triggerRef.current?.measureInWindow((x) => setMenuLeft(x));
+      // the model loads while the user picks an action
+      prewarmContext(aiSettings.selectedModel);
     }
     setIsMenuOpen((prev) => !prev);
-  }, [feedback, isMenuOpen]);
+  }, [feedback, isMenuOpen, aiSettings.selectedModel]);
+
+  // Leaving the note mid-action stops the model, and whatever it already wrote is dropped (never applied to the note).
+  useEffect(
+    () => () => {
+      runRef.current++;
+      if (runningRef.current) cancelCommand();
+    },
+    []
+  );
 
   useEffect(() => {
     menuProgress.value = withTiming(isMenuOpen ? 1 : 0, {
@@ -209,75 +232,92 @@ export default function AIEditorActions({
           .filter(Boolean)
           .join("\n");
       } else {
-        // Include the note title as context for actions that benefit from it
-        const needsTitle = action !== "generate_title" && action !== "add_comments" && action !== "explain_code";
+        // The title gives context to a summary and to suggestions; never to a rewrite, whose answer replaces the content
+        // (the title would end up in the text).
+        const needsTitle = action === "summarize" || action === "suggest_items";
         content = needsTitle && hasTitle ? `${noteTitle}\n${rawContent}` : rawContent;
       }
 
-      setFeedback("processing");
-      cancelledRef.current = false;
+      const run = ++runRef.current;
+      runningRef.current = true;
+      const staged = PREVIEW_ACTIONS.has(action);
+      // A rewrite opens its preview at once and fills it as the model writes; the others show the spinner.
+      const stream = staged
+        ? createTextStream((text) => {
+            if (run === runRef.current) setPreview((p) => (p ? { ...p, after: text } : p));
+          })
+        : null;
+      if (staged) {
+        setPreview({
+          action,
+          title: t(`ai.editor.${action}`),
+          before: action === "generate_title" ? noteTitle : rawContent,
+          after: "",
+          streaming: true,
+        });
+      } else {
+        setFeedback("processing");
+      }
 
-      initContext(aiSettings.selectedModel);
+      const fail = (msg: string) => {
+        setPreview(null);
+        setFeedback("error");
+        toast(msg);
+      };
 
       try {
-        const result = await generateEditorContent(action, content);
+        const result = await generateEditorContent(action, content, stream?.push);
+        stream?.stop();
+        if (run !== runRef.current) return;
+        runningRef.current = false;
 
-        if (cancelledRef.current) return;
-
-        if (result.success) {
-          // Stage a before/after preview for anything that overwrites existing
-          // content; apply lightweight/additive results directly.
-          const stage = (after: string) => {
-            setFeedback("idle");
-            setPreview({ action, title: t(`ai.editor.${action}`), before: rawContent, after });
-          };
-
-          switch (action) {
-            case "suggest_items":
-              setFeedback("success");
-              if (result.items?.length) onItemsSuggested?.(result.items);
-              break;
-            case "suggest_category":
-              setFeedback("success");
-              if (result.text) onCategorySuggested?.(result.text);
-              break;
-            case "explain_code":
-              setFeedback("idle");
-              if (result.text) setOutputText(result.text);
-              break;
-            case "generate_title":
-              if (result.text) {
-                setFeedback("idle");
-                setPreview({ action, title: t("ai.editor.generate_title"), before: noteTitle, after: result.text });
-              }
-              break;
-            case "summarize":
-            case "fix_grammar":
-            case "shorten":
-            case "translate":
-            case "add_comments":
-              if (result.text) stage(result.text);
-              break;
-          }
-        } else {
-          setFeedback("error");
-          const msg =
+        if (result.error === "cancelled") {
+          // stopped by a cancel elsewhere (the dictation's): nothing to report
+          setPreview(null);
+          setFeedback("idle");
+          return;
+        }
+        if (!result.success) {
+          fail(
             action === "suggest_category" && result.error === "no_category_match"
               ? t("ai.editor.no_category_match")
-              : t("ai.editor.error");
-          toast(msg);
+              : result.error === "implausible_output"
+                ? t("ai.editor.no_improvement")
+                : result.error === "too_long"
+                  ? t("ai.editor.too_long")
+                  : t("ai.editor.error")
+          );
+          return;
+        }
+
+        switch (action) {
+          case "suggest_items":
+            setFeedback("success");
+            if (result.items?.length) onItemsSuggested?.(result.items);
+            break;
+          case "suggest_category":
+            setFeedback("success");
+            if (result.text) onCategorySuggested?.(result.text);
+            break;
+          default: {
+            // the final answer (cleaned of prefixes and quotes) replaces what streamed in
+            const after = result.text;
+            if (after) setPreview((p) => (p ? { ...p, after, streaming: false } : p));
+            else fail(t("ai.editor.error"));
+          }
         }
       } catch {
-        if (cancelledRef.current) return;
-        setFeedback("error");
-        toast(t("ai.editor.error"));
+        stream?.stop();
+        if (run !== runRef.current) return;
+        runningRef.current = false;
+        fail(t("ai.editor.error"));
       }
     },
-    [getContent, noteTitle, aiSettings.selectedModel, onItemsSuggested, onCategorySuggested, t, closeMenu]
+    [getContent, noteTitle, onItemsSuggested, onCategorySuggested, t, closeMenu]
   );
 
   const applyPreview = () => {
-    if (!preview) return;
+    if (!preview || preview.streaming) return;
     const { action, before, after } = preview;
     setPreview(null);
 
@@ -296,19 +336,24 @@ export default function AIEditorActions({
       case "summarize":
         onSummaryGenerated?.(after);
         break;
-      case "add_comments":
-        onCodeCommented?.(after);
-        break;
       default:
         onTextRewritten?.(after);
     }
   };
 
   const handleCancel = useCallback(() => {
-    cancelledRef.current = true;
+    runRef.current++;
+    runningRef.current = false;
     cancelCommand();
     setFeedback("idle");
+    setPreview(null);
   }, []);
+
+  // Closing a preview the model is still writing stops the model too.
+  const closePreview = useCallback(() => {
+    if (preview?.streaming) handleCancel();
+    else setPreview(null);
+  }, [preview?.streaming, handleCancel]);
 
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: menuProgress.value,
@@ -325,8 +370,7 @@ export default function AIEditorActions({
         >
           <View style={styles.menuContainer}>
             {actionItems.map((actionItem, index) => {
-              const canRun =
-                !actionItem.minModelId || isModelSufficient(aiSettings.selectedModel as AIModelId, actionItem.minModelId);
+              const canRun = !actionItem.minModelId || isModelSufficient(aiSettings.selectedModel, actionItem.minModelId);
               const minLabel = actionItem.minModelId ? MODEL_SHORT_LABEL[actionItem.minModelId] : "";
               return (
                 <AnimatedActionItem
@@ -367,37 +411,7 @@ export default function AIEditorActions({
         )}
       </TouchableOpacity>
 
-      {outputText && (
-        <View style={[styles.outputPanel, style && { bottom: (style as { bottom?: number }).bottom }]}>
-          <View style={styles.outputHeader}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <SparklesIcon size={16} color={styles.outputTitle.color} />
-              <Text style={styles.outputTitle}>AI Result</Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => setOutputText(null)}
-              accessibilityRole="button"
-              accessibilityLabel={t("a11y.close")}
-              activeOpacity={0.7}
-            >
-              <XMarkIcon size={18} color={COLOR.lightBlue} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.outputScroll} showsVerticalScrollIndicator>
-            <Text style={styles.outputText} selectable>
-              {outputText}
-            </Text>
-          </ScrollView>
-        </View>
-      )}
-
-      <Modal
-        visible={preview !== null}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setPreview(null)}
-      >
+      <Modal visible={preview !== null} transparent animationType="fade" statusBarTranslucent onRequestClose={closePreview}>
         <View style={styles.previewBackdrop}>
           <View style={styles.previewCard}>
             <View style={styles.previewHeader}>
@@ -414,19 +428,26 @@ export default function AIEditorActions({
               </View>
               <View>
                 <Text style={[styles.previewLabel, { color: AI_COLOR }]}>{t("ai.editor.after")}</Text>
-                <Text style={[styles.previewBlock, styles.previewAfter]}>{preview?.after}</Text>
+                {preview?.streaming && !preview.after ? (
+                  <View style={[styles.previewBlock, styles.previewAfter]}>
+                    <ActivityIndicator size="small" color={AI_COLOR} />
+                  </View>
+                ) : (
+                  <Text style={[styles.previewBlock, styles.previewAfter]}>{preview?.after}</Text>
+                )}
               </View>
             </ScrollView>
 
             <View style={styles.previewFooter}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.previewAction, styles.previewCancel]}
-                onPress={() => setPreview(null)}
-              >
+              <TouchableOpacity activeOpacity={0.7} style={[styles.previewAction, styles.previewCancel]} onPress={closePreview}>
                 <Text style={styles.previewCancelLabel}>{t("cancel")}</Text>
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} style={[styles.previewAction, styles.previewApply]} onPress={applyPreview}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.previewAction, styles.previewApply, preview?.streaming && styles.previewApplyWaiting]}
+                onPress={applyPreview}
+                disabled={preview?.streaming}
+              >
                 <Text style={styles.previewApplyLabel}>{t("ai.editor.apply")}</Text>
               </TouchableOpacity>
             </View>
@@ -553,43 +574,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLOR.accentMuted,
     ...SHADOW.fab,
   },
-  outputPanel: {
-    position: "absolute",
-    bottom: 100,
-    left: 115,
-    right: PADDING_MARGIN.xxl,
-    maxHeight: 300,
-    backgroundColor: COLOR.boldBlue,
-    borderRadius: BORDER.normal,
-    borderWidth: 1,
-    borderColor: COLOR.blue,
-    zIndex: 7,
-    boxShadow: "0px 4px 6px rgba(0,0,0,0.4)",
-  },
-  outputHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: PADDING_MARGIN.md,
-    paddingVertical: PADDING_MARGIN.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: COLOR.blue,
-  },
-  outputTitle: {
-    color: COLOR.lightBlue,
-    fontSize: FONTSIZE.small,
-    fontWeight: FONTWEIGHT.semiBold,
-  },
-  outputScroll: {
-    flex: 1,
-    paddingHorizontal: PADDING_MARGIN.md,
-    paddingVertical: PADDING_MARGIN.sm,
-  },
-  outputText: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.medium,
-    lineHeight: 22,
-  },
   previewBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.7)",
@@ -658,6 +642,9 @@ const styles = StyleSheet.create({
   },
   previewApply: {
     backgroundColor: AI_COLOR,
+  },
+  previewApplyWaiting: {
+    opacity: 0.4,
   },
   previewCancelLabel: {
     color: COLOR.lightBlue,

@@ -320,10 +320,11 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                 <AIEditorActions
                   noteType="todo"
                   getContent={() =>
+                    // one item per line: the suggestions leave out what the list already has, line by line
                     note.list
                       .map((item) => item.text)
                       .filter(Boolean)
-                      .join(", ")
+                      .join("\n")
                   }
                   noteTitle={note.title}
                   onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
@@ -365,6 +366,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                     setNoteAsync({ ...note, list: mutableList });
                   }}
                   aiCleanup
+                  asItems
                   style={dockButtonStyle}
                 />
               </View>
