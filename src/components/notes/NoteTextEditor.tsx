@@ -12,6 +12,7 @@ import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
@@ -222,7 +223,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   // Only a brand-new note (created and never updated) autofocuses the editor, so
   // opening an existing note just lets the user read without popping the keyboard.
-  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const autofocus = useAutofocusNewNote(initialNote);
   const transitionDone = useScreenTransitionEnd();
   const didFocusRef = useRef(false);
 
@@ -231,11 +232,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
   // bridge (so it often no-op'd) and fired mid-transition (causing the jumps).
   useEffect(() => {
     if (didFocusRef.current) return;
-    if (!isNewNote || initialNote.readOnly) return;
+    if (!autofocus) return;
     if (!editorInitialized || !transitionDone) return;
     didFocusRef.current = true;
     richTextEditor.current?.focusContentEditor();
-  }, [editorInitialized, transitionDone, isNewNote, initialNote.readOnly]);
+  }, [editorInitialized, transitionDone, autofocus]);
 
   // Safety net: never leave the loading cover up forever if pell's init callback
   // somehow never fires.
@@ -662,8 +663,8 @@ const styles = StyleSheet.create({
   },
   richToolbarContainer: {
     width: SIZE.full,
-    // The button list fills the height inside this padding (a ScrollView grows), so the 44 high buttons sit centered.
-    height: 44 + 2 * PADDING_MARGIN.sm,
+    // The 44 high buttons centered in the padding (the height counts the top border too).
+    height: 44 + 2 * PADDING_MARGIN.sm + 1,
     paddingVertical: PADDING_MARGIN.sm,
     backgroundColor: COLOR.surface,
     borderTopWidth: 1,
@@ -704,6 +705,8 @@ const styles = StyleSheet.create({
     // bar from the window edges (the parent stretches it back to fill the gap).
     width: "auto",
     marginHorizontal: PADDING_MARGIN.lg,
+    // A border all round: one more pixel than the pinned bar's top one.
+    height: 44 + 2 * PADDING_MARGIN.sm + 2,
     borderWidth: 1,
     borderColor: GLASS.border,
   },

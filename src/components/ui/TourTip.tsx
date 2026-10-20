@@ -2,7 +2,7 @@ import { BORDER, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constan
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { StyleProp, ViewStyle } from "react-native";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { AccessibilityInfo, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 interface Props {
@@ -31,6 +31,11 @@ export default function TourTip({ step, total, title, text, actionLabel, onActio
   useEffect(() => {
     shown.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) });
   }, [shown]);
+
+  // Said out loud by a screen reader, which would reach the card last (it comes after the whole screen).
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(`${title}. ${text}`);
+  }, [title, text]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: shown.value,

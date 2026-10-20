@@ -21,13 +21,38 @@ const withLlamaProguardRules: ConfigPlugin = (config) =>
   ]);
 
 // A self-hosted FastMemo server on a home network is often plain http (a LAN address), which Android release builds
-// refuse by default. The connect screen warns before saving an http address and recommends HTTPS (ADR-017).
+// refuse by default. The connect screen warns before saving an http address and recommends HTTPS (ADR-017). The
+// manifest flag and a network security config: newer Android versions only read the config.
+const NETWORK_SECURITY_CONFIG = `<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+  <base-config cleartextTrafficPermitted="true">
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
+</network-security-config>
+`;
+
 const withCleartextTraffic: ConfigPlugin = (config) =>
-  withAndroidManifest(config, (modConfig) => {
-    const application = modConfig.modResults.manifest.application?.[0];
-    if (application) application.$["android:usesCleartextTraffic"] = "true";
-    return modConfig;
-  });
+  withDangerousMod(
+    withAndroidManifest(config, (modConfig) => {
+      const application = modConfig.modResults.manifest.application?.[0];
+      if (application) {
+        application.$["android:usesCleartextTraffic"] = "true";
+        application.$["android:networkSecurityConfig"] = "@xml/network_security_config";
+      }
+      return modConfig;
+    }),
+    [
+      "android",
+      (modConfig) => {
+        const dir = path.join(modConfig.modRequest.platformProjectRoot, "app", "src", "main", "res", "xml");
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "network_security_config.xml"), NETWORK_SECURITY_CONFIG);
+        return modConfig;
+      },
+    ]
+  );
 
 const isDev = process.env.EXPO_PUBLIC_ENV === "DEV";
 

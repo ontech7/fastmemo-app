@@ -20,7 +20,15 @@ export type {
   VaultRead,
 } from "./types";
 export { PRESENCE_TTL_MS } from "./types";
-export { cloudScope, isCloudSettingsComplete, isLoopbackUrl, isPlainHttp, normalizeServerUrl, providerOf } from "./scope";
+export {
+  cloudScope,
+  isCloudSettingsComplete,
+  isLoopbackUrl,
+  isPlainHttp,
+  isTailscaleUrl,
+  normalizeServerUrl,
+  providerOf,
+} from "./scope";
 
 /** The cloud this device syncs with (ADR-016): Firebase or a FastMemo server, as the settings say (ADR-017). */
 export const cloud: CloudBackend = new CloudRouter({ firebase: new FirebaseBackend(), server: new ServerBackend() });

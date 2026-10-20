@@ -119,10 +119,9 @@ const settingsSlice = createSlice({
     setNoteCreation: (state, action: PayloadAction<NoteCreationSettings>) => {
       state.noteCreation = action.payload;
     },
-    /** Moves the first-note tour on; `undefined` ends it. */
-    setTourStep: (state, action: PayloadAction<TourStep | undefined>) => {
-      if (action.payload) state.tour = action.payload;
-      else delete state.tour;
+    /** Moves the first-note tour on ("done" ends it). */
+    setTourStep: (state, action: PayloadAction<TourStep>) => {
+      state.tour = action.payload;
     },
   },
 });

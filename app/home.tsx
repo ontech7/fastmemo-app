@@ -42,12 +42,12 @@ import {
   selectorWebhook_updateNote,
   setTourStep,
 } from "@/slicers/settingsSlice";
-import type { CodeNote, Note, TextNote, TodoItem, TodoNote } from "@/types";
+import type { CodeNote, Note, RootState, TextNote, TodoItem, TodoNote } from "@/types";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FlashList } from "@shopify/flash-list";
-import { useIsFocused, useNavigation } from "expo-router";
+import { useFocusEffect, useIsFocused, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
@@ -392,6 +392,13 @@ export default function HomeScreen() {
   const [typeMenuOpen, setTypeMenuOpen] = useState(false);
   const showTour = isFocused && changelogChecked && !isDeleteMode && !typeMenuOpen;
 
+  // A tour left on its editor step (the app closed in the editor) goes on here, with the list's step.
+  useFocusEffect(
+    useCallback(() => {
+      if (selectorTourStep(store.getState() as RootState) === "write") dispatch(setTourStep("explore"));
+    }, [store, dispatch])
+  );
+
   return (
     <>
       <ConfirmOrCancelDialog
@@ -523,7 +530,7 @@ export default function HomeScreen() {
             total={3}
             title={t("tour.create_title")}
             text={t("tour.create_text")}
-            onSkip={() => dispatch(setTourStep(undefined))}
+            onSkip={() => dispatch(setTourStep("done"))}
           />
         )}
         {showTour && tourStep === "explore" && (
@@ -534,7 +541,7 @@ export default function HomeScreen() {
             title={t("tour.explore_title")}
             text={t("tour.explore_text")}
             actionLabel={t("tour.got_it")}
-            onAction={() => dispatch(setTourStep(undefined))}
+            onAction={() => dispatch(setTourStep("done"))}
           />
         )}
       </View>

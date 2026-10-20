@@ -11,6 +11,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { inferLanguageFromTitle, LANGUAGE_LABELS } from "@/constants/code-languages";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, MONOSPACE_FONT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName } from "@/libs/ai";
@@ -65,18 +66,18 @@ export default function NoteCodeEditor({ initialNote }: Props) {
 
   // Only a brand-new note autofocuses the editor content (not the tab title), so
   // opening an existing note just lets the user read without popping the keyboard.
-  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const autofocus = useAutofocusNewNote(initialNote);
   const transitionDone = useScreenTransitionEnd();
   const didFocusRef = useRef(false);
 
   // Focus once the editor has painted AND the screen transition has settled.
   useEffect(() => {
     if (didFocusRef.current) return;
-    if (!isNewNote || initialNote.readOnly) return;
+    if (!autofocus) return;
     if (!editorPainted || !transitionDone) return;
     didFocusRef.current = true;
     editorRef.current?.focus();
-  }, [editorPainted, transitionDone, isNewNote, initialNote.readOnly]);
+  }, [editorPainted, transitionDone, autofocus]);
 
   // Safety net: never leave the loading cover up forever if the WebView's ready
   // signal somehow never arrives.

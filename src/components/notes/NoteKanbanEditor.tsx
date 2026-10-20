@@ -8,6 +8,7 @@ import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
 import KanbanDragProvider from "@/providers/KanbanDragProvider";
@@ -68,10 +69,10 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
 
   // Only a brand-new note autofocuses its first card; opening an existing note
   // focuses nothing so the user can just read.
-  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const autofocus = useAutofocusNewNote(initialNote);
   const initialFocusCardId = useMemo(
-    () => (isNewNote && !initialNote.readOnly ? (memoInitialNote.columns[0]?.items[0]?.id ?? null) : null),
-    [isNewNote, initialNote.readOnly, memoInitialNote]
+    () => (autofocus ? (memoInitialNote.columns[0]?.items[0]?.id ?? null) : null),
+    [autofocus, memoInitialNote]
   );
 
   const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<KanbanNote>({

@@ -47,7 +47,7 @@ await build({
       export { SyncEngine } from "@/libs/cloud/syncEngine";
       export { ServerBackend } from "@/libs/cloud/serverBackend";
       export { CloudRouter } from "@/libs/cloud/router";
-      export { cloudScope, isLoopbackUrl, isPlainHttp, normalizeServerUrl } from "@/libs/cloud/scope";
+      export { cloudScope, isLoopbackUrl, isPlainHttp, isTailscaleUrl, normalizeServerUrl } from "@/libs/cloud/scope";
     `,
     resolveDir: src,
     loader: "ts",
@@ -115,6 +115,13 @@ ok(
     M.normalizeServerUrl(" notes.example.com ") === "https://notes.example.com"
 );
 ok(
+  "one server, however its scheme and host are typed (the path keeps its case)",
+  M.normalizeServerUrl("HTTPS://Notes.Example.COM/Sync/") === "https://notes.example.com/Sync" &&
+    M.normalizeServerUrl("NAS.Local:8787") === "http://nas.local:8787" &&
+    M.cloudScope({ provider: "server", serverUrl: "https://NOTES.example.com" }) ===
+      M.cloudScope({ provider: "server", serverUrl: "notes.example.com" })
+);
+ok(
   "plain http is told apart",
   M.isPlainHttp("192.168.1.5:8080") &&
     M.isPlainHttp("HTTP://notes.example.com") &&
@@ -132,7 +139,14 @@ ok(
       "http://notes.example.com",
       "http://127.0.0.1.nip.io",
       "http://10.0.0.2",
+      "http://evil.example.com?.localhost",
+      "http://evil.example.com#.localhost",
     ].some(M.isLoopbackUrl)
+);
+ok(
+  "Tailscale addresses and names are told apart",
+  ["http://100.64.0.1:8787", "100.127.255.254", "http://nas.tail1234.ts.net:8787"].every(M.isTailscaleUrl) &&
+    !["http://100.63.0.1", "http://100.128.0.1", "http://ts.net.example.com", "http://192.168.1.5"].some(M.isTailscaleUrl)
 );
 
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -295,6 +309,45 @@ try {
     const restarted = makeBackend(limited.url).backend;
     await restarted.listDevices();
     ok("the device list brings the server's limit (no handshake after a restart)", restarted.deviceLimit === 4);
+  }
+
+  log("\nServerBackend: when the access key travels");
+  {
+    const sent = [];
+    const tokens = new Map();
+    const spy = new M.ServerBackend({
+      fetch: (input, init) => {
+        const headers = init?.headers ?? {};
+        sent.push({ path: new URL(input).pathname, key: "X-Access-Key" in headers, token: "Authorization" in headers });
+        return fetch(input, init);
+      },
+      storage: {
+        get: async (k) => tokens.get(k) ?? null,
+        set: async (k, v) => void tokens.set(k, v),
+        remove: async (k) => void tokens.delete(k),
+      },
+    });
+    spy.init(settingsFor(server.url));
+    await spy.listDevices();
+    ok("not enrolled yet, a member call carries the key", sent.at(-1).key && !sent.at(-1).token);
+    await spy.registerDevice({ uuid: "K", modelName: "Mac", brand: "Apple" });
+    ok("enrolling does", sent.at(-1).path === "/v1/devices" && sent.at(-1).key);
+    sent.length = 0;
+    await spy.listDevices();
+    await spy.readVault();
+    ok("enrolled, member calls carry the token alone", sent.length === 2 && sent.every((r) => r.token && !r.key));
+    // Removed elsewhere (or by a leave whose answer got lost): its stored token is refused, the key still answers.
+    const other = makeBackend(server.url);
+    await other.backend.registerDevice({ uuid: "O", modelName: "Pixel", brand: "Google" });
+    await other.backend.unregisterDevice("K");
+    sent.length = 0;
+    const devices = await spy.listDevices();
+    ok(
+      "a refused token: the member call is tried again with the key, and answers",
+      Array.isArray(devices) && sent.length === 2 && sent[0].token && !sent[0].key && sent[1].key && !sent[1].token
+    );
+    await other.backend.unregisterDevice("O");
+    await spy.dispose();
   }
 
   log("\nServerBackend: devices, feed, presence");

@@ -6,6 +6,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
@@ -278,7 +279,8 @@ export default function ReportScreen() {
           <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView style={styles.scroll}>
+        {/* Keeps the focused field above the keyboard (under KeyboardProvider the window doesn't resize for it). */}
+        <KeyboardAwareScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" bottomOffset={PADDING_MARGIN.xl}>
           <View style={styles.appWrapper}>
             <LottieView ref={logoAnimRef} style={styles.logoStyle} source={lottieJson} loop={false} />
             <Text style={styles.text}>Fast Memo - Notes in one click</Text>
@@ -399,7 +401,7 @@ export default function ReportScreen() {
               <Text style={styles.text}>{t("report.sendReport")}</Text>
             </TouchableOpacity>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </>
   );

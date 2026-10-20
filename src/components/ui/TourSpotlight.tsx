@@ -29,6 +29,8 @@ const HOLE_RADIUS = BORDER.big;
 /** Between a hole and the card (the arrow sits in it). */
 const GAP = 16;
 const CARD_MAX_WIDTH = 340;
+/** Narrower than this, the card rather goes over another lit target than beside it. */
+const CARD_MIN_WIDTH = 200;
 const MARGIN = PADDING_MARGIN.lg;
 /** Keeps the arrow off the card's rounded corners. */
 const ARROW_INSET = 28;
@@ -66,14 +68,21 @@ export default function TourSpotlight({ targets, pointAt, passThrough = false, .
   }, [targetsKey, pointAt]);
 
   // Measured when shown, again once what it points at has settled (entering animations, a list's first layout), and
-  // whenever a target comes or goes or the window changes size.
+  // whenever a target comes or goes or the window changes size (then again once the new layout has settled: a list's
+  // cells resize after the event).
   useEffect(() => {
     measure();
     const later = setTimeout(measure, 400);
+    let settled: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = subscribeTourTargets(measure);
-    const dimensions = Dimensions.addEventListener("change", measure);
+    const dimensions = Dimensions.addEventListener("change", () => {
+      measure();
+      clearTimeout(settled);
+      settled = setTimeout(measure, 300);
+    });
     return () => {
       clearTimeout(later);
+      clearTimeout(settled);
       unsubscribe();
       dimensions.remove();
     };
@@ -96,14 +105,24 @@ export default function TourSpotlight({ targets, pointAt, passThrough = false, .
   const { size, holes, point } = layout ?? { size: null, holes: [], point: null };
   let cardWidth = size ? Math.min(CARD_MAX_WIDTH, size.width - 2 * MARGIN) : CARD_MAX_WIDTH;
 
-  // The card goes on the side of the target with more room, centered on it as far as the screen allows. A target
-  // taller than half the screen (the sidebar) gets the card beside it, in the room left of the screen, without an arrow.
+  // The card goes on the side of the target with more room, centered on it as far as the screen allows, and right of
+  // another lit target on its left there (the sidebar beside the first note). A target taller than half the screen (the
+  // sidebar) gets the card beside it, in the room left of the screen, without an arrow.
   let cardStyle: ViewStyle = {};
   let arrow: { side: "top" | "bottom"; left: number } | undefined;
   if (size && point && point.height < size.height / 2) {
     const center = point.x + point.width / 2;
-    const left = clamp(center - cardWidth / 2, MARGIN, size.width - cardWidth - MARGIN);
     const below = size.height - (point.y + point.height) >= point.y;
+    let minLeft = holes.reduce(
+      (min, rect) =>
+        rect.x + rect.width <= center && (below ? rect.y + rect.height > point.y + point.height : rect.y < point.y)
+          ? Math.max(min, rect.x + rect.width + GAP)
+          : min,
+      MARGIN
+    );
+    if (size.width - minLeft - MARGIN < CARD_MIN_WIDTH) minLeft = MARGIN;
+    cardWidth = Math.min(cardWidth, size.width - minLeft - MARGIN);
+    const left = clamp(center - cardWidth / 2, minLeft, size.width - cardWidth - MARGIN);
     cardStyle = below ? { left, top: point.y + point.height + GAP } : { left, bottom: size.height - point.y + GAP };
     arrow = { side: below ? "top" : "bottom", left: clamp(center - left, ARROW_INSET, cardWidth - ARROW_INSET) };
   } else if (size && point) {
@@ -119,7 +138,7 @@ export default function TourSpotlight({ targets, pointAt, passThrough = false, .
   const hole = passThrough && holes.length === 1 ? holes[0] : null;
 
   return (
-    <View ref={layerRef} style={[StyleSheet.absoluteFill, styles.layer]}>
+    <View ref={layerRef} style={[StyleSheet.absoluteFill, styles.layer]} onLayout={() => measure()}>
       {size && (
         <Animated.View style={[StyleSheet.absoluteFill, styles.passThrough, { opacity }]}>
           <View style={[StyleSheet.absoluteFill, styles.untouchable]}>

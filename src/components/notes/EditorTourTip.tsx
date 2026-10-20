@@ -39,7 +39,7 @@ export default function EditorTourTip() {
       text={t("tour.write_text")}
       actionLabel={t("tour.got_it")}
       onAction={() => dispatch(setTourStep("explore"))}
-      onSkip={() => dispatch(setTourStep(undefined))}
+      onSkip={() => dispatch(setTourStep("done"))}
     />
   );
 }
