@@ -278,6 +278,7 @@ const en = {
     deleteDevices: "Manage devices",
     handshakeFailed: "Connection attempt failed",
     handshakeFailedDesc: "Unable to connect to the Firebase server.",
+    example: "e.g.: {{value}}",
     provider: {
       title: "Sync with",
       firebase: "Google Firebase",
@@ -289,9 +290,9 @@ const en = {
       url: "Server address",
       key: "Access key",
       http_warning:
-        "This address isn't encrypted (HTTP): use it only on your home network. Your notes stay end-to-end encrypted, but the access key and the titles travel in the clear.",
+        "This address isn't encrypted (HTTP). Phones and the web app only connect over HTTPS (the guide shows a free way, with Tailscale): keep HTTP for tests on this computer. Your notes stay end-to-end encrypted, but the access key and the titles would travel in the clear.",
       handshake_failed_desc:
-        "Couldn't reach the server, or the access key is wrong. Check the address (e.g. https://notes.example.com or http://192.168.1.10:8787), the key, and that the server is running.",
+        "Couldn't reach the server, or the access key is wrong. Check the address (e.g. https://notes.example.com), the key, and that the server is running. Phones and the web app need an HTTPS address.",
     },
     vault: {
       setup_title: "Protect your notes",

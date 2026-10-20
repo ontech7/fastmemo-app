@@ -278,6 +278,7 @@ const es = {
     deleteDevices: "Administrar dispositivos",
     handshakeFailed: "Error en el intento de conexión",
     handshakeFailedDesc: "No se pudo conectar al servidor de Firebase.",
+    example: "p. ej.: {{value}}",
     provider: {
       title: "Sincronizar con",
       firebase: "Google Firebase",
@@ -289,9 +290,9 @@ const es = {
       url: "Dirección del servidor",
       key: "Clave de acceso",
       http_warning:
-        "Esta dirección no está cifrada (HTTP): úsala solo en la red de casa. Tus notas siguen cifradas de extremo a extremo, pero la clave de acceso y los títulos viajan sin cifrar.",
+        "Esta dirección no está cifrada (HTTP). Los teléfonos y la app web solo se conectan por HTTPS (la guía muestra una forma gratuita, con Tailscale): usa HTTP solo para pruebas en este ordenador. Tus notas siguen cifradas de extremo a extremo, pero la clave de acceso y los títulos viajarían sin cifrar.",
       handshake_failed_desc:
-        "No se pudo conectar con el servidor o la clave de acceso es incorrecta. Revisa la dirección (p. ej. https://notas.ejemplo.com o http://192.168.1.10:8787), la clave y que el servidor esté encendido.",
+        "No se pudo conectar con el servidor o la clave de acceso es incorrecta. Revisa la dirección (p. ej. https://notas.ejemplo.com), la clave y que el servidor esté encendido. Los teléfonos y la app web necesitan una dirección HTTPS.",
     },
     vault: {
       setup_title: "Protege tus notas",

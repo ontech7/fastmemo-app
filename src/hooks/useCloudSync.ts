@@ -71,36 +71,39 @@ export const useCloudSync = () => {
 
   const dispatch = useDispatch();
 
-  const toggleCloudSync = async (): Promise<void> => {
-    if (isCloudSyncEnabled) {
-      // Best-effort cloud cleanup. If a call rejects (transient/offline) we still
-      // disconnect locally below, so the user never gets stuck in a half-on state
-      // with no way to toggle off.
-      try {
-        // Stopped first: removing this device would otherwise read as "removed by another device".
-        (await getSyncEngine())?.stop();
+  /**
+   * Leaves the connected cloud: this device is removed from it and forgets its vault key there (`scopes`: the saved
+   * connection's, and the form's when it differs). The cloud vault stays, so reconnecting (or another device) can still
+   * unlock it with the passphrase. Best effort: a call that fails (offline) still disconnects here, so the user never gets
+   * stuck half on.
+   */
+  const leaveCloud = async (scopes: string[]): Promise<void> => {
+    try {
+      // Stopped first: removing this device would otherwise read as "removed by another device".
+      (await getSyncEngine())?.stop();
 
-        const me = await getDeviceUuid();
-        if (me) {
-          // Removed first, so the others stop making it a recipient; then nobody waits for its acks anymore.
-          await cloud.unregisterDevice(me);
-          await cloud.dropRecipient(me);
-        }
-
-        // forget the cached DEK for this device, but leave the cloud vault intact
-        // so reconnecting (or another device) can still unlock with the passphrase
-        if (scope) await forgetDeviceVault(scope);
-
-        await cloud.dispose();
-      } catch (e) {
-        console.log("toggleCloudSync cleanup error:", e);
+      const me = await getDeviceUuid();
+      if (me) {
+        // Removed first, so the others stop making it a recipient; then nobody waits for its acks anymore.
+        await cloud.unregisterDevice(me);
+        await cloud.dropRecipient(me);
       }
 
-      setIsConnected(false);
-      dispatch(setCloudConnected(false));
+      for (const forgotten of new Set(scopes)) if (forgotten) await forgetDeviceVault(forgotten);
 
-      AsyncStorage.setItem("@cloudSync", JSON.stringify({}));
+      await cloud.dispose();
+    } catch (e) {
+      console.log("cloud cleanup error:", e);
     }
+
+    setIsConnected(false);
+    dispatch(setCloudConnected(false));
+
+    await AsyncStorage.setItem("@cloudSync", JSON.stringify({})).catch(() => {});
+  };
+
+  const toggleCloudSync = async (): Promise<void> => {
+    if (isCloudSyncEnabled) await leaveCloud([cloudScope(selectorCloudSettings), scope]);
 
     setCloudSyncEnabled(!isCloudSyncEnabled);
     dispatch(setIsCloudSyncEnabled(!isCloudSyncEnabled));
@@ -122,10 +125,40 @@ export const useCloudSync = () => {
     setIsConnecting({ loading: true });
     setIsLoading(true);
 
+    if (selectorCloudConnected) {
+      const saved = selectorCloudSettings;
+      if (cloudScope(saved) === scope && providerOf(saved) === provider) {
+        await updateCloudSettings(saved);
+        return;
+      }
+      // Another cloud: this one is left first (as when turning sync off), then the new one connects as usual.
+      await leaveCloud([cloudScope(saved)]);
+    }
+
     cloud.init(connectionSettings);
 
     const ok = await cloud.verify();
     setIsConnecting({ loading: false, code: ok ? Handshake.Success : Handshake.Fail });
+  };
+
+  /**
+   * The same cloud with new credentials (a new API key, a rotated access key): checked, then saved. The device stays
+   * registered and its vault unlocked; if the check fails, the connection goes on with the saved settings and the form
+   * keeps the new ones to correct.
+   */
+  const updateCloudSettings = async (saved: CloudSettings): Promise<void> => {
+    cloud.init(connectionSettings);
+    const ok = await cloud.verify();
+    if (ok) {
+      await AsyncStorage.setItem("@cloudSync", JSON.stringify(connectionSettings));
+      dispatch(setCloudSettings(connectionSettings));
+      setIsConnected(true);
+    } else {
+      cloud.init(saved);
+      setHandshakeFailed(true);
+    }
+    setIsConnecting({ loading: false });
+    setIsLoading(false);
   };
 
   const editCloudSettings = (): void => {

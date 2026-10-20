@@ -279,6 +279,7 @@ const de = {
     deleteDevices: "Geräte verwalten",
     handshakeFailed: "Verbindungsversuch fehlgeschlagen",
     handshakeFailedDesc: "Es konnte keine Verbindung zum Firebase-Server hergestellt werden.",
+    example: "z. B.: {{value}}",
     provider: {
       title: "Synchronisieren mit",
       firebase: "Google Firebase",
@@ -290,9 +291,9 @@ const de = {
       url: "Serveradresse",
       key: "Zugangsschlüssel",
       http_warning:
-        "Diese Adresse ist nicht verschlüsselt (HTTP): Verwenden Sie sie nur in Ihrem Heimnetz. Ihre Notizen bleiben Ende-zu-Ende-verschlüsselt, aber der Zugangsschlüssel und die Titel werden unverschlüsselt übertragen.",
+        "Diese Adresse ist nicht verschlüsselt (HTTP). Smartphones und die Web-App verbinden sich nur über HTTPS (die Anleitung zeigt einen kostenlosen Weg mit Tailscale): Verwenden Sie HTTP nur für Tests auf diesem Computer. Ihre Notizen bleiben Ende-zu-Ende-verschlüsselt, aber der Zugangsschlüssel und die Titel würden unverschlüsselt übertragen.",
       handshake_failed_desc:
-        "Der Server ist nicht erreichbar oder der Zugangsschlüssel ist falsch. Prüfen Sie die Adresse (z. B. https://notizen.beispiel.de oder http://192.168.1.10:8787), den Schlüssel und ob der Server läuft.",
+        "Der Server ist nicht erreichbar oder der Zugangsschlüssel ist falsch. Prüfen Sie die Adresse (z. B. https://notizen.beispiel.de), den Schlüssel und ob der Server läuft. Smartphones und die Web-App benötigen eine HTTPS-Adresse.",
     },
     vault: {
       setup_title: "Schützen Sie Ihre Notizen",

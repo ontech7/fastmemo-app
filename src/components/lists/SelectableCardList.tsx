@@ -17,9 +17,11 @@ interface Props<T extends string> {
   items: SelectableCardItem<T>[];
   selectedId: T;
   onSelect: (id: T) => void;
+  /** Shows the choice without letting it change: nothing is dimmed (it's settled here, not unavailable). */
+  readOnly?: boolean;
 }
 
-export default function SelectableCardList<T extends string>({ items, selectedId, onSelect }: Props<T>) {
+export default function SelectableCardList<T extends string>({ items, selectedId, onSelect, readOnly = false }: Props<T>) {
   return (
     <View style={styles.list}>
       {items.map((item, index) => {
@@ -27,6 +29,7 @@ export default function SelectableCardList<T extends string>({ items, selectedId
         const isLast = index === items.length - 1;
         const disabled = item.disabled === true;
         const description = disabled && item.disabledLabel ? item.disabledLabel : item.description;
+        const locked = disabled || readOnly;
 
         return (
           <TouchableOpacity
@@ -37,11 +40,12 @@ export default function SelectableCardList<T extends string>({ items, selectedId
               isSelected && !disabled && styles.itemSelected,
               disabled && styles.itemDisabled,
             ]}
-            onPress={() => !disabled && onSelect(item.id)}
-            activeOpacity={disabled ? 1 : 0.7}
-            disabled={disabled}
+            onPress={() => !locked && onSelect(item.id)}
+            activeOpacity={locked ? 1 : 0.7}
+            disabled={locked}
             accessibilityRole="radio"
             aria-checked={isSelected}
+            aria-disabled={locked}
           >
             <View style={{ flex: 1 }}>
               <View style={styles.header}>

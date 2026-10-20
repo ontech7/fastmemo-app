@@ -182,7 +182,8 @@ export default function CloudSyncScreen() {
                     // Connected: only the cloud in use (edit the settings to switch).
                     items={state.isEditable ? providerItems : providerItems.filter((item) => item.id === provider)}
                     selectedId={provider}
-                    onSelect={(id) => state.isEditable && methods.setCloudProvider(id)}
+                    onSelect={methods.setCloudProvider}
+                    readOnly={!state.isEditable}
                   />
                 </View>
 
@@ -199,7 +200,7 @@ export default function CloudSyncScreen() {
                           style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
                           cursorColor={COLOR.textPrimary}
                           placeholderTextColor={COLOR.textMuted}
-                          placeholder="e.g.: https://notes.example.com"
+                          placeholder={t("cloudsync.example", { value: "https://notes.example.com" })}
                           autoCapitalize="none"
                           autoCorrect={false}
                           spellCheck={false}
@@ -223,10 +224,11 @@ export default function CloudSyncScreen() {
                           style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
                           cursorColor={COLOR.textPrimary}
                           placeholderTextColor={COLOR.textMuted}
-                          placeholder="e.g.: 3kQ9-x7Lm2P..."
+                          placeholder={t("cloudsync.example", { value: "3kQ9-x7Lm2P..." })}
                           autoCapitalize="none"
                           autoCorrect={false}
                           spellCheck={false}
+                          secureTextEntry
                           onChangeText={(text: string) => methods.setCloudSetting("serverKey", text)}
                           value={!state.isConnected ? (cloudSettings.serverKey ?? "") : "***********"}
                         />
@@ -246,7 +248,7 @@ export default function CloudSyncScreen() {
                           style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
                           cursorColor={COLOR.textPrimary}
                           placeholderTextColor={COLOR.textMuted}
-                          placeholder="e.g.: AIzaF0Ba0wDdkde893DR9rkfAE03"
+                          placeholder={t("cloudsync.example", { value: "AIzaF0Ba0wDdkde893DR9rkfAE03" })}
                           autoCapitalize="none"
                           autoCorrect={false}
                           spellCheck={false}
@@ -267,7 +269,7 @@ export default function CloudSyncScreen() {
                           style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
                           cursorColor={COLOR.textPrimary}
                           placeholderTextColor={COLOR.textMuted}
-                          placeholder="e.g.: fastmemo-xyzw"
+                          placeholder={t("cloudsync.example", { value: "fastmemo-xyzw" })}
                           autoCapitalize="none"
                           autoCorrect={false}
                           spellCheck={false}
@@ -288,7 +290,7 @@ export default function CloudSyncScreen() {
                           style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
                           cursorColor={COLOR.textPrimary}
                           placeholderTextColor={COLOR.textMuted}
-                          placeholder="e.g.: 1:2137892387:web:9g7a6s6f8gf8df878787s6"
+                          placeholder={t("cloudsync.example", { value: "1:2137892387:web:9g7a6s6f8gf8df878787s6" })}
                           autoCapitalize="none"
                           autoCorrect={false}
                           spellCheck={false}

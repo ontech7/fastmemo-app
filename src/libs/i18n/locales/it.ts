@@ -280,6 +280,7 @@ const it = {
     deleteDevices: "Gestisci dispositivi",
     handshakeFailed: "Tentativo di connessione fallito",
     handshakeFailedDesc: "Non è stato possibile connettersi al server di Firebase.",
+    example: "es.: {{value}}",
     provider: {
       title: "Sincronizza con",
       firebase: "Google Firebase",
@@ -291,9 +292,9 @@ const it = {
       url: "Indirizzo del server",
       key: "Chiave di accesso",
       http_warning:
-        "Questo indirizzo non è cifrato (HTTP): usalo solo sulla rete di casa. Le note restano cifrate end-to-end, ma la chiave di accesso e i titoli viaggiano in chiaro.",
+        "Questo indirizzo non è cifrato (HTTP). Telefoni e web app si collegano solo in HTTPS (la guida mostra un modo gratuito, con Tailscale): usa HTTP solo per prove su questo computer. Le note restano cifrate end-to-end, ma la chiave di accesso e i titoli viaggerebbero in chiaro.",
       handshake_failed_desc:
-        "Server non raggiungibile, o chiave di accesso errata. Controlla l'indirizzo (es. https://note.esempio.it o http://192.168.1.10:8787), la chiave e che il server sia acceso.",
+        "Server non raggiungibile, o chiave di accesso errata. Controlla l'indirizzo (es. https://note.esempio.it), la chiave e che il server sia acceso. Telefoni e web app richiedono un indirizzo HTTPS.",
     },
     vault: {
       setup_title: "Proteggi le tue note",

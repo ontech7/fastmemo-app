@@ -279,6 +279,7 @@ const fr = {
     deleteDevices: "Gérer les appareils",
     handshakeFailed: "Échec de la tentative de connexion",
     handshakeFailedDesc: "Impossible de se connecter au serveur Firebase.",
+    example: "ex. : {{value}}",
     provider: {
       title: "Synchroniser avec",
       firebase: "Google Firebase",
@@ -290,9 +291,9 @@ const fr = {
       url: "Adresse du serveur",
       key: "Clé d'accès",
       http_warning:
-        "Cette adresse n'est pas chiffrée (HTTP) : utilisez-la uniquement sur votre réseau domestique. Vos notes restent chiffrées de bout en bout, mais la clé d'accès et les titres circulent en clair.",
+        "Cette adresse n'est pas chiffrée (HTTP). Les téléphones et l'application web ne se connectent qu'en HTTPS (le guide montre une solution gratuite, avec Tailscale) : réservez HTTP aux essais sur cet ordinateur. Vos notes restent chiffrées de bout en bout, mais la clé d'accès et les titres circuleraient en clair.",
       handshake_failed_desc:
-        "Impossible de joindre le serveur, ou la clé d'accès est incorrecte. Vérifiez l'adresse (par ex. https://notes.exemple.fr ou http://192.168.1.10:8787), la clé, et que le serveur est allumé.",
+        "Impossible de joindre le serveur, ou la clé d'accès est incorrecte. Vérifiez l'adresse (par ex. https://notes.exemple.fr), la clé, et que le serveur est allumé. Les téléphones et l'application web exigent une adresse HTTPS.",
     },
     vault: {
       setup_title: "Protégez vos notes",

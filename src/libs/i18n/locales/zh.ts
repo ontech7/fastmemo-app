@@ -277,6 +277,7 @@ const zh = {
     deleteDevices: "管理设备",
     handshakeFailed: "连接尝试失败",
     handshakeFailedDesc: "无法连接到 Firebase 服务器。",
+    example: "例如：{{value}}",
     provider: {
       title: "同步到",
       firebase: "Google Firebase",
@@ -287,9 +288,10 @@ const zh = {
     server: {
       url: "服务器地址",
       key: "访问密钥",
-      http_warning: "此地址未加密（HTTP）：请仅在家庭网络中使用。笔记仍保持端到端加密，但访问密钥和标题以明文传输。",
+      http_warning:
+        "此地址未加密（HTTP）。手机和网页版只能通过 HTTPS 连接（指南中介绍了使用 Tailscale 的免费方法）：HTTP 仅用于在本机上测试。笔记仍保持端到端加密，但访问密钥和标题将以明文传输。",
       handshake_failed_desc:
-        "无法连接到服务器，或访问密钥错误。请检查地址（例如 https://notes.example.com 或 http://192.168.1.10:8787）、密钥，以及服务器是否正在运行。",
+        "无法连接到服务器，或访问密钥错误。请检查地址（例如 https://notes.example.com）、密钥，以及服务器是否正在运行。手机和网页版需要 HTTPS 地址。",
     },
     vault: {
       setup_title: "保护您的笔记",
