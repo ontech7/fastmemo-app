@@ -16,7 +16,7 @@ import {
   normalizeModelId,
   truncateForAction,
 } from "./constants";
-import { cleanSuggestedItems, isPlausibleRewrite, stripThinking } from "./helpers";
+import { categoryGrammar, cleanSuggestedItems, isPlausibleRewrite, stripThinking } from "./helpers";
 import type {
   AIModelId,
   AIModelInfo,
@@ -251,6 +251,8 @@ export async function deleteModel(modelId?: AIModelId): Promise<void> {
 }
 
 let _activeModelId: AIModelId | null = null;
+/** The model `_initPromise` is loading. */
+let _loadingModelId: AIModelId | null = null;
 
 /*
  * Loading takes seconds, so a loaded model stays: it is released 3 minutes after the last use, and when the app goes to
@@ -282,17 +284,31 @@ AppState.addEventListener("change", (state) => {
   if (state === "background") scheduleRelease();
 });
 
-/** Runs `work` with the context marked busy, then restarts the idle countdown. */
+/** The previous completion's end: one context runs one completion at a time (a second one fails "Context is busy"). */
+let _queue: Promise<void> = Promise.resolve();
+
+/** Runs `work` after the completions before it, with the context marked busy, then restarts the idle countdown. */
 async function whileBusy<T>(work: () => Promise<T>): Promise<T> {
   _busy++;
   clearIdleRelease();
+  const previous = _queue;
+  let done!: () => void;
+  _queue = new Promise<void>((resolve) => (done = resolve));
   try {
+    await previous;
     return await work();
   } finally {
+    done();
     _busy--;
     scheduleRelease();
   }
 }
+
+/**
+ * Bumped by every cancel. A run compares it with the value it started with at each step (in the queue, after the load, at
+ * every token): a stop sent while the model was still loading would otherwise be lost, and the answer run to its limit.
+ */
+let _cancelGeneration = 0;
 
 /**
  * Starts loading the model without waiting for it, where an action is likely to follow (the dictation sheet opens, the AI
@@ -305,6 +321,12 @@ export function prewarmContext(modelId?: AIModelId): void {
 export async function initContext(modelId?: AIModelId): Promise<boolean> {
   const targetId = normalizeModelId(modelId);
 
+  // A load under way: shared if it's this model, waited for (then replaced) if it's another one.
+  while (_initPromise) {
+    if (_loadingModelId === targetId) return _initPromise;
+    await _initPromise;
+  }
+
   // If context exists but for a different model, release it first
   if (_context && _activeModelId !== targetId) {
     await releaseContext();
@@ -312,8 +334,8 @@ export async function initContext(modelId?: AIModelId): Promise<boolean> {
 
   if (_context) return true;
 
-  // Prevent concurrent init calls (mutex via promise)
-  if (_initPromise) return _initPromise;
+  // Another caller may have started a load while this one released.
+  if (_initPromise) return initContext(targetId);
 
   if (!isNativeModuleAvailable()) {
     console.warn("[AI] Native module not available. Rebuild the app with: npx expo run:android");
@@ -321,6 +343,7 @@ export async function initContext(modelId?: AIModelId): Promise<boolean> {
     return false;
   }
 
+  _loadingModelId = targetId;
   _initPromise = (async () => {
     try {
       notifyListeners("loading");
@@ -353,6 +376,7 @@ export async function initContext(modelId?: AIModelId): Promise<boolean> {
       return false;
     } finally {
       _initPromise = null;
+      _loadingModelId = null;
     }
   })();
 
@@ -370,7 +394,9 @@ export function getContextInfo(): { gpu: boolean; reasonNoGPU: string; devices?:
   };
 }
 
+/** Stops the running completion, and any queued or loading run started before this call. */
 export async function cancelCommand(): Promise<void> {
+  _cancelGeneration++;
   if (_context) {
     try {
       await _context.stopCompletion();
@@ -382,12 +408,15 @@ export async function cancelCommand(): Promise<void> {
 
 export async function releaseContext(): Promise<void> {
   clearIdleRelease();
+  // A load under way would otherwise finish after the release and keep the model (switching models, turning the AI off).
+  if (_initPromise) await _initPromise;
   if (_context) {
     // Detached first: an action starting during the release loads a fresh context instead of using this one.
     const context = _context;
     _activeModelId = null;
     _context = null;
     try {
+      if (_busy > 0) await context.stopCompletion();
       await context.release();
     } catch {
       // Ignore release errors
@@ -433,21 +462,37 @@ export function generateEditorContent(
   onToken?: (token: string) => void,
   options: EditorActionOptions = {}
 ): Promise<EditorActionResult> {
-  return whileBusy(() => runEditorAction(action, content, onToken, options));
+  const generation = _cancelGeneration;
+  return whileBusy(() => runEditorAction(action, content, onToken, options, generation));
 }
+
+/** How much a rewrite may write, in tokens per input token (room for the whole text, not for a runaway). */
+const REWRITE_TOKEN_FACTOR: Partial<Record<EditorAction, number>> = {
+  clean_transcript: 1.6,
+  fix_grammar: 1.6,
+  translate: 2,
+  shorten: 1,
+  transcript_to_items: 1.5,
+};
 
 async function runEditorAction(
   action: EditorAction,
   content: string,
   onToken: ((token: string) => void) | undefined,
-  options: EditorActionOptions
+  options: EditorActionOptions,
+  generation: number
 ): Promise<EditorActionResult> {
-  if (!_context) {
-    const initialized = await initContext(selectedModelId());
-    if (!initialized) {
-      return { success: false, error: "Model not ready" };
-    }
+  const cancelled = () => generation !== _cancelGeneration;
+  if (cancelled()) return { success: false, error: "cancelled" };
+
+  // Always the model asked for: a context loaded for another one (switched in the settings meanwhile) is replaced.
+  const initialized = await initContext(options.modelId ?? selectedModelId());
+  if (!initialized) {
+    return { success: false, error: "Model not ready" };
   }
+  if (cancelled() || !_context) return { success: false, error: "cancelled" };
+  const context = _context;
+  const model = getModel(_activeModelId ?? undefined);
 
   const langCode = options.lang ?? resolveLanguage();
   const isJsonOutput = action === "suggest_items" || action === "transcript_to_items";
@@ -458,26 +503,49 @@ async function runEditorAction(
   // For suggest_category, build a user message with category list
   let categoryNames: string[] = [];
   if (action === "suggest_category") {
-    categoryNames = options.categories ?? store.getState().categories.items.map((c: { name: string }) => c.name);
+    categoryNames = (options.categories ?? store.getState().categories.items.map((c: { name: string }) => c.name)).filter(
+      (name) => name.trim()
+    );
+    if (categoryNames.length === 0) return { success: false, error: "no_category_match" };
     content = `Categories: ${categoryNames.join(", ")}\n\nNote:\n${content}`;
   }
 
   try {
-    const systemPrompt = getEditorSystemPrompt(action, langCode, _activeModelId ?? undefined);
+    const systemPrompt = getEditorSystemPrompt(action, langCode, model.id);
 
-    const result = await _context!.completion(
+    // A rewrite gets room for the whole text (a long dictation outgrows a fixed budget), within the context's size.
+    let nPredict = ACTION_MAX_TOKENS[action];
+    const factor = REWRITE_TOKEN_FACTOR[action];
+    if (factor) {
+      const inputTokens = (await context.tokenize(content)).tokens.length;
+      const room = model.contextSize - inputTokens - 256;
+      nPredict = Math.max(64, Math.min(room, Math.max(nPredict, Math.ceil(inputTokens * factor) + 32)));
+    }
+    if (cancelled()) return { success: false, error: "cancelled" };
+
+    let stopping = false;
+    const result = await context.completion(
       {
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content },
         ],
         ...CHAT_TEMPLATE,
-        n_predict: ACTION_MAX_TOKENS[action],
+        n_predict: nPredict,
         stop: STOP_WORDS,
         ...ACTION_SAMPLING[action],
         ...(isJsonOutput ? { grammar: JSON_ARRAY_GRAMMAR } : {}),
+        ...(action === "suggest_category" ? { grammar: categoryGrammar(categoryNames) } : {}),
       },
       (data) => {
+        // a cancel that landed before the native completion began was dropped by it: stop at the first token
+        if (cancelled()) {
+          if (!stopping) {
+            stopping = true;
+            void context.stopCompletion();
+          }
+          return;
+        }
         if (data.token && onToken) {
           onToken(data.token);
         }
@@ -485,6 +553,12 @@ async function runEditorAction(
     );
 
     const timings = timingsOf(result.timings);
+    // A stopped answer is cut short: never applied (a half list of items, half a category name).
+    if (cancelled() || result.interrupted) return { success: false, error: "cancelled", timings };
+    // So is one that ran out of room: a rewrite cut mid-way would replace the whole text with part of it.
+    if (result.stopped_limit || result.truncated || result.context_full) {
+      return { success: false, error: factor ? "too_long" : "No response", timings };
+    }
     const text = stripThinking(result.text ?? "").trim();
     if (!text) return { success: false, error: "No response", timings };
 
@@ -513,24 +587,11 @@ async function runEditorAction(
       .replace(/^(Continuation|Continuazione|Fortsetzung|Continuacion|Suite|続き|续写)\s*:\s*/i, "")
       .trim();
 
-    // For suggest_category, match model output to a real category name
+    // The grammar lets the model answer only with a category name or "none" (a category named "none" wins).
     if (action === "suggest_category") {
-      const lowerCleaned = cleaned.toLowerCase();
-
-      if (lowerCleaned === "none" || lowerCleaned.startsWith("none")) {
-        return { success: false, error: "no_category_match", timings };
-      }
-
-      // Exact match, then includes match
       const matched =
-        categoryNames.find((n) => n.toLowerCase() === lowerCleaned) ||
-        categoryNames.find((n) => lowerCleaned.includes(n.toLowerCase())) ||
-        categoryNames.find((n) => n.toLowerCase().includes(lowerCleaned));
-      if (matched) {
-        return { success: true, text: matched, timings };
-      }
-
-      return { success: false, error: "no_category_match", timings };
+        categoryNames.find((n) => n === text) ?? categoryNames.find((n) => n.toLowerCase() === text.toLowerCase());
+      return matched ? { success: true, text: matched, timings } : { success: false, error: "no_category_match", timings };
     }
 
     // A rewrite that lost half the text, or grew far beyond it, is not shown (the caller keeps the original).
@@ -561,16 +622,14 @@ export async function searchHelpByIntent(query: string, catalog: HelpCatalogEntr
 }
 
 async function runHelpSearch(query: string, catalog: HelpCatalogEntry[]): Promise<string[]> {
-  if (!_context) {
-    const initialized = await initContext(selectedModelId());
-    if (!initialized) return [];
-  }
+  if (!(await initContext(selectedModelId())) || !_context) return [];
+  const context = _context;
 
   const list = catalog.map((entry, i) => `${i}. ${entry.title}`).join("\n");
   const userContent = `Topics:\n${list}\n\nQuestion: ${query.trim()}`;
 
   try {
-    const result = await _context!.completion({
+    const result = await context.completion({
       messages: [
         { role: "system", content: HELP_SEARCH_SYSTEM_PROMPT },
         { role: "user", content: userContent },

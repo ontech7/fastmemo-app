@@ -575,6 +575,7 @@ const zh = {
       no_content: "请先写点内容",
       no_category_match: "未找到匹配的类别",
       no_improvement: "AI 无法改进这段文字，内容保持不变。",
+      too_long: "文本太长，AI 无法处理：请尝试较短的部分。",
       error: "无法生成，请重试",
     },
   },

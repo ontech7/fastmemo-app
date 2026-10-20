@@ -590,6 +590,7 @@ const it = {
       no_content: "Scrivi qualcosa prima",
       no_category_match: "Nessuna categoria corrispondente",
       no_improvement: "L'AI non è riuscita a migliorare questo testo: è rimasto com'era.",
+      too_long: "Il testo è troppo lungo per l'AI: prova con una parte più breve.",
       error: "Impossibile generare, riprova",
     },
   },

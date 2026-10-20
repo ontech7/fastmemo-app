@@ -63,9 +63,10 @@ export default function VoiceRecognitionButton({ onInsert, aiCleanup = false, as
   // What the sheet showed before the cleanup started, put back if it is cancelled or fails.
   const beforeAIRef = useRef<string | null>(null);
 
-  // Leaving the note mid-cleanup stops the model (it would keep the context busy for nothing).
+  // Leaving the note mid-cleanup stops the model (it would keep the context busy for nothing) and drops its answer.
   useEffect(
     () => () => {
+      aiRunRef.current++;
       if (processingRef.current) cancelCommand();
     },
     []
@@ -249,7 +250,15 @@ export default function VoiceRecognitionButton({ onInsert, aiCleanup = false, as
     setCleanedText(cleaned ?? beforeAIRef.current);
     processingRef.current = false;
     setProcessing(false);
-    if (!cleaned) setAiNotice(error === "implausible_output" ? t("ai.editor.no_improvement") : t("ai.editor.error"));
+    if (!cleaned && error !== "cancelled") {
+      setAiNotice(
+        error === "implausible_output"
+          ? t("ai.editor.no_improvement")
+          : error === "too_long"
+            ? t("ai.editor.too_long")
+            : t("ai.editor.error")
+      );
+    }
   }, [stopEngine, displayTranscript, cleanedText, asItems, t]);
 
   const languageLabel = useMemo(() => {

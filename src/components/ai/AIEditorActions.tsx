@@ -76,10 +76,11 @@ const TEXT_ACTIONS: ActionDef[] = [
   { id: "translate", labelKey: "ai.editor.translate", icon: LanguageIcon, minModelId: "qwen3.5-2b" },
 ];
 
+// The 0.8B only repeated the list back (AI evaluation, 2026-10): suggestions start at the 2B.
 const TODO_ACTIONS: ActionDef[] = [
   { id: "generate_title", labelKey: "ai.editor.generate_title", icon: TagIcon },
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
-  { id: "suggest_items", labelKey: "ai.editor.suggest_items", icon: ListBulletIcon },
+  { id: "suggest_items", labelKey: "ai.editor.suggest_items", icon: ListBulletIcon, minModelId: "qwen3.5-2b" },
 ];
 
 const KANBAN_ACTIONS: ActionDef[] = [
@@ -181,9 +182,10 @@ export default function AIEditorActions({
     setIsMenuOpen((prev) => !prev);
   }, [feedback, isMenuOpen, aiSettings.selectedModel]);
 
-  // Leaving the note mid-action stops the model.
+  // Leaving the note mid-action stops the model, and whatever it already wrote is dropped (never applied to the note).
   useEffect(
     () => () => {
+      runRef.current++;
       if (runningRef.current) cancelCommand();
     },
     []
@@ -269,13 +271,21 @@ export default function AIEditorActions({
         if (run !== runRef.current) return;
         runningRef.current = false;
 
+        if (result.error === "cancelled") {
+          // stopped by a cancel elsewhere (the dictation's): nothing to report
+          setPreview(null);
+          setFeedback("idle");
+          return;
+        }
         if (!result.success) {
           fail(
             action === "suggest_category" && result.error === "no_category_match"
               ? t("ai.editor.no_category_match")
               : result.error === "implausible_output"
                 ? t("ai.editor.no_improvement")
-                : t("ai.editor.error")
+                : result.error === "too_long"
+                  ? t("ai.editor.too_long")
+                  : t("ai.editor.error")
           );
           return;
         }

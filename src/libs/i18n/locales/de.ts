@@ -594,6 +594,7 @@ const de = {
       no_content: "Schreibe zuerst etwas",
       no_category_match: "Keine passende Kategorie gefunden",
       no_improvement: "Die KI konnte diesen Text nicht verbessern: Er bleibt unverändert.",
+      too_long: "Der Text ist zu lang für die KI: Versuche es mit einem kürzeren Teil.",
       error: "Konnte nicht generieren, versuche es erneut",
     },
   },

@@ -100,7 +100,8 @@ export interface Sampling {
 
 /**
  * Cold for anything that rewrites or labels: the right output repeats most of the input, so no repeat penalty (it pushed the
- * model to change words it should keep). Warmer, with a presence penalty, where it writes something new.
+ * model to change words it should keep). Warmer, with a presence penalty, where it writes something new. Not greedy
+ * (temperature 0): measured, it fixed nothing and sent the 0.8B into a loop until the token limit.
  */
 const FAITHFUL: Sampling = { temperature: 0.2, top_p: 0.8, top_k: 20, min_p: 0, penalty_repeat: 1, penalty_present: 0 };
 const GENERATIVE: Sampling = { temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, penalty_repeat: 1, penalty_present: 1 };
@@ -193,7 +194,7 @@ const EDITOR_SYSTEM_PROMPTS: Record<EditorAction, string> = {
   suggest_items:
     'You suggest checklist items. Given existing items, output ONLY a JSON array with 3 new related items in {{LANG}}. Format: ["item1","item2","item3"]',
   suggest_category:
-    "You assign notes to categories based on their title and content. Either alone is enough to decide. Output ONLY the exact category name from the list that matches. If none fits, output: none",
+    "You assign notes to categories based on their title and content. Either alone is enough to decide. Pick the category whose name best describes what the note is about (a recipe goes with cooking or recipes, a flight with travel, a meeting with work). Output ONLY the exact category name from the list. If none fits, output: none",
   fix_grammar:
     "You correct spelling, grammar and punctuation. Output ONLY the corrected text in the SAME language as the input, preserving the original meaning and wording as much as possible. No explanation, no quotes.",
   shorten:
@@ -207,9 +208,12 @@ const EDITOR_SYSTEM_PROMPTS: Record<EditorAction, string> = {
 
 /**
  * Shorter prompts for the 0.8B where the full one asks too much of it: given the long dictation prompt (fillers,
- * paragraphs, lists) it gave the text back without even the punctuation.
+ * paragraphs, lists) it gave the text back without even the punctuation, and the category examples made it answer the
+ * travel one for everything.
  */
 const SMALL_MODEL_PROMPTS: Partial<Record<EditorAction, string>> = {
+  suggest_category:
+    "You assign notes to categories based on their title and content. Either alone is enough to decide. Output ONLY the exact category name from the list that matches. If none fits, output: none",
   clean_transcript:
     "You clean up dictated text. Add correct punctuation and capitalization and fix obvious transcription mistakes, keeping the original wording, meaning and language. Output ONLY the cleaned text as plain text. No explanation, no quotes.",
 };

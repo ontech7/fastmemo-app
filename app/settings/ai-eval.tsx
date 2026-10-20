@@ -35,6 +35,14 @@ export default function AIEvalScreen() {
     if (available) isModelDownloaded(modelId).then(setDownloaded);
   }, [available, modelId]);
 
+  // Leaving the screen ends the run after the current fixture (it would hold the model for minutes).
+  useEffect(
+    () => () => {
+      stopRef.current = true;
+    },
+    []
+  );
+
   const run = async () => {
     stopRef.current = false;
     setRunning(true);

@@ -15,7 +15,10 @@ const entry = join(os.tmpdir(), "ai.entry.ts");
 const storeStub = join(os.tmpdir(), "ai.store-stub.ts");
 const out = join(os.tmpdir(), "ai.bundle.mjs");
 
-writeFileSync(storeStub, "export const store = { getState: () => ({ categories: { items: [] } }) };\n");
+writeFileSync(
+  storeStub,
+  `export const store = { getState: () => ({ categories: { items: [{ name: "Casa al mare" }, { name: "Casa" }, { name: "Lavoro" }] } }) };\n`
+);
 writeFileSync(
   entry,
   `
@@ -117,23 +120,42 @@ eq("partial JSON: completed strings only", H.completedJsonStrings('["Milk","Bre'
 eq("partial JSON: escapes decoded", H.completedJsonStrings('["Say \\"hi\\"","b"]'), ['Say "hi"', "b"]);
 eq("partial JSON: nothing yet", H.completedJsonStrings("["), []);
 
+// --- category the AI named ---
+eq("category: exact name wins over one containing it", H.findCategoryByName("Casa")?.name, "Casa");
+eq("category: case-insensitive", H.findCategoryByName("lavoro")?.name, "Lavoro");
+eq("category: containing as a fallback", H.findCategoryByName("mare")?.name, "Casa al mare");
+
+// --- category grammar ---
+eq("grammar: names then none", H.categoryGrammar(["Lavoro", "Casa"]), 'root ::= "Lavoro" | "Casa" | "none"');
+eq(
+  "grammar: quotes and backslashes escaped",
+  H.categoryGrammar(['Il "mio"', "a\\b"]),
+  'root ::= "Il \\"mio\\"" | "a\\\\b" | "none"'
+);
+eq("grammar: blank and repeated names dropped", H.categoryGrammar(["Casa", " ", "Casa"]), 'root ::= "Casa" | "none"');
+
 // --- dictation into a note ---
 eq("plain text: line breaks", V.voiceTextToHtml("a\nb"), " a<br>b");
 eq("plain text: escaped", V.voiceTextToHtml("1 < 2 & 3", { leadingSpace: false }), "1 &lt; 2 &amp; 3");
 eq(
   "dashes become a list",
-  V.voiceTextToHtml("Per sabato:\n- bibite\n- torta\nPoi gli inviti.", { leadingSpace: false }),
+  V.voiceTextToHtml("Per sabato:\n- bibite\n- torta\nPoi gli inviti.", { leadingSpace: false, lists: true }),
   "Per sabato:<ul><li>bibite</li><li>torta</li></ul>Poi gli inviti."
 );
 eq(
   "blank lines around a list dropped",
-  V.voiceTextToHtml("Intro\n\n- a\n- b\n\nOutro", { leadingSpace: false }),
+  V.voiceTextToHtml("Intro\n\n- a\n- b\n\nOutro", { leadingSpace: false, lists: true }),
   "Intro<ul><li>a</li><li>b</li></ul>Outro"
 );
-eq("a list first: no leading space", V.voiceTextToHtml("- a\n- b"), "<ul><li>a</li><li>b</li></ul>");
-eq("list items escaped", V.voiceTextToHtml("- <b>", { leadingSpace: false }), "<ul><li>&lt;b&gt;</li></ul>");
+eq("a list first: no leading space", V.voiceTextToHtml("- a\n- b", { lists: true }), "<ul><li>a</li><li>b</li></ul>");
+eq("list items escaped", V.voiceTextToHtml("- <b>", { leadingSpace: false, lists: true }), "<ul><li>&lt;b&gt;</li></ul>");
+eq("typed dashes stay text without lists (quick notes)", V.voiceTextToHtml("- a\n- b", { leadingSpace: false }), "- a<br>- b");
 eq("paragraphs kept", V.voiceTextToHtml("A\n\nB", { leadingSpace: false }), "A<br><br>B");
-eq("a dash inside a line is not a list", V.voiceTextToHtml("Roma - Milano", { leadingSpace: false }), "Roma - Milano");
+eq(
+  "a dash inside a line is not a list",
+  V.voiceTextToHtml("Roma - Milano", { leadingSpace: false, lists: true }),
+  "Roma - Milano"
+);
 
 eq("lines: bullets and dashes dropped", V.voiceTextToLines("• Latte\n- Pane\n\n  Uova "), ["Latte", "Pane", "Uova"]);
 eq("lines: plain lines kept", V.voiceTextToLines("Chiamare Marco\nPrenotare"), ["Chiamare Marco", "Prenotare"]);

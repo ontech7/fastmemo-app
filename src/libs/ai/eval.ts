@@ -56,6 +56,7 @@ export async function runAIEval(
     const answer = await generateEditorContent(fixture.action, fixture.input, undefined, {
       lang: fixture.lang,
       categories: fixture.categories,
+      modelId,
     });
     const result: EvalResult = {
       id: fixture.id,

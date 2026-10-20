@@ -4,11 +4,16 @@ import type { Category } from "@/types";
 import { REWRITE_LENGTH_RATIO } from "./constants";
 import type { EditorAction } from "./types";
 
+/** The category the AI named: the exact name first ("Casa" is not "Casa al mare"), then one containing it. */
 export function findCategoryByName(name: string): Category | undefined {
   const state = store.getState();
   const categories = state.categories.items;
   const lowerName = name.toLowerCase();
-  return categories.find((c: Category) => c.name.toLowerCase().includes(lowerName));
+  return (
+    categories.find((c: Category) => c.name === name) ??
+    categories.find((c: Category) => c.name.toLowerCase() === lowerName) ??
+    categories.find((c: Category) => c.name.toLowerCase().includes(lowerName))
+  );
 }
 
 /** Strip HTML tags and decode entities to get plain text for AI processing. */
@@ -113,4 +118,24 @@ export function completedJsonStrings(partial: string): string[] {
     }
   }
   return out;
+}
+
+/** A GBNF string literal of `text` (quotes, backslashes and line breaks escaped). */
+function gbnfLiteral(text: string): string {
+  const escaped = text
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t");
+  return `"${escaped}"`;
+}
+
+/**
+ * A grammar whose only sentences are the category names and `none`: the model can't answer with a category that doesn't
+ * exist, and no fuzzy matching has to guess which one it meant.
+ */
+export function categoryGrammar(names: string[]): string {
+  const options = [...new Set(names.filter((name) => name.trim()))];
+  return `root ::= ${[...options, "none"].map(gbnfLiteral).join(" | ")}`;
 }

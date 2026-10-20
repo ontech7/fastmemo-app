@@ -142,13 +142,17 @@ const LIST_LINE = /^\s*[-•*]\s+(.*)$/;
 
 /**
  * Convert formatted dictation text into HTML suitable for `RichEditor.insertHTML`,
- * turning `\n` into line breaks and runs of "- " lines into a bulleted list. A
- * leading space keeps it detached from the word before the caret.
+ * turning `\n` into line breaks and, with `lists` (text the AI wrote), runs of "- "
+ * lines into a bulleted list. A leading space keeps it detached from the word before
+ * the caret.
  */
-export function voiceTextToHtml(text: string, { leadingSpace = true }: { leadingSpace?: boolean } = {}): string {
+export function voiceTextToHtml(
+  text: string,
+  { leadingSpace = true, lists = false }: { leadingSpace?: boolean; lists?: boolean } = {}
+): string {
   if (!text) return "";
   const lines = text.split("\n");
-  if (!lines.some((line) => LIST_LINE.test(line))) {
+  if (!lists || !lines.some((line) => LIST_LINE.test(line))) {
     return (leadingSpace ? " " : "") + escapeHtml(text).replace(/\n/g, "<br>");
   }
 

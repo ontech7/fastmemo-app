@@ -586,6 +586,7 @@ const en = {
       no_content: "Write something first",
       no_category_match: "No matching category found",
       no_improvement: "The AI couldn't improve this text: it's unchanged.",
+      too_long: "The text is too long for the AI: try a shorter part.",
       error: "Could not generate, try again",
     },
   },

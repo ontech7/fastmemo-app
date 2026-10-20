@@ -47,10 +47,11 @@ export interface EditorActionResult {
   timings?: AITimings;
 }
 
-/** Overrides for one action: the language it answers in, the categories it picks from (the eval passes its own). */
+/** Overrides for one action: the language it answers in, the categories it picks from, the model (the eval passes its own). */
 export interface EditorActionOptions {
   lang?: string;
   categories?: string[];
+  modelId?: AIModelId;
 }
 
 /** A single help topic exposed to the AI intent search: its i18n base key and

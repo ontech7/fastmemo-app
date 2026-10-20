@@ -316,7 +316,7 @@ export default function AIAssistantScreen() {
               { key: "ai.cap.fix_grammar", min: "2B" },
               { key: "ai.cap.shorten", min: "2B" },
               { key: "ai.cap.translate", min: "2B" },
-              { key: "ai.cap.suggest_items" },
+              { key: "ai.cap.suggest_items", min: "2B" },
               { key: "ai.cap.suggest_category" },
               { key: "ai.cap.voice_cleanup" },
             ].map((item, index, arr) => (

@@ -589,6 +589,7 @@ const es = {
       no_content: "Escribe algo primero",
       no_category_match: "No se encontro una categoria",
       no_improvement: "La IA no pudo mejorar este texto: no se ha cambiado.",
+      too_long: "El texto es demasiado largo para la IA: prueba con una parte más corta.",
       error: "No se pudo generar, intenta de nuevo",
     },
   },
