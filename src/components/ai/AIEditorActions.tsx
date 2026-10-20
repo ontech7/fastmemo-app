@@ -18,9 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import ChatBubbleLeftRightIcon from "react-native-heroicons/outline/ChatBubbleLeftRightIcon";
 import CheckBadgeIcon from "react-native-heroicons/outline/CheckBadgeIcon";
-import CodeBracketIcon from "react-native-heroicons/outline/CodeBracketIcon";
 import DocumentTextIcon from "react-native-heroicons/outline/DocumentTextIcon";
 import FolderIcon from "react-native-heroicons/outline/FolderIcon";
 import LanguageIcon from "react-native-heroicons/outline/LanguageIcon";
@@ -28,7 +26,6 @@ import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
 import ScissorsIcon from "react-native-heroicons/outline/ScissorsIcon";
 import SparklesIcon from "react-native-heroicons/outline/SparklesIcon";
 import TagIcon from "react-native-heroicons/outline/TagIcon";
-import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import CheckCircleIcon from "react-native-heroicons/solid/CheckCircleIcon";
 import ExclamationCircleIcon from "react-native-heroicons/solid/ExclamationCircleIcon";
 import type { SharedValue } from "react-native-reanimated";
@@ -63,10 +60,10 @@ interface ActionDef {
 const TEXT_ACTIONS: ActionDef[] = [
   { id: "generate_title", labelKey: "ai.editor.generate_title", icon: TagIcon },
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
-  { id: "summarize", labelKey: "ai.editor.summarize", icon: DocumentTextIcon, minModelId: "qwen-1.5b" },
-  { id: "fix_grammar", labelKey: "ai.editor.fix_grammar", icon: CheckBadgeIcon, minModelId: "qwen-1.5b" },
-  { id: "shorten", labelKey: "ai.editor.shorten", icon: ScissorsIcon, minModelId: "qwen-1.5b" },
-  { id: "translate", labelKey: "ai.editor.translate", icon: LanguageIcon, minModelId: "qwen-3b" },
+  { id: "summarize", labelKey: "ai.editor.summarize", icon: DocumentTextIcon, minModelId: "qwen3.5-2b" },
+  { id: "fix_grammar", labelKey: "ai.editor.fix_grammar", icon: CheckBadgeIcon, minModelId: "qwen3.5-2b" },
+  { id: "shorten", labelKey: "ai.editor.shorten", icon: ScissorsIcon, minModelId: "qwen3.5-2b" },
+  { id: "translate", labelKey: "ai.editor.translate", icon: LanguageIcon, minModelId: "qwen3.5-2b" },
 ];
 
 const TODO_ACTIONS: ActionDef[] = [
@@ -80,11 +77,10 @@ const KANBAN_ACTIONS: ActionDef[] = [
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
 ];
 
+// Code notes store snippets: a title and a category, nothing that rewrites the code.
 const CODE_ACTIONS: ActionDef[] = [
   { id: "generate_title", labelKey: "ai.editor.generate_title", icon: TagIcon },
   { id: "suggest_category", labelKey: "ai.editor.suggest_category", icon: FolderIcon },
-  { id: "explain_code", labelKey: "ai.editor.explain_code", icon: ChatBubbleLeftRightIcon, minModelId: "qwen-7b" },
-  { id: "add_comments", labelKey: "ai.editor.add_comments", icon: CodeBracketIcon, minModelId: "qwen-7b" },
 ];
 
 function getActionsForType(noteType: NoteType): ActionDef[] {
@@ -112,8 +108,6 @@ interface Props {
   onCategorySuggested?: (categoryName: string) => void;
   /** Called with rewritten text for content-replacing actions (fix_grammar, shorten, translate). */
   onTextRewritten?: (text: string) => void;
-  /** Called with commented code when add_comments succeeds. */
-  onCodeCommented?: (commentedCode: string) => void;
   disabled?: boolean;
   /** Override the floating button position. Default: { bottom: 165, right: 42 } */
   style?: ViewStyle;
@@ -130,7 +124,6 @@ export default function AIEditorActions({
   onItemsSuggested,
   onCategorySuggested,
   onTextRewritten,
-  onCodeCommented,
   disabled = false,
   style,
   menuBottomOffset = 200,
@@ -141,7 +134,6 @@ export default function AIEditorActions({
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>("idle");
-  const [outputText, setOutputText] = useState<string | null>(null);
   // Staged result of a content-modifying action: shown as a before/after preview
   // and applied only when the user confirms (nothing is overwritten automatically).
   // It holds the result, not a callback: applying goes through the current props, so
@@ -210,7 +202,7 @@ export default function AIEditorActions({
           .join("\n");
       } else {
         // Include the note title as context for actions that benefit from it
-        const needsTitle = action !== "generate_title" && action !== "add_comments" && action !== "explain_code";
+        const needsTitle = action !== "generate_title";
         content = needsTitle && hasTitle ? `${noteTitle}\n${rawContent}` : rawContent;
       }
 
@@ -241,10 +233,6 @@ export default function AIEditorActions({
               setFeedback("success");
               if (result.text) onCategorySuggested?.(result.text);
               break;
-            case "explain_code":
-              setFeedback("idle");
-              if (result.text) setOutputText(result.text);
-              break;
             case "generate_title":
               if (result.text) {
                 setFeedback("idle");
@@ -255,7 +243,6 @@ export default function AIEditorActions({
             case "fix_grammar":
             case "shorten":
             case "translate":
-            case "add_comments":
               if (result.text) stage(result.text);
               break;
           }
@@ -296,9 +283,6 @@ export default function AIEditorActions({
       case "summarize":
         onSummaryGenerated?.(after);
         break;
-      case "add_comments":
-        onCodeCommented?.(after);
-        break;
       default:
         onTextRewritten?.(after);
     }
@@ -325,8 +309,7 @@ export default function AIEditorActions({
         >
           <View style={styles.menuContainer}>
             {actionItems.map((actionItem, index) => {
-              const canRun =
-                !actionItem.minModelId || isModelSufficient(aiSettings.selectedModel as AIModelId, actionItem.minModelId);
+              const canRun = !actionItem.minModelId || isModelSufficient(aiSettings.selectedModel, actionItem.minModelId);
               const minLabel = actionItem.minModelId ? MODEL_SHORT_LABEL[actionItem.minModelId] : "";
               return (
                 <AnimatedActionItem
@@ -366,30 +349,6 @@ export default function AIEditorActions({
           <SparklesIcon size={22} color={COLOR.softWhite} />
         )}
       </TouchableOpacity>
-
-      {outputText && (
-        <View style={[styles.outputPanel, style && { bottom: (style as { bottom?: number }).bottom }]}>
-          <View style={styles.outputHeader}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <SparklesIcon size={16} color={styles.outputTitle.color} />
-              <Text style={styles.outputTitle}>AI Result</Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => setOutputText(null)}
-              accessibilityRole="button"
-              accessibilityLabel={t("a11y.close")}
-              activeOpacity={0.7}
-            >
-              <XMarkIcon size={18} color={COLOR.lightBlue} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.outputScroll} showsVerticalScrollIndicator>
-            <Text style={styles.outputText} selectable>
-              {outputText}
-            </Text>
-          </ScrollView>
-        </View>
-      )}
 
       <Modal
         visible={preview !== null}
@@ -552,43 +511,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER.normal,
     backgroundColor: COLOR.accentMuted,
     ...SHADOW.fab,
-  },
-  outputPanel: {
-    position: "absolute",
-    bottom: 100,
-    left: 115,
-    right: PADDING_MARGIN.xxl,
-    maxHeight: 300,
-    backgroundColor: COLOR.boldBlue,
-    borderRadius: BORDER.normal,
-    borderWidth: 1,
-    borderColor: COLOR.blue,
-    zIndex: 7,
-    boxShadow: "0px 4px 6px rgba(0,0,0,0.4)",
-  },
-  outputHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: PADDING_MARGIN.md,
-    paddingVertical: PADDING_MARGIN.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: COLOR.blue,
-  },
-  outputTitle: {
-    color: COLOR.lightBlue,
-    fontSize: FONTSIZE.small,
-    fontWeight: FONTWEIGHT.semiBold,
-  },
-  outputScroll: {
-    flex: 1,
-    paddingHorizontal: PADDING_MARGIN.md,
-    paddingVertical: PADDING_MARGIN.sm,
-  },
-  outputText: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.medium,
-    lineHeight: 22,
   },
   previewBackdrop: {
     flex: 1,

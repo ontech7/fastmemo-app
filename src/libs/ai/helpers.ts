@@ -23,3 +23,15 @@ export function stripHtml(html: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+
+/**
+ * The answer without a reasoning block: thinking is turned off for every action, but a model may still open one. A block
+ * left open (the token budget ran out inside it) leaves no answer at all.
+ */
+export function stripThinking(text: string): string {
+  const open = text.indexOf("<think>");
+  if (open === -1) return text;
+  const close = text.indexOf("</think>", open);
+  if (close === -1) return text.slice(0, open).trim();
+  return (text.slice(0, open) + text.slice(close + "</think>".length)).trim();
+}

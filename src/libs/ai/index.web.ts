@@ -10,7 +10,15 @@ import type { EvalReport, EvalResult } from "./eval";
 import type { AIModelId, AIModelStatus, EditorActionOptions, EditorActionResult, HelpCatalogEntry } from "./types";
 
 export { findCategoryByName, stripHtml } from "./helpers";
-export { AI_MODELS, DEFAULT_MODEL_ID } from "./constants";
+export {
+  AI_MODELS,
+  DEFAULT_MODEL_ID,
+  MODEL_SIZE_ORDER,
+  MODEL_SHORT_LABEL,
+  isLegacyModelId,
+  isModelSufficient,
+  normalizeModelId,
+} from "./constants";
 export type { AIModelStatus, AIModelId, AIModelInfo, EditorAction, EditorActionResult, HelpCatalogEntry } from "./types";
 export type { EvalReport, EvalResult } from "./eval";
 
@@ -41,6 +49,18 @@ export async function downloadModel(_modelId?: AIModelId, _onProgress?: (progres
 }
 
 export async function cancelDownload(): Promise<void> {}
+
+export async function getOrphanedModelFiles(): Promise<{ fileName: string; size: number }[]> {
+  return [];
+}
+
+export async function deleteOrphanedModelFiles(): Promise<number> {
+  return 0;
+}
+
+export function getContextInfo(): null {
+  return null;
+}
 
 export async function deleteModel(_modelId?: AIModelId): Promise<void> {}
 

@@ -2,7 +2,7 @@ import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system/legacy";
 
 import { AI_MODELS } from "./constants";
-import { generateEditorContent, initContext, releaseContext } from "./context";
+import { generateEditorContent, getContextInfo, initContext, releaseContext } from "./context";
 import { EVAL_FIXTURES } from "./evalFixtures";
 import type { AIModelId, AITimings, EditorAction } from "./types";
 
@@ -25,6 +25,8 @@ export interface EvalReport {
   device: { model: string | null; os: string | null; totalMemory: number | null };
   /** Loading the model from a cold start. */
   loadMs: number;
+  /** What it ran on (GPU or not, and why not). */
+  runtime: ReturnType<typeof getContextInfo>;
   startedAt: string;
   results: EvalResult[];
   /** Where the report was saved (documents/ai-eval/). */
@@ -75,6 +77,7 @@ export async function runAIEval(
     modelName: AI_MODELS[modelId].name,
     device: { model: Device.modelName, os: Device.osVersion, totalMemory: Device.totalMemory },
     loadMs,
+    runtime: getContextInfo(),
     startedAt,
     results,
   };

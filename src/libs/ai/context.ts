@@ -5,14 +5,18 @@ import { NativeModules } from "react-native";
 
 import { store } from "@/slicers/store";
 import {
+  ACTION_MAX_TOKENS,
+  ACTION_SAMPLING,
   AI_MODELS,
-  DEFAULT_MODEL_ID,
+  HELP_SEARCH_SAMPLING,
   HELP_SEARCH_SYSTEM_PROMPT,
   JSON_ARRAY_GRAMMAR,
   JSON_INT_ARRAY_GRAMMAR,
   getEditorSystemPrompt,
+  normalizeModelId,
   truncateForAction,
 } from "./constants";
+import { stripThinking } from "./helpers";
 import type {
   AIModelId,
   AIModelInfo,
@@ -65,35 +69,78 @@ export function addAIStatusListener(listener: StatusListener): () => void {
   };
 }
 
-function getModel(modelId?: AIModelId): AIModelInfo {
-  return AI_MODELS[modelId || DEFAULT_MODEL_ID];
+/** The model the settings name now (an id stored by an earlier version maps to its replacement). */
+function selectedModelId(): AIModelId {
+  return normalizeModelId(store.getState().settings.aiAssistant?.selectedModel);
 }
+
+function getModel(modelId?: AIModelId): AIModelInfo {
+  return AI_MODELS[normalizeModelId(modelId)];
+}
+
+const MODELS_DIR = () => `${FileSystem.documentDirectory}models/`;
 
 export function getModelPath(modelId?: AIModelId): string {
-  return `${FileSystem.documentDirectory}models/${getModel(modelId).fileName}`;
+  return `${MODELS_DIR()}${getModel(modelId).fileName}`;
 }
 
-function getAllModelFiles(modelId?: AIModelId): { fileName: string; url: string }[] {
+function getAllModelFiles(modelId?: AIModelId): { fileName: string; url: string; sizeBytes: number }[] {
   const model = getModel(modelId);
-  const files = [{ fileName: model.fileName, url: model.url }];
-  if (model.parts) files.push(...model.parts);
-  return files;
+  return [{ fileName: model.fileName, url: model.url, sizeBytes: model.sizeBytes }, ...(model.parts ?? [])];
 }
 
+/** Every file name the catalog downloads: anything else in the models folder is a leftover. */
+function catalogFileNames(): Set<string> {
+  return new Set((Object.keys(AI_MODELS) as AIModelId[]).flatMap((id) => getAllModelFiles(id).map((f) => f.fileName)));
+}
+
+/** A model counts as downloaded only when every file is there at its exact size (a cut-off download is not). */
 export async function isModelDownloaded(modelId?: AIModelId): Promise<boolean> {
-  const files = getAllModelFiles(modelId);
-  for (const file of files) {
-    const path = `${FileSystem.documentDirectory}models/${file.fileName}`;
-    const info = await FileSystem.getInfoAsync(path);
-    if (!info.exists) return false;
+  for (const file of getAllModelFiles(modelId)) {
+    const info = await FileSystem.getInfoAsync(`${MODELS_DIR()}${file.fileName}`);
+    if (!info.exists || info.size !== file.sizeBytes) return false;
   }
   return true;
+}
+
+/**
+ * Files in the models folder that no model of today's catalog uses: the Qwen 2.5 models of earlier versions, and partial
+ * downloads of anything else.
+ */
+export async function getOrphanedModelFiles(): Promise<{ fileName: string; size: number }[]> {
+  const dir = MODELS_DIR();
+  if (!(await FileSystem.getInfoAsync(dir)).exists) return [];
+  const known = catalogFileNames();
+  const orphans: { fileName: string; size: number }[] = [];
+  for (const fileName of await FileSystem.readDirectoryAsync(dir)) {
+    if (known.has(fileName)) continue;
+    const info = await FileSystem.getInfoAsync(`${dir}${fileName}`);
+    orphans.push({ fileName, size: info.exists ? (info.size ?? 0) : 0 });
+  }
+  return orphans;
+}
+
+/** Deletes the leftover model files; returns the bytes freed. */
+export async function deleteOrphanedModelFiles(): Promise<number> {
+  const orphans = await getOrphanedModelFiles();
+  if (orphans.length === 0) return 0;
+  await releaseContext();
+  let freed = 0;
+  for (const orphan of orphans) {
+    try {
+      await FileSystem.deleteAsync(`${MODELS_DIR()}${orphan.fileName}`, { idempotent: true });
+      freed += orphan.size;
+    } catch (error) {
+      console.error("[AI] Delete old model file failed:", error);
+    }
+  }
+  return freed;
 }
 
 let _activeDownload: FileSystem.DownloadResumable | null = null;
 
 export async function downloadModel(modelId?: AIModelId, onProgress?: (progress: number) => void): Promise<boolean> {
-  const targetId = modelId || DEFAULT_MODEL_ID;
+  const targetId = normalizeModelId(modelId);
 
   try {
     if (_activeDownload) {
@@ -107,24 +154,21 @@ export async function downloadModel(modelId?: AIModelId, onProgress?: (progress:
 
     notifyListeners("downloading", 0);
 
-    const allModelIds = Object.keys(AI_MODELS) as AIModelId[];
-    for (const otherId of allModelIds) {
-      if (otherId !== targetId) {
-        const otherFiles = getAllModelFiles(otherId);
-        for (const file of otherFiles) {
-          const p = `${FileSystem.documentDirectory}models/${file.fileName}`;
-          const info = await FileSystem.getInfoAsync(p);
-          if (info.exists) {
-            await releaseContext();
-            await FileSystem.deleteAsync(p);
-          }
+    // One model on the device at a time: the others go, and so does anything left over (old models, partial files).
+    await deleteOrphanedModelFiles();
+    for (const otherId of Object.keys(AI_MODELS) as AIModelId[]) {
+      if (otherId === targetId) continue;
+      for (const file of getAllModelFiles(otherId)) {
+        const p = `${MODELS_DIR()}${file.fileName}`;
+        if ((await FileSystem.getInfoAsync(p)).exists) {
+          await releaseContext();
+          await FileSystem.deleteAsync(p);
         }
       }
     }
 
-    const dirPath = `${FileSystem.documentDirectory}models`;
-    const dirInfo = await FileSystem.getInfoAsync(dirPath);
-    if (!dirInfo.exists) {
+    const dirPath = MODELS_DIR();
+    if (!(await FileSystem.getInfoAsync(dirPath)).exists) {
       await FileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
     }
 
@@ -133,7 +177,7 @@ export async function downloadModel(modelId?: AIModelId, onProgress?: (progress:
 
     for (let i = 0; i < totalFiles; i++) {
       const file = files[i];
-      const filePath = `${FileSystem.documentDirectory}models/${file.fileName}`;
+      const filePath = `${MODELS_DIR()}${file.fileName}`;
 
       _activeDownload = FileSystem.createDownloadResumable(file.url, filePath, {}, (dp) => {
         const fileProgress = dp.totalBytesExpectedToWrite > 0 ? dp.totalBytesWritten / dp.totalBytesExpectedToWrite : 0;
@@ -145,7 +189,11 @@ export async function downloadModel(modelId?: AIModelId, onProgress?: (progress:
       const result = await _activeDownload.downloadAsync();
       _activeDownload = null;
 
-      if (!result?.uri) {
+      // A file of another size is cut off or not the one pinned: never load it.
+      const info = result?.uri ? await FileSystem.getInfoAsync(filePath) : null;
+      if (!info?.exists || info.size !== file.sizeBytes) {
+        console.error("[AI] Download incomplete:", file.fileName, info?.exists ? info.size : "missing");
+        await FileSystem.deleteAsync(filePath, { idempotent: true });
         notifyListeners("error");
         return false;
       }
@@ -175,16 +223,15 @@ export async function cancelDownload(): Promise<void> {
     }
     _activeDownload = null;
 
-    const allModelIds = Object.keys(AI_MODELS) as AIModelId[];
-    for (const id of allModelIds) {
+    // What the download left: a catalog file short of its size, and anything outside the catalog.
+    for (const id of Object.keys(AI_MODELS) as AIModelId[]) {
       for (const file of getAllModelFiles(id)) {
-        const p = `${FileSystem.documentDirectory}models/${file.fileName}`;
+        const p = `${MODELS_DIR()}${file.fileName}`;
         const info = await FileSystem.getInfoAsync(p);
-        if (info.exists && info.size && info.size < 1000000) {
-          await FileSystem.deleteAsync(p);
-        }
+        if (info.exists && info.size !== file.sizeBytes) await FileSystem.deleteAsync(p, { idempotent: true });
       }
     }
+    await deleteOrphanedModelFiles();
     notifyListeners("idle");
   }
 }
@@ -193,7 +240,7 @@ export async function deleteModel(modelId?: AIModelId): Promise<void> {
   try {
     await releaseContext();
     for (const file of getAllModelFiles(modelId)) {
-      const p = `${FileSystem.documentDirectory}models/${file.fileName}`;
+      const p = `${MODELS_DIR()}${file.fileName}`;
       const info = await FileSystem.getInfoAsync(p);
       if (info.exists) await FileSystem.deleteAsync(p);
     }
@@ -206,7 +253,7 @@ export async function deleteModel(modelId?: AIModelId): Promise<void> {
 let _activeModelId: AIModelId | null = null;
 
 export async function initContext(modelId?: AIModelId): Promise<boolean> {
-  const targetId = modelId || DEFAULT_MODEL_ID;
+  const targetId = normalizeModelId(modelId);
 
   // If context exists but for a different model, release it first
   if (_context && _activeModelId !== targetId) {
@@ -241,7 +288,7 @@ export async function initContext(modelId?: AIModelId): Promise<boolean> {
         model: modelPath,
         n_ctx: model.contextSize,
         n_gpu_layers: 99,
-        use_mlock: true,
+        use_mlock: model.useMlock,
       });
 
       _activeModelId = targetId;
@@ -259,6 +306,17 @@ export async function initContext(modelId?: AIModelId): Promise<boolean> {
   })();
 
   return _initPromise;
+}
+
+/** What the loaded model runs on (the eval report records it). Null with no model loaded. */
+export function getContextInfo(): { gpu: boolean; reasonNoGPU: string; devices?: unknown; androidLib?: unknown } | null {
+  if (!_context) return null;
+  return {
+    gpu: _context.gpu,
+    reasonNoGPU: _context.reasonNoGPU,
+    devices: _context.devices,
+    androidLib: _context.androidLib,
+  };
 }
 
 export async function cancelCommand(): Promise<void> {
@@ -306,8 +364,14 @@ const STOP_WORDS = [
 ];
 
 /**
- * Generate content for in-editor AI actions (title, summary, continuation, formatting,
- * category suggestion, item suggestions).
+ * Every completion goes through the model's own chat template (jinja) with thinking off: Qwen3.5 4B thinks by default, and a
+ * reasoning block would eat a title's whole budget.
+ */
+const CHAT_TEMPLATE = { jinja: true, enable_thinking: false, reasoning_format: "none" } as const;
+
+/**
+ * Generate content for in-editor AI actions (title, summary, rewrites, category suggestion, item suggestions, dictation
+ * cleanup).
  */
 export async function generateEditorContent(
   action: EditorAction,
@@ -316,9 +380,7 @@ export async function generateEditorContent(
   options: EditorActionOptions = {}
 ): Promise<EditorActionResult> {
   if (!_context) {
-    const settingsState = store.getState().settings;
-    const modelId = (settingsState.aiAssistant?.selectedModel as AIModelId) || DEFAULT_MODEL_ID;
-    const initialized = await initContext(modelId);
+    const initialized = await initContext(selectedModelId());
     if (!initialized) {
       return { success: false, error: "Model not ready" };
     }
@@ -337,21 +399,6 @@ export async function generateEditorContent(
     content = `Categories: ${categoryNames.join(", ")}\n\nNote:\n${content}`;
   }
 
-  const nPredict =
-    action === "generate_title" || action === "suggest_category"
-      ? 30
-      : action === "suggest_items"
-        ? 100
-        : action === "add_comments"
-          ? 1500
-          : action === "explain_code"
-            ? 300
-            : action === "fix_grammar" || action === "translate" || action === "clean_transcript"
-              ? 800
-              : 200;
-
-  const temperature = action === "generate_title" ? 0.05 : action === "add_comments" ? 0.1 : 0.15;
-
   try {
     const systemPrompt = getEditorSystemPrompt(action, langCode);
 
@@ -361,11 +408,10 @@ export async function generateEditorContent(
           { role: "system", content: systemPrompt },
           { role: "user", content },
         ],
-        n_predict: nPredict,
+        ...CHAT_TEMPLATE,
+        n_predict: ACTION_MAX_TOKENS[action],
         stop: STOP_WORDS,
-        temperature,
-        top_p: 0.9,
-        penalty_repeat: 1.2,
+        ...ACTION_SAMPLING[action],
         ...(isJsonOutput ? { grammar: JSON_ARRAY_GRAMMAR } : {}),
       },
       (data) => {
@@ -376,7 +422,7 @@ export async function generateEditorContent(
     );
 
     const timings = timingsOf(result.timings);
-    const text = result.text?.trim();
+    const text = stripThinking(result.text ?? "").trim();
     if (!text) return { success: false, error: "No response", timings };
 
     if (isJsonOutput) {
@@ -393,20 +439,6 @@ export async function generateEditorContent(
         }
       }
       return { success: false, error: "Invalid response format", timings };
-    }
-
-    // For add_comments, strip code fences and return code with comments
-    if (action === "add_comments") {
-      const code = text
-        .replace(/^```\w*\s*/i, "")
-        .replace(/```\s*$/g, "")
-        .trim();
-      return { success: true, text: code, timings };
-    }
-
-    // For explain_code, return as plain text
-    if (action === "explain_code") {
-      return { success: true, text: text.trim(), timings };
     }
 
     // Clean common artifacts from free-text output (multilingual prefixes)
@@ -458,9 +490,7 @@ export async function searchHelpByIntent(query: string, catalog: HelpCatalogEntr
   if (!query.trim() || catalog.length === 0) return [];
 
   if (!_context) {
-    const settingsState = store.getState().settings;
-    const modelId = (settingsState.aiAssistant?.selectedModel as AIModelId) || DEFAULT_MODEL_ID;
-    const initialized = await initContext(modelId);
+    const initialized = await initContext(selectedModelId());
     if (!initialized) return [];
   }
 
@@ -473,14 +503,14 @@ export async function searchHelpByIntent(query: string, catalog: HelpCatalogEntr
         { role: "system", content: HELP_SEARCH_SYSTEM_PROMPT },
         { role: "user", content: userContent },
       ],
+      ...CHAT_TEMPLATE,
       n_predict: 48,
       stop: STOP_WORDS,
-      temperature: 0.1,
-      top_p: 0.9,
+      ...HELP_SEARCH_SAMPLING,
       grammar: JSON_INT_ARRAY_GRAMMAR,
     });
 
-    const text = result.text?.trim();
+    const text = stripThinking(result.text ?? "").trim();
     if (!text) return [];
 
     let indices: number[] = [];

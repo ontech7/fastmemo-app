@@ -2,77 +2,133 @@ import type { AIModelId, AIModelInfo, EditorAction } from "./types";
 
 const GB = 1024 * 1024 * 1024;
 
+/** A file of a Hugging Face repo at a fixed commit: an update of the repo can never change what users download. */
+const hf = (repo: string, revision: string, file: string) => `https://huggingface.co/${repo}/resolve/${revision}/${file}`;
+
+/**
+ * Qwen3.5 Small, Q4_K_M GGUFs by Unsloth (Qwen publishes none). RAM gates sit under the phone's class: Android reports usable
+ * RAM, a little less than the box says. The 4B isn't pinned in RAM: on a 6 GB phone it would leave too little.
+ */
 export const AI_MODELS: Record<AIModelId, AIModelInfo> = {
-  "qwen-0.5b": {
-    id: "qwen-0.5b",
-    name: "Qwen2.5 0.5B",
-    fileName: "qwen2.5-0.5b-instruct-q4_k_m.gguf",
-    url: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
-    sizeLabel: "~400 MB",
+  "qwen3.5-0.8b": {
+    id: "qwen3.5-0.8b",
+    name: "Qwen3.5 0.8B",
+    fileName: "Qwen3.5-0.8B-Q4_K_M.gguf",
+    url: hf("unsloth/Qwen3.5-0.8B-GGUF", "6ab461498e2023f6e3c1baea90a8f0fe38ab64d0", "Qwen3.5-0.8B-Q4_K_M.gguf"),
+    sizeBytes: 532_517_120,
+    sizeLabel: "~530 MB",
     description: "ai.model_light",
-    minRamBytes: 3 * GB,
-    contextSize: 2048,
-  },
-  "qwen-1.5b": {
-    id: "qwen-1.5b",
-    name: "Qwen2.5 1.5B",
-    fileName: "qwen2.5-1.5b-instruct-q4_k_m.gguf",
-    url: "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
-    sizeLabel: "~1.0 GB",
-    description: "ai.model_powerful",
-    minRamBytes: 4 * GB,
+    minRamBytes: 2.5 * GB,
     contextSize: 4096,
+    useMlock: true,
   },
-  "qwen-3b": {
-    id: "qwen-3b",
-    name: "Qwen2.5 3B",
-    fileName: "qwen2.5-3b-instruct-q4_k_m.gguf",
-    url: "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf",
-    sizeLabel: "~1.9 GB",
-    description: "ai.model_advanced",
-    minRamBytes: 6 * GB,
+  "qwen3.5-2b": {
+    id: "qwen3.5-2b",
+    name: "Qwen3.5 2B",
+    fileName: "Qwen3.5-2B-Q4_K_M.gguf",
+    url: hf("unsloth/Qwen3.5-2B-GGUF", "f6d5376be1edb4d416d56da11e5397a961aca8ae", "Qwen3.5-2B-Q4_K_M.gguf"),
+    sizeBytes: 1_280_835_840,
+    sizeLabel: "~1.3 GB",
+    description: "ai.model_powerful",
+    minRamBytes: 3.2 * GB,
     contextSize: 8192,
+    useMlock: true,
   },
-  "qwen-7b": {
-    id: "qwen-7b",
-    name: "Qwen2.5 7B",
-    fileName: "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf",
-    url: "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf",
-    sizeLabel: "~4.7 GB",
-    description: "ai.model_pro",
-    minRamBytes: 8 * GB,
-    contextSize: 16384,
-    parts: [
-      {
-        fileName: "qwen2.5-7b-instruct-q4_k_m-00002-of-00002.gguf",
-        url: "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m-00002-of-00002.gguf",
-      },
-    ],
+  "qwen3.5-4b": {
+    id: "qwen3.5-4b",
+    name: "Qwen3.5 4B",
+    fileName: "Qwen3.5-4B-Q4_K_M.gguf",
+    url: hf("unsloth/Qwen3.5-4B-GGUF", "e87f176479d0855a907a41277aca2f8ee7a09523", "Qwen3.5-4B-Q4_K_M.gguf"),
+    sizeBytes: 2_740_937_888,
+    sizeLabel: "~2.7 GB",
+    description: "ai.model_advanced",
+    minRamBytes: 5 * GB,
+    contextSize: 8192,
+    useMlock: false,
   },
 };
 
-export const DEFAULT_MODEL_ID: AIModelId = "qwen-0.5b";
+export const DEFAULT_MODEL_ID: AIModelId = "qwen3.5-0.8b";
 
 /** Numeric ordering for model size comparison */
 export const MODEL_SIZE_ORDER: Record<AIModelId, number> = {
-  "qwen-0.5b": 0,
-  "qwen-1.5b": 1,
-  "qwen-3b": 2,
-  "qwen-7b": 3,
+  "qwen3.5-0.8b": 0,
+  "qwen3.5-2b": 1,
+  "qwen3.5-4b": 2,
 };
 
-/** Returns the short display label for a model (e.g. "7B") */
+/** Returns the short display label for a model (e.g. "4B") */
 export const MODEL_SHORT_LABEL: Record<AIModelId, string> = {
-  "qwen-0.5b": "0.5B",
-  "qwen-1.5b": "1.5B",
-  "qwen-3b": "3B",
-  "qwen-7b": "7B",
+  "qwen3.5-0.8b": "0.8B",
+  "qwen3.5-2b": "2B",
+  "qwen3.5-4b": "4B",
 };
 
 /** Check if the selected model meets the minimum requirement */
 export function isModelSufficient(currentModel: AIModelId, minModel: AIModelId): boolean {
   return MODEL_SIZE_ORDER[currentModel] >= MODEL_SIZE_ORDER[minModel];
 }
+
+/**
+ * The Qwen 2.5 models of earlier versions, to the tier that replaces each: a stored setting may still name one. There's no
+ * 7B any more: the 4B does as well on note tasks.
+ */
+const LEGACY_MODEL_MAP: Record<string, AIModelId> = {
+  "qwen-0.5b": "qwen3.5-0.8b",
+  "qwen-1.5b": "qwen3.5-2b",
+  "qwen-3b": "qwen3.5-4b",
+  "qwen-7b": "qwen3.5-4b",
+};
+
+export const isLegacyModelId = (id: string | undefined): boolean => !!id && id in LEGACY_MODEL_MAP;
+
+/** A stored model id as one of today's: itself, the tier replacing a legacy one, or the default. */
+export function normalizeModelId(id: string | undefined): AIModelId {
+  if (id && id in AI_MODELS) return id as AIModelId;
+  return (id && LEGACY_MODEL_MAP[id]) || DEFAULT_MODEL_ID;
+}
+
+/** llama.rn sampling for one kind of task (the names are its own). */
+export interface Sampling {
+  temperature: number;
+  top_p: number;
+  top_k: number;
+  min_p: number;
+  penalty_repeat: number;
+  penalty_present: number;
+}
+
+/**
+ * Cold for anything that rewrites or labels: the right output repeats most of the input, so no repeat penalty (it pushed the
+ * model to change words it should keep). Warmer, with a presence penalty, where it writes something new.
+ */
+const FAITHFUL: Sampling = { temperature: 0.2, top_p: 0.8, top_k: 20, min_p: 0, penalty_repeat: 1, penalty_present: 0 };
+const GENERATIVE: Sampling = { temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, penalty_repeat: 1, penalty_present: 1 };
+
+export const ACTION_SAMPLING: Record<EditorAction, Sampling> = {
+  clean_transcript: FAITHFUL,
+  fix_grammar: FAITHFUL,
+  translate: FAITHFUL,
+  shorten: FAITHFUL,
+  generate_title: FAITHFUL,
+  suggest_category: FAITHFUL,
+  summarize: GENERATIVE,
+  suggest_items: GENERATIVE,
+};
+
+export const HELP_SEARCH_SAMPLING: Sampling = { ...FAITHFUL, temperature: 0.1 };
+
+/** The most an action may write (transforms get room for the whole text). */
+export const ACTION_MAX_TOKENS: Record<EditorAction, number> = {
+  generate_title: 30,
+  suggest_category: 30,
+  suggest_items: 100,
+  summarize: 200,
+  shorten: 200,
+  fix_grammar: 800,
+  translate: 800,
+  clean_transcript: 800,
+};
 
 const LANG_NAMES: Record<string, string> = {
   en: "English",
@@ -113,7 +169,7 @@ export const HELP_SEARCH_SYSTEM_PROMPT =
 
 /**
  * System prompts for in-editor AI actions.
- * Each is a short directive prompt optimized for small models (Qwen 0.5B-3B).
+ * Each is a short directive prompt for small models (Qwen3.5 0.8B-4B).
  */
 const EDITOR_SYSTEM_PROMPTS: Record<EditorAction, string> = {
   generate_title:
@@ -124,10 +180,6 @@ const EDITOR_SYSTEM_PROMPTS: Record<EditorAction, string> = {
     'You suggest checklist items. Given existing items, output ONLY a JSON array with 3 new related items in {{LANG}}. Format: ["item1","item2","item3"]',
   suggest_category:
     "You assign notes to categories based on their title and content. Either alone is enough to decide. Output ONLY the exact category name from the list that matches. If none fits, output: none",
-  explain_code:
-    "You explain code clearly. Given source code, output ONLY a clear explanation of what the code does and how it works in {{LANG}}. Be concise (3-5 sentences). No code in your output, just the explanation.",
-  add_comments:
-    "You add inline comments to source code. CRITICAL: keep ALL code EXACTLY as-is. Do NOT modify, delete, or rewrite any line of code. ONLY add comment lines above important lines to explain what they do. Use the appropriate comment syntax for the language (// for JS/TS/C/Java, # for Python/Ruby/Bash, etc). Output the COMPLETE original code with comments added.",
   fix_grammar:
     "You correct spelling, grammar and punctuation. Output ONLY the corrected text in the SAME language as the input, preserving the original meaning and wording as much as possible. No explanation, no quotes.",
   shorten:

@@ -48,7 +48,8 @@ export interface CloudSettings {
 export interface AIAssistantSettings {
   enabled: boolean;
   modelDownloaded: boolean;
-  selectedModel: "qwen-0.5b" | "qwen-1.5b" | "qwen-3b" | "qwen-7b";
+  /** Earlier versions stored a Qwen 2.5 id (`qwen-0.5b` ...): `selectorAIAssistant` reads it as the tier replacing it. */
+  selectedModel: "qwen3.5-0.8b" | "qwen3.5-2b" | "qwen3.5-4b";
   voiceOnly: boolean;
 }
 

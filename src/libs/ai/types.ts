@@ -1,17 +1,21 @@
 export type AIModelStatus = "idle" | "downloading" | "loading" | "ready" | "error";
 
-export type AIModelId = "qwen-0.5b" | "qwen-1.5b" | "qwen-3b" | "qwen-7b";
+export type AIModelId = "qwen3.5-0.8b" | "qwen3.5-2b" | "qwen3.5-4b";
 
 export interface AIModelInfo {
   id: AIModelId;
   name: string;
   fileName: string;
   url: string;
+  /** The file's exact size: a download of any other size is incomplete or wrong, and is deleted. */
+  sizeBytes: number;
   sizeLabel: string;
   description: string;
   minRamBytes: number;
   contextSize: number;
-  parts?: { fileName: string; url: string }[];
+  /** Pin the weights in RAM (faster, but a large model can be killed for it on a phone with little to spare). */
+  useMlock: boolean;
+  parts?: { fileName: string; url: string; sizeBytes: number }[];
 }
 
 export type EditorAction =
@@ -19,8 +23,6 @@ export type EditorAction =
   | "summarize"
   | "suggest_items"
   | "suggest_category"
-  | "explain_code"
-  | "add_comments"
   | "fix_grammar"
   | "shorten"
   | "translate"

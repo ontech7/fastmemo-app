@@ -16,7 +16,6 @@ import { toast } from "@/utils/toast";
 
 import { BORDER, COLOR, SHADOW } from "@/constants/styles";
 
-import type { AIModelId } from "@/libs/ai";
 import type { ViewStyle } from "react-native";
 
 const KEEP_AWAKE_TAG = "voice-recognition";
@@ -177,7 +176,7 @@ export default function VoiceRecognitionButton({ onInsert, aiCleanup = false, st
 
     setProcessing(true);
     try {
-      await initContext(aiSettings.selectedModel as AIModelId);
+      await initContext(aiSettings.selectedModel);
       const result = await generateEditorContent("clean_transcript", displayTranscript);
       // show the cleaned result in the sheet; the user reviews it and taps Insert
       if (result.success && result.text) setCleanedText(result.text);
