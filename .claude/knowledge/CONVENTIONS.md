@@ -325,7 +325,9 @@ the merge is persisted** (`persistor.flush()`), through `ackChanges` (it refuses
   foreground, the page is hidden, or a desktop window closes; edits that arrive while the app is in the background are written
   at once (JS timers don't run there, LL-032). New editors must register through `useNoteEditor`, not their own timers.
 - Every `PersistConfig` sets `timeout: 0`: a slow read must never rehydrate the empty initial state (LL-029). Notes persist only
-  to their own storage (FS on native, IndexedDB on web), written atomically by `FSStorage` (LL-030).
+  through the note store (ADR-018): one value per note, written only when that note's object changed. Change notes immutably
+  (reducers, never in place outside them): a note mutated in place isn't seen as changed and isn't written.
+- File names given to expo-file-system's `File`/`Directory` are the real names, without `%` (segments are encoded, LL-052).
 
 ### Dispatching Actions
 
@@ -818,6 +820,7 @@ hard rules (each maps to a lesson learned):
 | 30  | Never rely on a JS timer for work that must finish before the app may be killed           | Android pauses timers in background; flush synchronously (see LL-032)                                                            |
 | 31  | Never concatenate translated fragments into a sentence                                    | Word order differs per language; one interpolated key, `<Trans>` for styled parts (see LL-035)                                   |
 | 32  | Never write a cloud document other devices listen to when nothing changed                 | Each write costs a read per listener and can wake the loop that writes again (see LL-044)                                        |
+| 33  | Never give expo-file-system's `File` a percent-encoded name                               | `Paths.join` encodes segments (`%` -> `%25`): the path names another file (see LL-052)                                           |
 | 33  | Never size what accumulates in one Firestore document by bytes alone                      | The 40,000 index-entry limit comes first (~50 per queued note); budget both (see LL-043)                                         |
 | 34  | Never read a per-cloud value from config, or name a provider, above `CloudBackend`        | Two clouds: ask `cloud` (`deviceLimit`, `pacing`), key by `cloudScope`, keep texts neutral (see LL-048)                          |
 

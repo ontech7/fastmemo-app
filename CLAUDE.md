@@ -130,7 +130,7 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 | Framework  | Expo SDK 58, React Native 0.88 (New Architecture, Hermes V1), React 19.3                           |
 | Language   | TypeScript 6.0 (path alias `@/*` -> `./src/*`)                                                     |
 | Routing    | expo-router 58 (file-based, typed routes)                                                          |
-| State      | Redux Toolkit 2.8 + Redux Persist (filesystem for notes, AsyncStorage for settings/categories)     |
+| State      | Redux Toolkit 2.8 + Redux Persist (notes one value per note: ADR-018; AsyncStorage for the rest)   |
 | Desktop    | Tauri 2.x (Rust, capabilities in `src-tauri/capabilities/`)                                        |
 | Cloud      | Firestore or a self-hosted FastMemo server behind `CloudBackend` (ADR-016, ADR-017), E2E (ADR-012) |
 | AI         | llama.rn 0.12 (Qwen 2.5 GGUF, on-device)                                                           |

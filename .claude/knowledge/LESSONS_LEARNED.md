@@ -1373,6 +1373,32 @@ answer is no" share a retry path.
 
 ---
 
+### LL-052: A percent-encoded file name given to expo-file-system's `File` names another file
+
+**Date:** 2026-10-20  
+**Severity:** Critical (caught before release)  
+**Category:** Bug  
+**What happened:** The note store (ADR-018) found the previous notes file with
+`new File(Paths.document, "reduxPersist", "persist%3Aroot_notes")`, the name fsStorage used. Reading expo-file-system before the
+device test showed `Paths.join` encodes every segment after the first (`%` -> `%25`): the native side would have looked for
+`persist%3Aroot_notes` while the file on disk is `persist:root_notes` (fsStorage put `%3A` in a URI, which the legacy API
+decoded). The migration would have found no notes, and its first write would have stored an empty note list. The unit tests had
+passed: the fake file system didn't encode segments.
+
+**Root cause:** Assuming a path segment is used as given. With the new API it's encoded, then the URI is decoded once.
+
+**Fix:** The legacy file is named as it is on disk (`persist:root_notes`); the note store's own names are escaped to characters
+neither step touches (`[A-Za-z0-9-_.!~*'()]`, `_` standing for `%`). `scripts/_expo-file-system-fake.js` now encodes segments as
+`Paths.join` does, and fails the migration tests with the old name. Verified on Android: an update over the old file migrated
+every note.  
+**Rule:** A name given to `File`/`Directory` must be the file's real name, with no `%`; check where an existing file really is
+(`run-as ... ls`) before code reads it, and make test doubles encode and decode like the library.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/per-note-storage`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

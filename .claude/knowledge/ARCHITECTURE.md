@@ -69,7 +69,7 @@ src/
     # Standalone: CategoryIcon, LoadingSpinner, SafeAreaView, Sidebar, VirtualNumberKeyboard
 
   slicers/             # Redux state management
-    store.ts           # Store configuration (nested persist, notes JSON reuse, legacy fold, typed hooks)
+    store.ts           # Store configuration (nested persist, notes through the note store, legacy fold, typed hooks)
     notesSlice.ts      # Notes state: CRUD, trash, filters, revisions, cloud outbox, sync plans/pushes (29 reducers)
     categoriesSlice.ts # Categories state: CRUD, reorder, cloud outbox, sync plans/pushes (9 reducers)
     settingsSlice.ts   # App settings: language, security, cloud, AI, dev mode (14 reducers)
@@ -107,7 +107,8 @@ src/
       index.web.ts     # No-op stubs for web
     haptics/           # Platform-split: native (expo-haptics) / web (no-op stubs)
     i18n/              # i18next setup + 7 locale files
-    storage/           # Platform-split: native (fsStorage: atomic tmp+rename writes) / web (localforage/IndexedDB)
+    storage/           # noteStore.ts: the notes one value per note (ADR-018), over noteStoreBackend (native: files in
+                       #   fastmemo-notes/; web: IndexedDB `v2:*`); fsStorage: the previous single value (read to migrate)
                        #   + legacyRootNotes.ts: one-shot fold of the notes copy out of `persist:root`
     flushOnExit.ts     # Platform-split: flush pending editor batches + persistor on background / hide / window close
     cloud/             # Cloud sync (ADR-016, ADR-017)
@@ -292,10 +293,12 @@ Redux Persist (nested -- see DECISIONS.md ADR-003)
 
 Root persistReducer (key: "root", AsyncStorage)      blacklist ["notes"] once the legacy copy is folded
   |
-  +-- notesSlice persistReducer (key: "root_notes")
-  |     Storage: FSStorage (files/reduxPersist/, atomic .tmp + rename) / IndexedDB on web
-  |     serialize/deserialize reuse the JSON the state was rehydrated from (no rewrite after boot)
-  |     Migration: legacy AsyncStorage -> FSStorage
+  +-- notesSlice persistReducer (key: "root_notes", serialize/deserialize: false)
+  |     Storage: the note store (ADR-018): one value per note, written only when that note changed,
+  |       then a small `state` value (entry list, settings, deletions waiting, tombstones)
+  |       native: files/fastmemo-notes/<escaped name>.json (.tmp + move) / web: IndexedDB `v2:<name>`
+  |     Migration: the previous single value (files/reduxPersist/persist:root_notes, IndexedDB
+  |       `persist:root_notes`) on the first launch, left as a backup; older still: AsyncStorage
   |
   +-- categoriesSlice persistReducer (key: "root_categories")
   |     Storage: AsyncStorage
@@ -308,7 +311,8 @@ All configs: timeout 0 (never rehydrate empty state on a slow read, LL-029).
 
 Boot order (`store.ts`): `persistStore(store, { manualPersist: true })`, then `foldLegacyRootNotes(notesStorage)` merges the old
 notes copy from `persist:root` into the notes storage (backup under `backup:root-notes`, marker `fastmemo:root-notes-folded`),
-and only then `persistor.persist()`. If the fold can't finish, notes keep persisting in the root blob for that session.
+and only then `persistor.persist()`. If the fold can't finish, notes keep persisting in the root blob for that session. The note
+store then reads its `state` value and entries (or, the first time, the folded single value: its first write migrates).
 
 Edits reach the store in batches (`useNoteEditor`: debounce 500ms / max 2s native, 300ms / 1s web). Pending batches register in
 `registry.ts`; `flushOnExit` (installed in `_layout`) flushes them plus `persistor.flush()` on AppState background, page hide,
