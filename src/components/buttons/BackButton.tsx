@@ -6,16 +6,20 @@ import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
 import IconChip from "@/components/ui/IconChip";
 import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
+import { useTourTarget } from "@/hooks/useTourTarget";
 
 interface Props {
   callback?: (() => void) | null;
   style?: ViewStyle;
   /** Wrap the chevron in a glass chip (modernized header style). */
   chip?: boolean;
+  /** Something the first-note tour can point at, under this name. */
+  tourTarget?: string;
 }
 
-export default function BackButton({ callback = null, style = {}, chip = false }: Props) {
+export default function BackButton({ callback = null, style = {}, chip = false, tourTarget }: Props) {
   const { t } = useTranslation();
+  const targetRef = useTourTarget(tourTarget);
 
   const router = useRouter();
 
@@ -27,6 +31,7 @@ export default function BackButton({ callback = null, style = {}, chip = false }
 
   return (
     <TouchableOpacity
+      ref={targetRef}
       style={style}
       activeOpacity={0.7}
       onPress={onPress}

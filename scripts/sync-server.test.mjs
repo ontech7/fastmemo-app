@@ -47,7 +47,7 @@ await build({
       export { SyncEngine } from "@/libs/cloud/syncEngine";
       export { ServerBackend } from "@/libs/cloud/serverBackend";
       export { CloudRouter } from "@/libs/cloud/router";
-      export { cloudScope, normalizeServerUrl } from "@/libs/cloud/scope";
+      export { cloudScope, isLoopbackUrl, isPlainHttp, normalizeServerUrl } from "@/libs/cloud/scope";
     `,
     resolveDir: src,
     loader: "ts",
@@ -102,6 +102,38 @@ const until = async (cond, ms = 8000) => {
   }
   return !!(await cond());
 };
+
+/* ------------------------------------------------------------------------------------------------------------------ */
+/* Addresses                                                                                                           */
+/* ------------------------------------------------------------------------------------------------------------------ */
+
+console.log("\n=== Addresses ===");
+ok(
+  "a bare IP or .local name gets http, a domain https",
+  M.normalizeServerUrl("192.168.1.5:8080/") === "http://192.168.1.5:8080" &&
+    M.normalizeServerUrl("nas.local") === "http://nas.local" &&
+    M.normalizeServerUrl(" notes.example.com ") === "https://notes.example.com"
+);
+ok(
+  "plain http is told apart",
+  M.isPlainHttp("192.168.1.5:8080") &&
+    M.isPlainHttp("HTTP://notes.example.com") &&
+    !M.isPlainHttp("notes.example.com") &&
+    !M.isPlainHttp("https://10.0.0.2")
+);
+ok(
+  "this machine is loopback, a LAN or public address isn't",
+  ["localhost:8080", "http://127.0.0.1:8080", "http://127.1.2.3", "http://[::1]:8080/x", "http://dev.localhost"].every(
+    M.isLoopbackUrl
+  ) &&
+    ![
+      "192.168.1.5:8080",
+      "http://localhost.example.com",
+      "http://notes.example.com",
+      "http://127.0.0.1.nip.io",
+      "http://10.0.0.2",
+    ].some(M.isLoopbackUrl)
+);
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 /* The server                                                                                                          */

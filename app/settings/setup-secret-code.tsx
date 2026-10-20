@@ -1,21 +1,19 @@
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
-import { defaultNote } from "@/configs/default";
+import { configs } from "@/configs";
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import Haptics from "@/libs/haptics";
-import { addNote } from "@/slicers/notesSlice";
-import type { Note } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import i18n from "i18next";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
 import { useDispatch } from "react-redux";
 import CodeInput from "@/components/inputs/CodeInput";
-import { setSecretCode } from "@/slicers/settingsSlice";
+import { setSecretCode, setTourStep } from "@/slicers/settingsSlice";
 
 const CODE_PHASE = {
   firstCode: [i18n.t("setupcode.firstCode_1"), i18n.t("setupcode.firstCode_2")],
@@ -49,9 +47,11 @@ export default function SetupSecretCodeScreen() {
         }
 
         AsyncStorage.setItem("@firstScreen", "/home");
+        // A new install has nothing to catch up on: no changelog on its first home screen, the tour instead.
+        AsyncStorage.setItem("@appVersion", Platform.OS === "web" ? configs.app.version.web : configs.app.version.mobile);
 
         dispatch(setSecretCode(code));
-        dispatch(addNote(defaultNote() as Note));
+        dispatch(setTourStep("create"));
 
         setPhase("savedCode");
         setTimeout(() => {

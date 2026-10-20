@@ -24,6 +24,11 @@ export const normalizeServerUrl = (input: string): string => {
 /** Whether the address is plain HTTP (not encrypted in transit). */
 export const isPlainHttp = (url: string): boolean => /^http:\/\//i.test(normalizeServerUrl(url));
 
+const LOOPBACK = /^https?:\/\/(localhost|[^/:]+\.localhost|127(\.\d{1,3}){3}|\[::1\])(:\d+)?(\/|$)/i;
+
+/** Whether the address is this machine, which a page served over HTTPS may still reach over plain HTTP. */
+export const isLoopbackUrl = (url: string): boolean => LOOPBACK.test(normalizeServerUrl(url));
+
 /** What this device's cached vault key is filed under for these settings. */
 export const cloudScope = (settings: Partial<CloudSettings> | null | undefined): string =>
   providerOf(settings) === "server" ? `server:${normalizeServerUrl(settings?.serverUrl ?? "")}` : (settings?.projectId ?? "");

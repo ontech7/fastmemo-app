@@ -24,6 +24,7 @@ export type {
   NoteCreationMode,
   NoteCreationType,
   NoteCreationSettings,
+  TourStep,
   SettingsState,
 } from "./settings";
 export type { NoteFilters, NotesState, CategoriesState, RootState } from "./store";

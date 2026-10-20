@@ -5,6 +5,7 @@ import type {
   NoteCreationSettings,
   RootState,
   SettingsState,
+  TourStep,
   VoiceRecognitionSettings,
   Webhooks,
 } from "@/types";
@@ -118,6 +119,11 @@ const settingsSlice = createSlice({
     setNoteCreation: (state, action: PayloadAction<NoteCreationSettings>) => {
       state.noteCreation = action.payload;
     },
+    /** Moves the first-note tour on; `undefined` ends it. */
+    setTourStep: (state, action: PayloadAction<TourStep | undefined>) => {
+      if (action.payload) state.tour = action.payload;
+      else delete state.tour;
+    },
   },
 });
 
@@ -136,6 +142,7 @@ export const {
   setAIAssistant,
   setDeveloperMode,
   setNoteCreation,
+  setTourStep,
 } = settingsSlice.actions;
 
 export const getAllSettings = (state: RootState): SettingsState => state.settings;
@@ -144,6 +151,7 @@ export const selectorIsIntroFinished = (state: RootState): boolean => state.sett
 export const selectorCurrentSecretCode = (state: RootState): string => state.settings.secretCode;
 export const selectorIsFingerprintEnabled = (state: RootState): boolean => state.settings.isFingerprintEnabled;
 export const selectorShowHidden = (state: RootState): boolean => state.settings.showHidden;
+export const selectorTourStep = (state: RootState): TourStep | undefined => state.settings.tour;
 export const selectorReportDate = (state: RootState): string | null => state.settings.reportDate;
 export const selectorIsCloudSyncEnabled = (state: RootState): boolean => state.settings.isCloudSyncEnabled;
 export const getCloudSettings = (state: RootState): CloudSettings => state.settings.cloud;

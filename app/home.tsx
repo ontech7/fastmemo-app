@@ -12,6 +12,7 @@ import SearchInput from "@/components/inputs/SearchInput";
 import QuickNoteBar, { QUICK_NOTE_BAR_RESERVED } from "@/components/notes/QuickNoteBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
+import TourSpotlight from "@/components/ui/TourSpotlight";
 import WebViewWarmup from "@/components/WebViewWarmup";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
@@ -35,9 +36,11 @@ import {
   selectorDeveloperMode,
   selectorNoteCreation,
   selectorShowHidden,
+  selectorTourStep,
   selectorWebhook_deleteNote,
   selectorWebhook_temporaryDeleteNote,
   selectorWebhook_updateNote,
+  setTourStep,
 } from "@/slicers/settingsSlice";
 import type { CodeNote, Note, TextNote, TodoItem, TodoNote } from "@/types";
 import { formatToPlainText } from "@/utils/string";
@@ -89,6 +92,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const noteCreation = useSelector(selectorNoteCreation);
+  const tourStep = useSelector(selectorTourStep);
   // Default ON for state persisted before the setting existed.
   const quickNoteEnabled = noteCreation.quickNote ?? true;
 
@@ -219,18 +223,20 @@ export default function HomeScreen() {
   // Stable across unrelated re-renders (focus changes, quick-note bar height, ...), so FlashList
   // only re-renders its cells when the selection or delete mode actually change (LL-019).
   const renderNote = useCallback(
-    ({ item }: { item: Note }) => (
+    ({ item, index }: { item: Note; index: number }) => (
       <NoteCard
         content={item}
         isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
         selectNote={selectNote}
         isDeleteMode={isDeleteMode}
         toggleDeleteMode={toggleDeleteMode}
+        // The tour's last step points at the first note.
+        tourTarget={tourStep === "explore" && index === 0 ? "firstNote" : undefined}
       />
     ),
-    [selectedNotes, selectNote, isDeleteMode, toggleDeleteMode]
+    [selectedNotes, selectNote, isDeleteMode, toggleDeleteMode, tourStep]
   );
-  const listExtraData = useMemo(() => ({ isDeleteMode, selectedNotes }), [isDeleteMode, selectedNotes]);
+  const listExtraData = useMemo(() => ({ isDeleteMode, selectedNotes, tourStep }), [isDeleteMode, selectedNotes, tourStep]);
 
   // hardware back for resetting deleteMode
   useEffect(() => {
@@ -382,6 +388,10 @@ export default function HomeScreen() {
   const showQuickBar = quickNoteEnabled && !isDeleteMode;
   const fabBottom = insets.bottom + barHeight + PADDING_MARGIN.xl;
 
+  // The first-note tour's steps on this screen (once the changelog check has settled; not over the note-type menu).
+  const [typeMenuOpen, setTypeMenuOpen] = useState(false);
+  const showTour = isFocused && changelogChecked && !isDeleteMode && !typeMenuOpen;
+
   return (
     <>
       <ConfirmOrCancelDialog
@@ -501,7 +511,32 @@ export default function HomeScreen() {
           isDeleteMode={isDeleteMode}
           toggleDeleteMode={toggleDeleteMode}
           bottomOffset={showQuickBar ? fabBottom : undefined}
+          onMenuToggle={setTypeMenuOpen}
         />
+
+        {showTour && tourStep === "create" && (
+          <TourSpotlight
+            targets={["addNoteGroup"]}
+            pointAt="addNote"
+            passThrough
+            step={1}
+            total={3}
+            title={t("tour.create_title")}
+            text={t("tour.create_text")}
+            onSkip={() => dispatch(setTourStep(undefined))}
+          />
+        )}
+        {showTour && tourStep === "explore" && (
+          <TourSpotlight
+            targets={["firstNote", "sidebar"]}
+            step={3}
+            total={3}
+            title={t("tour.explore_title")}
+            text={t("tour.explore_text")}
+            actionLabel={t("tour.got_it")}
+            onAction={() => dispatch(setTourStep(undefined))}
+          />
+        )}
       </View>
     </>
   );

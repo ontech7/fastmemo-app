@@ -1,6 +1,7 @@
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.web";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
@@ -201,7 +202,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
       <View>
         <View style={styles.header}>
-          <BackButton chip callback={updateNoteWebhook} />
+          <BackButton chip tourTarget="back" callback={updateNoteWebhook} />
 
           <TextInput
             style={styles.titleInput}
@@ -326,6 +327,8 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           </TouchableOpacity>
         </EditorActionDock>
       )}
+
+      <EditorTourTip />
     </SafeAreaView>
   );
 }

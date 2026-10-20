@@ -167,8 +167,17 @@ const en = {
     unlockCode: "Insert your secret code",
     error: "The code you entered doesn't match. Try again.",
   },
-  firstMemo: {
-    title: "Welcome to Fast Memo! 🔊",
+  tour: {
+    step: "{{current}} of {{total}}",
+    skip: "Skip",
+    got_it: "Got it",
+    create_title: "Your first note",
+    create_text: "Tap + to start writing. The arrow next to it opens the other types: To-Do, Kanban and Code.",
+    write_title: "Just write",
+    write_text: "Everything is saved as you type. When you're done, tap the arrow at the top left.",
+    explore_title: "One last tip",
+    explore_text:
+      "Long-press a note to select it: you can mark it important, lock it, hide it or delete it. Categories, trash and settings are in the bar on the left.",
   },
   home: {
     notes: "Notes",
@@ -290,9 +299,15 @@ const en = {
       url: "Server address",
       key: "Access key",
       http_warning:
-        "This address isn't encrypted (HTTP). Phones and the web app only connect over HTTPS (the guide shows a free way, with Tailscale): keep HTTP for tests on this computer. Your notes stay end-to-end encrypted, but the access key and the titles would travel in the clear.",
+        "This address isn't encrypted (HTTP). Anyone on the same network (public Wi-Fi, a shared router) can read your access key and your note titles, and with the key connect to your server. The content of your notes stays end-to-end encrypted. Use HTTPS if you can: a reverse proxy with a certificate, or Tailscale, which gives the server an HTTPS address for free (see the guide).",
+      http_blocked:
+        "Here FastMemo can only reach HTTPS addresses: the browser engine blocks HTTP. Put the server behind HTTPS: a reverse proxy with a certificate, or Tailscale, which gives it an HTTPS address for free (see the guide).",
+      http_confirm_title: "Connect over HTTP?",
+      http_confirm_desc:
+        "Without HTTPS, anyone on the same network can read your access key and your note titles. With the key they can connect to your server like one of your devices: they couldn't read your notes (they stay end-to-end encrypted), but they could delete them.\n\nOnly use HTTP on a network you trust. The guide shows how to get HTTPS for free with Tailscale.",
+      http_confirm_ok: "Use HTTP",
       handshake_failed_desc:
-        "Couldn't reach the server, or the access key is wrong. Check the address (e.g. https://notes.example.com), the key, and that the server is running. Phones and the web app need an HTTPS address.",
+        "Couldn't reach the server, or the access key is wrong. Check the address (e.g. https://notes.example.com), the key, and that the server is running. The web app needs an HTTPS address.",
     },
     vault: {
       setup_title: "Protect your notes",

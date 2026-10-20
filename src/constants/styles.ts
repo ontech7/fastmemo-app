@@ -45,6 +45,8 @@ export const COLOR = {
   // where the full accent reads too loud against the dark surface.
   accentMuted: "#475AA6",
   accentMutedBorder: "#5E72C4",
+  // The dim layer over everything but what a tour step shows
+  scrim: "rgba(2, 4, 14, 0.82)",
 } as const;
 
 export const KANBAN_COLUMN_COLORS = ["#A7ABB9", "#799EDC", "#00c951", "#EEE78E", "#ff6900", "#A43D3F", "#DAD9DE"] as const;

@@ -2,6 +2,7 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import EditorTourTip from "@/components/notes/EditorTourTip";
 import CodeDraggableTab from "@/components/notes/CodeDraggableTab";
 import CodeEditorWebView, { type CodeEditorWebViewRef } from "@/components/notes/CodeEditorWebView";
 import CodeLanguagePickerModal from "@/components/notes/CodeLanguagePickerModal";
@@ -232,7 +233,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
         <SafeAreaView style={styles.container}>
           <View>
             <View style={styles.header}>
-              <BackButton chip callback={updateNoteWebhook} />
+              <BackButton chip tourTarget="back" callback={updateNoteWebhook} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <TextInput
                   style={styles.titleInput}
@@ -359,6 +360,8 @@ export default function NoteCodeEditor({ initialNote }: Props) {
           />
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      <EditorTourTip />
     </View>
   );
 }

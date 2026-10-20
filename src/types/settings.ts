@@ -71,6 +71,9 @@ export interface DeveloperModeSettings {
   customAppIcon: string | null;
 }
 
+/** Where a new install is in the first-note tour: the add button, the editor, then the note list. */
+export type TourStep = "create" | "write" | "explore";
+
 export interface SettingsState {
   language: string;
   isIntroFinished: boolean;
@@ -86,4 +89,6 @@ export interface SettingsState {
   reportDate: string | null;
   developerMode: DeveloperModeSettings;
   noteCreation: NoteCreationSettings;
+  /** Only while a new install is in the first-note tour (absent for everyone else, existing users included). */
+  tour?: TourStep;
 }
