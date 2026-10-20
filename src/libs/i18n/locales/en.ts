@@ -1064,6 +1064,20 @@ const en = {
     unlimited_trash_time_desc: "Current limit: 30 days",
     change_app_icon: "Change app icon",
     change_app_icon_desc: "Coming soon",
+    ai_eval: "AI evaluation",
+    ai_eval_desc: "Runs fixed texts on the selected model: times and answers",
+  },
+
+  aieval: {
+    title: "AI evaluation",
+    run: "Run all",
+    stop: "Stop",
+    share: "Share results",
+    progress: "{{done}} / {{total}} done",
+    load: "Model loaded in {{ms}} ms",
+    no_model: "Download this model in AI Assistant first.",
+    unavailable: "The on-device AI isn't available here.",
+    failed: "The model didn't load.",
   },
 
   /* toast */

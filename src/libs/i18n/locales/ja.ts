@@ -1060,6 +1060,20 @@ const ja = {
     unlimited_trash_time_desc: "現在の制限：30 日",
     change_app_icon: "アプリアイコンを変更",
     change_app_icon_desc: "近日公開",
+    ai_eval: "AI 評価",
+    ai_eval_desc: "選択中のモデルで固定テキストを実行：時間と回答",
+  },
+
+  aieval: {
+    title: "AI 評価",
+    run: "すべて実行",
+    stop: "停止",
+    share: "結果を共有",
+    progress: "{{done}} / {{total}} 完了",
+    load: "モデルの読み込み：{{ms}} ms",
+    no_model: "まず AI アシスタントでこのモデルをダウンロードしてください。",
+    unavailable: "ここではデバイス上の AI は使えません。",
+    failed: "モデルを読み込めませんでした。",
   },
 
   /* toast */

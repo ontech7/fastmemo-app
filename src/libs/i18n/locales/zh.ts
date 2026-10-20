@@ -1035,6 +1035,20 @@ const zh = {
     unlimited_trash_time_desc: "当前限制：30 天",
     change_app_icon: "更改应用图标",
     change_app_icon_desc: "即将推出",
+    ai_eval: "AI 评估",
+    ai_eval_desc: "在所选模型上运行固定文本：耗时和回答",
+  },
+
+  aieval: {
+    title: "AI 评估",
+    run: "全部运行",
+    stop: "停止",
+    share: "分享结果",
+    progress: "已完成 {{done}} / {{total}}",
+    load: "模型加载耗时 {{ms}} 毫秒",
+    no_model: "请先在 AI 助手中下载此模型。",
+    unavailable: "此处无法使用设备端 AI。",
+    failed: "模型未能加载。",
   },
 
   /* toast */

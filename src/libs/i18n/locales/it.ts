@@ -1074,6 +1074,20 @@ const it = {
     unlimited_trash_time_desc: "Limite attuale: 30 giorni",
     change_app_icon: "Cambia icona app",
     change_app_icon_desc: "Prossimamente",
+    ai_eval: "Valutazione AI",
+    ai_eval_desc: "Esegue testi fissi sul modello selezionato: tempi e risposte",
+  },
+
+  aieval: {
+    title: "Valutazione AI",
+    run: "Esegui tutto",
+    stop: "Ferma",
+    share: "Condividi risultati",
+    progress: "{{done}} / {{total}} completati",
+    load: "Modello caricato in {{ms}} ms",
+    no_model: "Scarica prima questo modello in Assistente AI.",
+    unavailable: "L'AI sul dispositivo qui non è disponibile.",
+    failed: "Il modello non si è caricato.",
   },
 
   /* toast */

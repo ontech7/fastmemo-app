@@ -1086,6 +1086,20 @@ const fr = {
     unlimited_trash_time_desc: "Limite actuelle : 30 jours",
     change_app_icon: "Changer l'icône de l'app",
     change_app_icon_desc: "Bientôt disponible",
+    ai_eval: "Évaluation de l'IA",
+    ai_eval_desc: "Exécute des textes fixes sur le modèle choisi : temps et réponses",
+  },
+
+  aieval: {
+    title: "Évaluation de l'IA",
+    run: "Tout exécuter",
+    stop: "Arrêter",
+    share: "Partager les résultats",
+    progress: "{{done}} / {{total}} terminés",
+    load: "Modèle chargé en {{ms}} ms",
+    no_model: "Téléchargez d'abord ce modèle dans Assistant IA.",
+    unavailable: "L'IA sur l'appareil n'est pas disponible ici.",
+    failed: "Le modèle ne s'est pas chargé.",
   },
 
   /* toast */

@@ -1091,6 +1091,20 @@ const de = {
     unlimited_trash_time_desc: "Aktuelles Limit: 30 Tage",
     change_app_icon: "App-Symbol ändern",
     change_app_icon_desc: "Demnächst",
+    ai_eval: "KI-Auswertung",
+    ai_eval_desc: "Führt feste Texte auf dem gewählten Modell aus: Zeiten und Antworten",
+  },
+
+  aieval: {
+    title: "KI-Auswertung",
+    run: "Alle ausführen",
+    stop: "Stoppen",
+    share: "Ergebnisse teilen",
+    progress: "{{done}} / {{total}} erledigt",
+    load: "Modell in {{ms}} ms geladen",
+    no_model: "Laden Sie dieses Modell zuerst im KI-Assistenten herunter.",
+    unavailable: "Die KI auf dem Gerät ist hier nicht verfügbar.",
+    failed: "Das Modell wurde nicht geladen.",
   },
 
   /* toast */

@@ -13,7 +13,16 @@ import {
   getEditorSystemPrompt,
   truncateForAction,
 } from "./constants";
-import type { AIModelId, AIModelInfo, AIModelStatus, EditorAction, EditorActionResult, HelpCatalogEntry } from "./types";
+import type {
+  AIModelId,
+  AIModelInfo,
+  AIModelStatus,
+  AITimings,
+  EditorAction,
+  EditorActionOptions,
+  EditorActionResult,
+  HelpCatalogEntry,
+} from "./types";
 
 type StatusListener = (status: AIModelStatus, progress?: number) => void;
 
@@ -275,6 +284,15 @@ export async function releaseContext(): Promise<void> {
   }
 }
 
+function timingsOf(timings: { prompt_n: number; prompt_ms: number; predicted_n: number; predicted_ms: number }): AITimings {
+  return {
+    promptN: timings.prompt_n,
+    promptMs: timings.prompt_ms,
+    predictedN: timings.predicted_n,
+    predictedMs: timings.predicted_ms,
+  };
+}
+
 const STOP_WORDS = [
   "</s>",
   "<|end|>",
@@ -294,7 +312,8 @@ const STOP_WORDS = [
 export async function generateEditorContent(
   action: EditorAction,
   content: string,
-  onToken?: (token: string) => void
+  onToken?: (token: string) => void,
+  options: EditorActionOptions = {}
 ): Promise<EditorActionResult> {
   if (!_context) {
     const settingsState = store.getState().settings;
@@ -305,7 +324,7 @@ export async function generateEditorContent(
     }
   }
 
-  const langCode = resolveLanguage();
+  const langCode = options.lang ?? resolveLanguage();
   const isJsonOutput = action === "suggest_items";
 
   // Cap input length for gist-only actions so long notes don't blow up prefill latency.
@@ -314,8 +333,7 @@ export async function generateEditorContent(
   // For suggest_category, build a user message with category list
   let categoryNames: string[] = [];
   if (action === "suggest_category") {
-    const categories = store.getState().categories.items;
-    categoryNames = categories.map((c: { name: string }) => c.name);
+    categoryNames = options.categories ?? store.getState().categories.items.map((c: { name: string }) => c.name);
     content = `Categories: ${categoryNames.join(", ")}\n\nNote:\n${content}`;
   }
 
@@ -357,23 +375,24 @@ export async function generateEditorContent(
       }
     );
 
+    const timings = timingsOf(result.timings);
     const text = result.text?.trim();
-    if (!text) return { success: false, error: "No response" };
+    if (!text) return { success: false, error: "No response", timings };
 
     if (isJsonOutput) {
       try {
         const items = JSON.parse(text);
         if (Array.isArray(items)) {
-          return { success: true, items: items.map(String) };
+          return { success: true, items: items.map(String), timings };
         }
       } catch {
         // Fallback: extract quoted strings
         const matches = text.match(/"([^"]+)"/g);
         if (matches) {
-          return { success: true, items: matches.map((m) => m.replace(/"/g, "")) };
+          return { success: true, items: matches.map((m) => m.replace(/"/g, "")), timings };
         }
       }
-      return { success: false, error: "Invalid response format" };
+      return { success: false, error: "Invalid response format", timings };
     }
 
     // For add_comments, strip code fences and return code with comments
@@ -382,12 +401,12 @@ export async function generateEditorContent(
         .replace(/^```\w*\s*/i, "")
         .replace(/```\s*$/g, "")
         .trim();
-      return { success: true, text: code };
+      return { success: true, text: code, timings };
     }
 
     // For explain_code, return as plain text
     if (action === "explain_code") {
-      return { success: true, text: text.trim() };
+      return { success: true, text: text.trim(), timings };
     }
 
     // Clean common artifacts from free-text output (multilingual prefixes)
@@ -404,7 +423,7 @@ export async function generateEditorContent(
       const lowerCleaned = cleaned.toLowerCase();
 
       if (lowerCleaned === "none" || lowerCleaned.startsWith("none")) {
-        return { success: false, error: "no_category_match" };
+        return { success: false, error: "no_category_match", timings };
       }
 
       // Exact match, then includes match
@@ -413,13 +432,13 @@ export async function generateEditorContent(
         categoryNames.find((n) => lowerCleaned.includes(n.toLowerCase())) ||
         categoryNames.find((n) => n.toLowerCase().includes(lowerCleaned));
       if (matched) {
-        return { success: true, text: matched };
+        return { success: true, text: matched, timings };
       }
 
-      return { success: false, error: "no_category_match" };
+      return { success: false, error: "no_category_match", timings };
     }
 
-    return { success: true, text: cleaned };
+    return { success: true, text: cleaned, timings };
   } catch (error) {
     console.error("[AI] Editor content generation failed:", error);
     return { success: false, error: String(error) };
