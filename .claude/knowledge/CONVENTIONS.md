@@ -14,8 +14,9 @@
 7. [Platform-Specific Conventions](#platform-specific-conventions)
 8. [Backward Compatibility & Data Migration](#backward-compatibility--data-migration)
 9. [Cloud Sync & Firestore Budget](#cloud-sync--firestore-budget)
-10. [Naming Conventions](#naming-conventions)
-11. [DO / DON'T Quick Reference](#do--dont-quick-reference)
+10. [On-Device AI](#on-device-ai)
+11. [Naming Conventions](#naming-conventions)
+12. [DO / DON'T Quick Reference](#do--dont-quick-reference)
 
 ---
 
@@ -769,6 +770,27 @@ hard rules (each maps to a lesson learned):
    `await yieldToUI()` after `setLoading(true)` so the spinner paints (LL-026). PBKDF2 (key derivation) runs only at
    setup/unlock/reset/password-change — it is slow on Hermes (no JIT) but never per note; per-note `CryptNote.encrypt` is plain
    AES with the cached DEK and cannot lose notes (local-first save + synchronous encrypt-into-outbox + retried upload).
+
+---
+
+## On-Device AI
+
+Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file that talks to llama.rn.
+
+1. **Every completion passes `CHAT_TEMPLATE`** (`jinja: true, enable_thinking: false, reasoning_format: "none"`) and its
+   action's `ACTION_SAMPLING` + `ACTION_MAX_TOKENS`. A new action adds an entry to both maps, a prompt in
+   `EDITOR_SYSTEM_PROMPTS`, and a fixture in `evalFixtures.ts`.
+2. **Run completions through `whileBusy`** (as `generateEditorContent` and `searchHelpByIntent` do): the idle and background
+   release never free a context under a running completion.
+3. **Nothing the model writes replaces user content without a look.** A rewrite streams into a before/after preview (or the
+   dictation sheet), Apply waits for the end, Cancel stops the model (`cancelCommand`) and keeps the original. A rewrite action
+   gets a `REWRITE_LENGTH_RATIO` range so `isPlausibleRewrite` can discard a runaway answer.
+4. **Number each run** (`runRef`/`aiRunRef`): a cancelled or superseded run never writes into the UI, and unmounting mid-run
+   calls `cancelCommand`.
+5. **Pre-warm where an action is likely** (`prewarmContext` when the dictation sheet or the AI menu opens), never at app start:
+   a loaded 2B holds over a gigabyte.
+6. **Measure before changing a prompt, sampling or tier**: run Developer options -> AI evaluation on a phone before and after,
+   and compare the saved JSON reports.
 
 ---
 

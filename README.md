@@ -2,7 +2,8 @@
 
 <img width="600" height="114" alt="GithubLogo" src="https://github.com/user-attachments/assets/2b91e421-2c6b-4739-bb16-1220bd591667" />
 
-**A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, and end-to-end encrypted cloud sync.**
+**A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, and end-to-end
+encrypted cloud sync.**
 
 ![Android](https://badgen.net/badge/Android/v3.2.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v1.2.0/blue)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
@@ -30,7 +31,7 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 
 | Feature                  | Description                                                            |
 | ------------------------ | ---------------------------------------------------------------------- |
-| **AI Assistant (BETA)**  | On-device AI with Qwen 2.5 (0.5B-7B). No data leaves your phone        |
+| **AI Assistant (BETA)**  | On-device AI with Qwen3.5 (0.8B-4B). No data leaves your phone         |
 | **Rich Text Editor**     | Create beautifully formatted notes with full rich text support         |
 | **To-Do List**           | Organize your checklist                                                |
 | **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                        |
@@ -128,7 +129,7 @@ chmod +x Fast_Memo_*.AppImage
 | [Expo](https://expo.dev/)                                                                      | React Native framework for cross-platform development |
 | [React Native](https://reactnative.dev/)                                                       | Core framework for iOS and Android                    |
 | [Tauri](https://tauri.app/)                                                                    | Desktop application framework                         |
-| [llama.rn](https://github.com/a-ghorbani/llama.rn)                                             | On-device LLM inference (Qwen 2.5 GGUF)               |
+| [llama.rn](https://github.com/a-ghorbani/llama.rn)                                             | On-device LLM inference (Qwen3.5 GGUF)                |
 | [CodeMirror 6](https://codemirror.net/)                                                        | Code editor engine (bundled via esbuild)              |
 | [Google Firebase](https://firebase.google.com/)                                                | Cloud sync and data storage                           |
 | [Redux](https://react-redux.js.org/) + [Redux Persist](https://github.com/rt2zz/redux-persist) | State management and persistence                      |

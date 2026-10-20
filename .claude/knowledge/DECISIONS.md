@@ -91,16 +91,17 @@ single value, and the note store migrates from it.
 
 ## ADR-004: On-Device AI (llama.rn) over Cloud AI APIs
 
-**Status:** Accepted  
+**Status:** Accepted (models revised 2026-10: Qwen 2.5 -> Qwen3.5, see "Revision")  
 **Context:** Need AI features (title generation, summarization, item suggestions) without requiring internet or external API
 costs.  
-**Decision:** llama.rn 0.12 with Qwen 2.5 GGUF models (0.5B to 7B parameters).  
+**Decision:** llama.rn 0.12 with Qwen3.5 Small GGUF models (0.8B, 2B, 4B), Unsloth Q4_K_M files pinned to a Hugging Face commit
+and checked by exact size.  
 **Rationale:**
 
 - Complete privacy: no data leaves the device
 - No API costs or rate limits
 - Works offline
-- Four model tiers let users choose quality vs. device capability
+- Three model tiers let users choose quality vs. device capability
 - GBNF grammar constrains output format (e.g., JSON arrays for suggestions)
 
 **Trade-offs:**
@@ -109,7 +110,27 @@ costs.
 - Generation quality varies significantly with model size
 - Not available on web (no-op stubs provided)
 - Only one model loaded at a time (singleton context pattern)
-- RAM-intensive: minimum 3GB for smallest model, 8GB for 7B
+- RAM-intensive: minimum 3GB for smallest model, 6GB for the 4B
+
+**Revision (2026-10, `docs/AI_QWEN35_UPGRADE.md`):**
+
+- **Qwen3.5 replaced Qwen 2.5** (0.5B/1.5B/3B/7B -> 0.8B/2B/4B). No 7B/9B tier: on a phone the 7B took 12 s to load and ran at 4
+  tok/s, and the note tasks don't need it. The code actions (`explain_code`, `add_comments`) went with it: code notes store
+  snippets.
+- **Thinking off for every completion**: `jinja: true, enable_thinking: false, reasoning_format: "none"`; the 4B thinks by
+  default and a reasoning block eats a title's whole budget. `stripThinking` removes a stray block anyway.
+- **Sampling per action** (`ACTION_SAMPLING`): cold and without repeat penalty for anything that rewrites or labels (the right
+  answer repeats the input), warmer with a presence penalty where the model writes something new.
+- **Old ids are normalised on read** (`normalizeModelId` in a memoized selector) and fixed on write; the store keeps its shape.
+  Files outside the catalog are leftovers: the settings offer to delete them, and a new download deletes them.
+- **Load once, keep a while**: `prewarmContext` starts loading when the dictation sheet or the AI menu opens; the context is
+  released 3 minutes after its last use and when the app goes to the background, never under a running completion.
+- **Answers stream** into the dictation sheet and the before/after preview (throttled, think tags hidden); Apply waits for the
+  end, Cancel stops the model and keeps the original.
+- **Rewrites are guarded** (`isPlausibleRewrite`): an empty answer, a think tag, or a length outside the action's range
+  (`REWRITE_LENGTH_RATIO`) is discarded and the text stays as it was.
+- **Measured, not guessed**: Developer options -> AI evaluation runs fixed inputs on the loaded model and saves timings and
+  outputs as JSON (`libs/ai/evalFixtures.ts`). On a Pixel 10 Pro llama.rn finds no GPU backend and runs on the CPU.
 
 ---
 
