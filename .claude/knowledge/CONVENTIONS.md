@@ -131,6 +131,13 @@ The standard interactive element is `TouchableOpacity` with `activeOpacity={0.7}
 
 Always use the project's custom `@/components/SafeAreaView`, not the one from `react-native-safe-area-context` directly.
 
+### Screens with Text Inputs
+
+Under `KeyboardProvider` (react-native-keyboard-controller, in `_layout`) Android doesn't resize the window for the keyboard: a
+plain `ScrollView` leaves a field near the bottom under it, and can't scroll it up. A screen whose inputs can sit low scrolls in
+`KeyboardAwareScrollView` (`keyboardShouldPersistTaps="handled"`, `bottomOffset={PADDING_MARGIN.xl}`, as `VaultScaffold`); a
+list passes one as `renderScrollComponent` (`app/settings/webhooks.tsx`).
+
 ### Icons
 
 All icons come from `react-native-heroicons/outline` (outline variant only). Standard size is 28.
@@ -715,8 +722,10 @@ clouds, so the rules above still apply. In addition:
    (`fastmemo-server/src/service.ts`) together, and `scripts/sync-server.test.mjs` passes against the real server.
 4. **An id a client caches must not repeat across a restore.** Restoring a backup rewinds the server's counters; tie such ids to
    the boot (the feed's page ids do, LL-049).
-5. **HTTPS outside a test.** Android release builds refuse cleartext and an `https://` page can't call `http://`; never suggest
-   a plain-HTTP server address in UI copy for phones.
+5. **HTTPS by default, HTTP only with a warning** (ADR-017). Android, macOS and Linux can reach an `http://` server (the
+   cleartext plugin, `src-tauri/Info.plist`); an `https://` page (the web app, Windows) can't, except this machine. UI copy
+   recommends HTTPS (a reverse proxy, Tailscale); an http address is saved only after the warning dialog. The access key travels
+   only to connect: never add it to calls an enrolled device makes with its token.
 6. **"Removed" is the server refusing the token held now.** Never a token that can't be read (read it again), nor a refusal of a
    token a registration replaced; write and remove tokens in order (LL-050).
 7. **Settings changes don't re-enroll.** New settings are proven with `cloud.check` (its own connection) before the working one

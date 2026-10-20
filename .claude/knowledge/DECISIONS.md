@@ -595,18 +595,32 @@ who want their notes at home (PC, NAS, Raspberry Pi, VPS) had no option. ADR-016
 **Trade-offs:**
 
 - **Plain HTTP is allowed where the platform can do it, never silently** (user decision, 2026-10-20): a home server is often
-  `http://<LAN address>`. Android release builds get `usesCleartextTraffic` (the `withCleartextTraffic` plugin in
-  `app.config.ts`); macOS desktop (`tauri://`) reaches http as it is. The connect screen shows what HTTP exposes under the
-  address (the access key and the titles, readable on the network; with the key, anyone can enroll and delete notes) and asks to
-  confirm before saving, recommending HTTPS: a reverse proxy with a certificate, or Tailscale Serve. Where it can't work, it
-  says so and disables saving: the hosted web app and the Windows desktop app are `https://` pages, and the browser engine
-  blocks an `http://` fetch from them (mixed content) unless the server is this machine (`isLoopbackUrl`). Windows would need
-  `tauri-plugin-http` (a new dependency, not approved yet); WebView2's `--allow-running-insecure-content` was rejected, it lets
-  every insecure subresource in, not only the sync calls.
+  `http://<LAN address>`.
+  - Android release builds: `usesCleartextTraffic` plus a network security config permitting cleartext (system CAs only), both
+    from the `withCleartextTraffic` plugin in `app.config.ts`; newer Android versions only read the config. The flag is
+    app-wide: `http://` webhooks work on Android release too.
+  - macOS desktop (a `tauri://` page, so no mixed-content block): App Transport Security lets the webview reach IP addresses,
+    `localhost` and `.local` names over http, but not a dotted name (`nas.home.arpa`, a DDNS name; measured on a built app,
+    2026-10-20). `src-tauri/Info.plist` sets `NSAllowsArbitraryLoadsInWebContent` (webview loads only). Linux is a `tauri://`
+    page without ATS: expected to work the same, not tested.
+  - The hosted web app and the Windows desktop app are `https://` pages: the browser engine blocks an `http://` fetch from them
+    (mixed content) unless the server is this machine (`isLoopbackUrl`); the connect screen says so and disables saving. Windows
+    would need `tauri-plugin-http` (a new dependency, not approved yet); WebView2's `--allow-running-insecure-content` was
+    rejected, it lets every insecure subresource in, not only the sync calls.
+  - The connect screen warns under an http address and asks to confirm before saving, recommending HTTPS (a reverse proxy with a
+    certificate, or Tailscale). Not for this machine nor a Tailscale address (`isTailscaleUrl`: 100.64.0.0/10, `*.ts.net`),
+    which cross no network unencrypted. The warning says what a device on HTTP gives away wherever it is (it roams: confirmed at
+    home, it goes on talking on any Wi-Fi): the titles and its credentials, enough to delete or change notes and remove devices,
+    not to read them.
+  - The access key travels only to connect (handshake, enrolment, member calls before enrolment); an enrolled device sends its
+    own token, which can be revoked. A member call whose token the server refuses is tried again with the key (a device removed
+    by a leave whose answer got lost must still be able to reconnect).
 - **The access key is a shared secret** with the reach of Firebase credentials: whoever has it can enroll a device (up to the
   limit), read the encrypted notes, remove devices or wipe the cloud (vault reset). Notes stay unreadable without the encryption
   password; titles are plaintext, as on Firebase. A lost device is locked out by removing it (its token dies); rotating the key
-  only stops new enrolments, the devices already in keep their tokens. A SQLite backup holds the generated key.
+  only stops new enrolments, the devices already in keep their tokens. After an HTTP exposure, rotate the key and remove and
+  re-add each device (a sniffed token outlives the rotation). By default the access key is also the admin key. A SQLite backup
+  holds the generated key.
 - **A restored backup needs a full sync on every device** (a dashboard button): devices push only their outbox, so what changed
   after the backup comes back only when each compares everything.
 - **One process:** a single writer (SQLite behind a mutex, or a Postgres advisory lock), long polls held in memory. Plenty for a
@@ -717,9 +731,10 @@ opens the app to write a note in a hurry.
 **Decision:**
 
 - No welcome note on a new install (`defaultNote` is gone); notes already created keep theirs.
-- A three-step tour, only for a new install: `settings.tour` (`"create"` -> `"write"` -> `"explore"`, absent when there is no
-  tour). The intro's last step sets `"create"`; absent stays the default, so existing users (whose stored settings lack the key)
-  never see it.
+- A three-step tour, only for a new install: `settings.tour` (`"create"` -> `"write"` -> `"explore"` -> `"done"`). The intro's
+  last step sets `"create"`; absent stays the default, so existing users (whose stored settings lack the key) never see it. It
+  ends on `"done"`, not on a removed key: the settings are stored twice (ADR-003), and a key missing from one copy doesn't
+  remove it from the other, so a tour removed in one copy only could come back.
 - A classic spotlight (user decision): `TourSpotlight` (`components/ui/`) dims the whole screen (an SVG path with even-odd
   holes) except the step's targets, each ringed, and places the step's `TourTip` card on the roomier side of the one it points
   at, with an arrow. Targets register by name with `useTourTarget` (`libs/tourTargets.ts`) and are measured in window
@@ -727,8 +742,13 @@ opens the app to write a note in a hurry.
   around it); otherwise the layer takes every touch. Every step but the last has "Skip".
   - Home, `"create"`: the add button group lit, the card pointing at "+" (the type menu hides the step while open).
   - Editors, `"write"` (`EditorTourTip`, the last child of each editor): the back button lit and tappable. Opening any note
-    moves `"create"` to `"write"`; "Got it" or leaving the editor moves to `"explore"`.
-  - Home, `"explore"`: the first note and the sidebar lit, "Got it" ends the tour.
+    moves `"create"` to `"write"`; "Got it" or leaving the editor moves to `"explore"`. The new note's autofocus waits
+    (`useAutofocusNewNote`): the keyboard would come up and the typing go on under the dimmed screen. Home moves a `"write"` it
+    finds on focus to `"explore"` (the app closed in the editor).
+  - Home, `"explore"`: the first note and the sidebar lit, "Got it" ends the tour. The card starts right of another lit target
+    on its left (the sidebar), narrower, rather than covering it.
+- Measured when shown, after 400 ms, when a target comes or goes, on the layer's layout, and again 300 ms after a window resize
+  (a list's cells resize after the event). The card is announced to screen readers when it shows.
 - A new install marks the current version as seen (`@appVersion`), so its first home screen shows no changelog.
 
 **Trade-offs:** the tour state lives in the settings slice (local, not synced): a second device gets its own tour, which is
