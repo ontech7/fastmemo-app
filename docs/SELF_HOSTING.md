@@ -228,7 +228,7 @@ Once deployed, users can set up cloud sync directly in the app:
 4. Click "Save settings" to establish synchronization
 
 Each user brings their own Firebase project or server, making the app fully decentralized. A web app served over HTTPS can only
-reach an `https://` server.
+reach an `https://` server (or one on the same computer).
 
 ## 8. Environment Variables for Hosting Platforms
 

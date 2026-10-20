@@ -41,7 +41,8 @@ walks you through it, from trying it on your computer in five minutes to a Raspb
 
 You'll need:
 
-- **Server address** - `https://...` (phones need HTTPS: the guide shows the easy ways, such as Tailscale)
+- **Server address** - `https://...` (the web app and the Windows desktop app need HTTPS; Android and macOS also accept
+  `http://` after a warning, but HTTPS keeps the access key private: the guide shows the easy ways, such as Tailscale)
 - **Access key** - set on the server, or generated on its first start
 
 The server is one **vault** too: every device connects with the same address and key, plus the **encryption password**. It

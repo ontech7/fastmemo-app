@@ -161,7 +161,7 @@ src/
 
   configs/             # App configuration
     index.ts           # Main config (env vars, app metadata, business rules, cloud, sentry, firebase)
-    default.ts         # Factory defaults (defaultCategory, defaultNote function)
+    default.ts         # Factory defaults (defaultCategory)
 ```
 
 ## Data Flow

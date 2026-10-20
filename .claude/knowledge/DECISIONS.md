@@ -594,9 +594,15 @@ who want their notes at home (PC, NAS, Raspberry Pi, VPS) had no option. ADR-016
 
 **Trade-offs:**
 
-- **Phones and the hosted web app need HTTPS:** Android release builds refuse cleartext HTTP (no `usesCleartextTraffic`), and an
-  `https://` page can't call an `http://` server. Plain HTTP is for a test on the same computer; the README offers Tailscale
-  Serve (no domain, nothing exposed), Coolify or Caddy. The connect screen warns on `http://`.
+- **Plain HTTP is allowed where the platform can do it, never silently** (user decision, 2026-10-20): a home server is often
+  `http://<LAN address>`. Android release builds get `usesCleartextTraffic` (the `withCleartextTraffic` plugin in
+  `app.config.ts`); macOS desktop (`tauri://`) reaches http as it is. The connect screen shows what HTTP exposes under the
+  address (the access key and the titles, readable on the network; with the key, anyone can enroll and delete notes) and asks to
+  confirm before saving, recommending HTTPS: a reverse proxy with a certificate, or Tailscale Serve. Where it can't work, it
+  says so and disables saving: the hosted web app and the Windows desktop app are `https://` pages, and the browser engine
+  blocks an `http://` fetch from them (mixed content) unless the server is this machine (`isLoopbackUrl`). Windows would need
+  `tauri-plugin-http` (a new dependency, not approved yet); WebView2's `--allow-running-insecure-content` was rejected, it lets
+  every insecure subresource in, not only the sync calls.
 - **The access key is a shared secret** with the reach of Firebase credentials: whoever has it can enroll a device (up to the
   limit), read the encrypted notes, remove devices or wipe the cloud (vault reset). Notes stay unreadable without the encryption
   password; titles are plaintext, as on Firebase. A lost device is locked out by removing it (its token dies); rotating the key
@@ -697,3 +703,38 @@ edit, a rollback to the previous build, an edit there, and the update again: the
 stayed, the deleted note stayed deleted, the next launch folded nothing. "Wipe data" left only the marker and an empty `state`
 value; with that `state` value then removed, the app started empty. On the web: 300 notes (2 MB) migrated, first note on screen
 454 ms after the reload, an edit wrote one 386-byte value in 23 ms.
+
+---
+
+## ADR-019: A First-Note Tour Instead of the Welcome Note
+
+**Status:** Accepted (2026-10-20, user decision)  
+**Context:** A new install got a "Welcome to Fast Memo!" note with a fixed id, rich text and a large embedded image. With cloud
+sync, two devices each had their own copy under the same id and different content: the first sync showed a conflict copy. A new
+install also opened the changelog right after the intro. The user's rule for anything shown at launch: never block someone who
+opens the app to write a note in a hurry.
+
+**Decision:**
+
+- No welcome note on a new install (`defaultNote` is gone); notes already created keep theirs.
+- A three-step tour, only for a new install: `settings.tour` (`"create"` -> `"write"` -> `"explore"`, absent when there is no
+  tour). The intro's last step sets `"create"`; absent stays the default, so existing users (whose stored settings lack the key)
+  never see it.
+- A classic spotlight (user decision): `TourSpotlight` (`components/ui/`) dims the whole screen (an SVG path with even-odd
+  holes) except the step's targets, each ringed, and places the step's `TourTip` card on the roomier side of the one it points
+  at, with an arrow. Targets register by name with `useTourTarget` (`libs/tourTargets.ts`) and are measured in window
+  coordinates when the step shows. A step that asks to tap something lets touches through its single hole (four blocking bands
+  around it); otherwise the layer takes every touch. Every step but the last has "Skip".
+  - Home, `"create"`: the add button group lit, the card pointing at "+" (the type menu hides the step while open).
+  - Editors, `"write"` (`EditorTourTip`, the last child of each editor): the back button lit and tappable. Opening any note
+    moves `"create"` to `"write"`; "Got it" or leaving the editor moves to `"explore"`.
+  - Home, `"explore"`: the first note and the sidebar lit, "Got it" ends the tour.
+- A new install marks the current version as seen (`@appVersion`), so its first home screen shows no changelog.
+
+**Trade-offs:** the tour state lives in the settings slice (local, not synced): a second device gets its own tour, which is
+right for a new install. A step blocks the screen until it's done or skipped (only on a new install, right after the intro). The
+last step mentions long-press even when no note was written (then only the sidebar is lit).
+
+**Pitfalls met** (2026-10-20): the blocking views must be real native views (`collapsable={false}`), or Android's native inputs
+under a flattened one still take the touch; and the layer's fade uses React Native's `Animated`, because Reanimated's web View
+drops `pointerEvents` and the layer then swallows the taps meant for the hole.
