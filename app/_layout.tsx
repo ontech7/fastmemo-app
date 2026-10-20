@@ -209,6 +209,7 @@ export default Sentry.wrap(function RootLayout() {
                         options={{ headerShown: false, animation: "ios_from_left" }}
                       />
                       <Stack.Screen name="settings/ai-eval" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen name="settings/app-icon" options={{ headerShown: false, animation: "ios_from_left" }} />
                       <Stack.Screen name="settings/help" options={{ headerShown: false, animation: "ios_from_left" }} />
                       <Stack.Screen name="settings/report" options={{ headerShown: false, animation: "ios_from_left" }} />
                       <Stack.Screen

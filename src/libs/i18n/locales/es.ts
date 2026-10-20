@@ -1081,9 +1081,23 @@ const es = {
     unlimited_trash_time: "Tiempo de papelera ilimitado",
     unlimited_trash_time_desc: "Límite actual: 30 días",
     change_app_icon: "Cambiar icono de la app",
-    change_app_icon_desc: "Próximamente",
+    change_app_icon_desc: "Iconos de temporada para la pantalla de inicio",
     ai_eval: "Evaluación de IA",
     ai_eval_desc: "Ejecuta textos fijos en el modelo seleccionado: tiempos y respuestas",
+  },
+
+  appicon: {
+    title: "Icono de la app",
+    default: "Predeterminado",
+    halloween: "Halloween",
+    christmas: "Navidad",
+    easter: "Pascua",
+    summer: "Verano",
+    close_title: "Cambiar icono",
+    close_description: "Para aplicar el nuevo icono, Fast Memo se cierra. Vuelve a abrirla desde la pantalla de inicio.",
+    close_confirm: "Cambiar y cerrar",
+    failed: "No se pudo cambiar el icono.",
+    unavailable: "No disponible en este dispositivo",
   },
 
   aieval: {

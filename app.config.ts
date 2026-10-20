@@ -1,5 +1,5 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
-import { type ConfigPlugin, withAndroidManifest, withDangerousMod } from "expo/config-plugins";
+import { type AndroidConfig, type ConfigPlugin, withAndroidManifest, withDangerousMod } from "expo/config-plugins";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -54,6 +54,29 @@ const withCleartextTraffic: ConfigPlugin = (config) =>
     ]
   );
 
+// Changing the app icon on Android disables MainActivity and enables one of its <activity-alias> (expo-alternate-app-icons),
+// which only gets the launcher intent filter: give every alias MainActivity's other filters too, otherwise the app's URL
+// scheme (expo-router, the dev client) stops opening it once an alternate icon is chosen.
+// It wraps the config, so it is registered before the `plugins` array, and Expo runs the mods registered last first: the
+// aliases exist when it runs. Moved into `plugins` after expo-alternate-app-icons, it would find none and do nothing.
+const isLauncherFilter = (filter: AndroidConfig.Manifest.ManifestIntentFilter) =>
+  filter.action?.some((action) => action.$["android:name"] === "android.intent.action.MAIN") ?? false;
+
+const withAlternateIconIntentFilters: ConfigPlugin = (config) =>
+  withAndroidManifest(config, (modConfig) => {
+    const application = modConfig.modResults.manifest.application?.[0] as
+      | (AndroidConfig.Manifest.ManifestApplication & { "activity-alias"?: AndroidConfig.Manifest.ManifestActivity[] })
+      | undefined;
+    const mainActivity = application?.activity?.find((activity) => activity.$["android:name"] === ".MainActivity");
+    const filters = (mainActivity?.["intent-filter"] ?? []).filter((filter) => !isLauncherFilter(filter));
+
+    for (const alias of application?.["activity-alias"] ?? []) {
+      if (alias.$["android:targetActivity" as keyof typeof alias.$] !== ".MainActivity") continue;
+      alias["intent-filter"] = [...(alias["intent-filter"] ?? []).filter(isLauncherFilter), ...filters];
+    }
+    return modConfig;
+  });
+
 const isDev = process.env.EXPO_PUBLIC_ENV === "DEV";
 
 const appName = isDev ? "Fast Memo Test" : "Fast Memo";
@@ -64,89 +87,107 @@ const adaptiveIcon = isDev ? "./assets/images/test/adaptive-icon.png" : "./asset
 const favicon = isDev ? "./assets/images/test/favicon.png" : "./assets/images/favicon.png";
 const backgroundColor = "#05091A";
 
+// The alternate app icons (Settings > Developer options > Change app icon). Same names as AppIconName in
+// src/constants/app-icons.ts; the images come from scripts/build-app-icons.mjs.
+const alternateAppIcons = ["Halloween", "Christmas", "Easter", "Summer"].map((name) => {
+  const image = `./assets/images/app-icons/${name.toLowerCase()}`;
+  return {
+    name,
+    ios: `${image}.png`,
+    android: {
+      foregroundImage: `${image}-foreground.png`,
+      backgroundImage: `${image}-background.png`,
+      backgroundColor,
+    },
+  };
+});
+
 // The production EAS project (the old DEV project is no longer used).
 const EAS_PROJECT_ID = "44c5f162-d9f8-40db-ae28-269fe48982ca";
 
 export default ({ config }: ConfigContext): ExpoConfig =>
-  withCleartextTraffic(
-    withLlamaProguardRules({
-      ...config,
-      owner: "dontrok1",
-      name: appName,
-      slug: appSlug,
-      version: "3.2.0",
-      runtimeVersion: { policy: "fingerprint" },
-      updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
-      orientation: "portrait",
-      icon: appIcon,
-      scheme: appSlug,
-      userInterfaceStyle: "automatic",
-      backgroundColor,
-      ios: {
-        supportsTablet: true,
-        bundleIdentifier: appBundle,
-      },
-      android: {
-        adaptiveIcon: {
-          foregroundImage: adaptiveIcon,
-          backgroundImage: "./assets/images/adaptive-icon-bg.png",
-          backgroundColor,
+  withAlternateIconIntentFilters(
+    withCleartextTraffic(
+      withLlamaProguardRules({
+        ...config,
+        owner: "dontrok1",
+        name: appName,
+        slug: appSlug,
+        version: "3.2.0",
+        runtimeVersion: { policy: "fingerprint" },
+        updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
+        orientation: "portrait",
+        icon: appIcon,
+        scheme: appSlug,
+        userInterfaceStyle: "automatic",
+        backgroundColor,
+        ios: {
+          supportsTablet: true,
+          bundleIdentifier: appBundle,
         },
-        package: appBundle,
-        blockedPermissions: [
-          "android.permission.READ_MEDIA_IMAGES",
-          "android.permission.READ_MEDIA_VIDEO",
-          "android.permission.READ_MEDIA_AUDIO",
-        ],
-      },
-      web: {
-        bundler: "metro",
-        output: "single",
-        favicon,
-      },
-      plugins: [
-        "expo-router",
-        "expo-status-bar",
-        "expo-font",
-        "expo-image",
-        "expo-image-picker",
-        "expo-localization",
-        "expo-secure-store",
-        "expo-sharing",
-        [
-          "expo-speech-recognition",
-          {
-            microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
-            speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
-            androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
-          },
-        ],
-        [
-          "expo-splash-screen",
-          {
-            image: "./assets/images/splash-logo.png",
-            imageWidth: 150,
+        android: {
+          adaptiveIcon: {
+            foregroundImage: adaptiveIcon,
+            backgroundImage: "./assets/images/adaptive-icon-bg.png",
             backgroundColor,
           },
-        ],
-        "llama.rn",
-        [
-          "@sentry/react-native",
-          {
-            url: "https://sentry.io/",
-            note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
-            project: "fastmemo-app",
-            organization: "andrea-losavio",
-          },
-        ],
-      ],
-      experiments: {
-        typedRoutes: true,
-      },
-      extra: {
-        eas: {
-          projectId: EAS_PROJECT_ID,
+          package: appBundle,
+          blockedPermissions: [
+            "android.permission.READ_MEDIA_IMAGES",
+            "android.permission.READ_MEDIA_VIDEO",
+            "android.permission.READ_MEDIA_AUDIO",
+          ],
         },
-      },
-    })
+        web: {
+          bundler: "metro",
+          output: "single",
+          favicon,
+        },
+        plugins: [
+          "expo-router",
+          "expo-status-bar",
+          "expo-font",
+          "expo-image",
+          "expo-image-picker",
+          "expo-localization",
+          "expo-secure-store",
+          "expo-sharing",
+          [
+            "expo-speech-recognition",
+            {
+              microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
+              speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
+              androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
+            },
+          ],
+          [
+            "expo-splash-screen",
+            {
+              image: "./assets/images/splash-logo.png",
+              imageWidth: 150,
+              backgroundColor,
+            },
+          ],
+          "llama.rn",
+          ["expo-alternate-app-icons", alternateAppIcons],
+          [
+            "@sentry/react-native",
+            {
+              url: "https://sentry.io/",
+              note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
+              project: "fastmemo-app",
+              organization: "andrea-losavio",
+            },
+          ],
+        ],
+        experiments: {
+          typedRoutes: true,
+        },
+        extra: {
+          eas: {
+            projectId: EAS_PROJECT_ID,
+          },
+        },
+      })
+    )
   );

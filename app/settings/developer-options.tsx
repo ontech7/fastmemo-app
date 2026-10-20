@@ -10,6 +10,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
+import { supportsAppIcons } from "@/libs/appIcon";
 import { selectorDeveloperMode, setDeveloperMode } from "@/slicers/settingsSlice";
 import type { DeveloperModeSettings } from "@/types";
 
@@ -109,12 +110,26 @@ export default function DeveloperOptionsScreen() {
             </TouchableOpacity>
 
             {/* Change App Icon */}
-            <View style={[styles.sectionItemList, styles.sectionItemList_last, { opacity: 0.5 }]}>
+            <TouchableOpacity
+              style={[
+                styles.sectionItemList,
+                styles.sectionItemList_last,
+                !supportsAppIcons && styles.sectionItemList_disabled,
+              ]}
+              onPress={() => router.push("/settings/app-icon")}
+              disabled={!supportsAppIcons}
+              accessibilityRole="button"
+              aria-disabled={!supportsAppIcons}
+              activeOpacity={0.7}
+            >
               <View style={styles.sectionItemContent}>
                 <Text style={styles.sectionItemList_title}>{t("developeroptions.change_app_icon")}</Text>
-                <Text style={styles.sectionItemList_desc}>{t("developeroptions.change_app_icon_desc")}</Text>
+                <Text style={styles.sectionItemList_desc}>
+                  {t(supportsAppIcons ? "developeroptions.change_app_icon_desc" : "appicon.unavailable")}
+                </Text>
               </View>
-            </View>
+              {supportsAppIcons && <ChevronRightIcon size={20} color={COLOR.textMuted} />}
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -188,6 +203,9 @@ const styles = StyleSheet.create({
   },
   sectionItemList_last: {
     borderBottomWidth: 0,
+  },
+  sectionItemList_disabled: {
+    opacity: 0.5,
   },
   sectionItemContent: {
     flex: 1,

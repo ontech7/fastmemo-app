@@ -1038,9 +1038,23 @@ const zh = {
     unlimited_trash_time: "无限回收站时间",
     unlimited_trash_time_desc: "当前限制：30 天",
     change_app_icon: "更改应用图标",
-    change_app_icon_desc: "即将推出",
+    change_app_icon_desc: "主屏幕的季节图标",
     ai_eval: "AI 评估",
     ai_eval_desc: "在所选模型上运行固定文本：耗时和回答",
+  },
+
+  appicon: {
+    title: "应用图标",
+    default: "默认",
+    halloween: "万圣节",
+    christmas: "圣诞节",
+    easter: "复活节",
+    summer: "夏日",
+    close_title: "更换图标",
+    close_description: "应用新图标需要关闭 Fast Memo。请从主屏幕重新打开。",
+    close_confirm: "更换并关闭",
+    failed: "无法更换图标。",
+    unavailable: "此设备不支持",
   },
 
   aieval: {

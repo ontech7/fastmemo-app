@@ -1063,9 +1063,23 @@ const ja = {
     unlimited_trash_time: "無制限のゴミ箱期間",
     unlimited_trash_time_desc: "現在の制限：30 日",
     change_app_icon: "アプリアイコンを変更",
-    change_app_icon_desc: "近日公開",
+    change_app_icon_desc: "ホーム画面用の季節のアイコン",
     ai_eval: "AI 評価",
     ai_eval_desc: "選択中のモデルで固定テキストを実行：時間と回答",
+  },
+
+  appicon: {
+    title: "アプリアイコン",
+    default: "デフォルト",
+    halloween: "ハロウィン",
+    christmas: "クリスマス",
+    easter: "イースター",
+    summer: "夏",
+    close_title: "アイコンを変更",
+    close_description: "新しいアイコンを適用するため、Fast Memo を終了します。ホーム画面から再度開いてください。",
+    close_confirm: "変更して終了",
+    failed: "アイコンを変更できませんでした。",
+    unavailable: "このデバイスでは利用できません",
   },
 
   aieval: {
