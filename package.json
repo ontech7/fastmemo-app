@@ -66,6 +66,7 @@
     "crypto-js": "4.2.0",
     "embla-carousel-react": "^8.6.0",
     "expo": "^58.0.0",
+    "expo-alternate-app-icons": "^8.0.0",
     "expo-blur": "~58.0.4",
     "expo-constants": "~58.0.12",
     "expo-crypto": "~58.0.7",

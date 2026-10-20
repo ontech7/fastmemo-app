@@ -779,3 +779,36 @@ last step mentions long-press even when no note was written (then only the sideb
 **Pitfalls met** (2026-10-20): the blocking views must be real native views (`collapsable={false}`), or Android's native inputs
 under a flattened one still take the touch; and the layer's fade uses React Native's `Animated`, because Reanimated's web View
 drops `pointerEvents` and the layer then swallows the taps meant for the hole.
+
+## ADR-020: Seasonal Alternate App Icons with `expo-alternate-app-icons`
+
+**Status:** Accepted (2026-10-20, user decision)  
+**Context:** Developer options had a disabled "Change app icon" row and a `developerMode.customAppIcon` field that nothing used.
+The user wanted four seasonal icons (Halloween, Christmas, Easter, Summer) to pick from.
+
+**Decision:**
+
+- `expo-alternate-app-icons` (approved by the user): iOS alternate icons, Android one `<activity-alias>` per icon, switched with
+  `setComponentEnabledSetting(DONT_KILL_APP)`. The OS keeps the choice, so it is the only source of truth (`getAppIcon()`);
+  `customAppIcon` stays unused (removing a persisted key needs the ADR-003 audit first).
+- Sources in `assets/images/app-icons/source/*.svg`, each split into `<g id="background">` and `<g id="foreground">` (the F and
+  what is attached to it); `scripts/build-app-icons.mjs` (rsvg-convert) renders the iOS PNG and the two Android adaptive layers,
+  scaled to 0.68 so the launcher mask shows the whole artwork. Decorations stay within ~450 px of the centre so a circle mask
+  doesn't cut them off. The designs are on the Claude Design canvas "FastMemo Seasonal Icons".
+- The names live in `app.config.ts` and in `AppIconName` (`constants/app-icons.ts`): keep them equal.
+- `libs/appIcon.ts` wraps the module (iOS: switched in place, with a system alert); `appIcon.web.ts` says unsupported (web,
+  Tauri), and the Developer options row is then disabled. On Android (`appIcon.android.ts`) disabling the alias the app runs
+  from closes its window on the spot, `DONT_KILL_APP` notwithstanding (measured on the API 36 emulator, 2026-10-20). Applying
+  the choice on the next `background` was tried and dropped: an image picker, a share sheet or a permission dialog sends the app
+  there too, and the switch would close it mid-task. So the picker asks first ("Fast Memo closes"), flushes (`flushNow`),
+  switches and closes the app if its window is still up (where it survives, its activity keeps the old alias's name and the next
+  switch would disable the wrong component: two icons). The choice survives an app update.
+- The picker (`app/settings/app-icon.tsx`) reuses `SelectableCardList` with 144 px previews (`*-preview.png`, also from the
+  build script): the 1024 px icons would be decoded whole for a thumbnail.
+- `withAlternateIconIntentFilters` (`app.config.ts`) copies MainActivity's non-launcher intent filters onto every alias: the
+  plugin gives an alias only the launcher filter, and once an alias is enabled MainActivity is disabled, so the URL scheme
+  (expo-router, the dev client) would stop opening the app. It wraps the config rather than sitting in `plugins`: the mods
+  registered last run first, so it runs after the aliases exist.
+
+**Trade-offs:** a native module: it needs a new build, an OTA can't deliver it (the fingerprint changes). Choosing an icon on
+Android closes the app. iOS is configured but not built or tested yet (no `ios/` here).

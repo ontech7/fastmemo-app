@@ -135,6 +135,7 @@ src/
     vaultManager.ts    # Vault orchestration: probe/initialize/migrate/unlock/recover/changePassphrase/recreate
     vaultPrompt.ts     # Ephemeral pub/sub signal: "encryption needs attention" (drives VaultPromptDialog)
     vaultProgress.ts   # Ephemeral pub/sub signal {done,total} for the re-upload determinate progress bar
+    appIcon.ts         # Alternate app icon (expo-alternate-app-icons, ADR-020); .android.ts confirms and closes the app, .web.ts: none
 
   utils/               # Pure utility functions
     sort.ts            # Sort comparators for Timestamped/Ordered items
@@ -160,6 +161,7 @@ src/
     icons.ts           # Available category icon names
     code-languages.ts  # Supported code editor languages
     note-types.ts      # Note type metadata
+    app-icons.ts       # Alternate app icons: AppIconName (= the plugin names in app.config.ts), labels, previews (ADR-020)
 
   configs/             # App configuration
     index.ts           # Main config (env vars, app metadata, business rules, cloud, sentry, firebase)

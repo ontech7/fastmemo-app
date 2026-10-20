@@ -1094,9 +1094,24 @@ const de = {
     unlimited_trash_time: "Unbegrenzte Papierkorb-Zeit",
     unlimited_trash_time_desc: "Aktuelles Limit: 30 Tage",
     change_app_icon: "App-Symbol ändern",
-    change_app_icon_desc: "Demnächst",
+    change_app_icon_desc: "Saisonale Icons für den Startbildschirm",
     ai_eval: "KI-Auswertung",
     ai_eval_desc: "Führt feste Texte auf dem gewählten Modell aus: Zeiten und Antworten",
+  },
+
+  appicon: {
+    title: "App-Icon",
+    default: "Standard",
+    halloween: "Halloween",
+    christmas: "Weihnachten",
+    easter: "Ostern",
+    summer: "Sommer",
+    close_title: "Icon ändern",
+    close_description:
+      "Um das neue Icon zu übernehmen, wird Fast Memo geschlossen. Öffne die App danach wieder über den Startbildschirm.",
+    close_confirm: "Ändern und schließen",
+    failed: "Das Icon konnte nicht geändert werden.",
+    unavailable: "Auf diesem Gerät nicht verfügbar",
   },
 
   aieval: {

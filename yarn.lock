@@ -4999,6 +4999,11 @@ etag@~1.8.1:
   resolved "https://registry.npmjs.org/etag/-/etag-1.8.1.tgz"
   integrity sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==
 
+expo-alternate-app-icons@^8.0.0:
+  version "8.0.0"
+  resolved "https://registry.yarnpkg.com/expo-alternate-app-icons/-/expo-alternate-app-icons-8.0.0.tgz#c53fa4c2caa5934d7bb0161240de9b73292e8a63"
+  integrity sha512-iqvcxu3fNPtOtZ/y0/VPlxol9WUhkvbj7VI6SMwSAEAgOZ1D5k7KvF54U0oLC/i0k+HL0YOaIuZcLJuLaphIIw==
+
 expo-asset@~58.0.16:
   version "58.0.16"
   resolved "https://registry.yarnpkg.com/expo-asset/-/expo-asset-58.0.16.tgz#ae351bf723a1542a52ccb25d9b2aa569292bda3a"
