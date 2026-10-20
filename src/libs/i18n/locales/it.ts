@@ -147,7 +147,7 @@ const it = {
     step5: "Prendi nota dei tuoi snippets.",
     step6: "Crea la tua categoria in base alle tue esigenze.",
     step7: "Inserisci un codice segreto per nascondere le tue note.",
-    step8: "Sincronizza le tue note su Google Firebase.",
+    step8: "Sincronizza le note tra i tuoi dispositivi: sul tuo Firebase o sul tuo server.",
     title: "Cos'è Fast Memo?",
     continue: "Continua",
   },
@@ -285,7 +285,7 @@ const it = {
       firebase: "Google Firebase",
       firebase_desc: "Il tuo progetto Firebase: gratuito e veloce da configurare, ospitato da Google.",
       server: "FastMemo Server",
-      server_desc: "Il tuo server (PC, NAS, Raspberry Pi, VPS): le note non escono mai da casa tua.",
+      server_desc: "Il tuo server (PC, NAS, Raspberry Pi, VPS): le note restano sotto il tuo controllo.",
     },
     server: {
       url: "Indirizzo del server",
@@ -303,7 +303,7 @@ const it = {
       migrate_desc:
         "Stiamo aggiornando la sincronizzazione cloud alla crittografia end-to-end. Scegli una password di crittografia: le note già nel tuo cloud verranno ricifrate con essa, e la inserirai una volta su ogni dispositivo.",
       point_private:
-        "Solo tu puoi leggere le tue note — non noi, non Google. Vengono cifrate sul tuo dispositivo prima di essere caricate.",
+        "Solo tu puoi leggere le tue note — non noi, né chi le conserva. Vengono cifrate sul tuo dispositivo prima di essere caricate.",
       point_password: "Le tue note sono protette da una password di crittografia che scegli tu e che conosci solo tu.",
       point_devices: "Inserirai questa password una volta su ogni dispositivo che sincronizzi.",
       point_norecover:
@@ -356,7 +356,8 @@ const it = {
       locked_cta_title: "Sincronizzazione in pausa",
       locked_cta_hint:
         "Le tue note sono cifrate e bloccate su questo dispositivo, quindi la sincronizzazione cloud è sospesa. Inserisci la tua password di crittografia per sbloccarle e riprendere la sincronizzazione.",
-      enable_hint: "La sincronizzazione cloud è cifrata end-to-end — solo tu puoi leggere le tue note, non noi e non Google.",
+      enable_hint:
+        "La sincronizzazione cloud è cifrata end-to-end — solo tu puoi leggere le tue note, non noi né chi le conserva.",
       prompt_title: "Sincronizzazione in pausa",
       prompt_desc:
         "Le tue note non si stanno sincronizzando. Completa la crittografia nelle impostazioni Cloud per riattivare il sync.",
@@ -782,7 +783,7 @@ const it = {
     what_cloud_sync: {
       title: "Cos'è la sincronizzazione Cloud?",
       text_1_0:
-        "Puoi sincronizzare le tue note tra i dispositivi collegando il tuo progetto Google Firebase e attivando la sincronizzazione. Non esiste un server centrale di Fast Memo: i tuoi dati vivono solo nel tuo Firebase.",
+        "Puoi sincronizzare le tue note tra i dispositivi collegando il tuo progetto Google Firebase o il tuo FastMemo Server (su PC, NAS, Raspberry Pi o VPS) e attivando la sincronizzazione. Non esiste un server centrale di Fast Memo: i tuoi dati vivono solo dove scegli tu.",
       text_2_0:
         "Le tue note vengono cifrate end-to-end sul dispositivo prima di essere caricate, così nessuno tranne te può leggerle.",
       text_link: "Leggi la guida passo passo per configurare Google Firebase →",
@@ -792,7 +793,7 @@ const it = {
       text_1_0:
         "Il Cloud Sync usa la crittografia end-to-end. Alla prima configurazione scegli una password di crittografia, e il dispositivo ne deriva la chiave che protegge le tue note.",
       text_2_0:
-        "La chiave non lascia mai il dispositivo e non viene salvata nel cloud: anche chi avesse accesso al tuo Firebase non può leggere il contenuto delle note senza la tua password.",
+        "La chiave non lascia mai il dispositivo e non viene salvata nel cloud: anche chi avesse accesso al tuo Firebase o al tuo server non può leggere il contenuto delle note senza la tua password.",
       text_3_0:
         "Viene cifrato il contenuto delle note; titoli e date restano leggibili per permettere all'app di ordinarle e sincronizzarle.",
     },
@@ -896,7 +897,8 @@ const it = {
     what_platforms: {
       title: "Dove posso usare Fast Memo?",
       text_1_0: "Fast Memo funziona sia su mobile sia su desktop (Windows, macOS e Linux), oltre che in versione web.",
-      text_2_0: "Collega lo stesso progetto Google Firebase su ogni dispositivo e le tue note restano sincronizzate ovunque.",
+      text_2_0:
+        "Collega ogni dispositivo allo stesso progetto Google Firebase o allo stesso FastMemo Server e le tue note restano sincronizzate ovunque.",
     },
     what_ai_assistant: {
       title: "Cos'è l'Assistente AI?",

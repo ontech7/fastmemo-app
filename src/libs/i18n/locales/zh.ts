@@ -146,7 +146,7 @@ const zh = {
     step5: "记录您的代码片段。",
     step6: "根据您的需要创建您自己的类别。",
     step7: "输入密码来隐藏你的笔记。",
-    step8: "在您的 Google Firebase 上同步您的笔记。",
+    step8: "在您的设备之间同步笔记：使用您自己的 Firebase 或您自己的服务器。",
     title: "什么是 Fast Memo?",
     continue: "继续",
   },
@@ -297,7 +297,7 @@ const zh = {
       migrate_title: "开启加密",
       migrate_desc:
         "我们正在将您的云同步升级为端到端加密。请选择一个加密密码——云端已有的笔记将用它重新加密，并且您需要在每台设备上输入一次该密码。",
-      point_private: "只有您能读取您的笔记——我们不能，Google 也不能。笔记在上传前就已在您的设备上加密。",
+      point_private: "只有您能读取您的笔记——我们不能，存储它们的服务也不能。笔记在上传前就已在您的设备上加密。",
       point_password: "您的笔记受一个由您选择、只有您知道的加密密码保护。",
       point_devices: "您需要在每台同步的设备上输入一次此密码。",
       point_norecover: "我们无法为您重置密码。如果您忘记了密码，将需要我们接下来显示的恢复密钥——请将其妥善保管。",
@@ -346,7 +346,7 @@ const zh = {
       setup_cta_hint: "您的笔记尚未加密。开启端到端加密来保护它们——只需片刻。",
       locked_cta_title: "同步已暂停",
       locked_cta_hint: "您的笔记在此设备上已加密并锁定，因此云同步已暂停。输入您的加密密码即可解锁并恢复同步。",
-      enable_hint: "云同步采用端到端加密——只有您能读取您的笔记，我们和 Google 都不能。",
+      enable_hint: "云同步采用端到端加密——只有您能读取您的笔记，我们和存储它们的服务都不能。",
       prompt_title: "同步已暂停",
       prompt_desc: "您的笔记尚未同步。请在云设置中完成加密设置以重新开启同步。",
       prompt_close: "关闭",
@@ -760,7 +760,7 @@ const zh = {
     what_cloud_sync: {
       title: "什么是云同步？",
       text_1_0:
-        "您可以通过连接自己的 Google Firebase 项目并启用同步，在各设备间同步笔记。没有 Fast Memo 中央服务器——您的数据只存在于您自己的 Firebase 中。",
+        "您可以连接自己的 Google Firebase 项目或自己的 FastMemo Server（运行在电脑、NAS、树莓派或 VPS 上）并启用同步，在各设备间同步笔记。没有 Fast Memo 中央服务器——您的数据只存在于您选择的地方。",
       text_2_0: "您的笔记在上传前会在设备上进行端到端加密，因此除您之外没有人能读取它们。",
       text_link: "阅读设置 Google Firebase 的分步指南 →",
     },
@@ -768,7 +768,7 @@ const zh = {
       title: "我的笔记是如何加密的？",
       text_1_0: "云同步使用端到端加密。首次设置时您需要选择一个加密密码，设备会由此派生出保护笔记的密钥。",
       text_2_0:
-        "该密钥永远不会离开您的设备，也不会存储在云端，因此即使有人能访问您的 Firebase，没有您的密码也无法读取笔记内容。",
+        "该密钥永远不会离开您的设备，也不会存储在云端，因此即使有人能访问您的 Firebase 或服务器，没有您的密码也无法读取笔记内容。",
       text_3_0: "笔记内容会被加密；标题和日期保持可读，以便应用进行排序和同步。",
     },
     how_unlock_device: {
@@ -859,7 +859,7 @@ const zh = {
     what_platforms: {
       title: "我可以在哪里使用 Fast Memo？",
       text_1_0: "Fast Memo 可在移动端和桌面端（Windows、macOS 和 Linux）使用，还有网页版。",
-      text_2_0: "在每台设备上连接同一个 Google Firebase 项目，您的笔记就能在各处保持同步。",
+      text_2_0: "将每台设备连接到同一个 Google Firebase 项目或同一个 FastMemo Server，您的笔记就能在各处保持同步。",
     },
     what_ai_assistant: {
       title: "什么是 AI 助手？",

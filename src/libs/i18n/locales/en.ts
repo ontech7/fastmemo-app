@@ -146,7 +146,7 @@ const en = {
     step5: "Take note of your snippets.",
     step6: "Create your own category on your needs.",
     step7: "Insert a secret code to hide your notes.",
-    step8: "Synchronize your notes on Google Firebase.",
+    step8: "Sync your notes across your devices: on your own Firebase or your own server.",
     title: "What is Fast Memo?",
     continue: "Continue",
   },
@@ -301,7 +301,7 @@ const en = {
       migrate_desc:
         "We're upgrading your cloud sync to end-to-end encryption. Choose an encryption password — the notes already in your cloud will be re-encrypted with it, and you'll enter this password once on each device.",
       point_private:
-        "Only you can read your notes — not us, not Google. They're encrypted on your device before they're uploaded.",
+        "Only you can read your notes — not us, not whoever stores them. They're encrypted on your device before they're uploaded.",
       point_password: "Your notes are protected by an encryption password that you choose and only you know.",
       point_devices: "You'll enter this password once on each device you sync.",
       point_norecover:
@@ -354,7 +354,7 @@ const en = {
       locked_cta_title: "Sync is paused",
       locked_cta_hint:
         "Your notes are encrypted and locked on this device, so cloud sync is on hold. Enter your encryption password to unlock them and resume syncing.",
-      enable_hint: "Cloud sync is end-to-end encrypted — only you can read your notes, not us and not Google.",
+      enable_hint: "Cloud sync is end-to-end encrypted — only you can read your notes, not us and not whoever stores them.",
       prompt_title: "Sync paused",
       prompt_desc: "Your notes aren't syncing yet. Finish setting up encryption in Cloud settings to turn sync back on.",
       prompt_close: "Close",
@@ -776,7 +776,7 @@ const en = {
     what_cloud_sync: {
       title: "What is Cloud Sync?",
       text_1_0:
-        "You can sync your notes across devices by connecting your own Google Firebase project and enabling sync. There is no central Fast Memo server — your data lives only in your Firebase.",
+        "You can sync your notes across devices by connecting your own Google Firebase project or your own FastMemo Server (on a PC, NAS, Raspberry Pi or VPS) and enabling sync. There is no central Fast Memo server — your data lives only where you choose.",
       text_2_0: "Your notes are end-to-end encrypted on your device before they're uploaded, so no one but you can read them.",
       text_link: "Read the step-by-step guide to set up Google Firebase →",
     },
@@ -785,7 +785,7 @@ const en = {
       text_1_0:
         "Cloud Sync uses end-to-end encryption. The first time you set it up you choose an encryption password, and your device derives from it the key that protects your notes.",
       text_2_0:
-        "The key never leaves your device and is never stored in the cloud, so even someone with access to your Firebase cannot read your note contents without your password.",
+        "The key never leaves your device and is never stored in the cloud, so even someone with access to your Firebase or your server cannot read your note contents without your password.",
       text_3_0: "Note contents are encrypted; titles and dates stay readable so the app can sort and sync them.",
     },
     how_unlock_device: {
@@ -886,7 +886,8 @@ const en = {
     what_platforms: {
       title: "Where can I use Fast Memo?",
       text_1_0: "Fast Memo works on both mobile and desktop (Windows, macOS and Linux), plus a web version.",
-      text_2_0: "Connect the same Google Firebase project on each device and your notes stay in sync everywhere.",
+      text_2_0:
+        "Connect each device to the same Google Firebase project or FastMemo Server and your notes stay in sync everywhere.",
     },
     what_ai_assistant: {
       title: "What is the AI Assistant?",
