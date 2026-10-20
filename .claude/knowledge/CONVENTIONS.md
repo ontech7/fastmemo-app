@@ -714,8 +714,9 @@ clouds, so the rules above still apply. In addition:
    a plain-HTTP server address in UI copy for phones.
 6. **"Removed" is the server refusing the token held now.** Never a token that can't be read (read it again), nor a refusal of a
    token a registration replaced; write and remove tokens in order (LL-050).
-7. **Settings changes don't re-enroll.** A connected device saving the same cloud's settings verifies and saves; switching
-   clouds leaves the old one first (LL-050).
+7. **Settings changes don't re-enroll.** New settings are proven with `cloud.check` (its own connection) before the working one
+   is touched; the same cloud then only takes them, another cloud is left first. Change the connection only with the engine
+   stopped and `idle()`; a task that outlived `stop()` must not act (`outlived`) (LL-050).
 8. **A request carries the connection it started on.** Re-check after every `await` that the backend wasn't re-initialised
    before reading its URL, key or token: another server's key must never go to this one.
 9. **An error the client acts on must be readable.** The server drains an oversized body before its `413`; the client never

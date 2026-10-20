@@ -1332,14 +1332,18 @@ the old address with the new server's key.
 **Root cause:** "No token" and "the server refused a token" were both read as "removed", without checking which token was
 refused or whether the read had failed; and the edit path predates there being more than one cloud.
 
-**Fix:** The edit path compares the form with the saved connection: the same cloud only verifies and saves the new credentials
-(no re-registration, no vault flow; on failure it goes back to the saved ones and shows the dialog); another cloud is left
-first, as turning sync off does (unregister, forget the key, dispose), then connected as usual. The server backend keeps the
-token tri-state (read / not stored / unreadable, read again), treats `device_unknown` as removal only for the token it holds and
-not during a registration, serializes token writes, and drops a request whose connection changed while it waited. Verified
-through the web app (save unchanged, wrong key, switch servers) and in `scripts/sync-server.test.mjs`.  
+**Fix:** The edit path checks the new settings first on a connection of their own (`cloud.check`: a throwaway Firebase app, or a
+second `ServerBackend`), so a typo leaves the device connected as it was. Then the same cloud only takes the new credentials
+(engine stopped and idle, re-init, started again: no re-registration, no vault flow), and another cloud is left first, as
+turning sync off does (unregister, forget the key, dispose, each step bounded by a timeout), then connected as usual.
+`SyncEngine.stop()` now fences the task still running (`outlived`): it no longer reports a removal or a stale vault, pushes or
+acknowledges on what may be another connection; `idle()` waits for it. The server backend keeps the token tri-state (read / not
+stored / unreadable, read again), treats `device_unknown` as removal only for the token it holds and not during a registration,
+serializes token writes, and drops a request whose connection changed while it waited. Verified through the web app (save
+unchanged, wrong key, an unreachable server, a real switch) and in the sync suites.  
 **Rule:** A removal is the server refusing the credential the device holds now, never a failed local read or a refusal of a
-replaced credential (LL-023's tri-state, for tokens). Changing settings on a connected device must not re-enroll it.
+replaced credential (LL-023's tri-state, for tokens). Changing settings on a connected device must not re-enroll it, and new
+settings are proven on the side before the working connection is touched. A task that outlives `stop()` must not act.
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
 `feat/self-hosted-server`

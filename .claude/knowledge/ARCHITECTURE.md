@@ -269,7 +269,8 @@ cloud (CloudRouter) -> providerOf(settings): "firebase" (default, also for setti
 ServerBackend -> fastmemo-server /v1 (repo ../fastmemo-server, docs/PROTOCOL.md)
   connect: verify = GET /v1/info with the key (server + protocol 1, maxDevices) -> vault, notes, devices with the key
            -> once unlocked: POST /v1/devices -> token -> secure storage serverToken_<cloudScope> -> Bearer from now on
-  edit:    connected + Save: same cloudScope -> verify + save (no re-register); another cloud -> leave it, then connect
+  edit:    connected + Save: cloud.check(new) on its own connection (fails -> dialog, still connected as before);
+           same cloudScope -> engine stop + idle, init, save, start (no re-register); another cloud -> leave it, then connect
   token:   read / none stored / unreadable (read again); writes serialized; a request whose connection changed is dropped
   live:    pollLoop: GET /v1/sync?v=<version>&wait=25&p=<page> -> devices + vault listeners;
            feed page -> deliver as one ChangeSet (token "<page>|<seq>") -> engine merge -> POST /v1/ack { token: seq }

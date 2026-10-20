@@ -571,9 +571,11 @@ who want their notes at home (PC, NAS, Raspberry Pi, VPS) had no option. ADR-016
   Only the server refusing the token the device holds now means "removed": a token storage can't read now is read again, and a
   refusal of a token a registration replaced is retried (LL-050). What the app reads while connecting (vault, notes, devices)
   takes the key or a token ("member" routes). Wrong keys are rate-limited per address (20 / 15 min).
-- **Editing the settings of a connected device:** the same cloud (same `cloudScope`) only verifies and saves the new credentials
-  (a rotated access key, a new API key): no re-registration, no vault flow. Another cloud is left first, as turning sync off
-  does (unregister, forget its cached key, dispose), then connected as usual.
+- **Editing the settings of a connected device:** the new settings are checked first on a connection of their own
+  (`CloudBackend.check`), so a typo leaves the device connected as it was. The same cloud (same `cloudScope`) then only takes
+  the new credentials (a rotated access key, a new API key): no re-registration, no vault flow. Another cloud is left first, as
+  turning sync off does (unregister, forget its cached key, dispose), then connected as usual. The engine is stopped and idle
+  before the connection changes, and a task that outlived `stop()` doesn't act on what it reads.
 - **Long polling, not WebSockets:** `GET /v1/sync?v=&wait=25` answers when anything devices see changes (or after 25 s) with the
   devices, the next feed page and the vault: plain HTTP through any proxy, no dependency on either side. A page the device
   already has comes back as `{ same: true }`; page ids include the server's boot id, so a restored backup (which rewinds the seq
