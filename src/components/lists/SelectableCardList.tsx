@@ -8,6 +8,8 @@ export interface SelectableCardItem<T extends string> {
   id: T;
   label: string;
   description?: string | null;
+  /** Shown on the left, e.g. a logo. */
+  icon?: React.ReactNode;
   extra?: React.ReactNode;
   disabled?: boolean;
   disabledLabel?: string;
@@ -47,6 +49,7 @@ export default function SelectableCardList<T extends string>({ items, selectedId
             aria-checked={isSelected}
             aria-disabled={locked}
           >
+            {item.icon}
             <View style={{ flex: 1 }}>
               <View style={styles.header}>
                 <Text style={[styles.title, isSelected && !disabled && styles.titleSelected, disabled && styles.textDisabled]}>

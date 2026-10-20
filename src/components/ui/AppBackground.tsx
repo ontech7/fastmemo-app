@@ -13,7 +13,7 @@ interface Props {
 // opacity falloff approximates a smooth curve and removes the rings.
 const GLOW_OFFSETS = [0, 0.12, 0.25, 0.38, 0.52, 0.66, 0.82, 1];
 
-function glowStops(color: string, peak: number) {
+export function glowStops(color: string, peak: number) {
   return GLOW_OFFSETS.map((t) => (
     <Stop key={t} offset={`${Math.round(t * 100)}%`} stopColor={color} stopOpacity={+(peak * (1 - t) ** 2).toFixed(4)} />
   ));
