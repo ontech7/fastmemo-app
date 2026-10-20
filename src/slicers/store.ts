@@ -1,5 +1,6 @@
 import FSStorage from "@/libs/storage/fsStorage";
 import { foldLegacyRootNotes } from "@/libs/storage/legacyRootNotes";
+import { noteStore, notesNeedSorting } from "@/libs/storage/notes";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import { useDispatch } from "react-redux";
@@ -29,13 +30,18 @@ const failedNotesRead = (err: unknown): never => {
 // Whether the last notes write failed: redux-persist only logs it, and its flush() resolves anyway.
 let notesWriteFailed = false;
 
+// The notes as redux-persist stored them before the note store (one value): the legacy fold below works on it.
 const baseNotesStorage = FSStorage();
-const notesStorage = baseNotesStorage && {
-  getItem: (key: string) => baseNotesStorage.getItem(key).catch(failedNotesRead),
-  setItem: (key: string, value: string) =>
+
+let reorderOnRehydrate = false;
+
+// One stored value per note (ADR-018): a save writes only the notes that changed.
+const notesStorage = noteStore && {
+  getItem: (key: string) => noteStore.getItem(key).catch(failedNotesRead),
+  setItem: (key: string, value: unknown) =>
     notesReadFailed
       ? Promise.resolve()
-      : baseNotesStorage.setItem(key, value).then(
+      : noteStore.setItem(key, value as Parameters<typeof noteStore.setItem>[1]).then(
           () => {
             notesWriteFailed = false;
           },
@@ -44,7 +50,7 @@ const notesStorage = baseNotesStorage && {
             throw err;
           }
         ),
-  removeItem: (key: string) => baseNotesStorage.removeItem(key),
+  removeItem: (key: string) => noteStore.removeItem(key),
 };
 
 /** Whether the notes were read at launch (if not, they aren't written this session, see above). */
@@ -53,52 +59,6 @@ export const notesLoaded = (): boolean => !notesReadFailed;
 /** Whether the notes as they are now are on disk, after a `persistor.flush()`. */
 export const notesPersisted = (): boolean => !notesReadFailed && !notesWriteFailed;
 
-// redux-persist serializes every key again right after rehydrating it: all notes, on every boot,
-// though nothing changed. Rehydrated values remember the JSON they came from, reused for as long as
-// they're still in the state, and so does the stored file as a whole (FSStorage then also skips
-// writing it back).
-const rehydratedJson = new WeakMap<object, string>();
-let rehydratedFile: { keys: Record<string, string>; json: string } | null = null;
-
-/** The file itself, rather than a key: redux-persist stores every key's value as a JSON string. */
-const isPersistedFile = (value: object): value is Record<string, string> =>
-  typeof (value as { _persist?: unknown })._persist === "string";
-
-const deserializeNotes = (json: string): unknown => {
-  let value: unknown;
-  try {
-    value = JSON.parse(json);
-  } catch (err) {
-    failedNotesRead(err);
-  }
-  if (value !== null && typeof value === "object") {
-    rehydratedJson.set(value, json);
-    if (isPersistedFile(value)) rehydratedFile = { keys: value, json };
-  }
-  return value;
-};
-
-const serializeNotes = (value: unknown): string => {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-
-  if (isPersistedFile(value)) {
-    // Only its first write can match what was read; don't hold on to the file any longer.
-    const file = rehydratedFile;
-    rehydratedFile = null;
-    const keys = Object.keys(value);
-    const fileKeys = file ? Object.keys(file.keys) : [];
-    if (
-      file &&
-      keys.length === fileKeys.length &&
-      keys.every((key, i) => key === fileKeys[i] && value[key] === file.keys[key])
-    ) {
-      return file.json;
-    }
-  }
-
-  return rehydratedJson.get(value) ?? JSON.stringify(value);
-};
-
 // Every config waits for its read however long it takes (`timeout: 0`): on timeout redux-persist
 // rehydrates the empty initial state, and its next write replaces what was stored with it.
 
@@ -106,9 +66,9 @@ const notesPersistConfig: PersistConfig<NotesState> = {
   key: "root_notes",
   storage: notesStorage,
   timeout: 0,
-  // @ts-expect-error -- redux-persist 6 accepts a function here (createPersistoid.js), its typings only `boolean`
-  serialize: serializeNotes,
-  deserialize: deserializeNotes,
+  // The note store takes and gives the slice as it is: it stores each note on its own.
+  serialize: false,
+  deserialize: false,
   migrate: async (state: PersistedState): Promise<PersistedState> => {
     if (Platform.OS === "web") {
       return state;
@@ -159,10 +119,8 @@ export const store = configureStore({
     }),
 });
 
-let reorderOnRehydrate = false;
-
 export const persistor = persistStore(store, { manualPersist: true }, () => {
-  if (reorderOnRehydrate) store.dispatch(reorderNotes());
+  if (reorderOnRehydrate || notesNeedSorting()) store.dispatch(reorderNotes());
 });
 
 /** Keeps an outdated copy of the notes in the root blob (e.g. after a downgrade) from replacing them. */
@@ -180,7 +138,7 @@ foldLegacyRootNotes(baseNotesStorage).then((added) => {
   if (added !== null) {
     rootPersistConfig.blacklist = ["notes"];
     rootPersistConfig.migrate = dropLegacyRootNotes;
-    reorderOnRehydrate = added > 0;
+    if (added > 0) reorderOnRehydrate = true;
   }
   persistor.persist();
 });

@@ -1373,6 +1373,100 @@ answer is no" share a retry path.
 
 ---
 
+### LL-052: A percent-encoded file name given to expo-file-system's `File` names another file
+
+**Date:** 2026-10-20  
+**Severity:** Critical (caught before release)  
+**Category:** Bug  
+**What happened:** The note store (ADR-018) found the previous notes file with
+`new File(Paths.document, "reduxPersist", "persist%3Aroot_notes")`, the name fsStorage used. Reading expo-file-system before the
+device test showed `Paths.join` encodes every segment after the first (`%` -> `%25`): the native side would have looked for
+`persist%3Aroot_notes` while the file on disk is `persist:root_notes` (fsStorage put `%3A` in a URI, which the legacy API
+decoded). The migration would have found no notes, and its first write would have stored an empty note list. The unit tests had
+passed: the fake file system didn't encode segments.
+
+**Root cause:** Assuming a path segment is used as given. With the new API it's encoded, then the URI is decoded once.
+
+**Fix:** The legacy file is named as it is on disk (`persist:root_notes`); the note store's own names are escaped to characters
+neither step touches (`[A-Za-z0-9-_.!~*'()]`, `_` standing for `%`). `scripts/_expo-file-system-fake.js` now encodes segments as
+`Paths.join` does, and fails the migration tests with the old name. Verified on Android: an update over the old file migrated
+every note.  
+**Rule:** A name given to `File`/`Directory` must be the file's real name, with no `%`; check where an existing file really is
+(`run-as ... ls`) before code reads it, and make test doubles encode and decode like the library.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/per-note-storage`  
+**Update (2026-10-20):** the device backend now uses the legacy API (asynchronous, LL-053); its URIs are decoded once, so the
+same rule holds: no `%` in a note store name, and the legacy file is addressed as fsStorage does (`encodeURIComponent(key)`).
+The fake is `scripts/_expo-file-system-legacy-fake.js`.
+
+---
+
+### LL-053: A store that remembers what it wrote trusted it with another writer, and a skipped write resolved at once
+
+**Date:** 2026-10-20  
+**Severity:** High (caught in review, before release)  
+**Category:** Bug  
+**What happened:** Two reviews of the note store (ADR-018) found:
+
+- **Two browser tabs lost a note.** Each tab kept a map of the entries it had written, to skip unchanged ones. Tab 2 trashed a
+  note (wrote `t:W`, the `state` value, removed `n:W`); tab 1, stale, then saved anything: its `state` value still listed `n:W`,
+  which its map said was stored. At the next launch the note was in neither list. With the single value, the stale tab rewrote
+  everything, so this was new.
+- **A flush resolved before the notes were stored.** A write superseded while it waited was skipped and resolved at once;
+  `persistor.flush()` hands back exactly that promise, so the sync engine could ack a change before it was on disk, and the
+  skipped write's success cleared the "last write failed" flag.
+- **The device writes blocked the JS thread**: the synchronous file API took ~5 ms per file, 1.9 s for a migration of 400 notes,
+  the app frozen meanwhile; and its `moveSync` with `overwrite` deletes the target before renaming (not atomic).
+- A third review found two more tab cases: a save that failed before its `state` value, then another tab's launch cleanup, lost
+  a new note (the failing tab still trusted its map); and a tab with nothing of its own to save put its older view over another
+  tab's save.
+
+**Root cause:** A cache of "what's stored" is only true while nothing else writes; "skip what's superseded" dropped the outcome
+the caller was waiting for; a per-file API cost multiplied by the number of notes.  
+**Fix:** Web Locks around reads and writes; a write that finds a `state` value it didn't write, or follows a failed one,
+rewrites every entry that value doesn't list, and with nothing of its own doesn't write. A skipped write settles with the next
+write that runs. The device backend uses the legacy asynchronous API (`writeAsStringAsync` + `moveAsync`, an atomic rename), 8
+writes and 32 reads at a time: on the emulator the migration of 400 notes takes 607 ms with the JS thread never blocked over 113
+ms; on a Pixel 10 Pro 231 ms, and a launch reads them in ~120 ms. Tests run the web backend with tabs, and a held backend with a
+flush in flight.  
+**Rule:** A cache of what's stored holds only while this is the only writer: where storage is shared (tabs), check what's there
+before trusting it, under a lock. A write skipped for a newer one settles with that one, never at once. Time a per-item storage
+call on a device before multiplying it by every note.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/per-note-storage`
+
+---
+
+### LL-054: A copy kept "just in case" outlived "Wipe data" and could come back
+
+**Date:** 2026-10-20  
+**Severity:** High (caught in review, before release)  
+**Category:** Bug  
+**What happened:** The note store's migration keeps the previous single value for a rollback. "Wipe data" emptied only the note
+store: the old value (a full plaintext copy), its spare, the root fold's backup and the values set aside all stayed on the
+device. Worse, "no `state` value and no entries" meant "not migrated": after a wipe (or deleting every note), a lost `state`
+value brought every old note back. The rebuild of a lost `state` value folded the old notes in before taking the tombstones (a
+note deleted for good came back), took the old deletion queues (sent again), and recorded no stamp (folded again next launch).
+
+**Root cause:** Whether data was migrated was inferred from the absence of data, and the delete paths were written before the
+copy existed.  
+**Fix:** A `migrated` marker (the legacy notes taken into account, with their revisions), written after the first `state` value
+(so it means the migration finished), made again when lost or cut, and taking in the notes of every fold; a fold brings a
+missing note back only if the marker doesn't hold it at that revision. "Wipe data" removes every copy
+(`noteStore.removeCopies()`) and the wiped notes' queued uploads; 14 days after the migration all those copies go, once a write
+has stored what the launch folded from them. The web records a stamp too (length and hash), so an older tab still open across a
+deploy has its saves folded in. The rebuild takes tombstones first, old queues only for an unfinished migration, and records the
+stamp.  
+**Rule:** Every copy kept "just in case" is data the user can't see: each delete and wipe path must reach it, and it needs an
+end date. Record that a migration happened; never infer it from data being absent.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
+`feat/per-note-storage`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
