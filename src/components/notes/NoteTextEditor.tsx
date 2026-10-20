@@ -3,6 +3,7 @@ import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import FindReplaceBar from "@/components/notes/FindReplaceBar";
@@ -11,6 +12,7 @@ import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
@@ -31,6 +33,7 @@ import { useFocusEffect } from "expo-router";
 import type { ReactElement } from "react";
 import { cloneElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TouchableOpacityProps } from "react-native";
 import { Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
 import { KeyboardAvoidingView, KeyboardStickyView } from "react-native-keyboard-controller";
@@ -46,7 +49,7 @@ interface Props {
 // replaced by the real measured height on its first layout. It only needs to be at
 // least the real height so the bar parks fully below the screen while the keyboard
 // is down (and so the editor reserves enough room for it while the keyboard is up).
-const BAR_HEIGHT_ESTIMATE = 76;
+const BAR_HEIGHT_ESTIMATE = 100;
 
 const TOOLBAR_LABEL_KEYS: Record<string, string> = {
   [actions.undo]: "a11y.format.undo",
@@ -136,11 +139,19 @@ const renderToolbarAction = (
 )._defaultRenderAction;
 
 // RichToolbar renders its action buttons with no role or name and has no prop to add them, so decorate the
-// buttons its default renderer returns (`_renderAction` calls it through `this`, so the override is used).
+// buttons its default renderer returns (`_renderAction` calls it through `this`, so the override is used). It has no
+// prop for its list's padding either: the first and last buttons get a margin, so they don't touch the screen edges.
 class LabeledRichToolbar extends RichToolbar {
   _defaultRenderAction(action: string, selected: boolean) {
     const isToggle = !NON_TOGGLE_ACTIONS.has(action);
-    return cloneElement(renderToolbarAction.call(this, action, selected), {
+    const button = renderToolbarAction.call(this, action, selected) as ReactElement<TouchableOpacityProps>;
+    const list = this.props.actions ?? [];
+    return cloneElement(button, {
+      style: [
+        button.props.style,
+        action === list[0] && styles.firstToolbarAction,
+        action === list[list.length - 1] && styles.lastToolbarAction,
+      ],
       accessibilityRole: isToggle ? "checkbox" : "button",
       accessibilityLabel: TOOLBAR_LABEL_KEYS[action] ? i18n.t(TOOLBAR_LABEL_KEYS[action]) : undefined,
       "aria-checked": isToggle ? selected : undefined,
@@ -212,7 +223,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   // Only a brand-new note (created and never updated) autofocuses the editor, so
   // opening an existing note just lets the user read without popping the keyboard.
-  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const autofocus = useAutofocusNewNote(initialNote);
   const transitionDone = useScreenTransitionEnd();
   const didFocusRef = useRef(false);
 
@@ -221,11 +232,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
   // bridge (so it often no-op'd) and fired mid-transition (causing the jumps).
   useEffect(() => {
     if (didFocusRef.current) return;
-    if (!isNewNote || initialNote.readOnly) return;
+    if (!autofocus) return;
     if (!editorInitialized || !transitionDone) return;
     didFocusRef.current = true;
     richTextEditor.current?.focusContentEditor();
-  }, [editorInitialized, transitionDone, isNewNote, initialNote.readOnly]);
+  }, [editorInitialized, transitionDone, autofocus]);
 
   // Safety net: never leave the loading cover up forever if pell's init callback
   // somehow never fires.
@@ -396,7 +407,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
       <SafeAreaView style={styles.container}>
         <View>
           <View style={styles.header}>
-            <BackButton chip callback={updateNoteWebhook} />
+            <BackButton chip tourTarget="back" callback={updateNoteWebhook} />
 
             <View style={{ flex: 1, minWidth: 0 }}>
               <TextInput
@@ -543,9 +554,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
               flatContainerStyle={styles.richToolbarFlatContainer}
               editor={richTextEditor}
               onPressAddImage={pickImage}
-              iconSize={20}
+              iconSize={22}
               iconTint={COLOR.softWhite}
               selectedIconTint={COLOR.accentSoft}
+              unselectedButtonStyle={styles.toolbarAction}
+              selectedButtonStyle={styles.toolbarActionSelected}
               actions={toolbarActions}
               iconMap={toolbarIconMap}
             />
@@ -566,15 +579,19 @@ export default function NoteTextEditor({ initialNote }: Props) {
               style={styles.richToolbarContainer}
               editor={richTextEditor}
               onPressAddImage={pickImage}
-              iconSize={20}
+              iconSize={22}
               iconTint={COLOR.softWhite}
               selectedIconTint={COLOR.accentSoft}
+              unselectedButtonStyle={styles.toolbarAction}
+              selectedButtonStyle={styles.toolbarActionSelected}
               actions={toolbarActions}
               iconMap={toolbarIconMap}
             />
           </View>
         </KeyboardStickyView>
       )}
+
+      <EditorTourTip />
     </View>
   );
 }
@@ -646,8 +663,30 @@ const styles = StyleSheet.create({
   },
   richToolbarContainer: {
     width: SIZE.full,
-    height: 38,
+    // The 44 high buttons centered in the padding (the height counts the top border too).
+    height: 44 + 2 * PADDING_MARGIN.sm + 1,
+    paddingVertical: PADDING_MARGIN.sm,
     backgroundColor: COLOR.surface,
+    borderTopWidth: 1,
+    borderTopColor: GLASS.border,
+  },
+  // A 48x44 touch target per button; the selected format gets a soft fill besides its tint.
+  toolbarAction: {
+    width: 48,
+    height: 44,
+    borderRadius: BORDER.normal,
+  },
+  toolbarActionSelected: {
+    width: 48,
+    height: 44,
+    borderRadius: BORDER.normal,
+    backgroundColor: GLASS.fillStrong,
+  },
+  firstToolbarAction: {
+    marginLeft: PADDING_MARGIN.md,
+  },
+  lastToolbarAction: {
+    marginRight: PADDING_MARGIN.md,
   },
   // Native formatting bar: pinned to the bottom of the screen, full width. The
   // KeyboardStickyView translates it up to sit on the keyboard's edge (and below the
@@ -666,6 +705,10 @@ const styles = StyleSheet.create({
     // bar from the window edges (the parent stretches it back to fill the gap).
     width: "auto",
     marginHorizontal: PADDING_MARGIN.lg,
+    // A border all round: one more pixel than the pinned bar's top one.
+    height: 44 + 2 * PADDING_MARGIN.sm + 2,
+    borderWidth: 1,
+    borderColor: GLASS.border,
   },
   richToolbarFlatContainer: {
     maxWidth: SIZE.full,

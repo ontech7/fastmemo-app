@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { useSelector } from "react-redux";
 
 import { BORDER, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { useTourTarget } from "@/hooks/useTourTarget";
 
 import { getCategories } from "@/slicers/categoriesSlice";
 import GeneralSettingsButton from "./buttons/GeneralSettingsButton";
@@ -13,9 +14,11 @@ import GlassSurface from "./ui/GlassSurface";
 
 export default function Sidebar() {
   const categories = useSelector(getCategories);
+  // The first-note tour's last step shows where categories, the trash and the settings are.
+  const tourTarget = useTourTarget("sidebar");
 
   return (
-    <View style={styles.container}>
+    <View ref={tourTarget} style={styles.container} collapsable={false}>
       <GlassSurface style={StyleSheet.absoluteFill} radius={BORDER.big} bordered={false} fill={GLASS.navyFill} />
       <View style={styles.sideBar}>
         <View style={styles.header}>

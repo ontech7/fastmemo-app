@@ -1,8 +1,10 @@
 import { configs } from "@/configs";
 import { FlashList } from "@shopify/flash-list";
 import { useTranslation } from "react-i18next";
+import type { ScrollViewProps } from "react-native";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { openUrl } from "@/utils/openUrl";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -15,6 +17,11 @@ import WebhookItem from "@/components/webhook/WebhookItem";
 import { selectorWebhooks, setWebhooks } from "@/slicers/settingsSlice";
 
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
+
+/** The list's scroll view: keeps a focused URL field above the keyboard (the window doesn't resize for it). */
+function KeyboardAwareList(props: ScrollViewProps) {
+  return <KeyboardAwareScrollView {...props} keyboardShouldPersistTaps="handled" bottomOffset={PADDING_MARGIN.xl} />;
+}
 
 export default function WebhooksScreen() {
   const { t } = useTranslation();
@@ -79,6 +86,7 @@ export default function WebhooksScreen() {
           disabled: true,
         }}
         showsVerticalScrollIndicator={false}
+        renderScrollComponent={KeyboardAwareList}
         data={webhooks_values}
         extraData={{ toggleWebhook, setWebhookUrl, t }}
         renderItem={({ item, index }) => (

@@ -14,14 +14,15 @@ import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
 import { useVaultProgress } from "@/hooks/useVaultProgress";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
-import { isCloudSettingsComplete as settingsComplete, isPlainHttp } from "@/libs/cloud";
+import { isCloudSettingsComplete as settingsComplete, isLoopbackUrl, isPlainHttp, isTailscaleUrl } from "@/libs/cloud";
 import { probeVault } from "@/libs/vaultManager";
 import type { CloudProvider } from "@/types";
 import { openUrl } from "@/utils/openUrl";
 import { toast } from "@/utils/toast";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import DevicePhoneMobileIcon from "react-native-heroicons/outline/DevicePhoneMobileIcon";
@@ -82,6 +83,17 @@ export default function CloudSyncScreen() {
 
   const isCloudSettingsComplete = settingsComplete(cloudSettings);
   const plainHttp = provider === "server" && !!cloudSettings.serverUrl && isPlainHttp(cloudSettings.serverUrl);
+  // A page served over HTTPS (the web app, the Windows desktop app) can't fetch an http address other than this machine:
+  // the browser engine blocks it as mixed content.
+  const httpBlocked =
+    plainHttp &&
+    Platform.OS === "web" &&
+    globalThis.location?.protocol === "https:" &&
+    !isLoopbackUrl(cloudSettings.serverUrl ?? "");
+  // Plain HTTP crossing a network, worth a warning: not this machine, not Tailscale (encrypted on the way).
+  const httpExposed =
+    plainHttp && !isLoopbackUrl(cloudSettings.serverUrl ?? "") && !isTailscaleUrl(cloudSettings.serverUrl ?? "");
+  const saveDisabled = state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected || httpBlocked;
 
   const toggleCloudSync = () => {
     if (!netInfo?.isConnected) {
@@ -92,6 +104,11 @@ export default function CloudSyncScreen() {
   };
 
   const [showResyncDialog, setShowResyncDialog] = useState(false);
+  const [showHttpDialog, setShowHttpDialog] = useState(false);
+  // The dialog stays tappable while it fades out: one save per confirmation.
+  const httpConfirmed = useRef(false);
+
+  const saveSettings = () => unlockWithSecret(methods.saveCloudSettings);
 
   return (
     <>
@@ -121,6 +138,27 @@ export default function CloudSyncScreen() {
           label: t("cancel"),
           handler: () => setShowResyncDialog(false),
         }}
+      />
+
+      <ComplexDialog
+        open={showHttpDialog}
+        adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.yellow} style={{ marginBottom: -3 }} />}
+        title={t("cloudsync.server.http_confirm_title")}
+        description={t("cloudsync.server.http_confirm_desc")}
+        confirm={{
+          label: t("cloudsync.server.http_confirm_ok"),
+          handler: () => {
+            if (httpConfirmed.current) return;
+            httpConfirmed.current = true;
+            setShowHttpDialog(false);
+            saveSettings();
+          },
+        }}
+        cancel={{
+          label: t("cancel"),
+          handler: () => setShowHttpDialog(false),
+        }}
+        onDismiss={() => setShowHttpDialog(false)}
       />
 
       <ComplexDialog
@@ -159,7 +197,13 @@ export default function CloudSyncScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {/* Keeps the focused field above the keyboard (under KeyboardProvider the window doesn't resize for it). */}
+        <KeyboardAwareScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={PADDING_MARGIN.xl}
+        >
           <View style={styles.sectionWrapper}>
             <View style={styles.sectionList}>
               <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
@@ -221,7 +265,11 @@ export default function CloudSyncScreen() {
                         />
                       </View>
 
-                      {plainHttp && <Text style={styles.fieldWarning}>{t("cloudsync.server.http_warning")}</Text>}
+                      {(httpBlocked || httpExposed) && (
+                        <Text style={styles.fieldWarning}>
+                          {t(httpBlocked ? "cloudsync.server.http_blocked" : "cloudsync.server.http_warning")}
+                        </Text>
+                      )}
                     </View>
 
                     <View style={[styles.sectionWrapper, { marginBottom: PADDING_MARGIN.lg }]}>
@@ -322,12 +370,13 @@ export default function CloudSyncScreen() {
                         accessibilityRole="button"
                         accessibilityLabel={t("cloudsync.save")}
                         activeOpacity={0.7}
-                        disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
-                        style={[
-                          styles.saveButton,
-                          (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) && styles.saveButton_disabled,
-                        ]}
-                        onPress={() => unlockWithSecret(methods.saveCloudSettings)}
+                        disabled={saveDisabled}
+                        style={[styles.saveButton, saveDisabled && styles.saveButton_disabled]}
+                        onPress={() => {
+                          if (!httpExposed) return saveSettings();
+                          httpConfirmed.current = false;
+                          setShowHttpDialog(true);
+                        }}
                       >
                         <CheckIcon size={24} color={COLOR.softWhite} />
                       </TouchableOpacity>
@@ -507,7 +556,7 @@ export default function CloudSyncScreen() {
               </>
             )}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </>
   );

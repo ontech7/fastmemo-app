@@ -11,6 +11,7 @@ import UsersIcon from "react-native-heroicons/outline/UsersIcon";
 import { useSelector } from "react-redux";
 
 import { useRouter } from "@/hooks/useRouter";
+import { useTourTarget } from "@/hooks/useTourTarget";
 import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
@@ -30,6 +31,8 @@ interface Props {
   selectNote: (id: string, locked: boolean) => void;
   isDeleteMode: boolean;
   toggleDeleteMode: () => void;
+  /** Something the first-note tour can point at, under this name. */
+  tourTarget?: string;
 }
 
 /** Color of the card's left border — the type signal (red kept for important). */
@@ -48,7 +51,7 @@ function getCardAccent(type: Note["type"], important: boolean): string {
   }
 }
 
-function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode }: Props) {
+function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode, tourTarget }: Props) {
   const { t } = useTranslation();
 
   const router = useRouter();
@@ -57,6 +60,8 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
   const { sortBy } = useSelector(getNoteFilters);
 
   const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked, local } = content;
+
+  const targetRef = useTourTarget(tourTarget);
 
   // Another synced device has it open right now.
   const openElsewhere = useNoteOpenElsewhere(id);
@@ -105,6 +110,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
 
   return (
     <TouchableOpacity
+      ref={targetRef}
       activeOpacity={0.7}
       style={[
         styles.container,

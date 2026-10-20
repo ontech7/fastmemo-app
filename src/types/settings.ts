@@ -71,6 +71,9 @@ export interface DeveloperModeSettings {
   customAppIcon: string | null;
 }
 
+/** Where a new install is in the first-note tour: the add button, the editor, then the note list; "done" once it's over. */
+export type TourStep = "create" | "write" | "explore" | "done";
+
 export interface SettingsState {
   language: string;
   isIntroFinished: boolean;
@@ -86,4 +89,9 @@ export interface SettingsState {
   reportDate: string | null;
   developerMode: DeveloperModeSettings;
   noteCreation: NoteCreationSettings;
+  /**
+   * A new install's first-note tour (absent for everyone else, existing users included). It ends on "done", not on a
+   * removed key: the settings are stored twice, and a key missing from one copy doesn't remove it from the other.
+   */
+  tour?: TourStep;
 }

@@ -631,6 +631,23 @@ export class ServerBackend implements CloudBackend {
     options: { auth: Auth; body?: unknown; timeout?: number; signal?: AbortSignal }
   ): Promise<T> {
     const { generation } = this;
+    try {
+      return await this.send<T>(method, path, options);
+    } catch (e) {
+      // A member call whose token the server refused (this device was removed, maybe by a leave whose answer got lost,
+      // or the server lost its devices): the access key still answers, as before the device enrolled.
+      const refused = e instanceof ServerError && e.status === 401 && e.code === "device_unknown" && e.token !== null;
+      if (options.auth !== "member" || !refused || generation !== this.generation) throw e;
+      return this.send<T>(method, path, { ...options, auth: "key" });
+    }
+  }
+
+  private async send<T>(
+    method: string,
+    path: string,
+    options: { auth: Auth; body?: unknown; timeout?: number; signal?: AbortSignal }
+  ): Promise<T> {
+    const { generation } = this;
     if (!this.url) throw new Error("cloud not initialised");
     if (options.auth !== "key") {
       await this.loadToken();
@@ -641,7 +658,8 @@ export class ServerBackend implements CloudBackend {
     const base = this.url;
     const token = options.auth !== "key" && this.tokenKnown ? this.token : null;
     const headers: Record<string, string> = { Accept: "application/json" };
-    if (options.auth !== "device" && this.key) headers["X-Access-Key"] = this.key;
+    // The access key only when nothing else will do: enrolled, the device's own token (revocable) is all that travels.
+    if (this.key && (options.auth === "key" || (options.auth === "member" && !token))) headers["X-Access-Key"] = this.key;
     if (token) headers.Authorization = `Bearer ${token}`;
     let body: string | undefined;
     if (options.body !== undefined) {

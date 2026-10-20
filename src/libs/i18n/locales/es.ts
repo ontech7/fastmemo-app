@@ -167,8 +167,17 @@ const es = {
     unlockCode: "Inserta tu código secreto",
     error: "El código que ingresaste no coincide. Intentar otra vez.",
   },
-  firstMemo: {
-    title: "¡Bienvenido a FastMemo! 🔊",
+  tour: {
+    step: "{{current}} de {{total}}",
+    skip: "Omitir",
+    got_it: "Entendido",
+    create_title: "Tu primera nota",
+    create_text: "Toca + para empezar a escribir. La flecha de al lado abre los otros tipos: Lista, Kanban y Código.",
+    write_title: "Solo escribe",
+    write_text: "Todo se guarda mientras escribes. Cuando termines, toca la flecha de arriba a la izquierda.",
+    explore_title: "Un último consejo",
+    explore_text:
+      "Mantén pulsada una nota para seleccionarla: puedes marcarla como importante, bloquearla, ocultarla o eliminarla. Las categorías, la papelera y los ajustes están en la barra de la izquierda.",
   },
   home: {
     notes: "Notas",
@@ -290,9 +299,15 @@ const es = {
       url: "Dirección del servidor",
       key: "Clave de acceso",
       http_warning:
-        "Esta dirección no está cifrada (HTTP). Los teléfonos y la app web solo se conectan por HTTPS (la guía muestra una forma gratuita, con Tailscale): usa HTTP solo para pruebas en este ordenador. Tus notas siguen cifradas de extremo a extremo, pero la clave de acceso y los títulos viajarían sin cifrar.",
+        "Esta dirección no está cifrada (HTTP). En cualquier red en la que esté tu dispositivo (wifi pública, un router compartido, el camino hasta tu servidor), quien pueda ver el tráfico podría leer los títulos de tus notas y las credenciales de tu dispositivo, y usarlas en tu servidor. El contenido de tus notas sigue cifrado de extremo a extremo. Si puedes, usa HTTPS: un proxy inverso con certificado, o Tailscale, que le da al servidor una dirección HTTPS gratis (consulta la guía).",
+      http_blocked:
+        "Aquí FastMemo solo puede conectarse a direcciones HTTPS (o a un servidor en este mismo ordenador): el motor del navegador bloquea HTTP. Pon el servidor detrás de HTTPS: un proxy inverso con certificado, o Tailscale, que le da una dirección HTTPS gratis (consulta la guía).",
+      http_confirm_title: "¿Conectar por HTTP?",
+      http_confirm_desc:
+        "Sin HTTPS, lo que envía tu dispositivo no está cifrado, en cualquier red en la que esté: en casa, en una wifi pública, en el camino hasta tu servidor. Quien pueda verlo podría leer los títulos de tus notas y las credenciales de tu dispositivo. Con ellas podría conectarse a tu servidor: no podría leer tus notas sin tu contraseña de cifrado, pero sí borrarlas o cambiarlas y quitar tus dispositivos.\n\nLa guía explica cómo tener HTTPS gratis con Tailscale.",
+      http_confirm_ok: "Usar HTTP",
       handshake_failed_desc:
-        "No se pudo conectar con el servidor o la clave de acceso es incorrecta. Revisa la dirección (p. ej. https://notas.ejemplo.com), la clave y que el servidor esté encendido. Los teléfonos y la app web necesitan una dirección HTTPS.",
+        "No se pudo conectar con el servidor o la clave de acceso es incorrecta. Revisa la dirección (p. ej. https://notas.ejemplo.com), la clave y que el servidor esté encendido. Para un servidor sin HTTPS, escribe http:// delante de la dirección. La app web necesita una dirección HTTPS.",
     },
     vault: {
       setup_title: "Protege tus notas",

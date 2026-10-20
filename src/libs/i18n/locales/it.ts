@@ -168,8 +168,17 @@ const it = {
     unlockCode: "Inserisci il tuo codice segreto",
     error: "Il codice inserito non corrisponde. Riprova.",
   },
-  firstMemo: {
-    title: "Benvenuto su Fast Memo! 🔊",
+  tour: {
+    step: "{{current}} di {{total}}",
+    skip: "Salta",
+    got_it: "Ho capito",
+    create_title: "La tua prima nota",
+    create_text: "Tocca + per iniziare a scrivere. La freccia accanto apre gli altri tipi: Lista, Kanban e Codice.",
+    write_title: "Scrivi e basta",
+    write_text: "Tutto si salva mentre scrivi. Quando hai finito, tocca la freccia in alto a sinistra.",
+    explore_title: "Un ultimo consiglio",
+    explore_text:
+      "Tieni premuta una nota per selezionarla: puoi renderla importante, bloccarla, nasconderla o eliminarla. Categorie, cestino e impostazioni sono nella barra a sinistra.",
   },
   home: {
     notes: "Note",
@@ -292,9 +301,15 @@ const it = {
       url: "Indirizzo del server",
       key: "Chiave di accesso",
       http_warning:
-        "Questo indirizzo non è cifrato (HTTP). Telefoni e web app si collegano solo in HTTPS (la guida mostra un modo gratuito, con Tailscale): usa HTTP solo per prove su questo computer. Le note restano cifrate end-to-end, ma la chiave di accesso e i titoli viaggerebbero in chiaro.",
+        "Questo indirizzo non è cifrato (HTTP). Su qualsiasi rete si trovi il dispositivo (Wi-Fi pubblico, router condiviso, il percorso fino al server), chi può vedere il traffico potrebbe leggere i titoli delle note e le credenziali del dispositivo, e usarle sul tuo server. Il contenuto delle note resta cifrato end-to-end. Se puoi, usa HTTPS: un reverse proxy con un certificato, oppure Tailscale, che dà al server un indirizzo HTTPS gratis (vedi la guida).",
+      http_blocked:
+        "Qui FastMemo può raggiungere solo indirizzi HTTPS (o un server su questo stesso computer): il motore del browser blocca HTTP. Metti il server dietro HTTPS: un reverse proxy con un certificato, oppure Tailscale, che gli dà un indirizzo HTTPS gratis (vedi la guida).",
+      http_confirm_title: "Collegarsi in HTTP?",
+      http_confirm_desc:
+        "Senza HTTPS, quello che il dispositivo invia non è cifrato, su qualsiasi rete si trovi: a casa, su un Wi-Fi pubblico, lungo il percorso fino al server. Chi può vederlo potrebbe leggere i titoli delle note e le credenziali del dispositivo. Con queste potrebbe collegarsi al tuo server: non potrebbe leggere le note senza la password di cifratura, ma potrebbe cancellarle o modificarle e rimuovere i tuoi dispositivi.\n\nLa guida spiega come avere HTTPS gratis con Tailscale.",
+      http_confirm_ok: "Usa HTTP",
       handshake_failed_desc:
-        "Server non raggiungibile, o chiave di accesso errata. Controlla l'indirizzo (es. https://note.esempio.it), la chiave e che il server sia acceso. Telefoni e web app richiedono un indirizzo HTTPS.",
+        "Server non raggiungibile, o chiave di accesso errata. Controlla l'indirizzo (es. https://note.esempio.it), la chiave e che il server sia acceso. Per un server senza HTTPS scrivi http:// prima dell'indirizzo. La web app richiede un indirizzo HTTPS.",
     },
     vault: {
       setup_title: "Proteggi le tue note",

@@ -167,8 +167,17 @@ const fr = {
     unlockCode: "Insérez votre code secret",
     error: "Le code que vous avez entré ne correspond pas. Essayer à nouveau.",
   },
-  firstMemo: {
-    title: "Bienvenue sur FastMemo! 🔊",
+  tour: {
+    step: "{{current}} sur {{total}}",
+    skip: "Passer",
+    got_it: "Compris",
+    create_title: "Votre première note",
+    create_text: "Touchez + pour commencer à écrire. La flèche à côté ouvre les autres types : Liste, Kanban et Code.",
+    write_title: "Écrivez, c'est tout",
+    write_text: "Tout est enregistré pendant que vous écrivez. Quand vous avez fini, touchez la flèche en haut à gauche.",
+    explore_title: "Un dernier conseil",
+    explore_text:
+      "Appuyez longuement sur une note pour la sélectionner : vous pouvez la marquer comme importante, la verrouiller, la masquer ou la supprimer. Les catégories, la corbeille et les réglages sont dans la barre de gauche.",
   },
   home: {
     notes: "Notes",
@@ -291,9 +300,15 @@ const fr = {
       url: "Adresse du serveur",
       key: "Clé d'accès",
       http_warning:
-        "Cette adresse n'est pas chiffrée (HTTP). Les téléphones et l'application web ne se connectent qu'en HTTPS (le guide montre une solution gratuite, avec Tailscale) : réservez HTTP aux essais sur cet ordinateur. Vos notes restent chiffrées de bout en bout, mais la clé d'accès et les titres circuleraient en clair.",
+        "Cette adresse n'est pas chiffrée (HTTP). Sur n'importe quel réseau où se trouve votre appareil (Wi-Fi public, routeur partagé, le chemin jusqu'à votre serveur), quiconque voit le trafic pourrait lire les titres de vos notes et les identifiants de votre appareil, et s'en servir sur votre serveur. Le contenu de vos notes reste chiffré de bout en bout. Si possible, utilisez HTTPS : un reverse proxy avec un certificat, ou Tailscale, qui donne gratuitement une adresse HTTPS au serveur (voir le guide).",
+      http_blocked:
+        "Ici, FastMemo ne peut joindre que des adresses HTTPS (ou un serveur sur ce même ordinateur) : le moteur du navigateur bloque HTTP. Placez le serveur derrière HTTPS : un reverse proxy avec un certificat, ou Tailscale, qui lui donne gratuitement une adresse HTTPS (voir le guide).",
+      http_confirm_title: "Se connecter en HTTP ?",
+      http_confirm_desc:
+        "Sans HTTPS, ce qu'envoie votre appareil n'est pas chiffré, quel que soit le réseau : à la maison, sur un Wi-Fi public, sur le chemin jusqu'à votre serveur. Quiconque le voit pourrait lire les titres de vos notes et les identifiants de votre appareil. Avec eux, il pourrait se connecter à votre serveur : il ne pourrait pas lire vos notes sans votre mot de passe de chiffrement, mais il pourrait les supprimer ou les modifier, et retirer vos appareils.\n\nLe guide explique comment obtenir HTTPS gratuitement avec Tailscale.",
+      http_confirm_ok: "Utiliser HTTP",
       handshake_failed_desc:
-        "Impossible de joindre le serveur, ou la clé d'accès est incorrecte. Vérifiez l'adresse (par ex. https://notes.exemple.fr), la clé, et que le serveur est allumé. Les téléphones et l'application web exigent une adresse HTTPS.",
+        "Impossible de joindre le serveur, ou la clé d'accès est incorrecte. Vérifiez l'adresse (par ex. https://notes.exemple.fr), la clé, et que le serveur est allumé. Pour un serveur sans HTTPS, tapez http:// devant l'adresse. L'application web exige une adresse HTTPS.",
     },
     vault: {
       setup_title: "Protégez vos notes",

@@ -1,9 +1,11 @@
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.web";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
 import { isStringEmpty } from "@/utils/string";
@@ -137,10 +139,8 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   // nothing so the user can just read. `focusId` is seeded synchronously so the
   // target row mounts with autoFocus already set — setting it after mount is a
   // no-op because the input reads `autoFocus` only once.
-  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
-  const [focusId, setFocusId] = useState<string | null>(
-    isNewNote && !initialNote.readOnly ? (memoInitialNote.list[0]?.id ?? null) : null
-  );
+  const autofocus = useAutofocusNewNote(initialNote);
+  const [focusId, setFocusId] = useState<string | null>(autofocus ? (memoInitialNote.list[0]?.id ?? null) : null);
 
   const currentMode = stepMode ? "steps" : "free";
 
@@ -201,7 +201,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
       <View>
         <View style={styles.header}>
-          <BackButton chip callback={updateNoteWebhook} />
+          <BackButton chip tourTarget="back" callback={updateNoteWebhook} />
 
           <TextInput
             style={styles.titleInput}
@@ -326,6 +326,8 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           </TouchableOpacity>
         </EditorActionDock>
       )}
+
+      <EditorTourTip />
     </SafeAreaView>
   );
 }

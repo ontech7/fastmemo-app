@@ -167,8 +167,17 @@ const de = {
     unlockCode: "Geben Sie Ihren Geheimcode ein",
     error: "Der von Ihnen eingegebene Code stimmt nicht überein. Versuchen Sie es erneut.",
   },
-  firstMemo: {
-    title: "Willkommen bei FastMemo! 🔊",
+  tour: {
+    step: "{{current}} von {{total}}",
+    skip: "Überspringen",
+    got_it: "Verstanden",
+    create_title: "Ihre erste Notiz",
+    create_text: "Tippen Sie auf +, um zu schreiben. Der Pfeil daneben öffnet die anderen Typen: Liste, Kanban und Code.",
+    write_title: "Einfach schreiben",
+    write_text: "Alles wird beim Schreiben gespeichert. Wenn Sie fertig sind, tippen Sie oben links auf den Pfeil.",
+    explore_title: "Ein letzter Tipp",
+    explore_text:
+      "Halten Sie eine Notiz gedrückt, um sie auszuwählen: Sie können sie als wichtig markieren, sperren, ausblenden oder löschen. Kategorien, Papierkorb und Einstellungen finden Sie in der Leiste links.",
   },
   home: {
     notes: "Notiz",
@@ -291,9 +300,15 @@ const de = {
       url: "Serveradresse",
       key: "Zugangsschlüssel",
       http_warning:
-        "Diese Adresse ist nicht verschlüsselt (HTTP). Smartphones und die Web-App verbinden sich nur über HTTPS (die Anleitung zeigt einen kostenlosen Weg mit Tailscale): Verwenden Sie HTTP nur für Tests auf diesem Computer. Ihre Notizen bleiben Ende-zu-Ende-verschlüsselt, aber der Zugangsschlüssel und die Titel würden unverschlüsselt übertragen.",
+        "Diese Adresse ist nicht verschlüsselt (HTTP). In jedem Netzwerk, in dem Ihr Gerät ist (öffentliches WLAN, gemeinsamer Router, der Weg zu Ihrem Server), könnte jeder, der den Datenverkehr sieht, die Titel Ihrer Notizen und die Zugangsdaten Ihres Geräts lesen und sie auf Ihrem Server verwenden. Der Inhalt Ihrer Notizen bleibt Ende-zu-Ende-verschlüsselt. Verwenden Sie wenn möglich HTTPS: einen Reverse-Proxy mit Zertifikat oder Tailscale, das dem Server kostenlos eine HTTPS-Adresse gibt (siehe Anleitung).",
+      http_blocked:
+        "Hier kann FastMemo nur HTTPS-Adressen erreichen (oder einen Server auf diesem Computer): Die Browser-Engine blockiert HTTP. Stellen Sie den Server hinter HTTPS: einen Reverse-Proxy mit Zertifikat oder Tailscale, das ihm kostenlos eine HTTPS-Adresse gibt (siehe Anleitung).",
+      http_confirm_title: "Über HTTP verbinden?",
+      http_confirm_desc:
+        "Ohne HTTPS ist, was Ihr Gerät sendet, unverschlüsselt, egal in welchem Netzwerk: zu Hause, im öffentlichen WLAN, auf dem Weg zu Ihrem Server. Wer es sieht, könnte die Titel Ihrer Notizen und die Zugangsdaten Ihres Geräts lesen. Damit könnte er sich mit Ihrem Server verbinden: Ihre Notizen könnte er ohne Ihr Verschlüsselungspasswort nicht lesen, aber löschen oder ändern und Ihre Geräte entfernen.\n\nDie Anleitung zeigt, wie Sie mit Tailscale kostenlos HTTPS bekommen.",
+      http_confirm_ok: "HTTP verwenden",
       handshake_failed_desc:
-        "Der Server ist nicht erreichbar oder der Zugangsschlüssel ist falsch. Prüfen Sie die Adresse (z. B. https://notizen.beispiel.de), den Schlüssel und ob der Server läuft. Smartphones und die Web-App benötigen eine HTTPS-Adresse.",
+        "Der Server ist nicht erreichbar oder der Zugangsschlüssel ist falsch. Prüfen Sie die Adresse (z. B. https://notizen.beispiel.de), den Schlüssel und ob der Server läuft. Bei einem Server ohne HTTPS geben Sie http:// vor der Adresse ein. Die Web-App benötigt eine HTTPS-Adresse.",
     },
     vault: {
       setup_title: "Schützen Sie Ihre Notizen",

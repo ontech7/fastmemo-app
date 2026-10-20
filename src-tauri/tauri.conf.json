@@ -27,7 +27,6 @@
     "longDescription": "Fast Memo - Your personal notes app with cloud sync, rich text editing, and more.",
     "macOS": {
       "entitlements": null,
-      "exceptionDomain": "",
       "frameworks": [],
       "providerShortName": null,
       "signingIdentity": "-"

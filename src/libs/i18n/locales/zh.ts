@@ -167,8 +167,16 @@ const zh = {
     unlockCode: "插入您的密码",
     error: "您输入的代码不匹配。再试一次。",
   },
-  firstMemo: {
-    title: "欢迎使用 FastMemo! 🔊",
+  tour: {
+    step: "第 {{current}} 步，共 {{total}} 步",
+    skip: "跳过",
+    got_it: "知道了",
+    create_title: "你的第一条笔记",
+    create_text: "点按 + 开始书写。旁边的箭头可打开其他类型：列表、看板和代码。",
+    write_title: "直接写吧",
+    write_text: "内容会在输入时自动保存。写完后，点按左上角的箭头。",
+    explore_title: "最后一个提示",
+    explore_text: "长按笔记即可选中：你可以将其标为重要、锁定、隐藏或删除。分类、回收站和设置都在左侧栏中。",
   },
   home: {
     notes: "笔记",
@@ -289,9 +297,15 @@ const zh = {
       url: "服务器地址",
       key: "访问密钥",
       http_warning:
-        "此地址未加密（HTTP）。手机和网页版只能通过 HTTPS 连接（指南中介绍了使用 Tailscale 的免费方法）：HTTP 仅用于在本机上测试。笔记仍保持端到端加密，但访问密钥和标题将以明文传输。",
+        "此地址未加密（HTTP）。无论设备连在哪个网络（公共 Wi-Fi、共用路由器、通往服务器的线路），能看到流量的人都可能读取你的笔记标题和设备凭据，并用它们访问你的服务器。笔记内容仍保持端到端加密。如果可以，请使用 HTTPS：带证书的反向代理，或 Tailscale（可免费为服务器提供 HTTPS 地址，见指南）。",
+      http_blocked:
+        "在这里 FastMemo 只能连接 HTTPS 地址（或本机上的服务器）：浏览器引擎会拦截 HTTP。请为服务器启用 HTTPS：带证书的反向代理，或 Tailscale（可免费提供 HTTPS 地址，见指南）。",
+      http_confirm_title: "通过 HTTP 连接？",
+      http_confirm_desc:
+        "没有 HTTPS，无论设备连在哪个网络（家里、公共 Wi-Fi、通往服务器的线路），它发送的内容都不加密。能看到这些内容的人可能读取你的笔记标题和设备凭据，并借此连接你的服务器：没有你的加密密码，对方无法读取笔记内容，但可以删除或修改笔记，并移除你的设备。\n\n指南介绍了如何用 Tailscale 免费获得 HTTPS。",
+      http_confirm_ok: "使用 HTTP",
       handshake_failed_desc:
-        "无法连接到服务器，或访问密钥错误。请检查地址（例如 https://notes.example.com）、密钥，以及服务器是否正在运行。手机和网页版需要 HTTPS 地址。",
+        "无法连接到服务器，或访问密钥错误。请检查地址（例如 https://notes.example.com）、密钥，以及服务器是否正在运行。没有 HTTPS 的服务器，请在地址前输入 http://。网页版需要 HTTPS 地址。",
     },
     vault: {
       setup_title: "保护您的笔记",

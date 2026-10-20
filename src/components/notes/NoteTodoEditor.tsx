@@ -21,12 +21,14 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem.native";
 import AppBackground from "@/components/ui/AppBackground";
+import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName } from "@/libs/ai";
@@ -140,10 +142,8 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   // nothing so the user can just read. `focusId` is seeded synchronously so the
   // target row mounts with autoFocus already set — setting it after mount is a
   // no-op because RN reads `autoFocus` only once.
-  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
-  const [focusId, setFocusId] = useState<string | null>(
-    isNewNote && !initialNote.readOnly ? (memoInitialNote.list[0]?.id ?? null) : null
-  );
+  const autofocus = useAutofocusNewNote(initialNote);
+  const [focusId, setFocusId] = useState<string | null>(autofocus ? (memoInitialNote.list[0]?.id ?? null) : null);
 
   // Mount-time autoFocus is frequently dropped while the screen transition is
   // still running, so re-focus the seeded row imperatively once it settles.
@@ -153,10 +153,10 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
   useEffect(() => {
     if (didFocusRef.current) return;
-    if (!isNewNote || initialNote.readOnly || !transitionDone) return;
+    if (!autofocus || !transitionDone) return;
     didFocusRef.current = true;
     focusInputRef.current?.focus();
-  }, [transitionDone, isNewNote, initialNote.readOnly]);
+  }, [transitionDone, autofocus]);
 
   const currentMode = stepMode ? "steps" : "free";
 
@@ -250,7 +250,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         <SafeAreaView style={styles.container}>
           <View>
             <View style={styles.header}>
-              <BackButton chip callback={updateNoteWebhook} />
+              <BackButton chip tourTarget="back" callback={updateNoteWebhook} />
 
               <TextInput
                 style={styles.titleInput}
@@ -382,6 +382,8 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           )}
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      <EditorTourTip />
     </View>
   );
 }
