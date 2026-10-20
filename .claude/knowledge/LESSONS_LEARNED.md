@@ -1418,13 +1418,18 @@ The fake is `scripts/_expo-file-system-legacy-fake.js`.
   skipped write's success cleared the "last write failed" flag.
 - **The device writes blocked the JS thread**: the synchronous file API took ~5 ms per file, 1.9 s for a migration of 400 notes,
   the app frozen meanwhile; and its `moveSync` with `overwrite` deletes the target before renaming (not atomic).
+- A third review found two more tab cases: a save that failed before its `state` value, then another tab's launch cleanup, lost
+  a new note (the failing tab still trusted its map); and a tab with nothing of its own to save put its older view over another
+  tab's save.
 
 **Root cause:** A cache of "what's stored" is only true while nothing else writes; "skip what's superseded" dropped the outcome
 the caller was waiting for; a per-file API cost multiplied by the number of notes.  
-**Fix:** Web Locks around reads and writes; a write that finds a `state` value it didn't write rewrites every entry that value
-doesn't list. A skipped write settles with the next write that runs. The device backend uses the legacy asynchronous API
-(`writeAsStringAsync` + `moveAsync`, an atomic rename), 8 values at a time: the migration now takes 607 ms with the JS thread
-never blocked over 113 ms. Tests run the web backend with two tabs, and a slow backend with a flush in flight.  
+**Fix:** Web Locks around reads and writes; a write that finds a `state` value it didn't write, or follows a failed one,
+rewrites every entry that value doesn't list, and with nothing of its own doesn't write. A skipped write settles with the next
+write that runs. The device backend uses the legacy asynchronous API (`writeAsStringAsync` + `moveAsync`, an atomic rename), 8
+writes and 32 reads at a time: on the emulator the migration of 400 notes takes 607 ms with the JS thread never blocked over 113
+ms; on a Pixel 10 Pro 231 ms, and a launch reads them in ~120 ms. Tests run the web backend with tabs, and a held backend with a
+flush in flight.  
 **Rule:** A cache of what's stored holds only while this is the only writer: where storage is shared (tabs), check what's there
 before trusting it, under a lock. A write skipped for a newer one settles with that one, never at once. Time a per-item storage
 call on a device before multiplying it by every note.
@@ -1447,10 +1452,13 @@ note deleted for good came back), took the old deletion queues (sent again), and
 
 **Root cause:** Whether data was migrated was inferred from the absence of data, and the delete paths were written before the
 copy existed.  
-**Fix:** A `migrated` marker (the notes the migration took, with their revisions), written after the entries and before the
-`state` value; a fold brings a missing note back only if the marker doesn't hold it at that revision. "Wipe data" removes every
-copy (`noteStore.removeCopies()`) and the wiped notes' queued uploads; the old value is removed 14 days after the migration. The
-rebuild takes tombstones first, old queues only for an unfinished migration, and records the stamp.  
+**Fix:** A `migrated` marker (the legacy notes taken into account, with their revisions), written after the first `state` value
+(so it means the migration finished), made again when lost or cut, and taking in the notes of every fold; a fold brings a
+missing note back only if the marker doesn't hold it at that revision. "Wipe data" removes every copy
+(`noteStore.removeCopies()`) and the wiped notes' queued uploads; 14 days after the migration all those copies go, once a write
+has stored what the launch folded from them. The web records a stamp too (length and hash), so an older tab still open across a
+deploy has its saves folded in. The rebuild takes tombstones first, old queues only for an unfinished migration, and records the
+stamp.  
 **Rule:** Every copy kept "just in case" is data the user can't see: each delete and wipe path must reach it, and it needs an
 end date. Record that a migration happened; never infer it from data being absent.
 
