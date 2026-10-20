@@ -625,40 +625,64 @@ and the bigger the write, the wider the window in which a killed app loses its l
 - **`src/libs/storage/noteStore.ts`** is the notes' redux-persist storage (`serialize: false`, `deserialize: false`): it gets
   the slice as it is and writes only the notes whose object changed (Redux keeps unchanged notes as the same objects). Entries:
   `n:<id>` live notes, `t:<id>` trashed ones, `o:<id>` notes in the outbox; everything else (settings of the slice, deletions
-  waiting, tombstones, the list of entries in order) is one small `state` value, written after the entries it lists. Entries it
-  no longer lists are removed after it, and leftovers of a write cut short are removed on the next launch.
-- **Backends** (`noteStoreBackend.ts` / `.web.ts`): on a device, one file per value in `files/fastmemo-notes/`, written with
-  expo-file-system's synchronous API (each value is small) to `.tmp` and moved over; names escaped to `[A-Za-z0-9-_.!~*'()]`
-  (LL-052). On the web and the desktop, IndexedDB values `v2:<name>` in the same localforage store.
+  waiting, tombstones, the list of entries in order) is one small `state` value. The app's instance lives in
+  `src/libs/storage/notes.ts` (store.ts persists with it, the wipe thunk reaches it there).
+- **A write** stores the outbox entries, then the notes, then the `state` value, then removes the entries it no longer lists, a
+  few values at a time (8). A crash leaves a `state` value whose entries all exist. Leftovers nothing lists are removed on the
+  next launch, except the outbox entry of a listed note with a change the cloud lacks (`syncedRev` below its revision): the
+  crash came before the `state` value listed it, so it's taken back into the outbox. A write that a newer one superseded while
+  it waited is skipped and settles with that newer write: `persistor.flush()` never resolves before the slice is stored, and a
+  failure reaches `notesPersisted()` (the sync engine's ack rule).
+- **Backends** (`noteStoreBackend.ts` / `.web.ts`): on a device, one file per value in `files/fastmemo-notes/`, with
+  expo-file-system's legacy API (asynchronous: the calls run off the JS thread), written to `.tmp` and renamed over the file (an
+  atomic replace on Android). The folder is listed once per launch and kept up to date (the only writer), so a read needs no
+  existence check. Names are escaped to `[A-Za-z0-9-_.!~*'()]` (LL-052); a name that can't be a file name (a lone surrogate,
+  over 160 characters) is stored as `@<hash>.json` with the name on its first line. On the web and the desktop, IndexedDB values
+  `v2:<name>` in the same localforage store; browser tabs share it, so reads and writes run under a Web Lock, and a write that
+  finds a `state` value it didn't write rewrites every entry that value doesn't list (the last tab to save wins, whole, as with
+  the single value). The desktop is single-instance.
 - **Reading** is tri-state as everywhere else: an unreadable entry comes from its spare, then from the legacy value, and only
-  then is it given up and reported to Sentry; a read that fails (I/O) fails the whole read and nothing is written that session
-  (LL-039); a `state` value in an unknown format (a newer version's) is not read nor written over.
-- **Migration** is the first write: with no `state` value, the notes come from the legacy value (after the legacy root fold,
-  ADR-003), and redux-persist's write after rehydrating stores them. The legacy value is left untouched, as a backup. On a
-  device the store records the legacy file's size and modification time: if an older version rewrote it (a rollback), its notes
-  are folded in on the next launch (missing ones added, newer versions of ones in the same list replace them, notes deleted for
-  good here stay deleted). Entries found without a `state` value (a first write cut short) are merged with the legacy notes the
-  same way.
+  then is it given up; losses are reported to Sentry once per launch, with a count. A read that fails (I/O) fails the whole read
+  and nothing is written that session (LL-039); a `state` value in an unknown format (a newer version's) is not read nor written
+  over, whatever its shape.
+- **Migration** is the first write: with no `state` value, no entries and no marker, the notes come from the legacy value (after
+  the legacy root fold, ADR-003). The first write stores the entries, then the `migrated` marker (the ids and revisions it took,
+  written once), then the `state` value. So "no `state` value" never passes for "not migrated" once the marker exists (a lost
+  `state` value after everything was deleted rebuilds an empty store).
+- **The legacy value is kept for a rollback**: an older version reads it. On a device the store records its size and
+  modification time; if an older version rewrote it, its notes are folded in on the next launch: newer versions of notes in the
+  same list replace them, and a missing note comes back only if the marker doesn't hold it at that revision (deleted here since:
+  it stays deleted, device-only notes included) and no tombstone is newer. A lost `state` value is rebuilt from the entries the
+  same way, after taking the legacy settings and tombstones; the legacy deletion queues are taken only if the migration never
+  finished. The legacy value is removed 14 days after the migration (on a clean launch), and at once by "Wipe data".
+- **Wipe data** (`wipeNotesThunk`) also removes the notes' other copies on the device: the legacy value and its spare, the root
+  fold's `backup:root-notes`, every value set aside as unreadable, and the wiped notes' queued uploads.
 - **Tests:** `scripts/note-store.test.mjs` runs the store with redux-persist and the real notes slice over an in-memory file
-  system with expo-file-system's behaviour (`scripts/_expo-file-system-fake.js`), and launches from a copy of the disk at every
-  step of a write (and with the file being written cut in half): every note comes back as before or after the write.
+  system with Android's behaviour (`scripts/_expo-file-system-legacy-fake.js`: asynchronous, URI paths decoded, rename replaces)
+  and launches from a copy of the disk at every step of a write (and with the file being written cut in half): every note comes
+  back as before or after the write, and no change loses its upload. The web backend runs over an in-memory IndexedDB shared by
+  two "tabs" under Web Locks.
 
 **Trade-offs:**
 
-- **No OTA rollback past it without loss:** a rollback to a version without the note store shows the notes as they were at the
-  migration (the legacy value); what's changed meanwhile comes back when the note store runs again (folded in by revision), and
-  from the cloud for synced notes. Fix forward rather than roll back. On the web the legacy value can't be told apart cheaply,
-  so there's no fold-back there (a web rollback is a deploy we control).
-- **Launch reads one file per note** instead of one file: on the emulator 400 notes migrated and read back without a visible
-  difference; to watch on low-end phones with thousands of notes.
-- **Writes aren't fsynced** (expo-file-system has no fsync); a power loss right after a move can leave an empty file, which
-  reads as unreadable and is recovered from the spare or the legacy value.
-- **The legacy value stays on disk** (2.5 MB for 400 notes) until a later version removes it.
+- **Rollbacks:** a rollback to a version without the note store shows the notes as they were at the migration (the legacy
+  value): what changed meanwhile, deletions and the trash included, comes back when the note store runs again, and from the
+  cloud for synced notes. After 14 days the older version starts empty (the notes are intact in the note store). On the web and
+  the desktop the legacy value can't be told apart cheaply, so there's no fold-back: notes made during a web deploy rollback or
+  a desktop downgrade (manual: the updater only goes forward) stay in the legacy value, unseen, unless synced.
+- **Launch reads one file per note** instead of one file: on a loaded emulator 400 notes read in 0.2-1 s (8 at a time, the JS
+  thread free) against 0.15 s for the single 2.4 MB file (whose parse blocked JS ~90 ms). It grows with the number of notes: to
+  measure on a real phone; a pack file (all notes, rewritten rarely in the background, read first) is the fallback if needed.
+- **Writes aren't fsynced** (expo-file-system has no fsync); a power loss right after a rename can leave an empty file, which
+  reads as unreadable and is recovered from the legacy value or given up.
+- **The legacy value stays on disk** (2.5 MB for 400 notes, notes deleted since included) for 14 days.
 - **The last edit before a kill:** a save is now a few KB in milliseconds; what's still lost is what was typed less than ~0.3 s
   before Android killed the app (measured on a loaded emulator: the background event and the editor's commit need that long).
 
-**Verified** (2026-10-20): on Android (release build, emulator) an update over 400 notes stored by the previous version (2.4
-MB): every note there, 402 files, the old file untouched; a cold relaunch wrote nothing; an edit rewrote one 6 KB file; a
-rollback to the previous build, an edit there, and the update again: the old version's edit came in, the newer edits made in the
-note store stayed, and the next launch folded nothing. On the web: 300 notes (2 MB) migrated, first note on screen 454 ms after
-the reload, an edit wrote one 386-byte value in 23 ms.
+**Verified** (2026-10-20, release build on the emulator): an update over 400 notes stored by the previous version (2.4 MB):
+every note there, 403 files, the old file untouched; the migration wrote 401 entries in 607 ms with the JS thread never blocked
+over 113 ms (the synchronous first version: 1908 ms, blocked throughout); cold relaunches wrote nothing; an edit rewrote its
+file. A note deleted for good, an edit, a rollback to the previous build, an edit there, and the update again: the old version's
+edit came in, the newer edit stayed, the deleted note stayed deleted, the next launch folded nothing. "Wipe data" left only the
+marker and an empty `state` value; with that `state` value then removed, the app started empty. On the web: 300 notes (2 MB)
+migrated, first note on screen 454 ms after the reload, an edit wrote one 386-byte value in 23 ms.

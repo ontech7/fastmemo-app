@@ -108,7 +108,8 @@ src/
     haptics/           # Platform-split: native (expo-haptics) / web (no-op stubs)
     i18n/              # i18next setup + 7 locale files
     storage/           # noteStore.ts: the notes one value per note (ADR-018), over noteStoreBackend (native: files in
-                       #   fastmemo-notes/; web: IndexedDB `v2:*`); fsStorage: the previous single value (read to migrate)
+                       #   fastmemo-notes/, async legacy API; web: IndexedDB `v2:*`, Web Locks); notes.ts: the app's
+                       #   instance (store.ts, wipe thunk); fsStorage: the previous single value (read to migrate)
                        #   + legacyRootNotes.ts: one-shot fold of the notes copy out of `persist:root`
     flushOnExit.ts     # Platform-split: flush pending editor batches + persistor on background / hide / window close
     cloud/             # Cloud sync (ADR-016, ADR-017)
@@ -294,11 +295,13 @@ Redux Persist (nested -- see DECISIONS.md ADR-003)
 Root persistReducer (key: "root", AsyncStorage)      blacklist ["notes"] once the legacy copy is folded
   |
   +-- notesSlice persistReducer (key: "root_notes", serialize/deserialize: false)
-  |     Storage: the note store (ADR-018): one value per note, written only when that note changed,
-  |       then a small `state` value (entry list, settings, deletions waiting, tombstones)
-  |       native: files/fastmemo-notes/<escaped name>.json (.tmp + move) / web: IndexedDB `v2:<name>`
+  |     Storage: the note store (ADR-018): one value per note, written only when that note changed
+  |       (outbox entries, then notes, then a small `state` value: entry list, settings, deletions
+  |       waiting, tombstones), a few at a time
+  |       native: files/fastmemo-notes/<escaped name>.json (.tmp + rename) / web: IndexedDB `v2:<name>`
   |     Migration: the previous single value (files/reduxPersist/persist:root_notes, IndexedDB
-  |       `persist:root_notes`) on the first launch, left as a backup; older still: AsyncStorage
+  |       `persist:root_notes`) on the first launch, then a `migrated` marker; the old value is kept
+  |       14 days for a rollback (folded back by revision), removed by "Wipe data"; older: AsyncStorage
   |
   +-- categoriesSlice persistReducer (key: "root_categories")
   |     Storage: AsyncStorage

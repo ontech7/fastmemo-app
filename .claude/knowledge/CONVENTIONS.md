@@ -326,8 +326,11 @@ the merge is persisted** (`persistor.flush()`), through `ackChanges` (it refuses
   at once (JS timers don't run there, LL-032). New editors must register through `useNoteEditor`, not their own timers.
 - Every `PersistConfig` sets `timeout: 0`: a slow read must never rehydrate the empty initial state (LL-029). Notes persist only
   through the note store (ADR-018): one value per note, written only when that note's object changed. Change notes immutably
-  (reducers, never in place outside them): a note mutated in place isn't seen as changed and isn't written.
-- File names given to expo-file-system's `File`/`Directory` are the real names, without `%` (segments are encoded, LL-052).
+  (reducers, never in place outside them): a note mutated in place isn't seen as changed and isn't written. Anything that
+  deletes all notes for good also removes their copies outside the store (`noteStore.removeCopies()`, as `wipeNotesThunk`).
+- Device file I/O that runs per note goes through the asynchronous API, a few calls at a time: the synchronous one costs
+  milliseconds per file on the JS thread (LL-053). File names given to expo-file-system are the real names, without `%` (`File`
+  segments are encoded, legacy URIs decoded, LL-052).
 
 ### Dispatching Actions
 
@@ -820,9 +823,11 @@ hard rules (each maps to a lesson learned):
 | 30  | Never rely on a JS timer for work that must finish before the app may be killed           | Android pauses timers in background; flush synchronously (see LL-032)                                                            |
 | 31  | Never concatenate translated fragments into a sentence                                    | Word order differs per language; one interpolated key, `<Trans>` for styled parts (see LL-035)                                   |
 | 32  | Never write a cloud document other devices listen to when nothing changed                 | Each write costs a read per listener and can wake the loop that writes again (see LL-044)                                        |
-| 33  | Never give expo-file-system's `File` a percent-encoded name                               | `Paths.join` encodes segments (`%` -> `%25`): the path names another file (see LL-052)                                           |
 | 33  | Never size what accumulates in one Firestore document by bytes alone                      | The 40,000 index-entry limit comes first (~50 per queued note); budget both (see LL-043)                                         |
 | 34  | Never read a per-cloud value from config, or name a provider, above `CloudBackend`        | Two clouds: ask `cloud` (`deviceLimit`, `pacing`), key by `cloudScope`, keep texts neutral (see LL-048)                          |
+| 35  | Never put a `%` in a file name given to expo-file-system                                  | `File` segments are encoded (`%` -> `%25`), legacy URIs decoded: either way it names another file (see LL-052)                   |
+| 36  | Never trust a cache of what's stored where another writer can write (browser tabs)        | Check what's there first, under a lock; a write skipped for a newer one settles with it (see LL-053)                             |
+| 37  | Never keep a copy of user data without a wipe path and an end date                        | "Wipe data" must reach it; record migrations instead of inferring them from absent data (see LL-054)                             |
 
 ### ALWAYS
 
