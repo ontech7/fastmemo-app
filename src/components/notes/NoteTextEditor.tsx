@@ -53,8 +53,10 @@ interface Props {
 // is down (and so the editor reserves enough room for it while the keyboard is up).
 const BAR_HEIGHT_ESTIMATE = 100;
 
-// DOMPurify in the editor's page, before any note is loaded (LL-060): at the start of the page where the WebView can (the
-// phone), once it loaded otherwise (the web iframe). `true;` ends what the phone's WebView evaluates.
+// DOMPurify in the editor's page, before any note is loaded (LL-060). What guarantees it is `injectedJavaScript`: the
+// script ends the web iframe's page, and Android evaluates it when the page finished, ahead of the onLoad that sets the
+// note. `injectedJavaScriptBeforeContentLoaded` is only an earlier try (Android may run it before the page exists).
+// `true;` ends what the phone's WebView evaluates.
 const EDITOR_SANITIZE_SCRIPT = `${EDITOR_SANITIZE_JS}\ntrue;`;
 
 const TOOLBAR_LABEL_KEYS: Record<string, string> = {

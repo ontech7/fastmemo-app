@@ -1613,19 +1613,24 @@ meaning that destroys data (absent, removed) only with the server's error code.
 soon as it was opened: pell puts the note into its page with `innerHTML`. On web and desktop that page is a same-origin `srcdoc`
 iframe, so the code reached the app's page (its storage, on desktop the Rust commands); measured in the web build, a note of
 payloads ran 13 times, 11 of them in the app's own page. The web PDF export put the note, and its title unescaped, straight into
-the app's page.
+the app's page. The review of the fix found more ways in: on web pell runs as code the commands any window posts to its iframe,
+and the app handed any window's message to the editor (a page that opened or framed the app could rewrite the open note); and a
+note could still carry a fake login form, links to Android intents or app screens, a fixed overlay, and a form whose button
+reloaded the editor empty.
 
 **Root cause:** The note's HTML was trusted: nothing between the stored text and the DOM. Pasting is plain text, so the editor
 itself never produced such HTML, but imports and synced notes don't come through the editor.
 
 **Fix:** DOMPurify inside the editor's page, wrapping every way HTML becomes DOM there (ADR-021), injected before a note is
-loaded; DOMPurify with the same configuration before the web PDF export renders a note; the PDF title escaped on every platform.
-Checked against 329 real note HTML samples (no change but attribute whitespace and Word's empty tags), 25 payloads through 5
-sinks, and the real editor before and after (identical content and screenshots, to-do boxes, reopening). Tests:
-`scripts/sanitize.test.mjs`.
+loaded; dropped HTML inserted as text; a configuration without forms, dialogs, overlays or links into the phone and the app; on
+web, the editor iframe and the app read only each other's messages; the web PDF export built from DOMPurify's nodes, the title
+as text, and escaped on every platform. Checked against 329 real note HTML samples (no change but attribute whitespace, Word's
+empty tags and a link's `target`), 25 payloads through 5 sinks, the policy, the message guards and the drop in Chrome, and the
+real editor before and after (identical content and screenshots, to-do boxes, reopening). Tests: `scripts/sanitize.test.mjs`.
 
-**Rule:** Never turn a note's HTML or text into DOM unsanitized: DOMPurify (`NOTE_HTML_CONFIG`) for HTML, `escapeHtml` for text.
-A note is data from elsewhere, even the user's own.
+**Rule:** Never turn a note's HTML or text into DOM unsanitized: DOMPurify (`NOTE_HTML_CONFIG` + `addNoteHooks`) for HTML,
+`escapeHtml` or `textContent` for text. A note is data from elsewhere, even the user's own. A page that runs what it is sent
+(pell's `command`) must check who sent it.
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
 `fix/editor-sanitize`

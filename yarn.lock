@@ -4466,7 +4466,7 @@ domhandler@^5.0.2, domhandler@^5.0.3:
   dependencies:
     domelementtype "^2.3.0"
 
-dompurify@^3.3.1, dompurify@^3.4.0:
+dompurify@3.4.17, dompurify@^3.3.1:
   version "3.4.17"
   resolved "https://registry.npmjs.org/dompurify/-/dompurify-3.4.17.tgz"
   integrity sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==
