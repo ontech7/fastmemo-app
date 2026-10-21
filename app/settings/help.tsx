@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import AdjustmentsHorizontalIcon from "react-native-heroicons/outline/AdjustmentsHorizontalIcon";
+import ArrowsPointingOutIcon from "react-native-heroicons/outline/ArrowsPointingOutIcon";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
 import CloudIcon from "react-native-heroicons/outline/CloudIcon";
@@ -21,6 +22,7 @@ import DocumentTextIcon from "react-native-heroicons/outline/DocumentTextIcon";
 import EllipsisVerticalIcon from "react-native-heroicons/outline/EllipsisVerticalIcon";
 import FolderPlusIcon from "react-native-heroicons/outline/FolderPlusIcon";
 import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
+import PaperAirplaneIcon from "react-native-heroicons/outline/PaperAirplaneIcon";
 import PencilSquareIcon from "react-native-heroicons/outline/PencilSquareIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import QuestionMarkCircleIcon from "react-native-heroicons/outline/QuestionMarkCircleIcon";
@@ -43,6 +45,7 @@ import type { HelpCatalogEntry } from "@/libs/ai";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
 import { configs } from "@/configs";
 import { openUrl } from "@/utils/openUrl";
+import { isTauri } from "@/utils/platform";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
@@ -84,9 +87,8 @@ export default function HelpScreen() {
   const { t, i18n } = useTranslation();
   const aiSettings = useSelector(selectorAIAssistant);
 
-  // Online Firebase setup guide, in the active language when available.
+  // Online guides, in the active language when available.
   const guideLocale = GUIDE_LOCALES.includes(i18n.language) ? i18n.language : "en";
-  const firebaseGuideUrl = `${configs.app.websiteUrl}/${guideLocale}/guides/google-firebase/`;
 
   // AI intent search is offered only when the on-device model is set up and
   // we're on a native build (the web bundle has no llama.rn).
@@ -124,6 +126,7 @@ export default function HelpScreen() {
         {t(key)}
       </Text>
     );
+    const guideUrl = (slug: string) => `${configs.app.websiteUrl}/${guideLocale}/guides/${slug}/`;
 
     return [
       {
@@ -198,6 +201,25 @@ export default function HelpScreen() {
               </>
             ),
           },
+          {
+            base: "help.what_quick_note",
+            body: (
+              <>
+                <Text style={styles.sectionItemList_text}>
+                  {t("help.what_quick_note.text_1_0")} <PaperAirplaneIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
+                  {t("help.what_quick_note.text_1_1")}
+                </Text>
+                {txt("help.what_quick_note.text_2_0")}
+                <Text style={styles.sectionItemList_text}>
+                  {t("help.what_quick_note.text_3_0")} <ArrowsPointingOutIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
+                  {t("help.what_quick_note.text_3_1")}
+                </Text>
+                {/* Cmd/Ctrl+Enter: only react-native-web reports the modifier keys. */}
+                {Platform.OS === "web" && txt("help.what_quick_note.text_4_0")}
+                {txt("help.what_quick_note.text_5_0")}
+              </>
+            ),
+          },
           { base: "help.how_to_edit_note", body: <>{txt("help.how_to_edit_note.text_1_0")}</> },
           {
             base: "help.how_to_delete_note",
@@ -233,10 +255,12 @@ export default function HelpScreen() {
                   "text_1_0",
                   "text_2_0",
                   "text_3_0",
+                  "text_heading",
                   "text_4_0",
                   "text_5_0",
                   "text_6_0",
                   "text_7_0",
+                  "text_align",
                   "text_8_0",
                   "text_9_0",
                   "text_10_0",
@@ -250,6 +274,15 @@ export default function HelpScreen() {
             base: "help.what_find_replace",
             body: <>{lines("help.what_find_replace", ["text_1_0", "text_2_0", "text_3_0"])}</>,
           },
+          // Voice recognition is offered only on the phone (its settings are hidden on web).
+          ...(Platform.OS !== "web"
+            ? [
+                {
+                  base: "help.what_voice_dictation",
+                  body: <>{lines("help.what_voice_dictation", ["text_1_0", "text_2_0", "text_3_0", "text_4_0", "text_5_0"])}</>,
+                },
+              ]
+            : []),
           {
             base: "help.what_are_settings_note",
             body: (
@@ -405,9 +438,14 @@ export default function HelpScreen() {
             body: (
               <>
                 {lines("help.what_cloud_sync", ["text_1_0", "text_2_0"])}
-                {link("help.what_cloud_sync.text_link", firebaseGuideUrl)}
+                {link("help.what_cloud_sync.text_link", guideUrl("google-firebase"))}
+                {link("help.what_cloud_sync.text_link_server", guideUrl("self-hosting"))}
               </>
             ),
+          },
+          {
+            base: "help.what_conflict_copy",
+            body: <>{lines("help.what_conflict_copy", ["text_1_0", "text_2_0"])}</>,
           },
           {
             base: "help.what_encryption",
@@ -465,13 +503,44 @@ export default function HelpScreen() {
         catKey: "help.cat_more",
         icon: <QuestionMarkCircleIcon size={18} color={COLOR.accentSoft} />,
         items: [
-          { base: "help.what_version_check", body: <>{lines("help.what_version_check", ["text_1_0", "text_2_0"])}</> },
+          {
+            base: "help.what_version_check",
+            body: <>{lines("help.what_version_check", ["text_1_0", "text_2_0", "text_3_0"])}</>,
+          },
           {
             base: "help.what_report_problem",
             body: <>{lines("help.what_report_problem", ["text_1_0", "text_2_0", "text_3_0"])}</>,
           },
-          { base: "help.what_webhooks", body: <>{lines("help.what_webhooks", ["text_1_0", "text_2_0"])}</> },
+          {
+            base: "help.what_webhooks",
+            body: (
+              <>
+                {lines("help.what_webhooks", ["text_1_0", "text_2_0"])}
+                {link("help.what_webhooks.text_link", guideUrl("webhooks"))}
+              </>
+            ),
+          },
           { base: "help.what_platforms", body: <>{lines("help.what_platforms", ["text_1_0", "text_2_0"])}</> },
+          ...(isTauri()
+            ? [
+                {
+                  base: "help.what_desktop_shortcuts",
+                  body: (
+                    <>
+                      {lines("help.what_desktop_shortcuts", [
+                        "text_1_0",
+                        "text_2_0",
+                        "text_3_0",
+                        "text_4_0",
+                        "text_5_0",
+                        "text_6_0",
+                        "text_7_0",
+                      ])}
+                    </>
+                  ),
+                },
+              ]
+            : []),
         ],
       },
       {
@@ -481,13 +550,18 @@ export default function HelpScreen() {
         items: [
           {
             base: "help.what_ai_assistant",
-            body: <>{lines("help.what_ai_assistant", ["text_1_0", "text_2_0", "text_3_0", "text_4_0"])}</>,
+            body: (
+              <>
+                {lines("help.what_ai_assistant", ["text_1_0", "text_2_0", "text_3_0", "text_4_0", "text_5_0", "text_6_0"])}
+                {link("help.what_ai_assistant.text_link", guideUrl("ai-assistant"))}
+              </>
+            ),
           },
         ],
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t, firebaseGuideUrl]);
+  }, [t, guideLocale]);
 
   // Flat catalog (base key + localized title) fed to the model for intent search.
   const catalog: HelpCatalogEntry[] = useMemo(

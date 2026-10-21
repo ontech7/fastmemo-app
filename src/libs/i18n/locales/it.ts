@@ -693,6 +693,16 @@ const it = {
       text_5_0: "• Trova e sostituisci — tocca l'icona di ricerca in alto, come nelle note di testo.",
       text_6_0: "Per salvarla basta tornare alla schermata principale.",
     },
+    what_quick_note: {
+      title: "Cos'è la barra nota rapida?",
+      text_1_0: "È il campo 'Nota rapida…' in fondo alla schermata principale. Toccalo, scrivi e poi tocca",
+      text_1_1: "per salvare subito una nota di testo, senza aprire l'editor.",
+      text_2_0: "La nota finisce nella categoria che stai guardando e il titolo viene preso dalle sue prime parole.",
+      text_3_0: "Per aggiungere formattazione o immagini, tocca invece",
+      text_3_1: "e quello che hai scritto si apre nell'editor completo.",
+      text_4_0: "Al computer, Ctrl/⌘+Invio salva la nota e Invio va a capo.",
+      text_5_0: "Puoi disattivare la barra in Impostazioni → Creazione nota.",
+    },
     how_to_edit_note: {
       title: "Come modifico una nota?",
       text_1_0: "Tocca semplicemente la nota nella schermata principale per aprirla e modificarla.",
@@ -720,10 +730,12 @@ const it = {
       text_1_0: "Serve a formattare e arricchire il testo. Ecco cosa fanno i pulsanti:",
       text_2_0: "• Annulla / Ripeti — torna indietro o avanti tra le ultime modifiche.",
       text_3_0: "• Immagine — inserisci una foto dalla galleria.",
+      text_heading: "• Titolo — trasforma la riga in un titolo.",
       text_4_0: "• Grassetto — rende il testo in grassetto.",
       text_5_0: "• Corsivo — rende il testo in corsivo.",
       text_6_0: "• Barrato — barra il testo selezionato.",
       text_7_0: "• Sottolineato — sottolinea il testo.",
+      text_align: "• Allinea a sinistra / al centro — allinea il paragrafo a sinistra o al centro.",
       text_8_0: "• Pedice — abbassa leggermente il testo sotto la riga.",
       text_9_0: "• Apice — alza leggermente il testo sopra la riga.",
       text_10_0: "• Elenco puntato — crea un elenco puntato.",
@@ -736,6 +748,16 @@ const it = {
       text_2_0: "Scrivi cosa cerchi: le frecce ti spostano tra i risultati e ti mostrano quanti sono.",
       text_3_0: "Attiva 'Sostituisci' per cambiare il risultato corrente, oppure sostituiscili tutti in una volta.",
     },
+    what_voice_dictation: {
+      title: "Come faccio a dettare una nota?",
+      text_1_0: "In una nota di testo o in una lista di cose da fare, tocca il pulsante del microfono e parla.",
+      text_2_0: 'Di\' "virgola", "punto", "punto interrogativo" o "a capo" per la punteggiatura.',
+      text_3_0:
+        "Tocca 'Inserisci' per aggiungere il testo dove si trova il cursore. In una lista di cose da fare, ogni riga diventa un elemento.",
+      text_4_0:
+        "Con l'Assistente AI configurato, 'Sistema con AI' sistema prima la punteggiatura; in una lista di cose da fare divide anche quello che hai detto in elementi.",
+      text_5_0: "Puoi cambiare la lingua o disattivare la dettatura in Impostazioni → Riconoscimento vocale.",
+    },
     what_are_settings_note: {
       title: "Quali sono le opzioni di una nota?",
       text_1_0: "Apri una nota e tocca il menu ⋮ in alto a destra. Da lì puoi:",
@@ -744,7 +766,8 @@ const it = {
       text_4_0: "• Proteggi — blocca la nota dietro il tuo codice segreto o l'impronta.",
       text_5_0: "• Sola lettura — evita modifiche accidentali alla nota.",
       text_6_0: "• Nascondi — tiene la nota fuori dalla schermata principale finché non mostri le note nascoste.",
-      text_7_0: "• Rendi offline — tiene la nota solo su questo dispositivo, senza sincronizzarla sul cloud.",
+      text_7_0:
+        "• Rendi offline — tiene la nota solo su questo dispositivo, senza sincronizzarla sul cloud. Con 'Sincronizza nel cloud' torna sul cloud come nuova copia.",
       text_8_0: "• Cambia categoria — sposta la nota in un'altra categoria.",
       text_9_0: "• Esporta (note di testo) — salva la nota come file .txt, Markdown o PDF.",
       text_10_0: "• Informazioni — vedi tipo, categoria e date della nota.",
@@ -818,6 +841,14 @@ const it = {
       text_2_0:
         "Le tue note vengono cifrate end-to-end sul dispositivo prima di essere caricate, così nessuno tranne te può leggerle.",
       text_link: "Leggi la guida passo passo per configurare Google Firebase →",
+      text_link_server: "Leggi la guida per configurare il tuo FastMemo Server →",
+    },
+    what_conflict_copy: {
+      title: 'Perché c\'è una nota con "(conflitto)"?',
+      text_1_0:
+        "Se la stessa nota viene modificata su due dispositivi prima che si sincronizzino, Fast Memo tiene entrambe le versioni invece di sceglierne una, così non perdi niente di quello che hai scritto.",
+      text_2_0:
+        'Una delle due diventa una copia con "(conflitto)" alla fine del titolo: confrontale, tieni quello che ti serve ed elimina l\'altra.',
     },
     what_encryption: {
       title: "Come vengono cifrate le mie note?",
@@ -911,6 +942,8 @@ const it = {
       text_1_0: "Sì: quando apri Fast Memo controlla in background se è disponibile una nuova versione.",
       text_2_0:
         "Quando c'è un aggiornamento, una schermata 'Cosa c'è di nuovo?' ti mostra le novità. Puoi comunque controllare quando vuoi dalle impostazioni.",
+      text_3_0:
+        "Nell'app desktop fai clic su 'Installa': l'aggiornamento si scarica e si installa da solo, poi l'app si riavvia. Sul telefono le piccole correzioni possono anche arrivare da sole e si applicano alla successiva apertura dell'app.",
     },
     what_report_problem: {
       title: "Come segnalo un problema?",
@@ -924,6 +957,7 @@ const it = {
       text_1_0:
         "I webhook sono per utenti esperti: permettono a Fast Memo di avvisare un altro servizio ogni volta che succede qualcosa — una nota creata, modificata o eliminata, una categoria cambiata, dati esportati e così via.",
       text_2_0: "Ogni azione può richiamare un indirizzo web a tua scelta. Li configuri in Impostazioni → Webhook.",
+      text_link: "Leggi la guida ai webhook →",
     },
     what_platforms: {
       title: "Dove posso usare Fast Memo?",
@@ -931,14 +965,30 @@ const it = {
       text_2_0:
         "Collega ogni dispositivo allo stesso progetto Google Firebase o allo stesso FastMemo Server e le tue note restano sincronizzate ovunque.",
     },
+    what_desktop_shortcuts: {
+      title: "Ci sono scorciatoie da tastiera sul computer?",
+      text_1_0: "Sì, nell'app desktop:",
+      text_2_0: "• Ctrl/⌘+N — nuova nota.",
+      text_3_0: "• Ctrl/⌘+F — cerca tra le note, o trova un testo nella nota aperta.",
+      text_4_0: "• Ctrl/⌘+, — apre le impostazioni.",
+      text_5_0: "• Esc — torna indietro; in un campo di testo il primo Esc esce solo dal campo.",
+      text_6_0: "• Ctrl/⌘+Invio — salva la nota rapida.",
+      text_7_0:
+        "Su Mac gli stessi comandi sono nella barra dei menu, insieme agli altri tipi di nota e a Esporta/Importa. Chiudere la finestra lascia Fast Memo aperto: fai clic sulla sua icona nel Dock per riaprirlo, o chiudilo con ⌘Q.",
+    },
     what_ai_assistant: {
       title: "Cos'è l'Assistente AI?",
       text_1_0:
         "Fast Memo include un Assistente AI self-hosted che funziona interamente sul tuo dispositivo. Nessun dato viene inviato a server esterni.",
-      text_2_0: "Per configurarlo, vai in Impostazioni -> Assistente AI, scegli un modello e scaricalo.",
+      text_2_0: "Per configurarlo, vai in Impostazioni → Assistente AI, scegli un modello e scaricalo.",
       text_3_0:
-        "Una volta attivato, un bottone a forma di stella appare dentro ogni editor. Toccalo per accedere ad azioni smart come: genera titolo, riassumi, continua a scrivere, formatta testo, suggerisci elementi checklist o suggerisci categoria.",
-      text_4_0: "L'AI funziona offline e supporta più lingue.",
+        "Una volta attivato, nell'editor delle note compare un pulsante a forma di stella. Toccalo per generare un titolo, riassumere (il riassunto va in cima alla nota), correggere la grammatica, accorciare il testo, tradurlo nella lingua che scegli, suggerire elementi per una checklist o suggerire una categoria.",
+      text_4_0:
+        "Alcune azioni richiedono un modello più grande: in Impostazioni → Assistente AI vedi cosa sa fare ciascun modello.",
+      text_5_0:
+        "Può anche sistemare la dettatura vocale e, qui nell'Aiuto, trovare l'argomento giusto a partire dalle tue parole.",
+      text_6_0: "L'AI funziona offline e supporta più lingue.",
+      text_link: "Leggi la guida all'Assistente AI →",
     },
   },
   report: {

@@ -619,7 +619,7 @@ const de = {
     dictation: {
       listening: "Höre zu…",
       paused: "Pausiert",
-      hint: 'Sprich jetzt. Sage "Komma", "Punkt", "Fragezeichen" oder "neue Zeile" für Satzzeichen.',
+      hint: 'Sprechen Sie jetzt. Sagen Sie "Komma", "Punkt", "Fragezeichen" oder "neue Zeile" für Satzzeichen.',
       insert: "Einfügen",
       cancel: "Abbrechen",
       ai_cleanup: "Mit KI aufräumen",
@@ -696,6 +696,17 @@ const de = {
       text_5_0: "• Suchen & Ersetzen — tippen Sie oben auf das Suchsymbol, genau wie bei einer Textnotiz.",
       text_6_0: "Um sie zu speichern, kehren Sie einfach zur Startseite zurück.",
     },
+    what_quick_note: {
+      title: "Was ist die Schnellnotiz-Leiste?",
+      text_1_0:
+        "Das ist das Feld 'Schnelle Notiz…' unten auf der Startseite: Tippen Sie darauf, schreiben Sie und speichern Sie mit",
+      text_1_1: "sofort eine Textnotiz, ohne den Editor zu öffnen.",
+      text_2_0: "Die Notiz landet in der Kategorie, die Sie gerade ansehen, und ihr Titel stammt aus ihren ersten Wörtern.",
+      text_3_0: "Für Formatierung oder Bilder tippen Sie stattdessen auf",
+      text_3_1: "und Ihr Text öffnet sich im vollständigen Editor.",
+      text_4_0: "Am Computer speichert Strg/⌘+Eingabe die Notiz, und Eingabe beginnt eine neue Zeile.",
+      text_5_0: "Sie können die Leiste unter Einstellungen → Notiz erstellen ausschalten.",
+    },
     how_to_edit_note: {
       title: "Wie bearbeite ich eine Notiz?",
       text_1_0: "Tippen Sie einfach auf der Startseite auf die Notiz, um sie zu öffnen und Ihre Änderungen vorzunehmen.",
@@ -724,10 +735,12 @@ const de = {
       text_1_0: "Damit können Sie Ihren Text formatieren und anreichern. Das machen die Schaltflächen:",
       text_2_0: "• Rückgängig / Wiederherstellen — gehen Sie in Ihren letzten Änderungen vor oder zurück.",
       text_3_0: "• Bild — fügen Sie ein Bild aus Ihrer Galerie ein.",
+      text_heading: "• Überschrift — machen Sie die aktuelle Zeile zu einer Überschrift.",
       text_4_0: "• Fett — formatieren Sie den ausgewählten Text fett.",
       text_5_0: "• Kursiv — formatieren Sie den ausgewählten Text kursiv.",
       text_6_0: "• Durchgestrichen — streichen Sie den ausgewählten Text durch.",
       text_7_0: "• Unterstrichen — unterstreichen Sie den ausgewählten Text.",
+      text_align: "• Linksbündig / Zentriert — richten Sie den Absatz links oder mittig aus.",
       text_8_0: "• Tiefgestellt — setzen Sie den Text leicht unter die Zeile.",
       text_9_0: "• Hochgestellt — setzen Sie den Text leicht über die Zeile.",
       text_10_0: "• Aufzählungsliste — beginnen Sie eine Aufzählungsliste.",
@@ -740,6 +753,16 @@ const de = {
       text_2_0: "Geben Sie ein, wonach Sie suchen: Die Pfeile springen zwischen den Treffern und zeigen an, wie viele es gibt.",
       text_3_0: "Aktivieren Sie 'Ersetzen', um den aktuellen Treffer auszutauschen, oder ersetzen Sie alle Treffer auf einmal.",
     },
+    what_voice_dictation: {
+      title: "Wie diktiere ich eine Notiz?",
+      text_1_0: "Tippen Sie in einer Textnotiz oder einer To-Do-Liste auf die Mikrofon-Schaltfläche und sprechen Sie.",
+      text_2_0: 'Sagen Sie "Komma", "Punkt", "Fragezeichen" oder "neue Zeile" für Satzzeichen.',
+      text_3_0:
+        "Tippen Sie auf 'Einfügen', um den Text an der Cursorposition einzufügen. In einer To-Do-Liste wird jede Zeile zu einem Eintrag.",
+      text_4_0:
+        "Ist der KI-Assistent eingerichtet, setzt 'Mit KI aufräumen' zuerst die Satzzeichen; in einer To-Do-Liste teilt es das Gesagte außerdem in Einträge auf.",
+      text_5_0: "Sprache ändern oder das Diktat ausschalten können Sie unter Einstellungen → Spracherkennung.",
+    },
     what_are_settings_note: {
       title: "Welche Notizoptionen gibt es?",
       text_1_0: "Öffnen Sie eine Notiz und tippen Sie oben rechts auf das ⋮-Menü. Von dort aus können Sie:",
@@ -749,7 +772,8 @@ const de = {
       text_5_0: "• Schreibgeschützt — die Notiz vor versehentlichem Bearbeiten schützen.",
       text_6_0:
         "• Ausblenden — die Notiz von der Startseite fernhalten, bis Sie sich entscheiden, ausgeblendete Notizen anzuzeigen.",
-      text_7_0: "• Offline schalten — die Notiz nur auf diesem Gerät behalten, niemals in die Cloud synchronisieren.",
+      text_7_0:
+        "• Offline schalten — die Notiz nur auf diesem Gerät behalten, niemals in die Cloud synchronisieren. Mit 'Mit Cloud synchronisieren' kommt sie als neue Kopie zurück.",
       text_8_0: "• Kategorie ändern — die Notiz in eine andere Kategorie verschieben.",
       text_9_0: "• Exportieren (Textnotizen) — die Notiz als .txt-, Markdown- oder PDF-Datei speichern.",
       text_10_0: "• Information — Typ, Kategorie und Daten der Notiz anzeigen.",
@@ -828,6 +852,14 @@ const de = {
       text_2_0:
         "Ihre Notizen werden auf Ihrem Gerät Ende-zu-Ende verschlüsselt, bevor sie hochgeladen werden, sodass niemand außer Ihnen sie lesen kann.",
       text_link: "Schritt-für-Schritt-Anleitung zur Einrichtung von Google Firebase lesen →",
+      text_link_server: "Anleitung zur Einrichtung Ihres eigenen FastMemo Servers lesen →",
+    },
+    what_conflict_copy: {
+      title: 'Warum ist eine Notiz mit "(Konflikt)" markiert?',
+      text_1_0:
+        "Wird dieselbe Notiz auf zwei Geräten geändert, bevor sie synchronisiert werden, behält Fast Memo beide Versionen, statt eine auszuwählen: So geht nichts verloren, was Sie geschrieben haben.",
+      text_2_0:
+        'Eine davon wird zu einer Kopie mit "(Konflikt)" am Ende des Titels: Vergleichen Sie beide, behalten Sie, was Sie brauchen, und löschen Sie die andere.',
     },
     what_encryption: {
       title: "Wie werden meine Notizen verschlüsselt?",
@@ -924,6 +956,8 @@ const de = {
       text_1_0: "Ja — wenn Sie Fast Memo öffnen, prüft sie im Hintergrund, ob eine neuere Version verfügbar ist.",
       text_2_0:
         "Wenn es ein Update gibt, zeigt ein 'Was ist neu?'-Bildschirm, was sich geändert hat. Sie können auch jederzeit in den Einstellungen nachsehen.",
+      text_3_0:
+        "Klicken Sie in der Desktop-App auf 'Installieren': Das Update wird von selbst heruntergeladen und installiert, danach startet die App neu. Auf dem Telefon können kleine Korrekturen auch von selbst ankommen und werden beim nächsten Öffnen der App übernommen.",
     },
     what_report_problem: {
       title: "Wie melde ich ein Problem?",
@@ -937,6 +971,7 @@ const de = {
       text_1_0:
         "Webhooks sind für fortgeschrittene Nutzer: Sie lassen Fast Memo einen anderen Dienst benachrichtigen, sobald etwas passiert — eine Notiz erstellt, aktualisiert oder gelöscht, eine Kategorie geändert, Daten exportiert und so weiter.",
       text_2_0: "Jede Aktion kann eine Webadresse Ihrer Wahl aufrufen. Sie richten sie unter Einstellungen → Webhooks ein.",
+      text_link: "Anleitung zu Webhooks lesen →",
     },
     what_platforms: {
       title: "Wo kann ich Fast Memo nutzen?",
@@ -945,14 +980,29 @@ const de = {
       text_2_0:
         "Verbinden Sie jedes Gerät mit demselben Google-Firebase-Projekt oder demselben FastMemo Server, und Ihre Notizen bleiben überall synchron.",
     },
+    what_desktop_shortcuts: {
+      title: "Gibt es Tastenkürzel am Computer?",
+      text_1_0: "Ja, in der Desktop-App:",
+      text_2_0: "• Strg/⌘+N — neue Notiz.",
+      text_3_0: "• Strg/⌘+F — Ihre Notizen durchsuchen oder Text in der geöffneten Notiz finden.",
+      text_4_0: "• Strg/⌘+, — die Einstellungen öffnen.",
+      text_5_0: "• Esc — zurückgehen; in einem Textfeld verlässt das erste Esc nur das Feld.",
+      text_6_0: "• Strg/⌘+Eingabe — die Schnellnotiz speichern.",
+      text_7_0:
+        "Auf dem Mac finden Sie dieselben Befehle in der Menüleiste, zusammen mit den anderen Notiztypen und Export/Import. Wenn Sie das Fenster schließen, läuft Fast Memo weiter: Klicken Sie auf das Symbol im Dock, um es zurückzuholen, oder beenden Sie es mit ⌘Q.",
+    },
     what_ai_assistant: {
       title: "Was ist der KI-Assistent?",
       text_1_0:
         "Fast Memo enthält einen selbst gehosteten KI-Assistenten, der vollständig auf Ihrem Gerät läuft. Es werden keine Daten an externe Server gesendet.",
-      text_2_0: "Zum Einrichten gehen Sie zu Einstellungen -> KI-Assistent, wählen ein Modell und laden es herunter.",
+      text_2_0: "Zum Einrichten gehen Sie zu Einstellungen → KI-Assistent, wählen ein Modell und laden es herunter.",
       text_3_0:
-        "Nach der Aktivierung erscheint eine Sparkle-Schaltfläche in jedem Notiz-Editor. Tippen Sie darauf, um auf smarte Aktionen zuzugreifen, wie: Titel generieren, zusammenfassen, weiterschreiben, Text formatieren, Checklisten-Elemente vorschlagen oder eine Kategorie vorschlagen.",
-      text_4_0: "Die KI funktioniert offline und unterstützt mehrere Sprachen.",
+        "Nach der Aktivierung erscheint im Notiz-Editor eine Sparkle-Schaltfläche. Tippen Sie darauf, um einen Titel zu generieren, zusammenzufassen (die Zusammenfassung steht oben in der Notiz), die Grammatik zu korrigieren, den Text zu kürzen, ihn in eine Sprache Ihrer Wahl zu übersetzen, Checklisten-Elemente vorzuschlagen oder eine Kategorie vorzuschlagen.",
+      text_4_0:
+        "Manche Aktionen brauchen ein größeres Modell: Unter Einstellungen → KI-Assistent sehen Sie, was jedes Modell kann.",
+      text_5_0: "Er kann auch Ihr Diktat aufräumen und hier in der Hilfe anhand Ihrer eigenen Worte das passende Thema finden.",
+      text_6_0: "Die KI funktioniert offline und unterstützt mehrere Sprachen.",
+      text_link: "Anleitung zum KI-Assistenten lesen →",
     },
   },
   report: {
