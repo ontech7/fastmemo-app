@@ -3,6 +3,8 @@ use std::time::Duration;
 
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 
+mod net;
+
 /// Prompt the OS biometric dialog (Touch ID on macOS, Windows Hello on Windows)
 /// and report whether it succeeded. Used by the frontend's web/Tauri unlock path
 /// to gate access to protected notes without the secret code. `reason` is the
@@ -332,12 +334,19 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(ExitState::default())
-        .invoke_handler(tauri::generate_handler![biometric_authenticate, exit_after_flush, set_menu_labels])
+        .manage(net::Net::default())
+        .invoke_handler(tauri::generate_handler![
+            biometric_authenticate,
+            exit_after_flush,
+            set_menu_labels,
+            net::net_request,
+            net::net_cancel,
+            net::net_webhook
+        ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();

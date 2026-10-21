@@ -639,18 +639,28 @@ who want their notes at home (PC, NAS, Raspberry Pi, VPS) had no option. ADR-016
     app-wide: `http://` webhooks work on Android release too.
   - macOS desktop (a `tauri://` page, so no mixed-content block): App Transport Security lets the webview reach IP addresses,
     `localhost` and `.local` names over http, but not a dotted name (`nas.home.arpa`, a DDNS name; measured on a built app,
-    2026-10-20). `src-tauri/Info.plist` sets `NSAllowsArbitraryLoadsInWebContent` (webview loads only). Linux is a `tauri://`
-    page without ATS: expected to work the same, not tested.
+    2026-10-20). `src-tauri/Info.plist` set `NSAllowsArbitraryLoadsInWebContent` (webview loads only), until the revision below.
+    Linux is a `tauri://` page without ATS: expected to work the same, not tested.
   - The hosted web app is an `https://` page: the browser engine blocks an `http://` fetch from it (mixed content) unless the
     server is this machine (`isLoopbackUrl`); the connect screen says so and disables saving. WebView2's
     `--allow-running-insecure-content` was rejected for the Windows app, it lets every insecure subresource in, not only the
     sync calls.
-  - _Revised 2026-10-21 (desktop 2.0.0):_ the desktop app calls the server and the webhooks from Rust (`tauri-plugin-http`,
-    `src/utils/httpFetch.web.ts`), on every OS: no mixed-content block on Windows, no ATS on macOS, no CORS. Certificates come
-    from the OS store (`rustls-tls-native-roots`, as the webview: a home server's private CA keeps working), without a cookie
-    jar. The capability allows any `http`/`https` URL: the server and webhook addresses are the user's, and the page could
-    already reach any `https` URL. Verified on macOS through a logging proxy (the requests carry the plugin's user agent and no
-    `Sec-Fetch-*`); Windows still to be tried on a real PC.
+  - _Revised 2026-10-21 (desktop 2.0.0):_ the desktop app calls the server and the webhooks from Rust (`src-tauri/src/net.rs`,
+    `@/libs/net`), on every OS: no mixed-content block on Windows, no ATS on macOS, no CORS. The macOS
+    `NSAllowsArbitraryLoadsInWebContent` exception is gone with it. Own commands rather than `tauri-plugin-http` (tried, then
+    dropped after review): the plugin builds a new client per request (no connection reuse, the OS trust store read again each
+    time, ~80 ms of CPU on a Mac), follows redirects (a redirect to another host drops the `Authorization` header and the
+    server's refusal read as "device removed": a Caddy http->https redirect disconnected the device), sends bodies as JSON
+    number arrays and needed a capability open to any URL. `net.rs`:
+    - one reqwest 0.13 client (the updater's: no duplicate HTTP stack), built on first use, ring as the crypto provider, the OS
+      verifying certificates (`rustls-platform-verifier`, as the webview), gzip;
+    - no redirects: a 3xx is an ordinary server error, retried;
+    - the system proxy for internet hosts only; this machine, private and link-local addresses, Tailscale and local names
+      (`.local`, `.lan`, `.home.arpa`, `.internal`, single labels) go direct (reqwest ignores the proxy's bypass list);
+    - the page reaches only the server's API (`/v1/` paths) and webhook POSTs, whose answer it never sees;
+    - raw IPC bodies both ways (the answer is the status in 2 bytes, then the body); `net_cancel` aborts a request, even one
+      cancelled before it reached Rust. Verified on macOS (tauri dev) through a logging proxy; Windows still to be tried on a
+      real PC.
   - The connect screen warns under an http address and asks to confirm before saving, recommending HTTPS (a reverse proxy with a
     certificate, or Tailscale). Not for this machine nor a Tailscale address (`isTailscaleUrl`: 100.64.0.0/10, `*.ts.net`),
     which cross no network unencrypted. The warning says what a device on HTTP gives away wherever it is (it roams: confirmed at

@@ -2,14 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Plain http:// loads in the webview under a name (nas.home.arpa, a DDNS name), e.g. an image in a note: App
-	     Transport Security only lets the webview reach IP addresses, localhost and .local names over http otherwise. The
-	     sync server and webhooks don't go through the webview (tauri-plugin-http), so ATS doesn't apply to them. -->
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoadsInWebContent</key>
-		<true/>
-	</dict>
 	<!-- The app's languages. What macOS adds by itself (the Edit menu's Start Dictation and Emoji & Symbols, Close All,
 	     Exit Full Screen, the open/save panels) then follows the macOS language when it's one of them, instead of staying in
 	     English; it can differ from a language picked in the app's settings. -->

@@ -85,7 +85,7 @@ export default function CloudSyncScreen() {
   const isCloudSettingsComplete = settingsComplete(cloudSettings);
   const plainHttp = provider === "server" && !!cloudSettings.serverUrl && isPlainHttp(cloudSettings.serverUrl);
   // A page served over HTTPS (the web app in a browser) can't fetch an http address other than this machine: the browser
-  // engine blocks it as mixed content. The desktop app calls the server from Rust (`httpFetch`), so it can.
+  // engine blocks it as mixed content. The desktop app calls the server from Rust (`@/libs/net`), so it can.
   const httpBlocked =
     plainHttp &&
     Platform.OS === "web" &&

@@ -20,15 +20,17 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
-# The sync server and webhooks are called from Rust (src/utils/httpFetch.web.ts): no mixed-content block on Windows, no
-# CORS. Certificates from the OS store, as the webview uses (a home server's private CA keeps working); no cookie jar.
-tauri-plugin-http = { version = "2", default-features = false, features = ["rustls-tls-native-roots", "http2", "charset", "system-proxy"] }
 tauri-plugin-opener = "2"
 tauri-plugin-process = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# The FastMemo server and webhooks, called from Rust (src/net.rs). reqwest 0.13, rustls and tokio are already in the app
+# through tauri-plugin-updater: the same versions, ring as the crypto provider, the OS verifying certificates.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "gzip", "system-proxy"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+tokio = { version = "1", default-features = false, features = ["sync"] }
 
 # Desktop biometric unlock is scoped to macOS (Touch ID) and Windows (Hello), so
 # `robius-authentication` is a target-specific dependency. On Linux it would pull

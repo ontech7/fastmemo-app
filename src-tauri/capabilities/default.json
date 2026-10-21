@@ -13,17 +13,6 @@
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
     "fs:allow-write-file",
-    {
-      "identifier": "http:default",
-      "allow": [
-        {
-          "url": "http://*:*"
-        },
-        {
-          "url": "https://*:*"
-        }
-      ]
-    },
     "opener:allow-open-url",
     "opener:allow-default-urls",
     "updater:default",
