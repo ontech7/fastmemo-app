@@ -1,3 +1,4 @@
+import { fromOlderVersion, NOTES_PERSIST_VERSION } from "@/libs/cloud/revision";
 import FSStorage from "@/libs/storage/fsStorage";
 import { foldLegacyRootNotes } from "@/libs/storage/legacyRootNotes";
 import { noteStore, notesNeedSorting } from "@/libs/storage/notes";
@@ -62,25 +63,36 @@ export const notesPersisted = (): boolean => !notesReadFailed && !notesWriteFail
 // Every config waits for its read however long it takes (`timeout: 0`): on timeout redux-persist
 // rehydrates the empty initial state, and its next write replaces what was stored with it.
 
+/**
+ * The notes as an older version left them, made ready for the sync engine (ADR-016). A failure keeps them as they were: a
+ * rejected migrate makes redux-persist rehydrate the empty state and write it over the notes.
+ */
+const takeOver = (state: PersistedState): PersistedState => {
+  try {
+    return fromOlderVersion(state as (NonNullable<PersistedState> & Partial<NotesState>) | undefined);
+  } catch (err) {
+    console.warn("redux-persist: taking over the older version's notes failed", err);
+    return state;
+  }
+};
+
 const notesPersistConfig: PersistConfig<NotesState> = {
   key: "root_notes",
   storage: notesStorage,
   timeout: 0,
+  version: NOTES_PERSIST_VERSION,
   // The note store takes and gives the slice as it is: it stores each note on its own.
   serialize: false,
   deserialize: false,
   migrate: async (state: PersistedState): Promise<PersistedState> => {
-    if (Platform.OS === "web") {
-      return state;
-    }
-    if (state === undefined) {
+    if (Platform.OS !== "web" && state === undefined) {
       const asyncState = await getStoredState({
         key: "root_notes",
         storage: AsyncStorage,
       }).catch(failedNotesRead);
-      return asyncState as PersistedState;
+      return takeOver(asyncState as PersistedState);
     }
-    return state;
+    return takeOver(state);
   },
 };
 

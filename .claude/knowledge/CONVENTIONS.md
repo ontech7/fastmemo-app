@@ -293,7 +293,9 @@ queueCloudAdd(state, note); // only_if_cloudConnected + isVaultUnlocked; the eng
 `syncedRev` itself: that is the sync engine's bookkeeping (`applyNotesPlan`, `notesPushed`). A change without a new revision is
 ignored by the other devices (their copy looks as new). `addNote` takes `rev`, `syncedRev` and `local` from the stored note, not
 from the editor's copy. A note last written by an older app version has no `rev`: `touchNote` records its own version as the
-base (`baseOf`), and outbox entries an older version left are stamped by `adoptLegacyOutbox` before the first push.
+base (`baseOf`), and outbox entries an older version left are stamped by `adoptLegacyOutbox` before the first push. A note an
+older version _received_ from a newer one keeps that `rev` but has no `syncedRev`. The notes' persist migration (version 1,
+`adoptLegacySyncState`) records that `rev` as synced. Without it, the merge would take the note for an unsynced change (LL-056).
 
 `CryptNote.encrypt` takes no key argument anymore -- it reads the per-vault DEK from `vaultSession` and **fails closed** if the
 vault is locked (never emits plaintext). The old global `secretKey` argument and build-time `SECRET_KEY` are superseded by
@@ -863,6 +865,7 @@ Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file tha
 | 36  | Never trust a cache of what's stored where another writer can write (browser tabs)        | Check what's there first, under a lock; a write skipped for a newer one settles with it (see LL-053)                             |
 | 37  | Never keep a copy of user data without a wipe path and an end date                        | "Wipe data" must reach it; record migrations instead of inferring them from absent data (see LL-054)                             |
 | 38  | Never apply an AI answer that stopped early, or cancel only the native completion         | Queue completions, check the cancel generation at every step, drop `interrupted`/token-limited answers (see LL-055)              |
+| 39  | Never give persisted data a new meaning without bumping its persist `version`             | Migrate once, by version, never guess at read time; test older versions' data as they store it, newer fields included (LL-056)   |
 
 ### ALWAYS
 
