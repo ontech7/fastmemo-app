@@ -957,3 +957,41 @@ CSS splash in `index.html` (still a flash, then a second screen); a menu bar (tr
 button). A hidden FastMemo keeps its memory (~a browser tab) and keeps syncing (Firestore reads as for an open window). A
 protected note left open is still open when the window comes back (as when minimized). Dock Quit / logout with the window open
 still skip the flush (ADR-015); with it closed the flush already happened.
+
+---
+
+## ADR-023: Rich Text Line Types Handled by a Script in the Editor's Page
+
+**Status:** Accepted (2026-10-21, user decision: the line types are exclusive, the button of the current type turns the line
+back into text, H1 takes a bullet out of its list, Backspace at the start of a bullet removes it, Enter twice leaves a code
+block, a code block is a plain `<pre>`)  
+**Context:** pell's heading, code and list buttons are bare `execCommand`s that nest and never turn off (LL-062). RichToolbar
+sends them to the page itself, with no prop to replace them, and pell's page keeps its actions in a closure.
+
+**Decision:**
+
+- `src/libs/richTextEditor.ts` holds `RICH_TEXT_SCRIPT` and `RICH_TEXT_STYLE` (the editor's style). The script is plain ES5, run
+  by `RichEditor.command` once pell is up (`editorInitializedCallback`; a second run does nothing) and exposed as `window.__fm`.
+  `LabeledRichToolbar._onPress` sends heading, code and the two lists to `window.__fm.toggle(type)` after
+  `focusContentEditor()`, which restores pell's saved selection. Every other button goes to RichToolbar. The image picker
+  inserts through `window.__fm.insertImage`.
+- Every change is an `execCommand` on whole elements (select the element's contents, then `formatBlock`), so the browser's undo
+  keeps working. Only the repair of nested markup from saved notes (unwrapping) is a DOM edit that undo skips.
+- Enter in a code block is handled by a capture listener on the document, ahead of pell's keydown handler, which loses the caret
+  in a `<pre>` without pell's `<code>` lines. A keyboard that sends a new line as `beforeinput` instead of a key goes through
+  the same code.
+- `scripts/richtext.test.mjs` runs the real page in headless Chrome (`createHTML` with the app's options, the note sanitizer
+  (ADR-021) and the script), with the messages RichEditor posts and real key events.
+
+**Alternatives rejected:**
+
+- patching pell: patch-package is a new dependency, and the page's actions live in a closure;
+- replacing whole blocks with `insertHTML`: it merges them with the neighboring blocks and adds stray markup;
+- DOM edits for the line types: they break undo;
+- another editor (TipTap, Lexical): a rewrite of the screen and of the stored HTML.
+
+**Trade-offs:**
+
+- about 8 KB more script in the editor's page;
+- the editor's behavior now lives in two places (pell and the script), so a pell update must pass `scripts/richtext.test.mjs`;
+- the code button still never shows as selected: pell has no state for it.

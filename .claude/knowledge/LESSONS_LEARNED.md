@@ -1662,6 +1662,44 @@ state tao reports at its start.
 
 ---
 
+### LL-062: H1 on a list item grew on every press and never turned off
+
+**Date:** 2026-10-21  
+**Severity:** Medium (in every version with the rich text editor; reported by the user)  
+**Category:** Bug  
+**What happened:** H1 on a list item made the text bigger on every press (32 -> 64 -> 128 px) instead of turning off. An audit
+of the toolbar's block buttons (every kind of line, every kind of selection, in headless Chrome and the Android emulator's
+Chrome) found more: code nested a code block per press, lists went inside headings and code blocks, H1 split a list (the numbers
+restarted), neither H1 nor code ever turned off, the list buttons moved the caret to the line start, an image at the end of a
+line left a stray `<br>` and the caret a line below, Enter twice left pell's code block with an empty code line, and Backspace
+at the start of the first bullet did nothing. A saved note keeps `<h1><ul>` and `<pre><pre>` (the HTML parser flattens only
+`<h1><h1>`, leaving an empty heading).
+
+**Root cause:** pell's block buttons are bare `execCommand("formatBlock", "<h1>" / "<pre>")` (code also wraps each line in a
+`<code>`) and list commands. Chromium's `formatBlock` wraps a list or a block of another kind instead of replacing it, nests
+inside a multi-line `<pre>` or a list item, and has no "off". RichToolbar sends these buttons straight to the page, with no prop
+to change them.
+
+**Fix:** a script in the editor's page (`RICH_TEXT_SCRIPT`, ADR-023), with the toolbar's heading, code and list buttons routed
+to it. A line is one of text, heading, code, bullet or numbered item, and the button of what it is turns it back into text. A
+block is removed by selecting its whole content and running `formatBlock div` (clean, and undoable). The selection is kept by
+character offset. Backspace at the start of a list item removes the bullet. Enter on an empty last code line leaves the block in
+one undo step. Images go in at the caret, with the caret on a new line. CSS guards cover notes saved with the nested markup. The
+check in the web app found one more case the hand-written test HTML didn't have: after H1 is turned off, Chrome keeps a line's
+text in a style `<span>`, and the code exit looked for the empty line only among the block's direct children. Now it looks at
+any depth. `scripts/richtext.test.mjs`: 619 checks on the real pell page with the note sanitizer; pell's own buttons fail 141 of
+them.
+
+**Rule:** Never send a block format or a list command to pell directly (`formatBlock`, `insertUnorderedList` /
+`insertOrderedList`, pell's `heading1` / `code` actions): go through `window.__fm.toggle`. A change to the page script comes
+with a case in `scripts/richtext.test.mjs` and a check in the real editor: Chrome adds style spans and wrappers that
+hand-written HTML doesn't have.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
+`fix/richtext-blocks`
+
+---
+
 ### LL-063: Popup menus opened a status bar's height below their button on Android
 
 **Date:** 2026-10-21  
