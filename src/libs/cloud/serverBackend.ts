@@ -81,6 +81,38 @@ class ServerError extends Error {
 /** No answer in time: the link may be slow rather than down. */
 class TimeoutError extends Error {}
 
+/** The scheme, the host (lower-cased, without credentials or a trailing dot) and the port (the scheme's default if none). */
+function originOf(url: string): { scheme: string; host: string; port: number } | null {
+  const match = /^([a-z][a-z\d+.-]*):\/\/(?:[^/?#@]*@)?(\[[^\]]*\]|[^/?#:]*)(?::(\d*))?/i.exec(url);
+  if (!match) return null;
+  const scheme = match[1].toLowerCase();
+  const port = match[3] ? Number(match[3]) : scheme === "https" ? 443 : 80;
+  return { scheme, host: match[2].toLowerCase().replace(/\.$/, ""), port };
+}
+
+/** A host name every fetch hands back as written: ASCII, with a letter (an IP address or a Unicode name may be rewritten). */
+const PLAIN_NAME = /^(?=.*[a-z])[a-z\d.-]+$/;
+
+/**
+ * Whether the answer came through a redirect, so it isn't the server's. On the way to another host or scheme the device's
+ * token is dropped: the server's refusal would read as "this device was removed", a 404 elsewhere as a deleted note.
+ *
+ * With `redirect: "manual"` a browser hands back an opaque redirect and the phone (`expo/fetch`) the 3xx itself; the
+ * desktop app's Rust client follows none. A browser's answer (`basic`, `cors`) may still come from https when the browser
+ * upgraded the request itself (HSTS, HTTPS-Only), which keeps the token: only another fetch, one that may follow, is
+ * judged by `redirected` and by where its answer came from.
+ */
+function redirected(res: Response, requested: string): boolean {
+  if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) return true;
+  if (res.type === "basic" || res.type === "cors") return false;
+  if (res.redirected) return true;
+  const from = originOf(requested);
+  const to = res.url ? originOf(res.url) : null;
+  if (!from || !to) return false;
+  if (from.scheme !== to.scheme || from.port !== to.port) return true;
+  return PLAIN_NAME.test(from.host) && from.host !== to.host;
+}
+
 interface ServerChange {
   token: string;
   page: string;
@@ -435,8 +467,11 @@ export class ServerBackend implements CloudBackend {
 
   async createVaultExclusive(vault: VaultDoc): Promise<"created" | "exists" | "error"> {
     try {
-      await this.request("POST", "/v1/vault", { auth: "member", body: vault });
-      return "created";
+      const answer = await this.request<{ result?: string }>("POST", "/v1/vault", { auth: "member", body: vault });
+      // Only the server's own word: a vault taken as created keeps its key here and hands out a recovery key.
+      if (answer?.result === "created") return "created";
+      console.log("createVaultExclusive: unexpected answer", answer);
+      return "error";
     } catch (e) {
       if (e instanceof ServerError && e.status === 409) return "exists";
       console.log("createVaultExclusive:", e);
@@ -514,7 +549,8 @@ export class ServerBackend implements CloudBackend {
     try {
       return await this.request<Note>("GET", `/v1/notes/${encodeURIComponent(id)}`, { auth: "member" });
     } catch (e) {
-      if (e instanceof ServerError && e.status === 404) return null;
+      // Only the server's own 404: a reverse proxy's would drop an update as if the note had been deleted.
+      if (e instanceof ServerError && e.status === 404 && e.code === "not_found") return null;
       console.log("fetchNote:", e);
       return undefined;
     }
@@ -680,7 +716,8 @@ export class ServerBackend implements CloudBackend {
       let res: Response;
       let text: string;
       try {
-        res = await this.fetchImpl(base + path, { method, headers, body, signal: controller.signal });
+        res = await this.fetchImpl(base + path, { method, headers, body, signal: controller.signal, redirect: "manual" });
+        if (redirected(res, base + path)) throw new Error(`${method} ${path}: redirected, not the server's answer`);
         text = await res.text();
       } catch (e) {
         if (timedOut) throw new TimeoutError(`${method} ${path}: no answer in time`);
@@ -692,6 +729,8 @@ export class ServerBackend implements CloudBackend {
       } catch {
         data = undefined;
       }
+      // The server answers JSON or nothing: anything else (a captive portal's page) isn't its answer.
+      if (res.ok && text && data === undefined) throw new Error(`${method} ${path}: not the server's answer`);
       if (!res.ok) {
         const error = (data ?? {}) as { error?: string; message?: string };
         throw new ServerError(res.status, error.error ?? "", error.message ?? text.slice(0, 200), token);

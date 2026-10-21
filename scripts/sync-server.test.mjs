@@ -350,6 +350,137 @@ try {
     await spy.dispose();
   }
 
+  log("\nServerBackend: a redirect is never the server's answer");
+  {
+    // A fetch that follows an http -> https redirect (the phone's, without `redirect: "manual"`): the Authorization header
+    // is dropped on the way, the server refuses the device, and the answer says where it ended.
+    const device = makeBackend(server.url);
+    await device.backend.registerDevice({ uuid: "R", modelName: "Pixel", brand: "Google" });
+    const followed = { on: false };
+    const modes = new Set();
+    const phone = new M.ServerBackend({
+      fetch: async (input, init) => {
+        modes.add(init.redirect);
+        if (!followed.on) return fetch(input, init);
+        const { Authorization: _dropped, ...headers } = init.headers;
+        const res = await fetch(input, { ...init, headers });
+        return Object.defineProperties(res, {
+          url: { value: input.replace(/^http:\/\/[^/]+/, "https://notes.example") },
+          type: { value: "default" },
+        });
+      },
+      storage: {
+        get: async (k) => device.tokens.get(k) ?? null,
+        set: async (k, v) => void device.tokens.set(k, v),
+        remove: async (k) => void device.tokens.delete(k),
+      },
+    });
+    phone.init(settingsFor(server.url));
+    const snapshots = [];
+    const unsubscribe = phone.subscribeDevices(
+      "R",
+      (s) => snapshots.push(s),
+      () => {}
+    );
+    ok("enrolled, the poll lists the device", await until(() => snapshots.at(-1)?.devices.some((d) => d.uuid === "R"), 3000));
+    followed.on = true;
+    const seen = snapshots.length;
+    await phone.reconnect();
+    ok("redirected, a pull is an error", (await phone.pullDevices()) === null);
+    await sleep(1500);
+    ok(
+      "...and the poll never reads the device as removed",
+      snapshots.slice(seen).every((s) => s.devices.length > 0),
+      snapshots.slice(seen)
+    );
+    ok("...nor drops its token", device.tokens.size === 1);
+    followed.on = false;
+    ok(
+      "back on the server, the device is still enrolled",
+      (await phone.pullDevices())?.devices.some((d) => d.uuid === "R")
+    );
+    ok("every request asks not to follow redirects", modes.size === 1 && modes.has("manual"), [...modes]);
+    unsubscribe();
+    await phone.unregisterDevice("R");
+    await phone.dispose();
+
+    /** An adapter whose requests get `answer(url)`: a status, a body, where the answer came from, its type. */
+    const answering = (serverUrl, answer) => {
+      const backend = new M.ServerBackend({
+        fetch: async (input) => {
+          const { status = 200, body = "", url = input, type = "default", redirected = false } = answer(input);
+          return { ok: status >= 200 && status < 300, status, url, type, redirected, text: async () => body };
+        },
+        storage: { get: async () => null, set: async () => {}, remove: async () => {} },
+      });
+      backend.init(settingsFor(serverUrl));
+      return backend;
+    };
+    const devicesJson = JSON.stringify({ devices: [], maxDevices: 5 });
+    const browser = answering(server.url, () => ({ status: 0, type: "opaqueredirect", url: "" }));
+    ok("a browser's redirect (handed back, not followed) is an error", (await browser.listDevices()) === null);
+    const hsts = answering("http://notes.example", (url) => ({
+      body: devicesJson,
+      type: "cors",
+      url: url.replace("http:", "https:"),
+    }));
+    ok(
+      "a browser's own upgrade to https (HSTS: the token goes along) is the server's answer",
+      Array.isArray(await hsts.listDevices())
+    );
+    const desktop = answering(server.url, () => ({ status: 308 }));
+    ok("a 3xx (the desktop app doesn't follow) is an error", (await desktop.listDevices()) === null);
+    const flagged = answering(server.url, () => ({ body: devicesJson, redirected: true }));
+    ok("an answer marked as redirected is an error", (await flagged.listDevices()) === null);
+    const elsewhere = answering("http://notes.example", () => ({
+      body: devicesJson,
+      url: "http://login.example/v1/devices",
+    }));
+    ok("another host is a redirect", (await elsewhere.listDevices()) === null);
+    const otherPort = answering("http://notes.example:8787", () => ({
+      body: devicesJson,
+      url: "http://notes.example:8788/v1/devices",
+    }));
+    ok("...so is another port", (await otherPort.listDevices()) === null);
+    const sameServer = [
+      ["https://notes.example:443", "https://notes.example/v1/devices"],
+      ["http://notes.example:080", "http://notes.example/v1/devices"],
+      ["http://notes.example:08787", "http://notes.example:8787/v1/devices"],
+      ["https://Notes.Example.", "https://notes.example/v1/devices"],
+      ["http://192.168.001.005:8787", "http://192.168.1.5:8787/v1/devices"],
+      ["http://[0:0:0:0:0:0:0:1]:8787", "http://[::1]:8787/v1/devices"],
+      ["https://nötes.example", "https://xn--ntes-5qa.example/v1/devices"],
+    ];
+    const rewritten = [];
+    for (const [typed, came] of sameServer) {
+      if (!Array.isArray(await answering(typed, () => ({ body: devicesJson, url: came })).listDevices())) rewritten.push(typed);
+    }
+    ok(
+      "the same server written another way (default or padded port, case, trailing dot, IP forms, punycode) is no redirect",
+      rewritten.length === 0,
+      rewritten
+    );
+    const upgraded = answering("http://nötes.example", () => ({
+      body: devicesJson,
+      url: "https://xn--ntes-5qa.example/v1/devices",
+    }));
+    ok("...but moved to https it is", (await upgraded.listDevices()) === null);
+    const portal = answering(server.url, () => ({ body: "<html>Log in to the Wi-Fi</html>" }));
+    ok("a 200 that isn't JSON (a captive portal) is an error", !(await portal.writeVault({ key: "k1" })));
+    const foreignVault = answering(server.url, () => ({ status: 201, body: "{}" }));
+    ok(
+      "a vault counts as created only on the server's own word",
+      (await foreignVault.createVaultExclusive({ key: "k1", version: 2 })) === "error"
+    );
+    const proxy404 = answering(server.url, () => ({ status: 404, body: "<html>Not Found</html>" }));
+    ok(
+      "a 404 that isn't the server's (a reverse proxy) doesn't read as a deleted note",
+      (await proxy404.fetchNote("n")) === undefined
+    );
+    const server404 = answering(server.url, () => ({ status: 404, body: JSON.stringify({ error: "not_found" }) }));
+    ok("the server's own 404 does", (await server404.fetchNote("n")) === null);
+  }
+
   log("\nServerBackend: devices, feed, presence");
   {
     const a = makeBackend(server.url);

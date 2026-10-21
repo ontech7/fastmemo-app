@@ -902,6 +902,7 @@ Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file tha
 | 37  | Never keep a copy of user data without a wipe path and an end date                        | "Wipe data" must reach it; record migrations instead of inferring them from absent data (see LL-054)                             |
 | 38  | Never apply an AI answer that stopped early, or cancel only the native completion         | Queue completions, check the cancel generation at every step, drop `interrupted`/token-limited answers (see LL-055)              |
 | 39  | Never give persisted data a new meaning without bumping its persist `version`             | Migrate once, by version, never guess at read time; test older versions' data as they store it, newer fields included (LL-056)   |
+| 40  | Never interpret a server answer that came through a redirect                              | Fetch drops the token across hosts: the refusal reads as "removed"; absent/removed only with the server's error code (LL-059)    |
 
 ### ALWAYS
 
