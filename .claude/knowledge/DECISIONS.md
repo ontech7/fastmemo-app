@@ -857,3 +857,51 @@ The user wanted four seasonal icons (Halloween, Christmas, Easter, Summer) to pi
 
 **Trade-offs:** a native module: it needs a new build, an OTA can't deliver it (the fingerprint changes). Choosing an icon on
 Android closes the app. iOS is configured but not built or tested yet (no `ios/` here).
+
+## ADR-021: Note HTML Sanitized with DOMPurify in the Rich Text Editor's Page
+
+**Status:** Accepted (2026-10-21, user decision: DOMPurify, with a check that no note's HTML breaks)  
+**Context:** The text editor (react-native-pell-rich-editor) puts a note's HTML into its page with `innerHTML` and
+`execCommand("insertHTML")`. On web and desktop that page is a same-origin `srcdoc` iframe: an `<img onerror>` in a note runs
+with the app's origin (its storage, the parent window, on desktop the Rust commands). Notes come from imports and other devices.
+The web PDF export rendered a note, and its title unescaped, straight into the app's page (LL-060).
+
+**Decision:**
+
+- DOMPurify (approved as a direct dependency, pinned; jspdf already pulled it in, now one copy) runs inside the editor's page:
+  `src/editor/sanitize-entry.ts` wraps every way HTML becomes DOM there (the `innerHTML`/`outerHTML` setters, also on
+  `ShadowRoot`, `insertAdjacentHTML`, `execCommand("insertHTML")`, `createContextualFragment`, `setHTMLUnsafe`,
+  `Document.parseHTMLUnsafe`). It is bundled by `scripts/build-sanitize.mjs` into `src/generated/editor-sanitize.ts` (as
+  CodeMirror is) and injected through `injectedJavaScript`: the end of the web iframe's page, and on Android evaluated when the
+  page finished, ahead of the onLoad that sets the note (`injectedJavaScriptBeforeContentLoaded` is only an earlier try there).
+  `scripts/sanitize.test.mjs` fails while the generated file is out of date; it runs in the OTA workflow's checks.
+- HTML dropped from elsewhere is inserted as its text (as a paste is, `pasteAsPlainText`): the browser's own drop insertion
+  passes no hook. A drag within the note is left to the browser.
+- One configuration for the editor and the web PDF export (`NOTE_HTML_CONFIG` + `addNoteHooks`): DOMPurify's defaults plus
+  `contenteditable` (the to-do box), unknown schemes allowed (`obsidian:` links, old `file:`/`content:` images); no forms or
+  their controls (an `<input>` stays only as a checkbox), dialogs, popovers, style sheets, `<link>`/`<meta>`; no `position` in a
+  style (an overlay posing as the app); links lose `intent:`, `android-app:`, `file:`, `content:` and the app's own schemes. A
+  read-only note can't pose as a login screen, open an Android intent, or (a form's button) reload the editor empty.
+- On web the editor iframe and the app read only each other's `postMessage`: pell runs the commands it gets as code, and the web
+  WebView hands every window message to the editor. In the iframe, a message from another window reads as `"{}"` (a
+  `MessageEvent.prototype.data` getter, as pell's listener is added first); the app page drops, before any WebView listens, a
+  message from a window that isn't itself or one of its iframes (`src/libs/messageGuard.web.ts`).
+- The web PDF export builds its container from nodes (the title as text, the note as DOMPurify's fragment), never parsing it
+  again. The PDF title is escaped (`escapeHtml`) on every platform.
+
+**Alternatives rejected:** a sanitizer of our own (less tested against mutation XSS); a sandboxed iframe without
+`allow-same-origin` (the keyboard shortcuts, find/replace and the editor bridge read the iframe's document); sanitizing on the
+React Native side (no DOM on the phone).
+
+**Verified (2026-10-21):** 329 real note HTML samples (pell's output for 265 toolbar cases from the rich text audit, legacy
+shapes, what the app writes, hand-written ones) come out as the browser alone makes them, except a trailing space in a `style`
+and Word's empty `<o:p>`/`<meta>`; 25 payloads through 5 sinks: 37 runs without the hooks, none with them. In the web build the
+editor's content, a note edited and reopened, and the screenshots are identical before and after; a payload note ran code 13
+times before (11 in the app's own page), never after.
+
+With the tighter configuration (same day): the same samples change only by a link's `target`; the policy, the message guards
+(another frame and a popup are not heard, the app, the page itself and its ports are), the drop handler and the PDF export are
+checked in Chrome; in the web build the content is identical, and the payload note no longer reloads the editor when clicked.
+
+**Trade-offs:** ~34 KB of script in the editor's page (only the note route's chunk on web). The HTML a note keeps can differ
+from what was stored in insignificant ways (attribute whitespace) once it is edited.

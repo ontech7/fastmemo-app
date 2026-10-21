@@ -11,6 +11,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
 import { configs } from "@/configs";
+import { EDITOR_SANITIZE_JS } from "@/generated/editor-sanitize";
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
@@ -51,6 +52,12 @@ interface Props {
 // least the real height so the bar parks fully below the screen while the keyboard
 // is down (and so the editor reserves enough room for it while the keyboard is up).
 const BAR_HEIGHT_ESTIMATE = 100;
+
+// DOMPurify in the editor's page, before any note is loaded (LL-060). What guarantees it is `injectedJavaScript`: the
+// script ends the web iframe's page, and Android evaluates it when the page finished, ahead of the onLoad that sets the
+// note. `injectedJavaScriptBeforeContentLoaded` is only an earlier try (Android may run it before the page exists).
+// `true;` ends what the phone's WebView evaluates.
+const EDITOR_SANITIZE_SCRIPT = `${EDITOR_SANITIZE_JS}\ntrue;`;
 
 const TOOLBAR_LABEL_KEYS: Record<string, string> = {
   [actions.undo]: "a11y.format.undo",
@@ -489,6 +496,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
               initialContentHTML={initialNote.text}
               placeholder={t("note.description_placeholder")}
               pasteAsPlainText
+              injectedJavaScriptBeforeContentLoaded={EDITOR_SANITIZE_SCRIPT}
+              injectedJavaScript={EDITOR_SANITIZE_SCRIPT}
               editorStyle={editorStyle}
               editorInitializedCallback={onEditorInitialized}
             />

@@ -66,6 +66,7 @@ jobs:
           yarn lint
           node scripts/i18n.test.mjs
           node scripts/vault.test.mjs
+          node scripts/sanitize.test.mjs
 
       - name: Guard against native changes
         env:

@@ -14,6 +14,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { installDesktopMenu } from "@/libs/desktopMenu";
 import { installFlushOnExit } from "@/libs/flushOnExit";
 import i18n from "@/libs/i18n";
+import { installMessageGuard } from "@/libs/messageGuard";
 import AppUpdateProvider from "@/providers/AppUpdateProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
 import { persistor, store } from "@/slicers/store";
@@ -34,6 +35,7 @@ import { PersistGate } from "redux-persist/integration/react";
 
 enableFreeze(true);
 
+installMessageGuard();
 installFlushOnExit();
 installDesktopMenu();
 

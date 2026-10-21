@@ -118,6 +118,7 @@ src/
                        #   instance (store.ts, wipe thunk); fsStorage: the previous single value (read to migrate)
                        #   + legacyRootNotes.ts: one-shot fold of the notes copy out of `persist:root`
     flushOnExit.ts     # Platform-split: flush pending editor batches + persistor on background / hide / window close
+    messageGuard.ts    # Platform-split (web): the app page hears `postMessage` only from itself and its iframes (LL-060)
     cloud/             # Cloud sync (ADR-016, ADR-017)
       types.ts         # CloudBackend contract (devices, vault, data, push, listeners, ack, presence, deviceLimit, pacing)
       firebaseBackend.ts # The Firestore implementation: the ONLY importer of firebase/*
@@ -173,6 +174,12 @@ src/
   configs/             # App configuration
     index.ts           # Main config (env vars, app metadata, business rules, cloud, sentry, firebase)
     default.ts         # Factory defaults (defaultCategory)
+
+  editor/              # Sources bundled into strings that the editors' pages run (`yarn build:editor`)
+    codemirror-entry.js # CodeMirror 6 for the code editor WebView (scripts/build-codemirror.mjs)
+    sanitize-entry.ts  # DOMPurify + hooks in the rich text editor's page (scripts/build-sanitize.mjs; LL-060, ADR-021)
+    sanitizeConfig.ts  # What a note's HTML keeps (the editor's page and the web PDF export)
+  generated/           # Those scripts' output, committed (codemirror-html.ts, editor-sanitize.ts): never edit by hand
 ```
 
 ## Data Flow
