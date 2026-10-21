@@ -145,6 +145,7 @@ src/
     desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only
     desktopMenu.ts     # macOS menu labels (i18n menu.*) and its items' commands; .ts no-op, .web.ts on Tauri macOS
     windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
+    richTextEditor.ts  # The text editor's page script (line types, code exit, bullets, images) and style (ADR-023, scripts/richtext.test.mjs)
 
   utils/               # Pure utility functions
     sort.ts            # Sort comparators for Timestamped/Ordered items
