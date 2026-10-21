@@ -1487,6 +1487,51 @@ early is never applied.
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-20 **Resolved in:** branch
 `feat/ai-qwen35`
 
+### LL-056: After updating from 3.2.0, the next edit from another device made a "(conflict)" copy of an unchanged note
+
+**Date:** 2026-10-21  
+**Severity:** High (found in the E2E cloud test, before release; no data lost)  
+**Category:** Bug  
+**What happened:** On the Pixel, 3.2.0 was connected to a vault shared with devices on the new version, then updated in place.
+The first edit made on the web to a note the phone had received from a new device came in as the note, plus a "P1 ...
+(conflitto)" copy of the version the phone had never touched.
+
+**Root cause:** 3.2.0 stores a note it receives as it is: with the `rev` a newer version stamped, and no `syncedRev`. The merge
+reads "a `rev` and no `syncedRev`" as "stamped here, never synced", so every such note counted as an unsynced change, and the
+next newer version from the cloud kept it as a conflict copy. The unit tests modelled older versions' notes without a `rev`
+(only `updatedAt`), never as a newer device's note received by an older version.
+
+**Fix:** The notes' persist config has `version: 1`. Its migration, run only for state an older version stored (-1,
+redux-persist's default), records such a note's `rev` as synced (`adoptLegacySyncState` in `libs/cloud/revision.ts`). That
+covers the legacy single value the note store migrates from, AsyncStorage on native, and the web. One edited on 3.2.0 keeps
+`updatedAt > rev`, so it still counts as changed. A failure leaves the state as it was, because a rejected migrate rehydrates
+empty state over the notes. Verified on a real 3.2.0 → fixed update on the web (same origin, real Firestore) and on the Pixel:
+after the update, edits from other devices arrive with no copy.
+
+A review of the fix found more, and the branch fixes it:
+
+- A 3.2.0 change still waiting to go out, made without renewing `updatedAt` (a flag, the category, a restore), went out as the
+  cloud's own revision. It was refused as the version the cloud already has and became a conflict copy, so the flag never
+  reached the cloud. This was already the case before, because `adoptLegacyOutbox` only stamps notes without a `rev`. Such a
+  note now gets the received `rev` as its base and a revision of its own on top, so it goes through.
+- When the note store rebuilds a lost `state` value, it copies the legacy settings, and that included the legacy `_persist: -1`.
+  The migration would then have run again over this version's notes. The rebuild now leaves `_persist` out, and a state with no
+  version is not migrated.
+
+Accepted, in the safe direction or as for every note an older version wrote:
+
+- A 3.2.0 change made with no upload waiting (vault locked, not connected) that didn't renew `updatedAt` isn't seen as a change,
+  so the next newer version replaces it.
+- Notes an older tab writes into the legacy value after the migration are folded in without being taken over. A later version of
+  one of them can still make a conflict copy, but nothing is lost.
+- Internal builds since the sync engine stored version -1 too, so they go through the migration once.
+
+**Rule:** A change in what a persisted field means needs a versioned migration, never a guess at read time. Test older versions'
+data as they really store it, including the fields a newer version wrote that they keep without understanding.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
+`fix/sync-legacy-synced-rev`
+
 ---
 
 ## Template for New Entries

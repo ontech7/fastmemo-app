@@ -879,6 +879,16 @@ console.log("\ndamage");
 
   const broken = disk.copy();
   broken.files.get(`${FOLDER}/state.json`).text = "";
+  // As redux-persist reads it: not with the old value's persist version (these notes are this version's, and taking them
+  // for an older one's would migrate them again, LL-056).
+  const probe = broken.copy();
+  point(probe);
+  const read = await M.createNoteStore(M.createNoteStoreBackend(), { report: () => {} }).getItem("persist:root_notes");
+  ok(
+    "rebuilt: the old value's settings, not its persist version",
+    read?._persist === undefined && read?.filters?.sortBy === "createdAt",
+    read?._persist
+  );
   const rebuilt = await launch(broken);
   ok(
     "rebuilt: a note deleted for good since the migration doesn't come back",

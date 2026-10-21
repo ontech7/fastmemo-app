@@ -434,9 +434,10 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
       const legacy = await legacyNotes();
       const found = await theMarker();
       if (legacy) {
-        // The settings and the tombstones (before the fold, which respects them): the legacy ones beat none.
+        // The settings and the tombstones (before the fold, which respects them): the legacy ones beat none. Not its
+        // persist version: these notes are this version's, and taking them for an older one's would migrate them again.
         for (const [key, value] of Object.entries(legacy)) {
-          if (key === "items" || key === "temporaryItems") continue;
+          if (key === "items" || key === "temporaryItems" || key === "_persist") continue;
           if (key === "cloud") {
             const legacyCloud = value as NotesState["cloud"];
             const add = (state.cloud as NotesState["cloud"] | undefined)?.items.add ?? {};

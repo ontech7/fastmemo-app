@@ -28,21 +28,41 @@ export const baseOf = (note: Note): number | undefined =>
  * The notes as an app version without revisions stored them, taken over on this version's first launch. Those versions
  * never stamp a revision: a note with one got it from the cloud (a newer version wrote it), so that's the revision it last
  * synced. Without it, every later version from the cloud would find a change here and keep this one as a conflict copy.
- * A note with an upload waiting stays as it is: that's a change (see `isDirty` in the merge).
+ * A note with an upload waiting is a change on top of that version: it's stamped with a revision of its own, as
+ * `adoptLegacyOutbox` does for a note without one (a change that didn't renew `updatedAt` would go out as the cloud's own
+ * revision, and be refused as the version the cloud already has). A change made there without an upload waiting (vault
+ * locked, not connected) counts only if it renewed `updatedAt`, as for every note an older version wrote (LL-056).
  */
 export const adoptLegacySyncState = <T extends { items?: Note[]; cloud?: { items?: { add?: Record<string, unknown> } } }>(
-  state: T
+  state: T,
+  now: number = Date.now()
 ): T => {
   if (!Array.isArray(state.items)) return state;
   const pending = state.cloud?.items?.add ?? {};
   let adopted = 0;
   const items = state.items.map((note) => {
-    if (note.rev === undefined || note.syncedRev !== undefined || note.local || note.id in pending) return note;
+    if (note.rev === undefined || note.syncedRev !== undefined || note.local) return note;
     adopted++;
-    return { ...note, syncedRev: Number(note.rev) || 0 };
+    const syncedRev = Number(note.rev) || 0;
+    return note.id in pending ? { ...note, syncedRev, rev: nextRev(note, now) } : { ...note, syncedRev };
   });
   return adopted > 0 ? { ...state, items } : state;
 };
+
+/** The notes' persist version: 1 = they carry this device's sync bookkeeping. Older versions stored -1 (the default). */
+export const NOTES_PERSIST_VERSION = 1;
+
+/**
+ * The notes slice as redux-persist read it, taken over (see `adoptLegacySyncState`) if an older version stored it. One
+ * with no version (a state value the note store rebuilt) isn't known to be older: it's left as it is.
+ */
+export const fromOlderVersion = <
+  T extends { _persist?: { version: number }; items?: Note[]; cloud?: { items?: { add?: Record<string, unknown> } } },
+>(
+  state: T | undefined,
+  now: number = Date.now()
+): T | undefined =>
+  state?._persist === undefined || state._persist.version >= NOTES_PERSIST_VERSION ? state : adoptLegacySyncState(state, now);
 
 /** Stamps a synced change on a note (a draft, inside a reducer). */
 export const touchNote = (note: Note, now: number = Date.now()): void => {

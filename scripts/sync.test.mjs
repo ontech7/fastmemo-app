@@ -43,7 +43,7 @@ await build({
       export * as categories from "@/slicers/categoriesSlice";
       export { default as categoriesReducer } from "@/slicers/categoriesSlice";
       export { createPlanner, reconcileCategories } from "@/libs/cloud/merge";
-      export { noteRev, nextRev, adoptLegacySyncState } from "@/libs/cloud/revision";
+      export { noteRev, nextRev, adoptLegacySyncState, fromOlderVersion } from "@/libs/cloud/revision";
       export { contentToken } from "@/libs/cloud/token";
       export { SyncEngine } from "@/libs/cloud/syncEngine";
     `,
@@ -234,26 +234,35 @@ const local = (items = [], trash = [], extra = {}) => ({
     ],
     cloud: { items: { add: { c: {} } } },
   };
-  const adopted = M.adoptLegacySyncState(state).items;
+  const adopted = M.adoptLegacySyncState(state, 1000).items;
   const byId = Object.fromEntries(adopted.map((n) => [n.id, n]));
   ok("taking over an older version's notes: a received revision counts as synced", byId.a.syncedRev === 300);
   ok("...also under a later edit made there (still a change)", byId.b.syncedRev === 300 && M.noteRev(byId.b) > 300);
   ok(
-    "...but not for a note with an upload waiting, one without a revision, a device-only one, or one already synced",
-    byId.c.syncedRev === undefined &&
-      byId.d.syncedRev === undefined &&
-      byId.e.syncedRev === undefined &&
-      byId.f.syncedRev === 400
+    "...one with an upload waiting is a change on top of it: stamped with a revision of its own",
+    byId.c.syncedRev === 300 && byId.c.rev === 1000
   );
-  const without = ({ syncedRev: _syncedRev, ...rest }) => JSON.stringify(rest);
+  ok(
+    "...but not one without a revision, a device-only one, or one already synced",
+    byId.d.syncedRev === undefined && byId.e.syncedRev === undefined && byId.f.syncedRev === 400
+  );
+  const without = ({ syncedRev: _syncedRev, rev: _rev, ...rest }) => JSON.stringify(rest);
   ok(
     "...and nothing else changes",
-    adopted.every((n, i) => without(n) === without(state.items[i]))
+    adopted.every((n, i) => without(n) === without(state.items[i]) && (n.id === "c" || n.rev === state.items[i].rev))
   );
-  ok("...nor the state it was given", state.items[0].syncedRev === undefined);
+  ok("...nor the state it was given", state.items[0].syncedRev === undefined && state.items[2].rev === 300);
   ok(
     "a state with nothing to take over is returned as it is",
     M.adoptLegacySyncState({ items: [legacy("d", 200)] }).items[0].syncedRev === undefined
+  );
+  const older = { ...state, _persist: { version: -1, rehydrated: true } };
+  ok("taken over only from an older version's state", M.fromOlderVersion(older).items[0].syncedRev === 300);
+  ok(
+    "...not from this version's, one with no version (rebuilt), or none",
+    M.fromOlderVersion({ ...older, _persist: { version: 1, rehydrated: true } }).items[0].syncedRev === undefined &&
+      M.fromOlderVersion(state).items[0].syncedRev === undefined &&
+      M.fromOlderVersion(undefined) === undefined
   );
 
   const p = M.createPlanner(local([byId.a]), "(c)");
@@ -1291,7 +1300,9 @@ await scenario(
     const synced = (n) => ({ ...n, syncedRev: n.rev });
     const updated = preloaded([n1, { ...n2, text: "edited on the older version", updatedAt: t + 10 }]);
     // What the notes' persist migration does on the first launch of the update.
-    const u = await add("U", { preloadedState: { ...updated, notes: M.adoptLegacySyncState(updated.notes) } });
+    const migrated = M.fromOlderVersion({ ...updated.notes, _persist: { version: -1, rehydrated: true } });
+    const { _persist: _version, ...notes } = migrated;
+    const u = await add("U", { preloadedState: { ...updated, notes } });
     const n = await add("N", { preloadedState: preloaded([synced(n1), synced(n2)]) });
     u.engine.start();
     n.engine.start();
@@ -1327,6 +1338,33 @@ await scenario(
     await settle();
     ok("it reaches the cloud", cloud.notes.get("n1")?.important === true);
     ok("...and the other device", b.get("n1")?.important === true);
+    ok("A's outbox drains", outboxEmpty(a));
+  }
+);
+
+await scenario(
+  "...also for a note it had received from a newer version (same revision as the cloud's)",
+  async ({ cloud, add, settle }) => {
+    const t = Date.now() - 100000;
+    const base = note("n1", t, { text: "from N", updatedAt: t - 1 });
+    cloud.notes.set("n1", { ...base, sealed: "k1" });
+    const toggled = { ...base, important: true };
+    const older = preloaded([toggled], { add: { n1: { ...toggled, sealed: "outbox" } } });
+    const { _persist: _version, ...notes } = M.fromOlderVersion({
+      ...older.notes,
+      _persist: { version: -1, rehydrated: true },
+    });
+    const a = await add("A", { preloadedState: { ...older, notes } });
+    const n = await add("N", { preloadedState: preloaded([{ ...base, syncedRev: base.rev }]) });
+    a.engine.start();
+    n.engine.start();
+    await settle();
+    ok("it reaches the cloud", cloud.notes.get("n1")?.important === true, cloud.notes.get("n1"));
+    ok("...and the other device", n.get("n1")?.important === true);
+    ok("...with no conflict copy", ![...a.live(), ...n.live()].some((x) => x.id.includes("~")), {
+      A: contents(a),
+      N: contents(n),
+    });
     ok("A's outbox drains", outboxEmpty(a));
   }
 );
