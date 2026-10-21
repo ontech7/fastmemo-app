@@ -49,30 +49,54 @@ jobs:
           mobile=$(jq -r '.version' package.json)
           desktop=$(jq -r '.version' src-tauri/tauri.conf.json)
 
-          # The desktop version published now (the latest release's latest.json), if any.
-          published=$(gh release download --repo "$GITHUB_REPOSITORY" --pattern latest.json --output - 2>/dev/null \
-            | jq -r '.version // empty' || true)
+          # A release's asset names, after "@exists" (nothing: no such release). Any other failure stops the run: no guard
+          # below may be skipped because a lookup failed.
+          release() {
+            local out
+            if out=$(gh release view "$1" --repo "$GITHUB_REPOSITORY" --json assets -q '"@exists", .assets[].name' 2>&1); then
+              printf '%s\n' "$out"
+            elif [[ "$out" != *"release not found"* ]]; then
+              echo "::error::Can't read the release $1: $out" >&2
+              return 1
+            fi
+          }
+          # The desktop versions in asset names (the macOS update archives carry none).
+          versions_in() { grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sort -u || true; }
+          # Whether version $1 is newer than $2.
+          newer() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n 1)" = "$1" ]; }
+
+          # The desktop version installed apps are offered now: the latest release's latest.json.
+          latest_tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" -q .tag_name)
+          latest_assets=$(release "$latest_tag")
+          published=""
+          if grep -qx 'latest.json' <<< "$latest_assets"; then
+            published=$(gh release download "$latest_tag" --repo "$GITHUB_REPOSITORY" --pattern latest.json --output - \
+              | jq -r '.version')
+          fi
+          echo "Latest release $latest_tag offers desktop ${published:-nothing}"
 
           if [ "$DESKTOP_ONLY" = "true" ]; then
             tag="desktop-v$desktop"
             name="Desktop v$desktop"
-            newest=$(printf '%s\n%s\n' "$published" "$desktop" | sort -V | tail -n 1)
-            if [ -n "$published" ] && { [ "$desktop" = "$published" ] || [ "$newest" != "$desktop" ]; }; then
+            if [ -n "$published" ] && ! newer "$desktop" "$published"; then
               echo "::error::Desktop $desktop isn't newer than the published $published: bump src-tauri/tauri.conf.json"
               exit 1
             fi
-            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              echo "::error::The release $tag already exists"
+            if [ -n "$(release "$tag")" ]; then
+              echo "::error::The release $tag already exists (a failed run: re-run its failed jobs, or delete it and its tag)"
               exit 1
             fi
           else
             tag="v$mobile"
             name="v$mobile (+ Desktop)"
-            # A re-run of the same release is fine; another desktop version into it is not (see the top).
-            existing=$(gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern latest.json --output - 2>/dev/null \
-              | jq -r '.version // empty' || true)
-            if [ -n "$existing" ] && [ "$existing" != "$desktop" ]; then
-              echo "::error::$tag already holds desktop $existing: bump package.json, or run with desktop_only"
+            # A re-run of the same release is fine; builds of another desktop version in it are not (see the top).
+            others=$(release "$tag" | versions_in | grep -vxF "$desktop" || true)
+            if [ -n "$others" ]; then
+              echo "::error::$tag already holds desktop builds of ${others//$'\n'/ }: bump package.json, or run with desktop_only"
+              exit 1
+            fi
+            if [ -n "$published" ] && newer "$published" "$desktop"; then
+              echo "::error::Desktop $desktop is older than the published $published (a hotfix this branch misses?)"
               exit 1
             fi
           fi
@@ -126,10 +150,12 @@ jobs:
             body="Checkout GitHub latest release for more details."
           fi
 
+          # A delimiter no changelog line can be.
+          delimiter="EOF_$(openssl rand -hex 16)"
           {
-            echo "content<<EOF"
+            echo "content<<$delimiter"
             echo "$body"
-            echo "EOF"
+            echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
 
       # tauri-action would create it as GitHub's latest release; it uploads into one that exists.
@@ -244,7 +270,8 @@ jobs:
               ? match[1].trim()
               : "Checkout GitHub latest release for more details.";
 
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, "content<<EOF\n" + notes + "\nEOF\n");
+            const delimiter = "EOF_" + require("crypto").randomBytes(16).toString("hex");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, "content<<" + delimiter + "\n" + notes + "\n" + delimiter + "\n");
           '
 
       - name: reconstruct latest.json from release assets
