@@ -1584,19 +1584,20 @@ again right after it (Enter copies it onto the next line), nothing is taken for 
 phone connected, then dropped the connection as if another device had removed it. The web app did the same. A 404 that came
 through a redirect or from the proxy itself read as a deleted note, and a captive portal's 200 page counted as a written vault.
 
-**Root cause:** The phone's fetch (OkHttp) and the browser follow redirects. On the way to another scheme or host they drop the
-`Authorization` header, but keep `X-Access-Key`: the handshake and the enrolment worked, the device's token never arrived, and
-the server's `401 device_unknown` read as "this device was removed". The adapter read any answer as the server's: a status
-without the server's error code, a 2xx body that isn't JSON.
+**Root cause:** The phone's fetch (`expo/fetch`, on OkHttp) and the browser follow redirects by default. On the way to another
+scheme or host they drop the `Authorization` header, but keep `X-Access-Key`: the handshake and the enrolment worked, the
+device's token never arrived, and the server's `401 device_unknown` read as "this device was removed". The adapter read any
+answer as the server's: a status without the server's error code, a 2xx body that isn't JSON.
 
 **Fix:** `serverBackend.send()` asks for `redirect: "manual"` and treats any redirect as a transport error (retried, never a
-refusal): the browser's opaque redirect, a 3xx (the desktop app's Rust client follows none), an answer whose `url` has another
-scheme or host (the phone; hosts that may come back rewritten, Unicode or IPv6, compare only the scheme). A 2xx that isn't
-JSON is an error too, and `fetchNote` reads only the server's own `not_found` as a deleted note. Tests in
+refusal): the browser's opaque redirect, a 3xx (the phone's `expo/fetch` hands it back with `redirect: "manual"`, verified on
+the emulator; the desktop app's Rust client follows none), or, from a fetch that follows anyway, `redirected` or an answer whose
+`url` has another scheme or host (hosts that may come back rewritten, Unicode or IPv6, compare only the scheme). A 2xx that
+isn't JSON is an error too, and `fetchNote` reads only the server's own `not_found` as a deleted note. Tests in
 `scripts/sync-server.test.mjs` ("a redirect is never the server's answer").
 
-**Rule:** Interpret a status or a body only when the answer is the server's own: never one that came through a redirect, and
-a meaning that destroys data (absent, removed) only with the server's error code.
+**Rule:** Interpret a status or a body only when the answer is the server's own: never one that came through a redirect, and a
+meaning that destroys data (absent, removed) only with the server's error code.
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
 `fix/server-redirect`

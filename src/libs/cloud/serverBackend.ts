@@ -96,10 +96,10 @@ function originOf(url: string): { scheme: string; host: string } | null {
 const PLAIN_HOST = /^((?=[^:]*[a-z])[a-z\d.-]+|\d{1,3}(\.\d{1,3}){3})(:\d+)?$/;
 
 /**
- * Whether the answer came through a redirect, so it isn't the server's. A browser hands the redirect back
- * (`redirect: "manual"`), the desktop app doesn't follow it (a 3xx), the phone does (OkHttp: the answer's `url` is where it
- * ended). On the way to another host or scheme the device's token is dropped: the server's refusal would read as "this
- * device was removed", a 404 elsewhere as a deleted note.
+ * Whether the answer came through a redirect, so it isn't the server's. With `redirect: "manual"` a browser hands back an
+ * opaque redirect and the phone (`expo/fetch`) the 3xx itself; the desktop app's Rust client follows none. A fetch that
+ * follows anyway shows it in `redirected` or in the answer's `url`. On the way to another host or scheme the device's token
+ * is dropped: the server's refusal would read as "this device was removed", a 404 elsewhere as a deleted note.
  */
 function redirected(res: Response, requested: string): boolean {
   if (res.type === "opaqueredirect" || res.redirected || (res.status >= 300 && res.status < 400)) return true;
