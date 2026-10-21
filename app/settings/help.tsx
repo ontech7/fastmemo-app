@@ -535,7 +535,6 @@ export default function HelpScreen() {
                         "text_5_0",
                         "text_6_0",
                         "text_7_0",
-                        "text_8_0",
                       ])}
                     </>
                   ),

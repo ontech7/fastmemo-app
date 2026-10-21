@@ -955,12 +955,11 @@ const zh = {
       text_1_0: "有，在桌面应用中：",
       text_2_0: "• Ctrl/⌘+N — 新建笔记。",
       text_3_0: "• Ctrl/⌘+F — 搜索笔记，或在打开的文本笔记中查找文字。",
-      text_4_0: "• Ctrl/⌘+, — 打开设置。",
-      text_5_0: "• Esc — 返回；在文本框中，第一次按 Esc 只会离开该文本框。",
-      text_6_0: "• Ctrl/⌘+Enter — 保存快速笔记。",
-      text_7_0:
+      text_4_0: "• Esc — 返回；在文本框中，第一次按 Esc 只会离开该文本框。",
+      text_5_0: "• Ctrl/⌘+Enter — 保存快速笔记。",
+      text_6_0:
         "在 Mac 上，菜单栏中也有相同的命令，以及其他笔记类型和导出/导入数据。关闭窗口后 Fast Memo 仍会继续运行：点击程序坞中的图标即可重新打开，或按 ⌘Q 退出。",
-      text_8_0: "在 Windows 和 Linux 上，关闭窗口会退出 Fast Memo。",
+      text_7_0: "在 Windows 和 Linux 上，关闭窗口会退出 Fast Memo。",
     },
     what_ai_assistant: {
       title: "什么是 AI 助手？",

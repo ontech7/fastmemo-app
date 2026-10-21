@@ -1007,12 +1007,11 @@ const fr = {
       text_1_0: "Oui, dans l'application de bureau :",
       text_2_0: "• Ctrl/⌘+N — nouvelle note.",
       text_3_0: "• Ctrl/⌘+F — rechercher dans vos notes, ou trouver du texte dans une note texte ouverte.",
-      text_4_0: "• Ctrl/⌘+, — ouvrir les paramètres.",
-      text_5_0: "• Échap — revenir en arrière ; dans un champ de texte, le premier Échap quitte seulement le champ.",
-      text_6_0: "• Ctrl/⌘+Entrée — enregistrer la note rapide.",
-      text_7_0:
+      text_4_0: "• Échap — revenir en arrière ; dans un champ de texte, le premier Échap quitte seulement le champ.",
+      text_5_0: "• Ctrl/⌘+Entrée — enregistrer la note rapide.",
+      text_6_0:
         "Sur Mac, les mêmes commandes se trouvent dans la barre des menus, avec les autres types de note et Exporter/Importer des données. Fermer la fenêtre laisse Fast Memo ouvert : cliquez sur son icône dans le Dock pour le retrouver, ou quittez-le avec ⌘Q.",
-      text_8_0: "Sous Windows et Linux, fermer la fenêtre quitte Fast Memo.",
+      text_7_0: "Sous Windows et Linux, fermer la fenêtre quitte Fast Memo.",
     },
     what_ai_assistant: {
       title: "Qu'est-ce que l'Assistant IA ?",

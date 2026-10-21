@@ -1012,12 +1012,11 @@ const de = {
       text_1_0: "Ja, in der Desktop-App:",
       text_2_0: "• Strg/⌘+N — neue Notiz.",
       text_3_0: "• Strg/⌘+F — Ihre Notizen durchsuchen oder Text in einer geöffneten Textnotiz finden.",
-      text_4_0: "• Strg/⌘+, — die Einstellungen öffnen.",
-      text_5_0: "• Esc — zurückgehen; in einem Textfeld verlässt das erste Esc nur das Feld.",
-      text_6_0: "• Strg/⌘+Enter — die Schnellnotiz speichern.",
-      text_7_0:
+      text_4_0: "• Esc — zurückgehen; in einem Textfeld verlässt das erste Esc nur das Feld.",
+      text_5_0: "• Strg/⌘+Enter — die Schnellnotiz speichern.",
+      text_6_0:
         "Auf dem Mac finden Sie dieselben Befehle in der Menüleiste, zusammen mit den anderen Notiztypen und 'Daten exportieren/importieren'. Wenn Sie das Fenster schließen, läuft Fast Memo weiter: Klicken Sie auf das Symbol im Dock, um es zurückzuholen, oder beenden Sie es mit ⌘Q.",
-      text_8_0: "Unter Windows und Linux beendet das Schließen des Fensters Fast Memo.",
+      text_7_0: "Unter Windows und Linux beendet das Schließen des Fensters Fast Memo.",
     },
     what_ai_assistant: {
       title: "Was ist der KI-Assistent?",

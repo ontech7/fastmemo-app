@@ -413,7 +413,7 @@ fn macos_menu(app: &AppHandle, labels: &MenuLabels) -> tauri::Result<tauri::menu
                 &[
                     &PredefinedMenuItem::about(app, Some(&named(&labels.about)), Some(about))?,
                     &PredefinedMenuItem::separator(app)?,
-                    &item("settings", &labels.settings, Some("CmdOrCtrl+,"))?,
+                    &item("settings", &labels.settings, None)?,
                     &PredefinedMenuItem::separator(app)?,
                     &PredefinedMenuItem::services(app, Some(&labels.services))?,
                     &PredefinedMenuItem::separator(app)?,
