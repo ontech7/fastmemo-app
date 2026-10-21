@@ -32,6 +32,7 @@ prevent common mistakes. Load a skill when your task matches its trigger conditi
 | `redux-toolkit/`              | Working on Redux slices, selectors, thunks, or state management logic                                                                     | RTK best practices, slice structure, async thunks, memoized selectors, TypeScript integration                                                                                       |
 | `tauri-v2/`                   | Touching anything under `src-tauri/`, desktop-specific features, Rust commands, IPC, or desktop builds                                    | Tauri v2 commands, capabilities, permissions, IPC patterns, plugin setup, troubleshooting                                                                                           |
 | `prepare-release/`            | Preparing a release — bumping versions and writing changelogs/translations — or shipping an OTA update                                    | Two-track (mobile/desktop) versioning across 6 files, verbose developer changelogs (`docs/`) vs concise user changelogs (`changelog.tsx` + 7 i18n locales), README badges, OTA flow |
+| `store-screenshots/`          | Creating or updating the Google Play store screenshots (phone, 7"/10" tablet, any language)                                               | The HTML renderer in `store-screenshots/` (`node store-screenshots/render.mjs`), Play Store size rules, approved design rules, how to add copy/shots/languages      |
 
 Skills are in `.claude/skills/`. Each has a `SKILL.md` with full instructions.
 

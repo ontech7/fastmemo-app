@@ -346,6 +346,25 @@ eq("chunks: a text over the budget is split first", B.chunkTexts(["a".repeat(70)
   eq("split: a script without spaces still cut", B.splitText("日本語".repeat(10), 8).join(""), "日本語".repeat(10));
 }
 
+// --- a grammar fix keeps the words ---
+ok(
+  "grammar: a fix passes",
+  H.isPlausibleRewrite("fix_grammar", "Their going to the store tomorow", "They're going to the store tomorrow")
+);
+ok(
+  "grammar: a heavy fix of a short line passes",
+  H.isPlausibleRewrite("fix_grammar", "Me and him has decided", "He and I have decided")
+);
+ok(
+  "grammar: a line turned into another language is thrown away",
+  !H.isPlausibleRewrite("fix_grammar", "Prima del trasloco", "Antes del traslado")
+);
+ok(
+  "grammar: text without spaces isn't checked by words",
+  H.isPlausibleRewrite("fix_grammar", "明日は雨がふるでしょう", "明日は雨が降るでしょう")
+);
+ok("grammar: translation isn't checked by words", H.isPlausibleRewrite("translate", "Prima del trasloco", "Before the move"));
+
 // --- what the model adds around an answer ---
 eq("clean: quotes around a title", H.cleanAnswer("generate_title", "note", '"Spesa"'), "Spesa");
 eq("clean: a label before a title", H.cleanAnswer("generate_title", "note", "Titolo: Spesa"), "Spesa");

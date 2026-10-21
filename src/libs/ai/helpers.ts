@@ -136,6 +136,28 @@ export function cleanAnswer(action: EditorAction, input: string, answer: string)
   return text.trim();
 }
 
+const EDGE_PUNCTUATION = /^[.,;:!?¡¿"'«»“”„()[\]{}…–—-]+|[.,;:!?¡¿"'«»“”„()[\]{}…–—-]+$/g;
+
+/** A text's words, lowercased, without the punctuation around them. */
+const wordsOf = (text: string) =>
+  text
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => word.replace(EDGE_PUNCTUATION, ""))
+    .filter(Boolean);
+
+/**
+ * Whether a grammar fix kept enough of the words: one that changed most of them rewrote or translated the text instead
+ * (the 2B turned a short Italian heading into Spanish, AI evaluation 2026-10). Text without spaces (Chinese, Japanese) and a
+ * single word aren't checked.
+ */
+function keepsWords(input: string, output: string): boolean {
+  const before = wordsOf(input);
+  if (before.length < 2) return true;
+  const after = new Set(wordsOf(output));
+  return before.filter((word) => after.has(word)).length / before.length >= 0.4;
+}
+
 /**
  * Whether a rewrite is worth showing: not empty, no reasoning tag, and a length in the action's range (a short text gets a
  * few characters of slack: "ok" -> "Ok." is fine).
@@ -143,6 +165,7 @@ export function cleanAnswer(action: EditorAction, input: string, answer: string)
 export function isPlausibleRewrite(action: EditorAction, input: string, output: string): boolean {
   const out = output.trim();
   if (!out || out.includes("<think") || out.includes("</think>")) return false;
+  if (action === "fix_grammar" && !keepsWords(input, out)) return false;
   const range = REWRITE_LENGTH_RATIO[action];
   if (!range) return true;
   const inLength = input.trim().length;

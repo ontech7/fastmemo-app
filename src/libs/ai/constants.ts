@@ -127,7 +127,7 @@ export const ACTION_MAX_TOKENS: Record<EditorAction, number> = {
   suggest_category: 30,
   suggest_items: 100,
   summarize: 200,
-  summarize_part: 120,
+  summarize_part: 200,
   shorten: 200,
   fix_grammar: 800,
   translate: 800,

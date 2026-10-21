@@ -20,6 +20,7 @@ module.exports = defineConfig([
       "assets/**",
       "src/generated/**",
       "src-tauri/**",
+      "store-screenshots/**",
       "*.mjs",
       "package-lock.json",
       "**/*.md",
