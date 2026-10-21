@@ -195,8 +195,8 @@ const es = {
   },
   note: {
     title_placeholder: "Título",
-    description_placeholder: "Escribe algo aqui...",
-    no_items: "No hay elementos.\nAgregue uno presionando el botón inferior derecho.",
+    description_placeholder: "Escribe algo aquí...",
+    no_items: "No hay elementos.\nAgrega uno pulsando el botón inferior derecho.",
     characters: "caracteres",
     progress: "<hl>{{done}}</hl> de {{total}} completados",
     mode_free: "Lista",
@@ -208,7 +208,7 @@ const es = {
       todo: "Lista",
       kanban: "Kanban",
       text: "Texto",
-      code: "Codigo",
+      code: "Código",
     },
     settings: {
       delete: "Borrar",
@@ -260,7 +260,7 @@ const es = {
   code: {
     add_tab: "Agregar pestaña",
     tab_title_placeholder: "Nombre del archivo",
-    code_placeholder: "Escribe tu codigo aqui...",
+    code_placeholder: "Escribe tu código aquí...",
     max_tabs_reached: "Maximo de 6 pestañas alcanzado",
     delete_tab: "Eliminar pestaña",
     delete_tab_confirm: "¿Seguro que quieres eliminar esta pestaña? No se puede deshacer.",
@@ -400,7 +400,7 @@ const es = {
     title_create: "Crear Categoría",
     title_update: "Actualizar Categoría",
     name_title: "Nombre",
-    name_placeholder: "Ingrese el nombre de la categoría aquí...",
+    name_placeholder: "Escribe aquí el nombre de la categoría...",
     icon_title: "Icono",
     suggested_title: "Sugeridos",
     notes_num: "Nota: ",
@@ -453,7 +453,7 @@ const es = {
     export_import_placeholder_input: "Introduce el código secreto...",
     export_popup_description:
       "Escribe tu contraseña secreta aquí. Recuerda guardarlo, de lo contrario no podrás recuperar tus notas.",
-    import_popup_description: "Escriba su contraseña secreta aquí para importar sus notas.",
+    import_popup_description: "Escribe aquí tu contraseña secreta para importar tus notas.",
     webhooks: "Webhooks",
     voice_recognition: "Reconocimiento de voz",
     ai_assistant: "Asistente IA",
@@ -571,7 +571,7 @@ const es = {
       notes_merged: 'Notas fusionadas en "{{title}}"',
       setting_changed: "Configuración actualizada",
       help_message:
-        'Puedo crear notas, listas y tableros, eliminar, renombrar, convertir y fusionar notas, y más.\nPrueba: "Haz una lista de compras con leche y pan"\nVe todas las funciones en Configuración > Asistente IA.',
+        'Puedo crear notas, listas y tableros, eliminar, renombrar, convertir y fusionar notas, y más.\nPrueba: "Haz una lista de compras con leche y pan"\nVe todas las funciones en Ajustes > Asistente IA.',
       same_type: "La nota ya es de ese tipo",
       not_understood: "Solo puedo ayudar con las notas",
       error: "Algo salió mal, intenta de nuevo",
@@ -655,7 +655,7 @@ const es = {
     how_to_create_todo_note: {
       title: "¿Cómo creo una lista de tareas?",
       text_1_0: "Toca el botón",
-      text_1_1: "en la esquina inferior derecha de la pantalla de inicio.",
+      text_1_1: "junto a [+], en la esquina inferior derecha de la pantalla de inicio, y elige 'Lista'.",
       text_2_0: "Se abre una nueva página donde puedes añadir un título y los elementos de tu lista de tareas.",
       text_3_0: "Arrastra los seis puntos a la derecha de un elemento para moverlo hacia arriba o hacia abajo.",
       text_4_0: "Toca la cruz a la derecha para eliminar un elemento.",
@@ -669,7 +669,7 @@ const es = {
     how_to_create_kanban_note: {
       title: "¿Cómo creo un tablero Kanban?",
       text_1_0: "Toca el botón",
-      text_1_1: "en la esquina inferior derecha de la pantalla de inicio y elige 'Kanban'.",
+      text_1_1: "junto a [+], en la esquina inferior derecha de la pantalla de inicio, y elige 'Kanban'.",
       text_2_0: "Se abre un tablero con una columna lista para usar.",
       text_3_0: "• Añadir una columna: toca 'Añadir columna' a la derecha (hasta 10).",
       text_4_0: "• Renombrar una columna: edita el texto en su encabezado.",
@@ -683,12 +683,11 @@ const es = {
     how_to_create_code_note: {
       title: "¿Cómo creo una nota de código?",
       text_1_0: "Toca el botón",
-      text_1_1: "en la esquina inferior derecha de la pantalla de inicio y elige 'Código'.",
+      text_1_1: "junto a [+], en la esquina inferior derecha de la pantalla de inicio, y elige 'Código'.",
       text_2_0: "Obtienes un editor de código real con resaltado de sintaxis.",
       text_3_0:
         "• Pestañas: mantén varios fragmentos en una sola nota; añádelos, renómbralos, elimínalos o arrástralos para reordenarlos (hasta 6).",
       text_4_0: "• Lenguaje: toca la barra de lenguaje para elegir uno, o deja que se detecte automáticamente.",
-      text_5_0: "• Buscar y reemplazar: toca el icono de búsqueda en la parte superior, igual que en una nota de texto.",
       text_6_0: "Para guardarla, basta con volver a la pantalla de inicio.",
     },
     what_quick_note: {
@@ -728,7 +727,7 @@ const es = {
       text_1_0: "Te permite dar formato y enriquecer tu texto. Esto es lo que hacen los botones:",
       text_2_0: "• Deshacer / Rehacer: retrocede o avanza por tus últimos cambios.",
       text_3_0: "• Imagen: inserta una imagen desde tu galería.",
-      text_heading: "• Título: convierte la línea actual en un título.",
+      text_heading: "• Encabezado: convierte la línea actual en un encabezado.",
       text_4_0: "• Negrita: pon en negrita el texto seleccionado.",
       text_5_0: "• Cursiva: pon en cursiva el texto seleccionado.",
       text_6_0: "• Tachado: tacha el texto seleccionado.",
@@ -742,7 +741,7 @@ const es = {
     },
     what_find_replace: {
       title: "¿Cómo busco y reemplazo texto?",
-      text_1_0: "Mientras editas una nota de texto o de código, toca el icono de búsqueda en la esquina superior derecha.",
+      text_1_0: "Mientras editas una nota de texto, toca el icono de búsqueda en la esquina superior derecha.",
       text_2_0: "Escribe lo que buscas: las flechas saltan entre las coincidencias y muestran cuántas hay.",
       text_3_0: "Activa 'Reemplazar' para cambiar la coincidencia actual, o reemplaza todas las coincidencias a la vez.",
     },
@@ -753,7 +752,7 @@ const es = {
       text_3_0:
         "Toca 'Insertar' para añadir el texto donde está el cursor. En una lista de tareas, cada línea se convierte en un elemento.",
       text_4_0:
-        "Con el Asistente de IA configurado, 'Mejorar con IA' arregla antes la puntuación; en una lista de tareas también divide lo que dijiste en elementos.",
+        "Con el Asistente de IA configurado, 'Mejorar con IA' pule el texto (puntuación, mayúsculas, muletillas) antes de insertarlo; en una lista de tareas, en cambio, convierte lo que dijiste en elementos.",
       text_5_0: "Puedes cambiar el idioma o desactivar el dictado en Ajustes → Reconocimiento de voz.",
     },
     what_are_settings_note: {
@@ -765,7 +764,7 @@ const es = {
       text_5_0: "• Solo lectura: evita que la nota se edite por accidente.",
       text_6_0: "• Ocultar: mantén la nota fuera de la pantalla de inicio hasta que decidas mostrar las notas ocultas.",
       text_7_0:
-        "• Hacer sin conexión: mantén la nota solo en este dispositivo, sin sincronizarla nunca con la nube. Con 'Sincronizar en la nube' vuelve como una copia nueva.",
+        "• Hacer sin conexión: mantén la nota solo en este dispositivo, sin sincronizarla nunca con la nube. Con 'Sincronizar en la nube' se sube de nuevo como una nota nueva, con \"(2)\" al final del título.",
       text_8_0: "• Cambiar categoría: mueve la nota a otra categoría.",
       text_9_0: "• Exportar (notas de texto): guarda la nota como archivo .txt, Markdown o PDF.",
       text_10_0: "• Información: consulta el tipo, la categoría y las fechas de la nota.",
@@ -809,7 +808,7 @@ const es = {
       title: "¿Qué es la papelera?",
       text_1_0: "Cuando eliminas una nota no desaparece de inmediato: primero va a la papelera.",
       text_2_0:
-        "Las notas permanecen ahí 7 días y luego se eliminan definitivamente. Puedes cambiar cuánto tiempo se conservan en los ajustes básicos.",
+        "Las notas permanecen ahí 30 días y luego se eliminan definitivamente. En los ajustes básicos puedes conservarlas 3, 7, 15 o 30 días.",
     },
     how_restore_trashed_notes: {
       title: "¿Cómo restauro notas eliminadas?",
@@ -920,10 +919,12 @@ const es = {
     what_note_creation: {
       title: "¿Qué hace el ajuste de creación de notas?",
       text_1_0:
-        "Decide qué ocurre cuando tocas el botón [+] en la pantalla de inicio. En Ajustes → Creación de notas puedes elegir:",
+        "Decide qué ocurre cuando tocas el botón [+] en la pantalla de inicio. En Ajustes → Creación de nota puedes elegir:",
       text_2_0: "• Simple: [+] crea una nota de texto; usa el menú para los demás tipos.",
       text_3_0: "• Inteligente: [+] siempre crea el tipo que elegiste como favorito.",
       text_4_0: "• Adaptativo: [+] crea el mismo tipo que la última nota en la que trabajaste.",
+      text_5_0:
+        "• Barra de nota rápida: muestra u oculta la barra de notas rápidas en la parte inferior de la pantalla de inicio.",
     },
     what_home_filters: {
       title: "¿Cómo funcionan los filtros de la pantalla de inicio?",
@@ -971,12 +972,13 @@ const es = {
       title: "¿Hay atajos de teclado en el ordenador?",
       text_1_0: "Sí, en la app de escritorio:",
       text_2_0: "• Ctrl/⌘+N: nueva nota.",
-      text_3_0: "• Ctrl/⌘+F: busca en tus notas o encuentra texto en la nota abierta.",
+      text_3_0: "• Ctrl/⌘+F: busca en tus notas o encuentra texto en una nota de texto abierta.",
       text_4_0: "• Ctrl/⌘+,: abre los ajustes.",
       text_5_0: "• Esc: vuelve atrás; en un campo de texto, el primer Esc solo sale del campo.",
       text_6_0: "• Ctrl/⌘+Intro: guarda la nota rápida.",
       text_7_0:
-        "En un Mac, los mismos comandos están en la barra de menús, junto con los demás tipos de nota y Exportar/Importar. Cerrar la ventana deja Fast Memo abierto: haz clic en su icono del Dock para recuperarlo, o ciérralo con ⌘Q.",
+        "En un Mac, los mismos comandos están en la barra de menús, junto con los demás tipos de nota y Exportar/Importar datos. Cerrar la ventana deja Fast Memo abierto: haz clic en su icono del Dock para recuperarlo, o sal con ⌘Q.",
+      text_8_0: "En Windows y Linux, cerrar la ventana cierra Fast Memo.",
     },
     what_ai_assistant: {
       title: "¿Qué es el Asistente de IA?",
@@ -984,7 +986,7 @@ const es = {
         "Fast Memo incluye un Asistente de IA autoalojado que se ejecuta enteramente en tu dispositivo. No se envía ningún dato a servidores externos.",
       text_2_0: "Para configurarlo, ve a Ajustes → Asistente IA, elige un modelo y descárgalo.",
       text_3_0:
-        "Una vez activado, aparece un botón con un destello en el editor de notas. Tócalo para generar un título, resumir (el resumen va al principio de la nota), corregir la gramática, acortar el texto, traducirlo al idioma que elijas, sugerir elementos de lista o sugerir una categoría.",
+        "Una vez activado, aparece un botón con un destello en el editor de notas. Según el tipo de nota, tócalo para generar un título, resumir (el resumen va al principio de la nota), corregir la gramática, acortar el texto, traducirlo al idioma que elijas, sugerir elementos de lista o sugerir una categoría.",
       text_4_0:
         "Algunas acciones necesitan un modelo más grande: en Ajustes → Asistente IA ves lo que puede hacer cada modelo.",
       text_5_0:
@@ -1007,8 +1009,8 @@ const es = {
       suggestions: "Sugerencias",
       other: "Otro",
     },
-    descriptionPlaceholder: "Por favor, describa el problema en detalle (obligatorio)",
-    deviceInfoCheckbox: "Para un diagnóstico más preciso, por favor proporciónenos detalles del dispositivo.",
+    descriptionPlaceholder: "Describe el problema en detalle (obligatorio)",
+    deviceInfoCheckbox: "Para un diagnóstico más preciso, compártenos los detalles del dispositivo.",
     attachments: "Añadir imágenes",
     sendReport: "Enviar Reporte",
 
@@ -1034,7 +1036,7 @@ const es = {
       },
       missing: {
         title: "¡Datos Faltantes!",
-        text: "Por favor complete el tema y la descripción del problema.",
+        text: "Completa el tema y la descripción del problema.",
       },
     },
   },
@@ -1048,10 +1050,10 @@ const es = {
     delete_notes_perma: "¿Quieres eliminar esas notas de forma permanente?",
     restore_all_notes: "¿Quieres restaurar TODAS las notas?",
     delete_all_notes_perma: "¿Quieres eliminar TODAS las notas de forma permanente?",
-    select_one_option: "Por favor selecciona una opcion",
+    select_one_option: "Selecciona una opción",
     passphrase_wrong: "La contraseña que ingresaste es incorrecta.",
     are_you_sure_wipe: "¿Estás seguro de que quieres borrar tus datos?\nPerderás todas las notas y categorías creadas.",
-    finish_organize_categories: "Finalice para organizar categorías o deshacer sus cambios.",
+    finish_organize_categories: "Termina de organizar las categorías o deshaz tus cambios.",
     generic_success_description: "La operación fue exitosa.",
   },
 

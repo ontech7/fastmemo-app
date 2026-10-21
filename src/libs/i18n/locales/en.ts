@@ -652,7 +652,7 @@ const en = {
     how_to_create_todo_note: {
       title: "How do I create a to-do list?",
       text_1_0: "Tap the",
-      text_1_1: "button in the bottom-right corner of the Home screen.",
+      text_1_1: "button next to [+] in the bottom-right corner of the Home screen and choose 'To-Do'.",
       text_2_0: "A new page opens where you can add a title and your to-do items.",
       text_3_0: "Drag the six dots on the right of an item to move it up or down.",
       text_4_0: "Tap the cross on the right to remove an item.",
@@ -666,7 +666,7 @@ const en = {
     how_to_create_kanban_note: {
       title: "How do I create a Kanban board?",
       text_1_0: "Tap the",
-      text_1_1: "button in the bottom-right corner of the Home screen and choose 'Kanban'.",
+      text_1_1: "button next to [+] in the bottom-right corner of the Home screen and choose 'Kanban'.",
       text_2_0: "A board opens with one column ready to use.",
       text_3_0: "• Add a column — tap 'Add column' on the right (up to 10).",
       text_4_0: "• Rename a column — edit the text in its header.",
@@ -680,11 +680,10 @@ const en = {
     how_to_create_code_note: {
       title: "How do I create a code note?",
       text_1_0: "Tap the",
-      text_1_1: "button in the bottom-right corner of the Home screen and choose 'Code'.",
+      text_1_1: "button next to [+] in the bottom-right corner of the Home screen and choose 'Code'.",
       text_2_0: "You get a real code editor with syntax highlighting.",
       text_3_0: "• Tabs — keep several snippets in one note; add, rename, delete or drag them to reorder (up to 6).",
       text_4_0: "• Language — tap the language bar to pick one, or let it be detected automatically.",
-      text_5_0: "• Find & replace — tap the search icon at the top, just like in a text note.",
       text_6_0: "To save it, just go back to the Home screen.",
     },
     what_quick_note: {
@@ -738,7 +737,7 @@ const en = {
     },
     what_find_replace: {
       title: "How do I find and replace text?",
-      text_1_0: "While editing a text or code note, tap the search icon in the top-right corner.",
+      text_1_0: "While editing a text note, tap the search icon in the top-right corner.",
       text_2_0: "Type what you're looking for: the arrows jump between matches and show how many there are.",
       text_3_0: "Turn on 'Replace' to swap the current match, or replace every match at once.",
     },
@@ -748,7 +747,7 @@ const en = {
       text_2_0: 'Say "comma", "period", "question mark" or "new line" to punctuate.',
       text_3_0: "Tap 'Insert' to add the text where the cursor is. In a to-do list, each line becomes an item.",
       text_4_0:
-        "With the AI Assistant set up, 'Clean up with AI' tidies up the punctuation first; in a to-do list it also splits what you said into items.",
+        "With the AI Assistant set up, 'Clean up with AI' tidies the text (punctuation, capitals, filler words) before you insert it; in a to-do list it turns what you said into items instead.",
       text_5_0: "You can change the language or turn dictation off in Settings → Voice recognition.",
     },
     what_are_settings_note: {
@@ -760,7 +759,7 @@ const en = {
       text_5_0: "• Read-only — keep the note from being edited by accident.",
       text_6_0: "• Hide — keep the note off the Home screen until you choose to show hidden notes.",
       text_7_0:
-        "• Make offline — keep the note only on this device, never synced to the cloud. 'Sync to cloud' brings it back as a new copy.",
+        "• Make offline — keep the note only on this device, never synced to the cloud. 'Sync to cloud' uploads it again as a new note, with \"(2)\" added to its title.",
       text_8_0: "• Change category — move the note to another category.",
       text_9_0: "• Export (text notes) — save the note as a .txt, Markdown or PDF file.",
       text_10_0: "• Information — see the note's type, category and dates.",
@@ -804,7 +803,7 @@ const en = {
       title: "What is the trash?",
       text_1_0: "When you delete a note it isn't gone right away — it goes to the trash first.",
       text_2_0:
-        "Notes stay there for 7 days and are then removed for good. You can change how long they're kept in the basic settings.",
+        "Notes stay there for 30 days by default, then they're removed for good. In the basic settings you can keep them 3, 7, 15 or 30 days.",
     },
     how_restore_trashed_notes: {
       title: "How do I restore deleted notes?",
@@ -911,6 +910,7 @@ const en = {
       text_2_0: "• Simple — [+] creates a text note; use the menu for the other types.",
       text_3_0: "• Smart — [+] always creates the type you picked as your favourite.",
       text_4_0: "• Adaptive — [+] creates the same type as the last note you worked on.",
+      text_5_0: "• Quick-note bar — show or hide the bar for quick notes at the bottom of the Home screen.",
     },
     what_home_filters: {
       title: "How do the Home filters work?",
@@ -957,12 +957,13 @@ const en = {
       title: "Are there keyboard shortcuts on the computer?",
       text_1_0: "Yes, in the desktop app:",
       text_2_0: "• Ctrl/⌘+N — new note.",
-      text_3_0: "• Ctrl/⌘+F — search your notes, or find text in the open note.",
+      text_3_0: "• Ctrl/⌘+F — search your notes, or find text in an open text note.",
       text_4_0: "• Ctrl/⌘+, — open the settings.",
       text_5_0: "• Esc — go back; in a text field, the first Esc only leaves the field.",
       text_6_0: "• Ctrl/⌘+Enter — save the Quick note.",
       text_7_0:
-        "On a Mac the same commands are in the menu bar, together with the other note types and Export/Import. Closing the window keeps Fast Memo running: click its icon in the Dock to bring it back, or quit it with ⌘Q.",
+        "On a Mac the same commands are in the menu bar, together with the other note types and Export/Import Data. Closing the window keeps Fast Memo running: click its icon in the Dock to bring it back, or quit it with ⌘Q.",
+      text_8_0: "On Windows and Linux, closing the window quits Fast Memo.",
     },
     what_ai_assistant: {
       title: "What is the AI Assistant?",
@@ -970,7 +971,7 @@ const en = {
         "Fast Memo includes a self-hosted AI Assistant that runs entirely on your device. No data is sent to external servers.",
       text_2_0: "To set it up, go to Settings → AI Assistant, choose a model and download it.",
       text_3_0:
-        "Once enabled, a sparkle button appears in the note editor. Tap it to generate a title, summarize (the summary goes at the top of the note), fix grammar, make the text shorter, translate it into the language you choose, suggest checklist items or suggest a category.",
+        "Once enabled, a sparkle button appears in the note editor. Depending on the note type, tap it to generate a title, summarize (the summary goes at the top of the note), fix grammar, make the text shorter, translate it into the language you choose, suggest checklist items or suggest a category.",
       text_4_0: "Some actions need a bigger model: Settings → AI Assistant shows what each model can do.",
       text_5_0: "It can also clean up your voice dictation, and here in Help it finds the right topic from your own words.",
       text_6_0: "The AI works offline and supports multiple languages.",

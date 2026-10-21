@@ -16,12 +16,12 @@ import AdjustmentsHorizontalIcon from "react-native-heroicons/outline/Adjustment
 import ArrowsPointingOutIcon from "react-native-heroicons/outline/ArrowsPointingOutIcon";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
+import ChevronUpIcon from "react-native-heroicons/outline/ChevronUpIcon";
 import CloudIcon from "react-native-heroicons/outline/CloudIcon";
 import Cog6ToothIcon from "react-native-heroicons/outline/Cog6ToothIcon";
 import DocumentTextIcon from "react-native-heroicons/outline/DocumentTextIcon";
 import EllipsisVerticalIcon from "react-native-heroicons/outline/EllipsisVerticalIcon";
 import FolderPlusIcon from "react-native-heroicons/outline/FolderPlusIcon";
-import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
 import PaperAirplaneIcon from "react-native-heroicons/outline/PaperAirplaneIcon";
 import PencilSquareIcon from "react-native-heroicons/outline/PencilSquareIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
@@ -151,8 +151,8 @@ export default function HelpScreen() {
             body: (
               <>
                 <Text style={styles.sectionItemList_text}>
-                  {t("help.how_to_create_todo_note.text_1_0")} <ListBulletIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
-                  {t("help.how_to_create_note.text_1_1")}
+                  {t("help.how_to_create_todo_note.text_1_0")} <ChevronUpIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
+                  {t("help.how_to_create_todo_note.text_1_1")}
                 </Text>
                 {lines("help.how_to_create_todo_note", [
                   "text_2_0",
@@ -172,7 +172,7 @@ export default function HelpScreen() {
             body: (
               <>
                 <Text style={styles.sectionItemList_text}>
-                  {t("help.how_to_create_kanban_note.text_1_0")} <PlusIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
+                  {t("help.how_to_create_kanban_note.text_1_0")} <ChevronUpIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
                   {t("help.how_to_create_kanban_note.text_1_1")}
                 </Text>
                 {lines("help.how_to_create_kanban_note", [
@@ -194,10 +194,10 @@ export default function HelpScreen() {
             body: (
               <>
                 <Text style={styles.sectionItemList_text}>
-                  {t("help.how_to_create_code_note.text_1_0")} <PlusIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
+                  {t("help.how_to_create_code_note.text_1_0")} <ChevronUpIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
                   {t("help.how_to_create_code_note.text_1_1")}
                 </Text>
-                {lines("help.how_to_create_code_note", ["text_2_0", "text_3_0", "text_4_0", "text_5_0", "text_6_0"])}
+                {lines("help.how_to_create_code_note", ["text_2_0", "text_3_0", "text_4_0", "text_6_0"])}
               </>
             ),
           },
@@ -490,7 +490,7 @@ export default function HelpScreen() {
         items: [
           {
             base: "help.what_note_creation",
-            body: <>{lines("help.what_note_creation", ["text_1_0", "text_2_0", "text_3_0", "text_4_0"])}</>,
+            body: <>{lines("help.what_note_creation", ["text_1_0", "text_2_0", "text_3_0", "text_4_0", "text_5_0"])}</>,
           },
           {
             base: "help.what_home_filters",
@@ -535,6 +535,7 @@ export default function HelpScreen() {
                         "text_5_0",
                         "text_6_0",
                         "text_7_0",
+                        "text_8_0",
                       ])}
                     </>
                   ),

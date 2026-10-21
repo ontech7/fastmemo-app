@@ -148,7 +148,7 @@ const fr = {
     step7: "Insérez un code secret pour masquer vos notes.",
     step8: "Synchronisez vos notes entre vos appareils : sur votre Firebase ou votre propre serveur.",
     title: "Qu'est-ce que Fast Memo?",
-    continue: "Continue",
+    continue: "Continuer",
   },
   setupcode: {
     title: "Code Secret",
@@ -658,7 +658,7 @@ const fr = {
     how_to_create_todo_note: {
       title: "Comment créer une liste de tâches ?",
       text_1_0: "Appuyez sur le bouton",
-      text_1_1: "dans le coin inférieur droit de la page d'accueil.",
+      text_1_1: "à côté de [+], dans le coin inférieur droit de la page d'accueil, et choisissez 'Liste'.",
       text_2_0: "Une nouvelle page s'ouvre où vous pouvez ajouter un titre et vos tâches à faire.",
       text_3_0: "Faites glisser les six points à droite d'un élément pour le déplacer vers le haut ou le bas.",
       text_4_0: "Appuyez sur la croix à droite pour supprimer un élément.",
@@ -672,7 +672,7 @@ const fr = {
     how_to_create_kanban_note: {
       title: "Comment créer un tableau Kanban ?",
       text_1_0: "Appuyez sur le bouton",
-      text_1_1: "dans le coin inférieur droit de la page d'accueil et choisissez 'Kanban'.",
+      text_1_1: "à côté de [+], dans le coin inférieur droit de la page d'accueil, et choisissez 'Kanban'.",
       text_2_0: "Un tableau s'ouvre avec une colonne prête à l'emploi.",
       text_3_0: "• Ajouter une colonne — appuyez sur 'Ajouter une colonne' à droite (jusqu'à 10).",
       text_4_0: "• Renommer une colonne — modifiez le texte dans son en-tête.",
@@ -686,12 +686,11 @@ const fr = {
     how_to_create_code_note: {
       title: "Comment créer une note de code ?",
       text_1_0: "Appuyez sur le bouton",
-      text_1_1: "dans le coin inférieur droit de la page d'accueil et choisissez 'Code'.",
+      text_1_1: "à côté de [+], dans le coin inférieur droit de la page d'accueil, et choisissez 'Code'.",
       text_2_0: "Vous obtenez un véritable éditeur de code avec coloration syntaxique.",
       text_3_0:
         "• Onglets — gardez plusieurs extraits dans une seule note ; ajoutez-les, renommez-les, supprimez-les ou faites-les glisser pour les réorganiser (jusqu'à 6).",
       text_4_0: "• Langage — appuyez sur la barre de langage pour en choisir un, ou laissez-le être détecté automatiquement.",
-      text_5_0: "• Rechercher et remplacer — appuyez sur l'icône de recherche en haut, comme dans une note de texte.",
       text_6_0: "Pour l'enregistrer, il suffit de revenir à la page d'accueil.",
     },
     what_quick_note: {
@@ -745,8 +744,7 @@ const fr = {
     },
     what_find_replace: {
       title: "Comment rechercher et remplacer du texte ?",
-      text_1_0:
-        "Lors de l'édition d'une note de texte ou de code, appuyez sur l'icône de recherche dans le coin supérieur droit.",
+      text_1_0: "Pendant que vous modifiez une note texte, appuyez sur l'icône de recherche en haut à droite.",
       text_2_0: "Saisissez ce que vous cherchez : les flèches passent d'une occurrence à l'autre et indiquent leur nombre.",
       text_3_0: "Activez 'Remplacer' pour remplacer l'occurrence actuelle, ou remplacez toutes les occurrences d'un coup.",
     },
@@ -757,7 +755,7 @@ const fr = {
       text_3_0:
         "Appuyez sur 'Insérer' pour ajouter le texte à l'emplacement du curseur. Dans une liste de tâches, chaque ligne devient un élément.",
       text_4_0:
-        "Si l'Assistant IA est configuré, 'Nettoyer avec l'IA' corrige d'abord la ponctuation ; dans une liste de tâches, il découpe aussi ce que vous avez dit en éléments.",
+        "Si l'Assistant IA est configuré, 'Nettoyer avec l'IA' corrige le texte (ponctuation, majuscules, mots de remplissage) avant de l'insérer ; dans une liste de tâches, il transforme plutôt ce que vous avez dit en éléments.",
       text_5_0: "Vous pouvez changer la langue ou désactiver la dictée dans Paramètres → Reconnaissance vocale.",
     },
     what_are_settings_note: {
@@ -770,7 +768,7 @@ const fr = {
       text_6_0:
         "• Masquer — garder la note hors de la page d'accueil jusqu'à ce que vous choisissiez d'afficher les notes masquées.",
       text_7_0:
-        "• Rendre hors ligne — garder la note uniquement sur cet appareil, jamais synchronisée vers le cloud. 'Synchroniser avec le cloud' la remet en ligne sous forme de nouvelle copie.",
+        "• Rendre hors ligne — garder la note uniquement sur cet appareil, jamais synchronisée vers le cloud. 'Synchroniser avec le cloud' la renvoie comme une nouvelle note, avec \"(2)\" à la fin du titre.",
       text_8_0: "• Changer de catégorie — déplacer la note vers une autre catégorie.",
       text_9_0: "• Exporter (notes de texte) — enregistrer la note sous forme de fichier .txt, Markdown ou PDF.",
       text_10_0: "• Informations — voir le type, la catégorie et les dates de la note.",
@@ -815,7 +813,7 @@ const fr = {
       title: "Qu'est-ce que la corbeille ?",
       text_1_0: "Lorsque vous supprimez une note, elle n'est pas perdue tout de suite — elle va d'abord dans la corbeille.",
       text_2_0:
-        "Les notes y restent 7 jours, puis sont définitivement supprimées. Vous pouvez modifier leur durée de conservation dans les paramètres de base.",
+        "Les notes y restent 30 jours, puis sont définitivement supprimées. Dans les paramètres de base, vous pouvez les garder 3, 7, 15 ou 30 jours.",
     },
     how_restore_trashed_notes: {
       title: "Comment restaurer des notes supprimées ?",
@@ -932,6 +930,7 @@ const fr = {
       text_2_0: "• Simple — [+] crée une note de texte ; utilisez le menu pour les autres types.",
       text_3_0: "• Intelligent — [+] crée toujours le type que vous avez choisi comme favori.",
       text_4_0: "• Adaptatif — [+] crée le même type que la dernière note sur laquelle vous avez travaillé.",
+      text_5_0: "• Barre de note rapide — afficher ou masquer la barre des notes rapides en bas de la page d'accueil.",
     },
     what_home_filters: {
       title: "Comment fonctionnent les filtres de l'accueil ?",
@@ -980,12 +979,13 @@ const fr = {
       title: "Y a-t-il des raccourcis clavier sur ordinateur ?",
       text_1_0: "Oui, dans l'application de bureau :",
       text_2_0: "• Ctrl/⌘+N — nouvelle note.",
-      text_3_0: "• Ctrl/⌘+F — rechercher dans vos notes, ou trouver du texte dans la note ouverte.",
+      text_3_0: "• Ctrl/⌘+F — rechercher dans vos notes, ou trouver du texte dans une note texte ouverte.",
       text_4_0: "• Ctrl/⌘+, — ouvrir les paramètres.",
       text_5_0: "• Échap — revenir en arrière ; dans un champ de texte, le premier Échap quitte seulement le champ.",
       text_6_0: "• Ctrl/⌘+Entrée — enregistrer la note rapide.",
       text_7_0:
-        "Sur Mac, les mêmes commandes se trouvent dans la barre des menus, avec les autres types de note et Exporter/Importer. Fermer la fenêtre laisse Fast Memo ouvert : cliquez sur son icône dans le Dock pour le retrouver, ou quittez-le avec ⌘Q.",
+        "Sur Mac, les mêmes commandes se trouvent dans la barre des menus, avec les autres types de note et Exporter/Importer des données. Fermer la fenêtre laisse Fast Memo ouvert : cliquez sur son icône dans le Dock pour le retrouver, ou quittez-le avec ⌘Q.",
+      text_8_0: "Sous Windows et Linux, fermer la fenêtre quitte Fast Memo.",
     },
     what_ai_assistant: {
       title: "Qu'est-ce que l'Assistant IA ?",
@@ -993,7 +993,7 @@ const fr = {
         "Fast Memo inclut un Assistant IA auto-hébergé qui fonctionne entièrement sur votre appareil. Aucune donnée n'est envoyée à des serveurs externes.",
       text_2_0: "Pour le configurer, allez dans Paramètres → Assistant IA, choisissez un modèle et téléchargez-le.",
       text_3_0:
-        "Une fois activé, un bouton étincelle apparaît dans l'éditeur de note. Appuyez dessus pour générer un titre, résumer (le résumé se place en haut de la note), corriger la grammaire, raccourcir le texte, le traduire dans la langue de votre choix, suggérer des éléments de liste ou suggérer une catégorie.",
+        "Une fois activé, un bouton étincelle apparaît dans l'éditeur de note. Selon le type de note, appuyez dessus pour générer un titre, résumer (le résumé se place en haut de la note), corriger la grammaire, raccourcir le texte, le traduire dans la langue de votre choix, suggérer des éléments de liste ou suggérer une catégorie.",
       text_4_0:
         "Certaines actions demandent un modèle plus grand : Paramètres → Assistant IA indique ce que chaque modèle sait faire.",
       text_5_0:

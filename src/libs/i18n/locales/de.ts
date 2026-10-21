@@ -180,7 +180,7 @@ const de = {
       "Halten Sie eine Notiz gedrückt, um sie auszuwählen: Sie können sie als wichtig markieren, sperren, ausblenden oder löschen. Kategorien, Papierkorb und Einstellungen finden Sie in der Leiste links.",
   },
   home: {
-    notes: "Notiz",
+    notes: "Notizen",
     search: "Nach etwas suchen…",
     quickNote: "Schnelle Notiz…",
     deepSearch: "Tiefensuche (Text, Listen…)",
@@ -444,7 +444,7 @@ const de = {
   },
   generalsettings: {
     title: "Einstellungen",
-    basic: "Basic",
+    basic: "Grundeinstellungen",
     cloudsync: "Cloud Sync",
     temporary_trash_lifespan: "Temporäre Papierkorbdauer",
     days: "Tage",
@@ -660,7 +660,7 @@ const de = {
     how_to_create_todo_note: {
       title: "Wie erstelle ich eine To-Do-Liste?",
       text_1_0: "Tippen Sie auf die",
-      text_1_1: "Schaltfläche unten rechts auf der Startseite.",
+      text_1_1: "Schaltfläche neben [+] unten rechts auf der Startseite und wählen Sie 'Liste'.",
       text_2_0: "Es öffnet sich eine neue Seite, auf der Sie einen Titel und Ihre To-Do-Einträge hinzufügen können.",
       text_3_0: "Ziehen Sie an den sechs Punkten rechts neben einem Eintrag, um ihn nach oben oder unten zu verschieben.",
       text_4_0: "Tippen Sie auf das Kreuz rechts, um einen Eintrag zu entfernen.",
@@ -674,7 +674,7 @@ const de = {
     how_to_create_kanban_note: {
       title: "Wie erstelle ich ein Kanban-Board?",
       text_1_0: "Tippen Sie auf die",
-      text_1_1: "Schaltfläche unten rechts auf der Startseite und wählen Sie 'Kanban'.",
+      text_1_1: "Schaltfläche neben [+] unten rechts auf der Startseite und wählen Sie 'Kanban'.",
       text_2_0: "Es öffnet sich ein Board mit einer einsatzbereiten Spalte.",
       text_3_0: "• Spalte hinzufügen — tippen Sie rechts auf 'Spalte hinzufügen' (bis zu 10).",
       text_4_0: "• Spalte umbenennen — bearbeiten Sie den Text in ihrer Überschrift.",
@@ -688,12 +688,11 @@ const de = {
     how_to_create_code_note: {
       title: "Wie erstelle ich eine Code-Notiz?",
       text_1_0: "Tippen Sie auf die",
-      text_1_1: "Schaltfläche unten rechts auf der Startseite und wählen Sie 'Code'.",
+      text_1_1: "Schaltfläche neben [+] unten rechts auf der Startseite und wählen Sie 'Code'.",
       text_2_0: "Sie erhalten einen echten Code-Editor mit Syntaxhervorhebung.",
       text_3_0:
         "• Tabs — bewahren Sie mehrere Snippets in einer Notiz auf; fügen Sie welche hinzu, benennen Sie sie um, löschen Sie sie oder ziehen Sie sie zum Umsortieren (bis zu 6).",
       text_4_0: "• Sprache — tippen Sie auf die Sprachleiste, um eine auszuwählen, oder lassen Sie sie automatisch erkennen.",
-      text_5_0: "• Suchen & Ersetzen — tippen Sie oben auf das Suchsymbol, genau wie bei einer Textnotiz.",
       text_6_0: "Um sie zu speichern, kehren Sie einfach zur Startseite zurück.",
     },
     what_quick_note: {
@@ -704,7 +703,7 @@ const de = {
       text_2_0: "Die Notiz landet in der Kategorie, die Sie gerade ansehen, und ihr Titel stammt aus ihren ersten Wörtern.",
       text_3_0: "Für Formatierung oder Bilder tippen Sie stattdessen auf",
       text_3_1: "und Ihr Text öffnet sich im vollständigen Editor.",
-      text_4_0: "Am Computer speichert Strg/⌘+Eingabe die Notiz, und Eingabe beginnt eine neue Zeile.",
+      text_4_0: "Am Computer speichert Strg/⌘+Enter die Notiz, und Enter beginnt eine neue Zeile.",
       text_5_0: "Sie können die Leiste unter Einstellungen → Notiz erstellen ausschalten.",
     },
     how_to_edit_note: {
@@ -749,7 +748,7 @@ const de = {
     },
     what_find_replace: {
       title: "Wie suche und ersetze ich Text?",
-      text_1_0: "Tippen Sie beim Bearbeiten einer Text- oder Code-Notiz oben rechts auf das Suchsymbol.",
+      text_1_0: "Tippen Sie beim Bearbeiten einer Textnotiz oben rechts auf das Suchsymbol.",
       text_2_0: "Geben Sie ein, wonach Sie suchen: Die Pfeile springen zwischen den Treffern und zeigen an, wie viele es gibt.",
       text_3_0: "Aktivieren Sie 'Ersetzen', um den aktuellen Treffer auszutauschen, oder ersetzen Sie alle Treffer auf einmal.",
     },
@@ -760,7 +759,7 @@ const de = {
       text_3_0:
         "Tippen Sie auf 'Einfügen', um den Text an der Cursorposition einzufügen. In einer To-Do-Liste wird jede Zeile zu einem Eintrag.",
       text_4_0:
-        "Ist der KI-Assistent eingerichtet, setzt 'Mit KI aufräumen' zuerst die Satzzeichen; in einer To-Do-Liste teilt es das Gesagte außerdem in Einträge auf.",
+        "Ist der KI-Assistent eingerichtet, glättet 'Mit KI aufräumen' den Text (Satzzeichen, Großschreibung, Füllwörter), bevor Sie ihn einfügen; in einer To-Do-Liste macht es aus dem Gesagten stattdessen Einträge.",
       text_5_0: "Sprache ändern oder das Diktat ausschalten können Sie unter Einstellungen → Spracherkennung.",
     },
     what_are_settings_note: {
@@ -773,7 +772,7 @@ const de = {
       text_6_0:
         "• Ausblenden — die Notiz von der Startseite fernhalten, bis Sie sich entscheiden, ausgeblendete Notizen anzuzeigen.",
       text_7_0:
-        "• Offline schalten — die Notiz nur auf diesem Gerät behalten, niemals in die Cloud synchronisieren. Mit 'Mit Cloud synchronisieren' kommt sie als neue Kopie zurück.",
+        "• Offline schalten — die Notiz nur auf diesem Gerät behalten, niemals in die Cloud synchronisieren. Über 'Mit Cloud synchronisieren' wird sie erneut als neue Notiz hochgeladen, mit \"(2)\" am Ende des Titels.",
       text_8_0: "• Kategorie ändern — die Notiz in eine andere Kategorie verschieben.",
       text_9_0: "• Exportieren (Textnotizen) — die Notiz als .txt-, Markdown- oder PDF-Datei speichern.",
       text_10_0: "• Information — Typ, Kategorie und Daten der Notiz anzeigen.",
@@ -820,7 +819,7 @@ const de = {
       title: "Was ist der Papierkorb?",
       text_1_0: "Wenn Sie eine Notiz löschen, ist sie nicht sofort weg — sie landet zuerst im Papierkorb.",
       text_2_0:
-        "Notizen bleiben dort 7 Tage und werden dann endgültig entfernt. Wie lange sie aufbewahrt werden, können Sie in den Grundeinstellungen ändern.",
+        "Notizen bleiben dort standardmäßig 30 Tage und werden dann endgültig entfernt. In den Grundeinstellungen können Sie sie 3, 7, 15 oder 30 Tage aufbewahren.",
     },
     how_restore_trashed_notes: {
       title: "Wie stelle ich gelöschte Notizen wieder her?",
@@ -933,10 +932,11 @@ const de = {
     what_note_creation: {
       title: "Was bewirkt die Einstellung zur Notizerstellung?",
       text_1_0:
-        "Sie legt fest, was passiert, wenn Sie auf der Startseite auf die [+]-Schaltfläche tippen. Unter Einstellungen → Notizerstellung können Sie wählen:",
+        "Sie legt fest, was passiert, wenn Sie auf der Startseite auf die [+]-Schaltfläche tippen. Unter Einstellungen → Notiz erstellen können Sie wählen:",
       text_2_0: "• Einfach — [+] erstellt eine Textnotiz; nutzen Sie das Menü für die anderen Typen.",
       text_3_0: "• Smart — [+] erstellt immer den Typ, den Sie als Favoriten gewählt haben.",
       text_4_0: "• Adaptiv — [+] erstellt denselben Typ wie die zuletzt bearbeitete Notiz.",
+      text_5_0: "• Schnellnotiz-Leiste — die Leiste für Schnellnotizen unten auf der Startseite ein- oder ausblenden.",
     },
     what_home_filters: {
       title: "Wie funktionieren die Filter auf der Startseite?",
@@ -984,12 +984,13 @@ const de = {
       title: "Gibt es Tastenkürzel am Computer?",
       text_1_0: "Ja, in der Desktop-App:",
       text_2_0: "• Strg/⌘+N — neue Notiz.",
-      text_3_0: "• Strg/⌘+F — Ihre Notizen durchsuchen oder Text in der geöffneten Notiz finden.",
+      text_3_0: "• Strg/⌘+F — Ihre Notizen durchsuchen oder Text in einer geöffneten Textnotiz finden.",
       text_4_0: "• Strg/⌘+, — die Einstellungen öffnen.",
       text_5_0: "• Esc — zurückgehen; in einem Textfeld verlässt das erste Esc nur das Feld.",
-      text_6_0: "• Strg/⌘+Eingabe — die Schnellnotiz speichern.",
+      text_6_0: "• Strg/⌘+Enter — die Schnellnotiz speichern.",
       text_7_0:
-        "Auf dem Mac finden Sie dieselben Befehle in der Menüleiste, zusammen mit den anderen Notiztypen und Export/Import. Wenn Sie das Fenster schließen, läuft Fast Memo weiter: Klicken Sie auf das Symbol im Dock, um es zurückzuholen, oder beenden Sie es mit ⌘Q.",
+        "Auf dem Mac finden Sie dieselben Befehle in der Menüleiste, zusammen mit den anderen Notiztypen und 'Daten exportieren/importieren'. Wenn Sie das Fenster schließen, läuft Fast Memo weiter: Klicken Sie auf das Symbol im Dock, um es zurückzuholen, oder beenden Sie es mit ⌘Q.",
+      text_8_0: "Unter Windows und Linux beendet das Schließen des Fensters Fast Memo.",
     },
     what_ai_assistant: {
       title: "Was ist der KI-Assistent?",
@@ -997,7 +998,7 @@ const de = {
         "Fast Memo enthält einen selbst gehosteten KI-Assistenten, der vollständig auf Ihrem Gerät läuft. Es werden keine Daten an externe Server gesendet.",
       text_2_0: "Zum Einrichten gehen Sie zu Einstellungen → KI-Assistent, wählen ein Modell und laden es herunter.",
       text_3_0:
-        "Nach der Aktivierung erscheint im Notiz-Editor eine Sparkle-Schaltfläche. Tippen Sie darauf, um einen Titel zu generieren, zusammenzufassen (die Zusammenfassung steht oben in der Notiz), die Grammatik zu korrigieren, den Text zu kürzen, ihn in eine Sprache Ihrer Wahl zu übersetzen, Checklisten-Elemente vorzuschlagen oder eine Kategorie vorzuschlagen.",
+        "Nach der Aktivierung erscheint im Notiz-Editor eine Sparkle-Schaltfläche. Je nach Notiztyp können Sie damit einen Titel generieren, zusammenfassen (die Zusammenfassung steht oben in der Notiz), die Grammatik korrigieren, den Text kürzen, ihn in eine Sprache Ihrer Wahl übersetzen, Checklisten-Elemente vorschlagen oder eine Kategorie vorschlagen.",
       text_4_0:
         "Manche Aktionen brauchen ein größeres Modell: Unter Einstellungen → KI-Assistent sehen Sie, was jedes Modell kann.",
       text_5_0: "Er kann auch Ihr Diktat aufräumen und hier in der Hilfe anhand Ihrer eigenen Worte das passende Thema finden.",
