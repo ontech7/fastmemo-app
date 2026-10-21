@@ -682,6 +682,35 @@ check(
   (await imageState()).src.slice(0, 30)
 );
 
+// A change works on the image selected: then the caret goes back where it was, not next to the image (or on it, where a
+// key would replace it).
+const caretAfterImage = () =>
+  evaluate(`(() => {
+    const s = getSelection(), r = document.createRange();
+    r.setStartAfter(document.querySelector(".pell-content img"));
+    return s.isCollapsed && s.getRangeAt(0).compareBoundaryPoints(Range.START_TO_START, r) === 0;
+  })()`);
+for (const [change, value] of [["size", "50%"], ["align", "center"], ["rotate"], ["delete"]]) {
+  await open(imageNote(JPEG));
+  await select({ caret: "b", at: 1 });
+  await imageChange(tapped, change, value);
+  check(`${change}: the caret stays where it was`, (await state()).caret === "b@1", (await state()).caret);
+}
+for (const [change, value] of [["size", "50%"], ["align", "center"], ["rotate"]]) {
+  await open(imageNote(JPEG));
+  await select({ after: "img" });
+  await imageChange(tapped, change, value);
+  check(`${change}: a caret right after the image stays after it`, await caretAfterImage(), (await state()).caret);
+}
+await open(imageNote(JPEG));
+await imageChange(tapped, "size", "50%");
+check(
+  "A change in a note that isn't being edited leaves it so (no keyboard on the phone)",
+  (await imageState()).size === "50%" &&
+    (await evaluate(`document.activeElement !== document.querySelector(".pell-content") && !getSelection().rangeCount`)),
+  await evaluate(`[document.activeElement.className, getSelection().rangeCount]`)
+);
+
 await open(imageNote(JPEG));
 await listenToPage();
 await post({ type: "content", name: "setDisable", data: true });

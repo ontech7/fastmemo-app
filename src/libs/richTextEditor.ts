@@ -357,6 +357,13 @@ export const RICH_TEXT_SCRIPT = String.raw`
   var image = function (index, key, change, value) {
     var img = content().querySelectorAll("img")[index];
     if (!img || imageKey(img) !== key || !content().isContentEditable) return;
+    // A change works on the image selected: then the caret goes back where it was (a range follows the nodes around it),
+    // not next to the image, or on it where a key would replace it. A note that had no caret is left without one.
+    var s = selection(), caret = s.rangeCount ? s.getRangeAt(0).cloneRange() : null;
+    // A caret right after an image that is replaced would end up before its copy: insertHTML leaves it after.
+    var after = caret && caret.collapsed && caret.startContainer === img.parentNode &&
+      caret.startOffset === [].indexOf.call(img.parentNode.childNodes, img) + 1;
+    var restore = !(after && (change === "size" || change === "rotate"));
     try {
       if (change === "size") replaceImage(img, function (copy) { copy.style.width = value; });
       else if (change === "rotate") {
@@ -373,6 +380,8 @@ export const RICH_TEXT_SCRIPT = String.raw`
       // An image the canvas can't read (a file of an old version): the app says so.
       post("${IMAGE_FAILED_MESSAGE}", String(error));
     }
+    if (!caret) s.removeAllRanges();
+    else if (restore && content().contains(caret.startContainer) && content().contains(caret.endContainer)) select(caret);
     refreshToolbar();
   };
 
