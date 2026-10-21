@@ -19,6 +19,7 @@ import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
 import i18n from "@/libs/i18n";
+import { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE } from "@/libs/richTextEditor";
 import {
   selectorAIAssistant,
   selectorDeveloperMode,
@@ -145,11 +146,29 @@ const renderToolbarAction = (
     _defaultRenderAction(action: string, selected: boolean): ReactElement;
   }
 )._defaultRenderAction;
+const pressToolbarAction = (RichToolbar.prototype as unknown as { _onPress(action: string): void })._onPress;
+
+// The buttons that set what a line is, done by the page script (RICH_TEXT_SCRIPT) instead of pell.
+const LINE_TYPES: Record<string, string> = {
+  [actions.heading1]: "h1",
+  [actions.code]: "code",
+  [actions.insertBulletsList]: "ul",
+  [actions.insertOrderedList]: "ol",
+};
 
 // RichToolbar renders its action buttons with no role or name and has no prop to add them, so decorate the
 // buttons its default renderer returns (`_renderAction` calls it through `this`, so the override is used). It has no
 // prop for its list's padding either: the first and last buttons get a margin, so they don't touch the screen edges.
+// Nor for its own actions: the line types go to the page script.
 class LabeledRichToolbar extends RichToolbar {
+  _onPress(action: string) {
+    const editor = (this as unknown as { editor?: RichEditor }).editor;
+    const type = LINE_TYPES[action];
+    if (!type || !editor) return pressToolbarAction.call(this, action);
+    editor.focusContentEditor();
+    editor.command(`window.__fm && window.__fm.toggle(${JSON.stringify(type)})`);
+  }
+
   _defaultRenderAction(action: string, selected: boolean) {
     const isToggle = !NON_TOGGLE_ACTIONS.has(action);
     const button = renderToolbarAction.call(this, action, selected) as ReactElement<TouchableOpacityProps>;
@@ -292,7 +311,9 @@ export default function NoteTextEditor({ initialNote }: Props) {
       base64: true,
     });
 
-    richTextEditor.current?.insertImage(`data:image/jpeg;base64,${manipResult.base64}`);
+    const src = `data:image/jpeg;base64,${manipResult.base64}`;
+    richTextEditor.current?.focusContentEditor();
+    richTextEditor.current?.command(`window.__fm && window.__fm.insertImage(${JSON.stringify(src)})`);
   }, []);
 
   const setTitle = useCallback(
@@ -338,6 +359,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const onEditorInitialized = useCallback(() => {
     editorReadyRef.current = true;
+    richTextEditor.current?.command(RICH_TEXT_SCRIPT);
     setEditorInitialized(true);
     // Changed on another device while the page was loading: it loaded the text the screen opened with.
     if (noteRef.current.text !== initialNote.text) showRemote(noteRef.current.text);
@@ -359,23 +381,6 @@ export default function NoteTextEditor({ initialNote }: Props) {
         richTextEditor.current?.dismissKeyboard();
       };
     }, [])
-  );
-
-  const editorStyle = useMemo(
-    () => ({
-      backgroundColor: "transparent",
-      color: COLOR.softWhite,
-      placeholderColor: COLOR.textMuted,
-      cssText: richTextSyle,
-      // Horizontal inset lives here (not on containerStyle) so it matches the header
-      // and toolbar margins on every platform: on web the webview is a plain <iframe>
-      // that ignores containerStyle, so only this content padding aligns the text.
-      // The gap from the toolbar is handled by editorWrapper's paddingBottom (a real
-      // layout gap outside the iframe) — content padding-bottom can't do it because the
-      // iframe's bottom edge is the scroll viewport edge, so the caret always lands on it.
-      contentCSSText: `padding: ${PADDING_MARGIN.sm}px ${PADDING_MARGIN.lg}px ${PADDING_MARGIN.sm}px;`,
-    }),
-    []
   );
 
   const toolbarActions = useMemo(
@@ -498,7 +503,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
               pasteAsPlainText
               injectedJavaScriptBeforeContentLoaded={EDITOR_SANITIZE_SCRIPT}
               injectedJavaScript={EDITOR_SANITIZE_SCRIPT}
-              editorStyle={editorStyle}
+              editorStyle={RICH_TEXT_STYLE}
               editorInitializedCallback={onEditorInitialized}
             />
           </Animated.View>
@@ -730,15 +735,3 @@ const styles = StyleSheet.create({
     paddingBottom: PADDING_MARGIN.lg,
   },
 });
-
-/* RICH TEXT STYLE */
-
-const richTextSyle = `
-  pre {
-    background-color: ${COLOR.surfaceMuted};
-  }
-  img {
-    width: auto;
-    border-radius: ${BORDER.normal}px;
-  }
-`;
