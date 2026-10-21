@@ -2,6 +2,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
+import { parseImageDataUrl } from "@/utils/dataUrl";
 import { wrapHtmlForPdf } from "@/utils/html";
 
 export { htmlToMarkdown, wrapHtmlForPdf } from "@/utils/html";
@@ -12,6 +13,8 @@ export async function exportAsPdf(title: string, htmlContent: string): Promise<{
   return { uri: result.uri };
 }
 
+const IMAGE_TYPES: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" };
+
 export async function shareFile(uri: string, filename: string): Promise<void> {
   const isAvailable = await Sharing.isAvailableAsync();
   if (!isAvailable) return;
@@ -20,8 +23,9 @@ export async function shareFile(uri: string, filename: string): Promise<void> {
   // share as plain-text content to send as a message, not as a file attachment —
   // since we only pass a file stream they reject it ("format not supported"). A
   // generic document MIME forces attachment handling; the extension is preserved
-  // in the filename so the receiver still sees it as a .txt/.md.
-  const mimeType = filename.endsWith(".pdf") ? "application/pdf" : "application/octet-stream";
+  // in the filename so the receiver still sees it as a .txt/.md. An image goes as one, for the gallery and the chats.
+  const extension = filename.split(".").pop() ?? "";
+  const mimeType = extension === "pdf" ? "application/pdf" : (IMAGE_TYPES[extension] ?? "application/octet-stream");
 
   await Sharing.shareAsync(uri, {
     mimeType,
@@ -35,4 +39,20 @@ export async function exportAsTextFile(content: string, filename: string): Promi
     encoding: FileSystem.EncodingType.UTF8,
   });
   await shareFile(fileUri, filename);
+}
+
+// The images shared: the last one stays (the app it went to can read it after the share sheet has closed), the next share
+// removes it.
+const SHARED_IMAGES = FileSystem.cacheDirectory + "shared-images/";
+
+/** Shares an image of a note (a data: URL) as a file: to another app, or to the phone's files and gallery. */
+export async function exportImage(dataUrl: string): Promise<void> {
+  const image = parseImageDataUrl(dataUrl);
+  if (!image) throw new Error("not an image's data URL");
+  await FileSystem.deleteAsync(SHARED_IMAGES, { idempotent: true });
+  await FileSystem.makeDirectoryAsync(SHARED_IMAGES, { intermediates: true });
+  const filename = `fastmemo-${Date.now()}.${image.extension}`;
+  const uri = SHARED_IMAGES + filename;
+  await FileSystem.writeAsStringAsync(uri, image.base64, { encoding: FileSystem.EncodingType.Base64 });
+  await shareFile(uri, filename);
 }

@@ -997,3 +997,63 @@ sends them to the page itself, with no prop to replace them, and pell's page kee
 - about 8 KB more script in the editor's page;
 - the editor's behavior now lives in two places (pell and the script), so a pell update must pass `scripts/richtext.test.mjs`;
 - the code button still never shows as selected: pell has no state for it.
+
+---
+
+## ADR-024: Image Options in Text Notes: a Menu in the App, the Changes in the Editor's Page
+
+**Status:** Accepted (2026-10-21, user decision: size S/M/L/Full keeping the aspect ratio, align left/center/right, delete,
+full-screen viewer with zoom, rotate 90°, share/save; the menu and the viewer as built here were not discussed further)  
+**Context:** A text note's images are `data:` URLs in its HTML (the picker stores JPEG at 0.3), shown at their own width with no
+way to resize, align, turn, look at closely, share or remove them other than with the keyboard. The editor is pell in a WebView
+(Android) or an iframe (web, desktop), extended by the page script of ADR-023.
+
+**Decision:**
+
+- **The page reports a tap and the app shows the menu.** A touch on an image that didn't move more than 10 px, or a click, is
+  `preventDefault`ed so it places no caret and opens no keyboard. A long press (over 400 ms) is left to the browser, which
+  selects the image, and the click it makes afterwards is ignored. The page script posts `FASTMEMO_IMAGE` with the image's
+  index, key, `src`, natural size, width, its line's alignment, the point tapped, whether the note is editable, and what can be
+  done to the image (`alignable`, `rotatable`). NoteTextEditor adds the editor's window position and opens `NoteImageMenu`
+  there. That is a `PopupMenu` in its `at` mode: opened at a point instead of under a trigger, centered on it, and flipped above
+  it near the screen's bottom.
+- **The choice comes back as `window.__fm.image(index, key, change, value)`** (`imageCommand`, which writes every value as a
+  JSON literal, so a message can't add code to the command). The key (the `src` length and its last 32 characters) makes a
+  choice on an image that changed since (another device's edit) do nothing. A read-only note changes nothing, and its menu
+  offers only view and share. The page refuses what the menu doesn't offer.
+- **Every change is an `execCommand`, so undo works.** Size and rotation replace the image with a changed copy through
+  `insertHTML`. An image in a link is replaced along with the whole link, since an `insertHTML` of the image alone drops the
+  link. The alignment is `justify*` on the image's line, and delete is `delete` on the image. The selection is put back
+  afterwards (LL-065).
+- **Size is a width in % of the note** (25/50/75/100) with the height left to the ratio, so it fits every screen. Alignment is
+  the line's `text-align`, shared with any text on that line. It isn't offered in a code block, which stays a plain `<pre>`
+  (ADR-023): `justify*` would put a `<div>` in it.
+- **Rotation re-encodes the image in a canvas,** in its own type. A JPEG or a WebP gets the best of 0.8, 0.5 and 0.3 that keeps
+  it within 15% of its size. The picker's JPEG at 0.3 grew 1.6 to 2.3 times at 0.7, measured on three images, and a note has a
+  size limit. A PNG stays a PNG for its transparency. Rotation is offered for JPEG, PNG and WebP `data:` URLs only: a GIF would
+  stop moving, and a linked image taints the canvas. An image the canvas still can't read posts `FASTMEMO_IMAGE_FAILED`, and the
+  app shows a toast.
+- **The viewer is native** (`ImageViewer`: an RN `Modal` with gesture-handler pinch, pan and double tap, and Reanimated), not
+  inside the WebView. It covers the screen, has the app's chrome, and Back closes it. It is mounted only while shown, and opens
+  once the menu has closed, never two modals at once.
+- **Share and save:** a phone writes the image to the cache folder and opens the share sheet with its MIME type (`exportImage`).
+  Only the last image shared is kept there, and the next share removes it. The web downloads it, and the desktop opens the save
+  dialog (`saveFileWeb`). `utils/dataUrl.ts` reads the `data:` URL.
+- `scripts/richtext.test.mjs` (section 5) clicks and taps images in the real page. It runs every change with undo and checks:
+  the stale key, a PNG, read-only, the caret cases, links, the size after a turn, code blocks, GIFs, a long press, and a message
+  that tries to add code.
+
+**Alternatives rejected:**
+
+- a menu drawn inside the page: another UI to style and translate, with the WebView's own selection and keyboard in the way;
+- drag handles to resize: fiddly on a phone, and the four sizes are what was asked for;
+- rotation as a CSS `transform`: the box doesn't turn (the image overlaps the text), and exports, the share sheet and other apps
+  see the image unturned;
+- DOM edits for the changes: they break undo.
+
+**Trade-offs:**
+
+- every tap sends the image's `data:` URL over the bridge, since the menu and the viewer need it;
+- rotation re-encodes a JPEG, which is lossy, at a lower quality when a higher one would make it bigger;
+- the alignment applies to the whole line, text included;
+- `insertHTML` lets Blink add inline styles to the copy (`font-size: 1em`, with no visible effect).

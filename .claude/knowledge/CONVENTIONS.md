@@ -905,6 +905,7 @@ Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file tha
 | 40  | Never interpret a server answer that came through a redirect                              | Fetch drops the token across hosts: the refusal reads as "removed"; absent/removed only with the server's error code (LL-059)    |
 | 41  | Never turn a note's HTML or text into DOM unsanitized                                     | Notes come from imports, other devices: DOMPurify (`NOTE_HTML_CONFIG`, `addNoteHooks`), `escapeHtml`/`textContent` (LL-060)      |
 | 42  | Never send a block format or list command to pell directly                                | They nest and never turn off: go through `window.__fm.toggle` (RICH_TEXT_SCRIPT), test in `scripts/richtext.test.mjs` (LL-062)   |
+| 43  | Never leave an element selected after a page-script edit                                  | A key replaces it: put back the selection saved (as a `Range`) before the `execCommand`, as `__fm.image` does (LL-065)           |
 
 ### ALWAYS
 

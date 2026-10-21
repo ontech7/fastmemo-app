@@ -53,7 +53,7 @@ src/
   components/          # UI components (domain-grouped)
     buttons/           # 26 button components (each a single-purpose TouchableOpacity)
     cards/             # NoteCard, TrashedNoteCard, OrganizeCategoryCard, OrderedCategoryCard
-    notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor
+    notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor; NoteImageMenu (ADR-024)
     kanban/            # KanbanBoard, KanbanColumn, KanbanCard, KanbanDragOverlay
     settings/          # Settings UI system (Section, SectionHeader, SectionWrapper, items/)
     vault/             # VaultScaffold (shared chrome for the 6 vault screens) + VaultBackupButton (optional quick export before a risky op)
@@ -66,6 +66,8 @@ src/
     lottie/            # LottieAnimation.tsx, LottieAnimation.web.tsx
     webhook/           # WebhookItem
     renderers/         # ContextMenu
+    ui/                # Design primitives: AppBackground, GlassSurface, IconChip, PopupMenu (under a trigger, or `at` a point),
+                       # ImageViewer (full screen, pinch/pan/double tap), TourSpotlight, TourTip, BlinkingDot
     # Standalone: CategoryIcon, LoadingSpinner, SafeAreaView, Sidebar, VirtualNumberKeyboard
 
   slicers/             # Redux state management
@@ -145,7 +147,8 @@ src/
     desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only
     desktopMenu.ts     # macOS menu labels (i18n menu.*) and its items' commands; .ts no-op, .web.ts on Tauri macOS
     windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
-    richTextEditor.ts  # The text editor's page script (line types, code exit, bullets, images) and style (ADR-023, scripts/richtext.test.mjs)
+    richTextEditor.ts  # The text editor's page script (line types, code exit, bullets, images, the image menu's messages) and style
+                       # (ADR-023, ADR-024, scripts/richtext.test.mjs)
 
   utils/               # Pure utility functions
     sort.ts            # Sort comparators for Timestamped/Ordered items
@@ -158,7 +161,8 @@ src/
     ui.ts              # yieldToUI() — let the spinner paint a frame before a synchronous freeze
     toast.ts           # Platform-split toast notifications
     webhook.ts         # Webhook dispatcher (sends through @/libs/net)
-    export.ts          # PDF/text export, file sharing
+    export.ts          # PDF/text export, file sharing, an image's share (phone) / save (web, desktop)
+    dataUrl.ts         # An image's data: URL -> MIME type, base64, file extension
     platform.ts        # Tauri detection
     openUrl.ts         # Cross-platform URL opener
 
