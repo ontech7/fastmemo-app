@@ -3,14 +3,14 @@
 This guide explains how to self-host FastMemo as a web application.
 
 > Looking for a server to **sync your notes** on, instead of Google Firebase? That's
-> [fastmemo-server](https://github.com/ontech7/fastmemo-server) (see [Cloud Sync](CLOUD_SYNC.md#with-a-fastmemo-server)). This
+> [fastmemo-server](https://github.com/ontech7/fastmemo-server) (see [Cloud Sync](CLOUD_SYNC.md#with-fastmemo-server)). This
 > page is about serving the app itself.
 
 ## Prerequisites
 
 - **Node.js** (v18 or higher)
 - **Yarn** or **npm** package manager
-- A **Google Firebase** account (for cloud sync functionality)
+- Optional, for cloud sync: a **Google Firebase** project or a **FastMemo Server**
 - A hosting platform (Vercel, Netlify, or any static hosting service)
 
 ## 1. Clone the Repository

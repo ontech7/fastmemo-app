@@ -7,21 +7,18 @@ are end-to-end encrypted on your devices.
 ## Table of Contents
 
 - [With Google Firebase](#with-google-firebase)
-- [With a FastMemo Server](#with-a-fastmemo-server)
+- [With FastMemo Server](#with-fastmemo-server)
 - [How sync works](#how-it-works)
 - [End-to-End Encryption](#end-to-end-encryption)
 
 ## With Google Firebase
 
-<div align="center">
+![Google Firebase](images/cloud-firebase.png)
 
-![Firebase](https://i.imgur.com/W9Uyfp7.png)
-
-</div>
-
-Fast Memo uses **Google Firebase** for secure, end-to-end encrypted cloud synchronization across all your devices. Firebase is a
-**free service**, making it accessible for everyone. You bring your own Firebase project — there is no central Fast Memo server,
-and the project owner (you) is the only one who can reach the data.
+Connect Fast Memo to **your own Google Firebase project**: Google hosts it, and its free plan is enough for your notes. There is
+no central Fast Memo server: the project owner (you) is the only one who can reach the data, and the notes arrive there already
+encrypted. The [step-by-step guide](https://fastmemo.losav.cc/en/guides/google-firebase/) walks you through creating the
+project.
 
 ### Requirements
 
@@ -34,16 +31,19 @@ You'll need a Google account to create a Firebase project. Once set up, you'll n
 A single Firebase project acts as one **vault**. Up to 3 devices connect to the same vault by entering the same three
 credentials above, plus the **encryption password** described below.
 
-## With a FastMemo Server
+## With FastMemo Server
 
-Run [fastmemo-server](https://github.com/ontech7/fastmemo-server) yourself: one Docker container, one database file. Its README
-walks you through it, from trying it on your computer in five minutes to a Raspberry Pi, Coolify or a VPS.
+![FastMemo Server](images/cloud-fastmemo-server.png)
+
+Prefer to keep everything at home? Run [fastmemo-server](https://github.com/ontech7/fastmemo-server) yourself: one Docker
+container, one database file, open source. Its README and the [online guide](https://fastmemo.losav.cc/en/guides/self-hosting/)
+walk you through it, from trying it on your computer in five minutes to a Raspberry Pi, Coolify or a VPS.
 
 You'll need:
 
-- **Server address** - `https://...` (the web app and the Windows desktop app need HTTPS; Android, macOS and Linux also accept
-  `http://` after a warning: over HTTP your device's credentials and note titles travel unencrypted on every network it joins,
-  so prefer HTTPS: the guide shows the easy ways, such as Tailscale)
+- **Server address** - `https://...` (the web app needs HTTPS; Android and the desktop app also accept `http://` after a
+  warning: over HTTP your device's credentials and note titles travel unencrypted on every network it joins, so prefer HTTPS:
+  the guide shows the easy ways, such as Tailscale)
 - **Access key** - set on the server, or generated on its first start
 
 The server is one **vault** too: every device connects with the same address and key, plus the **encryption password**. It

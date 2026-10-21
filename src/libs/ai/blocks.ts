@@ -1,5 +1,5 @@
 /*
- * A text note's HTML as the AI works on it (spec docs/AI_QWEN35_UPGRADE.md §7.5): its lines (paragraphs, headings, list
+ * A text note's HTML as the AI works on it (ADR-004, long notes): its lines (paragraphs, headings, list
  * items, and the lines a `<br>` or an image separates inside one), each rewritten on its own and put back where it was, so
  * the note keeps its structure. What isn't text (images, code, tables, rules) is never touched, and a line the AI leaves as
  * it was keeps its formatting. Pure, no DOM (React Native has none).
