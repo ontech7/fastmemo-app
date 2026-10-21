@@ -255,6 +255,10 @@ function summaryEnd(html: string): number {
   return close.end + (gap ? gap[0].length : 0);
 }
 
+/** The label of a summary the AI added: a rewrite leaves it alone (rewritten, it would lose its mark). */
+export const isSummaryLabel = (segment: NoteSegment) =>
+  segment.kind === "unit" && /^<b data-fm="summary">[^<]*<\/b>$/.test(segment.inner);
+
 /** Whether the note starts with a summary the AI added (a new one replaces it). */
 export const hasSummary = (html: string) => summaryEnd(html ?? "") > 0;
 

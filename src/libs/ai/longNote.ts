@@ -2,6 +2,7 @@ import {
   blocksText,
   chunkTexts,
   estimateTokens,
+  isSummaryLabel,
   joinNoteBlocks,
   type NoteSegment,
   sameText,
@@ -60,7 +61,7 @@ const SHORTEN_TAGS = new Set(["", "div", "p", "blockquote"]);
 function targetsOf(action: LongNoteAction, segments: NoteSegment[]): number[] {
   const targets: number[] = [];
   segments.forEach((segment, i) => {
-    if (segment.kind !== "unit") return;
+    if (segment.kind !== "unit" || isSummaryLabel(segment)) return;
     if (action === "shorten" && (!SHORTEN_TAGS.has(segment.tag) || estimateTokens(segment.text) < SHORTEN_MIN_TOKENS)) return;
     targets.push(i);
   });

@@ -492,6 +492,15 @@ export default function AIEditorActions({
             <View style={styles.previewHeader}>
               <SparklesIcon size={18} color={AI_COLOR} />
               <Text style={styles.previewTitle}>{preview?.title}</Text>
+              {/* in the header: a long note's "before" fills the screen, the progress stays in sight */}
+              {preview?.streaming && preview.progress && preview.progress.total > 1 ? (
+                <Text style={styles.previewProgress}>
+                  {t("ai.editor.progress", {
+                    current: Math.min(preview.progress.done + 1, preview.progress.total),
+                    total: preview.progress.total,
+                  })}
+                </Text>
+              ) : null}
             </View>
 
             <ScrollView style={styles.previewScroll} contentContainerStyle={{ gap: PADDING_MARGIN.md }}>
@@ -502,17 +511,7 @@ export default function AIEditorActions({
                 </Text>
               </View>
               <View>
-                <View style={styles.previewLabelRow}>
-                  <Text style={[styles.previewLabel, { color: AI_COLOR }]}>{t("ai.editor.after")}</Text>
-                  {preview?.streaming && preview.progress && preview.progress.total > 1 ? (
-                    <Text style={styles.previewProgress}>
-                      {t("ai.editor.progress", {
-                        current: Math.min(preview.progress.done + 1, preview.progress.total),
-                        total: preview.progress.total,
-                      })}
-                    </Text>
-                  ) : null}
-                </View>
+                <Text style={[styles.previewLabel, { color: AI_COLOR }]}>{t("ai.editor.after")}</Text>
                 {preview?.streaming && !preview.after ? (
                   <View style={[styles.previewBlock, styles.previewAfter]}>
                     <ActivityIndicator size="small" color={AI_COLOR} />
@@ -687,13 +686,8 @@ const styles = StyleSheet.create({
     marginBottom: PADDING_MARGIN.xs,
     textTransform: "uppercase",
   },
-  previewLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    gap: PADDING_MARGIN.sm,
-  },
   previewProgress: {
+    marginLeft: "auto",
     color: COLOR.placeholder,
     fontSize: FONTSIZE.small,
   },

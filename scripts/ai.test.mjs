@@ -471,6 +471,14 @@ const run = async (fn) => {
     L.rewriteNote("shorten", `<h1>Un titolo</h1><div>Corto.</div><div>${long}</div><ul><li>${long}</li></ul>`, h)
   );
   eq("long: shortening runs on long paragraphs only (not headings, list items, short lines)", r.calls, [["shorten", long]]);
+  const summed = B.withSummary("<div>ciao</div>", "Riassunto", "saluto");
+  const translated = await run((h) => L.rewriteNote("translate", summed, h));
+  eq(
+    "long: a summary's label is never rewritten (it keeps its mark)",
+    translated.calls.map((c) => c[1]),
+    ["saluto", "ciao"]
+  );
+  ok("long: ...so it's still the summary", B.hasSummary(translated.result.html), translated.result.html);
   const none = await run((h) => L.rewriteNote("shorten", "<div>Corto.</div><div>Anche questo.</div>", h));
   eq("long: nothing long enough to shorten: no call", [none.result.error, none.calls.length], ["implausible_output", 0]);
   const paragraph = Array.from(
