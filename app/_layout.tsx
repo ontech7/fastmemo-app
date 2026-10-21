@@ -10,6 +10,7 @@ import WebToaster from "@/components/WebToaster";
 import AppBackground from "@/components/ui/AppBackground";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { useAppFonts } from "@/hooks/useAppFonts";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { installDesktopMenu } from "@/libs/desktopMenu";
 import { installFlushOnExit } from "@/libs/flushOnExit";
@@ -20,11 +21,10 @@ import SyncOnProvider from "@/providers/SyncOnProvider";
 import { persistor, store } from "@/slicers/store";
 import { DialogProvider } from "@ontech7/react-native-dialog";
 import * as Sentry from "@sentry/react-native";
-import { useFonts } from "expo-font";
 import { Stack, useTheme } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { I18nextProvider } from "react-i18next";
 import { Platform, StyleSheet, View } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -62,31 +62,9 @@ export default Sentry.wrap(function RootLayout() {
   // Web: no Backspace history navigation; desktop: Esc, Cmd/Ctrl+N/F/comma, no reload (no-op on native).
   useKeyboardShortcuts();
 
-  const [fontsLoaded, fontError] = useFonts({
-    "Geist-Regular": require("~/assets/fonts/Geist-Regular.ttf"),
-    "Geist-Medium": require("~/assets/fonts/Geist-Medium.ttf"),
-    "Geist-SemiBold": require("~/assets/fonts/Geist-SemiBold.ttf"),
-    "Geist-Bold": require("~/assets/fonts/Geist-Bold.ttf"),
-  });
-
-  // Never get stuck on the splash if fonts fail or hang to load — e.g. on
-  // Tauri/web the font asset URLs can resolve differently in the webview.
-  // After a short grace period, proceed anyway (system-font fallback). Only armed while still
-  // waiting: firing after the fonts loaded would re-render the whole app for nothing.
-  const [fontWaitElapsed, setFontWaitElapsed] = useState(false);
-  useEffect(() => {
-    if (fontsLoaded || fontError) return;
-    const id = setTimeout(() => setFontWaitElapsed(true), 2500);
-    return () => clearTimeout(id);
-  }, [fontsLoaded, fontError]);
-
-  // On web/Tauri the native expo splash doesn't exist and the font loader can
-  // hang in the WebView (asset URLs resolve differently), so blocking the first
-  // paint on it would leave the user staring at the flat background. Render
-  // immediately and let Geist swap in once loaded — the first screen is just the
-  // logo image, so there's no visible text reflow. Native still gates so text
-  // never flashes a system font.
-  const ready = Platform.OS === "web" || fontsLoaded || !!fontError || fontWaitElapsed;
+  // The apps have the fonts built in. The web loads them while it renders: its first screen is the logo image, with no
+  // text to reflow when Geist comes in.
+  useAppFonts();
 
   // Hide the splash only once a JS view (the gradient splash or the app shell)
   // has laid out, so the gradient is already painted underneath — no flash of
@@ -94,13 +72,6 @@ export default Sentry.wrap(function RootLayout() {
   const onLayoutRootView = useCallback(() => {
     SplashScreen.hideAsync().catch(() => {});
   }, []);
-
-  // While fonts load (native only), render nothing and keep the native splash up
-  // (it's already COLOR.bg + the same centered logo, so there's no separate JS
-  // splash to keep in sync). hideAsync only fires from the app shell's onLayout.
-  if (!ready) {
-    return null;
-  }
 
   return (
     <I18nextProvider i18n={i18n}>
@@ -159,7 +130,9 @@ export default Sentry.wrap(function RootLayout() {
                     <Stack id={undefined} screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
                       <Stack.Screen name="index" options={{ headerShown: false, animation: "none" }} />
                       <Stack.Screen name="intro" options={{ headerShown: false, animation: "fade" }} />
-                      <Stack.Screen name="home" options={{ headerShown: false, animation: "fade" }} />
+                      {/* No animation into home (from the logo, the intro, a note that can't open): it ran while home was drawing its
+                          first frame, and stuttered. The intro keeps its fade. */}
+                      <Stack.Screen name="home" options={{ headerShown: false, animation: "none" }} />
                       <Stack.Screen name="changelog" options={{ headerShown: false, animation: "fade_from_bottom" }} />
                       <Stack.Screen name="secret-code" options={{ headerShown: false, animation: "fade_from_bottom" }} />
                       <Stack.Screen name="notes/[noteId]" options={{ headerShown: false, animation: "fade_from_bottom" }} />

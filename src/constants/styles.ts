@@ -113,8 +113,9 @@ export const FONTWEIGHT = {
 } as const;
 
 /**
- * Geist font families. Weights are separate font files (loaded in _layout via useFonts),
- * so apply weight through `fontFamily` instead of `fontWeight` when using Geist.
+ * Geist font families. Weights are separate font files (built into the apps by the expo-font plugin in app.config.ts,
+ * where the file name is the family name; loaded on the web by useAppFonts), so apply weight through `fontFamily` instead
+ * of `fontWeight` when using Geist.
  */
 export const FONT = {
   regular: "Geist-Regular",

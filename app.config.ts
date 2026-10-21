@@ -1,5 +1,11 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
-import { type AndroidConfig, type ConfigPlugin, withAndroidManifest, withDangerousMod } from "expo/config-plugins";
+import {
+  type AndroidConfig,
+  type ConfigPlugin,
+  withAndroidManifest,
+  withDangerousMod,
+  withMainApplication,
+} from "expo/config-plugins";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -77,6 +83,42 @@ const withAlternateIconIntentFilters: ConfigPlugin = (config) =>
     return modConfig;
   });
 
+// At launch the stored notes are read with expo-file-system, and expo-modules builds the options object of that first call
+// through kotlin-reflect, whose first use loads its metadata: the rest of the notes and every other Expo call wait behind it
+// (~120 ms on the emulator, more on an older phone). Started on a thread of its own as the app starts, it runs while the JS
+// engine starts instead. By name: a class renamed in an expo-file-system update only skips the warm-up.
+const KOTLIN_REFLECT_WARMUP = "// FastMemo: kotlin-reflect warm-up (app.config.ts)";
+const KOTLIN_REFLECT_WARMUP_CLASSES = [
+  "InfoOptionsLegacy",
+  "ReadingOptions",
+  "WritingOptions",
+  "RelocatingOptions",
+  "DeletingOptions",
+  "MakeDirectoryOptions",
+].map((name) => `expo.modules.filesystem.legacy.${name}`);
+
+const withKotlinReflectWarmup: ConfigPlugin = (config) =>
+  withMainApplication(config, (modConfig) => {
+    const { contents, language } = modConfig.modResults;
+    if (language !== "kt" || contents.includes(KOTLIN_REFLECT_WARMUP)) return modConfig;
+    const names = KOTLIN_REFLECT_WARMUP_CLASSES.map((name) => `"${name}"`).join(", ");
+    modConfig.modResults.contents = contents.replace(
+      /^([ \t]*)super\.onCreate\(\)\n/m,
+      (line, indent: string) =>
+        `${line}${indent}${KOTLIN_REFLECT_WARMUP}\n` +
+        `${indent}Thread({\n` +
+        `${indent}  for (name in listOf(${names})) {\n` +
+        `${indent}    runCatching { Class.forName(name).kotlin.constructors.forEach { it.parameters } }\n` +
+        `${indent}  }\n` +
+        `${indent}}, "kotlin-reflect-warmup").start()\n`
+    );
+    return modConfig;
+  });
+
+// The Geist weights, built into the apps (no font to load at launch). On Android the file name is the family name, as
+// FONT in src/constants/styles.ts uses it. The web loads them (src/hooks/useAppFonts.web.ts).
+const GEIST_FONTS = ["Regular", "Medium", "SemiBold", "Bold"].map((weight) => `./assets/fonts/Geist-${weight}.ttf`);
+
 const isDev = process.env.EXPO_PUBLIC_ENV === "DEV";
 
 const appName = isDev ? "Fast Memo Test" : "Fast Memo";
@@ -107,89 +149,91 @@ const EAS_PROJECT_ID = "44c5f162-d9f8-40db-ae28-269fe48982ca";
 
 export default ({ config }: ConfigContext): ExpoConfig =>
   withAlternateIconIntentFilters(
-    withCleartextTraffic(
-      withLlamaProguardRules({
-        ...config,
-        owner: "dontrok1",
-        name: appName,
-        slug: appSlug,
-        version: "4.0.0",
-        runtimeVersion: { policy: "fingerprint" },
-        updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
-        orientation: "portrait",
-        icon: appIcon,
-        scheme: appSlug,
-        userInterfaceStyle: "automatic",
-        backgroundColor,
-        ios: {
-          supportsTablet: true,
-          bundleIdentifier: appBundle,
-        },
-        android: {
-          adaptiveIcon: {
-            foregroundImage: adaptiveIcon,
-            backgroundImage: "./assets/images/adaptive-icon-bg.png",
-            backgroundColor,
+    withKotlinReflectWarmup(
+      withCleartextTraffic(
+        withLlamaProguardRules({
+          ...config,
+          owner: "dontrok1",
+          name: appName,
+          slug: appSlug,
+          version: "4.0.0",
+          runtimeVersion: { policy: "fingerprint" },
+          updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
+          orientation: "portrait",
+          icon: appIcon,
+          scheme: appSlug,
+          userInterfaceStyle: "automatic",
+          backgroundColor,
+          ios: {
+            supportsTablet: true,
+            bundleIdentifier: appBundle,
           },
-          package: appBundle,
-          blockedPermissions: [
-            "android.permission.READ_MEDIA_IMAGES",
-            "android.permission.READ_MEDIA_VIDEO",
-            "android.permission.READ_MEDIA_AUDIO",
-          ],
-        },
-        web: {
-          bundler: "metro",
-          output: "single",
-          favicon,
-        },
-        plugins: [
-          // Every screen in the main bundle on web, as up to SDK 57: SDK 58 loads each route's code on first visit by default,
-          // and the desktop app showed an empty screen before every screen it opened.
-          ["expo-router", { asyncRoutes: { web: false } }],
-          "expo-status-bar",
-          "expo-font",
-          "expo-image",
-          "expo-image-picker",
-          "expo-localization",
-          "expo-secure-store",
-          "expo-sharing",
-          [
-            "expo-speech-recognition",
-            {
-              microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
-              speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
-              androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
-            },
-          ],
-          [
-            "expo-splash-screen",
-            {
-              image: "./assets/images/splash-logo.png",
-              imageWidth: 150,
+          android: {
+            adaptiveIcon: {
+              foregroundImage: adaptiveIcon,
+              backgroundImage: "./assets/images/adaptive-icon-bg.png",
               backgroundColor,
             },
-          ],
-          "llama.rn",
-          ["expo-alternate-app-icons", alternateAppIcons],
-          [
-            "@sentry/react-native",
-            {
-              url: "https://sentry.io/",
-              note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
-              project: "fastmemo-app",
-              organization: "andrea-losavio",
-            },
-          ],
-        ],
-        experiments: {
-          typedRoutes: true,
-        },
-        extra: {
-          eas: {
-            projectId: EAS_PROJECT_ID,
+            package: appBundle,
+            blockedPermissions: [
+              "android.permission.READ_MEDIA_IMAGES",
+              "android.permission.READ_MEDIA_VIDEO",
+              "android.permission.READ_MEDIA_AUDIO",
+            ],
           },
-        },
-      })
+          web: {
+            bundler: "metro",
+            output: "single",
+            favicon,
+          },
+          plugins: [
+            // Every screen in the main bundle on web, as up to SDK 57: SDK 58 loads each route's code on first visit by default,
+            // and the desktop app showed an empty screen before every screen it opened.
+            ["expo-router", { asyncRoutes: { web: false } }],
+            "expo-status-bar",
+            ["expo-font", { fonts: GEIST_FONTS }],
+            "expo-image",
+            "expo-image-picker",
+            "expo-localization",
+            "expo-secure-store",
+            "expo-sharing",
+            [
+              "expo-speech-recognition",
+              {
+                microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
+                speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
+                androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
+              },
+            ],
+            [
+              "expo-splash-screen",
+              {
+                image: "./assets/images/splash-logo.png",
+                imageWidth: 150,
+                backgroundColor,
+              },
+            ],
+            "llama.rn",
+            ["expo-alternate-app-icons", alternateAppIcons],
+            [
+              "@sentry/react-native",
+              {
+                url: "https://sentry.io/",
+                note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
+                project: "fastmemo-app",
+                organization: "andrea-losavio",
+              },
+            ],
+          ],
+          experiments: {
+            typedRoutes: true,
+          },
+          extra: {
+            eas: {
+              projectId: EAS_PROJECT_ID,
+            },
+          },
+        })
+      )
     )
   );

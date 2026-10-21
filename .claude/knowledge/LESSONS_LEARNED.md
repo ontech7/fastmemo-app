@@ -1789,6 +1789,46 @@ replace the link. Handlers on the editor's content must accept `refreshToolbar`'
 
 ---
 
+### LL-066: The startup looked slow on test builds, and its first file read waited for kotlin-reflect
+
+**Date:** 2026-10-22  
+**Severity:** Medium (the user found the startup too slow on a fast phone; the transition into home sometimes stuttered)  
+**Category:** Performance / Platform (Android)  
+**What happened:** The DEV test APKs were release builds marked debuggable (a local tweak of the generated `android/`, for
+`run-as`). Measured on the emulator with timing marks in the JS, a cold start took ~7.5 s to home's first frame. The same build
+not marked debuggable took ~0.6 s. The JS in between was mostly idle, waiting for the store's rehydration and for the fonts.
+Even in the non-debuggable build, the first file read (the legacy notes' check) took ~120 ms for a tiny file, and the
+rehydration and the fonts waited behind it. Then home faded in, while it was still drawing its first frame.
+
+**Root cause:** A debuggable app runs its Java/Kotlin interpreted (ART uses no compiled code), so everything native at startup
+was several times slower than in a store build. The slow read: Expo's async functions run on one queue, and the first one called
+with an options object (`FileSystem.getInfoAsync(path, {})`) has expo-modules build that object through kotlin-reflect.
+kotlin-reflect's first use loads its metadata (simpleperf on the queue thread: `KClassImpl.getConstructors` under
+`ObjectConstructorFactory`): 1.6 s interpreted, ~120 ms compiled, on the emulator. Every Expo call behind it waited, and
+`useFonts` loaded the 4 Geist files on that same queue at every launch, with the app drawing nothing until they were in. JS
+sampling profiles are not available in release builds (`HermesInternal.enableSamplingProfiler` is undefined).
+
+**Fix (ADR-025):**
+
+- The fonts are built into the apps (the expo-font plugin's `fonts`), and only the web loads them (`useAppFonts`).
+- A thread started in `MainApplication.onCreate` (a config plugin in `app.config.ts`) runs kotlin-reflect on expo-file-system's
+  option classes while the JS engine starts, so the first read takes ~22 ms.
+- No animation into home.
+
+On the emulator (non-debuggable, median of 6 cold starts) home's first frame moved from 594 to 514 ms after the process start,
+and with the 300 ms fade gone home shows ~380 ms sooner. The DEV APKs are no longer marked debuggable.
+
+**Rule:** Measure startup and performance on a non-debuggable release build (CONVENTIONS #44), with marks that log `Date.now()`
+(they reach logcat in release) and the process start from logcat. To find what a native thread does, use
+`simpleperf record --app <pkg> -e cpu-clock -g` (on the emulator `cpu-cycles` isn't available; the app must be debuggable or
+profileable). The first Expo async call with an options object pays for kotlin-reflect: keep it off the critical path or warm it
+up.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-22 **Resolved in:** branch
+`perf/startup-mobile`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

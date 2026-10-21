@@ -906,6 +906,7 @@ Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file tha
 | 41  | Never turn a note's HTML or text into DOM unsanitized                                     | Notes come from imports, other devices: DOMPurify (`NOTE_HTML_CONFIG`, `addNoteHooks`), `escapeHtml`/`textContent` (LL-060)      |
 | 42  | Never send a block format or list command to pell directly                                | They nest and never turn off: go through `window.__fm.toggle` (RICH_TEXT_SCRIPT), test in `scripts/richtext.test.mjs` (LL-062)   |
 | 43  | Never leave an element selected after a page-script edit                                  | A key replaces it: put back the selection saved (as a `Range`) before the `execCommand`, as `__fm.image` does (LL-065)           |
+| 44  | Never judge or measure performance on a debuggable build                                  | Its Java/Kotlin runs interpreted: a startup measured 10x slower (LL-066). Measure a release APK not marked debuggable            |
 
 ### ALWAYS
 
