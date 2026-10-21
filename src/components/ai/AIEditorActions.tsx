@@ -418,10 +418,15 @@ export default function AIEditorActions({
 
   const pickLanguage = useCallback(() => {
     closeMenu();
+    // nothing to translate: said before asking for a language
+    if (!getContent().trim()) {
+      toast(t("ai.editor.no_content"));
+      return;
+    }
     const app = resolveLanguage();
     const first = TRANSLATE_LANGUAGES.find((l) => l.code === app) ?? TRANSLATE_LANGUAGES[0];
     setLanguages([first, ...TRANSLATE_LANGUAGES.filter((l) => l !== first)]);
-  }, [closeMenu]);
+  }, [closeMenu, getContent, t]);
 
   const translateInto = useCallback(
     (code: string) => {
