@@ -108,6 +108,18 @@ ok(
 ok("4B is enough for a 2B action", C.isModelSufficient("qwen3.5-4b", "qwen3.5-2b"));
 ok("0.8B is not enough for a 2B action", !C.isModelSufficient("qwen3.5-0.8b", "qwen3.5-2b"));
 
+ok(
+  "translate: every language offered has a name in the prompt",
+  C.TRANSLATE_LANGUAGES.every(({ code }) => !C.getEditorSystemPrompt("translate", code).includes("the same language")),
+  C.TRANSLATE_LANGUAGES.filter(({ code }) => C.getEditorSystemPrompt("translate", code).includes("the same language"))
+);
+eq("translate: the target named in the prompt", C.getEditorSystemPrompt("translate", "ko").includes("Korean"), true);
+eq(
+  "translate: each language offered once",
+  new Set(C.TRANSLATE_LANGUAGES.map((l) => l.code)).size,
+  C.TRANSLATE_LANGUAGES.length
+);
+
 // --- reasoning blocks ---
 eq("no block: unchanged", H.stripThinking("Hello"), "Hello");
 eq("closed block removed", H.stripThinking("<think>hmm</think>\n\nHello"), "Hello");

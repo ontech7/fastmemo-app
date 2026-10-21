@@ -11,9 +11,11 @@ import {
   LONG_NOTE_ACTIONS,
   MODEL_SHORT_LABEL,
   prewarmContext,
+  resolveLanguage,
   rewriteNote,
   summarizeNote,
   tooLongForAI,
+  TRANSLATE_LANGUAGES,
   withSummary,
 } from "@/libs/ai";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
@@ -34,6 +36,7 @@ import {
   View,
 } from "react-native";
 import CheckBadgeIcon from "react-native-heroicons/outline/CheckBadgeIcon";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import DocumentTextIcon from "react-native-heroicons/outline/DocumentTextIcon";
 import FolderIcon from "react-native-heroicons/outline/FolderIcon";
 import LanguageIcon from "react-native-heroicons/outline/LanguageIcon";
@@ -183,6 +186,8 @@ export default function AIEditorActions({
   const [menuLeft, setMenuLeft] = useState(40);
   // The actions that would take too long on the note as it is when the menu opens (turned off, and said so).
   const [tooLong, setTooLong] = useState<ReadonlySet<EditorAction>>(NO_ACTIONS);
+  // Translating asks into which language first: the app's (the system's, by default) on top, ticked.
+  const [languages, setLanguages] = useState<{ code: string; name: string }[] | null>(null);
 
   const menuProgress = useSharedValue(0);
   // Each action run gets a number: a cancelled one (or one the user left behind) never writes into the UI.
@@ -257,7 +262,8 @@ export default function AIEditorActions({
   );
 
   const handleAction = useCallback(
-    async (action: EditorAction) => {
+    /** `lang`: the language a translation goes into. */
+    async (action: EditorAction, lang?: string) => {
       closeMenu();
 
       const rawContent = getContent();
@@ -282,7 +288,9 @@ export default function AIEditorActions({
       if (staged) {
         setPreview({
           action,
-          title: t(`ai.editor.${action}`),
+          title: lang
+            ? `${t("ai.editor.translate_to")} ${TRANSLATE_LANGUAGES.find((l) => l.code === lang)?.name ?? lang}`
+            : t(`ai.editor.${action}`),
           source: html ?? (action === "generate_title" ? noteTitle : rawContent),
           before: action === "generate_title" ? noteTitle : rawContent,
           after: "",
@@ -320,7 +328,7 @@ export default function AIEditorActions({
           const result =
             action === "summarize"
               ? await summarizeNote(html, noteTitle, handlers)
-              : await rewriteNote(action as Exclude<LongNoteAction, "summarize">, html, handlers);
+              : await rewriteNote(action as Exclude<LongNoteAction, "summarize">, html, handlers, { lang });
           stream.stop();
           if (run !== runRef.current) return;
           runningRef.current = false;
@@ -408,6 +416,26 @@ export default function AIEditorActions({
     else if (action === "generate_title") onTitleGenerated(after);
   };
 
+  const pickLanguage = useCallback(() => {
+    closeMenu();
+    // nothing to translate: said before asking for a language
+    if (!getContent().trim()) {
+      toast(t("ai.editor.no_content"));
+      return;
+    }
+    const app = resolveLanguage();
+    const first = TRANSLATE_LANGUAGES.find((l) => l.code === app) ?? TRANSLATE_LANGUAGES[0];
+    setLanguages([first, ...TRANSLATE_LANGUAGES.filter((l) => l !== first)]);
+  }, [closeMenu, getContent, t]);
+
+  const translateInto = useCallback(
+    (code: string) => {
+      setLanguages(null);
+      handleAction("translate", code);
+    },
+    [handleAction]
+  );
+
   const handleCancel = useCallback(() => {
     runRef.current++;
     runningRef.current = false;
@@ -452,7 +480,9 @@ export default function AIEditorActions({
                   index={index}
                   totalItems={actionItems.length}
                   menuProgress={menuProgress}
-                  onPress={canRun ? () => handleAction(actionItem.id) : undefined}
+                  onPress={
+                    !canRun ? undefined : actionItem.id === "translate" ? pickLanguage : () => handleAction(actionItem.id)
+                  }
                   label={t(actionItem.labelKey)}
                   disabled={!canRun}
                   hint={
@@ -485,6 +515,50 @@ export default function AIEditorActions({
           <SparklesIcon size={22} color={COLOR.softWhite} />
         )}
       </TouchableOpacity>
+
+      <Modal
+        visible={languages !== null}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setLanguages(null)}
+      >
+        <View style={styles.previewBackdrop}>
+          <View style={styles.previewCard}>
+            <View style={styles.previewHeader}>
+              <LanguageIcon size={18} color={AI_COLOR} />
+              <Text style={styles.previewTitle}>{t("ai.editor.translate_to")}</Text>
+            </View>
+            <ScrollView style={styles.previewScroll}>
+              {languages?.map((language, index) => (
+                <TouchableOpacity
+                  key={language.code}
+                  activeOpacity={0.7}
+                  style={[styles.languageRow, index === 0 && styles.languageRowApp]}
+                  onPress={() => translateInto(language.code)}
+                  accessibilityRole="button"
+                  accessibilityHint={index === 0 ? t("ai.editor.app_language") : undefined}
+                >
+                  <View style={styles.languageText}>
+                    <Text style={styles.languageName}>{language.name}</Text>
+                    {index === 0 ? <Text style={styles.languageHint}>{t("ai.editor.app_language")}</Text> : null}
+                  </View>
+                  {index === 0 ? <CheckIcon size={18} color={AI_COLOR} /> : null}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={styles.previewFooter}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.previewAction, styles.previewCancel]}
+                onPress={() => setLanguages(null)}
+              >
+                <Text style={styles.previewCancelLabel}>{t("cancel")}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={preview !== null} transparent animationType="fade" statusBarTranslucent onRequestClose={closePreview}>
         <View style={styles.previewBackdrop}>
@@ -688,6 +762,28 @@ const styles = StyleSheet.create({
   },
   previewProgress: {
     marginLeft: "auto",
+    color: COLOR.placeholder,
+    fontSize: FONTSIZE.small,
+  },
+  languageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+    paddingVertical: PADDING_MARGIN.md,
+    paddingHorizontal: PADDING_MARGIN.md,
+    borderRadius: BORDER.normal,
+  },
+  languageRowApp: {
+    backgroundColor: "rgba(108, 99, 255, 0.12)",
+  },
+  languageText: {
+    flex: 1,
+  },
+  languageName: {
+    color: COLOR.softWhite,
+    fontSize: FONTSIZE.medium,
+  },
+  languageHint: {
     color: COLOR.placeholder,
     fontSize: FONTSIZE.small,
   },
