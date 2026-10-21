@@ -173,6 +173,12 @@ src/
   configs/             # App configuration
     index.ts           # Main config (env vars, app metadata, business rules, cloud, sentry, firebase)
     default.ts         # Factory defaults (defaultCategory)
+
+  editor/              # Sources bundled into strings that the editors' pages run (`yarn build:editor`)
+    codemirror-entry.js # CodeMirror 6 for the code editor WebView (scripts/build-codemirror.mjs)
+    sanitize-entry.ts  # DOMPurify + hooks in the rich text editor's page (scripts/build-sanitize.mjs; LL-060, ADR-021)
+    sanitizeConfig.ts  # What a note's HTML keeps (the editor's page and the web PDF export)
+  generated/           # Those scripts' output, committed (codemirror-html.ts, editor-sanitize.ts): never edit by hand
 ```
 
 ## Data Flow

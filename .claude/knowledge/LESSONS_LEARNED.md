@@ -1604,6 +1604,32 @@ meaning that destroys data (absent, removed) only with the server's error code.
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
 `fix/server-redirect`
 
+### LL-060: A note's HTML could run code in the app: the text editor and the web PDF export
+
+**Date:** 2026-10-21  
+**Severity:** High (present in every version with the rich text editor; found in the review of the desktop shortcuts)  
+**Category:** Bug (security)  
+**What happened:** A note containing `<img src=x onerror="...">` (from an imported backup, or another device) ran that code as
+soon as it was opened: pell puts the note into its page with `innerHTML`. On web and desktop that page is a same-origin `srcdoc`
+iframe, so the code reached the app's page (its storage, on desktop the Rust commands); measured in the web build, a note of
+payloads ran 13 times, 11 of them in the app's own page. The web PDF export put the note, and its title unescaped, straight into
+the app's page.
+
+**Root cause:** The note's HTML was trusted: nothing between the stored text and the DOM. Pasting is plain text, so the editor
+itself never produced such HTML, but imports and synced notes don't come through the editor.
+
+**Fix:** DOMPurify inside the editor's page, wrapping every way HTML becomes DOM there (ADR-021), injected before a note is
+loaded; DOMPurify with the same configuration before the web PDF export renders a note; the PDF title escaped on every platform.
+Checked against 329 real note HTML samples (no change but attribute whitespace and Word's empty tags), 25 payloads through 5
+sinks, and the real editor before and after (identical content and screenshots, to-do boxes, reopening). Tests:
+`scripts/sanitize.test.mjs`.
+
+**Rule:** Never turn a note's HTML or text into DOM unsanitized: DOMPurify (`NOTE_HTML_CONFIG`) for HTML, `escapeHtml` for text.
+A note is data from elsewhere, even the user's own.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
+`fix/editor-sanitize`
+
 ---
 
 ## Template for New Entries

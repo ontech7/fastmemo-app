@@ -857,3 +857,36 @@ The user wanted four seasonal icons (Halloween, Christmas, Easter, Summer) to pi
 
 **Trade-offs:** a native module: it needs a new build, an OTA can't deliver it (the fingerprint changes). Choosing an icon on
 Android closes the app. iOS is configured but not built or tested yet (no `ios/` here).
+
+## ADR-021: Note HTML Sanitized with DOMPurify in the Rich Text Editor's Page
+
+**Status:** Accepted (2026-10-21, user decision: DOMPurify, with a check that no note's HTML breaks)  
+**Context:** The text editor (react-native-pell-rich-editor) puts a note's HTML into its page with `innerHTML` and
+`execCommand("insertHTML")`. On web and desktop that page is a same-origin `srcdoc` iframe: an `<img onerror>` in a note runs
+with the app's origin (its storage, the parent window, on desktop the Rust commands). Notes come from imports and other devices.
+The web PDF export rendered a note, and its title unescaped, straight into the app's page (LL-060).
+
+**Decision:**
+
+- DOMPurify (approved as a direct dependency; jspdf already pulled it in, now one copy) runs inside the editor's page:
+  `src/editor/sanitize-entry.ts` wraps every way HTML becomes DOM there (the `innerHTML`/`outerHTML` setters,
+  `insertAdjacentHTML`, `execCommand("insertHTML")`, `createContextualFragment`). It is bundled by `scripts/build-sanitize.mjs`
+  into `src/generated/editor-sanitize.ts` (as CodeMirror is) and injected through the WebView props
+  (`injectedJavaScriptBeforeContentLoaded` on the phone, `injectedJavaScript` in the web iframe, which runs before the editor
+  loads a note). `scripts/sanitize.test.mjs` fails while the generated file is out of date.
+- One configuration for the editor and the web PDF export (`NOTE_HTML_CONFIG`): DOMPurify's defaults plus `contenteditable` (the
+  to-do box) and `target`, and unknown link schemes allowed (`obsidian:`), `javascript:`-like ones still removed.
+- The PDF title is escaped (`escapeHtml`) on every platform.
+
+**Alternatives rejected:** a sanitizer of our own (less tested against mutation XSS); a sandboxed iframe without
+`allow-same-origin` (the keyboard shortcuts, find/replace and the editor bridge read the iframe's document); sanitizing on the
+React Native side (no DOM on the phone).
+
+**Verified (2026-10-21):** 329 real note HTML samples (pell's output for 265 toolbar cases from the rich text audit, legacy
+shapes, what the app writes, hand-written ones) come out as the browser alone makes them, except a trailing space in a `style`
+and Word's empty `<o:p>`/`<meta>`; 25 payloads through 5 sinks: 37 runs without the hooks, none with them. In the web build the
+editor's content, a note edited and reopened, and the screenshots are identical before and after; a payload note ran code 13
+times before (11 in the app's own page), never after.
+
+**Trade-offs:** ~32 KB of script in the editor's page (only the note route's chunk on web). The HTML a note keeps can differ
+from what was stored in insignificant ways (attribute whitespace) once it is edited.

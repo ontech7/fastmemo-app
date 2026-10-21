@@ -1,6 +1,8 @@
+import DOMPurify from "dompurify";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
+import { NOTE_HTML_CONFIG } from "@/editor/sanitizeConfig";
 import { withNativeDialog } from "@/libs/desktopCommands";
 import { isTauri } from "@/utils/platform";
 import { wrapHtmlForPdf } from "@/utils/html";
@@ -54,7 +56,8 @@ async function saveFileWeb(
 }
 
 export async function exportAsPdf(title: string, htmlContent: string): Promise<{ uri: string } | null> {
-  const fullHtml = wrapHtmlForPdf(title, htmlContent);
+  // Rendered in the app's own page: whatever runs in it would run as the app (LL-060).
+  const fullHtml = wrapHtmlForPdf(title, DOMPurify.sanitize(htmlContent, NOTE_HTML_CONFIG) as string);
 
   // Render the HTML in a temporary off-screen container
   const container = document.createElement("div");
