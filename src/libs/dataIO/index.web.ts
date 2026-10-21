@@ -1,3 +1,4 @@
+import { withNativeDialog } from "@/libs/desktopCommands";
 import { isTauri } from "@/utils/platform";
 
 /**
@@ -12,10 +13,12 @@ export async function exportEncryptedData(encryptedData: string, defaultFilename
     const { save } = await import("@tauri-apps/plugin-dialog");
     const { writeTextFile } = await import("@tauri-apps/plugin-fs");
 
-    const filePath = await save({
-      defaultPath: defaultFilename,
-      filters: [{ name: "Text Files", extensions: ["txt"] }],
-    });
+    const filePath = await withNativeDialog(() =>
+      save({
+        defaultPath: defaultFilename,
+        filters: [{ name: "Text Files", extensions: ["txt"] }],
+      })
+    );
 
     if (!filePath) return false;
 
@@ -41,10 +44,12 @@ export async function importEncryptedData(): Promise<string | null> {
     const { open } = await import("@tauri-apps/plugin-dialog");
     const { readTextFile } = await import("@tauri-apps/plugin-fs");
 
-    const filePath = await open({
-      filters: [{ name: "Text Files", extensions: ["txt"] }],
-      multiple: false,
-    });
+    const filePath = await withNativeDialog(() =>
+      open({
+        filters: [{ name: "Text Files", extensions: ["txt"] }],
+        multiple: false,
+      })
+    );
 
     if (!filePath || typeof filePath !== "string") {
       return null;

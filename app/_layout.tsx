@@ -57,7 +57,7 @@ export default Sentry.wrap(function RootLayout() {
   const { colors } = useTheme();
   colors.background = "transparent";
 
-  // Web: no Backspace history navigation; desktop: Esc, Cmd/Ctrl+N/F, no reload (no-op on native).
+  // Web: no Backspace history navigation; desktop: Esc, Cmd/Ctrl+N/F/comma, no reload (no-op on native).
   useKeyboardShortcuts();
 
   const [fontsLoaded, fontError] = useFonts({

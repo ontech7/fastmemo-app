@@ -1,6 +1,7 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
+import { withNativeDialog } from "@/libs/desktopCommands";
 import { isTauri } from "@/utils/platform";
 import { wrapHtmlForPdf } from "@/utils/html";
 
@@ -20,10 +21,12 @@ async function saveFileWeb(
     const { save } = await import("@tauri-apps/plugin-dialog");
     const { writeTextFile, writeFile } = await import("@tauri-apps/plugin-fs");
 
-    const filePath = await save({
-      defaultPath: defaultFilename,
-      filters: filters || [{ name: "All Files", extensions: ["*"] }],
-    });
+    const filePath = await withNativeDialog(() =>
+      save({
+        defaultPath: defaultFilename,
+        filters: filters || [{ name: "All Files", extensions: ["*"] }],
+      })
+    );
     if (!filePath) return; // user cancelled
 
     if (typeof content === "string") {
@@ -85,10 +88,12 @@ export async function exportAsPdf(title: string, htmlContent: string): Promise<{
     const { writeFile } = await import("@tauri-apps/plugin-fs");
 
     const defaultName = `${(title || "note").replace(/[^a-zA-Z0-9-_ ]/g, "").substring(0, 50)}.pdf`;
-    const filePath = await save({
-      defaultPath: defaultName,
-      filters: [{ name: "PDF", extensions: ["pdf"] }],
-    });
+    const filePath = await withNativeDialog(() =>
+      save({
+        defaultPath: defaultName,
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      })
+    );
     if (!filePath) return null;
 
     const pdfBytes = pdf.output("arraybuffer");

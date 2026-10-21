@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
-import { canRun, type DesktopCommand, IS_MAC, isEditable, press, runCommand } from "@/libs/desktopCommands";
+import { canRun, commandsIdle, type DesktopCommand, IS_MAC, isEditable, press, runCommand } from "@/libs/desktopCommands";
 import { isTauri } from "@/utils/platform";
 
 /*
@@ -57,21 +57,26 @@ function onDesktopKeyDown(e: KeyboardEvent) {
     return;
   }
 
-  if (e.repeat || e.altKey || e.shiftKey || otherMod) return;
+  if (e.altKey || e.shiftKey || otherMod) return;
+  const command = mod ? COMMAND_KEYS[e.key === "," ? "," : letterOf(e)] : undefined;
+
+  // A key the page leaves alone goes on to the macOS menu item with the same shortcut: a held key's repeats are stopped
+  // here, or the menu would run the command again on each.
+  if (e.repeat) {
+    if (command) e.preventDefault();
+    return;
+  }
 
   if (e.key === "Escape" && !mod) {
     if (isEditable(e.target)) {
       (e.target as HTMLElement).blur();
       e.preventDefault();
-    } else if (press(SHORTCUT_TARGET.back)) {
+    } else if (commandsIdle() && press(SHORTCUT_TARGET.back)) {
       e.preventDefault();
     }
     return;
   }
 
-  if (!mod) return;
-  const command = COMMAND_KEYS[e.key === "," ? "," : letterOf(e)];
-  // Handled here, the key doesn't reach the macOS menu's item for the same command.
   if (command && canRun(command)) {
     e.preventDefault();
     void runCommand(command);

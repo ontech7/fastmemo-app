@@ -559,11 +559,15 @@ button. A key does nothing when its control is covered (a dialog, menu or dimmed
 does more than a click could. Esc in a text field only leaves the field, and F5/Cmd/Ctrl+R are blocked in release builds (a
 reload drops the edits not yet saved).
 
-Commands that start from the home screen (Cmd/Ctrl+N new note, Cmd/Ctrl+, settings, the menu's Help) first press the back
-buttons one screen at a time, the same path and saves as clicking them, and stop at a screen whose back button is off or covered
-(`@/libs/desktopCommands`). The macOS menu bar (`installDesktopMenu`, `src-tauri/src/lib.rs`) runs the same commands: its labels
-come from i18n (`menu.*`, Apple's wording per language) and are sent again on every language change. Windows and Linux have no
-menu bar. A shortcut the page handles never reaches the menu item with the same key.
+Commands that start from the home screen (Cmd/Ctrl+N new note, Cmd/Ctrl+, settings, the menu's Help and New Text
+Note/List/Kanban Board/Code Note, which go through the note-type menu) first press the back buttons one screen at a time, the
+same path and saves as clicking them, and stop at a screen whose back button is off or covered (`@/libs/desktopCommands`). The
+macOS menu bar (`installDesktopMenu`, `src-tauri/src/lib.rs`) runs the same commands: its labels come from i18n (`menu.*`,
+Apple's wording per language) and are sent again on every language change. Windows and Linux have no menu bar. A shortcut the
+page handles never reaches the menu item with the same key; one it leaves alone (nothing to do, an IME composition) does, so a
+held key's repeats are stopped in the page. One command at a time, with a 1 s pause after each (a second Cmd+N would close the
+note the first opened), and none while a native open/save panel is up (`withNativeDialog` around the dialog plugin's
+`open`/`save`). Leaving a form this way drops what was typed there, as clicking back would; the note editors save as they go.
 
 - A screen's back control is `BackButton` (or `CloseButton`), so Esc works there; a search field is `SearchInput` or carries
   `testID={SHORTCUT_TARGET.find}`.

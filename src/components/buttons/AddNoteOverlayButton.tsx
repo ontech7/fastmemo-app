@@ -26,7 +26,7 @@ import { selectorNoteCreation, setNoteCreation } from "@/slicers/settingsSlice";
 import type { Href } from "expo-router";
 
 import { NOTE_TYPES } from "@/constants/note-types";
-import { SHORTCUT_TARGET } from "@/constants/shortcuts";
+import { noteTypeTarget, SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import type { NoteCreationType } from "@/types";
 
@@ -55,9 +55,10 @@ interface MenuItemProps {
   onPress: () => void;
   label: string;
   focusable: boolean;
+  testID: string;
 }
 
-function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, label, focusable }: MenuItemProps) {
+function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, label, focusable, testID }: MenuItemProps) {
   const reverseIndex = totalItems - 1 - index;
   const Icon = noteType.icon;
 
@@ -85,6 +86,7 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
         style={styles.noteTypeButton}
         activeOpacity={0.7}
         onPress={onPress}
+        testID={testID}
         accessibilityRole="button"
         focusable={focusable}
       >
@@ -266,6 +268,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
               label={t(noteType.labelKey)}
               // aria-hidden doesn't take a closed menu out of the web tab order
               focusable={isOverlayOpen}
+              testID={noteTypeTarget(noteType.key)}
             />
           ))}
         </View>
@@ -287,6 +290,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
             style={styles.fabSecondary}
             activeOpacity={0.7}
             onPress={toggleOverlay}
+            testID={isDeleteMode ? undefined : SHORTCUT_TARGET.noteTypes}
             focusable={!isDeleteMode}
             accessibilityRole="button"
             accessibilityLabel={t("a11y.note_types")}

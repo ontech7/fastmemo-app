@@ -3,15 +3,19 @@ import i18n from "@/libs/i18n";
 import { isTauri } from "@/utils/platform";
 
 /*
- * The macOS menu bar (Windows and Linux have none: a light menu bar inside the dark window would clash, and the keyboard
- * shortcuts cover the same commands). The Rust shell builds it (`src-tauri/src/lib.rs`), in English until the labels
- * arrive in the app's language, again on every language change. Its items send their id back here.
+ * The macOS menu bar (Windows and Linux have none: a light menu bar inside the dark window would clash; the keyboard
+ * shortcuts cover New Note, Find and Settings there). The Rust shell builds it (`src-tauri/src/lib.rs`), in English until
+ * the labels arrive in the app's language, again on every language change. Its items send their id back here.
  */
 
 const MENU_EVENT = "fastmemo://menu";
 
 const MENU_COMMANDS: Record<string, DesktopCommand> = {
   "new-note": "newNote",
+  "new-text": "newText",
+  "new-todo": "newTodo",
+  "new-kanban": "newKanban",
+  "new-code": "newCode",
   find: "find",
   settings: "settings",
   // Export and import live in the settings, behind the secret code: the menu only leads there.
@@ -32,6 +36,10 @@ function menuLabels() {
     quit: t("quit"),
     file: t("file"),
     newNote: t("new_note"),
+    newText: t("new_text"),
+    newTodo: t("new_todo"),
+    newKanban: t("new_kanban"),
+    newCode: t("new_code"),
     exportImport: t("export_import"),
     closeWindow: t("close_window"),
     edit: t("edit"),
@@ -58,7 +66,9 @@ export function installDesktopMenu(): void {
   Promise.all([import("@tauri-apps/api/core"), import("@tauri-apps/api/event")])
     .then(([{ invoke }, { listen }]) => {
       const sendLabels = () => {
-        invoke("set_menu_labels", { labels: menuLabels() }).catch(() => {});
+        invoke("set_menu_labels", { labels: menuLabels() }).catch((e) => {
+          if (__DEV__) console.warn("set_menu_labels", e);
+        });
       };
       sendLabels();
       i18n.on("languageChanged", sendLabels);

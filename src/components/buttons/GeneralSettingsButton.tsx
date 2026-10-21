@@ -4,6 +4,7 @@ import Cog8ToothIcon from "react-native-heroicons/outline/Cog8ToothIcon";
 
 import { useRouter } from "@/hooks/useRouter";
 
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 export default function GeneralSettingsButton() {
@@ -18,6 +19,7 @@ export default function GeneralSettingsButton() {
         accessibilityLabel={t("generalsettings.title")}
         activeOpacity={0.7}
         style={styles.button}
+        testID={SHORTCUT_TARGET.settings}
         onPress={() => {
           router.push("/settings/general");
         }}

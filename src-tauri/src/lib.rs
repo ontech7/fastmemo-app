@@ -100,7 +100,17 @@ const MENU_EVENT: &str = "fastmemo://menu";
 
 /// The menu items the frontend acts on.
 #[cfg(target_os = "macos")]
-const MENU_COMMANDS: [&str; 5] = ["new-note", "find", "settings", "export-import", "help"];
+const MENU_COMMANDS: [&str; 9] = [
+    "new-note",
+    "new-text",
+    "new-todo",
+    "new-kanban",
+    "new-code",
+    "find",
+    "settings",
+    "export-import",
+    "help",
+];
 
 /// The menu's labels, in the app's language (`set_menu_labels`); `{name}` stands for the app's name.
 #[derive(serde::Deserialize)]
@@ -116,6 +126,10 @@ struct MenuLabels {
     quit: String,
     file: String,
     new_note: String,
+    new_text: String,
+    new_todo: String,
+    new_kanban: String,
+    new_code: String,
     export_import: String,
     close_window: String,
     edit: String,
@@ -149,6 +163,10 @@ impl Default for MenuLabels {
             quit: s("Quit {name}"),
             file: s("File"),
             new_note: s("New Note"),
+            new_text: s("New Text Note"),
+            new_todo: s("New To-Do List"),
+            new_kanban: s("New Kanban Board"),
+            new_code: s("New Code Note"),
             export_import: s("Export/Import Data…"),
             close_window: s("Close Window"),
             edit: s("Edit"),
@@ -171,9 +189,10 @@ impl Default for MenuLabels {
 }
 
 /// macOS: the menu bar. Windows and Linux have none (a light menu bar inside the dark window would clash; the keyboard
-/// shortcuts cover the same commands). Quit is a plain item, not the predefined one: that sends `terminate:`, which
-/// ends the process without any event the app could hold, so this one goes through `flush_then_exit`. The items with a
-/// command (`MENU_COMMANDS`) share their shortcut with the frontend: a key the page handles doesn't reach the menu.
+/// shortcuts cover New Note, Find and Settings there). Quit is a plain item, not the predefined one: that sends
+/// `terminate:`, which ends the process without any event the app could hold, so this one goes through
+/// `flush_then_exit`. The frontend handles the same keys as New Note, Find and Settings: a key the page handles doesn't
+/// reach the menu, one it leaves alone does.
 #[cfg(target_os = "macos")]
 fn macos_menu(app: &AppHandle, labels: &MenuLabels) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     use tauri::menu::{
@@ -217,6 +236,11 @@ fn macos_menu(app: &AppHandle, labels: &MenuLabels) -> tauri::Result<tauri::menu
                 true,
                 &[
                     &item("new-note", &labels.new_note, Some("CmdOrCtrl+N"))?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &item("new-text", &labels.new_text, None)?,
+                    &item("new-todo", &labels.new_todo, None)?,
+                    &item("new-kanban", &labels.new_kanban, None)?,
+                    &item("new-code", &labels.new_code, None)?,
                     &PredefinedMenuItem::separator(app)?,
                     &item("export-import", &labels.export_import, None)?,
                     &PredefinedMenuItem::separator(app)?,
