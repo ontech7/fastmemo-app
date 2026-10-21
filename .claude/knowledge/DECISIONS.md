@@ -1057,3 +1057,43 @@ way to resize, align, turn, look at closely, share or remove them other than wit
 - rotation re-encodes a JPEG, which is lossy, at a lower quality when a higher one would make it bigger;
 - the alignment applies to the whole line, text included;
 - `insertHTML` lets Blink add inline styles to the copy (`font-size: 1em`, with no visible effect).
+
+## ADR-025: A Lighter Mobile Startup: Fonts Built In, kotlin-reflect Warmed Up, No Animation into Home
+
+**Status:** Accepted (2026-10-22, user request: a faster startup on mobile, and no animation from the splash into home, the
+intro keeps its fade)  
+**Context:** The user found the startup slow on a fast phone, and the passage from the splash into home sometimes stuttered.
+Measured on a non-debuggable build (LL-066), the JS mostly waited: the app drew nothing until `useFonts` had loaded the 4 Geist
+files, and the store's rehydration waited behind the first file read, which paid for kotlin-reflect's first use on Expo's one
+async queue. Home then faded in while it was still drawing its first frame. The WebView warm-ups of the rich text and code
+editors come after home is shown and stay as they are.
+
+**Decision:**
+
+- **The Geist fonts are built into the apps** with the expo-font plugin's `fonts` (`GEIST_FONTS` in `app.config.ts`): there is
+  nothing to load, and the first frame has them. On Android the file name is the family name, so `FONT` keeps its names. The web
+  loads them as before: `useAppFonts` is split, a no-op in the apps and `useFonts` on the web, which draws without waiting.
+- **kotlin-reflect is warmed up in `MainApplication.onCreate`** by a config plugin in `app.config.ts`
+  (`withKotlinReflectWarmup`): a thread of its own reads the constructors of expo-file-system's legacy option classes while the
+  JS engine starts, so the first read finds kotlin-reflect ready. The classes are named as strings: a class renamed in an
+  expo-file-system update only skips its warm-up (`runCatching`), and the build doesn't break.
+- **No animation into home** (`animation: "none"`), from the logo, the intro, or a note that can't open. The intro keeps its
+  fade.
+- The DEV test APKs are built non-debuggable: a debuggable one runs its Java/Kotlin interpreted (CONVENTIONS #44).
+
+**Alternatives rejected:**
+
+- calling `getInfoAsync` without options first: the first call with an options object pays for kotlin-reflect anyway, whatever
+  the call, and the notes' reads take options;
+- loading the fonts after the first frame: the first screens have text, which would show in the system font and then change;
+- splitting the JS bundle or lazy screens: the JS from its start to home's first frame is ~240 ms on the emulator, mostly the
+  first render of home, and expo-router's lazy routes made the desktop show an empty screen before every screen (see the
+  `asyncRoutes` comment in `app.config.ts`);
+- moving the editors' warm-ups later: the user wants them, and they run after home is shown.
+
+**Trade-offs:**
+
+- the warm-up is native: it needs a store build (not an OTA), and a local build needs `npx expo prebuild -p android` after
+  pulling this change;
+- the warm-up's class list follows expo-file-system's legacy API, which the note store uses: if the store moves to another API,
+  the list must follow it, or the warm-up stops helping (nothing breaks).

@@ -98,6 +98,7 @@ src/
     useVaultUnlocked.ts # useSyncExternalStore over vaultSession (is the DEK loaded?)
     useVaultPrompt.ts  # useSyncExternalStore over vaultPrompt (does encryption need attention?)
     useVaultProgress.ts # useSyncExternalStore over vaultProgress (re-upload progress bar)
+    useAppFonts.ts     # The Geist fonts: built into the apps (expo-font plugin, ADR-025), loaded on the web (.web.ts)
 
   libs/                # Third-party service wrappers
     ai/                # On-device LLM (llama.rn, Qwen3.5 0.8B/2B/4B -- ADR-004)
