@@ -919,27 +919,39 @@ ends it).
 
 **Decision:**
 
-- The main window starts hidden (`visible: false`) and the frontend shows it once its first screen past the logo is drawn
-  (`windowReady()` → `window_ready`, after Geist or 300 ms), or as the first launch's logo animation starts. Rust shows it after
-  5 s anyway (a frontend that failed to load) and on a second launch. A reload doesn't show it again.
-- macOS: the close button / Cmd+W hide the window after the usual flush (`fastmemo://hidden`, no exit); the Dock icon, opening
-  the app again (`RunEvent::Reopen`), a second launch and the menu's commands (New Note, Settings…) show it. Cmd+Q keeps the
-  held quit (ADR-015). A full screen window leaves full screen first and hides when that animation ends (LL-061).
+- The main window starts hidden (`visible: false`) and the frontend shows it once home is drawn (`windowReady()` in
+  `app/home.tsx` → `window_ready`, after Geist or 300 ms), or as the first launch's logo animation starts. Rust shows it after 5
+  s anyway (a frontend that failed to load). This first show doesn't take the focus (a slow start after the user moved on to
+  another app); the Dock, a second launch and the menu's commands do. A reload doesn't show it again.
+- macOS: the close button / Cmd+W hide the window and the frontend flushes pending edits (`fastmemo://hidden`, no exit, nothing
+  waits for it: the app goes on running); the Dock icon, opening the app again (`RunEvent::Reopen`), a second launch and the
+  menu's commands (New Note, Settings…) show it. Cmd+Q keeps the held quit (ADR-015). A full screen window leaves full screen
+  first and is kept hidden from the end of that animation (LL-061); asking for it back meanwhile cancels that.
 - Windows and Linux: unchanged, closing the window quits after the flush.
 - `tauri-plugin-window-state` (approved): size, position and zoom remembered; not the visibility (it would show the window
-  before it's drawn) nor full screen.
-- The webview keeps WebKit's default background policy: a hidden window's page is throttled/suspended (the sync engine resumes
-  when it's shown again, as on a phone).
+  before it's drawn) nor full screen. Quitting in full screen saves it as zoomed: the next launch opens filling the screen.
+- A hidden window's page keeps running, throttled (WebKit's default policy): the sync engine stays on (listeners, the 5-minute
+  poll), so the notes are current when the window comes back, as for a window left open behind others. The first showing at
+  launch isn't a return to the foreground (`SyncOnProvider` resumes only after a hide).
+- The desktop update check runs at launch and again every 6 h while the app runs (an hourly tick, and the window coming back): a
+  Mac app now runs for days. A version already offered isn't offered again in that run (Settings still shows it).
+- Later (after 2.0.0, user decision): a real JS-only OTA for desktop (a signed web bundle served in place of the bundled one,
+  same origin, a runtime version as Expo's fingerprint, rollback when it doesn't reach `window_ready`). Until then a desktop
+  hotfix is a signed release; note that `publish.yml` tags it with the mobile version and builds `latest.json` from the first
+  matching asset, so a desktop-only release needs its own tag first.
 
 **Measured (2026-10-21, test build, release, warm):** before: window at ~0.4 s, empty, home at ~0.65 s; after: window at ~0.6 s
 with home drawn. The first launch after an install/reboot takes ~2.5 s. A never-shown window boots at full speed: the page is
 `hidden` but its script, IndexedDB and React run (same times with WebKit's throttling `disabled`, `throttle` or default). Of the
 ~0.6 s, ~0.1 s is the Rust shell and ~0.2 s the page (6.3 MB of JS to home): splitting the bundle (Sentry, PDF, Firebase,
-locales, Lottie) would save tens of ms, not done.
+locales, Lottie) would save tens of ms, not done. Verified by hand on macOS: close/Dock/reopen/second launch, a menu command
+while hidden, full screen close (and reopen during it), menu Quit (flushed, ~0.2 s), Dock-style Quit, size/position restored.
+Windows (WebView2) and Linux (WebKitGTK) not tried yet: the first show must come from `window_ready`, not the 5 s fallback.
 
 **Alternatives rejected:** a splash window (another window to keep in sync, and the old one felt heavy); `visible: true` with a
 CSS splash in `index.html` (still a flash, then a second screen); a menu bar (tray) app (not what the user asked).
 
-**Trade-offs:** for ~0.6 s (~2.5 s cold) there's no window, only the Dock icon bouncing, as with native apps. A hidden FastMemo
-keeps its memory (~a browser tab). A protected note left open is still open when the window comes back (as when minimized). Dock
-Quit / logout with the window open still skip the flush (ADR-015); with it closed the flush already happened.
+**Trade-offs:** for ~0.6 s (~2.5 s cold) there's no window (on macOS the Dock icon, briefly; on Windows/Linux not even a taskbar
+button). A hidden FastMemo keeps its memory (~a browser tab) and keeps syncing (Firestore reads as for an open window). A
+protected note left open is still open when the window comes back (as when minimized). Dock Quit / logout with the window open
+still skip the flush (ADR-015); with it closed the flush already happened.

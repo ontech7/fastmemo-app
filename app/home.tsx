@@ -21,6 +21,7 @@ import { useSecret } from "@/hooks/useSecret";
 import { useVaultPrompt } from "@/hooks/useVaultPrompt";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import Haptics from "@/libs/haptics";
+import { windowReady } from "@/libs/windowReady";
 import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import {
@@ -59,6 +60,12 @@ import { useDispatch, useSelector, useStore } from "react-redux";
 
 export default function HomeScreen() {
   const { t } = useTranslation();
+
+  // Desktop: the window, hidden at launch, shows now that home is drawn (the first launch shows it for the logo
+  // animation already).
+  useEffect(() => {
+    windowReady();
+  }, []);
 
   const router = useRouter();
 

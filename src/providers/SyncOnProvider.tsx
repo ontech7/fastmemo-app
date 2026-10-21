@@ -146,8 +146,12 @@ export default function SyncOnProvider(): null {
     const resume = () => getSyncEngine().then((engine) => engine?.resume());
 
     if (Platform.OS === "web") {
+      // The desktop window starts hidden (ADR-022): its first showing is the launch, not a return.
+      let shown = document.visibilityState === "visible";
       const handleVisibilityChange = () => {
-        if (document.visibilityState === "visible") resume();
+        if (document.visibilityState !== "visible") return;
+        if (shown) resume();
+        shown = true;
       };
       document.addEventListener("visibilitychange", handleVisibilityChange);
       return () => document.removeEventListener("visibilitychange", handleVisibilityChange);

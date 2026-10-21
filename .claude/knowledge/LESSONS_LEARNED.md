@@ -1649,8 +1649,10 @@ changed: each time the window was back on screen ~0.4 s later, visible and focus
 **Root cause:** tao reports the window out of full screen (and resizes it) as the animation starts; macOS orders the window back
 in as the animation ends (`windowDidExitFullScreen`), undoing an earlier `hide()`.
 
-**Fix:** remember when the window was asked out of full screen; hide it on the next `Resized` / `Focused(true)` at least 200 ms
-later (the end of the animation emits both), or after 2 s. Measured: hidden as the animation ends, and still hidden later.
+**Fix:** remember when the window was asked out of full screen; on every `Resized` / `Focused(true)` from 200 ms later on (the
+end of the animation emits both) hide it, until 2 s, when it's hidden a last time if that request is still the current one.
+Showing the window (Dock, menu, second launch) cancels the request. Measured: hidden as the animation ends and still hidden
+later; reopened during the animation, it stays.
 
 **Rule:** On macOS, act on a window leaving full screen only once the animation is over (the event at its end), never on the
 state tao reports at its start.

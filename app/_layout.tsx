@@ -15,14 +15,13 @@ import { installDesktopMenu } from "@/libs/desktopMenu";
 import { installFlushOnExit } from "@/libs/flushOnExit";
 import i18n from "@/libs/i18n";
 import { installMessageGuard } from "@/libs/messageGuard";
-import { windowReady } from "@/libs/windowReady";
 import AppUpdateProvider from "@/providers/AppUpdateProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
 import { persistor, store } from "@/slicers/store";
 import { DialogProvider } from "@ontech7/react-native-dialog";
 import * as Sentry from "@sentry/react-native";
 import { useFonts } from "expo-font";
-import { Stack, usePathname, useTheme } from "expo-router";
+import { Stack, useTheme } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
@@ -62,13 +61,6 @@ export default Sentry.wrap(function RootLayout() {
 
   // Web: no Backspace history navigation; desktop: Esc, Cmd/Ctrl+N/F/comma, no reload (no-op on native).
   useKeyboardShortcuts();
-
-  // Desktop: the window shows once the first screen past the logo is drawn (the logo screen itself, for the first
-  // launch's animation, says so on its own).
-  const pathname = usePathname();
-  useEffect(() => {
-    if (pathname !== "/") windowReady();
-  }, [pathname]);
 
   const [fontsLoaded, fontError] = useFonts({
     "Geist-Regular": require("~/assets/fonts/Geist-Regular.ttf"),

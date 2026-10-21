@@ -30,6 +30,11 @@ interface AppUpdateContextValue {
   checkDesktopUpdate: () => Promise<boolean>;
 }
 
+/** Desktop: how often a running app looks for a newer build. */
+const DESKTOP_RECHECK_MS = 6 * 60 * 60 * 1000;
+/** How often it looks at the time since the last check (a sleeping computer pauses timers). */
+const DESKTOP_RECHECK_TICK_MS = 60 * 60 * 1000;
+
 const AppUpdateContext = createContext<AppUpdateContextValue>({
   updateAvailable: false,
   releaseUrl: null,
@@ -48,7 +53,8 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
   const [desktopUpdate, setDesktopUpdate] = useState<DesktopUpdate | null>(null);
   const [isDesktopPromptOpen, setIsDesktopPromptOpen] = useState(false);
   const desktopUpdateRef = useRef<DesktopUpdate | null>(null);
-  const desktopCheckedRef = useRef(false);
+  // The version whose prompt was shown, so a later check doesn't show it again.
+  const offeredVersionRef = useRef<string | null>(null);
   // An install runs once: a second one would download and swap the app again.
   const isInstallingRef = useRef(false);
 
@@ -80,26 +86,55 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
     };
   }, [isConnected]);
 
-  const checkDesktopUpdate = useCallback(async () => {
+  // `offerAgain`: show the prompt even for the version already offered (the user asked, from Settings).
+  const findDesktopUpdate = useCallback(async (offerAgain: boolean) => {
     if (isInstallingRef.current) return true;
     const update = await checkSignedDesktopUpdate();
     // Each found update holds a resource on the Rust side until closed.
     desktopUpdateRef.current?.close().catch(() => {});
     desktopUpdateRef.current = update;
     setDesktopUpdate(update);
-    setIsDesktopPromptOpen(update !== null);
+    if (!update) {
+      setIsDesktopPromptOpen(false);
+    } else if (offerAgain || update.version !== offeredVersionRef.current) {
+      offeredVersionRef.current = update.version;
+      setIsDesktopPromptOpen(true);
+    }
     return update !== null;
   }, []);
 
-  // Desktop: offer a found update once per launch, like the old built-in updater did (without its native dialog,
-  // which could hang the app). A failed check (e.g. offline at launch) is retried on the next connection.
-  useEffect(() => {
-    if (!isTauri() || !isConnected || desktopCheckedRef.current) return;
-    desktopCheckedRef.current = true;
-    checkDesktopUpdate().catch(() => {
-      desktopCheckedRef.current = false;
+  const checkDesktopUpdate = useCallback(() => findDesktopUpdate(true), [findDesktopUpdate]);
+
+  // Desktop: offer a found update at launch, like the old built-in updater did (without its native dialog, which could
+  // hang the app), then look again every DESKTOP_RECHECK_MS while the app runs: on macOS closing the window leaves it
+  // running for days (ADR-022). A version already offered isn't offered again (Settings still shows it). A failed check
+  // (e.g. offline) is retried on the next connection, or the next tick.
+  const lastDesktopCheckRef = useRef(0);
+  const recheckDesktop = useCallback(() => {
+    if (!isTauri() || Date.now() - lastDesktopCheckRef.current < DESKTOP_RECHECK_MS) return;
+    lastDesktopCheckRef.current = Date.now();
+    findDesktopUpdate(false).catch(() => {
+      lastDesktopCheckRef.current = 0;
     });
-  }, [isConnected, checkDesktopUpdate]);
+  }, [findDesktopUpdate]);
+
+  useEffect(() => {
+    if (isConnected) recheckDesktop();
+  }, [isConnected, recheckDesktop]);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    const timer = setInterval(recheckDesktop, DESKTOP_RECHECK_TICK_MS);
+    // The window coming back is when an update is worth offering.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") recheckDesktop();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [recheckDesktop]);
 
   const confirmDesktopUpdate = useCallback(async () => {
     setIsDesktopPromptOpen(false);

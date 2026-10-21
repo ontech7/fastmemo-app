@@ -63,7 +63,7 @@ async fn biometric_authenticate(_reason: String) -> Result<bool, String> {
 // Note edits are committed to storage in batches (ADR-013), so the latest ones may only be in the webview's memory when
 // the app quits. A quit from the window (close button on Windows/Linux) or the app menu (Cmd+Q) first asks the frontend to
 // flush (`src/libs/flushOnExit.web.ts`) and exits once it reports back, or after FLUSH_TIMEOUT if a write hangs. On macOS
-// closing the window only hides it (`hide_main`), after the same flush without the exit.
+// closing the window only hides it (`hide_main`), and the frontend flushes meanwhile.
 // Not covered: quits that bypass the event loop (macOS Dock Quit and logout, a Windows/Linux session ending) exit at once,
 // losing at most the edit batch still open (ADR-015). On macOS that is a quit while the window is open: a hidden one was
 // flushed when it was closed.
@@ -110,12 +110,22 @@ const SHOW_FALLBACK: Duration = Duration::from_secs(5);
 #[derive(Default)]
 struct WindowShown(AtomicBool);
 
-fn show_main(app: &AppHandle) {
-    app.state::<WindowShown>().0.store(true, Ordering::SeqCst);
+/// Shows the window as the user left it. `focus`: bring the app to the front, for what the user just asked (the Dock, a
+/// second launch, a menu command); not for the launch's first show, which could come after the user moved on to another
+/// app (a slow start).
+fn show_main(app: &AppHandle, focus: bool) {
+    // A closing full screen window asked back during its animation stays (`left_fullscreen`).
+    #[cfg(target_os = "macos")]
+    {
+        *app.state::<LeavingFullscreen>().0.lock().unwrap() = None;
+    }
     if let Some(window) = app.get_webview_window("main") {
+        app.state::<WindowShown>().0.store(true, Ordering::SeqCst);
         let _ = window.unminimize();
         let _ = window.show();
-        let _ = window.set_focus();
+        if focus {
+            let _ = window.set_focus();
+        }
     }
 }
 
@@ -124,7 +134,7 @@ fn show_main(app: &AppHandle) {
 #[tauri::command]
 fn window_ready(app: AppHandle) {
     if !app.state::<WindowShown>().0.load(Ordering::SeqCst) {
-        show_main(&app);
+        show_main(&app, false);
     }
 }
 
@@ -133,7 +143,8 @@ fn window_ready(app: AppHandle) {
 const HIDDEN_EVENT: &str = "fastmemo://hidden";
 
 /// macOS: closing the window leaves the app running, as Notes does (the Dock keeps its dot, a click on it brings the
-/// window back as it was); Quit ends it. Pending edits are written right away, as on a quit.
+/// window back as it was); Quit ends it. The frontend writes pending edits right away, as on a quit (the app goes on
+/// running: no need to wait for it).
 #[cfg(target_os = "macos")]
 fn hide_main(window: &tauri::Window) {
     let _ = window.app_handle().emit_to("main", HIDDEN_EVENT, ());
@@ -141,18 +152,31 @@ fn hide_main(window: &tauri::Window) {
         let _ = window.hide();
         return;
     }
-    // A full screen window hidden as it is leaves its Space black: out of full screen first, hidden once that animation
-    // is over (`left_fullscreen`). Not before: macOS puts the window back on screen as it ends.
-    *window.state::<LeavingFullscreen>().0.lock().unwrap() = Some(Instant::now());
+    // A full screen window hidden as it is leaves its Space black: out of full screen first, hidden as that animation
+    // ends (`left_fullscreen`). Not before: macOS puts the window back on screen then.
+    let since = Instant::now();
+    *window.state::<LeavingFullscreen>().0.lock().unwrap() = Some(since);
     let _ = window.set_fullscreen(false);
     let window = window.clone();
     std::thread::spawn(move || {
         std::thread::sleep(LEAVE_FULLSCREEN_MAX);
-        left_fullscreen(&window, true);
+        let state = window.state::<LeavingFullscreen>();
+        let current = {
+            let mut leaving = state.0.lock().unwrap();
+            let current = *leaving == Some(since);
+            if current {
+                *leaving = None;
+            }
+            current
+        };
+        if current {
+            let _ = window.hide();
+        }
     });
 }
 
-/// macOS: when a full screen window being closed was asked out of full screen.
+/// macOS: when a full screen window being closed was asked out of full screen; None once hidden for good, or asked back
+/// (`show_main`).
 #[cfg(target_os = "macos")]
 #[derive(Default)]
 struct LeavingFullscreen(Mutex<Option<Instant>>);
@@ -161,23 +185,16 @@ struct LeavingFullscreen(Mutex<Option<Instant>>);
 /// an event this long after the start is the end.
 #[cfg(target_os = "macos")]
 const LEAVE_FULLSCREEN_END: Duration = Duration::from_millis(200);
-/// The longest the window waits for that end.
+/// How long a closing full screen window is kept hidden: past the end of the animation, whatever its events.
 #[cfg(target_os = "macos")]
 const LEAVE_FULLSCREEN_MAX: Duration = Duration::from_millis(2000);
 
-/// Hides a window that was leaving full screen to be closed, once it's out (`at_any_rate`: the wait is over).
+/// A resize or focus of a window leaving full screen to be closed: from the end of the animation on, hide it, every time
+/// macOS puts it back, until LEAVE_FULLSCREEN_MAX (`hide_main`).
 #[cfg(target_os = "macos")]
-fn left_fullscreen(window: &tauri::Window, at_any_rate: bool) {
-    let state = window.state::<LeavingFullscreen>();
-    let out = {
-        let mut leaving = state.0.lock().unwrap();
-        let out = leaving.is_some_and(|since| at_any_rate || since.elapsed() >= LEAVE_FULLSCREEN_END);
-        if out {
-            *leaving = None;
-        }
-        out
-    };
-    if out {
+fn left_fullscreen(window: &tauri::Window) {
+    let leaving = *window.state::<LeavingFullscreen>().0.lock().unwrap();
+    if leaving.is_some_and(|since| since.elapsed() >= LEAVE_FULLSCREEN_END) {
         let _ = window.hide();
     }
 }
@@ -410,7 +427,7 @@ pub fn run() {
                 flush_then_exit(app);
             } else if MENU_COMMANDS.contains(&id) {
                 // The window may be closed (hidden): a new note or the settings bring it back.
-                show_main(app);
+                show_main(app, true);
                 let _ = app.emit_to("main", MENU_EVENT, id);
             }
         });
@@ -418,7 +435,7 @@ pub fn run() {
     builder
         // First: a second launch only focuses the running window. Two instances would share (and overwrite) the same
         // stored notes.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app, true)))
         // The window's size and place, as the user left them. Not its visibility: it shows once drawn (`window_ready`).
         .plugin(
             tauri_plugin_window_state::Builder::default()
@@ -453,7 +470,7 @@ pub fn run() {
         .on_window_event(|window, event| {
             #[cfg(target_os = "macos")]
             if matches!(event, WindowEvent::Resized(_) | WindowEvent::Focused(true)) {
-                left_fullscreen(window, false);
+                left_fullscreen(window);
             }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -471,9 +488,10 @@ pub fn run() {
                 api.prevent_exit();
                 flush_then_exit(app);
             }
-            // A click on the Dock icon (or opening the app again) while the window is closed.
+            // A click on the Dock icon (or opening the app again): the window, closed or not (still on screen, it may be
+            // leaving full screen to be hidden).
             #[cfg(target_os = "macos")]
-            RunEvent::Reopen { has_visible_windows: false, .. } => show_main(app),
+            RunEvent::Reopen { .. } => show_main(app, true),
             _ => {}
         });
 }
