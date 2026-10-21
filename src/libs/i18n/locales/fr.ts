@@ -298,6 +298,10 @@ const fr = {
   },
   cloudsync: {
     conflict_suffix: "(conflit)",
+    note_too_large:
+      "« {{title}} » est trop volumineuse pour ce cloud : elle est maintenant hors ligne, sur cet appareil uniquement.",
+    notes_too_large:
+      "{{count}} notes sont trop volumineuses pour ce cloud : elles sont maintenant hors ligne, sur cet appareil uniquement.",
     conflict_copies:
       "Modifiée sur deux appareils avant la synchronisation : les deux versions ont été gardées (l'une en copie)",
     open_on: "Ouverte sur {{devices}}",

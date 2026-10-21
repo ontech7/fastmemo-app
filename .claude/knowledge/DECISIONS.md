@@ -1097,3 +1097,44 @@ editors come after home is shown and stay as they are.
   pulling this change;
 - the warm-up's class list follows expo-file-system's legacy API, which the note store uses: if the store moves to another API,
   the list must follow it, or the warm-up stops helping (nothing breaks).
+
+## ADR-026: The Note Size Limit Comes from the Cloud; a Note Too Large for It Goes Offline
+
+**Status:** Accepted (2026-10-22, user decision: a FastMemo server sets its own limits, and a switch to a cloud with smaller
+ones must not end badly; option "B" over one limit for every cloud)  
+**Context:** Firestore takes documents up to 1 MiB; a FastMemo server takes notes up to `MAX_NOTE_MB` (5 by default). The app
+had one limit, 1 MB of text, too much for Firestore once encrypted (LL-067) and less than a server allows. A user can also move
+from a server to Firebase, or the server's admin can lower `MAX_NOTE_MB`: notes that fit before may not fit any more. The device
+limit needed nothing new: each cloud already refuses a device over its limit when it connects.
+
+**Decision:**
+
+- **Each cloud says how big a note may be,** as it measures it: `CloudBackend.maxNoteBytes`, the UTF-8 bytes of the note's JSON
+  as sent, encrypted (`jsonBytes` in `libs/cloud/size.ts`). Firebase: 1,000,000 (the 1 MiB document, less room for field names).
+  The server: `maxNoteBytes` from `/v1/info` and `/v1/devices` (an optional field, protocol 1). Asked with the device's token
+  (the device list), not the access key; null until the server said it.
+- **A cloud doesn't send a note over its limit:** `push` returns it in `PushResult.tooLarge`, without trying. With the limit
+  unknown (null), nothing is held back: the server refuses what's too big (`rejected`), as before. A note is never made offline
+  on a guess.
+- **The engine makes such a note offline** (`detachNote`, as the offline notes feature does): it leaves the cloud, and every
+  device keeps its own copy, marked offline. The user is told once (`onTooLarge` → the `tooLarge` sync event → a toast in
+  `SyncOnProvider`). It isn't a sync failure (LL-004) but a change to the notes the user has to know about.
+- **The text editor's limit is the cloud's,** turned into text (`noteTextLimit`: three quarters of it, less 4 KB for the other
+  fields): about 0.71 MB of text on Firebase, 3.75 MB on a server with `MAX_NOTE_MB=5`. An offline note, or no cloud: the app's
+  1 MB. Over the limit only what makes the note smaller goes in, so a note already over it can be cut down. Lists, kanban boards
+  and code notes have no limit in their editors: the check at sending covers them.
+- Back to syncing: cut the note down, then "Sync to cloud", which publishes it as a new note (" (2)"), as for any offline note.
+
+**Alternatives rejected:**
+
+- one limit for every cloud (what Firebase takes, ~0.75 MB of text): simple and every note can move anywhere, but a server's
+  owner couldn't allow bigger notes;
+- splitting a big note over several Firestore documents: more reads and writes on a quota that's tight already, and another
+  format to keep in step on both clouds;
+- leaving a note the cloud refuses in the outbox (as before): it never syncs, and nobody knows.
+
+**Trade-offs:**
+
+- a note that went offline for its size no longer syncs: each device's copy goes its own way;
+- the editor shows less than `MAX_NOTE_MB` (the limit counts the encrypted note);
+- a server older than 1.0.0 doesn't say its limit: its refusals stay silent, as before.

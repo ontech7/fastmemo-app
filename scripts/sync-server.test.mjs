@@ -897,6 +897,31 @@ try {
     await small.stop();
   }
 
+  log("\nServerBackend: a note over the server's note limit (MAX_NOTE_MB)");
+  {
+    const small = await newServer({ env: { MAX_NOTE_MB: "1" } });
+    const a = makeBackend(small.url);
+    await a.backend.registerDevice({ uuid: "A", modelName: "Mac", brand: "Apple" });
+    const big = note("big", 1, { text: "x".repeat(1_100_000) });
+    const res = await a.backend.push("A", ops([note("s1", 1), big, note("s2", 1)]), []);
+    ok("the limit is learned from the server", a.backend.maxNoteBytes === 1024 * 1024, a.backend.maxNoteBytes);
+    ok(
+      "the note over it isn't sent, the others are",
+      res.complete &&
+        res.tooLarge.join() === "big" &&
+        res.rejected.length === 0 &&
+        res.committed.notes.add.sort().join() === "s1,s2",
+      res
+    );
+    const stored = await a.backend.fetchNotes();
+    ok(
+      "the server never got it",
+      stored && !stored.some((n) => n.id === "big"),
+      stored?.map((n) => n.id)
+    );
+    await small.stop();
+  }
+
   /* ---------------------------------------------------------------------------------------------------------------- */
   /* The engine on it                                                                                                 */
   /* ---------------------------------------------------------------------------------------------------------------- */
@@ -952,6 +977,7 @@ try {
         applyNotesPlan: N.applyNotesPlan,
         notesPushed: N.notesPushed,
         dropNoteUploads: N.dropNoteUploads,
+        detachNote: N.detachNote,
         adoptLegacyOutbox: N.adoptLegacyOutbox,
         applyCategoriesPlan: C.applyCategoriesPlan,
         categoriesPushed: C.categoriesPushed,
@@ -968,6 +994,7 @@ try {
         onDevices: () => {},
         onRemoved: () => (device.removed = true),
         onVaultStale: () => (device.stale = true),
+        onTooLarge: () => {},
       },
     });
     cleanups.push(() => device.engine.stop());

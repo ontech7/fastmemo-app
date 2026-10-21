@@ -133,9 +133,10 @@ src/
       revision.ts      # noteRev / nextRev / touchNote / baseOf, deletion stubs, tombstone pruning (pure)
       merge.ts         # Merge rules: planner for incoming versions, full-sync reconcile, categories (pure)
       syncEngine.ts    # Listeners -> merge -> persist -> debounced ack; throttled pushes with backoff; poll; presence
-      sync.ts          # The app's engine (bound to the store) + event bus (applied/devices/removed/vaultStale)
+      sync.ts          # The app's engine (bound to the store) + event bus (applied/devices/removed/vaultStale/tooLarge)
       presence.ts      # useNoteOpenElsewhere(): which other device has a note open
       token.ts         # contentToken(): stable hash of queue content (guards the ack)
+      size.ts          # Note size per cloud (ADR-026): jsonBytes, FIRESTORE_NOTE_MAX_BYTES, textLimitFor
     registry.ts        # In-memory Map for passing non-serializable data between screens (+ vault continuation / recovery-key transport, pending editor flushes)
     localization.ts    # Locale detection wrapper (expo-localization + web fallback)
     secureStore.ts     # Platform-split (.web.ts): expo-secure-store / localforage key-value

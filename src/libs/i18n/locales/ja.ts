@@ -298,6 +298,8 @@ const ja = {
   },
   cloudsync: {
     conflict_suffix: "（競合）",
+    note_too_large: "「{{title}}」はこのクラウドには大きすぎるため、オフラインになりました（このデバイスのみ）。",
+    notes_too_large: "{{count}} 件のノートはこのクラウドには大きすぎるため、オフラインになりました（このデバイスのみ）。",
     conflict_copies: "同期前に2台のデバイスで編集されました：両方のバージョンを保持しました（一方はコピー）",
     open_on: "{{devices}} で開いています",
     note_deleted_elsewhere: "このメモは別のデバイスでゴミ箱に移動されました。編集すると元に戻ります。",

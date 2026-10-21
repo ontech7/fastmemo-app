@@ -450,6 +450,8 @@ class FakeBackend {
   vaultListener = null;
   /** Ids whose upload fails for good (like a note over Firestore's 1 MiB limit). */
   poison = new Set();
+  /** The largest note (as JSON) this cloud takes: bigger ones aren't sent (`tooLarge`). Null: no limit known. */
+  maxNoteBytes = null;
   /** How many entries the queues hold (the size and index budgets): past that they start over (see planFanout). */
   maxQueuedEntries = Infinity;
   pushes = 0;
@@ -606,11 +608,17 @@ class FakeBackend {
       committed: { notes: { add: [], delete: [], detach: [] }, categories: { add: [], delete: [] } },
       superseded: [],
       rejected: [],
+      tooLarge: [],
       complete: true,
     };
     if (!this.online) return { ...result, complete: false };
     const device = this.cloud.devices.get(me);
     if (!device) return { ...result, complete: false };
+    if (this.maxNoteBytes !== null) {
+      const fits = (note) => JSON.stringify(note).length <= this.maxNoteBytes;
+      result.tooLarge = ops.notes.add.filter((note) => !fits(note)).map((note) => note.id);
+      ops = { ...ops, notes: { ...ops.notes, add: ops.notes.add.filter(fits) } };
+    }
 
     const entries = [
       ...ops.notes.add.map((v) => ["addNotes", v.id, v]),
@@ -722,6 +730,8 @@ const makeDevice = async (cloud, name, opts = {}) => {
     stale: false,
     /** No key in the session (vault locked). */
     locked: false,
+    /** The notes the engine made offline for their size (onTooLarge). */
+    tooLarge: [],
     /** What the engine reported, in order, with persist() calls ("persist" when one starts, "persisted" when done). */
     log: [],
     /** How long persist() takes. */
@@ -739,6 +749,7 @@ const makeDevice = async (cloud, name, opts = {}) => {
       applyNotesPlan: N.applyNotesPlan,
       notesPushed: N.notesPushed,
       dropNoteUploads: N.dropNoteUploads,
+      detachNote: N.detachNote,
       adoptLegacyOutbox: N.adoptLegacyOutbox,
       applyCategoriesPlan: C.applyCategoriesPlan,
       categoriesPushed: C.categoriesPushed,
@@ -769,6 +780,7 @@ const makeDevice = async (cloud, name, opts = {}) => {
       onDevices: () => {},
       onRemoved: () => (device.removed = true),
       onVaultStale: () => (device.stale = true),
+      onTooLarge: (notes) => device.tooLarge.push(...notes),
     },
   });
   return device;
@@ -1119,6 +1131,38 @@ await scenario("an upload the cloud refuses for good doesn't block the rest", as
   await settle();
   ok("...and isn't retried in a loop", a.backend.pushes - pushes <= 1, a.backend.pushes - pushes);
 });
+
+await scenario(
+  "a note over the cloud's limit becomes offline on every device, each keeping its copy",
+  async ({ cloud, add, settle }) => {
+    const a = await add("A");
+    const b = await add("B");
+    a.engine.start();
+    b.engine.start();
+    a.dispatch(N.addNote(newNote("big", "small for now")));
+    a.dispatch(N.addNote(newNote("n2", "other")));
+    await settle();
+    ok("B has the note while it fits", b.get("big")?.text === "small for now");
+    // A cloud with a smaller limit (another cloud, or the server's MAX_NOTE_MB lowered), and the note grows past it.
+    a.backend.maxNoteBytes = b.backend.maxNoteBytes = 1000;
+    edit(a, "big", "x".repeat(2000));
+    await settle();
+    ok("A keeps it, offline", a.get("big")?.local === true && a.get("big").text === "x".repeat(2000));
+    ok(
+      "A was told once, with the note's title",
+      a.tooLarge.length === 1 && a.tooLarge[0].id === "big" && a.tooLarge[0].title === "big",
+      a.tooLarge
+    );
+    ok("it left the cloud", !cloud.notes.has("big"));
+    ok("B keeps its copy, offline", b.get("big")?.local === true && b.get("big").text === "small for now", b.get("big"));
+    ok("B wasn't told (nothing of its own went offline)", b.tooLarge.length === 0, b.tooLarge);
+    ok("nothing of it left in A's outbox", !("big" in a.store.getState().notes.cloud.items.add));
+    ok("the other note still syncs", !a.get("n2").local && cloud.notes.has("n2"));
+    const pushes = a.backend.pushes;
+    await settle();
+    ok("...and no push loop", a.backend.pushes - pushes <= 1, a.backend.pushes - pushes);
+  }
+);
 
 await scenario("clock behind: an edit still supersedes what it was based on", async ({ add, settle }) => {
   const a = await add("A");

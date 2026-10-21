@@ -297,6 +297,8 @@ const zh = {
   },
   cloudsync: {
     conflict_suffix: "（冲突）",
+    note_too_large: "“{{title}}”对此云来说太大：现已离线，仅保存在此设备上。",
+    notes_too_large: "{{count}} 条笔记对此云来说太大：现已离线，仅保存在此设备上。",
     conflict_copies: "同步前已在两台设备上编辑：两个版本都已保留（其中一个为副本）",
     open_on: "已在 {{devices}} 上打开",
     note_deleted_elsewhere: "此笔记已在另一台设备上移至回收站。编辑它即可恢复。",

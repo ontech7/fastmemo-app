@@ -11,7 +11,7 @@ import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
-import { configs } from "@/configs";
+import { noteTextLimit } from "@/libs/cloud";
 import { EDITOR_SANITIZE_JS } from "@/generated/editor-sanitize";
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
@@ -335,7 +335,10 @@ export default function NoteTextEditor({ initialNote }: Props) {
       const dm = devModeRef.current;
       const isUnlimited = dm.enabled && dm.unlimitedTextSpace;
 
-      if (!isUnlimited && textSize > configs.notes.sizeLimit) {
+      // Over the limit, only what makes the note smaller goes in: a note already over it (a cloud with a smaller limit)
+      // can still be cut down.
+      const limit = noteTextLimit(noteRef.current.local);
+      if (!isUnlimited && textSize > limit && textSize > getTextSize(noteRef.current.text)) {
         toast(t("noteLimitReached"));
         richTextEditor.current?.setContentHTML(noteRef.current.text); // revert
         return;
@@ -474,7 +477,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
             </Text>
             <Text style={[styles.subtitle, { flexGrow: 1 }]}>
               {convertToMB(noteTextSize)} MB /{" "}
-              {devMode.enabled && devMode.unlimitedTextSpace ? "∞" : `${convertToMB(configs.notes.sizeLimit)} MB`}
+              {devMode.enabled && devMode.unlimitedTextSpace ? "∞" : `${convertToMB(noteTextLimit(note.local))} MB`}
             </Text>
           </View>
         </View>

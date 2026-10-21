@@ -298,6 +298,9 @@ const es = {
   },
   cloudsync: {
     conflict_suffix: "(conflicto)",
+    note_too_large: "«{{title}}» es demasiado grande para esta nube: ahora está sin conexión, solo en este dispositivo.",
+    notes_too_large:
+      "{{count}} notas son demasiado grandes para esta nube: ahora están sin conexión, solo en este dispositivo.",
     conflict_copies: "Editada en dos dispositivos antes de sincronizar: se guardaron ambas versiones (una como copia)",
     open_on: "Abierta en {{devices}}",
     note_deleted_elsewhere: "Esta nota se movió a la papelera en otro dispositivo. Editarla la recupera.",

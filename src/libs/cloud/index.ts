@@ -6,6 +6,7 @@ import uuid from "react-uuid";
 import { FirebaseBackend } from "./firebaseBackend";
 import { CloudRouter } from "./router";
 import { ServerBackend } from "./serverBackend";
+import { textLimitFor } from "./size";
 import type { CloudBackend, DeviceInfo } from "./types";
 
 export type {
@@ -44,6 +45,13 @@ export const isCloudConnected = (): boolean => cloud.isActive();
 export const only_if_cloudConnected = (callback: () => void): void => {
   if (isCloudConnected()) callback();
 };
+
+/**
+ * The most text (UTF-8 bytes of its HTML) a note may hold now (ADR-026): what the cloud in use takes once the note is
+ * encrypted, or the app's own limit for an offline note and with no cloud.
+ */
+export const noteTextLimit = (local: boolean | undefined): number =>
+  textLimitFor(local || !isCloudConnected() ? null : cloud.maxNoteBytes);
 
 let deviceUuid: string | null = null;
 

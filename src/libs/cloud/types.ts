@@ -9,6 +9,11 @@ import type { VaultDoc } from "@/utils/vault";
 export interface CloudBackend {
   /** How many devices may be connected at once (this one included). */
   readonly deviceLimit: number;
+  /**
+   * The largest note this cloud takes, as `jsonBytes` measures it encrypted (ADR-026). Null: not known yet (the server
+   * hasn't said): nothing is held back for its size then, and the cloud refuses what's too big (`rejected`).
+   */
+  readonly maxNoteBytes: number | null;
   /** The engine's pacing for this cloud (unset: the defaults, sized for Firestore's costs). */
   readonly pacing?: Partial<Pacing>;
 
@@ -188,6 +193,8 @@ export interface PushResult {
   superseded: Note[];
   /** Note ids / category icons the backend refused for good: keep them queued, but don't retry until the next launch. */
   rejected: string[];
+  /** Ids of notes not sent for being over `maxNoteBytes`: the engine makes them device-only. */
+  tooLarge: string[];
   /** Whether everything not rejected was committed (false: retry later). */
   complete: boolean;
 }
