@@ -457,7 +457,8 @@ crates.
   turns straight into an exit with no event to hold. No JS close listener, so no window permission is needed (LL-038). _Revised
   2026-10-21 (desktop 2.0.0):_ the macOS menu is the app's own (File, Edit, View, Window, Help, localized through
   `set_menu_labels`), still with the plain Quit item; Windows and Linux keep no menu bar (CONVENTIONS, Desktop Keyboard
-  Shortcuts and Menu).
+  Shortcuts and Menu). _Revised again 2026-10-21:_ on macOS the close button / Cmd+W only hide the window (flushed, no exit;
+  ADR-022).
 - **Updater UI in the app:** `AppUpdateProvider` checks once per launch (retried on reconnect) and from Settings, asks with the
   app's own dialog, then downloads, flushes, installs, flushes and relaunches (neither the install nor the restart goes through
   the exit flush). No native dialog. deb/rpm installs are never offered an update (the updater only has the AppImage for them):
@@ -905,3 +906,52 @@ checked in Chrome; in the web build the content is identical, and the payload no
 
 **Trade-offs:** ~34 KB of script in the editor's page (only the note route's chunk on web). The HTML a note keeps can differ
 from what was stored in insignificant ways (attribute whitespace) once it is edited.
+
+---
+
+## ADR-022: Desktop Window Shown Once Drawn; on macOS Closing It Leaves the App Running
+
+**Status:** Accepted (2026-10-21, user request for desktop 2.0.0)  
+**Context:** The window opened at once: ~0.4 s of an empty dark window, then the logo screen, then home (measured on the release
+build, warm start). The Tauri splash window tried before (logo + progress bar) was too much. On macOS, closing the window quit
+the app, so reopening it meant loading again; the user asked for Notes' behavior (the app stays in the Dock, right click → Quit
+ends it).
+
+**Decision:**
+
+- The main window starts hidden (`visible: false`) and the frontend shows it once home is drawn (`windowReady()` in
+  `app/home.tsx` → `window_ready`, after Geist or 300 ms), or as the first launch's logo animation starts. Rust shows it after 5
+  s anyway (a frontend that failed to load). This first show doesn't take the focus (a slow start after the user moved on to
+  another app); the Dock, a second launch and the menu's commands do. A reload doesn't show it again.
+- macOS: the close button / Cmd+W hide the window and the frontend flushes pending edits (`fastmemo://hidden`, no exit, nothing
+  waits for it: the app goes on running); the Dock icon, opening the app again (`RunEvent::Reopen`), a second launch and the
+  menu's commands (New Note, Settings…) show it. Cmd+Q keeps the held quit (ADR-015). A full screen window leaves full screen
+  first and is kept hidden from the end of that animation (LL-061); asking for it back meanwhile cancels that.
+- Windows and Linux: unchanged, closing the window quits after the flush.
+- `tauri-plugin-window-state` (approved): size, position and zoom remembered; not the visibility (it would show the window
+  before it's drawn) nor full screen. Quitting in full screen saves it as zoomed: the next launch opens filling the screen.
+- A hidden window's page keeps running, throttled (WebKit's default policy): the sync engine stays on (listeners, the 5-minute
+  poll), so the notes are current when the window comes back, as for a window left open behind others. The first showing at
+  launch isn't a return to the foreground (`SyncOnProvider` resumes only after a hide).
+- The desktop update check runs at launch and again every 6 h while the app runs (an hourly tick, and the window coming back): a
+  Mac app now runs for days. A version already offered isn't offered again in that run (Settings still shows it).
+- Later (after 2.0.0, user decision): a real JS-only OTA for desktop (a signed web bundle served in place of the bundled one,
+  same origin, a runtime version as Expo's fingerprint, rollback when it doesn't reach `window_ready`). Until then a desktop
+  hotfix is a signed release; note that `publish.yml` tags it with the mobile version and builds `latest.json` from the first
+  matching asset, so a desktop-only release needs its own tag first.
+
+**Measured (2026-10-21, test build, release, warm):** before: window at ~0.4 s, empty, home at ~0.65 s; after: window at ~0.6 s
+with home drawn. The first launch after an install/reboot takes ~2.5 s. A never-shown window boots at full speed: the page is
+`hidden` but its script, IndexedDB and React run (same times with WebKit's throttling `disabled`, `throttle` or default). Of the
+~0.6 s, ~0.1 s is the Rust shell and ~0.2 s the page (6.3 MB of JS to home): splitting the bundle (Sentry, PDF, Firebase,
+locales, Lottie) would save tens of ms, not done. Verified by hand on macOS: close/Dock/reopen/second launch, a menu command
+while hidden, full screen close (and reopen during it), menu Quit (flushed, ~0.2 s), Dock-style Quit, size/position restored.
+Windows (WebView2) and Linux (WebKitGTK) not tried yet: the first show must come from `window_ready`, not the 5 s fallback.
+
+**Alternatives rejected:** a splash window (another window to keep in sync, and the old one felt heavy); `visible: true` with a
+CSS splash in `index.html` (still a flash, then a second screen); a menu bar (tray) app (not what the user asked).
+
+**Trade-offs:** for ~0.6 s (~2.5 s cold) there's no window (on macOS the Dock icon, briefly; on Windows/Linux not even a taskbar
+button). A hidden FastMemo keeps its memory (~a browser tab) and keeps syncing (Firestore reads as for an open window). A
+protected note left open is still open when the window comes back (as when minimized). Dock Quit / logout with the window open
+still skip the flush (ADR-015); with it closed the flush already happened.

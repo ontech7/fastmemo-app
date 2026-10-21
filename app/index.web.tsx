@@ -5,6 +5,7 @@ import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import { cloud } from "@/libs/cloud";
 import { getLocales } from "@/libs/localization";
+import { windowReady } from "@/libs/windowReady";
 import { isObjectEmpty } from "@/utils/string";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
@@ -70,6 +71,8 @@ export default function LoadingScreen() {
 
   useEffect(() => {
     if (showLottie) {
+      // Desktop: the window shows for the animation (first launch).
+      windowReady();
       setTimeout(() => {
         logoAnimRef.current?.play();
       }, 150);

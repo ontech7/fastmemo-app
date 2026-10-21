@@ -1637,6 +1637,31 @@ real editor before and after (identical content and screenshots, to-do boxes, re
 
 ---
 
+### LL-061: A full screen window hidden while leaving full screen came back on screen
+
+**Date:** 2026-10-21  
+**Severity:** Medium (found while testing ADR-022, never released)  
+**Category:** Platform (macOS)  
+**What happened:** Closing the desktop window in full screen should leave full screen and hide it (hidden as it is, its Space
+stays black). Hiding it right after `set_fullscreen(false)`, then once `is_fullscreen()` turned false, then once its size
+changed: each time the window was back on screen ~0.4 s later, visible and focused.
+
+**Root cause:** tao reports the window out of full screen (and resizes it) as the animation starts; macOS orders the window back
+in as the animation ends (`windowDidExitFullScreen`), undoing an earlier `hide()`.
+
+**Fix:** remember when the window was asked out of full screen; on every `Resized` / `Focused(true)` from 200 ms later on (the
+end of the animation emits both) hide it, until 2 s, when it's hidden a last time if that request is still the current one.
+Showing the window (Dock, menu, second launch) cancels the request. Measured: hidden as the animation ends and still hidden
+later; reopened during the animation, it stays.
+
+**Rule:** On macOS, act on a window leaving full screen only once the animation is over (the event at its end), never on the
+state tao reports at its start.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
+`feat/desktop-startup`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

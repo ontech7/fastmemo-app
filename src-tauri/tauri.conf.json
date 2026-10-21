@@ -63,7 +63,7 @@
         "width": 900,
         "minWidth": 500,
         "minHeight": 700,
-        "visible": true,
+        "visible": false,
         "backgroundColor": "#05091A",
         "titleBarStyle": "Transparent",
         "useHttpsScheme": true
