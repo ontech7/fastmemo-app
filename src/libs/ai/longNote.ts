@@ -16,7 +16,7 @@ import { visibleStreamText } from "./helpers";
 import type { AIModelId, EditorAction, LongNoteProgress } from "./types";
 
 /*
- * Text notes of any length (spec docs/AI_QWEN35_UPGRADE.md §7.5). A rewrite (grammar, shortening, translation) runs one
+ * Text notes of any length (ADR-004, long notes). A rewrite (grammar, shortening, translation) runs one
  * line at a time (a paragraph, a heading, a list item; a very long paragraph a few sentences at a time) and puts each back
  * in its place, so the note keeps its structure. A summary reads the note in parts, summarizes each, then merges them; it
  * goes on top of the note, which stays below it. Each step is one completion: the progress shows, a cancel stops every step

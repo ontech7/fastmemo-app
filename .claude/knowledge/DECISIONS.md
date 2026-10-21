@@ -112,7 +112,7 @@ and checked by exact size.
 - Only one model loaded at a time (singleton context pattern)
 - RAM-intensive: minimum 3GB for smallest model, 6GB for the 4B
 
-**Revision (2026-10, `docs/AI_QWEN35_UPGRADE.md`):**
+**Revision (2026-10, Qwen3.5; the working spec `docs/AI_QWEN35_UPGRADE.md` was removed before 4.0.0, see git history):**
 
 - **Qwen3.5 replaced Qwen 2.5** (0.5B/1.5B/3B/7B -> 0.8B/2B/4B). No 7B/9B tier: on a phone the 7B took 12 s to load and ran at 4
   tok/s, and the note tasks don't need it. The code actions (`explain_code`, `add_comments`) went with it: code notes store

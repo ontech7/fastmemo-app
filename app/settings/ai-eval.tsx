@@ -14,7 +14,7 @@ import { selectorAIAssistant } from "@/slicers/settingsSlice";
 
 /**
  * Developer options -> AI evaluation: the fixed inputs of `evalFixtures` run on the selected model, with the load time,
- * each action's time and speed, and its output. The report is saved as JSON and can be shared (docs/AI_QWEN35_UPGRADE.md §8).
+ * each action's time and speed, and its output. The report is saved as JSON and can be shared (ADR-004).
  */
 export default function AIEvalScreen() {
   const { t } = useTranslation();
