@@ -144,6 +144,7 @@ src/
     net.ts             # Calls to the user's servers (FastMemo server, webhooks); .web.ts: through Rust on desktop (src-tauri/src/net.rs, ADR-017)
     desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only
     desktopMenu.ts     # macOS menu labels (i18n menu.*) and its items' commands; .ts no-op, .web.ts on Tauri macOS
+    windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
 
   utils/               # Pure utility functions
     sort.ts            # Sort comparators for Timestamped/Ordered items
@@ -337,9 +338,10 @@ store then reads its `state` value and entries (or, the first time, the folded s
 
 Edits reach the store in batches (`useNoteEditor`: debounce 500ms / max 2s native, 300ms / 1s web). Pending batches register in
 `registry.ts`; `flushOnExit` (installed in `_layout`) flushes them plus `persistor.flush()` on AppState background, page hide,
-or a desktop quit: the Rust shell (`src-tauri/src/lib.rs`) holds a quit from the window (close button, Cmd+W) or the app menu
-(Cmd+Q), emits `fastmemo://flush-before-exit`, and exits on the frontend's `exit_after_flush` or after 2s (Dock Quit, logout and
-OS session end aren't held: ADR-015).
+or a desktop quit: the Rust shell (`src-tauri/src/lib.rs`) holds a quit from the window (close button on Windows/Linux) or the
+app menu (Cmd+Q), emits `fastmemo://flush-before-exit`, and exits on the frontend's `exit_after_flush` or after 2s (Dock Quit,
+logout and OS session end aren't held: ADR-015). On macOS closing the window hides it (`fastmemo://hidden`: a flush, no exit;
+ADR-022).
 
 ### Screen Navigation Flow
 
