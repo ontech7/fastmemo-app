@@ -74,12 +74,18 @@ export const RICH_TEXT_SCRIPT = String.raw`
   };
   var refreshToolbar = function () { content().dispatchEvent(new Event("touchend")); };
 
-  // The selection as character offsets, which survive the block changes (they move text, they don't change it).
+  // The selection as character offsets, which survive the block changes (they move text, they don't change it). A code
+  // block's "\n" line breaks become <br>s out of it, so they don't count.
   var textOffset = function (node, offset) {
     var r = $.createRange();
     r.selectNodeContents(content());
     r.setEnd(node, offset);
-    return r.toString().length;
+    return r.toString().replace(/\n/g, "").length;
+  };
+  // Where in text its count-th character that isn't a "\n" ends.
+  var indexIn = function (text, count) {
+    for (var i = 0; count > 0; i++) if (text[i] !== "\n") count--;
+    return i;
   };
   var atNodeStart = function (node, offset) {
     return node.nodeType === 3 ? offset === 0 : offset < node.childNodes.length;
@@ -87,9 +93,9 @@ export const RICH_TEXT_SCRIPT = String.raw`
   var pointAt = function (at, preferNext) {
     var w = $.createTreeWalker(content(), NodeFilter.SHOW_TEXT), n, seen = 0, last = null;
     while ((n = w.nextNode())) {
-      var end = seen + n.data.length;
-      if (at < end || (at === end && !preferNext)) return [n, at - seen];
-      if (at === end) last = [n, at - seen];
+      var end = seen + n.data.replace(/\n/g, "").length;
+      if (at < end || (at === end && !preferNext)) return [n, indexIn(n.data, at - seen)];
+      if (at === end) last = [n, indexIn(n.data, at - seen)];
       seen = end;
     }
     return last;
@@ -165,8 +171,17 @@ export const RICH_TEXT_SCRIPT = String.raw`
     return last;
   };
   var isContent = function (n) { return n.nodeType === 3 ? !!n.data.replace(/\n/g, "") : n.nodeName === "IMG"; };
-  // A line break, or an empty line of pell's code block.
-  var isLineEnd = function (n) { return n.nodeName === "BR" || (n.nodeName === "CODE" && !n.textContent); };
+  // A code block's text as its lines read: a line ends with a "\n", a <br>, or where one of pell's <code> lines starts.
+  var linesOf = function (root) {
+    var w = $.createTreeWalker(root, NodeFilter.SHOW_ALL), n, text = "";
+    while ((n = w.nextNode())) {
+      if (n.nodeType === 3) text += n.data;
+      else if (n.nodeName === "BR") text += "\n";
+      else if (n.nodeName === "IMG") text += "\uFFFC";
+      else if (n.nodeName === "CODE" && text) text += "\n";
+    }
+    return text;
+  };
   // Enter on an empty last line of a code block leaves the block, onto a new line under it.
   var leaveCode = function (pre) {
     var s = selection();
@@ -174,7 +189,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
     var after = $.createRange();
     after.selectNodeContents(pre);
     after.setStart(s.focusNode, s.focusOffset);
-    if (after.toString() || after.cloneContents().querySelector("img")) return false;
+    if (linesOf(after.cloneContents()).replace(/\n/g, "")) return false;
     if (!lastOf(pre, isContent)) {
       selectContents(pre);
       exec("formatBlock", "<div>");
@@ -183,11 +198,11 @@ export const RICH_TEXT_SCRIPT = String.raw`
     var before = $.createRange();
     before.selectNodeContents(pre);
     before.setEnd(s.focusNode, s.focusOffset);
-    var line = lastOf(before.cloneContents(), function (n) { return isContent(n) || isLineEnd(n); });
-    if (!line || !isLineEnd(line)) return false;
+    if (linesOf(before.cloneContents()).slice(-1) !== "\n") return false;
     flattenCode(pre);
-    var r = $.createRange();
-    r.setStartAfter(lastOf(pre, isContent));
+    var keep = lastOf(pre, isContent), r = $.createRange();
+    if (keep.nodeType === 3) r.setStart(keep, keep.data.replace(/\n+$/, "").length);
+    else r.setStartAfter(keep);
     r.setEnd(pre, pre.childNodes.length);
     select(r);
     exec("insertHTML", "<div><br></div>");
@@ -220,10 +235,16 @@ export const RICH_TEXT_SCRIPT = String.raw`
       refreshToolbar();
       return;
     }
-    // A keyboard that sends a new line as text, not as an Enter key.
+    // Enter, also from a keyboard that sends it as text: a new line of the code block, or out of it on an empty last line.
     if (e.inputType === "insertParagraph" || e.inputType === "insertLineBreak") {
       var pre = closest(node, "pre");
-      if (pre && leaveCode(pre)) e.preventDefault();
+      if (!pre) return;
+      if (leaveCode(pre)) return e.preventDefault();
+      // A new paragraph in a code block splits it in two on Android's WebView 134: a line break keeps it one.
+      if (e.inputType === "insertParagraph") {
+        e.preventDefault();
+        exec("insertLineBreak");
+      }
     }
   });
 

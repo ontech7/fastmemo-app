@@ -167,7 +167,8 @@ const type = async (text) => {
   await send("Input.insertText", { text });
   await sleep(90);
 };
-// The content, the type of each line by its text, the caret, and the biggest font on screen.
+// The content, the type of each line by its text (a code block's lines can be "\n" in one text node), the code blocks
+// and the first one's lines as shown, the caret, and the biggest font on screen.
 const state = () =>
   evaluate(`(() => {
     const c = document.querySelector(".pell-content"), s = getSelection();
@@ -175,13 +176,17 @@ const state = () =>
     const w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
     for (let n; (n = w.nextNode()); ) {
       const e = n.parentNode, li = e.closest("li");
-      lines[n.data.trim()] = e.closest("pre") ? "code" : e.closest("h1") ? "h1" : li ? li.parentNode.nodeName.toLowerCase() : "p";
+      const type = e.closest("pre") ? "code" : e.closest("h1") ? "h1" : li ? li.parentNode.nodeName.toLowerCase() : "p";
+      for (const line of n.data.split("\\n")) if (line.trim()) lines[line.trim()] = type;
     }
     const f = s.focusNode;
     return {
       html: c.innerHTML,
       text: c.textContent,
       lines,
+      pres: c.querySelectorAll("pre").length,
+      // a single line break at the end of a block shows no line
+      pre: c.querySelector("pre") && c.querySelector("pre").innerText,
       caret: f ? (f.nodeType === 3 ? f.data : f.nodeName) + "@" + s.focusOffset : null,
       maxFont: Math.max(...[...c.querySelectorAll("*")].map((e) => parseFloat(getComputedStyle(e).fontSize)), 16),
       nested: ["h1 h1", "pre pre", "h1 pre", "pre h1", "h1 ul", "h1 ol", "pre ul", "pre ol", "li h1", "li pre"].filter((q) => c.querySelector(q)),
@@ -357,6 +362,45 @@ const FLOWS = [
     (s) => s.html.endsWith("</pre>") && /<img[^>]*><br>/.test(s.html) && !s.html.includes("<div"),
   ],
   [
+    "Enter in a code block is a line of the block, not a new block",
+    `<div>a</div><pre>l1</pre><div>c</div>`,
+    [
+      ["select", end("l1")],
+      ["key", "Enter"],
+      ["type", "x"],
+    ],
+    (s) => s.pres === 1 && s.pre === "l1\nx" && s.lines.c === "p",
+  ],
+  [
+    "Enter twice at the end of a code block with \\n lines leaves it",
+    `<div>a</div><pre>l1\nl2</pre><div>c</div>`,
+    [
+      ["select", end("l2")],
+      ["key", "Enter"],
+      ["key", "Enter"],
+      ["type", "out"],
+    ],
+    (s) => s.pres === 1 && s.pre.replace(/\n$/, "") === "l1\nl2" && s.lines.out === "p" && s.lines.c === "p",
+  ],
+  [
+    "A code block with \\n lines turns into text, a line each, the caret where it was",
+    `<pre>l1\nl2</pre>`,
+    [
+      ["select", { caret: "l2", at: 1 }],
+      ["press", "code"],
+    ],
+    (s) => s.html === "<div>l1<br>l2</div>" && s.caret === "l2@1",
+  ],
+  [
+    "A code block with \\n lines turns into a list, an item per line",
+    `<pre>l1\nl2</pre>`,
+    [
+      ["select", { caret: "l1", at: 1 }],
+      ["press", "unorderedList"],
+    ],
+    (s) => s.lines.l1 === "ul" && s.lines.l2 === "ul" && (s.html.match(/<li>/g) || []).length === 2,
+  ],
+  [
     "Enter on an empty code block makes it text",
     `<div>a</div>`,
     [
@@ -376,7 +420,7 @@ const FLOWS = [
       ["key", "Enter"],
       ["key", "Enter"],
     ],
-    (s) => s.html === "<pre>l1<br><br><br>l2</pre>",
+    (s) => s.pres === 1 && /^<pre>[^]*<\/pre>$/.test(s.html) && s.pre === "l1\n\n\nl2",
   ],
   [
     "Leaving a code block is one undo",
@@ -388,7 +432,8 @@ const FLOWS = [
       ["key", "Enter"],
       ["press", "undo"],
     ],
-    (s) => s.html === `<div>${A}</div><pre>${B}<br><br></pre><div>${G}</div>`,
+    (s) =>
+      s.lines[A] === "p" && s.lines[B] === "code" && s.lines[G] === "p" && s.pres === 1 && !s.html.includes("<div><br></div>"),
   ],
   [
     "Backspace at the start of a bullet takes the bullet off",

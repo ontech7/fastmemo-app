@@ -979,7 +979,9 @@ sends them to the page itself, with no prop to replace them, and pell's page kee
   keeps working. Only the repair of nested markup from saved notes (unwrapping) is a DOM edit that undo skips.
 - Enter in a code block is handled by a capture listener on the document, ahead of pell's keydown handler, which loses the caret
   in a `<pre>` without pell's `<code>` lines. A keyboard that sends a new line as `beforeinput` instead of a key goes through
-  the same code.
+  the same code. A new line in a code block is `insertLineBreak` (a `\n`), never the browser's new paragraph, which splits the
+  block on Android's WebView 134. The `\n`s become `<br>`s when the block turns into text (`formatBlock`), so the selection's
+  character offsets skip them.
 - `scripts/richtext.test.mjs` runs the real page in headless Chrome (`createHTML` with the app's options, the note sanitizer
   (ADR-021) and the script), with the messages RichEditor posts and real key events.
 

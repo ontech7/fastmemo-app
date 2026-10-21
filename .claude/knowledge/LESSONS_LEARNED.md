@@ -1687,16 +1687,20 @@ character offset. Backspace at the start of a list item removes the bullet. Ente
 one undo step. Images go in at the caret, with the caret on a new line. CSS guards cover notes saved with the nested markup. The
 check in the web app found one more case the hand-written test HTML didn't have: after H1 is turned off, Chrome keeps a line's
 text in a style `<span>`, and the code exit looked for the empty line only among the block's direct children. Now it looks at
-any depth. `scripts/richtext.test.mjs`: 619 checks on the real pell page with the note sanitizer; pell's own buttons fail 141 of
-them.
+any depth. The check in the app, on the emulator's Android WebView 134, found another: there a new paragraph in a `<pre>`
+(Enter, also Gboard's) splits it into two code blocks, where Chrome 148 adds a line. Pell's `<code>` lines had hidden that.
+Enter in a code block is now a line break (`insertLineBreak`, a `\n` in the text), which `formatBlock` turns into `<br>`s when
+the block becomes text, so the caret's offsets don't count the `\n`s. `scripts/richtext.test.mjs`: 623 checks on the real pell
+page with the note sanitizer; pell's own buttons fail 141 of them.
 
 **Rule:** Never send a block format or a list command to pell directly (`formatBlock`, `insertUnorderedList` /
 `insertOrderedList`, pell's `heading1` / `code` actions): go through `window.__fm.toggle`. A change to the page script comes
-with a case in `scripts/richtext.test.mjs` and a check in the real editor: Chrome adds style spans and wrappers that
-hand-written HTML doesn't have.
+with a case in `scripts/richtext.test.mjs` and a check in the real editor, also in the app's Android WebView (the emulator's is
+134): Chrome adds style spans and wrappers that hand-written HTML doesn't have, and its editing commands change between
+versions.
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
-`fix/richtext-blocks`
+`fix/richtext-blocks`, `fix/richtext-code-lines`
 
 ---
 
