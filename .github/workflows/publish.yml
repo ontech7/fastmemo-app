@@ -1,9 +1,151 @@
 name: "publish"
 
-on: workflow_dispatch
+# Builds the desktop app (macOS arm/Intel, Linux, Windows) into a GitHub release and writes its updater manifest
+# (latest.json). Installed apps read releases/latest/download/latest.json; the website's /api/version reads the mobile
+# version from the latest release's tag and the desktop one from that latest.json. Manual only: Actions tab → "publish".
+#
+# - Default: the release of a store version, tag vX.Y.Z (package.json: the mobile version) "(+ Desktop)", with the mobile
+#   and desktop changelogs. It becomes GitHub's latest release.
+# - desktop_only (a desktop hotfix, the mobile version unchanged): its own release, tag desktop-vX.Y.Z (tauri.conf.json),
+#   never GitHub's latest (its tag would read as the mobile version). The latest release's latest.json is then pointed at
+#   its builds, so installed apps and the website see it. Its version must be newer than the one published.
+#
+# A release holds one desktop version: the macOS update archives carry no version in their name (Fast.Memo_aarch64.app
+# .tar.gz), so a second version in the same release would mix with the first.
+
+on:
+  workflow_dispatch:
+    inputs:
+      desktop_only:
+        description: "Desktop only (a hotfix): own tag desktop-vX.Y.Z, not GitHub's latest; installed apps are pointed to it"
+        type: boolean
+        default: false
+
+concurrency:
+  group: publish
+  # Queue, never cancel: a run cancelled between the builds and latest.json leaves a release the apps aren't pointed to.
+  cancel-in-progress: false
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      name: ${{ steps.release.outputs.name }}
+      desktop_version: ${{ steps.release.outputs.desktop_version }}
+      body: ${{ steps.release_body.outputs.content }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: release tag and name
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DESKTOP_ONLY: ${{ inputs.desktop_only }}
+        run: |
+          set -eo pipefail
+          mobile=$(jq -r '.version' package.json)
+          desktop=$(jq -r '.version' src-tauri/tauri.conf.json)
+
+          # The desktop version published now (the latest release's latest.json), if any.
+          published=$(gh release download --repo "$GITHUB_REPOSITORY" --pattern latest.json --output - 2>/dev/null \
+            | jq -r '.version // empty' || true)
+
+          if [ "$DESKTOP_ONLY" = "true" ]; then
+            tag="desktop-v$desktop"
+            name="Desktop v$desktop"
+            newest=$(printf '%s\n%s\n' "$published" "$desktop" | sort -V | tail -n 1)
+            if [ -n "$published" ] && { [ "$desktop" = "$published" ] || [ "$newest" != "$desktop" ]; }; then
+              echo "::error::Desktop $desktop isn't newer than the published $published: bump src-tauri/tauri.conf.json"
+              exit 1
+            fi
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "::error::The release $tag already exists"
+              exit 1
+            fi
+          else
+            tag="v$mobile"
+            name="v$mobile (+ Desktop)"
+            # A re-run of the same release is fine; another desktop version into it is not (see the top).
+            existing=$(gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern latest.json --output - 2>/dev/null \
+              | jq -r '.version // empty' || true)
+            if [ -n "$existing" ] && [ "$existing" != "$desktop" ]; then
+              echo "::error::$tag already holds desktop $existing: bump package.json, or run with desktop_only"
+              exit 1
+            fi
+          fi
+
+          {
+            echo "tag=$tag"
+            echo "name=$name"
+            echo "desktop_version=$desktop"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: compose release body
+        id: release_body
+        shell: bash
+        env:
+          DESKTOP_ONLY: ${{ inputs.desktop_only }}
+        run: |
+          set -eo pipefail
+
+          # Extract latest version section (from first ## to next ## or EOF)
+          extract_latest() {
+            awk '/^## /{if(found) exit; found=1; next} found' "$1"
+          }
+
+          mobile_file="docs/CHANGELOG_MOBILE.md"
+          desktop_file="docs/CHANGELOG_DESKTOP.md"
+
+          mobile_section=""
+          desktop_section=""
+
+          if [ -s "$mobile_file" ] && [ "$DESKTOP_ONLY" != "true" ]; then
+            mobile_content=$(extract_latest "$mobile_file")
+            if [ -n "$mobile_content" ]; then
+              mobile_section="📱 Mobile"$'\n\n'"$mobile_content"
+            fi
+          fi
+
+          if [ -s "$desktop_file" ]; then
+            desktop_content=$(extract_latest "$desktop_file")
+            if [ -n "$desktop_content" ]; then
+              desktop_section="🖥 Desktop"$'\n\n'"$desktop_content"
+            fi
+          fi
+
+          if [ -n "$mobile_section" ] && [ -n "$desktop_section" ]; then
+            body="$mobile_section"$'\n\n'"$desktop_section"
+          elif [ -n "$mobile_section" ]; then
+            body="$mobile_section"
+          elif [ -n "$desktop_section" ]; then
+            body="$desktop_section"
+          else
+            body="Checkout GitHub latest release for more details."
+          fi
+
+          {
+            echo "content<<EOF"
+            echo "$body"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # tauri-action would create it as GitHub's latest release; it uploads into one that exists.
+      - name: create the desktop-only release (not the latest)
+        if: inputs.desktop_only
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+          NAME: ${{ steps.release.outputs.name }}
+          BODY: ${{ steps.release_body.outputs.content }}
+        run: |
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "$NAME" --notes "$BODY" --latest=false
+
   publish-tauri:
+    needs: prepare
     permissions:
       contents: write
     environment: production
@@ -46,58 +188,6 @@ jobs:
       - name: install frontend dependencies
         run: yarn install
 
-      - name: get version from package.json
-        id: pkg_version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - name: compose release body
-        id: release_body
-        shell: bash
-        run: |
-          set -eo pipefail
-
-          # Extract latest version section (from first ## to next ## or EOF)
-          extract_latest() {
-            awk '/^## /{if(found) exit; found=1; next} found' "$1"
-          }
-
-          mobile_file="docs/CHANGELOG_MOBILE.md"
-          desktop_file="docs/CHANGELOG_DESKTOP.md"
-
-          mobile_section=""
-          desktop_section=""
-
-          if [ -s "$mobile_file" ]; then
-            mobile_content=$(extract_latest "$mobile_file")
-            if [ -n "$mobile_content" ]; then
-              mobile_section="📱 Mobile"$'\n\n'"$mobile_content"
-            fi
-          fi
-
-          if [ -s "$desktop_file" ]; then
-            desktop_content=$(extract_latest "$desktop_file")
-            if [ -n "$desktop_content" ]; then
-              desktop_section="🖥 Desktop"$'\n\n'"$desktop_content"
-            fi
-          fi
-
-          if [ -n "$mobile_section" ] && [ -n "$desktop_section" ]; then
-            body="$mobile_section"$'\n\n'"$desktop_section"
-          elif [ -n "$mobile_section" ]; then
-            body="$mobile_section"
-          elif [ -n "$desktop_section" ]; then
-            body="$desktop_section"
-          else
-            body="Checkout GitHub latest release for more details."
-          fi
-
-          {
-            echo "content<<EOF"
-            echo "$body"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -111,33 +201,25 @@ jobs:
           # Sentry
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         with:
-          tagName: v${{ steps.pkg_version.outputs.version }}
-          releaseName: "v${{ steps.pkg_version.outputs.version }} (+ Desktop)"
-          releaseBody: ${{ steps.release_body.outputs.content }}
+          tagName: ${{ needs.prepare.outputs.tag }}
+          releaseName: ${{ needs.prepare.outputs.name }}
+          releaseBody: ${{ needs.prepare.outputs.body }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
 
   reconstruct-latest-json:
-    needs: publish-tauri
+    needs: [prepare, publish-tauri]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: get tag from package.json
-        id: pkg_version
-        run: echo "version=$(jq -r '.version' package.json)" >> $GITHUB_OUTPUT
-
-      - name: get updater version from tauri.conf.json
-        id: tauri_version
-        run: echo "version=$(jq -r '.version' src-tauri/tauri.conf.json)" >> $GITHUB_OUTPUT
-
       - name: extract user-facing changelog from en.ts
         id: desktop_notes
         env:
-          VERSION: ${{ steps.tauri_version.outputs.version }}
+          VERSION: ${{ needs.prepare.outputs.desktop_version }}
         run: |
           set -eo pipefail
 
@@ -169,10 +251,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DESKTOP_NOTES: ${{ steps.desktop_notes.outputs.content }}
+          DESKTOP_ONLY: ${{ inputs.desktop_only }}
         run: |
           set -eo pipefail
-          tag="v${{ steps.pkg_version.outputs.version }}"
-          version="${{ steps.tauri_version.outputs.version }}"
+          tag="${{ needs.prepare.outputs.tag }}"
+          version="${{ needs.prepare.outputs.desktop_version }}"
 
           # Fetch release metadata and assets
           pub_date=$(gh release view "$tag" --json publishedAt -q '.publishedAt')
@@ -263,3 +346,11 @@ jobs:
           echo "::endgroup::"
 
           gh release upload "$tag" /tmp/latest.json --clobber
+
+          # A desktop-only release isn't the latest: the latest one's manifest, which installed apps and the website read,
+          # now points to it.
+          if [ "$DESKTOP_ONLY" = "true" ]; then
+            latest_tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" -q .tag_name)
+            gh release upload "$latest_tag" /tmp/latest.json --clobber
+            echo "latest.json of $latest_tag now offers desktop $version ($tag)"
+          fi

@@ -174,6 +174,23 @@ entry, no README badge.
 
 ---
 
+## Between releases: desktop hotfix (until the desktop OTA, ADR-022)
+
+A desktop-only fix (mobile unchanged) is a signed desktop release, offered by the in-app updater:
+
+1. Bump only the **Desktop** track (Step 1) and write its changelogs: `docs/CHANGELOG_DESKTOP.md` and
+   `changelog.web.description_X_Y_Z` in the 7 locales (the English one becomes the update's notes in `latest.json`).
+2. Merge to `main`, then run the **publish** workflow with **desktop_only** ticked (Actions tab, from `main`) or
+   `gh workflow run publish.yml --ref main -f desktop_only=true`. Publishing needs the user's explicit go-ahead.
+3. The run creates the release `desktop-vX.Y.Z`, never GitHub's latest (the website reads the mobile version from the latest
+   release's tag), and rewrites the latest release's `latest.json` to point at its builds: installed apps offer it at launch or
+   within 6 h, and the website shows the new desktop version. It refuses a version that isn't newer than the published one.
+4. A store release (new mobile version, with or without desktop changes) is the default run: tag `vX.Y.Z` "(+ Desktop)". It
+   refuses a tag that already holds another desktop version (one desktop version per release: the macOS update archives carry no
+   version in their name).
+
+---
+
 ## Final checklist
 
 - [ ] All 6 version files bumped for each released track (+ `Cargo.lock`)
