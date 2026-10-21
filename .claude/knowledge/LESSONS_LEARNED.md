@@ -1532,6 +1532,26 @@ data as they really store it, including the fields a newer version wrote that th
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
 `fix/sync-legacy-synced-rev`
 
+### LL-057: After a page refresh, creating a category left the web app on the splash logo
+
+**Date:** 2026-10-21  
+**Severity:** Medium (web/desktop; found in the E2E test, present since 3.2.0)  
+**Category:** Bug  
+**What happened:** The bug needed a page load on a route other than `/`: a browser refresh on `/home`, or a link. After that,
+saving a new category showed only the splash logo on `/`. Only a reload brought the app back.
+
+**Root cause:** The root stack's anchor (`unstable_settings.anchor: "index"`) puts the index screen under the loaded route. The
+index screen sends the app to `/home` only from its mount effect. Saving a category calls `router.dismissAll()`, which pops to
+that index screen. It was already mounted, so nothing sent it on.
+
+**Fix:** Once it has sent the app to `/home`, the index screen does it again whenever it regains focus (`useFocusEffect`, both
+`app/index.tsx` and `app/index.web.tsx`). This covers every way back to the root, not only `dismissAll`.
+
+**Rule:** A screen that only redirects must redirect on focus, not only on mount. The stack can return to it.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
+`fix/splash-dismiss-all`
+
 ---
 
 ## Template for New Entries
