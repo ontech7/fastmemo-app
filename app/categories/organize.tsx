@@ -94,7 +94,7 @@ export default function OrganizeCategoriesScreen() {
         <AppBackground style={StyleSheet.absoluteFill} />
 
         <View style={styles.header}>
-          <BackButton chip />
+          <BackButton chip shortcut={!isEditMode} />
 
           {isEditMode && <View style={styles.editSpacer} />}
 

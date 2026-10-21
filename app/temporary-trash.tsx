@@ -132,7 +132,7 @@ export default function TemporaryTrashScreen() {
       <AppBackground style={StyleSheet.absoluteFill} />
 
       <View style={styles.header}>
-        <BackButton chip />
+        <BackButton chip shortcut={!isDeleteMode} />
 
         <Text style={styles.headerTitle}>{t("trashednotes.title")}</Text>
 

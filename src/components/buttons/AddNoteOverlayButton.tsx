@@ -303,7 +303,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
           style={styles.fab}
           activeOpacity={0.7}
           onPress={createDirect}
-          testID={isDeleteMode ? undefined : SHORTCUT_TARGET.newNote}
+          testID={isDeleteMode ? SHORTCUT_TARGET.back : SHORTCUT_TARGET.newNote}
           accessibilityRole="button"
           accessibilityLabel={isDeleteMode ? t("a11y.exit_selection") : t("a11y.new_note")}
         >

@@ -5,8 +5,8 @@ import type { StyleProp, ViewStyle } from "react-native";
 import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 
-import { BORDER, COLOR, FONT, PADDING_MARGIN } from "@/constants/styles";
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
+import { BORDER, COLOR, FONT, PADDING_MARGIN } from "@/constants/styles";
 import GlassSurface from "@/components/ui/GlassSurface";
 
 interface Props {

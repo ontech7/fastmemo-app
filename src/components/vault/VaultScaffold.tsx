@@ -10,15 +10,26 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/
 
 /**
  * Shared chrome for the vault flow screens (set/unlock/recover/change/reset). `footer` holds the
- * screen's actions, pinned under the content so they're never below the fold.
+ * screen's actions, pinned under the content so they're never below the fold. `backShortcut={false}`: Esc doesn't leave
+ * (see `BackButton`).
  */
-export function VaultScreen({ title, footer, children }: { title: string; footer?: ReactNode; children: ReactNode }) {
+export function VaultScreen({
+  title,
+  footer,
+  backShortcut = true,
+  children,
+}: {
+  title: string;
+  footer?: ReactNode;
+  backShortcut?: boolean;
+  children: ReactNode;
+}) {
   return (
     <SafeAreaView style={styles.container}>
       <AppBackground style={StyleSheet.absoluteFill} />
 
       <View style={styles.header}>
-        <BackButton chip />
+        <BackButton chip shortcut={backShortcut} />
         <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} ellipsizeMode="tail">
           {title}
         </Text>

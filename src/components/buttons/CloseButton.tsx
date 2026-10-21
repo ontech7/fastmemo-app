@@ -3,6 +3,7 @@ import { TouchableOpacity } from "react-native";
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 
 import IconChip from "@/components/ui/IconChip";
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { useRouter } from "@/hooks/useRouter";
 
 import { COLOR } from "@/constants/styles";
@@ -25,6 +26,7 @@ export default function CloseButton({ callback = null, style = {}, chip = false 
     <TouchableOpacity
       accessibilityRole="button"
       accessibilityLabel={t("a11y.close")}
+      testID={SHORTCUT_TARGET.back}
       style={style}
       activeOpacity={0.7}
       onPress={() => {
