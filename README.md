@@ -5,7 +5,7 @@
 **A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, and end-to-end
 encrypted cloud sync.**
 
-![Android](https://badgen.net/badge/Android/v3.2.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v1.2.0/blue)
+![Android](https://badgen.net/badge/Android/v4.0.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v2.0.0/blue)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
 
 [Download](https://github.com/ontech7/fastmemo-app/releases) | [Documentation](docs/) |
@@ -36,17 +36,17 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 | **To-Do List**           | Organize your checklist                                                |
 | **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                        |
 | **Code Editor**          | Write code with syntax highlighting, tabs, and language detection      |
-| **Cloud Sync**           | End-to-end encrypted sync across devices (your key, no central server) |
+| **Cloud Sync**           | End-to-end encrypted sync on your Firebase or your own FastMemo Server |
 | **Biometric Protection** | Secure sensitive notes with fingerprint or secret code                 |
 | **Webhooks**             | Explore new stuff with Internet of Things                              |
 | **Voice Recognition**    | Dictate notes using speech-to-text on text and todo notes              |
-| **Multi-language**       | Available in English, Italian, French, German, Spanish, and Chinese    |
+| **Multi-language**       | English, Italian, French, German, Spanish, Chinese and Japanese        |
 
 <details>
 <summary><strong>View all features</strong></summary>
 
-- AI-powered actions inside note editors: generate title, summarize, continue writing, format text, suggest checklist items,
-  suggest category, explain code (7B), add comments (7B)
+- On-device AI actions inside note editors: generate title, summarize (long notes too, summary on top), fix grammar, make
+  shorter, translate into a chosen language, suggest checklist items, suggest category, clean up voice dictation
 - Notes and categories creation with custom icons
 - Sort notes by creation or update date
 - Filter and deep search across all notes

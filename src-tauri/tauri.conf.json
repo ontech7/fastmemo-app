@@ -42,7 +42,7 @@
   },
   "productName": "Fast Memo",
   "mainBinaryName": "Fast Memo",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "identifier": "com.ontech7.fastmemo",
   "plugins": {
     "updater": {
