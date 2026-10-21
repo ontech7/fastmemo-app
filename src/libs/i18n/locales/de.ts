@@ -396,6 +396,10 @@ const de = {
     pending: "{{count}} ausstehend",
     mostRecent: "Neueste",
     count: "({{count}}/{{limit}}) Geräte",
+    remove_title: "Dieses Gerät entfernen?",
+    remove_description:
+      "{{name}} wird von der Synchronisierung getrennt. Seine Notizen bleiben auf dem Gerät, werden aber erst wieder synchronisiert, wenn Sie es erneut verbinden.",
+    remove_confirm: "Entfernen",
   },
   createcategory: {
     title_create: "Kategorie Erstellen",

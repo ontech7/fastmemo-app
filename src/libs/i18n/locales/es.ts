@@ -391,6 +391,10 @@ const es = {
     pending: "{{count}} pendientes",
     mostRecent: "Más reciente",
     count: "({{count}}/{{limit}}) dispositivos",
+    remove_title: "¿Quitar este dispositivo?",
+    remove_description:
+      "{{name}} se desconectará de la sincronización. Sus notas se quedan en ese dispositivo, pero no se sincronizarán hasta que lo vuelvas a conectar.",
+    remove_confirm: "Quitar",
   },
   createcategory: {
     title_create: "Crear Categoría",
