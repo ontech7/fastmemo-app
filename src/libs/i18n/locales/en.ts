@@ -15,9 +15,9 @@ const en = {
     title: "What's new?",
 
     web: {
-      description_2_0_0: `• Sync with your own FastMemo Server (PC, NAS, Raspberry Pi) as an alternative to Google Firebase.
+      description_2_0_0: `• Sync your notes with your own FastMemo Server (PC, NAS, Raspberry Pi) as an alternative to Google Firebase.
 • Live sync: changes from your other devices show up as you work, and a note edited on two devices at once keeps both versions.
-• Faster launch, keyboard shortcuts and, on Mac, a full menu bar; closing the window keeps the app running.
+• Faster launch and keyboard shortcuts; on Mac, a full menu bar, and closing the window keeps the app running.
 • Rebuilt on Tauri 2, with safer automatic updates.
 • Various fixes and improvements.`,
 
@@ -56,7 +56,7 @@ const en = {
     },
 
     mobile: {
-      description_4_0_0: `• Sync with your own FastMemo Server (PC, NAS, Raspberry Pi) as an alternative to Google Firebase.
+      description_4_0_0: `• Sync your notes with your own FastMemo Server (PC, NAS, Raspberry Pi) as an alternative to Google Firebase.
 • Live sync: changes from your other devices show up as you work, and a note edited on two devices at once keeps both versions.
 • A faster, smarter AI Assistant with the new Qwen3.5 models: fix grammar, shorten, translate and summarize even long notes.
 • A faster app, and small fixes now arrive on their own without waiting for a store update.

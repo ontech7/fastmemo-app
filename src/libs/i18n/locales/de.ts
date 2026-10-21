@@ -15,9 +15,9 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
-      description_2_0_0: `• Synchronisieren Sie mit Ihrem eigenen FastMemo Server (PC, NAS, Raspberry Pi) als Alternative zu Google Firebase.
+      description_2_0_0: `• Synchronisieren Sie Ihre Notizen mit Ihrem eigenen FastMemo Server (PC, NAS, Raspberry Pi) als Alternative zu Google Firebase.
 • Live-Synchronisierung: Änderungen von Ihren anderen Geräten erscheinen, während Sie arbeiten, und eine gleichzeitig auf zwei Geräten bearbeitete Notiz behält beide Versionen.
-• Schnellerer Start, Tastenkürzel und auf dem Mac eine vollständige Menüleiste; wenn Sie das Fenster schließen, läuft die App weiter.
+• Schnellerer Start und Tastenkürzel; auf dem Mac eine vollständige Menüleiste, und die App läuft weiter, wenn Sie das Fenster schließen.
 • Neu aufgebaut auf Tauri 2, mit sichereren automatischen Updates.
 • Verschiedene Fehlerbehebungen und Verbesserungen.`,
 
@@ -56,10 +56,10 @@ const de = {
     },
 
     mobile: {
-      description_4_0_0: `• Synchronisieren Sie mit Ihrem eigenen FastMemo Server (PC, NAS, Raspberry Pi) als Alternative zu Google Firebase.
+      description_4_0_0: `• Synchronisieren Sie Ihre Notizen mit Ihrem eigenen FastMemo Server (PC, NAS, Raspberry Pi) als Alternative zu Google Firebase.
 • Live-Synchronisierung: Änderungen von Ihren anderen Geräten erscheinen, während Sie arbeiten, und eine gleichzeitig auf zwei Geräten bearbeitete Notiz behält beide Versionen.
 • Ein schnellerer und klügerer KI-Assistent mit den neuen Qwen3.5-Modellen: Grammatik korrigieren, kürzen, übersetzen und selbst lange Notizen zusammenfassen.
-• Eine schnellere App, und kleine Korrekturen kommen jetzt von selbst, ohne auf ein Store-Update zu warten.
+• Eine schnellere App, und kleine Fehlerbehebungen kommen jetzt automatisch, ohne auf ein Store-Update zu warten.
 • Verschiedene Fehlerbehebungen und Verbesserungen.`,
 
       description_3_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Ihre Notizen werden mit Ihrem eigenen Schlüssel geschützt.

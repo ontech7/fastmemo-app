@@ -2,6 +2,7 @@
 
 - Migrated to Tauri 2 in place (ADR-015): same identifier, data and update channel, so 1.x installs update and keep their notes; tighter capabilities, a safer in-app update flow, and Cmd+Q waits for the notes to be saved before quitting.
 - Faster start without an empty window (ADR-022): the window stays hidden until the home screen is drawn. On macOS, closing the window leaves the app running like other Mac apps (the Dock icon brings it back, Quit closes it, edits are saved when the window hides). The window remembers its size, position and zoom, and a quit in full screen reopens it as it was before.
+- Single instance: launching Fast Memo again focuses the running window instead of opening a second one.
 - Keyboard shortcuts: Esc goes back (in a text field it only leaves the field), Cmd/Ctrl+N a new note, Cmd/Ctrl+F the search or find in the note, Cmd/Ctrl+, the settings, Cmd/Ctrl+Enter saves the quick note. F5, Cmd/Ctrl+R and the history keys no longer reload or leave a screen and lose unsaved edits.
 - macOS menu bar in the app's language, with the same commands: every note type, find, settings, Export/Import, Help. A command runs only when its control is reachable, one at a time, never under a native open/save panel. The bundle declares its languages, so what macOS adds (Edit menu items, panels) follows the system language too.
 - The FastMemo Server and the webhooks are called from Rust commands, so no CORS limits and plain HTTP servers on the local network work.
@@ -13,8 +14,12 @@
 - The update check repeats every 6 hours and when the window comes back, without offering the same version twice; if the in-app check fails, the update button opens the right release page.
 - CI: desktop-only releases for hotfixes (`desktop_only` in the publish workflow), with checks against shipping an older or duplicate desktop version; `latest.json` notes come from the English changelog; desktop builds read their `EXPO_PUBLIC_*` values from GitHub variables.
 - Expo SDK 58 web bundle (React 19.3); faster start of the web bundle (deep icon imports, cached date formatter).
-- The vault key is derived with one key per passphrase on every path; the vault screens are translated into every language; the recovery key screen can't be left before the key is confirmed.
-- A first-note tour replaces the welcome note on a new install (ADR-019); the intro carousel is centered on wide windows.
+- The vault key is derived with WebCrypto PBKDF2 off the main thread, so setup, unlock and password change no longer freeze the window, with one key per passphrase on every path; the vault screens are translated into every language; the recovery key screen can't be left before the key is confirmed.
+- Data safety: a slow read can no longer rehydrate empty state (`timeout: 0` on every persist config), and a failed read, including a lost IndexedDB connection, never writes the notes back.
+- Sync fixes: newer edits stay queued, each note and category id is in one queue only, a restored note isn't deleted by a stale deletion, saving the settings while connected doesn't re-enroll the device, and notes 1.2.0 received from a newer version don't produce conflict copies.
+- Accessibility: names, roles and states for icon-only controls, and hidden controls out of the Tab order.
+- A first-note tour replaces the welcome note on a new install (ADR-019); the intro carousel is centered on wide windows; roomier text toolbar; logos in the cloud choice; a warning on the connect screen for plain HTTP servers.
+- Smaller fixes: longer auto-titles cut at a word boundary, changelog bullets with hanging indents, the to-do progress as one translated sentence, no splash logo stuck on screen after closing every screen at once on a reloaded page.
 - Help brought up to date, with new topics on the quick-note bar, the conflict copies and the desktop shortcuts; translations fixed (German "Sie" and umlauts, accents in Italian, Spanish and French, several wrong strings).
 - The website moved to fastmemo.losav.cc: the app's links and update check use it, and its version API now answers the desktop app (CORS).
 

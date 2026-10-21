@@ -10,9 +10,9 @@ platforms: Android (primary), Web, and Desktop (Tauri).
 
 | Platform | Framework                            | Build Tool   | Status          |
 | -------- | ------------------------------------ | ------------ | --------------- |
-| Android  | React Native 0.85 (New Architecture) | EAS Build    | Active (v3.2.0) |
-| Web      | Expo Web (React DOM)                 | Expo/Webpack | Active          |
-| Desktop  | Tauri 2.x (Rust + WebView)           | tauri-action | Active (v1.2.0) |
+| Android  | React Native 0.88 (New Architecture) | EAS Build    | Active (v4.0.0) |
+| Web      | Expo Web (React DOM)                 | Expo/Metro   | Active          |
+| Desktop  | Tauri 2.x (Rust + WebView)           | tauri-action | Active (v2.0.0) |
 | iOS      | React Native                         | -            | Dismissed       |
 
 ## Source Directory Structure

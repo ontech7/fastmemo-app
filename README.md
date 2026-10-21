@@ -36,17 +36,17 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 | **To-Do List**           | Organize your checklist                                                |
 | **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                        |
 | **Code Editor**          | Write code with syntax highlighting, tabs, and language detection      |
-| **Cloud Sync**           | End-to-end encrypted sync across devices (your key, no central server) |
+| **Cloud Sync**           | End-to-end encrypted sync on your Firebase or your own FastMemo Server |
 | **Biometric Protection** | Secure sensitive notes with fingerprint or secret code                 |
 | **Webhooks**             | Explore new stuff with Internet of Things                              |
 | **Voice Recognition**    | Dictate notes using speech-to-text on text and todo notes              |
-| **Multi-language**       | Available in English, Italian, French, German, Spanish, and Chinese    |
+| **Multi-language**       | English, Italian, French, German, Spanish, Chinese and Japanese        |
 
 <details>
 <summary><strong>View all features</strong></summary>
 
-- AI-powered actions inside note editors: generate title, summarize, continue writing, format text, suggest checklist items,
-  suggest category, explain code (7B), add comments (7B)
+- On-device AI actions inside note editors: generate title, summarize (long notes too, summary on top), fix grammar, make
+  shorter, translate into a chosen language, suggest checklist items, suggest category, clean up voice dictation
 - Notes and categories creation with custom icons
 - Sort notes by creation or update date
 - Filter and deep search across all notes
