@@ -10,5 +10,17 @@
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<true/>
 	</dict>
+	<!-- The app's languages: what macOS adds by itself (the Edit menu's Start Dictation and Emoji & Symbols, Close All,
+	     the open/save panels) follows them, instead of staying in English. -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>it</string>
+		<string>de</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>ja</string>
+		<string>zh-Hans</string>
+	</array>
 </dict>
 </plist>

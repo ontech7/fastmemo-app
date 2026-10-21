@@ -11,6 +11,7 @@ import AppBackground from "@/components/ui/AppBackground";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { installDesktopMenu } from "@/libs/desktopMenu";
 import { installFlushOnExit } from "@/libs/flushOnExit";
 import i18n from "@/libs/i18n";
 import AppUpdateProvider from "@/providers/AppUpdateProvider";
@@ -34,6 +35,7 @@ import { PersistGate } from "redux-persist/integration/react";
 enableFreeze(true);
 
 installFlushOnExit();
+installDesktopMenu();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
