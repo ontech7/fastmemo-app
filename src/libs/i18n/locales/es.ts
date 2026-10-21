@@ -18,7 +18,7 @@ const es = {
       description_2_0_0: `• Sincroniza tus notas con tu propio FastMemo Server (PC, NAS, Raspberry Pi) como alternativa a Google Firebase.
 • Sincronización en tiempo real: los cambios de tus otros dispositivos aparecen mientras trabajas, y una nota editada en dos dispositivos a la vez conserva ambas versiones.
 • Inicio más rápido y atajos de teclado; en Mac, una barra de menús completa y la app sigue abierta al cerrar la ventana.
-• Reconstruida sobre Tauri 2, con actualizaciones automáticas más seguras.
+• Haz clic en una imagen de una nota de texto para cambiar su tamaño, alinearla, girarla, verla a pantalla completa o guardarla.
 • Varias correcciones y mejoras.`,
 
       description_1_2_0: `• Sincronización en la nube con cifrado de extremo a extremo: tus notas se protegen con tu propia clave.
@@ -59,6 +59,7 @@ const es = {
       description_4_0_0: `• Sincroniza tus notas con tu propio FastMemo Server (PC, NAS, Raspberry Pi) como alternativa a Google Firebase.
 • Sincronización en tiempo real: los cambios de tus otros dispositivos aparecen mientras trabajas, y una nota editada en dos dispositivos a la vez conserva ambas versiones.
 • Un Asistente IA más rápido e inteligente con los nuevos modelos Qwen3.5: corrige la gramática, acorta, traduce y resume incluso notas largas.
+• Toca una imagen de una nota de texto para cambiar su tamaño, alinearla, girarla, verla a pantalla completa o compartirla.
 • Una app más rápida, y las pequeñas correcciones ahora llegan solas sin esperar una actualización de la tienda.
 • Varias correcciones y mejoras.`,
 
