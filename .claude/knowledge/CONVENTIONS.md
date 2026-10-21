@@ -791,7 +791,8 @@ Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file tha
    gets a `REWRITE_LENGTH_RATIO` range so `isPlausibleRewrite` can discard a runaway answer.
 4. **Number each run** (`runRef`/`aiRunRef`): a cancelled or superseded run never writes into the UI, and unmounting advances
    the number and calls `cancelCommand`. An interrupted or token-limited answer is never applied (`cancelled` / `too_long`): it
-   is cut short.
+   is cut short. One exception, never shown alone: a part of a long note's summary keeps its complete sentences (only the merge
+   reads it).
 5. **Pre-warm where an action is likely** (`prewarmContext` when the dictation sheet or the AI menu opens), never at app start:
    a loaded 2B holds over a gigabyte.
 6. **Measure before changing a prompt, sampling or tier**: run Developer options -> AI evaluation on a phone before and after,

@@ -17,7 +17,14 @@ import {
   normalizeModelId,
   truncateForAction,
 } from "./constants";
-import { categoryGrammar, cleanAnswer, cleanSuggestedItems, isPlausibleRewrite, stripThinking } from "./helpers";
+import {
+  categoryGrammar,
+  cleanAnswer,
+  cleanSuggestedItems,
+  completeSentences,
+  isPlausibleRewrite,
+  stripThinking,
+} from "./helpers";
 import type {
   AIModelId,
   AIModelInfo,
@@ -586,11 +593,14 @@ async function runEditorAction(
     recordSpeed(model.id, timings);
     // A stopped answer is cut short: never applied (a half list of items, half a category name).
     if (cancelled() || result.interrupted) return { success: false, error: "cancelled", timings };
-    // So is one that ran out of room: a rewrite cut mid-way would replace the whole text with part of it.
-    if (result.stopped_limit || result.truncated || result.context_full) {
+    // So is one that ran out of room: a rewrite cut mid-way would replace the whole text with part of it. A part of a long
+    // note's summary is the exception: only the merge reads it, and its complete sentences are enough.
+    const cut = result.stopped_limit || result.truncated || result.context_full;
+    if (cut && action !== "summarize_part") {
       return { success: false, error: factor ? "too_long" : "No response", timings };
     }
-    const text = stripThinking(result.text ?? "").trim();
+    const answer = stripThinking(result.text ?? "");
+    const text = (cut ? completeSentences(answer) : answer).trim();
     if (!text) return { success: false, error: "No response", timings };
 
     if (isJsonOutput) {

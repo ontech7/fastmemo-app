@@ -346,6 +346,11 @@ eq("chunks: a text over the budget is split first", B.chunkTexts(["a".repeat(70)
   eq("split: a script without spaces still cut", B.splitText("日本語".repeat(10), 8).join(""), "日本語".repeat(10));
 }
 
+// --- what's left of an answer cut off ---
+eq("cut answer: up to the last full sentence", H.completeSentences("Uno. Due! Tre e poi qu"), "Uno. Due!");
+eq("cut answer: CJK punctuation", H.completeSentences("東京に行った。京都も"), "東京に行った。");
+eq("cut answer: no sentence ended: nothing", H.completeSentences("Solo un pezzo"), "");
+
 // --- a grammar fix keeps the words ---
 ok(
   "grammar: a fix passes",

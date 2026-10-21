@@ -103,6 +103,12 @@ export function createThrottle<T>(onValue: (value: T) => void, intervalMs = 50) 
   };
 }
 
+/** `text` up to its last complete sentence (all of it if none ends): what's left of an answer cut off mid-sentence. */
+export function completeSentences(text: string): string {
+  const end = Math.max(...[".", "!", "?", "。", "！", "？"].map((mark) => text.lastIndexOf(mark)));
+  return end === -1 ? "" : text.slice(0, end + 1);
+}
+
 /** A label the model may put before a title or a summary ("Titolo: ..."), by action. */
 const ANSWER_LABELS: Partial<Record<EditorAction, RegExp>> = {
   generate_title: /^(Title|Titolo|Titel|Título|Titulo|Titre|タイトル|标题)\s*[:：]\s*/i,
