@@ -155,7 +155,39 @@ const LANG_NAMES: Record<string, string> = {
   fr: "French",
   ja: "Japanese",
   zh: "Chinese",
+  pt: "Portuguese",
+  nl: "Dutch",
+  pl: "Polish",
+  ru: "Russian",
+  uk: "Ukrainian",
+  tr: "Turkish",
+  ar: "Arabic",
+  hi: "Hindi",
+  ko: "Korean",
 };
+
+/**
+ * The languages a note can be translated into, each by the name it gives itself (the same in every app language). The
+ * models write all of them; the app's languages come first.
+ */
+export const TRANSLATE_LANGUAGES: { code: string; name: string }[] = [
+  { code: "en", name: "English" },
+  { code: "it", name: "Italiano" },
+  { code: "es", name: "Español" },
+  { code: "fr", name: "Français" },
+  { code: "de", name: "Deutsch" },
+  { code: "zh", name: "中文" },
+  { code: "ja", name: "日本語" },
+  { code: "pt", name: "Português" },
+  { code: "nl", name: "Nederlands" },
+  { code: "pl", name: "Polski" },
+  { code: "ru", name: "Русский" },
+  { code: "uk", name: "Українська" },
+  { code: "tr", name: "Türkçe" },
+  { code: "ar", name: "العربية" },
+  { code: "hi", name: "हिन्दी" },
+  { code: "ko", name: "한국어" },
+];
 
 /**
  * GBNF grammar for JSON array of strings output (used by suggest_items).

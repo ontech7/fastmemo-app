@@ -16,6 +16,7 @@ export {
   getAIStatus,
   addAIStatusListener,
   getModelPath,
+  resolveLanguage,
 } from "./context";
 export { clearLongNoteCache, estimateSeconds, LONG_NOTE_ACTIONS, rewriteNote, summarizeNote, tooLongForAI } from "./longNote";
 export type { LongNoteAction, LongNoteResult } from "./longNote";
@@ -31,6 +32,7 @@ export {
   isLegacyModelId,
   isModelSufficient,
   normalizeModelId,
+  TRANSLATE_LANGUAGES,
 } from "./constants";
 export type {
   AIModelStatus,

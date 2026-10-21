@@ -27,6 +27,7 @@ export {
   isLegacyModelId,
   isModelSufficient,
   normalizeModelId,
+  TRANSLATE_LANGUAGES,
 } from "./constants";
 export type {
   AIModelStatus,
@@ -137,3 +138,7 @@ export function tooLongForAI(_html: string): LongNoteAction[] {
 }
 
 export function clearLongNoteCache() {}
+
+export function resolveLanguage(): string {
+  return "en";
+}
