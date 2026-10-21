@@ -199,6 +199,65 @@ fn left_fullscreen(window: &tauri::Window) {
     }
 }
 
+/// macOS: the window's last place and size out of full screen and not zoomed. window-state saves a window quit in full
+/// screen as a zoomed one filling the screen; `save_windowed_frame` puts this one back in its place.
+#[cfg(target_os = "macos")]
+#[derive(Default)]
+struct WindowedFrame(Mutex<Option<(tauri::PhysicalPosition<i32>, tauri::PhysicalSize<u32>)>>);
+
+/// Records the window's frame if it's an ordinary window (as window-state saves it: outer position, inner size).
+#[cfg(target_os = "macos")]
+fn remember_windowed_frame(window: &tauri::Window) {
+    let ordinary = !window.is_fullscreen().unwrap_or(true)
+        && !window.is_maximized().unwrap_or(true)
+        && !window.is_minimized().unwrap_or(true);
+    if let (true, Ok(position), Ok(size)) = (ordinary, window.outer_position(), window.inner_size()) {
+        *window.state::<WindowedFrame>().0.lock().unwrap() = Some((position, size));
+    }
+}
+
+/// A quit in full screen: window-state has just saved the window (plugins see `RunEvent::Exit` first); its entry gets the
+/// last ordinary frame instead, so the next launch opens the window the user had before full screen.
+#[cfg(target_os = "macos")]
+fn save_windowed_frame(app: &AppHandle) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    if !window.is_fullscreen().unwrap_or(false) {
+        return;
+    }
+    let Some((position, size)) = *app.state::<WindowedFrame>().0.lock().unwrap() else {
+        return;
+    };
+    let Ok(dir) = app.path().app_config_dir() else {
+        return;
+    };
+    let path = dir.join(tauri_plugin_window_state::DEFAULT_FILENAME);
+    let Some(mut saved) = std::fs::read(&path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+    else {
+        return;
+    };
+    let Some(main) = saved.get_mut("main").and_then(|entry| entry.as_object_mut()) else {
+        return;
+    };
+    for (key, value) in [
+        ("x", position.x.into()),
+        ("y", position.y.into()),
+        ("prev_x", position.x.into()),
+        ("prev_y", position.y.into()),
+        ("width", size.width.into()),
+        ("height", size.height.into()),
+        ("maximized", false.into()),
+    ] {
+        main.insert(key.to_string(), value);
+    }
+    if let Ok(bytes) = serde_json::to_vec_pretty(&saved) {
+        let _ = std::fs::write(&path, bytes);
+    }
+}
+
 /// The app menu's Quit item.
 #[cfg(target_os = "macos")]
 const QUIT_MENU_ID: &str = "quit";
@@ -420,6 +479,7 @@ pub fn run() {
     #[cfg(target_os = "macos")]
     let builder = builder
         .manage(LeavingFullscreen::default())
+        .manage(WindowedFrame::default())
         .menu(|app| macos_menu(app, &MenuLabels::default()))
         .on_menu_event(|app, event| {
             let id = event.id().as_ref();
@@ -460,6 +520,11 @@ pub fn run() {
             net::net_webhook
         ])
         .setup(|app| {
+            // The frame window-state restored, until the user moves or resizes the window.
+            #[cfg(target_os = "macos")]
+            if let Some(window) = app.get_webview_window("main") {
+                remember_windowed_frame(&window.as_ref().window());
+            }
             let app = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(SHOW_FALLBACK);
@@ -471,6 +536,10 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             if matches!(event, WindowEvent::Resized(_) | WindowEvent::Focused(true)) {
                 left_fullscreen(window);
+            }
+            #[cfg(target_os = "macos")]
+            if matches!(event, WindowEvent::Resized(_) | WindowEvent::Moved(_)) {
+                remember_windowed_frame(window);
             }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -492,6 +561,8 @@ pub fn run() {
             // leaving full screen to be hidden).
             #[cfg(target_os = "macos")]
             RunEvent::Reopen { .. } => show_main(app, true),
+            #[cfg(target_os = "macos")]
+            RunEvent::Exit => save_windowed_frame(app),
             _ => {}
         });
 }
