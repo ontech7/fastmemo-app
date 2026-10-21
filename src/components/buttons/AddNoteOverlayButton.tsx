@@ -26,6 +26,7 @@ import { selectorNoteCreation, setNoteCreation } from "@/slicers/settingsSlice";
 import type { Href } from "expo-router";
 
 import { NOTE_TYPES } from "@/constants/note-types";
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import type { NoteCreationType } from "@/types";
 
@@ -302,6 +303,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
           style={styles.fab}
           activeOpacity={0.7}
           onPress={createDirect}
+          testID={isDeleteMode ? undefined : SHORTCUT_TARGET.newNote}
           accessibilityRole="button"
           accessibilityLabel={isDeleteMode ? t("a11y.exit_selection") : t("a11y.new_note")}
         >

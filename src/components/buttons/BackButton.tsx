@@ -4,6 +4,7 @@ import { Keyboard, TouchableOpacity } from "react-native";
 import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
 
 import IconChip from "@/components/ui/IconChip";
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import { useTourTarget } from "@/hooks/useTourTarget";
@@ -35,6 +36,7 @@ export default function BackButton({ callback = null, style = {}, chip = false, 
       style={style}
       activeOpacity={0.7}
       onPress={onPress}
+      testID={SHORTCUT_TARGET.back}
       accessibilityRole="button"
       accessibilityLabel={t("a11y.back")}
     >

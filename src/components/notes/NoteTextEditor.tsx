@@ -11,6 +11,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
 import { configs } from "@/configs";
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
@@ -425,6 +426,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
             <TouchableOpacity
               style={styles.searchToggle}
               onPress={() => setShowFindReplace((prev) => !prev)}
+              testID={showFindReplace ? undefined : SHORTCUT_TARGET.find}
               accessibilityRole="button"
               accessibilityLabel={t("a11y.search_in_note")}
               aria-expanded={showFindReplace}

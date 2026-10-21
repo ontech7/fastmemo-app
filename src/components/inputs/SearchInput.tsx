@@ -6,6 +6,7 @@ import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassI
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 
 import { BORDER, COLOR, FONT, PADDING_MARGIN } from "@/constants/styles";
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import GlassSurface from "@/components/ui/GlassSurface";
 
 interface Props {
@@ -40,6 +41,7 @@ export default function SearchInput({ value, onChangeText, placeholder, icon, on
         placeholderTextColor={COLOR.placeholder}
         style={styles.searchInput}
         returnKeyType="search"
+        testID={SHORTCUT_TARGET.find}
         onSubmitEditing={() => {
           Keyboard.dismiss();
           onSubmit?.();
