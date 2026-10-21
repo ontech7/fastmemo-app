@@ -94,21 +94,120 @@ fn exit_after_flush(app: AppHandle) {
 #[cfg(target_os = "macos")]
 const QUIT_MENU_ID: &str = "quit";
 
-/// macOS: Tauri's default menu, except Quit. Its predefined Quit (Cmd+Q) sends `terminate:`, which ends the process
-/// without any event the app could hold, so this one is a plain item that goes through `flush_then_exit`.
+/// The event a menu item's id goes out on; the frontend runs the matching command (`src/libs/desktopMenu.web.ts`).
 #[cfg(target_os = "macos")]
-fn macos_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+const MENU_EVENT: &str = "fastmemo://menu";
+
+/// The menu items the frontend acts on.
+#[cfg(target_os = "macos")]
+const MENU_COMMANDS: [&str; 9] = [
+    "new-note",
+    "new-text",
+    "new-todo",
+    "new-kanban",
+    "new-code",
+    "find",
+    "settings",
+    "export-import",
+    "help",
+];
+
+/// The menu's labels, in the app's language (`set_menu_labels`); `{name}` stands for the app's name.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+struct MenuLabels {
+    about: String,
+    settings: String,
+    services: String,
+    hide: String,
+    hide_others: String,
+    show_all: String,
+    quit: String,
+    file: String,
+    new_note: String,
+    new_text: String,
+    new_todo: String,
+    new_kanban: String,
+    new_code: String,
+    export_import: String,
+    close_window: String,
+    edit: String,
+    undo: String,
+    redo: String,
+    cut: String,
+    copy: String,
+    paste: String,
+    select_all: String,
+    find: String,
+    view: String,
+    fullscreen: String,
+    window: String,
+    minimize: String,
+    zoom: String,
+    help: String,
+    help_item: String,
+}
+
+/// English, until the frontend sends its language's labels.
+impl Default for MenuLabels {
+    fn default() -> Self {
+        let s = |text: &str| text.to_string();
+        Self {
+            about: s("About {name}"),
+            settings: s("Settings…"),
+            services: s("Services"),
+            hide: s("Hide {name}"),
+            hide_others: s("Hide Others"),
+            show_all: s("Show All"),
+            quit: s("Quit {name}"),
+            file: s("File"),
+            new_note: s("New Note"),
+            new_text: s("New Text Note"),
+            new_todo: s("New To-Do List"),
+            new_kanban: s("New Kanban Board"),
+            new_code: s("New Code Note"),
+            export_import: s("Export/Import Data…"),
+            close_window: s("Close Window"),
+            edit: s("Edit"),
+            undo: s("Undo"),
+            redo: s("Redo"),
+            cut: s("Cut"),
+            copy: s("Copy"),
+            paste: s("Paste"),
+            select_all: s("Select All"),
+            find: s("Find…"),
+            view: s("View"),
+            fullscreen: s("Enter Full Screen"),
+            window: s("Window"),
+            minimize: s("Minimize"),
+            zoom: s("Zoom"),
+            help: s("Help"),
+            help_item: s("{name} Help"),
+        }
+    }
+}
+
+/// macOS: the menu bar. Windows and Linux have none (a light menu bar inside the dark window would clash; the keyboard
+/// shortcuts cover New Note, Find and Settings there). Quit is a plain item, not the predefined one: that sends
+/// `terminate:`, which ends the process without any event the app could hold, so this one goes through
+/// `flush_then_exit`. The frontend handles the same keys as New Note, Find and Settings: a key the page handles doesn't
+/// reach the menu, one it leaves alone does.
+#[cfg(target_os = "macos")]
+fn macos_menu(app: &AppHandle, labels: &MenuLabels) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     use tauri::menu::{
         AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu, HELP_SUBMENU_ID, WINDOW_SUBMENU_ID,
     };
 
     let name = app.package_info().name.clone();
+    let named = |label: &str| label.replace("{name}", &name);
     let about = AboutMetadata {
         name: Some(name.clone()),
         version: Some(app.package_info().version.to_string()),
         copyright: app.config().bundle.copyright.clone(),
         ..Default::default()
     };
+    let item = |id: &str, label: &str, accelerator: Option<&str>| MenuItem::with_id(app, id, label, true, accelerator);
 
     Menu::with_items(
         app,
@@ -118,47 +217,91 @@ fn macos_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
                 &name,
                 true,
                 &[
-                    &PredefinedMenuItem::about(app, None, Some(about))?,
+                    &PredefinedMenuItem::about(app, Some(&named(&labels.about)), Some(about))?,
                     &PredefinedMenuItem::separator(app)?,
-                    &PredefinedMenuItem::services(app, None)?,
+                    &item("settings", &labels.settings, Some("CmdOrCtrl+,"))?,
                     &PredefinedMenuItem::separator(app)?,
-                    &PredefinedMenuItem::hide(app, None)?,
-                    &PredefinedMenuItem::hide_others(app, None)?,
+                    &PredefinedMenuItem::services(app, Some(&labels.services))?,
                     &PredefinedMenuItem::separator(app)?,
-                    &MenuItem::with_id(app, QUIT_MENU_ID, format!("Quit {name}"), true, Some("CmdOrCtrl+Q"))?,
+                    &PredefinedMenuItem::hide(app, Some(&named(&labels.hide)))?,
+                    &PredefinedMenuItem::hide_others(app, Some(&labels.hide_others))?,
+                    &PredefinedMenuItem::show_all(app, Some(&labels.show_all))?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &item(QUIT_MENU_ID, &named(&labels.quit), Some("CmdOrCtrl+Q"))?,
                 ],
             )?,
-            &Submenu::with_items(app, "File", true, &[&PredefinedMenuItem::close_window(app, None)?])?,
             &Submenu::with_items(
                 app,
-                "Edit",
+                &labels.file,
                 true,
                 &[
-                    &PredefinedMenuItem::undo(app, None)?,
-                    &PredefinedMenuItem::redo(app, None)?,
+                    &item("new-note", &labels.new_note, Some("CmdOrCtrl+N"))?,
                     &PredefinedMenuItem::separator(app)?,
-                    &PredefinedMenuItem::cut(app, None)?,
-                    &PredefinedMenuItem::copy(app, None)?,
-                    &PredefinedMenuItem::paste(app, None)?,
-                    &PredefinedMenuItem::select_all(app, None)?,
+                    &item("new-text", &labels.new_text, None)?,
+                    &item("new-todo", &labels.new_todo, None)?,
+                    &item("new-kanban", &labels.new_kanban, None)?,
+                    &item("new-code", &labels.new_code, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &item("export-import", &labels.export_import, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::close_window(app, Some(&labels.close_window))?,
                 ],
             )?,
-            &Submenu::with_items(app, "View", true, &[&PredefinedMenuItem::fullscreen(app, None)?])?,
+            &Submenu::with_items(
+                app,
+                &labels.edit,
+                true,
+                &[
+                    &PredefinedMenuItem::undo(app, Some(&labels.undo))?,
+                    &PredefinedMenuItem::redo(app, Some(&labels.redo))?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::cut(app, Some(&labels.cut))?,
+                    &PredefinedMenuItem::copy(app, Some(&labels.copy))?,
+                    &PredefinedMenuItem::paste(app, Some(&labels.paste))?,
+                    &PredefinedMenuItem::select_all(app, Some(&labels.select_all))?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &item("find", &labels.find, Some("CmdOrCtrl+F"))?,
+                ],
+            )?,
+            &Submenu::with_items(
+                app,
+                &labels.view,
+                true,
+                &[&PredefinedMenuItem::fullscreen(app, Some(&labels.fullscreen))?],
+            )?,
             &Submenu::with_id_and_items(
                 app,
                 WINDOW_SUBMENU_ID,
-                "Window",
+                &labels.window,
                 true,
                 &[
-                    &PredefinedMenuItem::minimize(app, None)?,
-                    &PredefinedMenuItem::maximize(app, None)?,
-                    &PredefinedMenuItem::separator(app)?,
-                    &PredefinedMenuItem::close_window(app, None)?,
+                    &PredefinedMenuItem::minimize(app, Some(&labels.minimize))?,
+                    &PredefinedMenuItem::maximize(app, Some(&labels.zoom))?,
                 ],
             )?,
-            &Submenu::with_id_and_items(app, HELP_SUBMENU_ID, "Help", true, &[])?,
+            &Submenu::with_id_and_items(
+                app,
+                HELP_SUBMENU_ID,
+                &labels.help,
+                true,
+                &[&item("help", &named(&labels.help_item), None)?],
+            )?,
         ],
     )
+}
+
+/// The frontend's labels for the menu, at startup and on every language change. Synchronous, so it runs on the main
+/// thread, where macOS menus live. Nothing to do elsewhere: there's no menu bar.
+#[tauri::command]
+fn set_menu_labels(app: AppHandle, labels: MenuLabels) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let menu = macos_menu(&app, &labels).map_err(|e| e.to_string())?;
+        app.set_menu(menu).map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, labels);
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -166,11 +309,16 @@ pub fn run() {
     let builder = tauri::Builder::default();
 
     #[cfg(target_os = "macos")]
-    let builder = builder.menu(macos_menu).on_menu_event(|app, event| {
-        if event.id() == QUIT_MENU_ID {
-            flush_then_exit(app);
-        }
-    });
+    let builder = builder
+        .menu(|app| macos_menu(app, &MenuLabels::default()))
+        .on_menu_event(|app, event| {
+            let id = event.id().as_ref();
+            if id == QUIT_MENU_ID {
+                flush_then_exit(app);
+            } else if MENU_COMMANDS.contains(&id) {
+                let _ = app.emit_to("main", MENU_EVENT, id);
+            }
+        });
 
     builder
         // First: a second launch only focuses the running window. Two instances would share (and overwrite) the same
@@ -188,7 +336,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(ExitState::default())
-        .invoke_handler(tauri::generate_handler![biometric_authenticate, exit_after_flush])
+        .invoke_handler(tauri::generate_handler![biometric_authenticate, exit_after_flush, set_menu_labels])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();

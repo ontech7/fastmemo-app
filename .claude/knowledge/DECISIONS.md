@@ -454,7 +454,10 @@ crates.
 - **Exit flush in Rust:** a quit from the window (`WindowEvent::CloseRequested`: close button, Cmd+W) or from the app menu is
   held, the frontend is asked to flush (`fastmemo://flush-before-exit`) and the app exits on its `exit_after_flush` or after 2s.
   On macOS the app menu is Tauri's default with its own Quit item (Cmd+Q): the predefined one sends `terminate:`, which tao
-  turns straight into an exit with no event to hold. No JS close listener, so no window permission is needed (LL-038).
+  turns straight into an exit with no event to hold. No JS close listener, so no window permission is needed (LL-038). _Revised
+  2026-10-21 (desktop 2.0.0):_ the macOS menu is the app's own (File, Edit, View, Window, Help, localized through
+  `set_menu_labels`), still with the plain Quit item; Windows and Linux keep no menu bar (CONVENTIONS, Desktop Keyboard
+  Shortcuts and Menu).
 - **Updater UI in the app:** `AppUpdateProvider` checks once per launch (retried on reconnect) and from Settings, asks with the
   app's own dialog, then downloads, flushes, installs, flushes and relaunches (neither the install nor the restart goes through
   the exit flush). No native dialog. deb/rpm installs are never offered an update (the updater only has the AppImage for them):

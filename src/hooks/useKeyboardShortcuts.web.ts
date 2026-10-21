@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
+import { canRun, commandsIdle, type DesktopCommand, IS_MAC, isEditable, press, runCommand } from "@/libs/desktopCommands";
 import { isTauri } from "@/utils/platform";
 
 /*
@@ -11,27 +12,19 @@ import { isTauri } from "@/utils/platform";
  *
  * Desktop (Tauri) only, where the app is the whole window:
  * - Esc: in a text field it only leaves the field; otherwise it presses the screen's back button.
- * - Cmd/Ctrl+N presses the new-note button, Cmd/Ctrl+F focuses the search field (or opens find in a note).
+ * - Cmd/Ctrl+N: a new note (from another screen, going back to the home screen first); Cmd/Ctrl+F: the search field,
+ *   or find in a text note; Cmd/Ctrl+,: the settings. The same commands as the macOS menu (`@/libs/desktopCommands`).
  * - F5 and Cmd/Ctrl+R would reload the page, dropping the edits not yet saved: blocked outside development.
  * - Alt+arrows (Windows, Linux) and the keyboard's back/forward keys would leave the screen through the history, without
  *   its back button: blocked.
  *
- * A shortcut presses its control (`SHORTCUT_TARGET`) only when the control is on screen and nothing covers it: an open
- * dialog, menu or popup lies over it, so the key does nothing then. It never acts on a held key's repeats, while an input
- * method is composing text (Esc there cancels the composition), or, in an editor, on a key the editor already handled
- * (CodeMirror's Esc collapsing a multiple selection). React Native Web's text inputs stop their keys from bubbling, so
- * this window listens in the capture phase. The note editors run in iframes, whose keys don't reach this window at all,
- * so they get the same listeners.
+ * A shortcut presses its control (`SHORTCUT_TARGET`) only when a click would reach it: an open dialog, menu or popup
+ * lying over it means the key does nothing. It never acts on a held key's repeats, while an input method is composing
+ * text (Esc there cancels the composition), or, in an editor, on a key the editor already handled (CodeMirror's Esc
+ * collapsing a multiple selection). React Native Web's text inputs stop their keys from bubbling, so this window listens
+ * in the capture phase. The note editors run in iframes, whose keys don't reach this window at all, so they get the
+ * same listeners.
  */
-
-const IS_MAC = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform || navigator.userAgent);
-
-function isEditable(node: EventTarget | null): boolean {
-  const element = node as HTMLElement | null;
-  if (!element || !element.tagName) return false;
-  const tag = element.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || element.isContentEditable === true;
-}
 
 /** The letter a shortcut is typed with: the key's own letter, or the physical key on a non-Latin layout. */
 function letterOf(e: KeyboardEvent): string {
@@ -39,29 +32,7 @@ function letterOf(e: KeyboardEvent): string {
   return e.code.startsWith("Key") ? e.code.slice(3).toLowerCase() : "";
 }
 
-/** The control marked `name` that a click would reach: on screen, with nothing over its center. */
-function reachableTarget(name: string): HTMLElement | null {
-  for (const node of document.querySelectorAll<HTMLElement>(`[data-testid="${name}"]`)) {
-    const rect = node.getBoundingClientRect();
-    if (!rect.width || !rect.height) continue;
-    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    if (hit && node.contains(hit)) return node;
-  }
-  return null;
-}
-
-/** Presses the control marked `name` (a field is focused instead), if it's reachable. */
-function press(name: string): boolean {
-  const node = reachableTarget(name);
-  if (!node) return false;
-  if (isEditable(node)) {
-    node.focus();
-    if (node instanceof HTMLInputElement) node.select();
-  } else {
-    node.click();
-  }
-  return true;
-}
+const COMMAND_KEYS: Record<string, DesktopCommand> = { n: "newNote", f: "find", ",": "settings" };
 
 /** A key that reloads the page. AltGr (Ctrl+Alt on Windows) types characters: AltGr+R isn't one. */
 function isReload(e: KeyboardEvent, mod: boolean): boolean {
@@ -86,22 +57,30 @@ function onDesktopKeyDown(e: KeyboardEvent) {
     return;
   }
 
-  if (e.repeat || e.altKey || e.shiftKey || otherMod) return;
+  if (e.altKey || e.shiftKey || otherMod) return;
+  const command = mod ? COMMAND_KEYS[e.key === "," ? "," : letterOf(e)] : undefined;
+
+  // A key the page leaves alone goes on to the macOS menu item with the same shortcut: a held key's repeats are stopped
+  // here, or the menu would run the command again on each.
+  if (e.repeat) {
+    if (command) e.preventDefault();
+    return;
+  }
 
   if (e.key === "Escape" && !mod) {
     if (isEditable(e.target)) {
       (e.target as HTMLElement).blur();
       e.preventDefault();
-    } else if (press(SHORTCUT_TARGET.back)) {
+    } else if (commandsIdle() && press(SHORTCUT_TARGET.back)) {
       e.preventDefault();
     }
     return;
   }
 
-  if (!mod) return;
-  const letter = letterOf(e);
-  if (letter === "n" && press(SHORTCUT_TARGET.newNote)) e.preventDefault();
-  else if (letter === "f" && press(SHORTCUT_TARGET.find)) e.preventDefault();
+  if (command && canRun(command)) {
+    e.preventDefault();
+    void runCommand(command);
+  }
 }
 
 /** The note editors' iframe documents already listened to. */
