@@ -21,6 +21,7 @@ export interface AIModelInfo {
 export type EditorAction =
   | "generate_title"
   | "summarize"
+  | "summarize_part"
   | "suggest_items"
   | "suggest_category"
   | "fix_grammar"
@@ -52,6 +53,17 @@ export interface EditorActionOptions {
   lang?: string;
   categories?: string[];
   modelId?: AIModelId;
+  /**
+   * The cancel generation a run of several actions started with (`currentGeneration()`): a cancel during one step stops
+   * the steps after it too. Each action takes the current one otherwise.
+   */
+  generation?: number;
+}
+
+/** A long note's action under way: the step it's on (paragraphs, or parts of a summary). */
+export interface LongNoteProgress {
+  done: number;
+  total: number;
 }
 
 /** A single help topic exposed to the AI intent search: its i18n base key and

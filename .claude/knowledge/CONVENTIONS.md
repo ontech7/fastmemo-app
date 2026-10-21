@@ -791,11 +791,19 @@ Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file tha
    gets a `REWRITE_LENGTH_RATIO` range so `isPlausibleRewrite` can discard a runaway answer.
 4. **Number each run** (`runRef`/`aiRunRef`): a cancelled or superseded run never writes into the UI, and unmounting advances
    the number and calls `cancelCommand`. An interrupted or token-limited answer is never applied (`cancelled` / `too_long`): it
-   is cut short.
+   is cut short. One exception, never shown alone: a part of a long note's summary keeps its complete sentences (only the merge
+   reads it).
 5. **Pre-warm where an action is likely** (`prewarmContext` when the dictation sheet or the AI menu opens), never at app start:
    a loaded 2B holds over a gigabyte.
 6. **Measure before changing a prompt, sampling or tier**: run Developer options -> AI evaluation on a phone before and after,
    and compare the saved JSON reports.
+7. **A note's text goes to the model through `rewriteNote` / `summarizeNote`** (`libs/ai/longNote.ts`), never whole: they work
+   line by line on the HTML (`blocks.ts`) and give HTML back with the structure kept. Never `stripHtml` a note, rewrite it and
+   `setContentHTML` the plain answer.
+8. **Remove from the user's text only what the app can prove it added** (LL-058): `cleanAnswer` strips quotes only when they
+   wrap the whole answer, not the input, and no other quote of the kind is inside (dialogue keeps its quotes); a "Title:" or
+   "Summary:" label only from a title or a summary. An AI summary is recognized by its `data-fm="summary"` mark at the very top,
+   never by a label's wording, and on doubt (the mark copied onto the next line) nothing is taken for it.
 
 ---
 

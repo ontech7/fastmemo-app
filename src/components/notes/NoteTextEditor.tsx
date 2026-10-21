@@ -503,20 +503,14 @@ export default function NoteTextEditor({ initialNote }: Props) {
                   <AIEditorActions
                     noteType="text"
                     getContent={() => stripHtml(note.text)}
+                    getHtml={() => note.text}
                     noteTitle={note.title}
                     onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
-                    onSummaryGenerated={(summary) => {
-                      // the model's text is text, not markup: escaped, line breaks kept
-                      const html = voiceTextToHtml(summary, { leadingSpace: false, lists: true });
-                      richTextEditor.current?.setContentHTML(html);
-                      setText(html);
-                    }}
                     onCategorySuggested={(name) => {
                       const cat = findCategoryByName(name);
                       if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                     }}
-                    onTextRewritten={(rewritten) => {
-                      const html = voiceTextToHtml(rewritten, { leadingSpace: false, lists: true });
+                    onHtmlChanged={(html) => {
                       richTextEditor.current?.setContentHTML(html);
                       setText(html);
                     }}

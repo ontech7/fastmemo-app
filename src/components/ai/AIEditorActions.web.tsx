@@ -7,12 +7,12 @@ import type { ViewStyle } from "react-native";
 interface Props {
   noteType: NoteType;
   getContent: () => string;
+  getHtml?: () => string;
   noteTitle: string;
   onTitleGenerated: (title: string) => void;
-  onSummaryGenerated?: (summary: string) => void;
   onItemsSuggested?: (items: string[]) => void;
   onCategorySuggested?: (categoryName: string) => void;
-  onTextRewritten?: (text: string) => void;
+  onHtmlChanged?: (html: string) => void;
   disabled?: boolean;
   style?: ViewStyle;
   menuBottomOffset?: number;

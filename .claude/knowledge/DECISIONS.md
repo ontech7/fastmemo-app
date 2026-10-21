@@ -131,6 +131,20 @@ and checked by exact size.
   (`REWRITE_LENGTH_RATIO`) is discarded and the text stays as it was.
 - **Measured, not guessed**: Developer options -> AI evaluation runs fixed inputs on the loaded model and saves timings and
   outputs as JSON (`libs/ai/evalFixtures.ts`). On a Pixel 10 Pro llama.rn finds no GPU backend and runs on the CPU.
+- **Long notes work line by line** (2026-10, phase 7, `libs/ai/blocks.ts` + `longNote.ts`). Grammar, shortening and translation
+  used to send the whole note as plain text and write plain text back: headings, lists, bold and images were lost, and a long
+  note overflowed the context. Now each line (paragraph, heading, list item, a `<br>` line) is one completion and goes back in
+  its place; code, tables and images are never sent; a line the AI leaves unchanged keeps its formatting; a paragraph over
+  `REWRITE_PIECE_TOKENS` goes a few sentences at a time. One call per line rather than grouped lines: nothing to map back, and
+  llama.rn reuses the system prompt's cache, so the cost per line is about half a second on the 2B. Alternative rejected:
+  numbered lines in one prompt (a small model merges or splits them).
+- **The summary goes on top of the note** (developer decision), under a bold label marked `data-fm="summary"`; a newer one
+  replaces it, and only the mark identifies it (a bold "Summary" the user wrote is text). A note longer than
+  `SUMMARY_PART_TOKENS` is summarized in parts, then the parts are merged (map-reduce): worse than reading it all at once, so
+  the parts are large.
+- **Turned off rather than slow**: an action estimated over `LONG_NOTE_MAX_SECONDS` (5 minutes) on the note is disabled with a
+  message. The estimate uses the speed the model ran at on this device in this session (`getModelSpeed`), the reference phone's
+  until then. Steps done are cached in memory (a run after a cancel resumes at once); turning a result down clears it.
 
 ---
 

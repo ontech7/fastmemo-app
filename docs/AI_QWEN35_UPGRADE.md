@@ -391,6 +391,14 @@ Proposed design: work **per block**, not per note.
 
 Todo and kanban notes do not use these actions; no change there.
 
+**As built (2026-10-21, branch `feat/ai-long-notes`):** `libs/ai/blocks.ts` splits the HTML into lines (a `<br>` or an image
+inside a block ends a line too: dictation and pasted text join lines with `<br>`), and `libs/ai/longNote.ts` runs one completion
+per line rather than per group of lines (nothing to map back; ~0.5 s overhead per line on the 2B). A paragraph over 600 tokens
+goes a few sentences at a time. The summary reads parts of 1,500 tokens (one call for most notes) and goes on top under a label
+marked `data-fm="summary"`. The ceiling is a time estimate (5 minutes) from the speed measured on the device, not a word count.
+Selection-first is not done: pell's public API has no call that returns the selected text (it would take injected JavaScript
+and a message back), so it is its own piece of work.
+
 ### 7.6 Do not do (now)
 
 - No thinking mode for any action (too slow on phones for what it buys here).
@@ -470,9 +478,10 @@ Each phase should be a reviewable PR into `dev`.
    (Recommendation: explicit + on download.)
 2. Merge or drop `shorten`? Where does the summary go: inserted at the top of the note (recommended) or shown read-only
    with "Copy"? (Code actions: **decided, removed**. 9B: **decided, not included** unless the eval says otherwise.)
-3. Opt-in **auto-title** for untitled notes?
-4. Default recommended tier: 2B for ≥ 6 GB RAM devices?
-5. Ship **Voice → new note** (§7.1.5) in this cycle or the next?
+   **Decided 2026-10-21:** `shorten` kept, run per paragraph; the summary is inserted at the top.
+3. Opt-in **auto-title** for untitled notes? **Decided 2026-10-21:** yes, opt-in, off by default (after long notes).
+4. Default recommended tier: 2B for ≥ 6 GB RAM devices? **Decided 2026-10-21:** 2B from 5 GB.
+5. Ship **Voice → new note** (§7.1.5) in this cycle or the next? **Decided 2026-10-21:** after 4.0.0.
 
 ---
 

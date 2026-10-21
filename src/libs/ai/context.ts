@@ -12,11 +12,13 @@ import {
   HELP_SEARCH_SYSTEM_PROMPT,
   JSON_ARRAY_GRAMMAR,
   JSON_INT_ARRAY_GRAMMAR,
+  MODEL_SPEED,
   getEditorSystemPrompt,
   normalizeModelId,
   truncateForAction,
 } from "./constants";
-import { categoryGrammar, cleanSuggestedItems, isPlausibleRewrite, stripThinking } from "./helpers";
+import { completeSentences } from "./blocks";
+import { categoryGrammar, cleanAnswer, cleanSuggestedItems, isPlausibleRewrite, stripThinking } from "./helpers";
 import type {
   AIModelId,
   AIModelInfo,
@@ -31,7 +33,7 @@ import type {
 type StatusListener = (status: AIModelStatus, progress?: number) => void;
 
 /** Resolve the effective language code, handling the "system" default. */
-function resolveLanguage(): string {
+export function resolveLanguage(): string {
   const lang = store.getState().settings.language;
   if (!lang || lang === "system") {
     return Localization.getLocales()[0]?.languageCode || "en";
@@ -70,7 +72,7 @@ export function addAIStatusListener(listener: StatusListener): () => void {
 }
 
 /** The model the settings name now (an id stored by an earlier version maps to its replacement). */
-function selectedModelId(): AIModelId {
+export function selectedModelId(): AIModelId {
   return normalizeModelId(store.getState().settings.aiAssistant?.selectedModel);
 }
 
@@ -310,6 +312,35 @@ async function whileBusy<T>(work: () => Promise<T>): Promise<T> {
  */
 let _cancelGeneration = 0;
 
+/** The current cancel generation: a run of several actions passes it to each (`EditorActionOptions.generation`). */
+export function currentGeneration(): number {
+  return _cancelGeneration;
+}
+
+/** How fast each model ran on this device, from its completions (none until it ran once): estimates use it first. */
+const _observedSpeed: Partial<Record<AIModelId, { prefill: number; generate: number }>> = {};
+
+function recordSpeed(modelId: AIModelId, timings: AITimings) {
+  const known = _observedSpeed[modelId];
+  // a short prompt or answer says little about the rate (fixed costs weigh most): only fair-sized ones count
+  const prefill = timings.promptN >= 64 && timings.promptMs > 0 ? (timings.promptN * 1000) / timings.promptMs : null;
+  const generate =
+    timings.predictedN >= 16 && timings.predictedMs > 0 ? (timings.predictedN * 1000) / timings.predictedMs : null;
+  if (prefill === null && generate === null) return;
+  const blend = (previous: number | undefined, fresh: number | null, fallback: number) =>
+    fresh === null ? (previous ?? fallback) : previous === undefined ? fresh : (previous + fresh) / 2;
+  _observedSpeed[modelId] = {
+    prefill: blend(known?.prefill, prefill, MODEL_SPEED[modelId].prefill),
+    generate: blend(known?.generate, generate, MODEL_SPEED[modelId].generate),
+  };
+}
+
+/** Tokens per second `modelId` reads and writes at: as measured on this device, or the reference phone's. */
+export function getModelSpeed(modelId?: AIModelId): { prefill: number; generate: number } {
+  const id = normalizeModelId(modelId ?? selectedModelId());
+  return _observedSpeed[id] ?? MODEL_SPEED[id];
+}
+
 /**
  * Starts loading the model without waiting for it, where an action is likely to follow (the dictation sheet opens, the AI
  * menu opens): by the time the user taps, the load is done or under way.
@@ -462,7 +493,7 @@ export function generateEditorContent(
   onToken?: (token: string) => void,
   options: EditorActionOptions = {}
 ): Promise<EditorActionResult> {
-  const generation = _cancelGeneration;
+  const generation = options.generation ?? _cancelGeneration;
   return whileBusy(() => runEditorAction(action, content, onToken, options, generation));
 }
 
@@ -553,13 +584,17 @@ async function runEditorAction(
     );
 
     const timings = timingsOf(result.timings);
+    recordSpeed(model.id, timings);
     // A stopped answer is cut short: never applied (a half list of items, half a category name).
     if (cancelled() || result.interrupted) return { success: false, error: "cancelled", timings };
-    // So is one that ran out of room: a rewrite cut mid-way would replace the whole text with part of it.
-    if (result.stopped_limit || result.truncated || result.context_full) {
+    // So is one that ran out of room: a rewrite cut mid-way would replace the whole text with part of it. A part of a long
+    // note's summary is the exception: only the merge reads it, and its complete sentences are enough.
+    const cut = result.stopped_limit || result.truncated || result.context_full;
+    if (cut && action !== "summarize_part") {
       return { success: false, error: factor ? "too_long" : "No response", timings };
     }
-    const text = stripThinking(result.text ?? "").trim();
+    const answer = stripThinking(result.text ?? "");
+    const text = (cut ? completeSentences(answer) : answer).trim();
     if (!text) return { success: false, error: "No response", timings };
 
     if (isJsonOutput) {
@@ -578,14 +613,7 @@ async function runEditorAction(
       return items.length ? { success: true, items, timings } : { success: false, error: "No items", timings };
     }
 
-    // Clean common artifacts from free-text output (multilingual prefixes)
-    const cleaned = text
-      .replace(/^["']|["']$/g, "")
-      .replace(/^\*\*|\*\*$/g, "")
-      .replace(/^(Title|Titolo|Titel|Titulo|Titre|タイトル|标题)\s*:\s*/i, "")
-      .replace(/^(Summary|Riassunto|Zusammenfassung|Resumen|Resume|要約|摘要)\s*:\s*/i, "")
-      .replace(/^(Continuation|Continuazione|Fortsetzung|Continuacion|Suite|続き|续写)\s*:\s*/i, "")
-      .trim();
+    const cleaned = cleanAnswer(action, content, text);
 
     // The grammar lets the model answer only with a category name or "none" (a category named "none" wins).
     if (action === "suggest_category") {

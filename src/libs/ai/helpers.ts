@@ -78,12 +78,115 @@ export function createTextStream(onText: (text: string) => void, intervalMs = 50
 }
 
 /**
+ * Hands `onValue` the latest value at most every `intervalMs` (a render per token would be dozens a second). `stop` drops
+ * what is pending.
+ */
+export function createThrottle<T>(onValue: (value: T) => void, intervalMs = 50) {
+  let latest: T;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let stopped = false;
+  return {
+    push(value: T) {
+      if (stopped) return;
+      latest = value;
+      if (!timer)
+        timer = setTimeout(() => {
+          timer = null;
+          if (!stopped) onValue(latest);
+        }, intervalMs);
+    },
+    stop() {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      timer = null;
+    },
+  };
+}
+
+/** A label the model may put before a title or a summary ("Titolo: ..."), by action. */
+const ANSWER_LABELS: Partial<Record<EditorAction, RegExp>> = {
+  generate_title: /^(Title|Titolo|Titel|Título|Titulo|Titre|タイトル|标题)\s*[:：]\s*/i,
+  summarize: /^(Summary|Riassunto|Zusammenfassung|Resumen|Résumé|Resume|要約|摘要)\s*[:：]\s*/i,
+  summarize_part: /^(Summary|Riassunto|Zusammenfassung|Resumen|Résumé|Resume|要約|摘要)\s*[:：]\s*/i,
+};
+
+const QUOTE_PAIRS: [string, string][] = [
+  ['"', '"'],
+  ["'", "'"],
+  ["“", "”"],
+  ["«", "»"],
+  ["「", "」"],
+  ["**", "**"],
+];
+
+const wraps = (text: string, [open, close]: [string, string]) =>
+  text.length > open.length + close.length && text.startsWith(open) && text.endsWith(close);
+
+/**
+ * The model's answer without what it adds around it: quotes or bold around the whole answer, a "Title:" before a title or
+ * a "Summary:" before a summary. Only what the input didn't have: an input quoted as a whole stays quoted (in its new
+ * quotes, translated), and quotes that open and close inside the answer (dialogue, two quoted words) are the text's own.
+ */
+export function cleanAnswer(action: EditorAction, input: string, answer: string): string {
+  let text = answer.trim();
+  const source = input.trim();
+  if (!QUOTE_PAIRS.some((pair) => wraps(source, pair))) {
+    for (const pair of QUOTE_PAIRS) {
+      const inner = text.slice(pair[0].length, -pair[1].length);
+      if (wraps(text, pair) && !inner.includes(pair[0]) && !inner.includes(pair[1])) text = inner.trim();
+    }
+  }
+  // a title or a summary is new text: its label is never the note's
+  const label = ANSWER_LABELS[action];
+  if (label) text = text.replace(label, "");
+  return text.trim();
+}
+
+const EDGE_PUNCTUATION = /^[.,;:!?¡¿"'«»“”„()[\]{}…–—-]+|[.,;:!?¡¿"'«»“”„()[\]{}…–—-]+$/g;
+
+/** A text's words, lowercased, without the punctuation around them. */
+const wordsOf = (text: string) =>
+  text
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => word.replace(EDGE_PUNCTUATION, ""))
+    .filter(Boolean);
+
+/**
+ * Whether a grammar fix kept enough of the words: one that changed most of them rewrote or translated the text instead
+ * (the 2B turned a short Italian heading into Spanish, AI evaluation 2026-10). Text without spaces (Chinese, Japanese) and a
+ * single word aren't checked.
+ */
+function keepsWords(input: string, output: string): boolean {
+  const before = wordsOf(input);
+  if (before.length < 2) return true;
+  const after = wordsOf(output);
+  // a word fixed by one letter added, dropped, changed or swapped is kept ("mamam" -> "mamma")
+  const kept = before.filter((word) => after.some((other) => oneEditApart(word, other)));
+  return kept.length / before.length >= 0.4;
+}
+
+/** Whether two words are the same, or one letter added, dropped, changed or two swapped apart. */
+function oneEditApart(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  if (a.length === b.length) {
+    // changed, or swapped with the next
+    return a.slice(i + 1) === b.slice(i + 1) || (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2));
+  }
+  return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
+}
+
+/**
  * Whether a rewrite is worth showing: not empty, no reasoning tag, and a length in the action's range (a short text gets a
  * few characters of slack: "ok" -> "Ok." is fine).
  */
 export function isPlausibleRewrite(action: EditorAction, input: string, output: string): boolean {
   const out = output.trim();
   if (!out || out.includes("<think") || out.includes("</think>")) return false;
+  if (action === "fix_grammar" && !keepsWords(input, out)) return false;
   const range = REWRITE_LENGTH_RATIO[action];
   if (!range) return true;
   const inLength = input.trim().length;

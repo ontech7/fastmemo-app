@@ -121,6 +121,7 @@ export default function AIEvalScreen() {
                   {result.timings?.predictedMs
                     ? ` · ${Math.round((result.timings.predictedN * 1000) / result.timings.predictedMs)} tok/s`
                     : ""}
+                  {result.steps ? ` · ${result.steps}× · ~${result.estimateMs} ms` : ""}
                 </Text>
                 <Text style={[styles.resultOutput, !result.success && styles.error]} numberOfLines={6}>
                   {result.success ? result.output : (result.error ?? "")}
