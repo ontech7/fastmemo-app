@@ -71,11 +71,13 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
       const data = await checkLatestAppVersion();
       if (cancelled || !data) return;
 
-      const latest = isDesktopOrWeb() ? data.desktop.version : data.mobile.version;
+      const desktop = isDesktopOrWeb();
+      const latest = desktop ? data.desktop.version : data.mobile.version;
       const current = getCurrentAppVersion();
 
       if (isNewerVersion(current, latest)) {
-        setReleaseUrl(data.releaseUrl);
+        // A desktop hotfix isn't in the latest release (that one is the store version's): its own page has its builds.
+        setReleaseUrl((desktop && data.desktop.releaseUrl) || data.releaseUrl);
       }
     };
 

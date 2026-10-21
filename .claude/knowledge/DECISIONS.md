@@ -937,8 +937,8 @@ ends it).
   Mac app now runs for days. A version already offered isn't offered again in that run (Settings still shows it).
 - Later (after 2.0.0, user decision): a real JS-only OTA for desktop (a signed web bundle served in place of the bundled one,
   same origin, a runtime version as Expo's fingerprint, rollback when it doesn't reach `window_ready`). Until then a desktop
-  hotfix is a signed release; note that `publish.yml` tags it with the mobile version and builds `latest.json` from the first
-  matching asset, so a desktop-only release needs its own tag first.
+  hotfix is a signed release: the **publish** workflow's `desktop_only` run (tag `desktop-vX.Y.Z`, never GitHub's latest, the
+  latest release's `latest.json` pointed at it; prepare-release skill).
 
 **Measured (2026-10-21, test build, release, warm):** before: window at ~0.4 s, empty, home at ~0.65 s; after: window at ~0.6 s
 with home drawn. The first launch after an install/reboot takes ~2.5 s. A never-shown window boots at full speed: the page is
