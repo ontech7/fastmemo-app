@@ -199,34 +199,60 @@ fn left_fullscreen(window: &tauri::Window) {
     }
 }
 
-/// macOS: the window's last place and size out of full screen and not zoomed. window-state saves a window quit in full
-/// screen as a zoomed one filling the screen; `save_windowed_frame` puts this one back in its place.
+/// macOS: the window as the user had it out of full screen: its last ordinary (not zoomed) frame, and whether it was zoomed.
+/// window-state saves a window quit in full screen as a zoomed one filling the screen; `save_windowed_frame` puts this back.
 #[cfg(target_os = "macos")]
 #[derive(Default)]
-struct WindowedFrame(Mutex<Option<(tauri::PhysicalPosition<i32>, tauri::PhysicalSize<u32>)>>);
+struct WindowedFrame(Mutex<Option<OrdinaryFrame>>);
 
-/// Records the window's frame if it's an ordinary window (as window-state saves it: outer position, inner size).
+/// As window-state saves a window: outer position, inner size.
+#[cfg(target_os = "macos")]
+#[derive(Clone, Copy)]
+struct OrdinaryFrame {
+    position: tauri::PhysicalPosition<i32>,
+    size: tauri::PhysicalSize<u32>,
+    zoomed: bool,
+}
+
+/// Records the window out of full screen: its frame if it's ordinary; only that it's zoomed if it is (window-state
+/// restores a zoomed window from the frame it had before).
 #[cfg(target_os = "macos")]
 fn remember_windowed_frame(window: &tauri::Window) {
-    let ordinary = !window.is_fullscreen().unwrap_or(true)
-        && !window.is_maximized().unwrap_or(true)
-        && !window.is_minimized().unwrap_or(true);
-    if let (true, Ok(position), Ok(size)) = (ordinary, window.outer_position(), window.inner_size()) {
-        *window.state::<WindowedFrame>().0.lock().unwrap() = Some((position, size));
+    if window.is_fullscreen().unwrap_or(true) || window.is_minimized().unwrap_or(true) {
+        return;
+    }
+    let Ok(zoomed) = window.is_maximized() else {
+        return;
+    };
+    let current = (window.outer_position(), window.inner_size());
+    let state = window.state::<WindowedFrame>();
+    let mut frame = state.0.lock().unwrap();
+    if zoomed {
+        if let Some(frame) = frame.as_mut() {
+            frame.zoomed = true;
+        }
+    } else if let (Ok(position), Ok(size)) = current {
+        *frame = Some(OrdinaryFrame {
+            position,
+            size,
+            zoomed: false,
+        });
     }
 }
 
 /// A quit in full screen: window-state has just saved the window (plugins see `RunEvent::Exit` first); its entry gets the
-/// last ordinary frame instead, so the next launch opens the window the user had before full screen.
+/// window as it was before full screen instead (its frame, zoomed or not), so the next launch opens that one.
 #[cfg(target_os = "macos")]
 fn save_windowed_frame(app: &AppHandle) {
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
-    if !window.is_fullscreen().unwrap_or(false) {
+    // Still in full screen, or leaving it to be hidden (Cmd+W then Cmd+Q): the plugin saved the full screen frame.
+    let leaving = app.state::<LeavingFullscreen>().0.lock().unwrap().is_some();
+    if !window.is_fullscreen().unwrap_or(false) && !leaving {
         return;
     }
-    let Some((position, size)) = *app.state::<WindowedFrame>().0.lock().unwrap() else {
+    let Some(frame) = *app.state::<WindowedFrame>().0.lock().unwrap() else {
         return;
     };
     let Ok(dir) = app.path().app_config_dir() else {
@@ -243,13 +269,13 @@ fn save_windowed_frame(app: &AppHandle) {
         return;
     };
     for (key, value) in [
-        ("x", position.x.into()),
-        ("y", position.y.into()),
-        ("prev_x", position.x.into()),
-        ("prev_y", position.y.into()),
-        ("width", size.width.into()),
-        ("height", size.height.into()),
-        ("maximized", false.into()),
+        ("x", frame.position.x.into()),
+        ("y", frame.position.y.into()),
+        ("prev_x", frame.position.x.into()),
+        ("prev_y", frame.position.y.into()),
+        ("width", frame.size.width.into()),
+        ("height", frame.size.height.into()),
+        ("maximized", frame.zoomed.into()),
     ] {
         main.insert(key.to_string(), value);
     }
@@ -520,7 +546,8 @@ pub fn run() {
             net::net_webhook
         ])
         .setup(|app| {
-            // The frame window-state restored, until the user moves or resizes the window.
+            // The config's frame: window-state's restore lands just after (on the main queue), recorded through its
+            // Moved/Resized like any later change.
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
                 remember_windowed_frame(&window.as_ref().window());

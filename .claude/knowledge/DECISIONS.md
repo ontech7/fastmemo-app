@@ -929,8 +929,9 @@ ends it).
   first and is kept hidden from the end of that animation (LL-061); asking for it back meanwhile cancels that.
 - Windows and Linux: unchanged, closing the window quits after the flush.
 - `tauri-plugin-window-state` (approved): size, position and zoom remembered; not the visibility (it would show the window
-  before it's drawn) nor full screen. A quit in full screen keeps the last ordinary frame (window-state alone would save it as a
-  zoomed window filling the screen: `save_windowed_frame` rewrites its entry on `RunEvent::Exit`, after the plugin's save).
+  before it's drawn) nor full screen. A quit in full screen (even while leaving it to be hidden) keeps the window as it was
+  before: its last ordinary frame, zoomed or not (window-state alone would save a zoomed window filling the screen:
+  `save_windowed_frame` rewrites its entry on `RunEvent::Exit`, after the plugin's save).
 - A hidden window's page keeps running, throttled (WebKit's default policy): the sync engine stays on (listeners, the 5-minute
   poll), so the notes are current when the window comes back, as for a window left open behind others. The first showing at
   launch isn't a return to the foreground (`SyncOnProvider` resumes only after a hide).
