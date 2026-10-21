@@ -1,3 +1,25 @@
+## v4.0.0
+
+- New sync engine behind a `CloudBackend` (ADR-016): live listeners, a revision per note, edits merged per note instead of whole-list overwrites, and conflicting edits from two devices kept as a "(conflict)" copy instead of one silently replacing the other. A note open in the editor reloads live when another device changes it, keeping the caret, without a toast per change.
+- Self-hosted FastMemo Server as a second cloud next to Google Firebase (ADR-017): pick the backend when connecting (with the Firebase and FastMemo logos), same per-vault end-to-end encryption, the devices screen shows the backend's device limit, removing a device asks for confirmation, plain HTTP allowed for servers on the local network with a warning, and an answer that came through a redirect is never taken as the server's.
+- On-device AI moved from Qwen 2.5 to Qwen3.5 0.8B / 2B / 4B (ADR-004 revised): the model is pre-warmed and answers stream in; new actions fix grammar, make a text shorter and translate a note into a language you choose; long notes are processed one paragraph at a time, with the summary placed at the top of the note; voice dictation can be cleaned up into list and checklist items; AI results apply only to the text the model read; the code actions are gone and the old model files are offered for deletion. A developer-only evaluation screen measures load time and per-action timings.
+- Notes stored one value per note and written only when they change (ADR-018), instead of rewriting every note on each save: a crash at any step of a write loses nothing, a slow or failed read never writes the notes back, and reads go 32 at a time.
+- Editors commit edits in batches and flush them when leaving the note or the app (ADR-013); the code editor loads its grammars on demand and keeps an undo history per tab.
+- A note's HTML is sanitized with DOMPurify inside the editor (ADR-021): a note from an import or another device can never run code or pose as an app control.
+- Expo SDK 58, React Native 0.88, React 19.3 (New Architecture, Hermes V1).
+- OTA updates with EAS Update (ADR-014): JS-only fixes reach installed apps without a store release, guarded by the build fingerprint (the Publish OTA workflow refuses native changes and needs a store build of the same version); the app shows "X.Y.Z · OTA N".
+- The vault key is derived with native PBKDF2 (local `fastmemo-crypto` module), with one key per passphrase on every path; the vault screens are translated into every language and keep their actions above the fold; the recovery key screen can't be left before the key is confirmed.
+- A three-step first-note tour replaces the welcome note on a new install (ADR-019); roomier text toolbar.
+- Accessibility: names, roles and states for icon-only controls, hidden controls out of the tab order.
+- Seasonal alternate app icons (Halloween, Christmas, Easter, Summer) under Developer options (ADR-020).
+- Faster start: deep heroicons imports, a cached date formatter, no late font re-render, the WebView warm-up after the home screen's first frame.
+- Sync fixes: newer edits stay queued, each note and category id is in one queue only, a restored note isn't deleted by a stale deletion, an edit made in an open editor no longer fails its push for good, a change in flight can't undo a live reload, saving the settings while connected doesn't re-enroll the device, and notes 3.2.0 received from a newer version don't produce conflict copies.
+- Auto-titles are longer and cut at a word boundary.
+- UI fixes: changelog bullets with hanging indents, no autocapitalize/autocorrect on credentials and URLs, fields no longer hidden by the keyboard, no splash logo left on screen after closing every screen at once, the to-do progress as one translated sentence.
+- Help brought up to date: toolbar, AI actions, the FastMemo Server guide, conflict copies, update flow, and new topics on the quick-note bar and voice dictation.
+- Translations: German uses "Sie" everywhere with its umlauts restored, broken webhook labels fixed, missing accents restored in Italian, Spanish and French, and several wrong strings corrected.
+- The website moved to fastmemo.losav.cc: the app's links and update check use it.
+
 ## v3.2.0
 
 - Cloud sync is now end-to-end encrypted per vault: notes are sealed with a key derived from your passphrase (envelope DEK/KEK scheme), with a one-time recovery key and password change/reset flows. The old global key is gone, and legacy notes sealed with the previous empty key are migrated automatically.

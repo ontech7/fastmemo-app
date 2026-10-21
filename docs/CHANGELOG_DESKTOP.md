@@ -1,3 +1,23 @@
+## v2.0.0
+
+- Migrated to Tauri 2 in place (ADR-015): same identifier, data and update channel, so 1.x installs update and keep their notes; tighter capabilities, a safer in-app update flow, and Cmd+Q waits for the notes to be saved before quitting.
+- Faster start without an empty window (ADR-022): the window stays hidden until the home screen is drawn. On macOS, closing the window leaves the app running like other Mac apps (the Dock icon brings it back, Quit closes it, edits are saved when the window hides). The window remembers its size, position and zoom, and a quit in full screen reopens it as it was before.
+- Keyboard shortcuts: Esc goes back (in a text field it only leaves the field), Cmd/Ctrl+N a new note, Cmd/Ctrl+F the search or find in the note, Cmd/Ctrl+, the settings, Cmd/Ctrl+Enter saves the quick note. F5, Cmd/Ctrl+R and the history keys no longer reload or leave a screen and lose unsaved edits.
+- macOS menu bar in the app's language, with the same commands: every note type, find, settings, Export/Import, Help. A command runs only when its control is reachable, one at a time, never under a native open/save panel. The bundle declares its languages, so what macOS adds (Edit menu items, panels) follows the system language too.
+- The FastMemo Server and the webhooks are called from Rust commands, so no CORS limits and plain HTTP servers on the local network work.
+- New sync engine behind a `CloudBackend` (ADR-016): live listeners, a revision per note, edits merged per note, and conflicting edits kept as a "(conflict)" copy; a note open in the editor reloads live keeping the caret.
+- Self-hosted FastMemo Server as a second cloud next to Google Firebase (ADR-017), with the same per-vault end-to-end encryption; the devices screen shows the device limit and asks before removing a device; an answer that came through a redirect is never taken as the server's.
+- Notes stored one value per note in IndexedDB and written only when they change (ADR-018); reads and writes shared by browser tabs run under a Web Lock.
+- Editors commit edits in batches and flush them on exit or when the window hides (ADR-013); the code editor loads its grammars on demand and keeps an undo history per tab.
+- A note's HTML is sanitized with DOMPurify inside the editor (ADR-021), and the app ignores messages from other windows: a note from an import or another device can never run code with access to the app's storage or its Rust commands. HTML dropped into a note from outside comes in as plain text.
+- The update check repeats every 6 hours and when the window comes back, without offering the same version twice; if the in-app check fails, the update button opens the right release page.
+- CI: desktop-only releases for hotfixes (`desktop_only` in the publish workflow), with checks against shipping an older or duplicate desktop version; `latest.json` notes come from the English changelog; desktop builds read their `EXPO_PUBLIC_*` values from GitHub variables.
+- Expo SDK 58 web bundle (React 19.3); faster start of the web bundle (deep icon imports, cached date formatter).
+- The vault key is derived with one key per passphrase on every path; the vault screens are translated into every language; the recovery key screen can't be left before the key is confirmed.
+- A first-note tour replaces the welcome note on a new install (ADR-019); the intro carousel is centered on wide windows.
+- Help brought up to date, with new topics on the quick-note bar, the conflict copies and the desktop shortcuts; translations fixed (German "Sie" and umlauts, accents in Italian, Spanish and French, several wrong strings).
+- The website moved to fastmemo.losav.cc: the app's links and update check use it, and its version API now answers the desktop app (CORS).
+
 ## v1.2.0
 
 - Cloud sync is now end-to-end encrypted per vault: notes are sealed with a key derived from your passphrase (envelope DEK/KEK scheme), with a one-time recovery key and password change/reset flows. The old global key is gone, and legacy notes sealed with the previous empty key are migrated automatically.
