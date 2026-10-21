@@ -182,8 +182,7 @@ const DEFAULT_AI_ASSISTANT: AIAssistantSettings = {
   selectedModel: "qwen3.5-0.8b",
   voiceOnly: false,
 };
-const selectorStoredAIAssistant = (state: RootState): AIAssistantSettings =>
-  state.settings.aiAssistant || DEFAULT_AI_ASSISTANT;
+const selectorStoredAIAssistant = (state: RootState): AIAssistantSettings => state.settings.aiAssistant || DEFAULT_AI_ASSISTANT;
 /**
  * The AI settings with one of today's models. A Qwen 2.5 id stored by an earlier version reads as the tier replacing it,
  * not downloaded (the file on the device is the old model's); the AI settings screen then stores it so.
