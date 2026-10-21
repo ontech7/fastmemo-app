@@ -1685,6 +1685,30 @@ origin too and subtract it (as `TourSpotlight` does).
 
 ---
 
+### LL-064: The desktop app showed an empty screen before every screen it opened
+
+**Date:** 2026-10-21  
+**Severity:** Medium (found in the 2.0.0 test build, never released)  
+**Category:** Platform (web/desktop) / Performance  
+**What happened:** In the desktop app every screen (settings, a note, help...) opened on an empty screen for a moment before its
+content, which 1.2.0 never did.
+
+**Root cause:** Expo Router 58 turns async routes on by default on web (`asyncRoutes: { web: true }`): the web export had one
+chunk per route (46 files), fetched and run on the first visit of each screen, with nothing drawn meanwhile. Measured on the web
+export with the CPU slowed 4x: home -> settings drew its content after 325 ms with 37 empty frames.
+
+**Fix:** `["expo-router", { asyncRoutes: { web: false } }]` in `app.config.ts`, as up to SDK 57: settings drawn after 45 ms, no
+empty frame. Startup got faster too (first content ~2.3 s instead of ~2.7 s at 4x): the first screen no longer waits for its own
+chunk after the main bundle. Native builds are unchanged (async routes are web-only in production).
+
+**Rule:** Keep async routes off on web: the desktop app loads its code from disk, so splitting saves nothing and costs a blank
+screen per navigation. After changing `asyncRoutes`, export with `--clear` (Metro's cache keeps the old split).
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
+`fix/web-sync-routes`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

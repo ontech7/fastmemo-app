@@ -144,7 +144,9 @@ export default ({ config }: ConfigContext): ExpoConfig =>
           favicon,
         },
         plugins: [
-          "expo-router",
+          // Every screen in the main bundle on web, as up to SDK 57: SDK 58 loads each route's code on first visit by default,
+          // and the desktop app showed an empty screen before every screen it opened.
+          ["expo-router", { asyncRoutes: { web: false } }],
           "expo-status-bar",
           "expo-font",
           "expo-image",
