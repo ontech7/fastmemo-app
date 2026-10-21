@@ -31,6 +31,7 @@ import {
 
 import { contentToken } from "./token";
 import { noteRev } from "./revision";
+import { FIRESTORE_NOTE_MAX_BYTES, jsonBytes } from "./size";
 import type {
   ChangeSet,
   CloudBackend,
@@ -319,6 +320,7 @@ const handshake = async (db: Firestore): Promise<boolean> => {
 export class FirebaseBackend implements CloudBackend {
   /** Every device's push is read by every other one: the free quota bounds how many there can be. */
   readonly deviceLimit = configs.cloud.deviceLimit;
+  readonly maxNoteBytes = FIRESTORE_NOTE_MAX_BYTES;
 
   /** The error callbacks of the open device listeners: told when the app they listen on goes away. */
   private readonly listening = new Set<(error: unknown) => void>();
@@ -737,9 +739,16 @@ export class FirebaseBackend implements CloudBackend {
       committed: { notes: { add: [], delete: [], detach: [] }, categories: { add: [], delete: [] } },
       superseded: [],
       rejected: [],
+      tooLarge: [],
       complete: true,
     };
-    const entries = entriesOf(ops);
+    // A note over the document limit would be refused on every try: it isn't sent (ADR-026).
+    const notes = ops.notes.add.filter((note) => {
+      if (jsonBytes(note) <= this.maxNoteBytes) return true;
+      result.tooLarge.push(note.id);
+      return false;
+    });
+    const entries = entriesOf({ ...ops, notes: { ...ops.notes, add: notes } });
     if (entries.length === 0) return result;
 
     const db = this.db;

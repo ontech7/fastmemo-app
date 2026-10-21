@@ -4,6 +4,7 @@ import type { Category, CloudSettings, Note } from "@/types";
 import type { VaultDoc } from "@/utils/vault";
 
 import { cloudScope, normalizeServerUrl } from "./scope";
+import { jsonBytes } from "./size";
 import type {
   ChangeSet,
   CloudBackend,
@@ -195,6 +196,12 @@ const entriesOf = (ops: PushOps): Entry[] =>
     ...ops.categories.delete.map((value) => ({ queue: "deleteCategories" as const, key: value.icon, value })),
   ].map((entry) => ({ ...entry, bytes: JSON.stringify(entry.value).length }));
 
+/** The limits the server reports in `/v1/info` and `/v1/devices`. */
+type Limits = { maxDevices?: number; maxNoteBytes?: number };
+
+/** How often a server that doesn't report its note limit (older than 1.0.0) is asked again. */
+const NOTE_LIMIT_ASK_MS = 60_000;
+
 /** One push request's body: these entries, and the bases of their uploads. */
 const opsOf = (entries: Entry[], bases: PushOps["bases"]) => {
   const pick = (queue: Queue) => entries.filter((e) => e.queue === queue).map((e) => e.value);
@@ -248,6 +255,10 @@ export class ServerBackend implements CloudBackend {
   /** This device (from its registration or its subscription). */
   private me: string | null = null;
   private limit = 10;
+  /** The server's MAX_NOTE_MB, once it said it (ADR-026). */
+  private noteLimit: number | null = null;
+  /** When the note limit was last asked for (an older server never tells it: asked again at most once a minute). */
+  private noteLimitAskedAt = 0;
 
   /** Bumped by init/dispose: a poll loop of an older generation stops. */
   private generation = 0;
@@ -276,6 +287,11 @@ export class ServerBackend implements CloudBackend {
     return this.limit;
   }
 
+  get maxNoteBytes(): number | null {
+    if (this.noteLimit === null) void this.learnNoteLimit();
+    return this.noteLimit;
+  }
+
   init(settings: CloudSettings): void {
     this.generation++;
     this.stopPoll();
@@ -286,6 +302,8 @@ export class ServerBackend implements CloudBackend {
     this.tokenKnown = false;
     this.tokenLoading = null;
     this.me = null;
+    this.noteLimit = null;
+    this.noteLimitAskedAt = 0;
     this.version = null;
     this.lastChange = null;
     this.lastVault = null;
@@ -301,12 +319,12 @@ export class ServerBackend implements CloudBackend {
 
   async verify(): Promise<boolean> {
     try {
-      const info = await this.request<{ server?: string; protocol?: number; maxDevices?: number }>("GET", "/v1/info", {
+      const info = await this.request<{ server?: string; protocol?: number } & Limits>("GET", "/v1/info", {
         auth: "key",
         timeout: HANDSHAKE_TIMEOUT_MS,
       });
       if (info?.server !== "fastmemo-server" || info.protocol !== PROTOCOL) return false;
-      if (typeof info.maxDevices === "number") this.limit = info.maxDevices;
+      this.takeLimits(info);
       return true;
     } catch (e) {
       console.log("handshake:", e);
@@ -343,14 +361,13 @@ export class ServerBackend implements CloudBackend {
   // --- Devices ---
 
   async listDevices(): Promise<CloudDevice[] | null> {
+    const { generation } = this;
     try {
-      const { devices, maxDevices } = await this.request<{ devices: CloudDevice[]; maxDevices?: number }>(
-        "GET",
-        "/v1/devices",
-        { auth: "member" }
-      );
-      // Also here, not only in the handshake: after a restart the app doesn't handshake again.
-      if (typeof maxDevices === "number") this.limit = maxDevices;
+      const { devices, ...limits } = await this.request<{ devices: CloudDevice[] } & Limits>("GET", "/v1/devices", {
+        auth: "member",
+      });
+      // Also here, not only in the handshake: after a restart the app doesn't handshake again. Not another server's.
+      if (generation === this.generation) this.takeLimits(limits);
       return devices;
     } catch (e) {
       console.log("listDevices:", e);
@@ -600,14 +617,27 @@ export class ServerBackend implements CloudBackend {
       committed: { notes: { add: [], delete: [], detach: [] }, categories: { add: [], delete: [] } },
       superseded: [],
       rejected: [],
+      tooLarge: [],
       complete: true,
     };
-    const entries = entriesOf(ops);
-    if (entries.length === 0) return result;
     if (!this.url) {
       result.complete = false;
       return result;
     }
+    // A note over the server's limit would be refused on every try: it isn't sent (ADR-026). The limit not known (an
+    // older server): the server refuses what's too big, as `rejected`.
+    if (this.noteLimit === null && ops.notes.add.length > 0) await this.learnNoteLimit();
+    const max = this.noteLimit;
+    const notes =
+      max === null
+        ? ops.notes.add
+        : ops.notes.add.filter((note) => {
+            if (jsonBytes(note) <= max) return true;
+            result.tooLarge.push(note.id);
+            return false;
+          });
+    const entries = entriesOf({ ...ops, notes: { ...ops.notes, add: notes } });
+    if (entries.length === 0) return result;
 
     let done = 0;
     const progressed = (n: number) => {
@@ -660,6 +690,18 @@ export class ServerBackend implements CloudBackend {
   }
 
   // --- Internals ---
+
+  private takeLimits({ maxDevices, maxNoteBytes }: Limits): void {
+    if (typeof maxDevices === "number") this.limit = maxDevices;
+    if (typeof maxNoteBytes === "number") this.noteLimit = maxNoteBytes;
+  }
+
+  /** Asks for the server's limits with the device's own credentials (the device list carries them). */
+  private async learnNoteLimit(): Promise<void> {
+    if (!this.url || Date.now() - this.noteLimitAskedAt < NOTE_LIMIT_ASK_MS) return;
+    this.noteLimitAskedAt = Date.now();
+    await this.listDevices();
+  }
 
   private async request<T>(
     method: string,

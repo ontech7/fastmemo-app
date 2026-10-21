@@ -6,7 +6,7 @@ import type { Note } from "@/types";
 import { flushPending } from "@/libs/registry";
 import { getDEK } from "@/libs/vaultSession";
 import { addLocalCategories, applyCategoriesPlan, categoriesPushed, deleteLocalCategories } from "@/slicers/categoriesSlice";
-import { adoptLegacyOutbox, applyNotesPlan, dropNoteUploads, notesPushed } from "@/slicers/notesSlice";
+import { adoptLegacyOutbox, applyNotesPlan, detachNote, dropNoteUploads, notesPushed } from "@/slicers/notesSlice";
 import { notesPersisted, persistor, store } from "@/slicers/store";
 import { CryptNote, tryDecryptNote } from "@/utils/crypt";
 import { dekMatchesVault } from "@/utils/vault";
@@ -21,7 +21,8 @@ export type SyncEvent =
   | ({ type: "applied"; openNote: string | null } & Parameters<SyncEvents["onApplied"]>[0])
   | { type: "devices"; devices: CloudDevice[] }
   | { type: "removed" }
-  | { type: "vaultStale" };
+  | { type: "vaultStale" }
+  | { type: "tooLarge"; notes: { id: string; title: string }[] };
 
 const listeners = new Set<(event: SyncEvent) => void>();
 
@@ -51,6 +52,7 @@ export const getSyncEngine = async (): Promise<SyncEngine | null> => {
       applyNotesPlan,
       notesPushed,
       dropNoteUploads,
+      detachNote,
       adoptLegacyOutbox,
       applyCategoriesPlan,
       categoriesPushed,
@@ -79,6 +81,7 @@ export const getSyncEngine = async (): Promise<SyncEngine | null> => {
       onDevices: (devices) => emit({ type: "devices", devices }),
       onRemoved: () => emit({ type: "removed" }),
       onVaultStale: () => emit({ type: "vaultStale" }),
+      onTooLarge: (notes) => emit({ type: "tooLarge", notes }),
     },
   });
   return engine;

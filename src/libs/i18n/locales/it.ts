@@ -299,6 +299,8 @@ const it = {
   },
   cloudsync: {
     conflict_suffix: "(conflitto)",
+    note_too_large: "«{{title}}» è troppo grande per questo cloud: ora è offline, solo su questo dispositivo.",
+    notes_too_large: "{{count}} note sono troppo grandi per questo cloud: ora sono offline, solo su questo dispositivo.",
     conflict_copies:
       "Modificata su due dispositivi prima della sincronizzazione: sono state tenute entrambe le versioni (una come copia)",
     open_on: "Aperta su {{devices}}",

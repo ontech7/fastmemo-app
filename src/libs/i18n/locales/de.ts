@@ -298,6 +298,8 @@ const de = {
   },
   cloudsync: {
     conflict_suffix: "(Konflikt)",
+    note_too_large: "„{{title}}“ ist zu groß für diese Cloud: Die Notiz ist jetzt offline, nur auf diesem Gerät.",
+    notes_too_large: "{{count}} Notizen sind zu groß für diese Cloud: Sie sind jetzt offline, nur auf diesem Gerät.",
     conflict_copies: "Vor dem Synchronisieren auf zwei Geräten bearbeitet: Beide Versionen wurden behalten (eine als Kopie)",
     open_on: "Geöffnet auf {{devices}}",
     note_deleted_elsewhere:

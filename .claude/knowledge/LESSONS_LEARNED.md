@@ -1829,6 +1829,33 @@ up.
 
 ---
 
+### LL-067: On Firebase, a text note of 0.75 to 1 MB never synced, and nothing said so
+
+**Date:** 2026-10-22  
+**Severity:** Medium (found by reading the code while planning per-cloud limits; never reported by a user)  
+**Category:** Bug / Sync  
+**What happened:** The text editor allowed 1 MB of text (`configs.notes.sizeLimit`) on every cloud. A note is encrypted field by
+field with AES, written in base64: a third bigger. A text note over ~0.75 MB therefore made a Firestore document over its 1 MiB
+limit. The write was refused, the note stayed in the outbox as `rejected` (not retried until the next launch) and was refused
+again at every launch. The other devices never got it, and cloud sync being silent (LL-004), nobody was told. The FastMemo
+server had the opposite gap: it took 5 MB (`MAX_NOTE_MB`) but the app stopped at 1 MB.
+
+**Root cause:** One app-wide limit on the plain text, while each cloud limits the note as it's sent, encrypted.
+
+**Fix (ADR-026):** each cloud reports its limit (`CloudBackend.maxNoteBytes`: Firestore's, or the server's `MAX_NOTE_MB` from
+`/v1/info` and `/v1/devices`) and doesn't send a note over it (`PushResult.tooLarge`). The engine makes such a note offline (the
+detach of the offline notes feature), so every device keeps its copy, and tells the user once. The text editor's limit is the
+cloud's, turned into text (`noteTextLimit`), and a note already over it can still be cut down. `scripts/sync.test.mjs` and
+`scripts/sync-server.test.mjs` cover it.
+
+**Rule:** a note's size limit comes from the cloud in use, measured as that cloud measures it (CONVENTIONS #45). A note a cloud
+can't take is made offline, never left to be refused in silence.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-22 **Resolved in:** branch
+`feat/note-size-per-cloud`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

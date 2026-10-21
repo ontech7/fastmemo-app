@@ -127,6 +127,14 @@ export default function SyncOnProvider(): null {
             if (projectIdRef.current) wipePersistedDEK(projectIdRef.current);
             setVaultPromptNeeded(true);
             break;
+          case "tooLarge":
+            // Not a sync failure but a change to the notes: they're offline now (ADR-026).
+            toast(
+              event.notes.length === 1
+                ? t("cloudsync.note_too_large", { title: event.notes[0].title.trim() || t("empty_title") })
+                : t("cloudsync.notes_too_large", { count: event.notes.length })
+            );
+            break;
         }
       }),
     [dispatch, t]

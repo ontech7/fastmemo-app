@@ -20,6 +20,10 @@ export class CloudRouter implements CloudBackend {
     return this.current.deviceLimit;
   }
 
+  get maxNoteBytes() {
+    return this.current.maxNoteBytes;
+  }
+
   get pacing() {
     return this.current.pacing;
   }

@@ -51,6 +51,8 @@ export interface SyncActions {
   applyNotesPlan(plan: SyncPlan): UnknownAction;
   notesPushed(pushed: NotesPushed): UnknownAction;
   dropNoteUploads(ids: string[]): UnknownAction;
+  /** Makes a note device-only (offline), and queues its removal from the cloud. */
+  detachNote(id: string): UnknownAction;
   adoptLegacyOutbox(ids: string[]): UnknownAction;
   applyCategoriesPlan(plan: { items: Category[]; upload: string[] }): UnknownAction;
   categoriesPushed(pushed: CategoriesPushed): UnknownAction;
@@ -95,6 +97,8 @@ export interface SyncEvents {
   onRemoved(): void;
   /** The vault was reset or replaced on another device: this device's key is stale. The engine stopped. */
   onVaultStale(): void;
+  /** Notes too large for this cloud became device-only (ADR-026). */
+  onTooLarge(notes: { id: string; title: string }[]): void;
 }
 
 export interface SyncEngineOptions {
@@ -813,6 +817,7 @@ export class SyncEngine {
       })
     );
     result.rejected.forEach((key) => this.rejected.add(key));
+    this.detachTooLarge(result.tooLarge ?? [], live);
 
     if (result.superseded.length > 0) {
       if (!(await this.mergeSuperseded(result.superseded))) return "retry";
@@ -822,6 +827,18 @@ export class SyncEngine {
       if (!progressed) return "retry";
     }
     return result.complete ? "pushed" : "retry";
+  }
+
+  /**
+   * Notes the cloud can't take (over its `maxNoteBytes`: a smaller limit than the last cloud's, or grown past it) become
+   * device-only, here and, through the detach, on the other devices: each keeps its copy (ADR-026). Sending them again
+   * would be refused on every pass.
+   */
+  private detachTooLarge(ids: string[], live: Map<string, Note>): void {
+    const notes = ids.map((id) => live.get(id)).filter((note): note is Note => note !== undefined && !note.local);
+    if (notes.length === 0) return;
+    notes.forEach((note) => this.o.store.dispatch(this.o.actions.detachNote(note.id)));
+    this.o.events.onTooLarge(notes.map(({ id, title }) => ({ id, title })));
   }
 
   private sendPresence(): void {
