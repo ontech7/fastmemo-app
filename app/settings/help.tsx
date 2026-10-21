@@ -41,6 +41,7 @@ import AppBackground from "@/components/ui/AppBackground";
 
 import type { HelpCatalogEntry } from "@/libs/ai";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
+import { configs } from "@/configs";
 import { openUrl } from "@/utils/openUrl";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
@@ -85,7 +86,7 @@ export default function HelpScreen() {
 
   // Online Firebase setup guide, in the active language when available.
   const guideLocale = GUIDE_LOCALES.includes(i18n.language) ? i18n.language : "en";
-  const firebaseGuideUrl = `https://fastmemo.vercel.app/${guideLocale}/guides/google-firebase/`;
+  const firebaseGuideUrl = `${configs.app.websiteUrl}/${guideLocale}/guides/google-firebase/`;
 
   // AI intent search is offered only when the on-device model is set up and
   // we're on a native build (the web bundle has no llama.rn).
