@@ -1000,12 +1000,11 @@ const es = {
       text_1_0: "Sí, en la app de escritorio:",
       text_2_0: "• Ctrl/⌘+N: nueva nota.",
       text_3_0: "• Ctrl/⌘+F: busca en tus notas o encuentra texto en una nota de texto abierta.",
-      text_4_0: "• Ctrl/⌘+,: abre los ajustes.",
-      text_5_0: "• Esc: vuelve atrás; en un campo de texto, el primer Esc solo sale del campo.",
-      text_6_0: "• Ctrl/⌘+Intro: guarda la nota rápida.",
-      text_7_0:
+      text_4_0: "• Esc: vuelve atrás; en un campo de texto, el primer Esc solo sale del campo.",
+      text_5_0: "• Ctrl/⌘+Intro: guarda la nota rápida.",
+      text_6_0:
         "En un Mac, los mismos comandos están en la barra de menús, junto con los demás tipos de nota y Exportar/Importar datos. Cerrar la ventana deja Fast Memo abierto: haz clic en su icono del Dock para recuperarlo, o sal con ⌘Q.",
-      text_8_0: "En Windows y Linux, cerrar la ventana cierra Fast Memo.",
+      text_7_0: "En Windows y Linux, cerrar la ventana cierra Fast Memo.",
     },
     what_ai_assistant: {
       title: "¿Qué es el Asistente de IA?",

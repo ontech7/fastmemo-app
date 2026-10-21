@@ -13,7 +13,7 @@ import { isTauri } from "@/utils/platform";
  * Desktop (Tauri) only, where the app is the whole window:
  * - Esc: in a text field it only leaves the field; otherwise it presses the screen's back button.
  * - Cmd/Ctrl+N: a new note (from another screen, going back to the home screen first); Cmd/Ctrl+F: the search field,
- *   or find in a text note; Cmd/Ctrl+,: the settings. The same commands as the macOS menu (`@/libs/desktopCommands`).
+ *   or find in a text note. The same commands as the macOS menu (`@/libs/desktopCommands`).
  * - F5 and Cmd/Ctrl+R would reload the page, dropping the edits not yet saved: blocked outside development.
  * - Alt+arrows (Windows, Linux) and the keyboard's back/forward keys would leave the screen through the history, without
  *   its back button: blocked.
@@ -32,7 +32,7 @@ function letterOf(e: KeyboardEvent): string {
   return e.code.startsWith("Key") ? e.code.slice(3).toLowerCase() : "";
 }
 
-const COMMAND_KEYS: Record<string, DesktopCommand> = { n: "newNote", f: "find", ",": "settings" };
+const COMMAND_KEYS: Record<string, DesktopCommand> = { n: "newNote", f: "find" };
 
 /** A key that reloads the page. AltGr (Ctrl+Alt on Windows) types characters: AltGr+R isn't one. */
 function isReload(e: KeyboardEvent, mod: boolean): boolean {
@@ -58,7 +58,7 @@ function onDesktopKeyDown(e: KeyboardEvent) {
   }
 
   if (e.altKey || e.shiftKey || otherMod) return;
-  const command = mod ? COMMAND_KEYS[e.key === "," ? "," : letterOf(e)] : undefined;
+  const command = mod ? COMMAND_KEYS[letterOf(e)] : undefined;
 
   // A key the page leaves alone goes on to the macOS menu item with the same shortcut: a held key's repeats are stopped
   // here, or the menu would run the command again on each.

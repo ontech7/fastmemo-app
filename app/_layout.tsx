@@ -59,7 +59,7 @@ export default Sentry.wrap(function RootLayout() {
   const { colors } = useTheme();
   colors.background = "transparent";
 
-  // Web: no Backspace history navigation; desktop: Esc, Cmd/Ctrl+N/F/comma, no reload (no-op on native).
+  // Web: no Backspace history navigation; desktop: Esc, Cmd/Ctrl+N/F, no reload (no-op on native).
   useKeyboardShortcuts();
 
   // The apps have the fonts built in. The web loads them while it renders: its first screen is the logo image, with no

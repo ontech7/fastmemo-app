@@ -10,7 +10,7 @@ export const SHORTCUT_TARGET = {
   newNote: "shortcut-new-note",
   /** Cmd/Ctrl+F: a search field is focused, a button is pressed. */
   find: "shortcut-find",
-  /** Cmd/Ctrl+, (and the way to Help): the home screen's settings button. */
+  /** The macOS menu's Settings (and the way to Help): the home screen's settings button (no shortcut). */
   settings: "shortcut-settings",
   /** The home screen's button that opens the note-type menu (the menu bar's New Text Note, New List...). */
   noteTypes: "shortcut-note-types",
