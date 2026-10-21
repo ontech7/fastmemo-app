@@ -32,15 +32,30 @@ export default function VaultRecoveryScreen() {
   const allowLeaving = usePreventRemove(!!recoveryKey && !confirmed);
   // Taken on the first confirm and kept: a retry after a failure runs it again.
   const continuation = useRef<(() => void | Promise<void>) | null>(null);
+  const running = useRef(false);
+  const left = useRef(false);
+  const mounted = useRef(true);
+  useEffect(
+    () => () => {
+      mounted.current = false;
+    },
+    []
+  );
 
-  // If reached without a key (e.g. a stale navigation), bail back gracefully.
+  // If reached without a key (e.g. a stale navigation), bail back gracefully (once: `router` changes on every render).
   useEffect(() => {
-    if (!recoveryKey) router.back();
+    if (recoveryKey || left.current) return;
+    left.current = true;
+    router.back();
   }, [recoveryKey, router]);
 
   // The continuation does a full sync (add device + upload/download), so it can
-  // take a few seconds — show a spinner instead of an unresponsive button.
+  // take a few seconds — show a spinner instead of an unresponsive button. Once
+  // confirmed the screen may be left (a back press while it runs): the sync goes
+  // on for the cloud settings screen, and this one doesn't go back a second time.
   const confirm = async () => {
+    if (running.current) return;
+    running.current = true;
     setConfirmed(true);
     allowLeaving();
     setFailed(false);
@@ -48,10 +63,14 @@ export default function VaultRecoveryScreen() {
     try {
       continuation.current ??= retrieveVaultContinuation() ?? null;
       if (continuation.current) await continuation.current();
-      router.back();
+      if (mounted.current) router.back();
     } catch {
-      setFailed(true);
-      setLoading(false);
+      if (mounted.current) {
+        setFailed(true);
+        setLoading(false);
+      }
+    } finally {
+      running.current = false;
     }
   };
 
