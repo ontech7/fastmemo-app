@@ -1662,6 +1662,29 @@ state tao reports at its start.
 
 ---
 
+### LL-063: Popup menus opened a status bar's height below their button on Android
+
+**Date:** 2026-10-21  
+**Severity:** Medium (found in the 4.0.0 test build, never released)  
+**Category:** Platform (Android)  
+**What happened:** The ⋮ menu of a note (every `PopupMenu`) opened ~24 dp below its button instead of right under it, as it did
+in 3.2.0. Measured on the emulator: the first item 63 px lower than expected, the status bar's exact height.
+
+**Root cause:** `PopupMenu` added `StatusBar.currentHeight` to the trigger's `measureInWindow` y, because the window used to
+start below the status bar while the translucent `Modal` starts at the top of the screen. Since Expo SDK 58 the app draws edge
+to edge: the window starts at the top too, so the offset counted the status bar twice.
+
+**Fix:** no offset: the trigger's window coordinates are the Modal's.
+
+**Rule:** On Android (edge to edge), `measureInWindow` coordinates and a `statusBarTranslucent` Modal share the same origin, the
+top of the screen: never add the status bar's height to place an overlay. To be independent of it, measure the overlay's own
+origin too and subtract it (as `TourSpotlight` does).
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
+`fix/popup-menu-offset`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
