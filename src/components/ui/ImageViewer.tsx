@@ -19,8 +19,8 @@ import IconChip from "@/components/ui/IconChip";
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
-  /** The image (a data: URL or a URL); null hides the viewer. */
-  src: string | null;
+  /** The image (a data: URL or a URL). The viewer is shown while it is mounted. */
+  src: string;
   /** Its own size, in pixels. */
   width: number;
   height: number;
@@ -120,11 +120,11 @@ export default function ImageViewer({ src, width, height, onClose, action }: Pro
   };
 
   return (
-    <Modal visible={!!src} animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+    <Modal visible animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <GestureHandlerRootView style={styles.root}>
         <GestureDetector gesture={gesture}>
           <View style={styles.stage} onLayout={onStageLayout}>
-            {!!src && !!fit && (
+            {!!fit && (
               <Animated.Image
                 source={{ uri: src }}
                 style={[fitted, imageStyle]}

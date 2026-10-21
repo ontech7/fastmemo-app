@@ -1758,27 +1758,34 @@ screen per navigation. After changing `asyncRoutes`, export with `--clear` (Metr
 **Category:** Bug  
 **What happened:** The image menu (ADR-024) changed the image, but the caret moved next to it: after a new size or a quarter
 turn it was by the image's edge instead of on the line where the user was writing. After an alignment the image itself stayed
-selected, so the next key typed replaced it. While the image code was being written, a tap test also crashed in the image's
-`touchend` handler.
+selected, so the next key typed replaced it. The branch's review found that a new size or a turn also dropped a link around the
+image, and that after a long press Chrome's click opened the menu anyway. While the image code was being written, a tap test
+also crashed in the image's `touchend` handler.
 
 **Root cause:** `execCommand` works on the selection, so each change selects the image first (`insertHTML` of a changed copy,
 `justify*`, `delete`), and the browser leaves the selection where the command ends: after the inserted copy, or on the image for
-`justify*`. The crash: `refreshToolbar` dispatches a bare `touchend` (no `changedTouches`) to make pell read the selection
-again, and the handler read `e.changedTouches[0]`.
+`justify*`. An `insertHTML` over the image alone puts the copy outside the link the image was in. The crash: `refreshToolbar`
+dispatches a bare `touchend` (no `changedTouches`) to make pell read the selection again, and the handler read
+`e.changedTouches[0]`.
 
 **Fix:** `__fm.image` saves the selection as a `Range` before the change (a range follows the edits around it) and selects it
-again after. Two cases are different. A caret right after an image that gets replaced would end up before the copy, so there
-`insertHTML`'s own placement is kept. A note with no selection is left with none, so a change made while not editing the note
-doesn't open the keyboard. The `touchend` handler ignores an event with no `changedTouches`. `scripts/richtext.test.mjs` checks
-each change with the caret on another line, the caret right after the image, and no caret: 8 of these checks failed before the
-fix.
+again after. Three cases are different:
+
+- a caret right after what gets replaced would end up before the copy, so it is put after the copy;
+- a caret inside a link that gets replaced goes back by its place in the text;
+- a note with no selection is left with none, so a change made while not editing the note doesn't open the keyboard.
+
+An image in a link is replaced along with the whole link. The `touchend` handler ignores an event with no `changedTouches`, and
+a click right after a touch on an image belongs to the touch. `scripts/richtext.test.mjs` checks each change with the caret on
+another line, right after the image or its link, and with no caret, plus links with and without text and a long press. All of
+these checks failed before the fix.
 
 **Rule:** A page-script change that selects something to run an `execCommand` on it puts the user's selection back afterwards.
-Never leave an element selected behind, because a key replaces it. Handlers on the editor's content must accept
-`refreshToolbar`'s synthetic `touchend`.
+Never leave an element selected behind, because a key replaces it. An `insertHTML` that replaces an element inside a link must
+replace the link. Handlers on the editor's content must accept `refreshToolbar`'s synthetic `touchend`.
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
-`feat/richtext-images` (fbab1b2)
+`feat/richtext-images`
 
 ---
 

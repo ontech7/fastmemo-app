@@ -54,13 +54,17 @@ export interface EditorImage {
   y: number;
   /** The note can be changed (not read-only). */
   editable: boolean;
+  /** Not in a code block, which stays a plain `<pre>` (ADR-023). */
+  alignable: boolean;
+  /** A JPEG, PNG or WebP of the note: a GIF would stop moving, a linked image can't be read. */
+  rotatable: boolean;
 }
 
 export type ImageChange = "size" | "align" | "rotate" | "delete";
 
-/** The page command for a change to a tapped image (RichEditor.command). */
+/** The page command for a change to a tapped image (RichEditor.command); every value is a literal, whatever it holds. */
 export const imageCommand = (image: EditorImage, change: ImageChange, value?: string) =>
-  `window.__fm && window.__fm.image(${image.index}, ${JSON.stringify(image.key)}, ${JSON.stringify(change)}, ${JSON.stringify(value ?? null)})`;
+  `window.__fm && window.__fm.image(${[image.index, image.key, change, value ?? null].map((v) => JSON.stringify(v)).join(", ")})`;
 
 /**
  * What the text editor's page runs besides pell (react-native-pell-rich-editor), injected once it is up
@@ -288,6 +292,10 @@ export const RICH_TEXT_SCRIPT = String.raw`
   };
   var imageKey = function (img) { return img.src.length + ":" + img.src.slice(-32); };
   var lineOf = function (img) { return closest(img, "div,p,li,h1,pre") || content(); };
+  // A code block stays a plain <pre>: an alignment would put a <div> in it.
+  var alignable = function (img) { return !closest(img, "pre"); };
+  // A turn draws the image in a canvas: a GIF would stop moving, and a linked image can't be read.
+  var rotatable = function (img) { return /^data:image\/(jpeg|png|webp);base64,/.test(img.src); };
   var openImage = function (img, x, y) {
     post("${IMAGE_MESSAGE}", {
       index: [].indexOf.call(content().querySelectorAll("img"), img),
@@ -300,18 +308,26 @@ export const RICH_TEXT_SCRIPT = String.raw`
       x: x,
       y: y,
       editable: content().isContentEditable,
+      alignable: alignable(img),
+      rotatable: rotatable(img),
     });
   };
-  var touch = null;
+  // A long press is the browser's (it selects the image): a tap is much shorter.
+  var LONG_PRESS = 400;
+  var touch = null, touchedAt = -Infinity;
   content().addEventListener("touchstart", function (e) {
     var t = e.touches[0];
-    touch = e.touches.length === 1 && e.target.nodeName === "IMG" ? { img: e.target, x: t.clientX, y: t.clientY } : null;
+    touch = e.touches.length === 1 && e.target.nodeName === "IMG"
+      ? { img: e.target, x: t.clientX, y: t.clientY, at: e.timeStamp }
+      : null;
   }, { passive: true });
   content().addEventListener("touchend", function (e) {
     var start = touch;
     touch = null;
     // refreshToolbar's touchend has no touches
     if (!start || !e.changedTouches) return;
+    touchedAt = e.timeStamp;
+    if (e.timeStamp - start.at > LONG_PRESS) return;
     var t = e.changedTouches[0];
     if (e.target !== start.img || Math.abs(t.clientX - start.x) > 10 || Math.abs(t.clientY - start.y) > 10) return;
     // No caret and no keyboard: the menu is the app's.
@@ -322,14 +338,15 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (e.target.nodeName === "IMG") e.preventDefault();
   });
   content().addEventListener("click", function (e) {
-    if (e.target.nodeName !== "IMG") return;
+    // The click a touch makes (after a long press) was the touch's.
+    if (e.target.nodeName !== "IMG" || e.timeStamp - touchedAt < 1000) return;
     e.preventDefault();
     openImage(e.target, e.clientX, e.clientY);
   });
 
-  // The app's own images are JPEG at 0.3: a turn makes one about a third bigger, once (turning it again keeps the size), and
-  // doesn't blur it more at each turn.
-  var ROTATE_QUALITY = 0.7;
+  // The picker stores JPEG at 0.3, and a turn at 0.7 made a photo up to twice as big (a note has a size limit). A JPEG or a
+  // WebP gets the best of these qualities that keeps it about its size; a PNG stays a PNG (its transparency).
+  var QUALITIES = [0.8, 0.5, 0.3];
   var rotated = function (img) {
     var canvas = $.createElement("canvas");
     canvas.width = img.naturalHeight;
@@ -338,50 +355,80 @@ export const RICH_TEXT_SCRIPT = String.raw`
     g.translate(canvas.width, 0);
     g.rotate(Math.PI / 2);
     g.drawImage(img, 0, 0);
-    // A PNG keeps its transparency.
-    return canvas.toDataURL(/^data:image\/png/.test(img.src) ? "image/png" : "image/jpeg", ROTATE_QUALITY);
+    var type = /^data:(image\/\w+)/.exec(img.src)[1], src;
+    if (type === "image/png") return canvas.toDataURL(type);
+    for (var i = 0; i < QUALITIES.length; i++) {
+      src = canvas.toDataURL(type, QUALITIES[i]);
+      if (src.length <= img.src.length * 1.15) break;
+    }
+    return src;
   };
-  var selectImage = function (img) {
+  var selectNode = function (node) {
     var r = $.createRange();
-    r.selectNode(img);
+    r.selectNode(node);
     select(r);
   };
+  var childIndex = function (node) { return [].indexOf.call(node.parentNode.childNodes, node); };
+  // What a new size or a turn replaces with a changed copy: the image, or the link it is in, which an insertHTML of the image
+  // alone would drop.
+  var replacedBy = function (img) { return closest(img, "a") || img; };
   // Through insertHTML, so undo brings the image back as it was.
   var replaceImage = function (img, change) {
-    var copy = img.cloneNode();
-    change(copy);
-    selectImage(img);
+    var node = replacedBy(img), copy = node.cloneNode(true);
+    change(node === img ? copy : copy.querySelectorAll("img")[[].indexOf.call(node.querySelectorAll("img"), img)]);
+    selectNode(node);
     exec("insertHTML", copy.outerHTML);
+  };
+  // A change works on the image selected; then the selection goes back where it was (LL-065), not next to the image, or on
+  // it where a key would replace it. A range follows the nodes around it. A note that had none is left without one.
+  var keepSelectionAround = function (img, replacing, change) {
+    var s = selection(), caret = s.rangeCount ? s.getRangeAt(0).cloneRange() : null, node = replacedBy(img);
+    var put = caret
+      ? function () { if (content().contains(caret.startContainer) && content().contains(caret.endContainer)) select(caret); }
+      : function () { s.removeAllRanges(); };
+    if (caret && caret.collapsed && replacing) {
+      // Right after what is replaced the range ends up before the copy (and insertHTML leaves the caret in a link's copy):
+      // after the copy, then.
+      if (caret.startContainer === node.parentNode && caret.startOffset === childIndex(node) + 1) {
+        put = function () {
+          if (caret.startContainer.childNodes[caret.startOffset]) s.collapse(caret.startContainer, caret.startOffset + 1);
+        };
+      }
+      // In a link that is replaced: by its place in the text, which the copy has too.
+      else if (node.contains(caret.startContainer)) {
+        var at = textOffset(caret.startContainer, caret.startOffset);
+        put = function () {
+          var p = pointAt(at, false);
+          if (p) s.collapse(p[0], p[1]);
+        };
+      }
+    }
+    change();
+    put();
   };
   var JUSTIFY = { left: "justifyLeft", center: "justifyCenter", right: "justifyRight" };
   var image = function (index, key, change, value) {
     var img = content().querySelectorAll("img")[index];
     if (!img || imageKey(img) !== key || !content().isContentEditable) return;
-    // A change works on the image selected: then the caret goes back where it was (a range follows the nodes around it),
-    // not next to the image, or on it where a key would replace it. A note that had no caret is left without one.
-    var s = selection(), caret = s.rangeCount ? s.getRangeAt(0).cloneRange() : null;
-    // A caret right after an image that is replaced would end up before its copy: insertHTML leaves it after.
-    var after = caret && caret.collapsed && caret.startContainer === img.parentNode &&
-      caret.startOffset === [].indexOf.call(img.parentNode.childNodes, img) + 1;
-    var restore = !(after && (change === "size" || change === "rotate"));
+    if ((change === "align" && !alignable(img)) || (change === "rotate" && !rotatable(img))) return;
     try {
-      if (change === "size") replaceImage(img, function (copy) { copy.style.width = value; });
-      else if (change === "rotate") {
-        var src = rotated(img);
-        replaceImage(img, function (copy) { copy.src = src; });
-      } else if (change === "align") {
-        selectImage(img);
-        exec(JUSTIFY[value]);
-      } else if (change === "delete") {
-        selectImage(img);
-        exec("delete");
-      }
+      keepSelectionAround(img, change === "size" || change === "rotate", function () {
+        if (change === "size") replaceImage(img, function (copy) { copy.style.width = value; });
+        else if (change === "rotate") {
+          var src = rotated(img);
+          replaceImage(img, function (copy) { copy.src = src; });
+        } else if (change === "align") {
+          selectNode(img);
+          exec(JUSTIFY[value]);
+        } else if (change === "delete") {
+          selectNode(img);
+          exec("delete");
+        }
+      });
     } catch (error) {
       // An image the canvas can't read (a file of an old version): the app says so.
       post("${IMAGE_FAILED_MESSAGE}", String(error));
     }
-    if (!caret) s.removeAllRanges();
-    else if (restore && content().contains(caret.startContainer) && content().contains(caret.endContainer)) select(caret);
     refreshToolbar();
   };
 

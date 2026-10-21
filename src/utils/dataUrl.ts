@@ -12,3 +12,6 @@ export const parseImageDataUrl = (url: string): DataUrlImage | null => {
   const [, mime, subtype, base64] = match;
   return { mime, base64, extension: subtype === "jpeg" ? "jpg" : subtype.replace(/\+.*$/, "") };
 };
+
+/** Whether a URL is an image's base64 data: URL, without reading the data. */
+export const isImageDataUrl = (url: string) => /^data:image\/[\w.+-]+;base64,/.test(url);

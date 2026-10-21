@@ -15,7 +15,7 @@ import ImageViewer from "@/components/ui/ImageViewer";
 import PopupMenu, { PopupMenuDivider, PopupMenuLabel, PopupMenuOption, usePopupMenu } from "@/components/ui/PopupMenu";
 import { BORDER, COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 import type { EditorImage, ImageChange } from "@/libs/richTextEditor";
-import { parseImageDataUrl } from "@/utils/dataUrl";
+import { isImageDataUrl } from "@/utils/dataUrl";
 import { exportImage } from "@/utils/export";
 import { toast } from "@/utils/toast";
 
@@ -40,16 +40,14 @@ const ICON = { size: 18, color: COLOR.softWhite };
 /** The line's CSS text-align as the menu's choices. */
 const alignOf = (align: string) => (/center/.test(align) ? "center" : /right|end/.test(align) ? "right" : "left");
 
-/** A row of choices, the current one marked, that closes the menu once one is picked. */
-function ChoiceRow({
-  choices,
-  selected,
-  onSelect,
-}: {
+interface ChoiceRowProps {
   choices: Choice[];
   selected: string;
   onSelect: (value: string) => void;
-}) {
+}
+
+/** A row of choices, the current one marked, that closes the menu once one is picked. */
+function ChoiceRow({ choices, selected, onSelect }: ChoiceRowProps) {
   const { close } = usePopupMenu();
   return (
     <View style={styles.row}>
@@ -121,8 +119,16 @@ export default function NoteImageMenu({ image, at, onChange, onClose }: Props) {
           <>
             <PopupMenuLabel>{t("note.image.size")}</PopupMenuLabel>
             <ChoiceRow choices={sizes} selected={image.size} onSelect={(value) => onChange(image, "size", value)} />
-            <PopupMenuLabel>{t("note.image.align")}</PopupMenuLabel>
-            <ChoiceRow choices={aligns} selected={alignOf(image.align)} onSelect={(value) => onChange(image, "align", value)} />
+            {image.alignable && (
+              <>
+                <PopupMenuLabel>{t("note.image.align")}</PopupMenuLabel>
+                <ChoiceRow
+                  choices={aligns}
+                  selected={alignOf(image.align)}
+                  onSelect={(value) => onChange(image, "align", value)}
+                />
+              </>
+            )}
             <PopupMenuDivider />
           </>
         )}
@@ -133,14 +139,14 @@ export default function NoteImageMenu({ image, at, onChange, onClose }: Props) {
             onSelect={() => (viewNext.current = image)}
           />
         )}
-        {image?.editable && (
+        {image?.editable && image.rotatable && (
           <PopupMenuOption
             label={t("note.image.rotate")}
             trailing={<ArrowPathIcon size={16} color={COLOR.textSecondary} />}
             onSelect={() => onChange(image, "rotate")}
           />
         )}
-        {image && parseImageDataUrl(image.src) && (
+        {image && isImageDataUrl(image.src) && (
           <PopupMenuOption
             label={shareLabel}
             trailing={<ShareActionIcon size={16} color={COLOR.textSecondary} />}
@@ -156,21 +162,23 @@ export default function NoteImageMenu({ image, at, onChange, onClose }: Props) {
         )}
       </PopupMenu>
 
-      <ImageViewer
-        src={viewing?.src ?? null}
-        width={viewing?.width ?? 0}
-        height={viewing?.height ?? 0}
-        onClose={() => setViewing(null)}
-        action={
-          viewing && parseImageDataUrl(viewing.src)
-            ? {
-                icon: <ShareActionIcon size={20} color={COLOR.softWhite} />,
-                label: shareLabel,
-                onPress: () => share(viewing.src),
-              }
-            : undefined
-        }
-      />
+      {viewing && (
+        <ImageViewer
+          src={viewing.src}
+          width={viewing.width}
+          height={viewing.height}
+          onClose={() => setViewing(null)}
+          action={
+            isImageDataUrl(viewing.src)
+              ? {
+                  icon: <ShareActionIcon size={20} color={COLOR.softWhite} />,
+                  label: shareLabel,
+                  onPress: () => share(viewing.src),
+                }
+              : undefined
+          }
+        />
+      )}
     </>
   );
 }

@@ -41,12 +41,18 @@ export async function exportAsTextFile(content: string, filename: string): Promi
   await shareFile(fileUri, filename);
 }
 
+// The images shared: the last one stays (the app it went to can read it after the share sheet has closed), the next share
+// removes it.
+const SHARED_IMAGES = FileSystem.cacheDirectory + "shared-images/";
+
 /** Shares an image of a note (a data: URL) as a file: to another app, or to the phone's files and gallery. */
 export async function exportImage(dataUrl: string): Promise<void> {
   const image = parseImageDataUrl(dataUrl);
   if (!image) throw new Error("not an image's data URL");
+  await FileSystem.deleteAsync(SHARED_IMAGES, { idempotent: true });
+  await FileSystem.makeDirectoryAsync(SHARED_IMAGES, { intermediates: true });
   const filename = `fastmemo-${Date.now()}.${image.extension}`;
-  const uri = FileSystem.cacheDirectory + filename;
+  const uri = SHARED_IMAGES + filename;
   await FileSystem.writeAsStringAsync(uri, image.base64, { encoding: FileSystem.EncodingType.Base64 });
   await shareFile(uri, filename);
 }

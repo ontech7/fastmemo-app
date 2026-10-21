@@ -140,6 +140,6 @@ export async function exportImage(dataUrl: string): Promise<void> {
   if (!image) throw new Error("not an image's data URL");
   const bytes = Uint8Array.from(atob(image.base64), (c) => c.charCodeAt(0));
   await saveFileWeb(new Blob([bytes], { type: image.mime }), `fastmemo-${Date.now()}.${image.extension}`, [
-    { name: "Image", extensions: [image.extension] },
+    { name: image.extension.toUpperCase(), extensions: [image.extension] },
   ]);
 }
