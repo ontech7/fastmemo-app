@@ -223,16 +223,25 @@ export async function summarizeNote(
   return { success: true, text: result.text.trim() };
 }
 
+/**
+ * What each completion reads besides its text (the chat template, and the system prompt where its cache misses): measured
+ * as about half a second per line on the 2B and two on the 4B (AI evaluation, 2026-10).
+ */
+const STEP_TOKENS = 50;
+
 function secondsFor(action: LongNoteAction, html: string, speed: { prefill: number; generate: number }): number {
   if (action === "summarize") {
     const tokens = estimateTokens(summaryInput(html).join("\n"));
     const parts = Math.max(1, Math.ceil(tokens / SUMMARY_PART_TOKENS));
-    const written = parts > 1 ? parts * 60 + 150 : 150;
-    return tokens / speed.prefill + written / speed.generate;
+    const steps = parts > 1 ? parts + 1 : 1;
+    const written = parts > 1 ? parts * 90 + 150 : 150;
+    return (tokens + steps * STEP_TOKENS) / speed.prefill + written / speed.generate;
   }
   const segments = splitNoteBlocks(html);
-  const tokens = targetsOf(action, segments).reduce((sum, i) => sum + estimateTokens((segments[i] as Unit).text), 0);
-  return tokens / speed.prefill + (tokens * (action === "shorten" ? 0.6 : 1)) / speed.generate;
+  const texts = targetsOf(action, segments).flatMap((i) => splitText((segments[i] as Unit).text, REWRITE_PIECE_TOKENS));
+  const tokens = texts.reduce((sum, text) => sum + estimateTokens(text), 0);
+  const written = tokens * (action === "shorten" ? 0.6 : 1);
+  return (tokens + texts.length * STEP_TOKENS) / speed.prefill + written / speed.generate;
 }
 
 /** About how long `action` takes on the note `html`, in seconds, at the speed the model runs on this device. */
