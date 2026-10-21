@@ -652,7 +652,7 @@ const en = {
     how_to_create_todo_note: {
       title: "How do I create a to-do list?",
       text_1_0: "Tap the",
-      text_1_1: "button in the bottom-right corner of the Home screen.",
+      text_1_1: "button next to [+] in the bottom-right corner of the Home screen and choose 'To-Do'.",
       text_2_0: "A new page opens where you can add a title and your to-do items.",
       text_3_0: "Drag the six dots on the right of an item to move it up or down.",
       text_4_0: "Tap the cross on the right to remove an item.",
@@ -666,7 +666,7 @@ const en = {
     how_to_create_kanban_note: {
       title: "How do I create a Kanban board?",
       text_1_0: "Tap the",
-      text_1_1: "button in the bottom-right corner of the Home screen and choose 'Kanban'.",
+      text_1_1: "button next to [+] in the bottom-right corner of the Home screen and choose 'Kanban'.",
       text_2_0: "A board opens with one column ready to use.",
       text_3_0: "• Add a column — tap 'Add column' on the right (up to 10).",
       text_4_0: "• Rename a column — edit the text in its header.",
@@ -680,12 +680,21 @@ const en = {
     how_to_create_code_note: {
       title: "How do I create a code note?",
       text_1_0: "Tap the",
-      text_1_1: "button in the bottom-right corner of the Home screen and choose 'Code'.",
+      text_1_1: "button next to [+] in the bottom-right corner of the Home screen and choose 'Code'.",
       text_2_0: "You get a real code editor with syntax highlighting.",
       text_3_0: "• Tabs — keep several snippets in one note; add, rename, delete or drag them to reorder (up to 6).",
       text_4_0: "• Language — tap the language bar to pick one, or let it be detected automatically.",
-      text_5_0: "• Find & replace — tap the search icon at the top, just like in a text note.",
       text_6_0: "To save it, just go back to the Home screen.",
+    },
+    what_quick_note: {
+      title: "What is the Quick-note bar?",
+      text_1_0: "It's the 'Quick note…' field at the bottom of the Home screen. Tap it, write, then tap",
+      text_1_1: "to save a text note right away, without opening the editor.",
+      text_2_0: "The note goes into the category you're viewing, and its title comes from its first words.",
+      text_3_0: "To add formatting or images, tap",
+      text_3_1: "instead, and what you wrote opens in the full editor.",
+      text_4_0: "On a computer, Ctrl/⌘+Enter saves the note and Enter starts a new line.",
+      text_5_0: "You can turn the bar off in Settings → Note creation.",
     },
     how_to_edit_note: {
       title: "How do I edit a note?",
@@ -714,10 +723,12 @@ const en = {
       text_1_0: "It lets you format and enrich your text. Here's what the buttons do:",
       text_2_0: "• Undo / Redo — step back or forward through your latest changes.",
       text_3_0: "• Image — insert a picture from your gallery.",
+      text_heading: "• Heading — turn the current line into a heading.",
       text_4_0: "• Bold — make the selected text bold.",
       text_5_0: "• Italic — make the selected text italic.",
       text_6_0: "• Strikethrough — cross out the selected text.",
       text_7_0: "• Underline — underline the selected text.",
+      text_align: "• Align left / Align center — line the paragraph up on the left or in the center.",
       text_8_0: "• Subscript — lower the text slightly below the line.",
       text_9_0: "• Superscript — raise the text slightly above the line.",
       text_10_0: "• Bullet list — start a bulleted list.",
@@ -726,9 +737,18 @@ const en = {
     },
     what_find_replace: {
       title: "How do I find and replace text?",
-      text_1_0: "While editing a text or code note, tap the search icon in the top-right corner.",
+      text_1_0: "While editing a text note, tap the search icon in the top-right corner.",
       text_2_0: "Type what you're looking for: the arrows jump between matches and show how many there are.",
       text_3_0: "Turn on 'Replace' to swap the current match, or replace every match at once.",
+    },
+    what_voice_dictation: {
+      title: "How do I dictate a note?",
+      text_1_0: "In a text note or a to-do list, tap the microphone button and speak.",
+      text_2_0: 'Say "comma", "period", "question mark" or "new line" to punctuate.',
+      text_3_0: "Tap 'Insert' to add the text where the cursor is. In a to-do list, each line becomes an item.",
+      text_4_0:
+        "With the AI Assistant set up, 'Clean up with AI' tidies the text (punctuation, capitals, filler words) before you insert it; in a to-do list it turns what you said into items instead.",
+      text_5_0: "You can change the language or turn dictation off in Settings → Voice recognition.",
     },
     what_are_settings_note: {
       title: "What are the note options?",
@@ -738,7 +758,8 @@ const en = {
       text_4_0: "• Protect — lock the note behind your secret code or fingerprint.",
       text_5_0: "• Read-only — keep the note from being edited by accident.",
       text_6_0: "• Hide — keep the note off the Home screen until you choose to show hidden notes.",
-      text_7_0: "• Make offline — keep the note only on this device, never synced to the cloud.",
+      text_7_0:
+        "• Make offline — keep the note only on this device, never synced to the cloud. 'Sync to cloud' uploads it again as a new note, with \"(2)\" added to its title.",
       text_8_0: "• Change category — move the note to another category.",
       text_9_0: "• Export (text notes) — save the note as a .txt, Markdown or PDF file.",
       text_10_0: "• Information — see the note's type, category and dates.",
@@ -782,7 +803,7 @@ const en = {
       title: "What is the trash?",
       text_1_0: "When you delete a note it isn't gone right away — it goes to the trash first.",
       text_2_0:
-        "Notes stay there for 7 days and are then removed for good. You can change how long they're kept in the basic settings.",
+        "Notes stay there for 30 days by default, then they're removed for good. In the basic settings you can keep them 3, 7, 15 or 30 days.",
     },
     how_restore_trashed_notes: {
       title: "How do I restore deleted notes?",
@@ -810,6 +831,14 @@ const en = {
         "You can sync your notes across devices by connecting your own Google Firebase project or your own FastMemo Server (on a PC, NAS, Raspberry Pi or VPS) and enabling sync. There is no central Fast Memo server — your data lives only where you choose.",
       text_2_0: "Your notes are end-to-end encrypted on your device before they're uploaded, so no one but you can read them.",
       text_link: "Read the step-by-step guide to set up Google Firebase →",
+      text_link_server: "Read the guide to set up your own FastMemo Server →",
+    },
+    what_conflict_copy: {
+      title: 'Why is there a note marked "(conflict)"?',
+      text_1_0:
+        "If the same note is changed on two devices before they sync, Fast Memo keeps both versions instead of picking one, so nothing you wrote is lost.",
+      text_2_0:
+        'One of them becomes a copy with "(conflict)" at the end of its title: compare the two, keep what you need and delete the other.',
     },
     what_encryption: {
       title: "How are my notes encrypted?",
@@ -881,6 +910,7 @@ const en = {
       text_2_0: "• Simple — [+] creates a text note; use the menu for the other types.",
       text_3_0: "• Smart — [+] always creates the type you picked as your favourite.",
       text_4_0: "• Adaptive — [+] creates the same type as the last note you worked on.",
+      text_5_0: "• Quick-note bar — show or hide the bar for quick notes at the bottom of the Home screen.",
     },
     what_home_filters: {
       title: "How do the Home filters work?",
@@ -900,6 +930,8 @@ const en = {
       text_1_0: "Yes — when you open Fast Memo it quietly checks whether a newer version is available.",
       text_2_0:
         "When there's an update, a 'What's new?' screen shows what changed. You can also check anytime from the settings.",
+      text_3_0:
+        "In the desktop app, click 'Install' and the update downloads and installs by itself, then the app restarts. On the phone, small fixes can also arrive on their own and apply the next time you open the app.",
     },
     what_report_problem: {
       title: "How do I report a problem?",
@@ -913,6 +945,7 @@ const en = {
       text_1_0:
         "Webhooks are for power users: they let Fast Memo notify another service whenever something happens — a note created, updated or deleted, a category changed, data exported, and so on.",
       text_2_0: "Each action can call a web address of your choice. You set them up in Settings → Webhooks.",
+      text_link: "Read the webhooks guide →",
     },
     what_platforms: {
       title: "Where can I use Fast Memo?",
@@ -920,14 +953,29 @@ const en = {
       text_2_0:
         "Connect each device to the same Google Firebase project or FastMemo Server and your notes stay in sync everywhere.",
     },
+    what_desktop_shortcuts: {
+      title: "Are there keyboard shortcuts on the computer?",
+      text_1_0: "Yes, in the desktop app:",
+      text_2_0: "• Ctrl/⌘+N — new note.",
+      text_3_0: "• Ctrl/⌘+F — search your notes, or find text in an open text note.",
+      text_4_0: "• Ctrl/⌘+, — open the settings.",
+      text_5_0: "• Esc — go back; in a text field, the first Esc only leaves the field.",
+      text_6_0: "• Ctrl/⌘+Enter — save the Quick note.",
+      text_7_0:
+        "On a Mac the same commands are in the menu bar, together with the other note types and Export/Import Data. Closing the window keeps Fast Memo running: click its icon in the Dock to bring it back, or quit it with ⌘Q.",
+      text_8_0: "On Windows and Linux, closing the window quits Fast Memo.",
+    },
     what_ai_assistant: {
       title: "What is the AI Assistant?",
       text_1_0:
         "Fast Memo includes a self-hosted AI Assistant that runs entirely on your device. No data is sent to external servers.",
-      text_2_0: "To set it up, go to Settings -> AI Assistant, choose a model and download it.",
+      text_2_0: "To set it up, go to Settings → AI Assistant, choose a model and download it.",
       text_3_0:
-        "Once enabled, a sparkle button appears inside each note editor. Tap it to access smart actions like: generate a title, summarize, continue writing, format text, suggest checklist items, or suggest a category.",
-      text_4_0: "The AI works offline and supports multiple languages.",
+        "Once enabled, a sparkle button appears in the note editor. Depending on the note type, tap it to generate a title, summarize (the summary goes at the top of the note), fix grammar, make the text shorter, translate it into the language you choose, suggest checklist items or suggest a category.",
+      text_4_0: "Some actions need a bigger model: Settings → AI Assistant shows what each model can do.",
+      text_5_0: "It can also clean up your voice dictation, and here in Help it finds the right topic from your own words.",
+      text_6_0: "The AI works offline and supports multiple languages.",
+      text_link: "Read the AI Assistant guide →",
     },
   },
   report: {
