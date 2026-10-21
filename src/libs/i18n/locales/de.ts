@@ -3,43 +3,43 @@ const de = {
   languageName: "Deutsch",
 
   date: {
-    mon: "Mon",
-    tue: "Die",
-    wed: "Mit",
-    thu: "Don",
-    fri: "Fre",
-    sat: "Sam",
-    sun: "Son",
+    mon: "Mo",
+    tue: "Di",
+    wed: "Mi",
+    thu: "Do",
+    fri: "Fr",
+    sat: "Sa",
+    sun: "So",
   },
   changelog: {
     title: "Was gibt's Neues?",
 
     web: {
-      description_1_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Deine Notizen werden mit deinem eigenen Schlüssel geschützt.
+      description_1_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Ihre Notizen werden mit Ihrem eigenen Schlüssel geschützt.
 • Neue Schnellnotiz-Leiste, um direkt vom Startbildschirm eine Notiz zu erfassen.
 • Überarbeiteter Hilfe-Bereich mit KI-gestützter intelligenter Suche.
 • Verschiedene Fehlerbehebungen und Verbesserungen.`,
 
-      description_1_1_1: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
+      description_1_1_1: `• Offline-Notizen hinzugefügt: Behalten Sie eine Notiz nur auf diesem Gerät, ohne sie mit der Cloud zu synchronisieren.
 • Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
 • Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
-• Ruckgangig/Wiederholen und Durchstreichen im Texteditor hinzugefugt.
-• Das Entsperren am Desktop unterstutzt jetzt Touch ID und Windows Hello.
+• Rückgängig/Wiederholen und Durchstreichen im Texteditor hinzugefügt.
+• Das Entsperren am Desktop unterstützt jetzt Touch ID und Windows Hello.
 • Verschiedene Fehlerbehebungen.`,
 
       description_1_0_0: `• Erste stabile Version von Fast Memo Desktop (kein BETA mehr).
-• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
-• Onboarding mit neuen Einfuhrungsschritten neu gestaltet.
-• Einstellungen zur Notizerstellung hinzugefugt, um Standardwerte anzupassen.
-• Schritt-Modus fur To-Do-Notizen hinzugefugt.
+• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflächen und Verläufen.
+• Onboarding mit neuen Einführungsschritten neu gestaltet.
+• Einstellungen zur Notizerstellung hinzugefügt, um Standardwerte anzupassen.
+• Schritt-Modus für To-Do-Notizen hinzugefügt.
 • Verschiedene Fehlerbehebungen.`,
 
       description_0_3_0: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
-• Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
-• Notiz-Export hinzugefugt.
+• Such- und Ersetzungsfunktion in Textnotizen hinzugefügt.
+• Notiz-Export hinzugefügt.
 • Verschiedene Fehlerbehebungen.`,
 
-      description_0_2_0: `• Kanban-Spalten koennen jetzt verschoben werden.
+      description_0_2_0: `• Kanban-Spalten können jetzt verschoben werden.
 • Animationen verbessert.
 • Verschiedene Korrekturen.`,
 
@@ -50,32 +50,32 @@ const de = {
     },
 
     mobile: {
-      description_3_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Deine Notizen werden mit deinem eigenen Schlüssel geschützt.
+      description_3_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Ihre Notizen werden mit Ihrem eigenen Schlüssel geschützt.
 • Neue Schnellnotiz-Leiste, um direkt vom Startbildschirm eine Notiz zu erfassen.
 • Überarbeiteter Hilfe-Bereich mit KI-gestützter intelligenter Suche.
 • Verschiedene Fehlerbehebungen und Verbesserungen.`,
 
-      description_3_1_1: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
+      description_3_1_1: `• Offline-Notizen hinzugefügt: Behalten Sie eine Notiz nur auf diesem Gerät, ohne sie mit der Cloud zu synchronisieren.
 • Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
 • Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
-• Ruckgangig/Wiederholen und Durchstreichen im Texteditor hinzugefugt.
+• Rückgängig/Wiederholen und Durchstreichen im Texteditor hinzugefügt.
 • Verschiedene Fehlerbehebungen.`,
 
-      description_3_0_0: `• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
-• Onboarding mit neuen Einfuhrungsschritten neu gestaltet.
-• Einstellungen zur Notizerstellung hinzugefugt, um Standardwerte anzupassen.
-• Schritt-Modus fur To-Do-Notizen hinzugefugt.
+      description_3_0_0: `• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflächen und Verläufen.
+• Onboarding mit neuen Einführungsschritten neu gestaltet.
+• Einstellungen zur Notizerstellung hinzugefügt, um Standardwerte anzupassen.
+• Schritt-Modus für To-Do-Notizen hinzugefügt.
 • App-Icon und Startbildschirm aufgefrischt.
 • Verschiedene Fehlerbehebungen.`,
 
       description_2_9_1: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
-• Qwen 2.5 7B Modell mit Gerate-RAM-Erkennung hinzugefugt. Neue AI-Aktionen fur Code: Code erklaren und Kommentare hinzufugen.
-• Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
-• Notiz-Export hinzugefugt.
+• Qwen 2.5 7B Modell mit Geräte-RAM-Erkennung hinzugefügt. Neue AI-Aktionen für Code: Code erklären und Kommentare hinzufügen.
+• Such- und Ersetzungsfunktion in Textnotizen hinzugefügt.
+• Notiz-Export hinzugefügt.
 • Verschiedene Fehlerbehebungen.`,
 
-      description_2_8_0: `• Self-hosted KI-Assistent (Qwen 2.5) mit smarten Funktionen fuer Notizen hinzugefuegt. Einrichtung unter Einstellungen -> KI-Assistent.
-• Kanban-Spalten koennen jetzt verschoben werden.
+      description_2_8_0: `• Self-hosted KI-Assistent (Qwen 2.5) mit smarten Funktionen für Notizen hinzugefügt. Einrichtung unter Einstellungen -> KI-Assistent.
+• Kanban-Spalten können jetzt verschoben werden.
 • Animationen verbessert.
 • Verschiedene Korrekturen.`,
 
@@ -258,12 +258,12 @@ const de = {
     cards_count: "Karten",
   },
   code: {
-    add_tab: "Tab hinzufugen",
+    add_tab: "Tab hinzufügen",
     tab_title_placeholder: "Dateiname",
     code_placeholder: "Schreiben Sie Ihren Code hier...",
     max_tabs_reached: "Maximum von 6 Tabs erreicht",
-    delete_tab: "Tab loschen",
-    delete_tab_confirm: "Möchtest du diesen Tab wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+    delete_tab: "Tab löschen",
+    delete_tab_confirm: "Möchten Sie diesen Tab wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
     language: "Sprache",
   },
   changecategory: {
@@ -429,8 +429,8 @@ const de = {
     addTextNote: "Textnotiz hinzufügen",
     addTodoNote: "Todo-Notiz hinzufügen",
     addKanbanNote: "Kanban-Notiz hinzufügen",
-    addCodeNote: "Code-Notiz hinzufugen",
-    updateNote: "Nota de actualización",
+    addCodeNote: "Code-Notiz hinzufügen",
+    updateNote: "Notiz aktualisieren",
     temporaryDeleteNote: "Notiz vorübergehend löschen",
     deleteNote: "Notiz löschen",
     restoreNote: "Notiz wiederherstellen",
@@ -450,8 +450,8 @@ const de = {
     days: "Tage",
     change_secret_code: "Ändern Sie Ihren Geheimcode",
     enable_fingerprint: "Fingerabdruck aktivieren",
-    fingerprint_reason: "Entsperre deine Notizen",
-    advanced: "Fortschrittlich",
+    fingerprint_reason: "Entsperren Sie Ihre Notizen",
+    advanced: "Erweitert",
     show_hidden: "Versteckte Notizen anzeigen",
     export_import_data: "Daten exportieren/importieren",
     export_import_popup_title: "Geheime Passphrase",
@@ -502,7 +502,7 @@ const de = {
       smart: "Intelligent",
       smart_description: "Tippen erstellt immer den unten gewählten Typ.",
       adaptive: "Adaptiv",
-      adaptive_description: "Tippen erstellt denselben Typ wie deine letzte Notiz.",
+      adaptive_description: "Tippen erstellt denselben Typ wie Ihre letzte Notiz.",
     },
   },
   aboutdeveloper: {
@@ -524,12 +524,12 @@ const de = {
     downloading: "Wird heruntergeladen...",
     download_model: "Modell herunterladen",
     cancel: "Abbrechen",
-    delete_model: "Modell loeschen",
+    delete_model: "Modell löschen",
     info: "Der KI-Assistent läuft vollständig auf Ihrem Gerät. Es werden keine Daten an externe Server gesendet. Das Modell wird einmal heruntergeladen (ab ~530 MB) und lokal gespeichert.",
     model_light: "Schnell, Basisqualität. 3GB+ RAM erforderlich.",
     model_powerful: "Gute Balance zwischen Geschwindigkeit und Qualität. 4GB+ RAM erforderlich.",
     model_advanced: "Beste Qualität. 6GB+ RAM erforderlich.",
-    model_unavailable: "Nicht genug RAM auf diesem Gerat",
+    model_unavailable: "Nicht genug RAM auf diesem Gerät",
     recommended: "Empfohlen",
     old_models_title: "Alte KI-Modelle: {{size}}",
     old_models_desc:
@@ -540,22 +540,22 @@ const de = {
     capabilities_title: "Was kann ich?",
     cap: {
       generate_title: "Titel aus dem Notizinhalt generieren",
-      summarize: "Textnotiz in wenigen Saetzen zusammenfassen",
+      summarize: "Textnotiz in wenigen Sätzen zusammenfassen",
       fix_grammar: "Rechtschreibung und Grammatik korrigieren",
       shorten: "Einen Text kürzer und prägnanter machen",
       translate: "Eine Notiz in eine Sprache Ihrer Wahl übersetzen",
-      suggest_items: "Neue Elemente fuer eine Checkliste vorschlagen",
-      suggest_category: "Die beste Kategorie fuer eine Notiz vorschlagen",
+      suggest_items: "Neue Elemente für eine Checkliste vorschlagen",
+      suggest_category: "Die beste Kategorie für eine Notiz vorschlagen",
       voice_cleanup: "Diktierten Text mit Satzzeichen aufräumen",
     },
-    unavailable_web: "KI-Assistent ist nur auf Mobilgeraeten verfuegbar.",
-    native_rebuild_needed: "KI-Assistent erfordert einen nativen Rebuild.\nFuehre aus: npx expo run:android",
+    unavailable_web: "KI-Assistent ist nur auf Mobilgeräten verfügbar.",
+    native_rebuild_needed: "KI-Assistent erfordert einen nativen Rebuild.\nFühren Sie aus: npx expo run:android",
     voice_only: "Nur Sprache",
     voice_only_hint: "Mit dem Assistenten nur per Sprache interagieren",
-    listening: "Hoere zu...",
+    listening: "Höre zu...",
     tap_to_speak: "Tippen Sie auf das Mikrofon zum Sprechen",
     sending_soon: "Wird gesendet...",
-    placeholder: "Was moechten Sie tun?",
+    placeholder: "Was möchten Sie tun?",
     processing: "Denke nach...",
     feedback: {
       note_created: 'Notiz "{{title}}" erstellt',
@@ -564,7 +564,7 @@ const de = {
       category_changed: "{{count}} Notiz(en) verschoben",
       done: "Fertig",
       note_renamed: 'Notiz umbenannt in "{{title}}"',
-      items_added: "{{count}} Element(e) hinzugefuegt",
+      items_added: "{{count}} Element(e) hinzugefügt",
       category_created: 'Kategorie "{{name}}" erstellt',
       note_restored: "{{count}} Notiz(en) wiederhergestellt",
       category_switched: 'Gewechselt zu "{{name}}"',
@@ -573,14 +573,14 @@ const de = {
       not_todo_note: "Diese Notiz ist keine Checkliste",
       category_exists: "Kategorie existiert bereits",
       note_converted: 'Notiz "{{title}}" konvertiert',
-      notes_merged: 'Notizen zu "{{title}}" zusammengefuegt',
+      notes_merged: 'Notizen zu "{{title}}" zusammengeführt',
       setting_changed: "Einstellung aktualisiert",
       help_message:
-        'Ich kann Notizen, Listen und Boards erstellen, loeschen, umbenennen, konvertieren und zusammenfuegen.\nVersuche: "Erstelle eine Einkaufsliste mit Milch und Brot"\nAlle Funktionen unter Einstellungen > KI-Assistent.',
+        'Ich kann Notizen, Listen und Boards erstellen, löschen, umbenennen, konvertieren und zusammenführen.\nVersuchen Sie: "Erstelle eine Einkaufsliste mit Milch und Brot"\nAlle Funktionen unter Einstellungen > KI-Assistent.',
       same_type: "Die Notiz ist bereits von diesem Typ",
       not_understood: "Ich kann nur bei Notizen helfen",
-      error: "Etwas ist schiefgelaufen, versuche es erneut",
-      voice_unavailable: "Sprache nicht verfuegbar",
+      error: "Etwas ist schiefgelaufen, bitte versuchen Sie es erneut",
+      voice_unavailable: "Sprache nicht verfügbar",
     },
     editor: {
       generate_title: "Titel generieren",
@@ -597,16 +597,16 @@ const de = {
       after: "Nachher",
       apply: "Anwenden",
       content_changed: "Die Notiz hat sich geändert, während die KI gearbeitet hat: Bitte erneut ausführen.",
-      no_content: "Schreibe zuerst etwas",
+      no_content: "Schreiben Sie zuerst etwas",
       no_category_match: "Keine passende Kategorie gefunden",
       no_improvement: "Die KI konnte diesen Text nicht verbessern: Er bleibt unverändert.",
-      too_long: "Der Text ist zu lang für die KI: Versuche es mit einem kürzeren Teil.",
+      too_long: "Der Text ist zu lang für die KI: Versuchen Sie es mit einem kürzeren Teil.",
       note_too_long: "Notiz zu lang für dieses Modell",
       progress: "Teil {{current}} von {{total}}",
       summary_label: "Zusammenfassung",
       summary_on_top: "Sie steht oben in der Notiz; darunter bleibt die Notiz unverändert.",
       summary_replaces: "Sie steht oben in der Notiz, anstelle der vorherigen Zusammenfassung.",
-      error: "Konnte nicht generieren, versuche es erneut",
+      error: "Generierung fehlgeschlagen, bitte versuchen Sie es erneut",
     },
   },
   voicerecognition: {
@@ -970,8 +970,8 @@ const de = {
       other: "Andere",
     },
     descriptionPlaceholder: "Bitte beschreiben Sie das Problem ausführlich (erforderlich)",
-    deviceInfoCheckbox: "Für eine genauere Diagnose bitten wir Sie, uns bitte Gerätedetails bereitzustellen.",
-    attachments: "Füge Bilder hinzu",
+    deviceInfoCheckbox: "Für eine genauere Diagnose bitten wir Sie, uns Gerätedetails bereitzustellen.",
+    attachments: "Bilder hinzufügen",
     sendReport: "Bericht senden",
 
     sent_message_1: "Vielen Dank für das Einreichen des Berichts.",
@@ -1119,7 +1119,7 @@ const de = {
     summer: "Sommer",
     close_title: "Icon ändern",
     close_description:
-      "Um das neue Icon zu übernehmen, wird Fast Memo geschlossen. Öffne die App danach wieder über den Startbildschirm.",
+      "Um das neue Icon zu übernehmen, wird Fast Memo geschlossen. Öffnen Sie die App danach wieder über den Startbildschirm.",
     close_confirm: "Ändern und schließen",
     failed: "Das Icon konnte nicht geändert werden.",
     unavailable: "Auf diesem Gerät nicht verfügbar",

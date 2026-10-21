@@ -419,7 +419,7 @@ const ja = {
     title: "Webhooks",
     addTextNote: "テキストノートを追加",
     addTodoNote: "ToDoノートを追加",
-    addKanbanNote: "カンバンノー��を追加",
+    addKanbanNote: "カンバンノートを追加",
     addCodeNote: "コードノートを追加",
     updateNote: "ノートを更新",
     temporaryDeleteNote: "一時的にノートを削除",

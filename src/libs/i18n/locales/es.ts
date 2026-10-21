@@ -425,7 +425,7 @@ const es = {
     addTodoNote: "Agregar Nota Todo",
     addKanbanNote: "Agregar Nota Kanban",
     addCodeNote: "Agregar Nota de Codigo",
-    updateNote: "Nota de actualización",
+    updateNote: "Actualizar nota",
     temporaryDeleteNote: "Nota de borrado temporal",
     deleteNote: "Borrar nota",
     restoreNote: "Restaurar nota",
