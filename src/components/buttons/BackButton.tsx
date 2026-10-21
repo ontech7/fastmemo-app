@@ -4,6 +4,7 @@ import { Keyboard, TouchableOpacity } from "react-native";
 import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
 
 import IconChip from "@/components/ui/IconChip";
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import { useTourTarget } from "@/hooks/useTourTarget";
@@ -15,9 +16,14 @@ interface Props {
   chip?: boolean;
   /** Something the first-note tour can point at, under this name. */
   tourTarget?: string;
+  /**
+   * Esc presses it on desktop. Off where leaving would lose what's on screen (a one-time key, text being typed) or while
+   * the screen is in a mode the back key should end first.
+   */
+  shortcut?: boolean;
 }
 
-export default function BackButton({ callback = null, style = {}, chip = false, tourTarget }: Props) {
+export default function BackButton({ callback = null, style = {}, chip = false, tourTarget, shortcut = true }: Props) {
   const { t } = useTranslation();
   const targetRef = useTourTarget(tourTarget);
 
@@ -35,6 +41,7 @@ export default function BackButton({ callback = null, style = {}, chip = false, 
       style={style}
       activeOpacity={0.7}
       onPress={onPress}
+      testID={shortcut ? SHORTCUT_TARGET.back : undefined}
       accessibilityRole="button"
       accessibilityLabel={t("a11y.back")}
     >

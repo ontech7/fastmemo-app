@@ -551,6 +551,24 @@ Raw DOM nodes (`<div>` in a `.web.tsx`, e.g. for Embla) don't get react-native-w
 `boxSizing: "border-box"` when they're sized with padding. UI that can be resized (web, Tauri windows) reads dimensions with
 `useWindowDimensions()`, never `Dimensions.get()` at module scope (LL-036).
 
+### Desktop Keyboard Shortcuts
+
+On desktop (Tauri), `useKeyboardShortcuts` (in `_layout`) makes a key press a control on screen, marked with a `SHORTCUT_TARGET`
+`testID` (`@/constants/shortcuts`): Esc presses `BackButton`, Cmd/Ctrl+N the new-note FAB, Cmd/Ctrl+F focuses a search field or
+presses the note's find button. A key does nothing when its control is covered (a dialog, menu or dimmed overlay over its
+center), so a shortcut never does more than a click could. Esc in a text field only leaves the field, and F5/Cmd/Ctrl+R are
+blocked in release builds (a reload drops the edits not yet saved).
+
+- A screen's back control is `BackButton` (or `CloseButton`), so Esc works there; a search field is `SearchInput` or carries
+  `testID={SHORTCUT_TARGET.find}`.
+- `BackButton shortcut={false}` where leaving would lose what's on screen (the one-time recovery key, a form being typed:
+  report, connect, recovery key entry) and while a mode is on that Android's back ends first (trash selection, category
+  organizing). The home FAB is the Esc target in delete mode, since it ends the selection.
+- A control that changes meaning (the FAB in delete mode, the find button once the bar is open) changes or drops its `testID`
+  meanwhile.
+- The window listens in the capture phase: react-native-web's `TextInput` stops keys from bubbling. Iframes (the rich text and
+  code editors) get the same listener when they load.
+
 ### Never Import with Explicit Platform Suffix
 
 Consumers must ALWAYS import the suffix-less path. Never write `from "./Component.native"` or `from "./Component.web"` --

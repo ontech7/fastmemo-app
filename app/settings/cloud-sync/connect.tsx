@@ -177,7 +177,7 @@ export default function CloudSyncScreen() {
         <AppBackground style={StyleSheet.absoluteFill} />
 
         <View style={styles.header}>
-          <BackButton chip />
+          <BackButton chip shortcut={false} />
 
           <Text style={styles.headerTitle}>{t("cloudsync.title")}</Text>
 

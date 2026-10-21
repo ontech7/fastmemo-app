@@ -272,7 +272,7 @@ export default function ReportScreen() {
         <AppBackground style={StyleSheet.absoluteFill} />
 
         <View style={styles.header}>
-          <BackButton chip />
+          <BackButton chip shortcut={false} />
 
           <Text style={styles.headerTitle}>{t("report.title")}</Text>
 

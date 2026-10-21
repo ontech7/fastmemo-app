@@ -52,6 +52,7 @@ export default function VaultRecoveryScreen() {
 
       <VaultScreen
         title={t("cloudsync.vault.recovery_title")}
+        backShortcut={false}
         footer={<VaultButton label={t("cloudsync.vault.recovery_saved")} onPress={confirm} disabled={loading} />}
       >
         <VaultDescription>{t("cloudsync.vault.recovery_desc")}</VaultDescription>

@@ -5,6 +5,7 @@ import type { StyleProp, ViewStyle } from "react-native";
 import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, COLOR, FONT, PADDING_MARGIN } from "@/constants/styles";
 import GlassSurface from "@/components/ui/GlassSurface";
 
@@ -40,6 +41,7 @@ export default function SearchInput({ value, onChangeText, placeholder, icon, on
         placeholderTextColor={COLOR.placeholder}
         style={styles.searchInput}
         returnKeyType="search"
+        testID={SHORTCUT_TARGET.find}
         onSubmitEditing={() => {
           Keyboard.dismiss();
           onSubmit?.();

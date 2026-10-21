@@ -1,3 +1,4 @@
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -221,6 +222,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
           placeholderTextColor={COLOR.textSecondary}
           cursorColor={COLOR.softWhite}
           returnKeyType="search"
+          testID={SHORTCUT_TARGET.find}
           onSubmitEditing={() => navigateMatch("next")}
         />
         <Text style={styles.matchCount}>{matchCount > 0 ? `${currentMatch}/${matchCount}` : "0/0"}</Text>
