@@ -800,9 +800,10 @@ Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file tha
 7. **A note's text goes to the model through `rewriteNote` / `summarizeNote`** (`libs/ai/longNote.ts`), never whole: they work
    line by line on the HTML (`blocks.ts`) and give HTML back with the structure kept. Never `stripHtml` a note, rewrite it and
    `setContentHTML` the plain answer.
-8. **Remove from the user's text only what the app can prove it added** (LL-058): `cleanAnswer` strips quotes or a "Title:" only
-   when the input didn't have them, and only for the action that adds them; an AI summary is recognized by its
-   `data-fm="summary"` mark at the very top, never by a label's wording.
+8. **Remove from the user's text only what the app can prove it added** (LL-058): `cleanAnswer` strips quotes only when they
+   wrap the whole answer, not the input, and no other quote of the kind is inside (dialogue keeps its quotes); a "Title:" or
+   "Summary:" label only from a title or a summary. An AI summary is recognized by its `data-fm="summary"` mark at the very top,
+   never by a label's wording, and on doubt (the mark copied onto the next line) nothing is taken for it.
 
 ---
 

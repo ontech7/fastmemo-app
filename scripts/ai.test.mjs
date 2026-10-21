@@ -310,6 +310,10 @@ eq("blocks: text of the units, one per line", B.blocksText(B.splitNoteBlocks(NOT
   const edited = '<div><b data-fm="summary">Riassunto</b></div><div>Mine <i>too</i><div>nested</div> end</div><div>after</div>';
   eq("summary: one the user edited goes whole (nested markup too)", B.withoutSummary(edited), "<div>after</div>");
   for (const [name, html] of [
+    [
+      "a line the user started after the label (its mark copied by Enter)",
+      '<div><b data-fm="summary">Riassunto</b></div><div><b data-fm="summary">mia riga</b></div><div>vecchio</div>',
+    ],
     ["a bold line the user wrote", "<div><b>Riassunto</b></div><div>We agreed X.</div>"],
     ["a bold label before a list", "<div><b>Summary</b></div><ul><li>first</li><li>second</li></ul>"],
     [
@@ -344,12 +348,33 @@ eq("chunks: a text over the budget is split first", B.chunkTexts(["a".repeat(70)
   eq("split: cut after a sentence", pieces[0], "Prima frase. ");
   eq("split: short text, one piece", B.splitText("Breve.", 12), ["Breve."]);
   eq("split: a script without spaces still cut", B.splitText("日本語".repeat(10), 8).join(""), "日本語".repeat(10));
+  const numbers =
+    "Il totale ammonta a 2.300 euro più IVA, vedi https://docs.example.com/path e poi " + "parola ".repeat(40) + "fine.";
+  ok(
+    "split: never after a number's or a URL's dot",
+    B.splitText(numbers, 12).every((piece) => !/\d\.$|example\.$/.test(piece.trimEnd())),
+    B.splitText(numbers, 12)
+  );
+  const emoji = "漢字😀".repeat(400);
+  const halves = B.splitText(emoji, 50);
+  eq(
+    "split: an emoji is never cut in half",
+    [halves.join("") === emoji, halves.some((p) => /^[\udc00-\udfff]|[\ud800-\udbff]$/.test(p))],
+    [true, false]
+  );
 }
 
 // --- what's left of an answer cut off ---
-eq("cut answer: up to the last full sentence", H.completeSentences("Uno. Due! Tre e poi qu"), "Uno. Due!");
-eq("cut answer: CJK punctuation", H.completeSentences("東京に行った。京都も"), "東京に行った。");
-eq("cut answer: no sentence ended: nothing", H.completeSentences("Solo un pezzo"), "");
+eq("cut answer: up to the last full sentence", B.completeSentences("Uno. Due! Tre e poi qu"), "Uno. Due!");
+eq("cut answer: CJK punctuation", B.completeSentences("東京に行った。京都も"), "東京に行った。");
+eq("cut answer: no sentence ended: nothing", B.completeSentences("Solo un pezzo"), "");
+eq("cut answer: a number isn't a sentence end", B.completeSentences("Spesa 2.300 euro. Marco paga 1.200"), "Spesa 2.300 euro.");
+eq("cut answer: ...nor a decimal", B.completeSentences("Revenue grew 3.5% and the dr"), "");
+eq(
+  "cut answer: a list keeps its whole lines",
+  B.completeSentences("- Budget 38k\n- Riunione il 14\n- Marco pa"),
+  "- Budget 38k\n- Riunione il 14"
+);
 
 // --- a grammar fix keeps the words ---
 ok(
@@ -360,6 +385,15 @@ ok(
   "grammar: a heavy fix of a short line passes",
   H.isPlausibleRewrite("fix_grammar", "Me and him has decided", "He and I have decided")
 );
+for (const [typo, fixed] of [
+  ["Telefonre a mamam", "Telefonare a mamma"],
+  ["Chiamre dentsta", "Chiamare dentista"],
+  ["Riunone con Marcco", "Riunione con Marco"],
+  ["recieve teh pakage", "receive the package"],
+  ["He dont knows", "He doesn't know"],
+]) {
+  ok(`grammar: typos fixed on a short line pass (${typo})`, H.isPlausibleRewrite("fix_grammar", typo, fixed));
+}
 ok(
   "grammar: a line turned into another language is thrown away",
   !H.isPlausibleRewrite("fix_grammar", "Prima del trasloco", "Antes del traslado")
@@ -388,6 +422,32 @@ eq(
 );
 eq("clean: ...nor from dictation", H.cleanAnswer("clean_transcript", "titolo: ciao", "Titolo: ciao"), "Titolo: ciao");
 eq("clean: bold around the answer", H.cleanAnswer("summarize", "x", "**Short.**"), "Short.");
+eq(
+  "clean: dialogue keeps its quotes",
+  H.cleanAnswer("translate", '"Hello," he said, "see you."', "«Ciao», disse, «a domani.»"),
+  "«Ciao», disse, «a domani.»"
+);
+eq("clean: ...in Japanese too", H.cleanAnswer("translate", "x", "「はい」と「いいえ」"), "「はい」と「いいえ」");
+eq(
+  "clean: a quoted input stays quoted in new quotes",
+  H.cleanAnswer("translate", '"Carpe diem"', "«Cogli l'attimo»"),
+  "«Cogli l'attimo»"
+);
+eq(
+  "clean: a closing quote the fix added stays",
+  H.cleanAnswer("fix_grammar", '"ciao" disse lui, "vieni qui', '"Ciao" disse lui, "vieni qui"'),
+  '"Ciao" disse lui, "vieni qui"'
+);
+eq(
+  "clean: two quoted words in a title stay",
+  H.cleanAnswer("generate_title", "note", '"Meeting" and "notes"'),
+  '"Meeting" and "notes"'
+);
+eq(
+  "clean: a title's label goes even if the note starts with one",
+  H.cleanAnswer("generate_title", "Titolo: bozza", "Titolo: Relazione Q3"),
+  "Relazione Q3"
+);
 
 // --- long notes: one step per paragraph (or part), against the stub model ---
 const run = async (fn) => {
@@ -459,6 +519,9 @@ const run = async (fn) => {
     big.result.html,
     "<div>T1</div><div>t2 <b>x</b></div><div>T3</div>"
   );
+  M.setAnswer(() => ({ success: false, error: "too_long" }));
+  const nothingFits = await run((h) => L.rewriteNote("fix_grammar", "<div>u1</div><div>u2</div>", h));
+  eq('long: no line fits: too long, not "no improvement"', nothingFits.result.error, "too_long");
 }
 {
   M.setAnswer((_a, c) => {

@@ -17,14 +17,8 @@ import {
   normalizeModelId,
   truncateForAction,
 } from "./constants";
-import {
-  categoryGrammar,
-  cleanAnswer,
-  cleanSuggestedItems,
-  completeSentences,
-  isPlausibleRewrite,
-  stripThinking,
-} from "./helpers";
+import { completeSentences } from "./blocks";
+import { categoryGrammar, cleanAnswer, cleanSuggestedItems, isPlausibleRewrite, stripThinking } from "./helpers";
 import type {
   AIModelId,
   AIModelInfo,

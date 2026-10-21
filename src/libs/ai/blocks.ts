@@ -250,7 +250,8 @@ function summaryEnd(html: string): number {
   const open = re.exec(html);
   if (open?.index !== label[0].length || open[1]?.toLowerCase() !== "div" || open[0][1] === "/") return 0;
   const close = findClose(html, "div", re.lastIndex);
-  if (!close) return 0;
+  // Enter at the end of the label copies its mark onto the user's next line: on doubt, nothing is taken for the summary
+  if (!close || html.slice(re.lastIndex, close.start).includes("data-fm")) return 0;
   const gap = /^<div><br\s*\/?><\/div>/i.exec(html.slice(close.end));
   return close.end + (gap ? gap[0].length : 0);
 }
@@ -283,6 +284,27 @@ export function estimateTokens(text: string): number {
 }
 
 /**
+ * Whether a sentence ends at `text[i]`: a full stop, "!" or "?" before a space or the end ("2.300", "e.g." and a URL's dots
+ * don't end one), a CJK one, or a line break.
+ */
+function endsSentence(text: string, i: number): boolean {
+  if (/[。！？\n]/.test(text[i])) return true;
+  const next = text[i + 1];
+  return /[.!?]/.test(text[i]) && (next === undefined || /\s/.test(next));
+}
+
+/**
+ * What's left of an answer cut off mid-way: up to its last complete sentence, or its last complete line (a list); empty if
+ * none ended.
+ */
+export function completeSentences(text: string): string {
+  for (let i = text.length - 1; i >= 0; i--) {
+    if (endsSentence(text, i)) return text.slice(0, i + 1).trim();
+  }
+  return "";
+}
+
+/**
  * `text` in consecutive pieces of about `budget` tokens at most, cut after a sentence (or, in a sentence longer than that,
  * after a space). Joining the pieces gives `text` back.
  */
@@ -292,7 +314,8 @@ export function splitText(text: string, budget: number): string[] {
   const sentences: string[] = [];
   let from = 0;
   for (let i = 0; i < text.length; i++) {
-    if (!/[.!?。！？\n]/.test(text[i]) || /[.!?。！？\n]/.test(text[i + 1] ?? "")) continue;
+    // (a run of marks ends at its last one)
+    if (!endsSentence(text, i) || /[。！？\n]/.test(text[i + 1] ?? "")) continue;
     let end = i + 1;
     while (end < text.length && /\s/.test(text[end])) end++;
     sentences.push(text.slice(from, end));
@@ -321,6 +344,8 @@ export function splitText(text: string, budget: number): string[] {
       let end = Math.min(sentence.length, at + size);
       const space = sentence.lastIndexOf(" ", end - 1);
       if (end < sentence.length && space > at + size * 0.6) end = space + 1;
+      // never between the two halves of an emoji
+      if (end < sentence.length && /[\udc00-\udfff]/.test(sentence[end])) end = end > at + 1 ? end - 1 : end + 1;
       add(sentence.slice(at, end));
       at = end;
     }

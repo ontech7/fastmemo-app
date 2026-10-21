@@ -111,6 +111,7 @@ export async function rewriteNote(
   if (steps.length === 0) return { success: false, error: "implausible_output" };
 
   const rewrites = new Map<number, string>();
+  let tooLong = 0;
   // the lines rewritten, then the one under way (its pieces so far)
   const done: string[] = [];
   const show = (current: string) => handlers.onText?.([...done, current].filter((t) => t.trim()).join("\n\n"));
@@ -138,6 +139,7 @@ export async function rewriteNote(
         next = result.text.trim();
         remember(key, next);
       } else if (KEEPS_LINE.has(result.error ?? "")) {
+        if (result.error === "too_long") tooLong++;
         next = input;
       } else {
         return { success: false, error: result.error ?? "error" };
@@ -153,7 +155,7 @@ export async function rewriteNote(
   handlers.onProgress?.({ done: steps.length, total: steps.length });
 
   if ([...rewrites].every(([index, text]) => sameText(text, (segments[index] as Unit).text))) {
-    return { success: false, error: "implausible_output" };
+    return { success: false, error: tooLong === steps.length ? "too_long" : "implausible_output" };
   }
   const next = joinNoteBlocks(segments, rewrites);
   return { success: true, html: next, text: blocksText(splitNoteBlocks(next)) };

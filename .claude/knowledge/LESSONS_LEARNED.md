@@ -1566,10 +1566,10 @@ bold label in any language, so a note starting with the user's own bold "Riassun
 
 **Root cause:** Both guessed what the model or the app had added from what the text looked like, instead of checking it against
 the input or marking what the app writes.  
-**Fix:** `cleanAnswer(action, input, answer)`: quotes or bold are removed only when they wrap the whole answer and not the
-input, and a label only for the action that adds it (a title, a summary), and only if the input didn't start with it. The
-summary's label is written as `<b data-fm="summary">` and only that mark, at the very top, identifies it. Tests in
-`scripts/ai.test.mjs`.  
+**Fix:** `cleanAnswer(action, input, answer)`: quotes or bold are removed only when they wrap the whole answer, not the input,
+and no other quote of the kind is inside (a translated dialogue, two quoted words); a label only from a title or a summary. The
+summary's label is written as `<b data-fm="summary">` and only that mark, at the very top, identifies it; if the mark shows up
+again right after it (Enter copies it onto the next line), nothing is taken for the summary. Tests in `scripts/ai.test.mjs`.  
 **Rule:** Remove from the user's text only what the app can prove it added: compare with the input, or mark what it writes.
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch

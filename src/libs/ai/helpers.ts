@@ -103,12 +103,6 @@ export function createThrottle<T>(onValue: (value: T) => void, intervalMs = 50) 
   };
 }
 
-/** `text` up to its last complete sentence (all of it if none ends): what's left of an answer cut off mid-sentence. */
-export function completeSentences(text: string): string {
-  const end = Math.max(...[".", "!", "?", "。", "！", "？"].map((mark) => text.lastIndexOf(mark)));
-  return end === -1 ? "" : text.slice(0, end + 1);
-}
-
 /** A label the model may put before a title or a summary ("Titolo: ..."), by action. */
 const ANSWER_LABELS: Partial<Record<EditorAction, RegExp>> = {
   generate_title: /^(Title|Titolo|Titel|Título|Titulo|Titre|タイトル|标题)\s*[:：]\s*/i,
@@ -125,20 +119,26 @@ const QUOTE_PAIRS: [string, string][] = [
   ["**", "**"],
 ];
 
+const wraps = (text: string, [open, close]: [string, string]) =>
+  text.length > open.length + close.length && text.startsWith(open) && text.endsWith(close);
+
 /**
  * The model's answer without what it adds around it: quotes or bold around the whole answer, a "Title:" before a title or
- * a "Summary:" before a summary. Only what the input didn't have: a line that starts with a quote, or a note that says
- * "Title: ...", comes back as it was written.
+ * a "Summary:" before a summary. Only what the input didn't have: an input quoted as a whole stays quoted (in its new
+ * quotes, translated), and quotes that open and close inside the answer (dialogue, two quoted words) are the text's own.
  */
 export function cleanAnswer(action: EditorAction, input: string, answer: string): string {
   let text = answer.trim();
   const source = input.trim();
-  for (const [open, close] of QUOTE_PAIRS) {
-    const wrapped = text.length > open.length + close.length && text.startsWith(open) && text.endsWith(close);
-    if (wrapped && !(source.startsWith(open) && source.endsWith(close))) text = text.slice(open.length, -close.length).trim();
+  if (!QUOTE_PAIRS.some((pair) => wraps(source, pair))) {
+    for (const pair of QUOTE_PAIRS) {
+      const inner = text.slice(pair[0].length, -pair[1].length);
+      if (wraps(text, pair) && !inner.includes(pair[0]) && !inner.includes(pair[1])) text = inner.trim();
+    }
   }
+  // a title or a summary is new text: its label is never the note's
   const label = ANSWER_LABELS[action];
-  if (label && !label.test(source)) text = text.replace(label, "");
+  if (label) text = text.replace(label, "");
   return text.trim();
 }
 
@@ -160,8 +160,23 @@ const wordsOf = (text: string) =>
 function keepsWords(input: string, output: string): boolean {
   const before = wordsOf(input);
   if (before.length < 2) return true;
-  const after = new Set(wordsOf(output));
-  return before.filter((word) => after.has(word)).length / before.length >= 0.4;
+  const after = wordsOf(output);
+  // a word fixed by one letter added, dropped, changed or swapped is kept ("mamam" -> "mamma")
+  const kept = before.filter((word) => after.some((other) => oneEditApart(word, other)));
+  return kept.length / before.length >= 0.4;
+}
+
+/** Whether two words are the same, or one letter added, dropped, changed or two swapped apart. */
+function oneEditApart(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  if (a.length === b.length) {
+    // changed, or swapped with the next
+    return a.slice(i + 1) === b.slice(i + 1) || (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2));
+  }
+  return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
 }
 
 /**
