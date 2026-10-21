@@ -320,7 +320,7 @@ Guiding principle: **invisible, voice-first, one-tap AI** beats a menu of nine a
   category names + `none`. The model can then only output a valid category, and the fuzzy `includes` matching (which can
   pick wrong categories) goes away. Escape quotes and backslashes in names.
 - **`generate_title`**: fine as is. With the better models, consider an opt-in "auto-title untitled notes on close" running
-  on the 0.8B/2B (background, no UI, never overwrites a user title). **Decision for the developer.**
+  on the 0.8B/2B (background, no UI, never overwrites a user title). **Dropped 2026-10-21** (see §11 question 3).
 - **`suggest_items`**: keep. Feed the note title as context (it already does via `needsTitle`).
 - **Help search**: keep as is (only add `jinja`/`enable_thinking`).
 
@@ -480,6 +480,10 @@ Each phase should be a reviewable PR into `dev`.
    with "Copy"? (Code actions: **decided, removed**. 9B: **decided, not included** unless the eval says otherwise.)
    **Decided 2026-10-21:** `shorten` kept, run per paragraph; the summary is inserted at the top.
 3. Opt-in **auto-title** for untitled notes? **Decided 2026-10-21:** yes, opt-in, off by default (after long notes).
+   **Revised the same day: dropped.** The time doesn't grow with the note (`generate_title` reads only the first 800
+   characters), but every close of an untitled note would load the model (seconds, RAM, battery) and sync the title as a
+   second revision a few seconds later. An untitled note already shows its first line as the title placeholder, and
+   "Generate title" stays in the AI menu for when it's wanted.
 4. Default recommended tier: 2B for ≥ 6 GB RAM devices? **Decided 2026-10-21:** 2B from 5 GB.
 5. Ship **Voice → new note** (§7.1.5) in this cycle or the next? **Decided 2026-10-21:** after 4.0.0.
 

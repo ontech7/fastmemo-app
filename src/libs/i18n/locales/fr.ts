@@ -428,7 +428,7 @@ const fr = {
     addTodoNote: "Ajouter une note de tâche",
     addKanbanNote: "Ajouter une note Kanban",
     addCodeNote: "Ajouter une note Code",
-    updateNote: "Note de mise à jour",
+    updateNote: "Mettre à jour la note",
     temporaryDeleteNote: "Note de suppression temporaire",
     deleteNote: "Supprimer la note",
     restoreNote: "Restaurer la note",
