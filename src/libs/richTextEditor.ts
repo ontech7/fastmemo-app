@@ -138,7 +138,8 @@ export const RICH_TEXT_SCRIPT = String.raw`
   // A line is text, a heading, code, or a bullet or numbered item. Pressing the button of what it is makes it text.
   var toggle = function (type) {
     var s = selection();
-    if (!s.rangeCount) return;
+    // A read-only note (RichEditor's disabled): the repair of old markup would change it.
+    if (!s.rangeCount || !content().isContentEditable) return;
     keepSelection(function () {
       var current = typeAt(s.getRangeAt(0).startContainer);
       if (current === type) return off(type);

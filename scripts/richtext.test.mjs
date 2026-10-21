@@ -501,6 +501,21 @@ for (const [name, html, action, ok] of SAVED) {
   check(name, ok(s), s.html);
 }
 
+// 4. A read-only note (RichEditor's `disabled`): on web the toolbar stays on screen, and its buttons change nothing.
+await open(`<div>a</div><pre><pre><code type="">${B}</code></pre></pre><h1><ul><li>${G}</li></ul></h1>`);
+await post({ type: "content", name: "setDisable", data: true });
+const readOnly = (await state()).html;
+for (const [text, action] of [
+  [B, "code"],
+  [B, "heading1"],
+  [G, "heading1"],
+  [G, "unorderedList"],
+]) {
+  await select({ caret: text, at: 1 });
+  await press(action);
+}
+check("A read-only note doesn't change", (await state()).html === readOnly, `${readOnly} -> ${(await state()).html}`);
+
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");
 check("no page errors", !pageErrors.length, pageErrors.join("\n"));
 

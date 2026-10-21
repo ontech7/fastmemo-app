@@ -1687,7 +1687,7 @@ character offset. Backspace at the start of a list item removes the bullet. Ente
 one undo step. Images go in at the caret, with the caret on a new line. CSS guards cover notes saved with the nested markup. The
 check in the web app found one more case the hand-written test HTML didn't have: after H1 is turned off, Chrome keeps a line's
 text in a style `<span>`, and the code exit looked for the empty line only among the block's direct children. Now it looks at
-any depth. `scripts/richtext.test.mjs`: 618 checks on the real pell page with the note sanitizer; pell's own buttons fail 141 of
+any depth. `scripts/richtext.test.mjs`: 619 checks on the real pell page with the note sanitizer; pell's own buttons fail 141 of
 them.
 
 **Rule:** Never send a block format or a list command to pell directly (`formatBlock`, `insertUnorderedList` /
