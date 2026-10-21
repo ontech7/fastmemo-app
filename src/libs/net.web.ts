@@ -6,8 +6,17 @@ import { isTauri } from "@/utils/platform";
  * address as mixed content, and a server that doesn't answer CORS is refused.
  */
 
+// Missing before Safari 16.
+AbortSignal.timeout ??= function timeout(ms: number) {
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
+};
+
 const WEBHOOK_TIMEOUT_MS = 5000;
 
+/** This page load's prefix for request ids: Rust outlives a reload, and a request from before must not pass for a new one. */
+const LOAD_ID = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 let nextRequestId = 1;
 
 const tauriCore = () => import("@tauri-apps/api/core");
@@ -16,37 +25,48 @@ const cancelled = () => new DOMException("The request was cancelled", "AbortErro
 
 /**
  * `fetch` for the FastMemo server (`ServerBackend`). On desktop: the method, address, headers and a string body go to
- * Rust, the answer comes back as the status and the body bytes; aborting the signal cancels the request there.
+ * Rust, the answer comes back as the status and the body bytes; aborting the signal rejects at once and cancels the
+ * request there.
  */
 export const serverFetch: typeof fetch = async (input, init: RequestInit = {}) => {
   if (!isTauri()) return fetch(input, init);
 
-  const { invoke } = await tauriCore();
   const { signal } = init;
+  const text = init.body ?? "";
+  if (typeof text !== "string") throw new TypeError("serverFetch sends only text bodies");
+  const { invoke } = await tauriCore();
   if (signal?.aborted) throw cancelled();
 
-  const id = nextRequestId++;
-  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  const headers: Record<string, string> = { "x-fm-id": String(id), "x-fm-method": init.method ?? "GET", "x-fm-url": url };
+  const id = `${LOAD_ID}-${nextRequestId++}`;
+  // Written out in ASCII (punycode, percent-encoding): it travels in a header.
+  const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url).href;
+  const headers: Record<string, string> = {
+    "x-fm-id": id,
+    "x-fm-method": (init.method ?? "GET").toUpperCase(),
+    "x-fm-url": url,
+  };
   new Headers(init.headers).forEach((value, name) => {
     headers[`x-fm-h-${name}`] = value;
   });
-  const body = typeof init.body === "string" ? new TextEncoder().encode(init.body) : new Uint8Array(0);
+  const body = new TextEncoder().encode(text);
 
-  const cancel = () => {
-    invoke("net_cancel", { id }).catch(() => {});
-  };
-  signal?.addEventListener("abort", cancel);
+  let onAbort = () => {};
+  const aborted = new Promise<never>((_, reject) => {
+    onAbort = () => {
+      invoke("net_cancel", { id }).catch(() => {});
+      reject(cancelled());
+    };
+  });
+  signal?.addEventListener("abort", onAbort);
   try {
-    const answer = new Uint8Array(await invoke<ArrayBuffer>("net_request", body, { headers }));
-    if (signal?.aborted) throw cancelled();
+    const answer = new Uint8Array(await Promise.race([invoke<ArrayBuffer>("net_request", body, { headers }), aborted]));
     const status = (answer[0] << 8) | answer[1];
     const nullBody = status === 204 || status === 205 || status === 304;
     return new Response(nullBody ? null : answer.subarray(2), { status });
   } catch (e) {
     throw signal?.aborted ? cancelled() : e;
   } finally {
-    signal?.removeEventListener("abort", cancel);
+    signal?.removeEventListener("abort", onAbort);
   }
 };
 

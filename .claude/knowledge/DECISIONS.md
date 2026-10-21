@@ -652,15 +652,26 @@ who want their notes at home (PC, NAS, Raspberry Pi, VPS) had no option. ADR-016
     time, ~80 ms of CPU on a Mac), follows redirects (a redirect to another host drops the `Authorization` header and the
     server's refusal read as "device removed": a Caddy http->https redirect disconnected the device), sends bodies as JSON
     number arrays and needed a capability open to any URL. `net.rs`:
-    - one reqwest 0.13 client (the updater's: no duplicate HTTP stack), built on first use, ring as the crypto provider, the OS
-      verifying certificates (`rustls-platform-verifier`, as the webview), gzip;
-    - no redirects: a 3xx is an ordinary server error, retried;
+    - reqwest 0.13, already compiled for the updater (no second HTTP stack), but clients of its own: a pair for the server and a
+      pair for webhooks, built on first use and kept (connections reused), again after a connection failed (the system proxy is
+      read only when a client is built), never kept when the build failed; ring as the crypto provider, gzip, a
+      `FastMemo-desktop/<version>` user agent (some proxies and CDNs refuse a request without one);
+    - certificates checked by `rustls-platform-verifier`: the OS's verifier on macOS and Windows (as the webview), the system's
+      CA certificates on Linux;
+    - the server's requests follow no redirect: a 3xx is an ordinary server error, retried. Webhooks follow up to 5, as the
+      browser's fetch did (no token travels with them);
     - the system proxy for internet hosts only; this machine, private and link-local addresses, Tailscale and local names
-      (`.local`, `.lan`, `.home.arpa`, `.internal`, single labels) go direct (reqwest ignores the proxy's bypass list);
-    - the page reaches only the server's API (`/v1/` paths) and webhook POSTs, whose answer it never sees;
-    - raw IPC bodies both ways (the answer is the status in 2 bytes, then the body); `net_cancel` aborts a request, even one
-      cancelled before it reached Rust. Verified on macOS (tauri dev) through a logging proxy; Windows still to be tried on a
-      real PC.
+      (`.local`, `.lan`, `.home.arpa`, `.internal`, `.localhost`, single labels) go direct, on every OS (on macOS reqwest
+      doesn't read the proxy's bypass list);
+    - the page reaches only `/v1/` paths and webhook POSTs, whose answer it never sees. A guard against mistakes, not a security
+      boundary: code running in the page can still reach any host with such a path. An address with credentials (`user:pass@`)
+      is refused, as by fetch;
+    - raw IPC bodies both ways (the answer is the status in 2 bytes, then the body; a number array when the IPC falls back to
+      `postMessage`). Request ids are unique per page load (Rust outlives a reload); `net_cancel` aborts a request, even one
+      cancelled before it reached Rust, and the page rejects at once. Errors carry their causes, never the address. Verified on
+      macOS (tauri dev) through a logging proxy; Windows still to be tried on a real PC.
+    - Without the ATS exception, a note's image at `http://` under a dotted name (`http://nas.home.arpa/a.png`) no longer loads
+      on macOS: the webview's own loads are back under ATS. https, an IP address, `localhost` and `.local` names load.
   - The connect screen warns under an http address and asks to confirm before saving, recommending HTTPS (a reverse proxy with a
     certificate, or Tailscale). Not for this machine nor a Tailscale address (`isTailscaleUrl`: 100.64.0.0/10, `*.ts.net`),
     which cross no network unencrypted. The warning says what a device on HTTP gives away wherever it is (it roams: confirmed at
