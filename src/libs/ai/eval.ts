@@ -3,7 +3,8 @@ import * as FileSystem from "expo-file-system/legacy";
 
 import { AI_MODELS } from "./constants";
 import { generateEditorContent, getContextInfo, initContext, releaseContext } from "./context";
-import { EVAL_FIXTURES } from "./evalFixtures";
+import { EVAL_FIXTURES, LONG_NOTE_FIXTURES } from "./evalFixtures";
+import { clearLongNoteCache, estimateSeconds, rewriteNote, summarizeNote } from "./longNote";
 import type { AIModelId, AITimings, EditorAction } from "./types";
 
 export interface EvalResult {
@@ -17,6 +18,10 @@ export interface EvalResult {
   error?: string;
   timings?: AITimings;
   expect: string;
+  /** A long note: the calls it took (paragraphs, or parts and the merge), what was estimated, and the note it gave. */
+  steps?: number;
+  estimateMs?: number;
+  html?: string;
 }
 
 export interface EvalReport {
@@ -49,6 +54,7 @@ export async function runAIEval(
   if (!(await initContext(modelId))) return null;
   const loadMs = Date.now() - loadStart;
 
+  const total = EVAL_FIXTURES.length + LONG_NOTE_FIXTURES.length;
   const results: EvalResult[] = [];
   for (const fixture of EVAL_FIXTURES) {
     if (shouldStop()) break;
@@ -70,7 +76,36 @@ export async function runAIEval(
       expect: fixture.expect,
     };
     results.push(result);
-    onResult(result, results.length, EVAL_FIXTURES.length);
+    onResult(result, results.length, total);
+  }
+
+  clearLongNoteCache();
+  for (const fixture of LONG_NOTE_FIXTURES) {
+    if (shouldStop()) break;
+    const estimateMs = Math.round(estimateSeconds(fixture.action, fixture.html, modelId) * 1000);
+    let steps = 0;
+    const handlers = { onProgress: ({ total: count }: { total: number }) => (steps = count) };
+    const options = { lang: fixture.lang, modelId };
+    const start = Date.now();
+    const answer =
+      fixture.action === "summarize"
+        ? await summarizeNote(fixture.html, fixture.title ?? "", [], handlers, options)
+        : await rewriteNote(fixture.action, fixture.html, handlers, options);
+    const result: EvalResult = {
+      id: fixture.id,
+      action: fixture.action,
+      lang: fixture.lang,
+      ms: Date.now() - start,
+      success: answer.success,
+      output: answer.text ?? "",
+      error: answer.error,
+      expect: fixture.expect,
+      steps,
+      estimateMs,
+      html: answer.html,
+    };
+    results.push(result);
+    onResult(result, results.length, total);
   }
 
   const report: EvalReport = {

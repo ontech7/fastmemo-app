@@ -7,9 +7,18 @@
  */
 
 import type { EvalReport, EvalResult } from "./eval";
-import type { AIModelId, AIModelStatus, EditorActionOptions, EditorActionResult, HelpCatalogEntry } from "./types";
+import type { LongNoteAction, LongNoteResult } from "./longNote";
+import type {
+  AIModelId,
+  AIModelStatus,
+  EditorAction,
+  EditorActionOptions,
+  EditorActionResult,
+  HelpCatalogEntry,
+} from "./types";
 
-export { completedJsonStrings, createTextStream, findCategoryByName, stripHtml } from "./helpers";
+export { completedJsonStrings, createTextStream, createThrottle, findCategoryByName, stripHtml } from "./helpers";
+export { withSummary } from "./blocks";
 export {
   AI_MODELS,
   DEFAULT_MODEL_ID,
@@ -19,8 +28,24 @@ export {
   isModelSufficient,
   normalizeModelId,
 } from "./constants";
-export type { AIModelStatus, AIModelId, AIModelInfo, EditorAction, EditorActionResult, HelpCatalogEntry } from "./types";
+export type {
+  AIModelStatus,
+  AIModelId,
+  AIModelInfo,
+  EditorAction,
+  EditorActionResult,
+  HelpCatalogEntry,
+  LongNoteProgress,
+} from "./types";
 export type { EvalReport, EvalResult } from "./eval";
+export type { LongNoteAction, LongNoteResult } from "./longNote";
+
+export const LONG_NOTE_ACTIONS: ReadonlySet<EditorAction> = new Set<EditorAction>([
+  "summarize",
+  "fix_grammar",
+  "shorten",
+  "translate",
+]);
 
 // --- no-op stubs for context.ts functions (native-only) ---
 
@@ -92,5 +117,21 @@ export async function runAIEval(
 }
 
 export async function searchHelpByIntent(_query: string, _catalog: HelpCatalogEntry[]): Promise<string[]> {
+  return [];
+}
+
+export async function rewriteNote(_action: Exclude<LongNoteAction, "summarize">, _html: string): Promise<LongNoteResult> {
+  return { success: false, error: "AI not available on web" };
+}
+
+export async function summarizeNote(_html: string, _title: string, _labels: string[]): Promise<LongNoteResult> {
+  return { success: false, error: "AI not available on web" };
+}
+
+export function estimateSeconds(_action: LongNoteAction, _html: string): number {
+  return 0;
+}
+
+export function tooLongForAI(_html: string): LongNoteAction[] {
   return [];
 }

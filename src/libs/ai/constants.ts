@@ -115,6 +115,7 @@ export const ACTION_SAMPLING: Record<EditorAction, Sampling> = {
   suggest_category: FAITHFUL,
   transcript_to_items: FAITHFUL,
   summarize: GENERATIVE,
+  summarize_part: GENERATIVE,
   suggest_items: GENERATIVE,
 };
 
@@ -126,6 +127,7 @@ export const ACTION_MAX_TOKENS: Record<EditorAction, number> = {
   suggest_category: 30,
   suggest_items: 100,
   summarize: 200,
+  summarize_part: 120,
   shorten: 200,
   fix_grammar: 800,
   translate: 800,
@@ -191,6 +193,8 @@ const EDITOR_SYSTEM_PROMPTS: Record<EditorAction, string> = {
     "You generate short note titles. Given note content, output ONLY a concise title (2-5 words) in {{LANG}}. No quotes, no explanation, just the title.",
   summarize:
     "You summarize notes concisely. Given note content, output ONLY a brief summary (2-3 sentences) in {{LANG}}. No extra text.",
+  summarize_part:
+    "You summarize one part of a longer note. Output ONLY its key points in 1-2 sentences in {{LANG}}. No extra text.",
   suggest_items:
     'You suggest checklist items. Given existing items, output ONLY a JSON array with 3 new related items in {{LANG}}. Format: ["item1","item2","item3"]',
   suggest_category:
@@ -247,3 +251,25 @@ export function truncateForAction(action: EditorAction, content: string): string
   const lastSpace = slice.lastIndexOf(" ");
   return (lastSpace > limit * 0.6 ? slice.slice(0, lastSpace) : slice).trim();
 }
+
+/**
+ * How fast each model reads (prefill) and writes, in tokens per second, as measured on a Pixel 10 Pro, CPU only (AI
+ * evaluation, 2026-10). A device's own completions replace them as they run (`getModelSpeed`).
+ */
+export const MODEL_SPEED: Record<AIModelId, { prefill: number; generate: number }> = {
+  "qwen3.5-0.8b": { prefill: 210, generate: 38 },
+  "qwen3.5-2b": { prefill: 92, generate: 18 },
+  "qwen3.5-4b": { prefill: 28, generate: 7 },
+};
+
+/**
+ * The longest a long-note action may take, estimated before it starts: past it the action is off for that note (minutes
+ * of waiting with the phone busy is no use). The progress shows meanwhile.
+ */
+export const LONG_NOTE_MAX_SECONDS = 300;
+
+/** A summary reads the note in parts of about this many tokens (one call each, then one that merges them). */
+export const SUMMARY_PART_TOKENS = 1000;
+
+/** Shortening runs on paragraphs of at least this many tokens (about 20 words): a short line stays as it is. */
+export const SHORTEN_MIN_TOKENS = 30;

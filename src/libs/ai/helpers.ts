@@ -78,6 +78,32 @@ export function createTextStream(onText: (text: string) => void, intervalMs = 50
 }
 
 /**
+ * Hands `onValue` the latest value at most every `intervalMs` (a render per token would be dozens a second). `stop` drops
+ * what is pending.
+ */
+export function createThrottle<T>(onValue: (value: T) => void, intervalMs = 50) {
+  let latest: T;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let stopped = false;
+  return {
+    push(value: T) {
+      if (stopped) return;
+      latest = value;
+      if (!timer)
+        timer = setTimeout(() => {
+          timer = null;
+          if (!stopped) onValue(latest);
+        }, intervalMs);
+    },
+    stop() {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      timer = null;
+    },
+  };
+}
+
+/**
  * Whether a rewrite is worth showing: not empty, no reasoning tag, and a length in the action's range (a short text gets a
  * few characters of slack: "ok" -> "Ok." is fine).
  */

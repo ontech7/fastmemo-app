@@ -1,17 +1,24 @@
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
-import type { AIModelId, EditorAction } from "@/libs/ai";
+import type { AIModelId, EditorAction, LongNoteAction, LongNoteProgress } from "@/libs/ai";
 import {
   cancelCommand,
   createTextStream,
+  createThrottle,
   generateEditorContent,
   isModelSufficient,
+  LONG_NOTE_ACTIONS,
   MODEL_SHORT_LABEL,
   prewarmContext,
+  rewriteNote,
+  summarizeNote,
+  tooLongForAI,
+  withSummary,
 } from "@/libs/ai";
+import { supportedLanguages } from "@/libs/i18n";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
 import type { NoteType } from "@/types/note";
 import { toast } from "@/utils/toast";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ViewStyle } from "react-native";
 import {
@@ -58,6 +65,8 @@ type FeedbackState = "idle" | "processing" | "success" | "error";
 
 /** Actions whose answer replaces something the user wrote: it streams into a before/after preview and waits for Apply. */
 const PREVIEW_ACTIONS = new Set<EditorAction>(["generate_title", "summarize", "fix_grammar", "shorten", "translate"]);
+
+const NO_ACTIONS: ReadonlySet<EditorAction> = new Set();
 
 interface ActionDef {
   id: EditorAction;
@@ -111,14 +120,18 @@ interface Props {
   noteType: NoteType;
   /** Returns the plain-text content of the note (HTML already stripped for text notes). */
   getContent: () => string;
+  /**
+   * A text note's HTML: a summary or a rewrite (grammar, shortening, translation) works on it one paragraph at a time and
+   * keeps its structure. Those actions show only when it's given, with `onHtmlChanged`.
+   */
+  getHtml?: () => string;
   noteTitle: string;
   onTitleGenerated: (title: string) => void;
-  onSummaryGenerated?: (summary: string) => void;
   onItemsSuggested?: (items: string[]) => void;
   /** Called with the matched category name when suggest_category succeeds. */
   onCategorySuggested?: (categoryName: string) => void;
-  /** Called with rewritten text for content-replacing actions (fix_grammar, shorten, translate). */
-  onTextRewritten?: (text: string) => void;
+  /** Called with the note's new HTML when a summary (on top of the note) or a rewrite is applied. */
+  onHtmlChanged?: (html: string) => void;
   disabled?: boolean;
   /** Override the floating button position. Default: { bottom: 165, right: 42 } */
   style?: ViewStyle;
@@ -129,17 +142,17 @@ interface Props {
 export default function AIEditorActions({
   noteType,
   getContent,
+  getHtml,
   noteTitle,
   onTitleGenerated,
-  onSummaryGenerated,
   onItemsSuggested,
   onCategorySuggested,
-  onTextRewritten,
+  onHtmlChanged,
   disabled = false,
   style,
   menuBottomOffset = 200,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const aiSettings = useSelector(selectorAIAssistant);
 
@@ -153,12 +166,20 @@ export default function AIEditorActions({
   const [preview, setPreview] = useState<{
     action: EditorAction;
     title: string;
+    /** What the action read (the title, the text, or the note's HTML): applying checks it hasn't changed since. */
+    source: string;
     before: string;
     after: string;
+    /** A summary or a rewrite: the note's HTML it applies. */
+    html?: string;
+    /** The paragraph, or the part of a summary, under way. */
+    progress?: LongNoteProgress;
     streaming: boolean;
   } | null>(null);
   // Left edge (window coords) of the trigger, so the menu opens exactly from the button.
   const [menuLeft, setMenuLeft] = useState(40);
+  // The actions that would take too long on the note as it is when the menu opens (turned off, and said so).
+  const [tooLong, setTooLong] = useState<ReadonlySet<EditorAction>>(NO_ACTIONS);
 
   const menuProgress = useSharedValue(0);
   // Each action run gets a number: a cancelled one (or one the user left behind) never writes into the UI.
@@ -167,7 +188,14 @@ export default function AIEditorActions({
   const triggerRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const actionItems = getActionsForType(noteType);
+  const editsHtml = !!getHtml && !!onHtmlChanged;
+  const actionItems = getActionsForType(noteType).filter((item) => editsHtml || !LONG_NOTE_ACTIONS.has(item.id));
+
+  // A summary added before, in any language, is replaced by the next one (and never summarized itself).
+  const summaryLabels = useMemo(
+    () => Object.keys(supportedLanguages).map((code) => i18n.getFixedT(code)("ai.editor.summary_label")),
+    [i18n]
+  );
 
   const closeMenu = useCallback(() => setIsMenuOpen(false), []);
 
@@ -178,9 +206,10 @@ export default function AIEditorActions({
       triggerRef.current?.measureInWindow((x) => setMenuLeft(x));
       // the model loads while the user picks an action
       prewarmContext(aiSettings.selectedModel);
+      setTooLong(getHtml ? new Set(tooLongForAI(getHtml(), aiSettings.selectedModel, summaryLabels)) : NO_ACTIONS);
     }
     setIsMenuOpen((prev) => !prev);
-  }, [feedback, isMenuOpen, aiSettings.selectedModel]);
+  }, [feedback, isMenuOpen, aiSettings.selectedModel, getHtml, summaryLabels]);
 
   // Leaving the note mid-action stops the model, and whatever it already wrote is dropped (never applied to the note).
   useEffect(
@@ -210,6 +239,20 @@ export default function AIEditorActions({
     }
   }, [feedback]);
 
+  const errorMessage = useCallback(
+    (action: EditorAction, error?: string) =>
+      action === "suggest_category" && error === "no_category_match"
+        ? t("ai.editor.no_category_match")
+        : error === "implausible_output"
+          ? t("ai.editor.no_improvement")
+          : error === "too_long"
+            ? t("ai.editor.too_long")
+            : error === "no_content"
+              ? t("ai.editor.no_content")
+              : t("ai.editor.error"),
+    [t]
+  );
+
   const handleAction = useCallback(
     async (action: EditorAction) => {
       closeMenu();
@@ -224,33 +267,20 @@ export default function AIEditorActions({
         return;
       }
 
-      let content: string;
-      if (action === "suggest_category") {
-        // Pass whichever parts exist (title and/or content); a title alone is enough.
-        // Title goes first so it survives input truncation.
-        content = [hasTitle && `Title: ${noteTitle.trim()}`, rawContent.trim() && `Content: ${rawContent.trim()}`]
-          .filter(Boolean)
-          .join("\n");
-      } else {
-        // The title gives context to a summary and to suggestions; never to a rewrite, whose answer replaces the content
-        // (the title would end up in the text).
-        const needsTitle = action === "summarize" || action === "suggest_items";
-        content = needsTitle && hasTitle ? `${noteTitle}\n${rawContent}` : rawContent;
-      }
+      // A summary or a rewrite reads the note's HTML, one paragraph (or part) at a time.
+      const html = LONG_NOTE_ACTIONS.has(action) ? getHtml?.() : undefined;
 
       const run = ++runRef.current;
       runningRef.current = true;
       const staged = PREVIEW_ACTIONS.has(action);
-      // A rewrite opens its preview at once and fills it as the model writes; the others show the spinner.
-      const stream = staged
-        ? createTextStream((text) => {
-            if (run === runRef.current) setPreview((p) => (p ? { ...p, after: text } : p));
-          })
-        : null;
+      const showText = (after: string) => {
+        if (run === runRef.current) setPreview((p) => (p ? { ...p, after } : p));
+      };
       if (staged) {
         setPreview({
           action,
           title: t(`ai.editor.${action}`),
+          source: html ?? (action === "generate_title" ? noteTitle : rawContent),
           before: action === "generate_title" ? noteTitle : rawContent,
           after: "",
           streaming: true,
@@ -264,6 +294,59 @@ export default function AIEditorActions({
         setFeedback("error");
         toast(msg);
       };
+      // stopped by a cancel elsewhere (the dictation's): nothing to report
+      const stopped = () => {
+        setPreview(null);
+        setFeedback("idle");
+      };
+
+      if (html !== undefined) {
+        // A rewrite opens its preview at once and fills it as the model writes, paragraph after paragraph.
+        const stream = createThrottle(showText);
+        const handlers = {
+          onText: stream.push,
+          onProgress: (progress: LongNoteProgress) => {
+            if (run === runRef.current) setPreview((p) => (p ? { ...p, progress } : p));
+          },
+        };
+        try {
+          const result =
+            action === "summarize"
+              ? await summarizeNote(html, noteTitle, summaryLabels, handlers)
+              : await rewriteNote(action as Exclude<LongNoteAction, "summarize">, html, handlers);
+          stream.stop();
+          if (run !== runRef.current) return;
+          runningRef.current = false;
+          if (result.error === "cancelled") return stopped();
+          const next =
+            action === "summarize" && result.text
+              ? withSummary(html, t("ai.editor.summary_label"), result.text, summaryLabels)
+              : result.html;
+          if (!result.success || !result.text || !next) return fail(errorMessage(action, result.error));
+          setPreview((p) => (p ? { ...p, after: result.text ?? "", html: next, streaming: false } : p));
+        } catch {
+          stream.stop();
+          if (run !== runRef.current) return;
+          runningRef.current = false;
+          fail(t("ai.editor.error"));
+        }
+        return;
+      }
+
+      let content: string;
+      if (action === "suggest_category") {
+        // Pass whichever parts exist (title and/or content); a title alone is enough.
+        // Title goes first so it survives input truncation.
+        content = [hasTitle && `Title: ${noteTitle.trim()}`, rawContent.trim() && `Content: ${rawContent.trim()}`]
+          .filter(Boolean)
+          .join("\n");
+      } else {
+        // The title gives context to suggestions; never to a title, which would only repeat it.
+        content = action === "suggest_items" && hasTitle ? `${noteTitle}\n${rawContent}` : rawContent;
+      }
+
+      // A title opens its preview at once and fills it as the model writes; the others show the spinner.
+      const stream = staged ? createTextStream(showText) : null;
 
       try {
         const result = await generateEditorContent(action, content, stream?.push);
@@ -271,22 +354,9 @@ export default function AIEditorActions({
         if (run !== runRef.current) return;
         runningRef.current = false;
 
-        if (result.error === "cancelled") {
-          // stopped by a cancel elsewhere (the dictation's): nothing to report
-          setPreview(null);
-          setFeedback("idle");
-          return;
-        }
+        if (result.error === "cancelled") return stopped();
         if (!result.success) {
-          fail(
-            action === "suggest_category" && result.error === "no_category_match"
-              ? t("ai.editor.no_category_match")
-              : result.error === "implausible_output"
-                ? t("ai.editor.no_improvement")
-                : result.error === "too_long"
-                  ? t("ai.editor.too_long")
-                  : t("ai.editor.error")
-          );
+          fail(errorMessage(action, result.error));
           return;
         }
 
@@ -313,32 +383,24 @@ export default function AIEditorActions({
         fail(t("ai.editor.error"));
       }
     },
-    [getContent, noteTitle, onItemsSuggested, onCategorySuggested, t, closeMenu]
+    [getContent, getHtml, noteTitle, onItemsSuggested, onCategorySuggested, t, closeMenu, errorMessage, summaryLabels]
   );
 
   const applyPreview = () => {
     if (!preview || preview.streaming) return;
-    const { action, before, after } = preview;
+    const { action, source, after, html } = preview;
     setPreview(null);
 
     // The model takes seconds and the note stays editable meanwhile: if what it read has
     // changed since (new edits, another code tab), applying would overwrite those changes.
-    const current = action === "generate_title" ? noteTitle : getContent();
-    if (current !== before) {
+    const current = html !== undefined ? getHtml?.() : action === "generate_title" ? noteTitle : getContent();
+    if (current !== source) {
       toast(t("ai.editor.content_changed"));
       return;
     }
 
-    switch (action) {
-      case "generate_title":
-        onTitleGenerated(after);
-        break;
-      case "summarize":
-        onSummaryGenerated?.(after);
-        break;
-      default:
-        onTextRewritten?.(after);
-    }
+    if (html !== undefined) onHtmlChanged?.(html);
+    else if (action === "generate_title") onTitleGenerated(after);
   };
 
   const handleCancel = useCallback(() => {
@@ -370,8 +432,9 @@ export default function AIEditorActions({
         >
           <View style={styles.menuContainer}>
             {actionItems.map((actionItem, index) => {
-              const canRun = !actionItem.minModelId || isModelSufficient(aiSettings.selectedModel, actionItem.minModelId);
+              const modelFits = !actionItem.minModelId || isModelSufficient(aiSettings.selectedModel, actionItem.minModelId);
               const minLabel = actionItem.minModelId ? MODEL_SHORT_LABEL[actionItem.minModelId] : "";
+              const canRun = modelFits && !tooLong.has(actionItem.id);
               return (
                 <AnimatedActionItem
                   key={actionItem.id}
@@ -382,7 +445,9 @@ export default function AIEditorActions({
                   onPress={canRun ? () => handleAction(actionItem.id) : undefined}
                   label={t(actionItem.labelKey)}
                   disabled={!canRun}
-                  minModelLabel={!canRun ? `${t("ai.editor.min_model")} ${minLabel}` : undefined}
+                  hint={
+                    !modelFits ? `${t("ai.editor.min_model")} ${minLabel}` : !canRun ? t("ai.editor.note_too_long") : undefined
+                  }
                 />
               );
             })}
@@ -427,7 +492,17 @@ export default function AIEditorActions({
                 </Text>
               </View>
               <View>
-                <Text style={[styles.previewLabel, { color: AI_COLOR }]}>{t("ai.editor.after")}</Text>
+                <View style={styles.previewLabelRow}>
+                  <Text style={[styles.previewLabel, { color: AI_COLOR }]}>{t("ai.editor.after")}</Text>
+                  {preview?.streaming && preview.progress && preview.progress.total > 1 ? (
+                    <Text style={styles.previewProgress}>
+                      {t("ai.editor.progress", {
+                        current: Math.min(preview.progress.done + 1, preview.progress.total),
+                        total: preview.progress.total,
+                      })}
+                    </Text>
+                  ) : null}
+                </View>
                 {preview?.streaming && !preview.after ? (
                   <View style={[styles.previewBlock, styles.previewAfter]}>
                     <ActivityIndicator size="small" color={AI_COLOR} />
@@ -466,19 +541,11 @@ interface AnimatedItemProps {
   onPress?: () => void;
   label: string;
   disabled?: boolean;
-  minModelLabel?: string;
+  /** Why it's off: the model it needs, or a note too long for it. */
+  hint?: string;
 }
 
-function AnimatedActionItem({
-  action,
-  index,
-  totalItems,
-  menuProgress,
-  onPress,
-  label,
-  disabled,
-  minModelLabel,
-}: AnimatedItemProps) {
+function AnimatedActionItem({ action, index, totalItems, menuProgress, onPress, label, disabled, hint }: AnimatedItemProps) {
   const reverseIndex = totalItems - 1 - index;
   const Icon = action.icon;
 
@@ -513,7 +580,7 @@ function AnimatedActionItem({
         </View>
         <View>
           <Text style={styles.actionLabel}>{label}</Text>
-          {minModelLabel && <Text style={styles.actionMinModel}>{minModelLabel}</Text>}
+          {hint ? <Text style={styles.actionHint}>{hint}</Text> : null}
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -550,7 +617,7 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.medium,
     fontWeight: FONTWEIGHT.semiBold,
   },
-  actionMinModel: {
+  actionHint: {
     color: COLOR.placeholder,
     fontSize: FONTSIZE.small,
     marginTop: 2,
@@ -608,6 +675,16 @@ const styles = StyleSheet.create({
     fontWeight: FONTWEIGHT.semiBold,
     marginBottom: PADDING_MARGIN.xs,
     textTransform: "uppercase",
+  },
+  previewLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: PADDING_MARGIN.sm,
+  },
+  previewProgress: {
+    color: COLOR.placeholder,
+    fontSize: FONTSIZE.small,
   },
   previewBlock: {
     fontSize: FONTSIZE.medium,
