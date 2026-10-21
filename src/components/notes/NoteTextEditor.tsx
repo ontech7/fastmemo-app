@@ -2,6 +2,7 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import NoteImageMenu from "@/components/notes/NoteImageMenu";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
 import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
@@ -19,7 +20,8 @@ import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
 import i18n from "@/libs/i18n";
-import { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE } from "@/libs/richTextEditor";
+import type { EditorImage, ImageChange } from "@/libs/richTextEditor";
+import { IMAGE_FAILED_MESSAGE, IMAGE_MESSAGE, imageCommand, RICH_TEXT_SCRIPT, RICH_TEXT_STYLE } from "@/libs/richTextEditor";
 import {
   selectorAIAssistant,
   selectorDeveloperMode,
@@ -36,7 +38,7 @@ import { useFocusEffect } from "expo-router";
 import type { ReactElement } from "react";
 import { cloneElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { TouchableOpacityProps } from "react-native";
+import type { TouchableOpacityProps, ViewInstance } from "react-native";
 import { Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
 import { KeyboardAvoidingView, KeyboardStickyView } from "react-native-keyboard-controller";
@@ -236,6 +238,9 @@ export default function NoteTextEditor({ initialNote }: Props) {
   });
 
   const [showFindReplace, setShowFindReplace] = useState(false);
+  // An image tapped in the editor, and where on screen: its menu is open.
+  const [tappedImage, setTappedImage] = useState<{ image: EditorImage; at: { x: number; y: number } } | null>(null);
+  const editorBoxRef = useRef<ViewInstance>(null);
   // The RichEditor (a WebView) is mounted immediately into a reserved, flex-sized
   // box — never gated behind an idle timer — so the editor is present as the
   // screen fades in instead of flashing empty and popping in later. The WebView
@@ -355,7 +360,18 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const onEditorMessage = useCallback((message: { type?: string; data?: unknown }) => {
     if (message?.type === RELOAD_SHOWN) reloadsShownRef.current = message.data as number;
+    if (message?.type === IMAGE_MESSAGE) {
+      const image = message.data as EditorImage;
+      // The page gives the point in itself: the editor's box is where the page is on screen.
+      editorBoxRef.current?.measureInWindow((x, y) => setTappedImage({ image, at: { x: x + image.x, y: y + image.y } }));
+    }
+    if (message?.type === IMAGE_FAILED_MESSAGE) toast(i18n.t("note.image.failed"));
   }, []);
+
+  const changeImage = useCallback((image: EditorImage, change: ImageChange, value?: string) => {
+    richTextEditor.current?.command(imageCommand(image, change, value));
+  }, []);
+  const closeImageMenu = useCallback(() => setTappedImage(null), []);
 
   const onEditorInitialized = useCallback(() => {
     editorReadyRef.current = true;
@@ -488,7 +504,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
           {/* The editor fades in from transparent once pell has painted (see effect
               above), so the rich content dissolves over the app background — the user
               briefly sees an empty editor, never a flash of unformatted text. */}
-          <Animated.View style={[styles.editorWrapper, { opacity: editorOpacity }]}>
+          <Animated.View ref={editorBoxRef} style={[styles.editorWrapper, { opacity: editorOpacity }]}>
             <RichEditor
               containerStyle={styles.richTextContainer}
               androidLayerType="hardware"
@@ -602,6 +618,13 @@ export default function NoteTextEditor({ initialNote }: Props) {
           </View>
         </KeyboardStickyView>
       )}
+
+      <NoteImageMenu
+        image={tappedImage?.image ?? null}
+        at={tappedImage?.at ?? null}
+        onChange={changeImage}
+        onClose={closeImageMenu}
+      />
 
       <EditorTourTip />
     </View>

@@ -24,7 +24,11 @@ export const usePopupMenu = () => useContext(PopupMenuContext);
 
 interface PopupMenuProps {
   /** The pressable content that opens the menu (usually an icon). */
-  trigger: ReactNode;
+  trigger?: ReactNode;
+  /** Without a trigger: the menu is open, centered under this point of the screen, while it is set. */
+  at?: { x: number; y: number } | null;
+  /** Called once the menu has closed. */
+  onClose?: () => void;
   children: ReactNode;
   width?: number;
   /** Screen-reader name of the trigger (it is usually just an icon). */
@@ -33,10 +37,17 @@ interface PopupMenuProps {
 
 /**
  * Custom popup/context menu matching the app's design language — replaces
- * react-native-popup-menu. Anchors right-aligned just below its trigger and
+ * react-native-popup-menu. Anchors right-aligned just below its trigger (or centered under a point, `at`) and
  * opens as a dropdown that expands from zero height to its content height.
  */
-export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH, accessibilityLabel }: PopupMenuProps) {
+export default function PopupMenu({
+  trigger,
+  at,
+  onClose,
+  children,
+  width = DEFAULT_WIDTH,
+  accessibilityLabel,
+}: PopupMenuProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const triggerRef = useRef<ViewInstance>(null);
@@ -45,32 +56,36 @@ export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH, ac
 
   const [visible, setVisible] = useState(false);
   const [anchor, setAnchor] = useState<Anchor>({ left: 0, top: 0 });
+  // At a point: placed again once the content's height is known, to flip above it near the bottom.
+  const [measuredHeight, setMeasuredHeight] = useState(0);
 
   const progress = useSharedValue(0); // 0 = collapsed, 1 = fully expanded
   const contentHeight = useSharedValue(0);
+
+  // The menu's place for something at x, y of size w, h on screen: below it (above it if it would overflow), its right edge
+  // on the thing's (centered on it).
+  const place = (x: number, y: number, w: number, h: number, ch: number, align: "right" | "center"): Anchor => {
+    const screen = Dimensions.get("window");
+
+    let left = align === "right" ? x + w - width : x + w / 2 - width / 2;
+    left = Math.max(SCREEN_MARGIN, Math.min(left, screen.width - width - SCREEN_MARGIN));
+
+    let top = y + h + GAP;
+    if (ch > 0 && top + ch > screen.height - insets.bottom - SCREEN_MARGIN) {
+      const above = y - GAP - ch;
+      top =
+        above >= insets.top + SCREEN_MARGIN
+          ? above
+          : Math.max(insets.top + SCREEN_MARGIN, top - (top + ch - (screen.height - insets.bottom - SCREEN_MARGIN)));
+    }
+    return { left, top };
+  };
 
   const open = () => {
     // Android draws edge to edge (SDK 58): measureInWindow and the translucent Modal both start at the top of the screen, so
     // no status bar offset (adding its height put the menu that much below the trigger).
     triggerRef.current?.measureInWindow((x, y, w, h) => {
-      const screen = Dimensions.get("window");
-      const ch = lastHeight.current;
-
-      // Horizontal: right edge of the menu aligns to the trigger's right edge.
-      let left = x + w - width;
-      left = Math.max(SCREEN_MARGIN, Math.min(left, screen.width - width - SCREEN_MARGIN));
-
-      // Vertical: just below the trigger, flipping above it if it would overflow.
-      let top = y + h + GAP;
-      if (ch > 0 && top + ch > screen.height - insets.bottom - SCREEN_MARGIN) {
-        const above = y - GAP - ch;
-        top =
-          above >= insets.top + SCREEN_MARGIN
-            ? above
-            : Math.max(insets.top + SCREEN_MARGIN, top - (top + ch - (screen.height - insets.bottom - SCREEN_MARGIN)));
-      }
-
-      setAnchor({ left, top });
+      setAnchor(place(x, y, w, h, lastHeight.current, "right"));
       setVisible(true);
     });
   };
@@ -79,6 +94,7 @@ export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH, ac
     const measured = e.nativeEvent.layout.height;
     lastHeight.current = measured;
     contentHeight.value = measured;
+    setMeasuredHeight(measured);
     if (!openedRef.current) {
       openedRef.current = true;
       progress.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
@@ -88,6 +104,7 @@ export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH, ac
   const finishClose = () => {
     setVisible(false);
     openedRef.current = false;
+    onClose?.();
   };
 
   const close = () => {
@@ -102,21 +119,26 @@ export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH, ac
 
   const cardStyle = useAnimatedStyle(() => ({ height: progress.value * contentHeight.value }));
 
+  const shown = at ? true : visible;
+  const position = at ? place(at.x, at.y, 0, 0, measuredHeight, "center") : anchor;
+
   return (
     <>
-      <Pressable
-        ref={triggerRef}
-        onPress={open}
-        hitSlop={8}
-        style={styles.trigger}
-        accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
-        aria-expanded={visible}
-      >
-        {trigger}
-      </Pressable>
+      {trigger && (
+        <Pressable
+          ref={triggerRef}
+          onPress={open}
+          hitSlop={8}
+          style={styles.trigger}
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
+          aria-expanded={visible}
+        >
+          {trigger}
+        </Pressable>
+      )}
 
-      <Modal visible={visible} transparent statusBarTranslucent animationType="none" onRequestClose={close}>
+      <Modal visible={shown} transparent statusBarTranslucent animationType="none" onRequestClose={close}>
         <Animated.View style={[styles.backdrop, backdropStyle]}>
           <Pressable
             style={StyleSheet.absoluteFill}
@@ -126,7 +148,7 @@ export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH, ac
           />
         </Animated.View>
 
-        <Animated.View style={[styles.cardShadow, { width, top: anchor.top, left: anchor.left }, cardStyle]}>
+        <Animated.View style={[styles.cardShadow, { width, top: position.top, left: position.left }, cardStyle]}>
           <View style={styles.cardClip}>
             <View style={styles.cardInner} onLayout={onContentLayout}>
               <PopupMenuContext.Provider value={{ close }}>{children}</PopupMenuContext.Provider>

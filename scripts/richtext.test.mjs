@@ -561,6 +561,159 @@ for (const [text, action] of [
 }
 check("A read-only note doesn't change", (await state()).html === readOnly, `${readOnly} -> ${(await state()).html}`);
 
+// 5. Images: a tap asks the app for the image's menu (FASTMEMO_IMAGE), the app's choices come back as __fm.image().
+// What the page posts to the app (pell posts to its parent: here the page itself).
+const listenToPage = () =>
+  evaluate(`(() => {
+    window.__posted = [];
+    window.addEventListener("message", (e) => {
+      try { const m = JSON.parse(e.data); if (/^(FASTMEMO_IMAGE|CONTENT_CHANGE)/.test(m.type)) window.__posted.push(m); } catch (error) {}
+    });
+  })()`);
+const posted = async (type) => {
+  await sleep(150);
+  return evaluate(`window.__posted.splice(0).filter((m) => m.type === ${JSON.stringify(type)})`);
+};
+// A photo-like image of w x h, as the app stores them.
+const picture = (w, h, mime = "image/jpeg") =>
+  evaluate(`(() => {
+    const c = document.createElement("canvas"); c.width = ${w}; c.height = ${h};
+    const g = c.getContext("2d"); g.fillStyle = "#3355aa"; g.fillRect(0, 0, ${w}, ${h}); g.fillStyle = "#ffcc00"; g.fillRect(0, 0, ${w / 2}, ${h / 2});
+    return c.toDataURL(${JSON.stringify(mime)}, 0.7);
+  })()`);
+const imageCenter = () =>
+  evaluate(
+    `(() => { const r = document.querySelector(".pell-content img").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`
+  );
+const imageState = () =>
+  evaluate(`(async () => {
+    const img = document.querySelector(".pell-content img");
+    if (!img) return null;
+    await img.decode().catch(() => {});
+    return { src: img.src, width: img.naturalWidth, height: img.naturalHeight, size: img.style.width, align: getComputedStyle(img.parentNode).textAlign };
+  })()`);
+// What NoteTextEditor runs for a choice in the menu.
+const imageChange = (image, change, value) =>
+  post({
+    type: "content",
+    name: "command",
+    data: `window.__fm && window.__fm.image(${image.index}, ${JSON.stringify(image.key)}, ${JSON.stringify(change)}, ${JSON.stringify(value ?? null)})`,
+  });
+
+const JPEG = await picture(80, 40);
+const PNG = await picture(80, 40, "image/png");
+const imageNote = (src) => `<div>a</div><div><img src="${src}"></div><div>b</div>`;
+
+await open(imageNote(JPEG));
+await listenToPage();
+await select({ caret: "a", at: 1 });
+let [x, y] = await imageCenter();
+await send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+await send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+let asked = await posted("FASTMEMO_IMAGE");
+const tapped = asked[0]?.data ?? { index: 0, key: "" }; // without the message, the checks below fail instead of throwing
+check(
+  "A click on an image asks the app for its menu, once",
+  asked.length === 1 &&
+    tapped.index === 0 &&
+    tapped.src === JPEG &&
+    tapped.width === 80 &&
+    tapped.height === 40 &&
+    tapped.editable === true &&
+    Math.abs(tapped.x - x) < 2 &&
+    Math.abs(tapped.y - y) < 2,
+  asked
+);
+check("A click on an image leaves the caret where it was", (await state()).caret === "a@1", (await state()).caret);
+
+await imageChange(tapped, "size", "50%");
+check("Size: the image gets a width of the note's", (await imageState()).size === "50%", await imageState());
+check(
+  "Size: the note is saved",
+  (await posted("CONTENT_CHANGE")).some((m) => m.data.includes("50%")),
+  "no CONTENT_CHANGE with the width"
+);
+await press("undo");
+check("Size: undo", (await imageState()).size === "", await imageState());
+
+await imageChange(tapped, "align", "center");
+check("Align: the image's line is centered", (await imageState()).align === "center", await imageState());
+await imageChange(tapped, "align", "right");
+check("Align: right", (await imageState()).align === "right", await imageState());
+await press("undo");
+await press("undo");
+check("Align: undo", !/center|right/.test((await imageState()).align), await imageState());
+
+await imageChange(tapped, "size", "25%");
+// a width doesn't change the image's key (its data)
+await imageChange(tapped, "rotate");
+let rotatedImage = await imageState();
+check(
+  "Rotate: a quarter turn, still a JPEG, the size kept",
+  rotatedImage.width === 40 &&
+    rotatedImage.height === 80 &&
+    rotatedImage.src.startsWith("data:image/jpeg") &&
+    rotatedImage.size === "25%",
+  { ...rotatedImage, src: rotatedImage.src.slice(0, 30) }
+);
+await press("undo");
+check("Rotate: undo", (await imageState()).width === 80 && (await imageState()).size === "25%", await imageState());
+
+await open(imageNote(JPEG));
+await imageChange(tapped, "rotate");
+await imageChange(tapped, "delete");
+check("A choice made on an image that changed since does nothing", (await imageState())?.width === 40, await imageState());
+
+await open(imageNote(JPEG));
+await imageChange(tapped, "delete");
+check(
+  "Delete: the image is gone, the lines around it stay",
+  !(await imageState()) && /a[^]*b/.test((await state()).text),
+  (await state()).html
+);
+await press("undo");
+check("Delete: undo", (await imageState())?.src === JPEG, await imageState());
+
+await open(imageNote(PNG));
+await imageChange({ ...tapped, key: `${PNG.length}:${PNG.slice(-32)}` }, "rotate");
+check(
+  "Rotate: a PNG turns and stays a PNG (its transparency)",
+  (await imageState()).src.startsWith("data:image/png") && (await imageState()).width === 40,
+  (await imageState()).src.slice(0, 30)
+);
+
+await open(imageNote(JPEG));
+await listenToPage();
+await post({ type: "content", name: "setDisable", data: true });
+[x, y] = await imageCenter();
+await send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+await send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+asked = await posted("FASTMEMO_IMAGE");
+check(
+  "A read-only note's image asks for its menu, not editable",
+  asked.length === 1 && asked[0].data.editable === false,
+  asked
+);
+await imageChange(tapped, "delete");
+check("A read-only note's image doesn't change", (await imageState())?.src === JPEG, await imageState());
+
+// A finger, as on the phone: a tap opens the menu (no caret, no keyboard), a touch that scrolls doesn't.
+await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
+await open(imageNote(JPEG));
+await listenToPage();
+await select({ caret: "b", at: 1 });
+[x, y] = await imageCenter();
+await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+asked = await posted("FASTMEMO_IMAGE");
+check("A tap on an image asks for its menu, once", asked.length === 1 && asked[0].data.index === 0, asked);
+check("A tap on an image leaves the caret where it was", (await state()).caret === "b@1", (await state()).caret);
+await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y - 30 }] });
+await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+check("A touch that scrolls over an image doesn't open its menu", !(await posted("FASTMEMO_IMAGE")).length, "asked");
+await send("Emulation.setTouchEmulationEnabled", { enabled: false });
+
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");
 check("no page errors", !pageErrors.length, pageErrors.join("\n"));
 

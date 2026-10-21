@@ -13,6 +13,7 @@ export const RICH_TEXT_STYLE = {
     img {
       width: auto;
       border-radius: ${BORDER.normal}px;
+      cursor: pointer;
     }
     /* Notes saved before RICH_TEXT_SCRIPT can hold a heading or code block in one of its kind, and lines that kept the
        look of where they came from when joined to a code block. */
@@ -29,6 +30,37 @@ export const RICH_TEXT_STYLE = {
   // iframe's bottom edge is the scroll viewport edge, so the caret always lands on it.
   contentCSSText: `padding: ${PADDING_MARGIN.sm}px ${PADDING_MARGIN.lg}px ${PADDING_MARGIN.sm}px;`,
 };
+
+/** The page's message that an image was tapped: its data is an `EditorImage`. */
+export const IMAGE_MESSAGE = "FASTMEMO_IMAGE";
+/** The page's message that a change couldn't be made to an image. */
+export const IMAGE_FAILED_MESSAGE = "FASTMEMO_IMAGE_FAILED";
+
+/** A tapped image, as the page describes it. */
+export interface EditorImage {
+  /** Which image of the note, and its data when tapped: a change for an image that has changed since does nothing. */
+  index: number;
+  key: string;
+  src: string;
+  /** Its own size, in pixels. */
+  width: number;
+  height: number;
+  /** Its width in the note ("50%"), or "" for its own. */
+  size: string;
+  /** Its line's CSS text-align. */
+  align: string;
+  /** Where it was tapped, in the editor. */
+  x: number;
+  y: number;
+  /** The note can be changed (not read-only). */
+  editable: boolean;
+}
+
+export type ImageChange = "size" | "align" | "rotate" | "delete";
+
+/** The page command for a change to a tapped image (RichEditor.command). */
+export const imageCommand = (image: EditorImage, change: ImageChange, value?: string) =>
+  `window.__fm && window.__fm.image(${image.index}, ${JSON.stringify(image.key)}, ${JSON.stringify(change)}, ${JSON.stringify(value ?? null)})`;
 
 /**
  * What the text editor's page runs besides pell (react-native-pell-rich-editor), injected once it is up
@@ -248,6 +280,102 @@ export const RICH_TEXT_SCRIPT = String.raw`
     }
   });
 
-  window.__fm = { toggle: toggle, insertImage: insertImage };
+  // Images. A tap on one (a touch that didn't move, or a click) asks the app for its menu (IMAGE_MESSAGE); the app's choice
+  // comes back as __fm.image(index, key, change, value). The key is the image's data: a choice made on an image that has
+  // changed since (another device's edit) does nothing.
+  var post = function (type, data) {
+    (window.ReactNativeWebView || window.parent).postMessage(JSON.stringify({ type: type, data: data }));
+  };
+  var imageKey = function (img) { return img.src.length + ":" + img.src.slice(-32); };
+  var lineOf = function (img) { return closest(img, "div,p,li,h1,pre") || content(); };
+  var openImage = function (img, x, y) {
+    post("${IMAGE_MESSAGE}", {
+      index: [].indexOf.call(content().querySelectorAll("img"), img),
+      key: imageKey(img),
+      src: img.src,
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+      size: img.style.width,
+      align: getComputedStyle(lineOf(img)).textAlign,
+      x: x,
+      y: y,
+      editable: content().isContentEditable,
+    });
+  };
+  var touch = null;
+  content().addEventListener("touchstart", function (e) {
+    var t = e.touches[0];
+    touch = e.touches.length === 1 && e.target.nodeName === "IMG" ? { img: e.target, x: t.clientX, y: t.clientY } : null;
+  }, { passive: true });
+  content().addEventListener("touchend", function (e) {
+    var start = touch;
+    touch = null;
+    // refreshToolbar's touchend has no touches
+    if (!start || !e.changedTouches) return;
+    var t = e.changedTouches[0];
+    if (e.target !== start.img || Math.abs(t.clientX - start.x) > 10 || Math.abs(t.clientY - start.y) > 10) return;
+    // No caret and no keyboard: the menu is the app's.
+    e.preventDefault();
+    openImage(start.img, t.clientX, t.clientY);
+  });
+  content().addEventListener("mousedown", function (e) {
+    if (e.target.nodeName === "IMG") e.preventDefault();
+  });
+  content().addEventListener("click", function (e) {
+    if (e.target.nodeName !== "IMG") return;
+    e.preventDefault();
+    openImage(e.target, e.clientX, e.clientY);
+  });
+
+  // The app's own images are JPEG at 0.3: a turn makes one about a third bigger, once (turning it again keeps the size), and
+  // doesn't blur it more at each turn.
+  var ROTATE_QUALITY = 0.7;
+  var rotated = function (img) {
+    var canvas = $.createElement("canvas");
+    canvas.width = img.naturalHeight;
+    canvas.height = img.naturalWidth;
+    var g = canvas.getContext("2d");
+    g.translate(canvas.width, 0);
+    g.rotate(Math.PI / 2);
+    g.drawImage(img, 0, 0);
+    // A PNG keeps its transparency.
+    return canvas.toDataURL(/^data:image\/png/.test(img.src) ? "image/png" : "image/jpeg", ROTATE_QUALITY);
+  };
+  var selectImage = function (img) {
+    var r = $.createRange();
+    r.selectNode(img);
+    select(r);
+  };
+  // Through insertHTML, so undo brings the image back as it was.
+  var replaceImage = function (img, change) {
+    var copy = img.cloneNode();
+    change(copy);
+    selectImage(img);
+    exec("insertHTML", copy.outerHTML);
+  };
+  var JUSTIFY = { left: "justifyLeft", center: "justifyCenter", right: "justifyRight" };
+  var image = function (index, key, change, value) {
+    var img = content().querySelectorAll("img")[index];
+    if (!img || imageKey(img) !== key || !content().isContentEditable) return;
+    try {
+      if (change === "size") replaceImage(img, function (copy) { copy.style.width = value; });
+      else if (change === "rotate") {
+        var src = rotated(img);
+        replaceImage(img, function (copy) { copy.src = src; });
+      } else if (change === "align") {
+        selectImage(img);
+        exec(JUSTIFY[value]);
+      } else if (change === "delete") {
+        selectImage(img);
+        exec("delete");
+      }
+    } catch (error) {
+      // An image the canvas can't read (a file of an old version): the app says so.
+      post("${IMAGE_FAILED_MESSAGE}", String(error));
+    }
+    refreshToolbar();
+  };
+
+  window.__fm = { toggle: toggle, insertImage: insertImage, image: image };
 })();
 `;
