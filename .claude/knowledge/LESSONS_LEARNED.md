@@ -1751,6 +1751,37 @@ screen per navigation. After changing `asyncRoutes`, export with `--clear` (Metr
 
 ---
 
+### LL-065: After an image change the image stayed selected, and the next key deleted it
+
+**Date:** 2026-10-21  
+**Severity:** Medium (found on the emulator before the image menu was merged, never released)  
+**Category:** Bug  
+**What happened:** The image menu (ADR-024) changed the image, but the caret moved next to it: after a new size or a quarter
+turn it was by the image's edge instead of on the line where the user was writing. After an alignment the image itself stayed
+selected, so the next key typed replaced it. While the image code was being written, a tap test also crashed in the image's
+`touchend` handler.
+
+**Root cause:** `execCommand` works on the selection, so each change selects the image first (`insertHTML` of a changed copy,
+`justify*`, `delete`), and the browser leaves the selection where the command ends: after the inserted copy, or on the image for
+`justify*`. The crash: `refreshToolbar` dispatches a bare `touchend` (no `changedTouches`) to make pell read the selection
+again, and the handler read `e.changedTouches[0]`.
+
+**Fix:** `__fm.image` saves the selection as a `Range` before the change (a range follows the edits around it) and selects it
+again after. Two cases are different. A caret right after an image that gets replaced would end up before the copy, so there
+`insertHTML`'s own placement is kept. A note with no selection is left with none, so a change made while not editing the note
+doesn't open the keyboard. The `touchend` handler ignores an event with no `changedTouches`. `scripts/richtext.test.mjs` checks
+each change with the caret on another line, the caret right after the image, and no caret: 8 of these checks failed before the
+fix.
+
+**Rule:** A page-script change that selects something to run an `execCommand` on it puts the user's selection back afterwards.
+Never leave an element selected behind, because a key replaces it. Handlers on the editor's content must accept
+`refreshToolbar`'s synthetic `touchend`.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
+`feat/richtext-images` (fbab1b2)
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
