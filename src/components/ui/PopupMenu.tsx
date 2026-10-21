@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { createContext, useContext, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LayoutChangeEvent, ViewInstance } from "react-native";
-import { Dimensions, Modal, Platform, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,11 +11,6 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/
 const DEFAULT_WIDTH = 230;
 const GAP = PADDING_MARGIN.sm; // space between the trigger and the menu
 const SCREEN_MARGIN = PADDING_MARGIN.md; // min distance from the screen edges
-
-// On Android, measureInWindow is relative to the app window (below the status
-// bar) while the translucent Modal overlay starts at the very top of the
-// screen — without this the menu lands a status-bar height too high.
-const VERTICAL_OFFSET = Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0;
 
 interface Anchor {
   left: number;
@@ -55,9 +50,10 @@ export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH, ac
   const contentHeight = useSharedValue(0);
 
   const open = () => {
+    // Android draws edge to edge (SDK 58): measureInWindow and the translucent Modal both start at the top of the screen, so
+    // no status bar offset (adding its height put the menu that much below the trigger).
     triggerRef.current?.measureInWindow((x, y, w, h) => {
       const screen = Dimensions.get("window");
-      const ay = y + VERTICAL_OFFSET;
       const ch = lastHeight.current;
 
       // Horizontal: right edge of the menu aligns to the trigger's right edge.
@@ -65,9 +61,9 @@ export default function PopupMenu({ trigger, children, width = DEFAULT_WIDTH, ac
       left = Math.max(SCREEN_MARGIN, Math.min(left, screen.width - width - SCREEN_MARGIN));
 
       // Vertical: just below the trigger, flipping above it if it would overflow.
-      let top = ay + h + GAP;
+      let top = y + h + GAP;
       if (ch > 0 && top + ch > screen.height - insets.bottom - SCREEN_MARGIN) {
-        const above = ay - GAP - ch;
+        const above = y - GAP - ch;
         top =
           above >= insets.top + SCREEN_MARGIN
             ? above
