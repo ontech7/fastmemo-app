@@ -18,6 +18,7 @@ import { isCloudSettingsComplete as settingsComplete, isLoopbackUrl, isPlainHttp
 import { probeVault } from "@/libs/vaultManager";
 import type { CloudProvider } from "@/types";
 import { openUrl } from "@/utils/openUrl";
+import { isTauri } from "@/utils/platform";
 import { toast } from "@/utils/toast";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -83,11 +84,12 @@ export default function CloudSyncScreen() {
 
   const isCloudSettingsComplete = settingsComplete(cloudSettings);
   const plainHttp = provider === "server" && !!cloudSettings.serverUrl && isPlainHttp(cloudSettings.serverUrl);
-  // A page served over HTTPS (the web app, the Windows desktop app) can't fetch an http address other than this machine:
-  // the browser engine blocks it as mixed content.
+  // A page served over HTTPS (the web app in a browser) can't fetch an http address other than this machine: the browser
+  // engine blocks it as mixed content. The desktop app calls the server from Rust (`@/libs/net`), so it can.
   const httpBlocked =
     plainHttp &&
     Platform.OS === "web" &&
+    !isTauri() &&
     globalThis.location?.protocol === "https:" &&
     !isLoopbackUrl(cloudSettings.serverUrl ?? "");
   // Plain HTTP crossing a network, worth a warning: not this machine, not Tailscale (encrypted on the way).

@@ -140,6 +140,9 @@ src/
     vaultPrompt.ts     # Ephemeral pub/sub signal: "encryption needs attention" (drives VaultPromptDialog)
     vaultProgress.ts   # Ephemeral pub/sub signal {done,total} for the re-upload determinate progress bar
     appIcon.ts         # Alternate app icon (expo-alternate-app-icons, ADR-020); .android.ts confirms and closes the app, .web.ts: none
+    net.ts             # Calls to the user's servers (FastMemo server, webhooks); .web.ts: through Rust on desktop (src-tauri/src/net.rs, ADR-017)
+    desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only
+    desktopMenu.ts     # macOS menu labels (i18n menu.*) and its items' commands; .ts no-op, .web.ts on Tauri macOS
 
   utils/               # Pure utility functions
     sort.ts            # Sort comparators for Timestamped/Ordered items
@@ -151,7 +154,7 @@ src/
     secureRandom.ts    # OS CSPRNG bytes (WebCrypto getRandomValues, expo-crypto fallback)
     ui.ts              # yieldToUI() — let the spinner paint a frame before a synchronous freeze
     toast.ts           # Platform-split toast notifications
-    webhook.ts         # HTTP POST webhook dispatcher
+    webhook.ts         # Webhook dispatcher (sends through @/libs/net)
     export.ts          # PDF/text export, file sharing
     platform.ts        # Tauri detection
     openUrl.ts         # Cross-platform URL opener
