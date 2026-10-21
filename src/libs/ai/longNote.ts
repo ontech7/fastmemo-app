@@ -1,22 +1,25 @@
 import {
+  blocksText,
   chunkTexts,
   estimateTokens,
   joinNoteBlocks,
   type NoteSegment,
   sameText,
   splitNoteBlocks,
+  splitText,
   withoutSummary,
 } from "./blocks";
-import { LONG_NOTE_MAX_SECONDS, SHORTEN_MIN_TOKENS, SUMMARY_PART_TOKENS } from "./constants";
+import { LONG_NOTE_MAX_SECONDS, REWRITE_PIECE_TOKENS, SHORTEN_MIN_TOKENS, SUMMARY_PART_TOKENS } from "./constants";
 import { currentGeneration, generateEditorContent, getModelSpeed, resolveLanguage, selectedModelId } from "./context";
 import { visibleStreamText } from "./helpers";
 import type { AIModelId, EditorAction, LongNoteProgress } from "./types";
 
 /*
  * Text notes of any length (spec docs/AI_QWEN35_UPGRADE.md §7.5). A rewrite (grammar, shortening, translation) runs one
- * paragraph, heading or list item at a time and puts each back in its place, so the note keeps its structure. A summary
- * reads the note in parts, summarizes each, then merges them; it goes on top of the note, which stays below it. Each step
- * is one completion: the progress shows, a cancel stops every step left, and nothing is applied until the end.
+ * line at a time (a paragraph, a heading, a list item; a very long paragraph a few sentences at a time) and puts each back
+ * in its place, so the note keeps its structure. A summary reads the note in parts, summarizes each, then merges them; it
+ * goes on top of the note, which stays below it. Each step is one completion: the progress shows, a cancel stops every step
+ * left, and nothing is applied until the end.
  */
 
 export type LongNoteAction = "summarize" | "fix_grammar" | "shorten" | "translate";
@@ -43,7 +46,7 @@ export interface LongNoteResult {
   success: boolean;
   /** A rewrite: the note's new HTML. */
   html?: string;
-  /** The rewritten text (a rewrite), or the summary. */
+  /** A rewrite: the note's new text, line by line. A summary: the summary. */
   text?: string;
   error?: string;
 }
@@ -66,7 +69,8 @@ function targetsOf(action: LongNoteAction, segments: NoteSegment[]): number[] {
 
 /*
  * The steps done, by action, language, model and input text: a run again after a cancel, or over paragraphs that didn't
- * change, takes them at once. Memory only, never stored or synced.
+ * change, takes them at once. Memory only, never stored or synced. A step the guard threw away isn't kept (a run again
+ * tries it again), and the whole cache goes when the user turns a result down (`clearLongNoteCache`).
  */
 const CACHE_MAX = 300;
 const _cache = new Map<string, string>();
@@ -77,7 +81,7 @@ function remember(key: string, value: string) {
   if (_cache.size > CACHE_MAX) _cache.delete(_cache.keys().next().value as string);
 }
 
-/** Forgets the steps done (the AI evaluation times every run from scratch). */
+/** Forgets the steps done: the user turned a result down (a run again asks the model again), or the AI evaluation times a run. */
 export function clearLongNoteCache() {
   _cache.clear();
 }
@@ -85,7 +89,10 @@ export function clearLongNoteCache() {
 const cacheKey = (action: EditorAction, lang: string, modelId: AIModelId, text: string) =>
   [action, lang, modelId, text].join("\u0000");
 
-/** Runs `action` on each paragraph, heading or list item of the note `html` it applies to. */
+/** A rewrite answered with the text as it was: the guard threw it away, or it didn't fit (that line stays, the rest goes on). */
+const KEEPS_LINE = new Set(["implausible_output", "too_long"]);
+
+/** Runs `action` on each line of the note `html` it applies to (a long paragraph a few sentences at a time). */
 export async function rewriteNote(
   action: Exclude<LongNoteAction, "summarize">,
   html: string,
@@ -96,50 +103,64 @@ export async function rewriteNote(
   const modelId = options.modelId ?? selectedModelId();
   const lang = options.lang ?? resolveLanguage();
   const segments = splitNoteBlocks(html);
-  const targets = targetsOf(action, segments);
+  const steps = targetsOf(action, segments).flatMap((index) =>
+    splitText((segments[index] as Unit).text, REWRITE_PIECE_TOKENS).map((piece) => ({ index, piece }))
+  );
   // nothing it applies to (shortening a note of short lines): as if the AI found nothing to improve
-  if (targets.length === 0) return { success: false, error: "implausible_output" };
+  if (steps.length === 0) return { success: false, error: "implausible_output" };
 
   const rewrites = new Map<number, string>();
+  // the lines rewritten, then the one under way (its pieces so far)
   const done: string[] = [];
-  for (let step = 0; step < targets.length; step++) {
+  const show = (current: string) => handlers.onText?.([...done, current].filter((t) => t.trim()).join("\n\n"));
+  for (let step = 0; step < steps.length; step++) {
     if (generation !== currentGeneration()) return { success: false, error: "cancelled" };
-    handlers.onProgress?.({ done: step, total: targets.length });
-    const unit = segments[targets[step]] as Unit;
-    const key = cacheKey(action, lang, modelId, unit.text);
-    let next = _cache.get(key);
+    handlers.onProgress?.({ done: step, total: steps.length });
+    const { index, piece } = steps[step];
+    const sofar = rewrites.get(index) ?? "";
+    const input = piece.trim();
+    const key = cacheKey(action, lang, modelId, input);
+    // (a piece of nothing but spaces stays as it is)
+    let next = input ? _cache.get(key) : "";
     if (next === undefined) {
       let streamed = "";
       const result = await generateEditorContent(
         action,
-        unit.text,
+        input,
         (token) => {
           streamed += token;
-          handlers.onText?.([...done, visibleStreamText(streamed)].join("\n\n"));
+          show(sofar + visibleStreamText(streamed));
         },
         { lang, modelId, generation }
       );
-      if (result.success && result.text) next = result.text.trim();
-      // the guard threw this one away: it stays as it was, the rest goes on
-      else if (result.error === "implausible_output") next = unit.text.trim();
-      else return { success: false, error: result.error ?? "error" };
-      remember(key, next);
+      if (result.success && result.text) {
+        next = result.text.trim();
+        remember(key, next);
+      } else if (KEEPS_LINE.has(result.error ?? "")) {
+        next = input;
+      } else {
+        return { success: false, error: result.error ?? "error" };
+      }
     }
-    rewrites.set(targets[step], next);
-    done.push(next);
-    handlers.onText?.(done.join("\n\n"));
+    // the spaces around a piece stay as they were (a paragraph's sentences joined back)
+    const spaced = piece.slice(0, piece.length - piece.trimStart().length) + next + piece.slice(piece.trimEnd().length);
+    rewrites.set(index, sofar + spaced);
+    const lineDone = steps[step + 1]?.index !== index;
+    if (lineDone) done.push((sofar + spaced).trim());
+    show(lineDone ? "" : sofar + spaced);
   }
-  handlers.onProgress?.({ done: targets.length, total: targets.length });
+  handlers.onProgress?.({ done: steps.length, total: steps.length });
 
-  if (targets.every((i) => sameText(rewrites.get(i) ?? "", (segments[i] as Unit).text))) {
+  if ([...rewrites].every(([index, text]) => sameText(text, (segments[index] as Unit).text))) {
     return { success: false, error: "implausible_output" };
   }
-  return { success: true, html: joinNoteBlocks(segments, rewrites), text: done.join("\n\n") };
+  const next = joinNoteBlocks(segments, rewrites);
+  return { success: true, html: next, text: blocksText(splitNoteBlocks(next)) };
 }
 
-/** What a summary reads: the note's units without a summary added on top before, one per line. */
-function summaryInput(segments: NoteSegment[], labels: string[]): string[] {
-  return withoutSummary(segments, labels)
+/** What a summary reads: the note's lines, without a summary added on top before. */
+function summaryInput(html: string): string[] {
+  return splitNoteBlocks(withoutSummary(html))
     .filter((segment): segment is Unit => segment.kind === "unit")
     .map((unit) => unit.text.trim())
     .filter(Boolean);
@@ -147,19 +168,18 @@ function summaryInput(segments: NoteSegment[], labels: string[]): string[] {
 
 /**
  * A summary of the note `html` (its title gives context). Read in parts when it's long: each part summarized, then the
- * parts' summaries merged. `labels`: the label a summary added before has on top, in every language (it isn't read again).
+ * parts' summaries merged. A summary added on top before isn't read again.
  */
 export async function summarizeNote(
   html: string,
   title: string,
-  labels: string[],
   handlers: LongNoteHandlers = {},
   options: LongNoteOptions = {}
 ): Promise<LongNoteResult> {
   const generation = currentGeneration();
   const modelId = options.modelId ?? selectedModelId();
   const lang = options.lang ?? resolveLanguage();
-  const texts = summaryInput(splitNoteBlocks(html), labels);
+  const texts = summaryInput(html);
   if (texts.length === 0) return { success: false, error: "no_content" };
   const parts = chunkTexts(texts, SUMMARY_PART_TOKENS);
   const withTitle = (body: string) => (title.trim() ? `${title.trim()}\n${body}` : body);
@@ -203,32 +223,27 @@ export async function summarizeNote(
   return { success: true, text: result.text.trim() };
 }
 
-function secondsFor(
-  action: LongNoteAction,
-  segments: NoteSegment[],
-  speed: { prefill: number; generate: number },
-  labels: string[]
-): number {
+function secondsFor(action: LongNoteAction, html: string, speed: { prefill: number; generate: number }): number {
   if (action === "summarize") {
-    const tokens = estimateTokens(summaryInput(segments, labels).join("\n"));
+    const tokens = estimateTokens(summaryInput(html).join("\n"));
     const parts = Math.max(1, Math.ceil(tokens / SUMMARY_PART_TOKENS));
     const written = parts > 1 ? parts * 60 + 150 : 150;
     return tokens / speed.prefill + written / speed.generate;
   }
+  const segments = splitNoteBlocks(html);
   const tokens = targetsOf(action, segments).reduce((sum, i) => sum + estimateTokens((segments[i] as Unit).text), 0);
   return tokens / speed.prefill + (tokens * (action === "shorten" ? 0.6 : 1)) / speed.generate;
 }
 
 /** About how long `action` takes on the note `html`, in seconds, at the speed the model runs on this device. */
-export function estimateSeconds(action: LongNoteAction, html: string, modelId?: AIModelId, labels: string[] = []): number {
-  return secondsFor(action, splitNoteBlocks(html), getModelSpeed(modelId), labels);
+export function estimateSeconds(action: LongNoteAction, html: string, modelId?: AIModelId): number {
+  return secondsFor(action, html, getModelSpeed(modelId));
 }
 
 /** The actions that would take longer on the note `html` than anyone should wait: they're turned off for it. */
-export function tooLongForAI(html: string, modelId?: AIModelId, labels: string[] = []): LongNoteAction[] {
-  const segments = splitNoteBlocks(html);
+export function tooLongForAI(html: string, modelId?: AIModelId): LongNoteAction[] {
   const speed = getModelSpeed(modelId);
   return (["summarize", "fix_grammar", "shorten", "translate"] as const).filter(
-    (action) => secondsFor(action, segments, speed, labels) > LONG_NOTE_MAX_SECONDS
+    (action) => secondsFor(action, html, speed) > LONG_NOTE_MAX_SECONDS
   );
 }

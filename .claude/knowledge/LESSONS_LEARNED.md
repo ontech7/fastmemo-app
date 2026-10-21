@@ -1552,6 +1552,29 @@ that index screen. It was already mounted, so nothing sent it on.
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
 `fix/splash-dismiss-all`
 
+### LL-058: AI rewrites removed quotes and labels the user wrote, and a bold "Summary" line would have been replaced
+
+**Date:** 2026-10-21  
+**Severity:** Medium (the cleanup shipped with the rewrite actions; the summary detection was caught in review, before
+release)  
+**Category:** Bug  
+**What happened:** Every free-text answer went through one cleanup that stripped a quote at either end and a "Title:",
+"Summary:" or "Continuation:" label at the start, in 7 languages, whatever the action. Correcting `"Dune" by Frank Herbert` gave
+`Dune" by Frank Herbert`, and dictating "Titolo: ..." lost the word. Once rewrites ran line by line (phase 7) it hit every line
+that started or ended with a quote. The first draft of the summary on top had a similar flaw: it recognized an old summary by a
+bold label in any language, so a note starting with the user's own bold "Riassunto" line would have lost the line under it.
+
+**Root cause:** Both guessed what the model or the app had added from what the text looked like, instead of checking it against
+the input or marking what the app writes.  
+**Fix:** `cleanAnswer(action, input, answer)`: quotes or bold are removed only when they wrap the whole answer and not the
+input, and a label only for the action that adds it (a title, a summary), and only if the input didn't start with it. The
+summary's label is written as `<b data-fm="summary">` and only that mark, at the very top, identifies it. Tests in
+`scripts/ai.test.mjs`.  
+**Rule:** Remove from the user's text only what the app can prove it added: compare with the input, or mark what it writes.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-21 **Resolved in:** branch
+`feat/ai-long-notes`
+
 ---
 
 ## Template for New Entries

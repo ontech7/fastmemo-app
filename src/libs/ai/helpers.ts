@@ -103,6 +103,39 @@ export function createThrottle<T>(onValue: (value: T) => void, intervalMs = 50) 
   };
 }
 
+/** A label the model may put before a title or a summary ("Titolo: ..."), by action. */
+const ANSWER_LABELS: Partial<Record<EditorAction, RegExp>> = {
+  generate_title: /^(Title|Titolo|Titel|Título|Titulo|Titre|タイトル|标题)\s*[:：]\s*/i,
+  summarize: /^(Summary|Riassunto|Zusammenfassung|Resumen|Résumé|Resume|要約|摘要)\s*[:：]\s*/i,
+  summarize_part: /^(Summary|Riassunto|Zusammenfassung|Resumen|Résumé|Resume|要約|摘要)\s*[:：]\s*/i,
+};
+
+const QUOTE_PAIRS: [string, string][] = [
+  ['"', '"'],
+  ["'", "'"],
+  ["“", "”"],
+  ["«", "»"],
+  ["「", "」"],
+  ["**", "**"],
+];
+
+/**
+ * The model's answer without what it adds around it: quotes or bold around the whole answer, a "Title:" before a title or
+ * a "Summary:" before a summary. Only what the input didn't have: a line that starts with a quote, or a note that says
+ * "Title: ...", comes back as it was written.
+ */
+export function cleanAnswer(action: EditorAction, input: string, answer: string): string {
+  let text = answer.trim();
+  const source = input.trim();
+  for (const [open, close] of QUOTE_PAIRS) {
+    const wrapped = text.length > open.length + close.length && text.startsWith(open) && text.endsWith(close);
+    if (wrapped && !(source.startsWith(open) && source.endsWith(close))) text = text.slice(open.length, -close.length).trim();
+  }
+  const label = ANSWER_LABELS[action];
+  if (label && !label.test(source)) text = text.replace(label, "");
+  return text.trim();
+}
+
 /**
  * Whether a rewrite is worth showing: not empty, no reasoning tag, and a length in the action's range (a short text gets a
  * few characters of slack: "ok" -> "Ok." is fine).

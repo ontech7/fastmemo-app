@@ -194,7 +194,7 @@ const EDITOR_SYSTEM_PROMPTS: Record<EditorAction, string> = {
   summarize:
     "You summarize notes concisely. Given note content, output ONLY a brief summary (2-3 sentences) in {{LANG}}. No extra text.",
   summarize_part:
-    "You summarize one part of a longer note. Output ONLY its key points in 1-2 sentences in {{LANG}}. No extra text.",
+    "You summarize one part of a longer note. Output ONLY its key facts (who, what, numbers, dates, decisions) in 2-3 sentences in {{LANG}}. No extra text.",
   suggest_items:
     'You suggest checklist items. Given existing items, output ONLY a JSON array with 3 new related items in {{LANG}}. Format: ["item1","item2","item3"]',
   suggest_category:
@@ -268,8 +268,15 @@ export const MODEL_SPEED: Record<AIModelId, { prefill: number; generate: number 
  */
 export const LONG_NOTE_MAX_SECONDS = 300;
 
-/** A summary reads the note in parts of about this many tokens (one call each, then one that merges them). */
-export const SUMMARY_PART_TOKENS = 1000;
+/**
+ * A summary reads the note in parts of about this many tokens (one call each, then one that merges them). A summary of the
+ * whole note at once is better than one merged from parts (AI evaluation, 2026-10), but a part is read before anything
+ * shows: about 15 s on the 2B and 55 s on the 4B on the reference phone.
+ */
+export const SUMMARY_PART_TOKENS = 1500;
+
+/** A rewrite takes a paragraph longer than this many tokens a few sentences at a time (room to write in, and progress). */
+export const REWRITE_PIECE_TOKENS = 600;
 
 /** Shortening runs on paragraphs of at least this many tokens (about 20 words): a short line stays as it is. */
 export const SHORTEN_MIN_TOKENS = 30;

@@ -212,6 +212,8 @@ const NOTES = [
   "<div>unclosed <b>bold<div>broken",
   "<p>Old</p><p>paragraphs</p><blockquote>quote<div>inner</div></blockquote>",
   "<!-- comment --><div>after a comment</div></div>stray close",
+  "Dictated line one<br>line two<br><br>line four<div>Next <b>a<br>b</b> c</div>",
+  "<div>&#99999999; &#x1F600; &amp;</div>",
 ];
 for (const html of NOTES)
   eq(`blocks: round trip ${JSON.stringify(html.slice(0, 30))}`, B.joinNoteBlocks(B.splitNoteBlocks(html)), html);
@@ -237,7 +239,30 @@ eq(
   units(NOTES[4]).map((u) => u.text),
   ["Centered"]
 );
-eq("blocks: a paragraph holding an image is kept (a rewrite would drop it), and tables", units(NOTES[5]).length, 0);
+eq(
+  "blocks: the text around an image is rewritten, the image kept; tables kept",
+  units(NOTES[5]).map((u) => u.text),
+  ["Text with an image ", " inside"]
+);
+eq(
+  "blocks: lines joined by <br> (dictation, pasted text) are a unit each; not one inside bold",
+  units(NOTES[9]).map((u) => u.text),
+  ["Dictated line one", "line two", "line four", "Next a\nb c"]
+);
+{
+  const segments = B.splitNoteBlocks(NOTES[9]);
+  const i = segments.findIndex((s) => s.kind === "unit" && s.text === "line two");
+  eq(
+    "blocks: one line rewritten, the line breaks around it kept",
+    B.joinNoteBlocks(segments, new Map([[i, "LINE 2"]])),
+    NOTES[9].replace("line two", "LINE 2")
+  );
+}
+eq(
+  "blocks: an entity past Unicode stays as written",
+  units(NOTES[10]).map((u) => u.text),
+  ["&#99999999; 😀 &"]
+);
 eq(
   "blocks: nothing past broken markup is rewritten",
   units(NOTES[6]).map((u) => u.text),
@@ -268,34 +293,33 @@ eq(
 }
 eq("blocks: text of the units, one per line", B.blocksText(B.splitNoteBlocks(NOTES[3])), "Title\nPara\none\ntwo it\na\nnested");
 {
-  const labels = ["Riassunto", "Summary"];
   const note = "<div>Body</div><ul><li>x</li></ul>";
-  const once = B.withSummary(note, "Riassunto", "Short & sweet.\nTwo lines", labels);
+  const once = B.withSummary(note, "Riassunto", "Short & sweet.\nTwo lines");
   eq(
-    "summary: on top under a bold label, the note below as it was",
+    "summary: on top under a marked bold label, the note below as it was",
     once,
-    "<div><b>Riassunto</b></div><div>Short &amp; sweet.<br>Two lines</div><div><br></div><div>Body</div><ul><li>x</li></ul>"
+    '<div><b data-fm="summary">Riassunto</b></div><div>Short &amp; sweet.<br>Two lines</div><div><br></div>' + note
   );
+  ok("summary: found at the top", B.hasSummary(once) && !B.hasSummary(note));
   eq(
-    "summary: a new one replaces the one added before",
-    B.withSummary(once, "Riassunto", "Newer.", labels),
-    "<div><b>Riassunto</b></div><div>Newer.</div><div><br></div>" + note
+    "summary: a new one replaces the one added before (in any language)",
+    B.withSummary(once, "Summary", "Newer."),
+    '<div><b data-fm="summary">Summary</b></div><div>Newer.</div><div><br></div>' + note
   );
-  eq(
-    "summary: ...also added in another language",
-    B.withSummary(B.withSummary(note, "Summary", "Old.", labels), "Riassunto", "New.", labels),
-    "<div><b>Riassunto</b></div><div>New.</div><div><br></div>" + note
-  );
-  eq(
-    "summary: what a new summary reads leaves the old one out",
-    B.blocksText(B.withoutSummary(B.splitNoteBlocks(once), labels)),
-    "Body\nx"
-  );
-  eq(
-    "summary: a bold line the user wrote that isn't a label stays",
-    B.blocksText(B.withoutSummary(B.splitNoteBlocks("<div><b>Ingredienti</b></div><div>farina</div>"), labels)),
-    "Ingredienti\nfarina"
-  );
+  eq("summary: what a new summary reads leaves the old one out", B.withoutSummary(once), note);
+  const edited = '<div><b data-fm="summary">Riassunto</b></div><div>Mine <i>too</i><div>nested</div> end</div><div>after</div>';
+  eq("summary: one the user edited goes whole (nested markup too)", B.withoutSummary(edited), "<div>after</div>");
+  for (const [name, html] of [
+    ["a bold line the user wrote", "<div><b>Riassunto</b></div><div>We agreed X.</div>"],
+    ["a bold label before a list", "<div><b>Summary</b></div><ul><li>first</li><li>second</li></ul>"],
+    [
+      "a marked label below an image",
+      '<div><img src="x"></div><div><b data-fm="summary">Riassunto</b></div><div>mio testo</div>',
+    ],
+    ["a marked label with no summary after it", '<div><b data-fm="summary">Riassunto</b></div>'],
+  ]) {
+    eq(`summary: not one: ${name}`, B.withoutSummary(html), html);
+  }
 }
 eq("tokens: about 3.5 characters each", B.estimateTokens("a".repeat(35)), 10);
 eq("tokens: a CJK character is one", B.estimateTokens("日本語"), 3);
@@ -303,7 +327,43 @@ eq("chunks: grouped up to the budget", B.chunkTexts(["a".repeat(35), "b".repeat(
   "a".repeat(35) + "\n" + "b".repeat(35),
   "c".repeat(35),
 ]);
-eq("chunks: a text over the budget is a chunk of its own", B.chunkTexts(["a".repeat(70), "b"], 10), ["a".repeat(70), "b"]);
+eq("chunks: a text over the budget is split first", B.chunkTexts(["a".repeat(70), "b"], 10), [
+  "a".repeat(35),
+  "a".repeat(35),
+  "b",
+]);
+{
+  const text = "Prima frase. Seconda frase, un po' più lunga! Terza? " + "parola ".repeat(60) + "fine.";
+  const pieces = B.splitText(text, 12);
+  eq("split: joining the pieces gives the text back", pieces.join(""), text);
+  ok(
+    "split: every piece within about the budget",
+    pieces.every((p) => B.estimateTokens(p) <= 13),
+    pieces
+  );
+  eq("split: cut after a sentence", pieces[0], "Prima frase. ");
+  eq("split: short text, one piece", B.splitText("Breve.", 12), ["Breve."]);
+  eq("split: a script without spaces still cut", B.splitText("日本語".repeat(10), 8).join(""), "日本語".repeat(10));
+}
+
+// --- what the model adds around an answer ---
+eq("clean: quotes around a title", H.cleanAnswer("generate_title", "note", '"Spesa"'), "Spesa");
+eq("clean: a label before a title", H.cleanAnswer("generate_title", "note", "Titolo: Spesa"), "Spesa");
+eq("clean: a label before a summary", H.cleanAnswer("summarize", "note", "Summary: Short."), "Short.");
+eq(
+  "clean: a line that starts with a quote stays",
+  H.cleanAnswer("fix_grammar", '"Dune" by Frank Herbert', '"Dune" by Frank Herbert'),
+  '"Dune" by Frank Herbert'
+);
+eq("clean: ...or ends with one", H.cleanAnswer("fix_grammar", 'He said "call me"', 'He said "call me"'), 'He said "call me"');
+eq("clean: a quoted input stays quoted", H.cleanAnswer("translate", '"Ciao"', '"Hello"'), '"Hello"');
+eq(
+  "clean: no label stripped from a rewrite",
+  H.cleanAnswer("fix_grammar", "Title: The Hobbit", "Title: The Hobbit"),
+  "Title: The Hobbit"
+);
+eq("clean: ...nor from dictation", H.cleanAnswer("clean_transcript", "titolo: ciao", "Titolo: ciao"), "Titolo: ciao");
+eq("clean: bold around the answer", H.cleanAnswer("summarize", "x", "**Short.**"), "Short.");
 
 // --- long notes: one step per paragraph (or part), against the stub model ---
 const run = async (fn) => {
@@ -320,7 +380,7 @@ const run = async (fn) => {
   eq("long: each unit rewritten in its place, the rest kept", r.result, {
     success: true,
     html: "<h1>TITOLO</h1><div>UNO BOLD</div><ul><li>DUE</li></ul><pre>code</pre>",
-    text: "TITOLO\n\nUNO BOLD\n\nDUE",
+    text: "TITOLO\nUNO BOLD\nDUE",
   });
   eq("long: one call per unit, in order", r.calls, [
     ["fix_grammar", "Titolo"],
@@ -349,6 +409,11 @@ const run = async (fn) => {
     r.result.html,
     "<div>PRIMO</div><div>secondo <i>x</i></div>"
   );
+  const again = await run((h) => L.rewriteNote("translate", "<div>primo</div><div>secondo <i>x</i></div>", h));
+  eq("long: ...and is asked again next time (the rest from the cache)", again.calls, [["translate", "secondo x"]]);
+  L.clearLongNoteCache();
+  const fresh = await run((h) => L.rewriteNote("translate", "<div>primo</div><div>secondo <i>x</i></div>", h));
+  eq("long: a result turned down is forgotten: the next run asks the model", fresh.calls.length, 2);
 }
 {
   M.setAnswer((_a, c) => ({ success: true, text: c }));
@@ -356,12 +421,19 @@ const run = async (fn) => {
   eq("long: nothing changed anywhere: no improvement", r.result, { success: false, error: "implausible_output" });
 }
 {
-  M.setAnswer((_a, c) => (c === "b2" ? { success: false, error: "too_long" } : { success: true, text: c.toUpperCase() }));
+  M.setAnswer((_a, c) => (c === "b2" ? { success: false, error: "No response" } : { success: true, text: c.toUpperCase() }));
   const r = await run((h) => L.rewriteNote("fix_grammar", "<div>b1</div><div>b2</div><div>b3</div>", h));
   eq(
-    "long: another error stops the run, nothing applied",
+    "long: an error stops the run, nothing applied",
     [r.result, r.calls.length],
-    [{ success: false, error: "too_long" }, 2]
+    [{ success: false, error: "No response" }, 2]
+  );
+  M.setAnswer((_a, c) => (c === "t2 x" ? { success: false, error: "too_long" } : { success: true, text: c.toUpperCase() }));
+  const big = await run((h) => L.rewriteNote("fix_grammar", "<div>t1</div><div>t2 <b>x</b></div><div>t3</div>", h));
+  eq(
+    "long: a line that doesn't fit stays as it was, the rest goes on",
+    big.result.html,
+    "<div>T1</div><div>t2 <b>x</b></div><div>T3</div>"
   );
 }
 {
@@ -382,34 +454,42 @@ const run = async (fn) => {
   eq("long: shortening runs on long paragraphs only (not headings, list items, short lines)", r.calls, [["shorten", long]]);
   const none = await run((h) => L.rewriteNote("shorten", "<div>Corto.</div><div>Anche questo.</div>", h));
   eq("long: nothing long enough to shorten: no call", [none.result.error, none.calls.length], ["implausible_output", 0]);
+  const paragraph = Array.from(
+    { length: 30 },
+    (_, i) => `Frase numero ${i + 1} di un paragrafo molto lungo, scritto tutto di fila senza andare a capo.`
+  ).join(" ");
+  const pieces = await run((h) => L.rewriteNote("fix_grammar", `<div>${paragraph}</div>`, h));
+  ok("long: a long paragraph a few sentences at a time", pieces.calls.length > 1, pieces.calls.length);
+  eq("long: ...joined back as one paragraph", pieces.result.html, `<div>${paragraph.toUpperCase()}</div>`);
+  eq("long: ...progress counts the pieces", pieces.progress.at(-1), `${pieces.calls.length}/${pieces.calls.length}`);
 }
 {
-  const r = await run((h) => L.summarizeNote("<div>Uno.</div><div>Due.</div>", "Spesa", ["Riassunto"], h));
+  const r = await run((h) => L.summarizeNote("<div>Uno.</div><div>Due.</div>", "Spesa", h));
   eq(
     "summary: a short note in one call, the title first",
     [r.result, r.calls, r.progress],
     [{ success: true, text: "SPESA\nUNO.\nDUE." }, [["summarize", "Spesa\nUno.\nDue."]], ["0/1", "1/1"]]
   );
-  const old = B.withSummary("<div>Corpo.</div>", "Riassunto", "Vecchio.", ["Riassunto"]);
-  const again = await run((h) => L.summarizeNote(old, "", ["Summary", "Riassunto"], h));
+  const old = B.withSummary("<div>Corpo.</div>", "Riassunto", "Vecchio.");
+  const again = await run((h) => L.summarizeNote(old, "", h));
   eq("summary: the one added before is not read again", again.calls, [["summarize", "Corpo."]]);
-  const empty = await run((h) => L.summarizeNote(B.withSummary("", "Riassunto", "Solo questo.", []), "", ["Riassunto"], h));
+  const empty = await run((h) => L.summarizeNote(B.withSummary("", "Riassunto", "Solo questo."), "", h));
   eq("summary: nothing but an old summary: no content", [empty.result.error, empty.calls.length], ["no_content", 0]);
 }
 {
   const para = (i) => `<div>${`Paragrafo ${i} `.repeat(150)}</div>`;
-  const note = [1, 2, 3].map(para).join("");
+  const note = [1, 2, 3, 4, 5, 6].map(para).join("");
   M.setAnswer((action, c) => ({ success: true, text: action === "summarize_part" ? `parte(${c.length})` : `finale: ${c}` }));
-  const r = await run((h) => L.summarizeNote(note, "T", [], h));
+  const r = await run((h) => L.summarizeNote(note, "T", h));
   eq(
     "summary: a long note in parts, then merged",
     r.calls.map((c) => c[0]),
     ["summarize_part", "summarize_part", "summarize_part", "summarize"]
   );
-  eq("summary: the merge reads the parts' summaries", r.calls.at(-1)[1], "T\nparte(1799)\nparte(1799)\nparte(1799)");
+  eq("summary: the merge reads the parts' summaries", r.calls.at(-1)[1], "T\nparte(3599)\nparte(3599)\nparte(3599)");
   eq("summary: progress counts the parts and the merge", r.progress, ["0/4", "1/4", "2/4", "3/4", "4/4"]);
   M.setAnswer((action, c) => ({ success: true, text: action === "summarize_part" ? `parte(${c.length})` : `finale: ${c}` }));
-  const again = await run((h) => L.summarizeNote(note, "T", [], h));
+  const again = await run((h) => L.summarizeNote(note, "T", h));
   eq(
     "summary: run again, only the merge runs (the parts are cached)",
     again.calls.map((c) => c[0]),
@@ -418,7 +498,7 @@ const run = async (fn) => {
   M.setAnswer((action) =>
     action === "summarize_part" ? { success: false, error: "No response" } : { success: true, text: "x" }
   );
-  const failed = await run((h) => L.summarizeNote(note.replace(/Paragrafo/g, "Capitolo"), "T", [], h));
+  const failed = await run((h) => L.summarizeNote(note.replace(/Paragrafo/g, "Capitolo"), "T", h));
   eq("summary: a part that fails stops it", [failed.result.error, failed.calls.length], ["No response", 1]);
 }
 {

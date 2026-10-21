@@ -594,6 +594,8 @@ const en = {
       note_too_long: "Note too long for this model",
       progress: "Part {{current}} of {{total}}",
       summary_label: "Summary",
+      summary_on_top: "It goes at the top of the note; the note stays as it is below.",
+      summary_replaces: "It goes at the top of the note, in place of the earlier summary.",
       error: "Could not generate, try again",
     },
   },

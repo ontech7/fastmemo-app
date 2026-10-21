@@ -582,6 +582,8 @@ const zh = {
       note_too_long: "笔记太长，此模型无法处理",
       progress: "第 {{current}} / {{total}} 部分",
       summary_label: "摘要",
+      summary_on_top: "添加在笔记顶部，下面的笔记保持不变。",
+      summary_replaces: "添加在笔记顶部，替换之前的摘要。",
       error: "无法生成，请重试",
     },
   },

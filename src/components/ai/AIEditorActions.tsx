@@ -2,9 +2,11 @@ import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SHADOW } from "@/c
 import type { AIModelId, EditorAction, LongNoteAction, LongNoteProgress } from "@/libs/ai";
 import {
   cancelCommand,
+  clearLongNoteCache,
   createTextStream,
   createThrottle,
   generateEditorContent,
+  hasSummary,
   isModelSufficient,
   LONG_NOTE_ACTIONS,
   MODEL_SHORT_LABEL,
@@ -14,11 +16,10 @@ import {
   tooLongForAI,
   withSummary,
 } from "@/libs/ai";
-import { supportedLanguages } from "@/libs/i18n";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
 import type { NoteType } from "@/types/note";
 import { toast } from "@/utils/toast";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ViewStyle } from "react-native";
 import {
@@ -152,7 +153,7 @@ export default function AIEditorActions({
   style,
   menuBottomOffset = 200,
 }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const aiSettings = useSelector(selectorAIAssistant);
 
@@ -174,6 +175,8 @@ export default function AIEditorActions({
     html?: string;
     /** The paragraph, or the part of a summary, under way. */
     progress?: LongNoteProgress;
+    /** Where the result goes, when that isn't plain (a summary goes on top of the note). */
+    hint?: string;
     streaming: boolean;
   } | null>(null);
   // Left edge (window coords) of the trigger, so the menu opens exactly from the button.
@@ -191,12 +194,6 @@ export default function AIEditorActions({
   const editsHtml = !!getHtml && !!onHtmlChanged;
   const actionItems = getActionsForType(noteType).filter((item) => editsHtml || !LONG_NOTE_ACTIONS.has(item.id));
 
-  // A summary added before, in any language, is replaced by the next one (and never summarized itself).
-  const summaryLabels = useMemo(
-    () => Object.keys(supportedLanguages).map((code) => i18n.getFixedT(code)("ai.editor.summary_label")),
-    [i18n]
-  );
-
   const closeMenu = useCallback(() => setIsMenuOpen(false), []);
 
   const toggleMenu = useCallback(() => {
@@ -206,10 +203,16 @@ export default function AIEditorActions({
       triggerRef.current?.measureInWindow((x) => setMenuLeft(x));
       // the model loads while the user picks an action
       prewarmContext(aiSettings.selectedModel);
-      setTooLong(getHtml ? new Set(tooLongForAI(getHtml(), aiSettings.selectedModel, summaryLabels)) : NO_ACTIONS);
+      let tooLongNow: ReadonlySet<EditorAction> = NO_ACTIONS;
+      try {
+        if (getHtml) tooLongNow = new Set(tooLongForAI(getHtml(), aiSettings.selectedModel));
+      } catch {
+        // markup it can't read: every action stays on (the model has the last word)
+      }
+      setTooLong(tooLongNow);
     }
     setIsMenuOpen((prev) => !prev);
-  }, [feedback, isMenuOpen, aiSettings.selectedModel, getHtml, summaryLabels]);
+  }, [feedback, isMenuOpen, aiSettings.selectedModel, getHtml]);
 
   // Leaving the note mid-action stops the model, and whatever it already wrote is dropped (never applied to the note).
   useEffect(
@@ -283,6 +286,10 @@ export default function AIEditorActions({
           source: html ?? (action === "generate_title" ? noteTitle : rawContent),
           before: action === "generate_title" ? noteTitle : rawContent,
           after: "",
+          hint:
+            action === "summarize" && html !== undefined
+              ? t(hasSummary(html) ? "ai.editor.summary_replaces" : "ai.editor.summary_on_top")
+              : undefined,
           streaming: true,
         });
       } else {
@@ -312,16 +319,14 @@ export default function AIEditorActions({
         try {
           const result =
             action === "summarize"
-              ? await summarizeNote(html, noteTitle, summaryLabels, handlers)
+              ? await summarizeNote(html, noteTitle, handlers)
               : await rewriteNote(action as Exclude<LongNoteAction, "summarize">, html, handlers);
           stream.stop();
           if (run !== runRef.current) return;
           runningRef.current = false;
           if (result.error === "cancelled") return stopped();
           const next =
-            action === "summarize" && result.text
-              ? withSummary(html, t("ai.editor.summary_label"), result.text, summaryLabels)
-              : result.html;
+            action === "summarize" && result.text ? withSummary(html, t("ai.editor.summary_label"), result.text) : result.html;
           if (!result.success || !result.text || !next) return fail(errorMessage(action, result.error));
           setPreview((p) => (p ? { ...p, after: result.text ?? "", html: next, streaming: false } : p));
         } catch {
@@ -383,7 +388,7 @@ export default function AIEditorActions({
         fail(t("ai.editor.error"));
       }
     },
-    [getContent, getHtml, noteTitle, onItemsSuggested, onCategorySuggested, t, closeMenu, errorMessage, summaryLabels]
+    [getContent, getHtml, noteTitle, onItemsSuggested, onCategorySuggested, t, closeMenu, errorMessage]
   );
 
   const applyPreview = () => {
@@ -411,11 +416,16 @@ export default function AIEditorActions({
     setPreview(null);
   }, []);
 
-  // Closing a preview the model is still writing stops the model too.
+  // Closing a preview the model is still writing stops the model too (the steps done are kept, a run again picks up from
+  // there). Turning a finished one down forgets them: a run again asks the model again.
   const closePreview = useCallback(() => {
-    if (preview?.streaming) handleCancel();
-    else setPreview(null);
-  }, [preview?.streaming, handleCancel]);
+    if (preview?.streaming) {
+      handleCancel();
+      return;
+    }
+    if (preview?.html !== undefined) clearLongNoteCache();
+    setPreview(null);
+  }, [preview?.streaming, preview?.html, handleCancel]);
 
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: menuProgress.value,
@@ -510,6 +520,7 @@ export default function AIEditorActions({
                 ) : (
                   <Text style={[styles.previewBlock, styles.previewAfter]}>{preview?.after}</Text>
                 )}
+                {preview?.hint ? <Text style={styles.previewHint}>{preview.hint}</Text> : null}
               </View>
             </ScrollView>
 
@@ -685,6 +696,11 @@ const styles = StyleSheet.create({
   previewProgress: {
     color: COLOR.placeholder,
     fontSize: FONTSIZE.small,
+  },
+  previewHint: {
+    color: COLOR.placeholder,
+    fontSize: FONTSIZE.small,
+    marginTop: PADDING_MARGIN.xs,
   },
   previewBlock: {
     fontSize: FONTSIZE.medium,

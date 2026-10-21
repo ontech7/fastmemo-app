@@ -1,8 +1,8 @@
 /*
- * A text note's HTML as the AI works on it (spec docs/AI_QWEN35_UPGRADE.md §7.5): its paragraphs, headings and list items,
- * each rewritten on its own and put back where it was, so the note keeps its structure. What isn't text (images, code,
- * tables, rules) is never touched, and a unit the AI leaves as it was keeps its formatting. Pure, no DOM (React Native has
- * none).
+ * A text note's HTML as the AI works on it (spec docs/AI_QWEN35_UPGRADE.md §7.5): its lines (paragraphs, headings, list
+ * items, and the lines a `<br>` or an image separates inside one), each rewritten on its own and put back where it was, so
+ * the note keeps its structure. What isn't text (images, code, tables, rules) is never touched, and a line the AI leaves as
+ * it was keeps its formatting. Pure, no DOM (React Native has none).
  */
 
 /** A piece of the note: kept as it is, or a unit of text the AI may rewrite (`inner` is replaced, `open`/`close` stay). */
@@ -56,6 +56,9 @@ const OPAQUE = new Set(["details", "dl", "fieldset", "figure", "form", "hr", "pr
 /** Content a rewrite would lose (the text is put back without markup): a unit holding any of it is kept. */
 const EMBEDDED = /<(img|video|audio|iframe|svg|canvas|object|embed|input|picture)\b/i;
 
+/** What ends a line inside a block: a line break, or an image or a checkbox between two runs of text (kept apart). */
+const LINE_CUT = new Set(["br", "embed", "img", "input"]);
+
 const ENTITIES: Record<string, string> = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", "#39": "'" };
 
 /** The text a fragment shows: line breaks for `<br>`, no tags, entities decoded. */
@@ -66,9 +69,13 @@ export function textOfHtml(html: string): string {
     .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (entity, name: string) => {
       const lower = name.toLowerCase();
       if (lower in ENTITIES) return ENTITIES[lower];
-      if (lower.startsWith("#x")) return String.fromCodePoint(parseInt(lower.slice(2), 16));
-      if (lower.startsWith("#")) return String.fromCodePoint(parseInt(lower.slice(1), 10));
-      return entity;
+      const code = lower.startsWith("#x")
+        ? parseInt(lower.slice(2), 16)
+        : lower.startsWith("#")
+          ? parseInt(lower.slice(1), 10)
+          : NaN;
+      // a code point past Unicode's (pasted markup) stays as it was written
+      return code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : entity;
     });
 }
 
@@ -108,10 +115,40 @@ function hasBlock(html: string): boolean {
   return false;
 }
 
+/**
+ * A block's inline content, one unit per line: a `<br>` or an image outside any inline element ends a line (dictation and
+ * pasted text join their lines with `<br>`; an image sits between two runs of text). The block's open tag goes with its
+ * first line, the close tag with its last.
+ */
 function pushUnit(tag: string, open: string, inner: string, close: string, out: NoteSegment[]) {
-  const text = textOfHtml(inner);
-  if (!text.trim() || EMBEDDED.test(inner)) out.push(keep(open + inner + close));
-  else out.push({ kind: "unit", tag, open, inner, close, text });
+  const re = new RegExp(TAG_RE.source, "g");
+  const lines: string[] = [];
+  const cuts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let m = re.exec(inner); m; m = re.exec(inner)) {
+    const name = m[1]?.toLowerCase();
+    if (!name) continue;
+    if (m[0][1] === "/") depth = Math.max(0, depth - 1);
+    else if (!VOID.has(name) && !m[0].endsWith("/>")) depth++;
+    else if (depth === 0 && LINE_CUT.has(name)) {
+      lines.push(inner.slice(start, m.index));
+      cuts.push(m[0]);
+      start = re.lastIndex;
+    }
+  }
+  lines.push(inner.slice(start));
+  lines.forEach((line, i) => {
+    const before = i === 0 ? open : "";
+    const after = i === lines.length - 1 ? close : cuts[i];
+    const text = textOfHtml(line);
+    if (!text.trim() || EMBEDDED.test(line)) {
+      out.push(keep(before + line + after));
+    } else {
+      out.push({ kind: "unit", tag, open: before, inner: line, close: i === lines.length - 1 ? close : "", text });
+      if (i < lines.length - 1) out.push(keep(cuts[i]));
+    }
+  });
 }
 
 function pushBlock(name: string, open: string, inner: string, close: string, out: NoteSegment[]) {
@@ -198,42 +235,38 @@ export function blocksText(segments: NoteSegment[]): string {
     .join("\n");
 }
 
-const BOLD_LABEL = /^\s*<(b|strong)>([^<]*)<\/\1>\s*$/i;
-
 /**
- * Where a summary the AI added before sits: a bold label (in any of `labels`) on the note's first line, the summary on the
- * next, and the empty line after it. Null if the note doesn't start with one.
+ * A summary the AI added: its label is marked (a bold line the user wrote is never taken for one), and only one at the very
+ * top of the note counts. Whoever edits its text keeps the mark; whoever unbolds the label makes it part of the note.
  */
-function summaryAtTop(segments: NoteSegment[], labels: string[]): { from: number; to: number } | null {
-  const first = segments.findIndex((s) => s.kind === "unit" || s.html.replace(/<[^>]*>|\s|&nbsp;/g, ""));
-  const label = segments[first];
-  if (label?.kind !== "unit" || !labels.some((name) => name.trim() === BOLD_LABEL.exec(label.inner)?.[2]?.trim())) return null;
-  const summary = segments.findIndex((s, i) => i > first && s.kind === "unit");
-  if (summary === -1) return null;
-  // only kept markup between them (closing and opening tags), nothing the user wrote
-  if (segments.slice(first + 1, summary).some((s) => s.kind === "keep" && textOfHtml(s.html).trim())) return null;
-  return { from: first, to: summary };
+const SUMMARY_LABEL = /^<div><b data-fm="summary">[^<]*<\/b><\/div>/;
+
+/** Where a summary the AI added at the top of the note ends (its label, its text and the empty line after it), or 0. */
+function summaryEnd(html: string): number {
+  const label = SUMMARY_LABEL.exec(html);
+  if (!label) return 0;
+  const re = new RegExp(TAG_RE.source, "g");
+  re.lastIndex = label[0].length;
+  const open = re.exec(html);
+  if (open?.index !== label[0].length || open[1]?.toLowerCase() !== "div" || open[0][1] === "/") return 0;
+  const close = findClose(html, "div", re.lastIndex);
+  if (!close) return 0;
+  const gap = /^<div><br\s*\/?><\/div>/i.exec(html.slice(close.end));
+  return close.end + (gap ? gap[0].length : 0);
 }
 
+/** Whether the note starts with a summary the AI added (a new one replaces it). */
+export const hasSummary = (html: string) => summaryEnd(html ?? "") > 0;
+
 /** The note without a summary the AI added at its top (what a new summary reads, and what it goes on top of). */
-export function withoutSummary(segments: NoteSegment[], labels: string[]): NoteSegment[] {
-  const found = summaryAtTop(segments, labels);
-  if (!found) return segments;
-  const rest = segments.slice(found.to + 1);
-  // the empty line that separated it from the note
-  const next = rest[0];
-  if (next?.kind === "keep") {
-    // (any closing tags before it stay: they close something the note opened)
-    const trimmed = next.html.replace(/^((?:\s*<\/[a-z0-9]+>)*)\s*<div>\s*<br\s*\/?>\s*<\/div>/i, "$1");
-    rest[0] = { kind: "keep", html: trimmed };
-  }
-  return [...segments.slice(0, found.from), ...rest];
+export function withoutSummary(html: string): string {
+  return (html ?? "").slice(summaryEnd(html ?? ""));
 }
 
 /** The note with `summary` on top, under a bold `label` (replacing one added before), and the note as it was below. */
-export function withSummary(html: string, label: string, summary: string, labels: string[]): string {
-  const body = joinNoteBlocks(withoutSummary(splitNoteBlocks(html), [label, ...labels]));
-  return `<div><b>${escapeHtml(label.trim())}</b></div><div>${textToInlineHtml(summary)}</div><div><br></div>${body}`;
+export function withSummary(html: string, label: string, summary: string): string {
+  const top = `<div><b data-fm="summary">${escapeHtml(label.trim())}</b></div><div>${textToInlineHtml(summary)}</div>`;
+  return `${top}<div><br></div>${withoutSummary(html)}`;
 }
 
 /**
@@ -245,12 +278,59 @@ export function estimateTokens(text: string): number {
   return Math.ceil(cjk + (text.length - cjk) / 3.5);
 }
 
-/** Consecutive texts grouped into chunks of at most `budget` tokens (a text over it is a chunk on its own). */
+/**
+ * `text` in consecutive pieces of about `budget` tokens at most, cut after a sentence (or, in a sentence longer than that,
+ * after a space). Joining the pieces gives `text` back.
+ */
+export function splitText(text: string, budget: number): string[] {
+  if (estimateTokens(text) <= budget) return [text];
+  // sentences, each with the spaces after it
+  const sentences: string[] = [];
+  let from = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (!/[.!?。！？\n]/.test(text[i]) || /[.!?。！？\n]/.test(text[i + 1] ?? "")) continue;
+    let end = i + 1;
+    while (end < text.length && /\s/.test(text[end])) end++;
+    sentences.push(text.slice(from, end));
+    from = end;
+    i = end - 1;
+  }
+  if (from < text.length) sentences.push(text.slice(from));
+
+  const pieces: string[] = [];
+  let current = "";
+  const add = (part: string) => {
+    if (current && estimateTokens(current + part) > budget) {
+      pieces.push(current);
+      current = "";
+    }
+    current += part;
+  };
+  for (const sentence of sentences) {
+    if (estimateTokens(sentence) <= budget) {
+      add(sentence);
+      continue;
+    }
+    // a sentence longer than a piece: cut after a space (or anywhere, in a script without spaces)
+    const size = Math.max(1, Math.floor((sentence.length * budget) / estimateTokens(sentence)));
+    for (let at = 0; at < sentence.length; ) {
+      let end = Math.min(sentence.length, at + size);
+      const space = sentence.lastIndexOf(" ", end - 1);
+      if (end < sentence.length && space > at + size * 0.6) end = space + 1;
+      add(sentence.slice(at, end));
+      at = end;
+    }
+  }
+  if (current) pieces.push(current);
+  return pieces;
+}
+
+/** Consecutive texts grouped into chunks of at most about `budget` tokens (a longer text is split first). */
 export function chunkTexts(texts: string[], budget: number): string[] {
   const chunks: string[] = [];
   let current: string[] = [];
   let tokens = 0;
-  for (const text of texts) {
+  for (const text of texts.flatMap((t) => splitText(t, budget).map((piece) => piece.trim()))) {
     const size = estimateTokens(text);
     if (current.length && tokens + size > budget) {
       chunks.push(current.join("\n"));

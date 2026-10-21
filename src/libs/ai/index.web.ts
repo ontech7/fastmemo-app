@@ -18,7 +18,7 @@ import type {
 } from "./types";
 
 export { completedJsonStrings, createTextStream, createThrottle, findCategoryByName, stripHtml } from "./helpers";
-export { withSummary } from "./blocks";
+export { hasSummary, withSummary } from "./blocks";
 export {
   AI_MODELS,
   DEFAULT_MODEL_ID,
@@ -124,7 +124,7 @@ export async function rewriteNote(_action: Exclude<LongNoteAction, "summarize">,
   return { success: false, error: "AI not available on web" };
 }
 
-export async function summarizeNote(_html: string, _title: string, _labels: string[]): Promise<LongNoteResult> {
+export async function summarizeNote(_html: string, _title: string): Promise<LongNoteResult> {
   return { success: false, error: "AI not available on web" };
 }
 
@@ -135,3 +135,5 @@ export function estimateSeconds(_action: LongNoteAction, _html: string): number 
 export function tooLongForAI(_html: string): LongNoteAction[] {
   return [];
 }
+
+export function clearLongNoteCache() {}

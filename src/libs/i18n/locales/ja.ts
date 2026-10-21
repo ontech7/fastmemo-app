@@ -592,6 +592,8 @@ const ja = {
       note_too_long: "このモデルにはノートが長すぎます",
       progress: "パート {{current}} / {{total}}",
       summary_label: "要約",
+      summary_on_top: "ノートの先頭に追加され、その下のノートはそのまま残ります。",
+      summary_replaces: "ノートの先頭に追加され、以前の要約と置き換わります。",
       error: "生成できませんでした。もう一度お試しください",
     },
   },

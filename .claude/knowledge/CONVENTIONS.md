@@ -796,6 +796,12 @@ Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file tha
    a loaded 2B holds over a gigabyte.
 6. **Measure before changing a prompt, sampling or tier**: run Developer options -> AI evaluation on a phone before and after,
    and compare the saved JSON reports.
+7. **A note's text goes to the model through `rewriteNote` / `summarizeNote`** (`libs/ai/longNote.ts`), never whole: they work
+   line by line on the HTML (`blocks.ts`) and give HTML back with the structure kept. Never `stripHtml` a note, rewrite it and
+   `setContentHTML` the plain answer.
+8. **Remove from the user's text only what the app can prove it added** (LL-058): `cleanAnswer` strips quotes or a "Title:" only
+   when the input didn't have them, and only for the action that adds them; an AI summary is recognized by its
+   `data-fm="summary"` mark at the very top, never by a label's wording.
 
 ---
 

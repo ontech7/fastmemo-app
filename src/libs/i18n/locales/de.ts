@@ -602,6 +602,8 @@ const de = {
       note_too_long: "Notiz zu lang für dieses Modell",
       progress: "Teil {{current}} von {{total}}",
       summary_label: "Zusammenfassung",
+      summary_on_top: "Sie steht oben in der Notiz; darunter bleibt die Notiz unverändert.",
+      summary_replaces: "Sie steht oben in der Notiz, anstelle der vorherigen Zusammenfassung.",
       error: "Konnte nicht generieren, versuche es erneut",
     },
   },

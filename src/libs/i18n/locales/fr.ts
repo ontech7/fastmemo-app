@@ -600,6 +600,8 @@ const fr = {
       note_too_long: "Note trop longue pour ce modèle",
       progress: "Partie {{current}} sur {{total}}",
       summary_label: "Résumé",
+      summary_on_top: "Il s'ajoute en haut de la note ; en dessous, la note reste telle quelle.",
+      summary_replaces: "Il s'ajoute en haut de la note, à la place du résumé précédent.",
       error: "Impossible de generer, reessayez",
     },
   },

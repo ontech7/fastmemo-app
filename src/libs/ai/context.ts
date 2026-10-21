@@ -17,7 +17,7 @@ import {
   normalizeModelId,
   truncateForAction,
 } from "./constants";
-import { categoryGrammar, cleanSuggestedItems, isPlausibleRewrite, stripThinking } from "./helpers";
+import { categoryGrammar, cleanAnswer, cleanSuggestedItems, isPlausibleRewrite, stripThinking } from "./helpers";
 import type {
   AIModelId,
   AIModelInfo,
@@ -609,14 +609,7 @@ async function runEditorAction(
       return items.length ? { success: true, items, timings } : { success: false, error: "No items", timings };
     }
 
-    // Clean common artifacts from free-text output (multilingual prefixes)
-    const cleaned = text
-      .replace(/^["']|["']$/g, "")
-      .replace(/^\*\*|\*\*$/g, "")
-      .replace(/^(Title|Titolo|Titel|Titulo|Titre|タイトル|标题)\s*:\s*/i, "")
-      .replace(/^(Summary|Riassunto|Zusammenfassung|Resumen|Resume|要約|摘要)\s*:\s*/i, "")
-      .replace(/^(Continuation|Continuazione|Fortsetzung|Continuacion|Suite|続き|续写)\s*:\s*/i, "")
-      .trim();
+    const cleaned = cleanAnswer(action, content, text);
 
     // The grammar lets the model answer only with a category name or "none" (a category named "none" wins).
     if (action === "suggest_category") {

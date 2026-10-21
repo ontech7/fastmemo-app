@@ -89,7 +89,7 @@ export async function runAIEval(
     const start = Date.now();
     const answer =
       fixture.action === "summarize"
-        ? await summarizeNote(fixture.html, fixture.title ?? "", [], handlers, options)
+        ? await summarizeNote(fixture.html, fixture.title ?? "", handlers, options)
         : await rewriteNote(fixture.action, fixture.html, handlers, options);
     const result: EvalResult = {
       id: fixture.id,

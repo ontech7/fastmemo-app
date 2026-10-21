@@ -101,8 +101,12 @@ src/
     ai/                # On-device LLM (llama.rn, Qwen3.5 0.8B/2B/4B -- ADR-004)
       types.ts         # AIModelId, AIModelStatus, EditorAction, EditorActionResult, AITimings
       constants.ts     # Model catalog (pinned GGUFs), legacy id map, per-action sampling/token budget, prompts, GBNF
-      helpers.ts       # Category matching, HTML stripping, think stripping, stream throttle, rewrite guard (tested by
-                       # scripts/ai.test.mjs)
+      helpers.ts       # Category matching, HTML stripping, think stripping, stream throttle, rewrite guard, answer cleanup
+                       # (tested by scripts/ai.test.mjs)
+      blocks.ts        # A text note's HTML as lines to rewrite (split/join, structure kept), the summary on top, token
+                       # estimate, chunking (pure, tested by scripts/ai.test.mjs)
+      longNote.ts      # Long notes: a rewrite line by line, a summary in parts then merged, step cache, time estimate
+                       # (tested with a stub model)
       context.ts       # LLM context lifecycle (pre-warm, idle/background release), download, generation (native only)
       eval.ts          # Developer-only evaluation run over evalFixtures.ts (Developer options -> AI evaluation)
       index.ts         # Barrel export (native)

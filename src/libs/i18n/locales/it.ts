@@ -598,6 +598,8 @@ const it = {
       note_too_long: "Nota troppo lunga per questo modello",
       progress: "Parte {{current}} di {{total}}",
       summary_label: "Riassunto",
+      summary_on_top: "Va in cima alla nota; sotto, la nota resta com'è.",
+      summary_replaces: "Va in cima alla nota, al posto del riassunto di prima.",
       error: "Impossibile generare, riprova",
     },
   },
