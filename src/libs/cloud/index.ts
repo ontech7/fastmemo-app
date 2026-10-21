@@ -1,4 +1,5 @@
 import { getDeviceInfo } from "@/libs/device";
+import { httpFetch } from "@/utils/httpFetch";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import uuid from "react-uuid";
 
@@ -31,7 +32,10 @@ export {
 } from "./scope";
 
 /** The cloud this device syncs with (ADR-016): Firebase or a FastMemo server, as the settings say (ADR-017). */
-export const cloud: CloudBackend = new CloudRouter({ firebase: new FirebaseBackend(), server: new ServerBackend() });
+export const cloud: CloudBackend = new CloudRouter({
+  firebase: new FirebaseBackend(),
+  server: new ServerBackend({ fetch: httpFetch }),
+});
 
 /** Whether a cloud connection is set up (not whether it's reachable). */
 export const isCloudConnected = (): boolean => cloud.isActive();

@@ -641,10 +641,16 @@ who want their notes at home (PC, NAS, Raspberry Pi, VPS) had no option. ADR-016
     `localhost` and `.local` names over http, but not a dotted name (`nas.home.arpa`, a DDNS name; measured on a built app,
     2026-10-20). `src-tauri/Info.plist` sets `NSAllowsArbitraryLoadsInWebContent` (webview loads only). Linux is a `tauri://`
     page without ATS: expected to work the same, not tested.
-  - The hosted web app and the Windows desktop app are `https://` pages: the browser engine blocks an `http://` fetch from them
-    (mixed content) unless the server is this machine (`isLoopbackUrl`); the connect screen says so and disables saving. Windows
-    would need `tauri-plugin-http` (a new dependency, not approved yet); WebView2's `--allow-running-insecure-content` was
-    rejected, it lets every insecure subresource in, not only the sync calls.
+  - The hosted web app is an `https://` page: the browser engine blocks an `http://` fetch from it (mixed content) unless the
+    server is this machine (`isLoopbackUrl`); the connect screen says so and disables saving. WebView2's
+    `--allow-running-insecure-content` was rejected for the Windows app, it lets every insecure subresource in, not only the
+    sync calls.
+  - _Revised 2026-10-21 (desktop 2.0.0):_ the desktop app calls the server and the webhooks from Rust (`tauri-plugin-http`,
+    `src/utils/httpFetch.web.ts`), on every OS: no mixed-content block on Windows, no ATS on macOS, no CORS. Certificates come
+    from the OS store (`rustls-tls-native-roots`, as the webview: a home server's private CA keeps working), without a cookie
+    jar. The capability allows any `http`/`https` URL: the server and webhook addresses are the user's, and the page could
+    already reach any `https` URL. Verified on macOS through a logging proxy (the requests carry the plugin's user agent and no
+    `Sec-Fetch-*`); Windows still to be tried on a real PC.
   - The connect screen warns under an http address and asks to confirm before saving, recommending HTTPS (a reverse proxy with a
     certificate, or Tailscale). Not for this machine nor a Tailscale address (`isTailscaleUrl`: 100.64.0.0/10, `*.ts.net`),
     which cross no network unencrypted. The warning says what a device on HTTP gives away wherever it is (it roams: confirmed at

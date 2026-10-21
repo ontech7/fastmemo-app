@@ -1,4 +1,5 @@
 import type { WebhookPayload } from "@/types";
+import { httpFetch } from "@/utils/httpFetch";
 
 AbortSignal.timeout ??= function timeout(ms: number) {
   const ctrl = new AbortController();
@@ -12,7 +13,7 @@ export const webhook = async (payload: WebhookPayload, body: Record<string, unkn
   }
 
   try {
-    await fetch(payload.url, {
+    await httpFetch(payload.url, {
       method: "POST",
       signal: AbortSignal.timeout(5000),
       headers: {

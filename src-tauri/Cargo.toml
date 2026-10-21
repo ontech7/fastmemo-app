@@ -20,6 +20,9 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+# The sync server and webhooks are called from Rust (src/utils/httpFetch.web.ts): no mixed-content block on Windows, no
+# CORS. Certificates from the OS store, as the webview uses (a home server's private CA keeps working); no cookie jar.
+tauri-plugin-http = { version = "2", default-features = false, features = ["rustls-tls-native-roots", "http2", "charset", "system-proxy"] }
 tauri-plugin-opener = "2"
 tauri-plugin-process = "2"
 tauri-plugin-single-instance = "2"

@@ -2,9 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- A self-hosted server on plain http:// under a name (nas.home.arpa, a DDNS name): App Transport Security only lets
-	     the webview reach IP addresses, localhost and .local names over http otherwise. The app warns before using HTTP
-	     (ADR-017). -->
+	<!-- Plain http:// loads in the webview under a name (nas.home.arpa, a DDNS name), e.g. an image in a note: App
+	     Transport Security only lets the webview reach IP addresses, localhost and .local names over http otherwise. The
+	     sync server and webhooks don't go through the webview (tauri-plugin-http), so ATS doesn't apply to them. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
