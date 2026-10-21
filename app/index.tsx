@@ -7,10 +7,11 @@ import { cloud } from "@/libs/cloud";
 import { isObjectEmpty } from "@/utils/string";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
+import { useFocusEffect } from "expo-router";
 import * as Localization from "expo-localization";
 import * as SplashScreen from "expo-splash-screen";
 import i18n from "i18next";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 
 export default function LoadingScreen() {
@@ -18,6 +19,8 @@ export default function LoadingScreen() {
   const logoAnimRef = useRef<any>(null);
 
   const [showLottie, setShowLottie] = useState<boolean | null>(null);
+  // Set once this screen has sent the app to /home.
+  const startedRef = useRef(false);
 
   const handleLottieFinish = () => router.replace("/intro");
 
@@ -48,10 +51,12 @@ export default function LoadingScreen() {
           setShowLottie(true);
         } else {
           // already configured
+          startedRef.current = true;
           router.replace("/home");
         }
       } catch (error) {
         SplashScreen.hideAsync().catch(() => {});
+        startedRef.current = true;
         router.replace("/home");
         Sentry.captureException(error);
       }
@@ -60,6 +65,15 @@ export default function LoadingScreen() {
     runInitialActions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A page loaded on another route (a refresh on /home, a link) keeps this screen under it, and a dismissAll comes back
+  // here: go to /home again instead of staying on the logo.
+  const { replace } = router;
+  useFocusEffect(
+    useCallback(() => {
+      if (startedRef.current) replace("/home");
+    }, [replace])
+  );
 
   useEffect(() => {
     if (showLottie) {
