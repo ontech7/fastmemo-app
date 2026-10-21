@@ -388,6 +388,9 @@ const ja = {
     pending: "{{count}} 件保留中",
     mostRecent: "最も新しい",
     count: "（{{count}}/{{limit}}）台のデバイス",
+    remove_title: "このデバイスを削除しますか？",
+    remove_description: "{{name}} は同期から切断されます。ノートはそのデバイスに残りますが、再接続するまで同期されません。",
+    remove_confirm: "削除",
   },
   createcategory: {
     title_create: "カテゴリーを作成",

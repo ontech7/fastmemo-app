@@ -394,6 +394,10 @@ const fr = {
     pending: "{{count}} en attente",
     mostRecent: "Plus récent",
     count: "({{count}}/{{limit}}) appareils",
+    remove_title: "Retirer cet appareil ?",
+    remove_description:
+      "{{name}} sera déconnecté de la synchronisation. Ses notes restent sur cet appareil, mais elles ne seront plus synchronisées tant que vous ne le reconnecterez pas.",
+    remove_confirm: "Retirer",
   },
   createcategory: {
     title_create: "Créer une Catégorie",

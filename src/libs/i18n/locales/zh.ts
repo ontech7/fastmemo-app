@@ -379,6 +379,9 @@ const zh = {
     pending: "{{count}} 项待同步",
     mostRecent: "最新",
     count: "（{{count}}/{{limit}}）台设备",
+    remove_title: "移除此设备？",
+    remove_description: "{{name}} 将断开同步。其笔记会保留在该设备上，但在重新连接之前不会同步。",
+    remove_confirm: "移除",
   },
   createcategory: {
     title_create: "创建类别",

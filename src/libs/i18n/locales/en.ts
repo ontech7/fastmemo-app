@@ -388,6 +388,10 @@ const en = {
     pending: "{{count}} pending",
     mostRecent: "Most recent",
     count: "({{count}}/{{limit}}) devices",
+    remove_title: "Remove this device?",
+    remove_description:
+      "{{name}} will be disconnected from sync. Its notes stay on that device, but they won't sync until you connect it again.",
+    remove_confirm: "Remove",
   },
   createcategory: {
     title_create: "Create Category",

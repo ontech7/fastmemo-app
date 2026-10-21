@@ -1,4 +1,5 @@
 import BackButton from "@/components/buttons/BackButton";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import DeviceAndroidIcon from "@/components/icons/DeviceAndroidIcon";
 import DeviceAppleIcon from "@/components/icons/DeviceAppleIcon";
 import NoCloudIcon from "@/components/icons/NoCloudIcon";
@@ -102,6 +103,22 @@ export default function SyncedDevicesScreen() {
     );
   };
 
+  // The device the user asked to remove. It's kept while the dialog fades out, so its name doesn't vanish from the text.
+  const [removing, setRemoving] = useState<CloudDevice | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const askRemove = (device: CloudDevice) => {
+    setRemoving(device);
+    setConfirmOpen(true);
+  };
+
+  const confirmRemove = () => {
+    // The dialog stays tappable while it fades out: one removal per confirmation.
+    if (!confirmOpen || !removing) return;
+    setConfirmOpen(false);
+    deleteDeviceFromCloud(removing.uuid);
+  };
+
   const getDevices = async () => {
     await setTimeoutTask(async () => {
       const currDeviceUuid = await getDeviceUuid();
@@ -168,6 +185,15 @@ export default function SyncedDevicesScreen() {
   return (
     <>
       <LoadingSpinner visible={timeoutStates.loading.get() || syncing} color={COLOR.accentSoft} text={t("loading")} />
+
+      <ConfirmOrCancelDialog
+        open={confirmOpen}
+        title={t("synceddevices.remove_title")}
+        description={t("synceddevices.remove_description", { name: removing?.modelName ?? "" })}
+        confirmLabel={t("synceddevices.remove_confirm")}
+        onConfirm={confirmRemove}
+        onCancel={() => setConfirmOpen(false)}
+      />
 
       <SafeAreaView style={styles.container}>
         <AppBackground style={StyleSheet.absoluteFill} />
@@ -266,7 +292,7 @@ export default function SyncedDevicesScreen() {
                     ) : (
                       <TouchableOpacity
                         activeOpacity={0.7}
-                        onPress={() => deleteDeviceFromCloud(connectedDevice.uuid)}
+                        onPress={() => askRemove(connectedDevice)}
                         accessibilityRole="button"
                         accessibilityLabel={t("a11y.remove_device")}
                       >
