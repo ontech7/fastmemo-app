@@ -1590,11 +1590,13 @@ device's token never arrived, and the server's `401 device_unknown` read as "thi
 answer as the server's: a status without the server's error code, a 2xx body that isn't JSON.
 
 **Fix:** `serverBackend.send()` asks for `redirect: "manual"` and treats any redirect as a transport error (retried, never a
-refusal): the browser's opaque redirect, a 3xx (the phone's `expo/fetch` hands it back with `redirect: "manual"`, verified on
-the emulator; the desktop app's Rust client follows none), or, from a fetch that follows anyway, `redirected` or an answer whose
-`url` has another scheme or host (hosts that may come back rewritten, Unicode or IPv6, compare only the scheme). A 2xx that
-isn't JSON is an error too, and `fetchNote` reads only the server's own `not_found` as a deleted note. Tests in
-`scripts/sync-server.test.mjs` ("a redirect is never the server's answer").
+refusal): the browser's opaque redirect, a 3xx (the phone's `expo/fetch` hands it back, verified on the emulator; the desktop
+app's Rust client follows none) and, from a fetch that isn't a browser's (one that may follow), `redirected` or an answer from
+another scheme, port or host name (IP and Unicode hosts, which may come back rewritten, are judged by scheme and port). A
+browser's answer from https after it upgraded the request itself (HSTS, HTTPS-Only) is the server's: the token goes along. A 2xx
+that isn't JSON is an error too, a vault counts as created only on the server's `{result: "created"}`, and `fetchNote` reads
+only the server's own `not_found` as a deleted note. Tests in `scripts/sync-server.test.mjs` ("a redirect is never the server's
+answer"; 12 of them fail on the code before the fix).
 
 **Rule:** Interpret a status or a body only when the answer is the server's own: never one that came through a redirect, and a
 meaning that destroys data (absent, removed) only with the server's error code.

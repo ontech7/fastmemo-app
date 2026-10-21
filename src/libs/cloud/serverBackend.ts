@@ -81,34 +81,36 @@ class ServerError extends Error {
 /** No answer in time: the link may be slow rather than down. */
 class TimeoutError extends Error {}
 
-/** The scheme and `host[:port]`, lower-cased, without credentials, a trailing dot or the scheme's default port. */
-function originOf(url: string): { scheme: string; host: string } | null {
-  const match = /^([a-z][a-z\d+.-]*):\/\/(?:[^/?#@]*@)?([^/?#]*)/i.exec(url);
+/** The scheme, the host (lower-cased, without credentials or a trailing dot) and the port (the scheme's default if none). */
+function originOf(url: string): { scheme: string; host: string; port: number } | null {
+  const match = /^([a-z][a-z\d+.-]*):\/\/(?:[^/?#@]*@)?(\[[^\]]*\]|[^/?#:]*)(?::(\d*))?/i.exec(url);
   if (!match) return null;
   const scheme = match[1].toLowerCase();
-  const port = { http: ":80", https: ":443" }[scheme];
-  let host = match[2].toLowerCase().replace(/\.(?=:\d+$|$)/, "");
-  if (port && host.endsWith(port)) host = host.slice(0, -port.length);
-  return { scheme, host };
+  const port = match[3] ? Number(match[3]) : scheme === "https" ? 443 : 80;
+  return { scheme, host: match[2].toLowerCase().replace(/\.$/, ""), port };
 }
 
-/** A host that comes back as written: an ASCII name or a dotted-quad IPv4 address (with a port or not). */
-const PLAIN_HOST = /^((?=[^:]*[a-z])[a-z\d.-]+|\d{1,3}(\.\d{1,3}){3})(:\d+)?$/;
+/** A host name every fetch hands back as written: ASCII, with a letter (an IP address or a Unicode name may be rewritten). */
+const PLAIN_NAME = /^(?=.*[a-z])[a-z\d.-]+$/;
 
 /**
- * Whether the answer came through a redirect, so it isn't the server's. With `redirect: "manual"` a browser hands back an
- * opaque redirect and the phone (`expo/fetch`) the 3xx itself; the desktop app's Rust client follows none. A fetch that
- * follows anyway shows it in `redirected` or in the answer's `url`. On the way to another host or scheme the device's token
- * is dropped: the server's refusal would read as "this device was removed", a 404 elsewhere as a deleted note.
+ * Whether the answer came through a redirect, so it isn't the server's. On the way to another host or scheme the device's
+ * token is dropped: the server's refusal would read as "this device was removed", a 404 elsewhere as a deleted note.
+ *
+ * With `redirect: "manual"` a browser hands back an opaque redirect and the phone (`expo/fetch`) the 3xx itself; the
+ * desktop app's Rust client follows none. A browser's answer (`basic`, `cors`) may still come from https when the browser
+ * upgraded the request itself (HSTS, HTTPS-Only), which keeps the token: only another fetch, one that may follow, is
+ * judged by `redirected` and by where its answer came from.
  */
 function redirected(res: Response, requested: string): boolean {
-  if (res.type === "opaqueredirect" || res.redirected || (res.status >= 300 && res.status < 400)) return true;
+  if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) return true;
+  if (res.type === "basic" || res.type === "cors") return false;
+  if (res.redirected) return true;
   const from = originOf(requested);
   const to = res.url ? originOf(res.url) : null;
   if (!from || !to) return false;
-  if (from.scheme !== to.scheme) return true;
-  // Another host (Unicode, IPv6) may come back rewritten (punycode, the short form): then only the scheme tells.
-  return PLAIN_HOST.test(from.host) && from.host !== to.host;
+  if (from.scheme !== to.scheme || from.port !== to.port) return true;
+  return PLAIN_NAME.test(from.host) && from.host !== to.host;
 }
 
 interface ServerChange {
@@ -465,8 +467,11 @@ export class ServerBackend implements CloudBackend {
 
   async createVaultExclusive(vault: VaultDoc): Promise<"created" | "exists" | "error"> {
     try {
-      await this.request("POST", "/v1/vault", { auth: "member", body: vault });
-      return "created";
+      const answer = await this.request<{ result?: string }>("POST", "/v1/vault", { auth: "member", body: vault });
+      // Only the server's own word: a vault taken as created keeps its key here and hands out a recovery key.
+      if (answer?.result === "created") return "created";
+      console.log("createVaultExclusive: unexpected answer", answer);
+      return "error";
     } catch (e) {
       if (e instanceof ServerError && e.status === 409) return "exists";
       console.log("createVaultExclusive:", e);
