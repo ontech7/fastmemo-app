@@ -81,6 +81,36 @@ class ServerError extends Error {
 /** No answer in time: the link may be slow rather than down. */
 class TimeoutError extends Error {}
 
+/** The scheme and `host[:port]`, lower-cased, without credentials, a trailing dot or the scheme's default port. */
+function originOf(url: string): { scheme: string; host: string } | null {
+  const match = /^([a-z][a-z\d+.-]*):\/\/(?:[^/?#@]*@)?([^/?#]*)/i.exec(url);
+  if (!match) return null;
+  const scheme = match[1].toLowerCase();
+  const port = { http: ":80", https: ":443" }[scheme];
+  let host = match[2].toLowerCase().replace(/\.(?=:\d+$|$)/, "");
+  if (port && host.endsWith(port)) host = host.slice(0, -port.length);
+  return { scheme, host };
+}
+
+/** A host that comes back as written: an ASCII name or a dotted-quad IPv4 address (with a port or not). */
+const PLAIN_HOST = /^((?=[^:]*[a-z])[a-z\d.-]+|\d{1,3}(\.\d{1,3}){3})(:\d+)?$/;
+
+/**
+ * Whether the answer came through a redirect, so it isn't the server's. A browser hands the redirect back
+ * (`redirect: "manual"`), the desktop app doesn't follow it (a 3xx), the phone does (OkHttp: the answer's `url` is where it
+ * ended). On the way to another host or scheme the device's token is dropped: the server's refusal would read as "this
+ * device was removed", a 404 elsewhere as a deleted note.
+ */
+function redirected(res: Response, requested: string): boolean {
+  if (res.type === "opaqueredirect" || res.redirected || (res.status >= 300 && res.status < 400)) return true;
+  const from = originOf(requested);
+  const to = res.url ? originOf(res.url) : null;
+  if (!from || !to) return false;
+  if (from.scheme !== to.scheme) return true;
+  // Another host (Unicode, IPv6) may come back rewritten (punycode, the short form): then only the scheme tells.
+  return PLAIN_HOST.test(from.host) && from.host !== to.host;
+}
+
 interface ServerChange {
   token: string;
   page: string;
@@ -514,7 +544,8 @@ export class ServerBackend implements CloudBackend {
     try {
       return await this.request<Note>("GET", `/v1/notes/${encodeURIComponent(id)}`, { auth: "member" });
     } catch (e) {
-      if (e instanceof ServerError && e.status === 404) return null;
+      // Only the server's own 404: a reverse proxy's would drop an update as if the note had been deleted.
+      if (e instanceof ServerError && e.status === 404 && e.code === "not_found") return null;
       console.log("fetchNote:", e);
       return undefined;
     }
@@ -680,7 +711,8 @@ export class ServerBackend implements CloudBackend {
       let res: Response;
       let text: string;
       try {
-        res = await this.fetchImpl(base + path, { method, headers, body, signal: controller.signal });
+        res = await this.fetchImpl(base + path, { method, headers, body, signal: controller.signal, redirect: "manual" });
+        if (redirected(res, base + path)) throw new Error(`${method} ${path}: redirected, not the server's answer`);
         text = await res.text();
       } catch (e) {
         if (timedOut) throw new TimeoutError(`${method} ${path}: no answer in time`);
@@ -692,6 +724,8 @@ export class ServerBackend implements CloudBackend {
       } catch {
         data = undefined;
       }
+      // The server answers JSON or nothing: anything else (a captive portal's page) isn't its answer.
+      if (res.ok && text && data === undefined) throw new Error(`${method} ${path}: not the server's answer`);
       if (!res.ok) {
         const error = (data ?? {}) as { error?: string; message?: string };
         throw new ServerError(res.status, error.error ?? "", error.message ?? text.slice(0, 200), token);

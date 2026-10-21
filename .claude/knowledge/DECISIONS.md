@@ -658,8 +658,9 @@ who want their notes at home (PC, NAS, Raspberry Pi, VPS) had no option. ADR-016
       `FastMemo-desktop/<version>` user agent (some proxies and CDNs refuse a request without one);
     - certificates checked by `rustls-platform-verifier`: the OS's verifier on macOS and Windows (as the webview), the system's
       CA certificates on Linux;
-    - the server's requests follow no redirect: a 3xx is an ordinary server error, retried. Webhooks follow up to 5, as the
-      browser's fetch did (no token travels with them);
+    - the server's requests follow no redirect: the adapter reads a 3xx, as any redirect on every platform, as a transport
+      error, retried, never a refusal (LL-059). Webhooks follow up to 5, as the browser's fetch did (no token travels with
+      them);
     - the system proxy for internet hosts only; this machine, private and link-local addresses, Tailscale and local names
       (`.local`, `.lan`, `.home.arpa`, `.internal`, `.localhost`, single labels) go direct, on every OS (on macOS reqwest
       doesn't read the proxy's bypass list);
