@@ -19,7 +19,7 @@ export const configs: AppConfigs = {
     favicon: process.env.EXPO_PUBLIC_ENV !== "DEV" ? "./assets/images/favicon.png" : "./assets/images/test/favicon.png",
     backgroundColor: "#020e35",
 
-    websiteUrl: "https://fastmemo.vercel.app",
+    websiteUrl: "https://fastmemo.losav.cc",
     playStoreUrl: "http://play.google.com/store/apps/details?id=com.ontech7.FastMemoApp",
     appStoreUrl: "https://apps.apple.com/it/app/fast-memo-note-in-un-click/id6450381916",
   },
