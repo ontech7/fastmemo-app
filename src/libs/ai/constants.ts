@@ -50,6 +50,12 @@ export const AI_MODELS: Record<AIModelId, AIModelInfo> = {
 
 export const DEFAULT_MODEL_ID: AIModelId = "qwen3.5-0.8b";
 
+/**
+ * The file (in the app's private files) where the system download under way is written down (ADR-028): the app checks for it
+ * at its start, without loading the AI.
+ */
+export const MODEL_DOWNLOAD_RECORD = "model-download.json";
+
 /** Numeric ordering for model size comparison */
 export const MODEL_SIZE_ORDER: Record<AIModelId, number> = {
   "qwen3.5-0.8b": 0,

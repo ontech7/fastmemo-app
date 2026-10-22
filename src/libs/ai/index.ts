@@ -8,6 +8,8 @@ export {
   downloadModel,
   deleteModel,
   cancelDownload,
+  getModelDownload,
+  getDownloadFailure,
   isModelDownloaded,
   getOrphanedModelFiles,
   deleteOrphanedModelFiles,
@@ -18,6 +20,7 @@ export {
   getModelPath,
   resolveLanguage,
 } from "./context";
+export type { DownloadFailure, ModelDownloadProgress } from "./context";
 export { clearLongNoteCache, estimateSeconds, LONG_NOTE_ACTIONS, rewriteNote, summarizeNote, tooLongForAI } from "./longNote";
 export type { LongNoteAction, LongNoteResult } from "./longNote";
 export { hasSummary, withSummary } from "./blocks";

@@ -552,6 +552,12 @@ const fr = {
     not_downloaded: "Non téléchargé",
     downloading: "Téléchargement...",
     download_model: "Télécharger le modèle",
+    download_notification: "Modèle d'IA pour FastMemo",
+    download_waiting: "En attente du réseau...",
+    download_failed: "Le téléchargement a échoué : réessayez.",
+    download_no_space: "Pas assez d'espace pour le modèle : libérez-en un peu et réessayez.",
+    download_background:
+      "Vous pouvez quitter cet écran ou l'éteindre : le téléchargement continue, avec sa progression dans les notifications.",
     cancel: "Annuler",
     delete_model: "Supprimer le modèle",
     info: "L'assistant IA fonctionne entièrement sur votre appareil. Aucune donnée n'est envoyée à des serveurs externes. Le modèle se télécharge une fois (à partir de ~530 Mo) et reste stocké sur l'appareil.",

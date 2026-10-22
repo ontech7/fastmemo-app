@@ -544,6 +544,12 @@ const en = {
     not_downloaded: "Not downloaded",
     downloading: "Downloading...",
     download_model: "Download model",
+    download_notification: "AI model for FastMemo",
+    download_waiting: "Waiting for the network...",
+    download_failed: "The download failed: try again.",
+    download_no_space: "Not enough space for the model: free some up and try again.",
+    download_background:
+      "You can leave this screen or turn the screen off: the download goes on, with its progress in the notifications.",
     cancel: "Cancel",
     delete_model: "Delete model",
     info: "The AI assistant runs entirely on your device. No data is sent to external servers. The model is downloaded once (from ~530 MB) and stored locally.",
