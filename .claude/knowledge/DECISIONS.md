@@ -1138,3 +1138,36 @@ limit needed nothing new: each cloud already refuses a device over its limit whe
 - a note that went offline for its size no longer syncs: each device's copy goes its own way;
 - the editor shows less than `MAX_NOTE_MB` (the limit counts the encrypted note);
 - a server older than 1.0.0 doesn't say its limit: its refusals stay silent, as before.
+
+## ADR-027: A Category Suggestion Is Previewed, and Offers Its Runner-Up When the Model Was Torn
+
+**Status:** Accepted (2026-10-22, user decision: a before/after like the other AI actions; the choice between two only when the
+AI isn't sure, over always two or a list of every category)  
+**Context:** "Suggest category" applied the model's answer straight away, with a check on the button as the only sign. Unlike
+the title or a rewrite, the user couldn't turn it down, and a note that fits two categories got one of them silently.
+
+**Decision:**
+
+- **It's a preview** (`PREVIEW_ACTIONS`): before = the note's category ("All" translated), after = the suggestion, Apply/Cancel.
+  It doesn't stream (a name half written means nothing): a spinner, then the answer. A suggestion that is already the note's
+  category, with nothing close, opens nothing: a toast says so (`ai.editor.category_unchanged`). Applying checks the category
+  hasn't changed meanwhile (`source`), as a title does.
+- **The runner-up comes from the model's own probabilities,** not from a second question: the completion asks for `n_probs: 10`,
+  and `categoryAlternative` (`libs/ai/helpers.ts`) walks the answer's tokens. A candidate that leaves the answer's path starts
+  another category's name; its probability against the token taken says how close it came. The sampler reports them after the
+  temperature (0.2 for this action), which sharpens them: a ratio r there was r^0.2 before, undone. At 30% of the first or more
+  (`CATEGORY_ALTERNATIVE_RATIO`), both are offered as radio rows, the model's pick ticked, with `ai.editor.category_unsure`.
+- What the model picks doesn't change: the grammar still allows only the category names (or none).
+
+**Alternatives rejected:**
+
+- always two suggestions (a grammar for two names): the small models fill the second slot with anything;
+- every category under the suggestion: a long list for a choice the model was sure about;
+- scoring each category with its own completion: one run per category, seconds each on a phone.
+
+**Trade-offs:**
+
+- top_p (0.8, before the temperature) drops a candidate when the first token holds 80% or more: such a pick is offered alone;
+- a name split inside a multi-byte character (accented letters) is shown by llama.rn as bytes: its runner-up is missed, the pick
+  still works;
+- the 30% threshold is a guess, to tune on a phone with real notes.

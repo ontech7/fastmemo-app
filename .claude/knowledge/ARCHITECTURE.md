@@ -61,7 +61,7 @@ src/
     inputs/            # BaseInput, CodeInput, SearchNotesInput
     lists/             # FavoriteCategoryList, OrderedCategoryList, OrganizeCategoryList
     todo/              # TodoItem.native.tsx, TodoItem.web.tsx
-    ai/                # AIEditorActions.tsx, AIEditorActions.web.tsx
+    ai/                # AIEditorActions.tsx (before/after preview: title, category -- ADR-027 --, rewrites), .web.tsx
     icons/             # Custom icon components
     lottie/            # LottieAnimation.tsx, LottieAnimation.web.tsx
     webhook/           # WebhookItem

@@ -45,6 +45,8 @@ export interface EditorActionResult {
   error?: string;
   /** A rewrite the guard threw away (the eval reports it; the app never shows it). */
   discarded?: string;
+  /** A category suggestion's runner-up, when the model nearly picked it: the user chooses between the two. */
+  alternative?: string;
   timings?: AITimings;
 }
 

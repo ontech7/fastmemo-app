@@ -628,6 +628,8 @@ const de = {
       content_changed: "Die Notiz hat sich geändert, während die KI gearbeitet hat: Bitte erneut ausführen.",
       no_content: "Schreiben Sie zuerst etwas",
       no_category_match: "Keine passende Kategorie gefunden",
+      category_unchanged: "Die Notiz ist schon in „{{name}}“",
+      category_unsure: "Die KI schwankt zwischen diesen beiden: Wählen Sie eine aus.",
       no_improvement: "Die KI konnte diesen Text nicht verbessern: Er bleibt unverändert.",
       too_long: "Der Text ist zu lang für die KI: Versuchen Sie es mit einem kürzeren Teil.",
       note_too_long: "Notiz zu lang für dieses Modell",

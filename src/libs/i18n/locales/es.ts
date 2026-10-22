@@ -624,6 +624,8 @@ const es = {
       content_changed: "La nota cambió mientras la IA trabajaba: vuelve a ejecutarla.",
       no_content: "Escribe algo primero",
       no_category_match: "No se encontró una categoría",
+      category_unchanged: "La nota ya está en «{{name}}»",
+      category_unsure: "La IA duda entre estas dos: elige tú.",
       no_improvement: "La IA no pudo mejorar este texto: no se ha cambiado.",
       too_long: "El texto es demasiado largo para la IA: prueba con una parte más corta.",
       note_too_long: "Nota demasiado larga para este modelo",

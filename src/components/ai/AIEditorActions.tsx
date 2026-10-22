@@ -5,6 +5,7 @@ import {
   clearLongNoteCache,
   createTextStream,
   createThrottle,
+  findCategoryByName,
   generateEditorContent,
   hasSummary,
   isModelSufficient,
@@ -78,7 +79,14 @@ const isAtEnd = ({ contentOffset, contentSize, layoutMeasurement }: NativeScroll
 type FeedbackState = "idle" | "processing" | "success" | "error";
 
 /** Actions whose answer replaces something the user wrote: it streams into a before/after preview and waits for Apply. */
-const PREVIEW_ACTIONS = new Set<EditorAction>(["generate_title", "summarize", "fix_grammar", "shorten", "translate"]);
+const PREVIEW_ACTIONS = new Set<EditorAction>([
+  "generate_title",
+  "suggest_category",
+  "summarize",
+  "fix_grammar",
+  "shorten",
+  "translate",
+]);
 
 const NO_ACTIONS: ReadonlySet<EditorAction> = new Set();
 
@@ -140,9 +148,11 @@ interface Props {
    */
   getHtml?: () => string;
   noteTitle: string;
+  /** The note's category (its name): a category suggestion shows it as the "before". */
+  categoryName?: string;
   onTitleGenerated: (title: string) => void;
   onItemsSuggested?: (items: string[]) => void;
-  /** Called with the matched category name when suggest_category succeeds. */
+  /** Called with the category name the user applies from a suggestion. */
   onCategorySuggested?: (categoryName: string) => void;
   /** Called with the note's new HTML when a summary (on top of the note) or a rewrite is applied. */
   onHtmlChanged?: (html: string) => void;
@@ -158,6 +168,7 @@ export default function AIEditorActions({
   getContent,
   getHtml,
   noteTitle,
+  categoryName = "",
   onTitleGenerated,
   onItemsSuggested,
   onCategorySuggested,
@@ -181,10 +192,12 @@ export default function AIEditorActions({
   const [preview, setPreview] = useState<{
     action: EditorAction;
     title: string;
-    /** What the action read (the title, the text, or the note's HTML): applying checks it hasn't changed since. */
+    /** What the action replaces (the title, the category, the text, or the note's HTML): applying checks it hasn't changed. */
     source: string;
     before: string;
     after: string;
+    /** A category suggestion the model was torn about: the two it nearly picked, `after` the one ticked. */
+    choices?: string[];
     /** A summary or a rewrite: the note's HTML it applies. */
     html?: string;
     /** The paragraph, or the part of a summary, under way. */
@@ -215,6 +228,9 @@ export default function AIEditorActions({
   const actionItems = getActionsForType(noteType).filter((item) => editsHtml || !LONG_NOTE_ACTIONS.has(item.id));
 
   const closeMenu = useCallback(() => setIsMenuOpen(false), []);
+
+  // The index category is "All" in the store, translated on screen.
+  const categoryLabel = useCallback((name: string) => (findCategoryByName(name)?.index ? t("All") : name), [t]);
 
   const toggleMenu = useCallback(() => {
     if (feedback === "processing") return;
@@ -307,8 +323,9 @@ export default function AIEditorActions({
           title: lang
             ? `${t("ai.editor.translate_to")} ${TRANSLATE_LANGUAGES.find((l) => l.code === lang)?.name ?? lang}`
             : t(`ai.editor.${action}`),
-          source: html ?? (action === "generate_title" ? noteTitle : rawContent),
-          before: action === "generate_title" ? noteTitle : rawContent,
+          source: html ?? (action === "generate_title" ? noteTitle : action === "suggest_category" ? categoryName : rawContent),
+          before:
+            action === "generate_title" ? noteTitle : action === "suggest_category" ? categoryLabel(categoryName) : rawContent,
           after: "",
           hint:
             action === "summarize" && html !== undefined
@@ -374,8 +391,8 @@ export default function AIEditorActions({
         content = action === "suggest_items" && hasTitle ? `${noteTitle}\n${rawContent}` : rawContent;
       }
 
-      // A title opens its preview at once and fills it as the model writes; the others show the spinner.
-      const stream = staged ? createTextStream(showText) : null;
+      // A title fills its preview as the model writes; a category waits for the whole name, the others show the spinner.
+      const stream = action === "generate_title" ? createTextStream(showText) : null;
 
       try {
         const result = await generateEditorContent(action, content, stream?.push);
@@ -394,10 +411,28 @@ export default function AIEditorActions({
             setFeedback("success");
             if (result.items?.length) onItemsSuggested?.(result.items);
             break;
-          case "suggest_category":
-            setFeedback("success");
-            if (result.text) onCategorySuggested?.(result.text);
+          case "suggest_category": {
+            const picked = result.text ?? "";
+            const { alternative } = result;
+            // already there, and nothing else came close: nothing to apply
+            if (picked === categoryName && !alternative) {
+              setPreview(null);
+              toast(t("ai.editor.category_unchanged", { name: categoryLabel(picked) }));
+              break;
+            }
+            setPreview((p) =>
+              p
+                ? {
+                    ...p,
+                    after: picked,
+                    choices: alternative ? [picked, alternative] : undefined,
+                    hint: alternative ? t("ai.editor.category_unsure") : undefined,
+                    streaming: false,
+                  }
+                : p
+            );
             break;
+          }
           default: {
             // the final answer (cleaned of prefixes and quotes) replaces what streamed in
             const after = result.text;
@@ -412,7 +447,7 @@ export default function AIEditorActions({
         fail(t("ai.editor.error"));
       }
     },
-    [getContent, getHtml, noteTitle, onItemsSuggested, onCategorySuggested, t, closeMenu, errorMessage]
+    [getContent, getHtml, noteTitle, categoryName, categoryLabel, onItemsSuggested, t, closeMenu, errorMessage]
   );
 
   const applyPreview = () => {
@@ -420,9 +455,16 @@ export default function AIEditorActions({
     const { action, source, after, html } = preview;
     setPreview(null);
 
-    // The model takes seconds and the note stays editable meanwhile: if what it read has
+    // The model takes seconds and the note stays editable meanwhile: if what it replaces has
     // changed since (new edits, another code tab), applying would overwrite those changes.
-    const current = html !== undefined ? getHtml?.() : action === "generate_title" ? noteTitle : getContent();
+    const current =
+      html !== undefined
+        ? getHtml?.()
+        : action === "generate_title"
+          ? noteTitle
+          : action === "suggest_category"
+            ? categoryName
+            : getContent();
     if (current !== source) {
       toast(t("ai.editor.content_changed"));
       return;
@@ -430,6 +472,7 @@ export default function AIEditorActions({
 
     if (html !== undefined) onHtmlChanged?.(html);
     else if (action === "generate_title") onTitleGenerated(after);
+    else if (action === "suggest_category") onCategorySuggested?.(after);
   };
 
   const pickLanguage = useCallback(() => {
@@ -562,14 +605,14 @@ export default function AIEditorActions({
                 <TouchableOpacity
                   key={language.code}
                   activeOpacity={0.7}
-                  style={[styles.languageRow, index === 0 && styles.languageRowApp]}
+                  style={[styles.optionRow, index === 0 && styles.optionRowTicked]}
                   onPress={() => translateInto(language.code)}
                   accessibilityRole="button"
                   accessibilityHint={index === 0 ? t("ai.editor.app_language") : undefined}
                 >
-                  <View style={styles.languageText}>
-                    <Text style={styles.languageName}>{language.name}</Text>
-                    {index === 0 ? <Text style={styles.languageHint}>{t("ai.editor.app_language")}</Text> : null}
+                  <View style={styles.optionText}>
+                    <Text style={styles.optionName}>{language.name}</Text>
+                    {index === 0 ? <Text style={styles.optionHint}>{t("ai.editor.app_language")}</Text> : null}
                   </View>
                   {index === 0 ? <CheckIcon size={18} color={AI_COLOR} /> : null}
                 </TouchableOpacity>
@@ -624,6 +667,22 @@ export default function AIEditorActions({
                   <View style={[styles.previewBox, styles.previewAfter, styles.previewBoxContent]}>
                     <ActivityIndicator size="small" color={AI_COLOR} />
                   </View>
+                ) : preview?.choices ? (
+                  <View style={styles.previewChoices} accessibilityRole="radiogroup">
+                    {preview.choices.map((name) => (
+                      <TouchableOpacity
+                        key={name}
+                        activeOpacity={0.7}
+                        style={[styles.optionRow, styles.optionRowUnticked, name === preview.after && styles.optionRowTicked]}
+                        onPress={() => setPreview((p) => (p ? { ...p, after: name } : p))}
+                        accessibilityRole="radio"
+                        aria-checked={name === preview.after}
+                      >
+                        <Text style={[styles.optionText, styles.optionName]}>{categoryLabel(name)}</Text>
+                        {name === preview.after ? <CheckIcon size={18} color={AI_COLOR} /> : null}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 ) : (
                   <ScrollView
                     ref={afterScrollRef}
@@ -634,7 +693,9 @@ export default function AIEditorActions({
                     onScrollEndDrag={settleAfterScroll}
                     onMomentumScrollEnd={settleAfterScroll}
                   >
-                    <Text style={[styles.previewText, styles.previewAfterText]}>{preview?.after}</Text>
+                    <Text style={[styles.previewText, styles.previewAfterText]}>
+                      {preview?.action === "suggest_category" ? categoryLabel(preview.after) : preview?.after}
+                    </Text>
                   </ScrollView>
                 )}
                 {preview?.hint ? <Text style={styles.previewHint}>{preview.hint}</Text> : null}
@@ -809,7 +870,7 @@ const styles = StyleSheet.create({
     color: COLOR.placeholder,
     fontSize: FONTSIZE.small,
   },
-  languageRow: {
+  optionRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: PADDING_MARGIN.sm,
@@ -817,17 +878,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.md,
     borderRadius: BORDER.normal,
   },
-  languageRowApp: {
+  optionRowTicked: {
     backgroundColor: "rgba(108, 99, 255, 0.12)",
   },
-  languageText: {
+  // a choice not ticked, in the preview: still reads as a box to tap
+  optionRowUnticked: {
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  previewChoices: {
+    gap: PADDING_MARGIN.xs,
+  },
+  optionText: {
     flex: 1,
   },
-  languageName: {
+  optionName: {
     color: COLOR.softWhite,
     fontSize: FONTSIZE.medium,
   },
-  languageHint: {
+  optionHint: {
     color: COLOR.placeholder,
     fontSize: FONTSIZE.small,
   },

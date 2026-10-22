@@ -242,3 +242,40 @@ export function categoryGrammar(names: string[]): string {
   const options = [...new Set(names.filter((name) => name.trim()))];
   return `root ::= ${[...options, "none"].map(gbnfLiteral).join(" | ")}`;
 }
+
+/** How close another category must come to the one picked, in probability, for the user to choose between the two. */
+export const CATEGORY_ALTERNATIVE_RATIO = 0.3;
+
+/** One token of the model's answer, with the candidates the sampler kept for it (the completion's `n_probs`). */
+export interface TokenCandidates {
+  content: string;
+  probs: { tok_str: string; prob: number }[];
+}
+
+/**
+ * The category the model nearly picked instead of `chosen`, when one came close. At each token of the answer, a candidate
+ * that leaves its path starts another name: its probability against the token taken says how close it came. The sampler
+ * reports them after `temperature`, which sharpens them (a ratio r there was r^temperature before): undone here.
+ */
+export function categoryAlternative(
+  steps: TokenCandidates[],
+  chosen: string,
+  names: string[],
+  temperature: number
+): string | undefined {
+  let prefix = "";
+  let best: { name: string; ratio: number } | undefined;
+  for (const step of steps) {
+    const taken = step.probs.find((candidate) => candidate.tok_str === step.content);
+    if (!taken?.prob) break;
+    for (const { tok_str, prob } of step.probs) {
+      if (tok_str === step.content || !prob) continue;
+      const start = prefix + tok_str;
+      const name = names.find((n) => n !== chosen && n.startsWith(start));
+      const ratio = (prob / taken.prob) ** temperature;
+      if (name && ratio > (best?.ratio ?? 0)) best = { name, ratio };
+    }
+    prefix += step.content;
+  }
+  return best && best.ratio >= CATEGORY_ALTERNATIVE_RATIO ? best.name : undefined;
+}

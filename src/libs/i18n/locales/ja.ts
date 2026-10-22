@@ -618,6 +618,8 @@ const ja = {
       content_changed: "AI の処理中にノートが変更されました。もう一度実行してください。",
       no_content: "まず何か書いてください",
       no_category_match: "該当するカテゴリが見つかりません",
+      category_unchanged: "ノートはすでに「{{name}}」にあります",
+      category_unsure: "AI はこの 2 つで迷っています。どちらかを選んでください。",
       no_improvement: "AI はこのテキストを改善できませんでした。変更はありません。",
       too_long: "テキストが長すぎて AI で処理できません。短い部分で試してください。",
       note_too_long: "このモデルにはノートが長すぎます",

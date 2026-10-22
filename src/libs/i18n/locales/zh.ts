@@ -608,6 +608,8 @@ const zh = {
       content_changed: "AI 处理期间笔记已更改，请重新运行。",
       no_content: "请先写点内容",
       no_category_match: "未找到匹配的类别",
+      category_unchanged: "笔记已在“{{name}}”中",
+      category_unsure: "AI 在这两个之间拿不定主意，请选择一个。",
       no_improvement: "AI 无法改进这段文字，内容保持不变。",
       too_long: "文本太长，AI 无法处理：请尝试较短的部分。",
       note_too_long: "笔记太长，此模型无法处理",
