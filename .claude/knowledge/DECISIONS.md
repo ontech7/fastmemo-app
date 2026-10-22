@@ -1171,3 +1171,45 @@ the title or a rewrite, the user couldn't turn it down, and a note that fits two
 - a name split inside a multi-byte character (accented letters) is shown by llama.rn as bytes: its runner-up is missed, the pick
   still works;
 - the 30% threshold is a guess, to tune on a phone with real notes.
+
+## ADR-028: The AI Model Downloads Through Android's DownloadManager, Across Restarts
+
+**Status:** Accepted (2026-10-22, user decision: the system download, over a third-party library or only keeping the in-app one
+running)  
+**Context:** A model is 0.5 to 2.7 GB: minutes of download. The app downloaded it itself (`createDownloadResumable`), only while
+its process lived: the screen kept no hold on it (reopened, it showed "Not downloaded" while the file was still growing), a
+download that died left its file behind at its catalog name (not counted as an old model, never cleaned), and Android stops a
+background app's network work. The user had to stay on the screen with the screen on.
+
+**Decision:**
+
+- **A local Expo module, `modules/fastmemo-downloads`** (Kotlin, Android only, no new dependency), hands the download to the
+  system's `DownloadManager`: it goes on with the screen off and the app in the background or closed, resumes after the network
+  drops, and shows its progress in a notification (none once done: tapping it would try to open the model file).
+- **Staging, then a rename.** The download manager reserves the file's whole size at the start, so a cut-off file would pass the
+  size check: it writes into `files/model-downloads/` on the app's shared-storage folder, and only a finished download moves
+  (rename, same storage) into `files/models/` there, where models are looked for. The download manager can't write the app's
+  private files, so new models live in that folder; models downloaded before stay in the private `files/models/` and are still
+  read (`modelDirs`). Moving them would need their size free twice.
+- **Written down, picked up.** The download under way (model, file, id) is kept in `model-download.json` in the private files.
+  At the AI module's load and each time the app comes back to the foreground, `resumeModelDownload` follows it, or finishes one
+  done meanwhile; the settings (`modelDownloaded`, `enabled`) are set by the module when it ends, not by the screen, which may
+  be closed by then (it used a stale copy of the settings).
+- **The screen follows the module** (`getModelDownload`, the status listener): opened again it shows the download under way,
+  "Waiting for the network" while the system holds it, and says so when it fails (no space, or any other error).
+- **Leftovers:** a catalog file short of its size counts as an old model (offered for deletion, removed at the next download),
+  unless the in-app download is writing it; at the app's start, without a download under way, the staging folder is emptied.
+- A binary without the module (an old dev client) downloads in the app, as before.
+
+**Alternatives rejected:**
+
+- `react-native-background-downloader`: the same through a library (a new dependency);
+- a foreground service: a Play Console declaration for its type, and a notification of our own to keep up;
+- keeping the in-app download running when the screen closes: Android still stops it with the screen off for long.
+
+**Trade-offs:**
+
+- new models sit in the app's folder on the shared storage (`Android/data/<package>/files/models`): deleted with the app,
+  like the private files, and not readable by other apps;
+- the progress shows in a system notification with the download manager's look, title the model's name;
+- a download that ends while the app is closed is moved into place at the next start: until then the AI stays off.

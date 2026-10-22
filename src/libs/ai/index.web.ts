@@ -62,7 +62,7 @@ export function addAIStatusListener(_listener: (status: AIModelStatus, progress?
   return () => {};
 }
 
-export function getModelPath(_modelId?: AIModelId): string {
+export async function getModelPath(_modelId?: AIModelId): Promise<string> {
   return "";
 }
 
@@ -70,13 +70,21 @@ export async function isModelDownloaded(_modelId?: AIModelId): Promise<boolean> 
   return false;
 }
 
-export async function downloadModel(_modelId?: AIModelId, _onProgress?: (progress: number) => void): Promise<boolean> {
+export async function downloadModel(_modelId?: AIModelId): Promise<boolean> {
   return false;
 }
 
 export async function cancelDownload(): Promise<void> {}
 
-export async function getOrphanedModelFiles(): Promise<{ fileName: string; size: number }[]> {
+export function getModelDownload(): null {
+  return null;
+}
+
+export function getDownloadFailure(): null {
+  return null;
+}
+
+export async function getOrphanedModelFiles(): Promise<{ dir: string; fileName: string; size: number }[]> {
   return [];
 }
 

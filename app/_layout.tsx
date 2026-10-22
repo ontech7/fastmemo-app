@@ -11,6 +11,7 @@ import AppBackground from "@/components/ui/AppBackground";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useAppFonts } from "@/hooks/useAppFonts";
+import { useModelDownloadResume } from "@/hooks/useModelDownloadResume";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { installDesktopMenu } from "@/libs/desktopMenu";
 import { installFlushOnExit } from "@/libs/flushOnExit";
@@ -65,6 +66,9 @@ export default Sentry.wrap(function RootLayout() {
   // The apps have the fonts built in. The web loads them while it renders: its first screen is the logo image, with no
   // text to reflow when Geist comes in.
   useAppFonts();
+
+  // An AI model download the app was closed during: finished, or followed again (no-op on the web).
+  useModelDownloadResume();
 
   // Hide the splash only once a JS view (the gradient splash or the app shell)
   // has laid out, so the gradient is already painted underneath — no flash of

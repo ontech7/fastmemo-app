@@ -38,7 +38,7 @@ src/
       organize.tsx     # Reorder categories via drag-and-drop
     settings/
       general.tsx      # Settings hub
-      ai-assistant.tsx # AI model management
+      ai-assistant.tsx # AI model management (shows a download under way: it goes on when the screen closes)
       cloud-sync/
         connect.tsx        # Cloud sync setup + encryption entry points (enable/unlock/change/reset)
         devices.tsx        # Connected devices
@@ -110,7 +110,9 @@ src/
                        # estimate, chunking (pure, tested by scripts/ai.test.mjs)
       longNote.ts      # Long notes: a rewrite line by line, a summary in parts then merged, step cache, time estimate
                        # (tested with a stub model)
-      context.ts       # LLM context lifecycle (pre-warm, idle/background release), download, generation (native only)
+      context.ts       # LLM context lifecycle (pre-warm, idle/background release), generation (native only); the model
+                       # download through modules/fastmemo-downloads (Android DownloadManager, picked up after a restart --
+                       # ADR-028), models in the app's shared-storage folder (older downloads still read from files/models/)
       eval.ts          # Developer-only evaluation run over evalFixtures.ts (Developer options -> AI evaluation)
       index.ts         # Barrel export (native)
       index.web.ts     # No-op stubs for web

@@ -552,6 +552,12 @@ const de = {
     not_downloaded: "Nicht heruntergeladen",
     downloading: "Wird heruntergeladen...",
     download_model: "Modell herunterladen",
+    download_notification: "KI-Modell für FastMemo",
+    download_waiting: "Warten auf das Netzwerk...",
+    download_failed: "Der Download ist fehlgeschlagen: Bitte erneut versuchen.",
+    download_no_space: "Nicht genug Speicherplatz für das Modell: Geben Sie etwas frei und versuchen Sie es erneut.",
+    download_background:
+      "Sie können diesen Bildschirm verlassen oder ausschalten: Der Download läuft weiter, mit dem Fortschritt in den Benachrichtigungen.",
     cancel: "Abbrechen",
     delete_model: "Modell löschen",
     info: "Der KI-Assistent läuft vollständig auf Ihrem Gerät. Es werden keine Daten an externe Server gesendet. Das Modell wird einmal heruntergeladen (ab ~530 MB) und lokal gespeichert.",

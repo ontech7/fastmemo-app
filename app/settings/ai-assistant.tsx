@@ -1,5 +1,5 @@
 import * as Device from "expo-device";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
@@ -14,14 +14,17 @@ import { toast } from "@/utils/toast";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
-import type { AIModelId, AIModelInfo } from "@/libs/ai";
+import type { AIModelId, AIModelInfo, ModelDownloadProgress } from "@/libs/ai";
 import {
+  addAIStatusListener,
   AI_MODELS,
   cancelDownload,
   DEFAULT_MODEL_ID,
   deleteModel,
   deleteOrphanedModelFiles,
   downloadModel,
+  getDownloadFailure,
+  getModelDownload,
   getOrphanedModelFiles,
   isModelDownloaded,
   isNativeModuleAvailable,
@@ -36,6 +39,8 @@ const formatBytes = (bytes: number) => (bytes >= GB ? `${(bytes / GB).toFixed(1)
 /** Bytes taken by model files no model of today uses (the Qwen 2.5 ones of earlier versions, partial downloads). */
 const oldModelsBytes = async () => (await getOrphanedModelFiles()).reduce((sum, file) => sum + file.size, 0);
 
+const subscribeToAI = (onChange: () => void) => addAIStatusListener(onChange);
+
 export default function AIAssistantScreen() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -47,8 +52,11 @@ export default function AIAssistantScreen() {
   const [confirmDeleteOld, setConfirmDeleteOld] = useState(false);
 
   const [modelDownloaded, setModelDownloaded] = useState(aiSettings.modelDownloaded);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
+  // A download goes on when the screen closes, the screen off or the app in the background (ADR-028): opened again, the
+  // screen shows it.
+  const download: ModelDownloadProgress | null = useSyncExternalStore(subscribeToAI, getModelDownload);
+  const isDownloading = download !== null;
+  const downloadProgress = download?.progress ?? 0;
   const [nativeAvailable, setNativeAvailable] = useState(true);
 
   const deviceRam = Device.totalMemory ?? 0;
@@ -126,31 +134,31 @@ export default function AIAssistantScreen() {
     [aiSettings, dispatch]
   );
 
-  const handleDownload = useCallback(async () => {
-    if (Platform.OS === "web") return;
-
-    setIsDownloading(true);
-    setDownloadProgress(0);
-
-    const success = await downloadModel(selectedModelId, (progress) => {
-      setDownloadProgress(progress);
-    });
-
-    setIsDownloading(false);
-    setModelDownloaded(success);
-    // Downloading a model is asking for the AI: switching models turned it off, a finished download turns it back on.
-    dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: success, enabled: success }));
-    // A download clears the old models' files.
+  // A download's end, even one before the screen opened: done (the module turned the AI on), cancelled or failed.
+  useEffect(() => {
+    if (isDownloading || Platform.OS === "web") return;
+    isModelDownloaded(selectedModelId).then(setModelDownloaded);
+    // a download clears the old models' files
     oldModelsBytes().then(setOldBytes);
-  }, [aiSettings, selectedModelId, dispatch]);
+  }, [isDownloading, selectedModelId]);
+
+  // A failure while the screen is open is said.
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    return addAIStatusListener((status) => {
+      const failure = status === "error" ? getDownloadFailure() : null;
+      if (failure) toast(t(failure === "no_space" ? "ai.download_no_space" : "ai.download_failed"));
+    });
+  }, [t]);
+
+  const handleDownload = useCallback(() => {
+    if (Platform.OS === "web") return;
+    void downloadModel(selectedModelId);
+  }, [selectedModelId]);
 
   const handleCancelDownload = useCallback(async () => {
     if (Platform.OS === "web") return;
-
     await cancelDownload();
-    setIsDownloading(false);
-    setDownloadProgress(0);
-    setModelDownloaded(false);
   }, []);
 
   const handleDeleteOld = useCallback(async () => {
@@ -237,7 +245,9 @@ export default function AIAssistantScreen() {
               <Text style={styles.sectionItemList_title}>{t("ai.status")}</Text>
               <Text style={[styles.sectionItemList_text, modelDownloaded && styles.statusReady]}>
                 {isDownloading
-                  ? `${t("ai.downloading")} ${Math.round(downloadProgress * 100)}%`
+                  ? download.waiting
+                    ? t("ai.download_waiting")
+                    : `${t("ai.downloading")} ${Math.round(downloadProgress * 100)}%`
                   : modelDownloaded
                     ? t("ai.downloaded")
                     : t("ai.not_downloaded")}
@@ -256,7 +266,9 @@ export default function AIAssistantScreen() {
             {isDownloading && (
               <View style={[styles.sectionItemList, styles.sectionItemList_last, styles.downloadingRow]}>
                 <Text style={[styles.sectionItemList_title, styles.actionText]}>
-                  {`${t("ai.downloading")} ${Math.round(downloadProgress * 100)}%`}
+                  {download.waiting
+                    ? t("ai.download_waiting")
+                    : `${t("ai.downloading")} ${Math.round(downloadProgress * 100)}%`}
                 </Text>
                 <TouchableOpacity onPress={handleCancelDownload} activeOpacity={0.7}>
                   <Text style={styles.cancelText}>{t("ai.cancel")}</Text>
@@ -275,9 +287,12 @@ export default function AIAssistantScreen() {
           </View>
 
           {isDownloading && (
-            <View style={styles.progressBarContainer}>
-              <View style={[styles.progressBar, { width: `${downloadProgress * 100}%` }]} />
-            </View>
+            <>
+              <View style={styles.progressBarContainer}>
+                <View style={[styles.progressBar, { width: `${downloadProgress * 100}%` }]} />
+              </View>
+              <Text style={styles.downloadHint}>{t("ai.download_background")}</Text>
+            </>
           )}
         </View>
 
@@ -440,6 +455,12 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: COLOR.accentMuted,
     borderRadius: 2,
+  },
+  downloadHint: {
+    marginTop: PADDING_MARGIN.sm,
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
   },
   infoText: {
     color: COLOR.textSecondary,

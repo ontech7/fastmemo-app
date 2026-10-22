@@ -1,9 +1,13 @@
 import * as FileSystem from "expo-file-system/legacy";
 import * as Localization from "expo-localization";
+import { t } from "i18next";
 import { initLlama, type LlamaContext } from "llama.rn";
 import { AppState, NativeModules } from "react-native";
 
+import { selectorAIAssistant, setAIAssistant } from "@/slicers/settingsSlice";
 import { store } from "@/slicers/store";
+import type { RootState } from "@/types";
+import FastmemoDownloads from "~/modules/fastmemo-downloads";
 import {
   ACTION_MAX_TOKENS,
   ACTION_SAMPLING,
@@ -12,6 +16,7 @@ import {
   HELP_SEARCH_SYSTEM_PROMPT,
   JSON_ARRAY_GRAMMAR,
   JSON_INT_ARRAY_GRAMMAR,
+  MODEL_DOWNLOAD_RECORD,
   MODEL_SPEED,
   getEditorSystemPrompt,
   normalizeModelId,
@@ -87,44 +92,77 @@ function getModel(modelId?: AIModelId): AIModelInfo {
   return AI_MODELS[normalizeModelId(modelId)];
 }
 
-const MODELS_DIR = () => `${FileSystem.documentDirectory}models/`;
+/** Where models were downloaded before the system download (ADR-028), and still are without it: the app's private files. */
+const APP_MODELS_DIR = () => `${FileSystem.documentDirectory}models/`;
 
-export function getModelPath(modelId?: AIModelId): string {
-  return `${MODELS_DIR()}${getModel(modelId).fileName}`;
+let _downloadDir: string | null = null;
+/**
+ * Where a new download goes: the folder the system's download manager writes (the app's own, on the shared storage), or the
+ * app's private files on a binary without it.
+ */
+const DOWNLOAD_DIR = (): string => (_downloadDir ??= FastmemoDownloads?.modelsDir() ?? APP_MODELS_DIR());
+
+/** Every folder a model file can be in, the download one first. */
+const modelDirs = (): string[] => [...new Set([DOWNLOAD_DIR(), APP_MODELS_DIR()])];
+
+/** Deletes a model file: in the download manager's folder through the module (expo-file-system can't delete there). */
+async function deleteModelFile(dir: string, fileName: string): Promise<void> {
+  if (FastmemoDownloads && dir !== APP_MODELS_DIR()) await FastmemoDownloads.deleteAsync(fileName);
+  else await FileSystem.deleteAsync(`${dir}${fileName}`, { idempotent: true });
 }
 
-function getAllModelFiles(modelId?: AIModelId): { fileName: string; url: string; sizeBytes: number }[] {
+type ModelFile = { fileName: string; url: string; sizeBytes: number };
+
+function getAllModelFiles(modelId?: AIModelId): ModelFile[] {
   const model = getModel(modelId);
   return [{ fileName: model.fileName, url: model.url, sizeBytes: model.sizeBytes }, ...(model.parts ?? [])];
 }
 
-/** Every file name the catalog downloads: anything else in the models folder is a leftover. */
-function catalogFileNames(): Set<string> {
-  return new Set((Object.keys(AI_MODELS) as AIModelId[]).flatMap((id) => getAllModelFiles(id).map((f) => f.fileName)));
+/** Every file the catalog downloads, with its size: anything else in a models folder is a leftover. */
+function catalogSizes(): Map<string, number> {
+  return new Map(
+    (Object.keys(AI_MODELS) as AIModelId[]).flatMap((id) => getAllModelFiles(id).map((f) => [f.fileName, f.sizeBytes]))
+  );
+}
+
+/** Where `file` is, whole: a file of another size is cut off or not the one pinned, and never loaded. */
+async function findModelFile(file: ModelFile): Promise<string | null> {
+  for (const dir of modelDirs()) {
+    const info = await FileSystem.getInfoAsync(`${dir}${file.fileName}`);
+    if (info.exists && info.size === file.sizeBytes) return `${dir}${file.fileName}`;
+  }
+  return null;
+}
+
+export async function getModelPath(modelId?: AIModelId): Promise<string> {
+  const [main] = getAllModelFiles(modelId);
+  return (await findModelFile(main)) ?? `${DOWNLOAD_DIR()}${main.fileName}`;
 }
 
 /** A model counts as downloaded only when every file is there at its exact size (a cut-off download is not). */
 export async function isModelDownloaded(modelId?: AIModelId): Promise<boolean> {
   for (const file of getAllModelFiles(modelId)) {
-    const info = await FileSystem.getInfoAsync(`${MODELS_DIR()}${file.fileName}`);
-    if (!info.exists || info.size !== file.sizeBytes) return false;
+    if (!(await findModelFile(file))) return false;
   }
   return true;
 }
 
 /**
- * Files in the models folder that no model of today's catalog uses: the Qwen 2.5 models of earlier versions, and partial
- * downloads of anything else.
+ * Files in the models folders that no model of today's catalog uses (the Qwen 2.5 models of earlier versions), and catalog
+ * files short of their size: a download that died, unless the in-app one is writing them now (a system download writes
+ * elsewhere until it's done).
  */
-export async function getOrphanedModelFiles(): Promise<{ fileName: string; size: number }[]> {
-  const dir = MODELS_DIR();
-  if (!(await FileSystem.getInfoAsync(dir)).exists) return [];
-  const known = catalogFileNames();
-  const orphans: { fileName: string; size: number }[] = [];
-  for (const fileName of await FileSystem.readDirectoryAsync(dir)) {
-    if (known.has(fileName)) continue;
-    const info = await FileSystem.getInfoAsync(`${dir}${fileName}`);
-    orphans.push({ fileName, size: info.exists ? (info.size ?? 0) : 0 });
+export async function getOrphanedModelFiles(): Promise<{ dir: string; fileName: string; size: number }[]> {
+  const sizes = catalogSizes();
+  const orphans: { dir: string; fileName: string; size: number }[] = [];
+  for (const dir of modelDirs()) {
+    if (!(await FileSystem.getInfoAsync(dir)).exists) continue;
+    for (const fileName of await FileSystem.readDirectoryAsync(dir)) {
+      const info = await FileSystem.getInfoAsync(`${dir}${fileName}`);
+      const size = info.exists ? (info.size ?? 0) : 0;
+      if (sizes.get(fileName) === size || (sizes.has(fileName) && _activeDownload && dir === APP_MODELS_DIR())) continue;
+      orphans.push({ dir, fileName, size });
+    }
   }
   return orphans;
 }
@@ -137,7 +175,7 @@ export async function deleteOrphanedModelFiles(): Promise<number> {
   let freed = 0;
   for (const orphan of orphans) {
     try {
-      await FileSystem.deleteAsync(`${MODELS_DIR()}${orphan.fileName}`, { idempotent: true });
+      await deleteModelFile(orphan.dir, orphan.fileName);
       freed += orphan.size;
     } catch (error) {
       console.error("[AI] Delete old model file failed:", error);
@@ -146,113 +184,262 @@ export async function deleteOrphanedModelFiles(): Promise<number> {
   return freed;
 }
 
+/** Deletes every file of `modelId`, in every models folder. */
+async function deleteModelFiles(modelId: AIModelId): Promise<void> {
+  for (const file of getAllModelFiles(modelId)) {
+    for (const dir of modelDirs()) {
+      if ((await FileSystem.getInfoAsync(`${dir}${file.fileName}`)).exists) {
+        await releaseContext();
+        await deleteModelFile(dir, file.fileName);
+      }
+    }
+  }
+}
+
+/*
+ * The download (ADR-028). Through the system's download manager it goes on with the screen off and the app in the background
+ * or closed, with its progress in a notification: the system download under way is written down, and the app picks it up at
+ * its next start (or when it comes back to the foreground). Without the module (an old binary), the app downloads it itself,
+ * only while it runs.
+ */
+
+/** The system download under way, kept across restarts. */
+interface DownloadRecord {
+  modelId: AIModelId;
+  fileName: string;
+  id: number;
+}
+
+const DOWNLOAD_RECORD = () => `${FileSystem.documentDirectory}${MODEL_DOWNLOAD_RECORD}`;
+
+async function readDownloadRecord(): Promise<DownloadRecord | null> {
+  try {
+    if (!(await FileSystem.getInfoAsync(DOWNLOAD_RECORD())).exists) return null;
+    return JSON.parse(await FileSystem.readAsStringAsync(DOWNLOAD_RECORD()));
+  } catch {
+    return null;
+  }
+}
+
+async function writeDownloadRecord(record: DownloadRecord | null): Promise<void> {
+  if (record) await FileSystem.writeAsStringAsync(DOWNLOAD_RECORD(), JSON.stringify(record));
+  else await FileSystem.deleteAsync(DOWNLOAD_RECORD(), { idempotent: true });
+}
+
+/** How often a system download is asked how far it got. */
+const DOWNLOAD_POLL_MS = 500;
+/** DownloadManager.ERROR_INSUFFICIENT_SPACE. */
+const ERROR_INSUFFICIENT_SPACE = 1006;
+
+export interface ModelDownloadProgress {
+  modelId: AIModelId;
+  /** 0..1, over every file of the model. */
+  progress: number;
+  /** Paused by the system, waiting for the network (it resumes by itself). */
+  waiting: boolean;
+}
+
+/** Why the last download failed, for the screen to say: "no_space", or anything else. */
+export type DownloadFailure = "no_space" | "failed";
+
+let _download: Promise<boolean> | null = null;
+let _downloadProgress: ModelDownloadProgress | null = null;
+let _downloadFailure: DownloadFailure | null = null;
+/** Bumped by a cancel: the download that started before it stops. */
+let _downloadGeneration = 0;
+/** The in-app download (without the module). */
 let _activeDownload: FileSystem.DownloadResumable | null = null;
 
-export async function downloadModel(modelId?: AIModelId, onProgress?: (progress: number) => void): Promise<boolean> {
-  const targetId = normalizeModelId(modelId);
+/** The download under way, or null: a screen opened meanwhile shows it. */
+export function getModelDownload(): ModelDownloadProgress | null {
+  return _downloadProgress;
+}
 
-  try {
-    if (_activeDownload) {
-      try {
-        await _activeDownload.cancelAsync();
-      } catch {
-        /* ignore */
-      }
-      _activeDownload = null;
+/** Why the last download failed (null when it didn't). */
+export function getDownloadFailure(): DownloadFailure | null {
+  return _downloadFailure;
+}
+
+type FileResult = "done" | "cancelled" | DownloadFailure;
+
+async function downloadWithSystem(
+  modelId: AIModelId,
+  file: ModelFile,
+  resumeId: number | null,
+  generation: number,
+  report: (fraction: number, waiting: boolean) => void
+): Promise<FileResult> {
+  const downloads = FastmemoDownloads!;
+  let id = resumeId;
+  if (id === null) {
+    id = await downloads.startAsync(file.url, file.fileName, getModel(modelId).name, t("ai.download_notification"));
+    // cancelled while it was being started: the cancel didn't know it yet
+    if (generation !== _downloadGeneration) {
+      await downloads.cancelAsync(id, file.fileName);
+      return "cancelled";
     }
+    await writeDownloadRecord({ modelId, fileName: file.fileName, id });
+  }
+  for (;;) {
+    if (generation !== _downloadGeneration) return "cancelled";
+    const state = await downloads.queryAsync(id);
+    if (generation !== _downloadGeneration) return "cancelled";
+    switch (state.status) {
+      case "successful":
+        return (await downloads.finishAsync(id, file.fileName)) && (await findModelFile(file)) ? "done" : "failed";
+      case "failed":
+        console.error("[AI] Download failed:", file.fileName, state.reason);
+        await downloads.cancelAsync(id, file.fileName);
+        return state.reason === ERROR_INSUFFICIENT_SPACE ? "no_space" : "failed";
+      // removed from its notification: as a cancel
+      case "missing":
+        return "cancelled";
+    }
+    report(state.total > 0 ? state.downloaded / state.total : 0, state.status === "paused");
+    await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_POLL_MS));
+  }
+}
 
+async function downloadInApp(file: ModelFile, report: (fraction: number, waiting: boolean) => void): Promise<FileResult> {
+  const filePath = `${APP_MODELS_DIR()}${file.fileName}`;
+  _activeDownload = FileSystem.createDownloadResumable(file.url, filePath, {}, (dp) => {
+    report(dp.totalBytesExpectedToWrite > 0 ? dp.totalBytesWritten / dp.totalBytesExpectedToWrite : 0, false);
+  });
+  try {
+    await _activeDownload.downloadAsync();
+  } catch (error) {
+    // a cancel throws too
+    if (String(error).includes("cancel")) return "cancelled";
+    throw error;
+  } finally {
+    _activeDownload = null;
+  }
+  if (await findModelFile(file)) return "done";
+  console.error("[AI] Download incomplete:", file.fileName);
+  await FileSystem.deleteAsync(filePath, { idempotent: true });
+  return "failed";
+}
+
+/** A finished download asks for the AI: switching models turned it off, the download turns it back on. */
+function downloaded(modelId: AIModelId) {
+  const ai = selectorAIAssistant(store.getState() as RootState);
+  if (normalizeModelId(ai.selectedModel) === modelId) {
+    store.dispatch(setAIAssistant({ ...ai, modelDownloaded: true, enabled: true }));
+  }
+}
+
+async function runDownload(modelId: AIModelId, resume: DownloadRecord | null, generation: number): Promise<boolean> {
+  const files = getAllModelFiles(modelId);
+  try {
+    _downloadFailure = null;
+    _downloadProgress = { modelId, progress: 0, waiting: false };
     notifyListeners("downloading", 0);
 
-    // One model on the device at a time: the others go, and so does anything left over (old models, partial files).
-    await deleteOrphanedModelFiles();
-    for (const otherId of Object.keys(AI_MODELS) as AIModelId[]) {
-      if (otherId === targetId) continue;
-      for (const file of getAllModelFiles(otherId)) {
-        const p = `${MODELS_DIR()}${file.fileName}`;
-        if ((await FileSystem.getInfoAsync(p)).exists) {
-          await releaseContext();
-          await FileSystem.deleteAsync(p);
-        }
+    if (!resume) {
+      // One model on the device at a time: the others go, and so does anything left over (old models, partial files).
+      await deleteOrphanedModelFiles();
+      for (const otherId of Object.keys(AI_MODELS) as AIModelId[]) {
+        if (otherId !== modelId) await deleteModelFiles(otherId);
       }
     }
-
-    const dirPath = MODELS_DIR();
-    if (!(await FileSystem.getInfoAsync(dirPath)).exists) {
-      await FileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
+    if (!(await FileSystem.getInfoAsync(DOWNLOAD_DIR())).exists) {
+      await FileSystem.makeDirectoryAsync(DOWNLOAD_DIR(), { intermediates: true });
     }
 
-    const files = getAllModelFiles(targetId);
-    const totalFiles = files.length;
-
-    for (let i = 0; i < totalFiles; i++) {
+    for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const filePath = `${MODELS_DIR()}${file.fileName}`;
-
-      _activeDownload = FileSystem.createDownloadResumable(file.url, filePath, {}, (dp) => {
-        const fileProgress = dp.totalBytesExpectedToWrite > 0 ? dp.totalBytesWritten / dp.totalBytesExpectedToWrite : 0;
-        const overall = (i + fileProgress) / totalFiles;
-        notifyListeners("downloading", overall);
-        onProgress?.(overall);
-      });
-
-      const result = await _activeDownload.downloadAsync();
-      _activeDownload = null;
-
-      // A file of another size is cut off or not the one pinned: never load it.
-      const info = result?.uri ? await FileSystem.getInfoAsync(filePath) : null;
-      if (!info?.exists || info.size !== file.sizeBytes) {
-        console.error("[AI] Download incomplete:", file.fileName, info?.exists ? info.size : "missing");
-        await FileSystem.deleteAsync(filePath, { idempotent: true });
+      if (await findModelFile(file)) continue;
+      const report = (fraction: number, waiting: boolean) => {
+        if (generation !== _downloadGeneration) return;
+        _downloadProgress = { modelId, progress: (i + fraction) / files.length, waiting };
+        notifyListeners("downloading", _downloadProgress.progress);
+      };
+      const result = FastmemoDownloads
+        ? await downloadWithSystem(modelId, file, resume?.fileName === file.fileName ? resume.id : null, generation, report)
+        : await downloadInApp(file, report);
+      // cancelled meanwhile: the cancel cleaned up and said so
+      if (generation !== _downloadGeneration) return false;
+      if (result !== "done") {
+        await writeDownloadRecord(null);
+        if (result === "cancelled") {
+          _downloadProgress = null;
+          notifyListeners("idle");
+          return false;
+        }
+        _downloadFailure = result;
+        _downloadProgress = null;
         notifyListeners("error");
         return false;
       }
     }
 
+    await writeDownloadRecord(null);
+    downloaded(modelId);
+    _downloadProgress = null;
     notifyListeners("idle");
     return true;
   } catch (error) {
-    _activeDownload = null;
-    // Don't log cancellation as error
-    if (String(error).includes("cancel")) {
-      notifyListeners("idle");
-      return false;
-    }
+    if (generation !== _downloadGeneration) return false;
     console.error("[AI] Download failed:", error);
+    await writeDownloadRecord(null).catch(() => undefined);
+    _downloadFailure = "failed";
+    _downloadProgress = null;
     notifyListeners("error");
     return false;
   }
 }
 
-export async function cancelDownload(): Promise<void> {
-  if (_activeDownload) {
-    try {
-      await _activeDownload.cancelAsync();
-    } catch {
-      /* ignore */
-    }
-    _activeDownload = null;
+function startDownload(modelId: AIModelId, resume: DownloadRecord | null): Promise<boolean> {
+  const download = runDownload(modelId, resume, _downloadGeneration).finally(() => {
+    if (_download === download) _download = null;
+  });
+  _download = download;
+  return download;
+}
 
-    // What the download left: a catalog file short of its size, and anything outside the catalog.
-    for (const id of Object.keys(AI_MODELS) as AIModelId[]) {
-      for (const file of getAllModelFiles(id)) {
-        const p = `${MODELS_DIR()}${file.fileName}`;
-        const info = await FileSystem.getInfoAsync(p);
-        if (info.exists && info.size !== file.sizeBytes) await FileSystem.deleteAsync(p, { idempotent: true });
-      }
-    }
+/** Downloads `modelId` (its files not on the device yet), or follows its download under way. */
+export async function downloadModel(modelId?: AIModelId): Promise<boolean> {
+  const targetId = normalizeModelId(modelId);
+  if (_download && _downloadProgress?.modelId === targetId) return _download;
+  if (_download) await cancelDownload();
+  return startDownload(targetId, null);
+}
+
+/**
+ * Picks up the system download the app was closed during: follows it, or finishes one done meanwhile. At the app's start,
+ * without one, clears what a download may have left in the staging folder.
+ */
+async function resumeModelDownload(atStart: boolean): Promise<void> {
+  if (_download || !FastmemoDownloads) return;
+  const record = await readDownloadRecord();
+  if (_download) return;
+  if (record) void startDownload(normalizeModelId(record.modelId), record);
+  else if (atStart) await FastmemoDownloads.clearStagingAsync();
+}
+
+export async function cancelDownload(): Promise<void> {
+  _downloadGeneration++;
+  const download = _download;
+  _download = null;
+  _downloadProgress = null;
+  try {
+    const record = await readDownloadRecord();
+    if (record && FastmemoDownloads) await FastmemoDownloads.cancelAsync(record.id, record.fileName);
+    await writeDownloadRecord(null);
+    if (_activeDownload) await _activeDownload.cancelAsync().catch(() => undefined);
+    await download?.catch(() => undefined);
+    // what the download left: catalog files short of their size, and anything outside the catalog
     await deleteOrphanedModelFiles();
-    notifyListeners("idle");
+  } catch (error) {
+    console.error("[AI] Cancel download failed:", error);
   }
+  notifyListeners("idle");
 }
 
 export async function deleteModel(modelId?: AIModelId): Promise<void> {
   try {
     await releaseContext();
-    for (const file of getAllModelFiles(modelId)) {
-      const p = `${MODELS_DIR()}${file.fileName}`;
-      const info = await FileSystem.getInfoAsync(p);
-      if (info.exists) await FileSystem.deleteAsync(p);
-    }
+    await deleteModelFiles(normalizeModelId(modelId));
     notifyListeners("idle");
   } catch (error) {
     console.error("[AI] Delete model failed:", error);
@@ -386,7 +573,7 @@ export async function initContext(modelId?: AIModelId): Promise<boolean> {
     try {
       notifyListeners("loading");
 
-      const modelPath = getModelPath(targetId);
+      const modelPath = await getModelPath(targetId);
       const exists = await isModelDownloaded(targetId);
 
       if (!exists) {
@@ -707,3 +894,9 @@ async function runHelpSearch(query: string, catalog: HelpCatalogEntry[]): Promis
     return [];
   }
 }
+
+// a download the app was closed during goes on: picked up now, and each time the app comes back
+void resumeModelDownload(true);
+AppState.addEventListener("change", (state) => {
+  if (state === "active") void resumeModelDownload(false);
+});
