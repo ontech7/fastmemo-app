@@ -333,6 +333,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   noteType="code"
                   getContent={() => activeTab?.code || ""}
                   noteTitle={note.title}
+                  categoryName={note.category.name}
                   onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                   onCategorySuggested={(name) => {
                     const cat = findCategoryByName(name);

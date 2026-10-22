@@ -18,7 +18,14 @@ import {
   truncateForAction,
 } from "./constants";
 import { completeSentences } from "./blocks";
-import { categoryGrammar, cleanAnswer, cleanSuggestedItems, isPlausibleRewrite, stripThinking } from "./helpers";
+import {
+  categoryAlternative,
+  categoryGrammar,
+  cleanAnswer,
+  cleanSuggestedItems,
+  isPlausibleRewrite,
+  stripThinking,
+} from "./helpers";
 import type {
   AIModelId,
   AIModelInfo,
@@ -566,7 +573,8 @@ async function runEditorAction(
         stop: STOP_WORDS,
         ...ACTION_SAMPLING[action],
         ...(isJsonOutput ? { grammar: JSON_ARRAY_GRAMMAR } : {}),
-        ...(action === "suggest_category" ? { grammar: categoryGrammar(categoryNames) } : {}),
+        // the candidates of each token tell how close another category came
+        ...(action === "suggest_category" ? { grammar: categoryGrammar(categoryNames), n_probs: 10 } : {}),
       },
       (data) => {
         // a cancel that landed before the native completion began was dropped by it: stop at the first token
@@ -619,7 +627,10 @@ async function runEditorAction(
     if (action === "suggest_category") {
       const matched =
         categoryNames.find((n) => n === text) ?? categoryNames.find((n) => n.toLowerCase() === text.toLowerCase());
-      return matched ? { success: true, text: matched, timings } : { success: false, error: "no_category_match", timings };
+      if (!matched) return { success: false, error: "no_category_match", timings };
+      const temperature = ACTION_SAMPLING.suggest_category.temperature;
+      const alternative = categoryAlternative(result.completion_probabilities ?? [], matched, categoryNames, temperature);
+      return { success: true, text: matched, alternative, timings };
     }
 
     // A rewrite that lost half the text, or grew far beyond it, is not shown (the caller keeps the original).

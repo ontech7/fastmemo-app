@@ -628,6 +628,8 @@ const fr = {
       content_changed: "La note a changé pendant que l'IA travaillait : relancez-la.",
       no_content: "Écrivez quelque chose d'abord",
       no_category_match: "Aucune catégorie correspondante",
+      category_unchanged: "La note est déjà dans « {{name}} »",
+      category_unsure: "L'IA hésite entre ces deux : choisissez-en une.",
       no_improvement: "L'IA n'a pas pu améliorer ce texte : il n'a pas changé.",
       too_long: "Le texte est trop long pour l'IA : essayez avec une partie plus courte.",
       note_too_long: "Note trop longue pour ce modèle",

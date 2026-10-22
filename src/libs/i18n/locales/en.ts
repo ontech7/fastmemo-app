@@ -620,6 +620,8 @@ const en = {
       content_changed: "The note changed while the AI was working: run it again.",
       no_content: "Write something first",
       no_category_match: "No matching category found",
+      category_unchanged: "The note is already in “{{name}}”",
+      category_unsure: "The AI is torn between these two: pick one.",
       no_improvement: "The AI couldn't improve this text: it's unchanged.",
       too_long: "The text is too long for the AI: try a shorter part.",
       note_too_long: "Note too long for this model",

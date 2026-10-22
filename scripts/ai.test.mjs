@@ -186,6 +186,91 @@ eq(
 );
 eq("grammar: blank and repeated names dropped", H.categoryGrammar(["Casa", " ", "Casa"]), 'root ::= "Casa" | "none"');
 
+// --- category runner-up (candidates as the sampler reports them, after temperature 0.2) ---
+{
+  const names = ["Lavoro", "Casa", "Casa al mare", "Spesa"];
+  const step = (content, probs) => ({ content, probs: probs.map(([tok_str, prob]) => ({ tok_str, prob })) });
+  eq(
+    "runner-up: a close second (1% after temperature: 40% of the first before it)",
+    H.categoryAlternative(
+      [
+        step("Lavoro", [
+          ["Lavoro", 0.99],
+          ["Casa", 0.01],
+        ]),
+      ],
+      "Lavoro",
+      names,
+      0.2
+    ),
+    "Casa"
+  );
+  eq(
+    "runner-up: a far one is not offered",
+    H.categoryAlternative(
+      [
+        step("Lavoro", [
+          ["Lavoro", 0.9999],
+          ["Spesa", 0.0001],
+        ]),
+      ],
+      "Lavoro",
+      names,
+      0.2
+    ),
+    undefined
+  );
+  eq(
+    "runner-up: a candidate that starts no category is skipped",
+    H.categoryAlternative(
+      [
+        step("Lavoro", [
+          ["Lavoro", 0.6],
+          ["The", 0.4],
+        ]),
+      ],
+      "Lavoro",
+      names,
+      0.2
+    ),
+    undefined
+  );
+  eq(
+    "runner-up: found where the name parts from the answer",
+    H.categoryAlternative(
+      [
+        step("Casa", [["Casa", 1]]),
+        step(" al", [
+          [" al", 0.9],
+          ["", 0.1],
+        ]),
+        step(" mare", [[" mare", 1]]),
+      ],
+      "Casa al mare",
+      names,
+      0.2
+    ),
+    "Casa"
+  );
+  eq(
+    "runner-up: the closest of several",
+    H.categoryAlternative(
+      [
+        step("Spesa", [
+          ["Spesa", 0.97],
+          ["Casa", 0.02],
+          ["Lav", 0.01],
+        ]),
+      ],
+      "Spesa",
+      names,
+      0.2
+    ),
+    "Casa"
+  );
+  eq("runner-up: no candidates (an older native module), none", H.categoryAlternative([], "Lavoro", names, 0.2), undefined);
+}
+
 // --- dictation into a note ---
 eq("plain text: line breaks", V.voiceTextToHtml("a\nb"), " a<br>b");
 eq("plain text: escaped", V.voiceTextToHtml("1 < 2 & 3", { leadingSpace: false }), "1 &lt; 2 &amp; 3");

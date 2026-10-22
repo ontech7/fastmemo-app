@@ -327,6 +327,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                       .join("\n")
                   }
                   noteTitle={note.title}
+                  categoryName={note.category.name}
                   onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                   onItemsSuggested={(items) => {
                     const newItems = items.map((text) => ({

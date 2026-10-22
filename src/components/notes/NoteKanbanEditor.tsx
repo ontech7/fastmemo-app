@@ -215,6 +215,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
                       .join(". ")
                   }
                   noteTitle={note.title}
+                  categoryName={note.category.name}
                   onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                   onCategorySuggested={(name) => {
                     const cat = findCategoryByName(name);

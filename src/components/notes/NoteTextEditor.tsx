@@ -540,6 +540,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
                     getContent={() => stripHtml(note.text)}
                     getHtml={() => note.text}
                     noteTitle={note.title}
+                    categoryName={note.category.name}
                     onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                     onCategorySuggested={(name) => {
                       const cat = findCategoryByName(name);
