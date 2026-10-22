@@ -15,11 +15,11 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
-      description_2_0_0: `• Synchronisieren Sie Ihre Notizen mit Ihrem eigenen FastMemo Server (PC, NAS, Raspberry Pi) als Alternative zu Google Firebase.
-• Live-Synchronisierung: Änderungen von Ihren anderen Geräten erscheinen, während Sie arbeiten, und eine gleichzeitig auf zwei Geräten bearbeitete Notiz behält beide Versionen.
-• Schnellerer Start und Tastenkürzel; auf dem Mac eine vollständige Menüleiste, und die App läuft weiter, wenn Sie das Fenster schließen.
-• Klicken Sie auf ein Bild in einer Textnotiz, um es in der Größe zu ändern, auszurichten, zu drehen, im Vollbild anzuzeigen oder zu speichern.
-• Verschiedene Fehlerbehebungen und Verbesserungen.`,
+      description_2_0_0: `• Synchronisieren Sie mit Ihrem eigenen FastMemo Server statt mit Firebase.
+• Echtzeit-Synchronisierung zwischen Ihren Geräten.
+• Tastenkürzel und auf dem Mac eine Menüleiste.
+• Klicken Sie auf ein Bild, um es zu skalieren, zu drehen oder zu speichern.
+• Eine schnellere App und verschiedene Korrekturen.`,
 
       description_1_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Ihre Notizen werden mit Ihrem eigenen Schlüssel geschützt.
 • Neue Schnellnotiz-Leiste, um direkt vom Startbildschirm eine Notiz zu erfassen.
@@ -56,12 +56,11 @@ const de = {
     },
 
     mobile: {
-      description_4_0_0: `• Synchronisieren Sie Ihre Notizen mit Ihrem eigenen FastMemo Server (PC, NAS, Raspberry Pi) als Alternative zu Google Firebase.
-• Live-Synchronisierung: Änderungen von Ihren anderen Geräten erscheinen, während Sie arbeiten, und eine gleichzeitig auf zwei Geräten bearbeitete Notiz behält beide Versionen.
-• Ein schnellerer und klügerer KI-Assistent mit den neuen Qwen3.5-Modellen: Grammatik korrigieren, kürzen, übersetzen und selbst lange Notizen zusammenfassen.
-• Tippen Sie auf ein Bild in einer Textnotiz, um es in der Größe zu ändern, auszurichten, zu drehen, im Vollbild anzuzeigen oder zu teilen.
-• Eine schnellere App, und kleine Fehlerbehebungen kommen jetzt automatisch, ohne auf ein Store-Update zu warten.
-• Verschiedene Fehlerbehebungen und Verbesserungen.`,
+      description_4_0_0: `• Synchronisieren Sie mit Ihrem eigenen FastMemo Server statt mit Firebase.
+• Echtzeit-Synchronisierung zwischen Ihren Geräten.
+• KI-Assistent mit den neuen Qwen3.5-Modellen: korrigieren, kürzen, übersetzen und zusammenfassen.
+• Tippen Sie auf ein Bild, um es zu skalieren, zu drehen oder zu teilen.
+• Eine schnellere App und verschiedene Korrekturen.`,
 
       description_3_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Ihre Notizen werden mit Ihrem eigenen Schlüssel geschützt.
 • Neue Schnellnotiz-Leiste, um direkt vom Startbildschirm eine Notiz zu erfassen.

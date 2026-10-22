@@ -15,11 +15,11 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
-      description_2_0_0: `• Sincronizza le note con il tuo FastMemo Server (PC, NAS, Raspberry Pi) in alternativa a Google Firebase.
-• Sincronizzazione in tempo reale: le modifiche dagli altri dispositivi compaiono mentre lavori, e una nota modificata su due dispositivi contemporaneamente conserva entrambe le versioni.
-• Avvio più rapido e scorciatoie da tastiera; su Mac, una barra dei menu completa e l'app resta aperta quando chiudi la finestra.
-• Fai clic su un'immagine in una nota di testo per ridimensionarla, allinearla, ruotarla, vederla a schermo intero o salvarla.
-• Varie correzioni e miglioramenti.`,
+      description_2_0_0: `• Sincronizza con il tuo FastMemo Server, in alternativa a Firebase.
+• Sincronizzazione in tempo reale tra i tuoi dispositivi.
+• Scorciatoie da tastiera e, su Mac, la barra dei menu.
+• Fai clic su un'immagine per ridimensionarla, ruotarla o salvarla.
+• App più veloce e varie correzioni.`,
 
       description_1_2_0: `• Sincronizzazione cloud con crittografia end-to-end: le tue note sono protette con una chiave solo tua.
 • Nuova barra "nota rapida" per scrivere al volo una nota dalla home.
@@ -56,12 +56,11 @@ const it = {
     },
 
     mobile: {
-      description_4_0_0: `• Sincronizza le note con il tuo FastMemo Server (PC, NAS, Raspberry Pi) in alternativa a Google Firebase.
-• Sincronizzazione in tempo reale: le modifiche dagli altri dispositivi compaiono mentre lavori, e una nota modificata su due dispositivi contemporaneamente conserva entrambe le versioni.
-• Assistente AI più veloce e intelligente con i nuovi modelli Qwen3.5: correggi la grammatica, accorcia, traduci e riassumi anche le note lunghe.
-• Tocca un'immagine in una nota di testo per ridimensionarla, allinearla, ruotarla, vederla a schermo intero o condividerla.
-• App più veloce, e le piccole correzioni ora arrivano da sole senza aspettare un aggiornamento dallo store.
-• Varie correzioni e miglioramenti.`,
+      description_4_0_0: `• Sincronizza con il tuo FastMemo Server, in alternativa a Firebase.
+• Sincronizzazione in tempo reale tra i tuoi dispositivi.
+• Assistente AI con i nuovi modelli Qwen3.5: correggi, accorcia, traduci e riassumi.
+• Tocca un'immagine per ridimensionarla, ruotarla o condividerla.
+• App più veloce e varie correzioni.`,
 
       description_3_2_0: `• Sincronizzazione cloud con crittografia end-to-end: le tue note sono protette con una chiave solo tua.
 • Nuova barra "nota rapida" per scrivere al volo una nota dalla home.

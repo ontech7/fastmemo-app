@@ -15,11 +15,11 @@ const en = {
     title: "What's new?",
 
     web: {
-      description_2_0_0: `• Sync your notes with your own FastMemo Server (PC, NAS, Raspberry Pi) as an alternative to Google Firebase.
-• Live sync: changes from your other devices show up as you work, and a note edited on two devices at once keeps both versions.
-• Faster launch and keyboard shortcuts; on Mac, a full menu bar, and closing the window keeps the app running.
-• Click an image in a text note to resize, align, rotate, view it full screen or save it.
-• Various fixes and improvements.`,
+      description_2_0_0: `• Sync with your own FastMemo Server, instead of Firebase.
+• Real-time sync across your devices.
+• Keyboard shortcuts and, on Mac, a menu bar.
+• Click an image to resize, rotate or save it.
+• A faster app and various fixes.`,
 
       description_1_2_0: `• End-to-end encrypted cloud sync: your notes are sealed with your own key.
 • New quick-note bar to capture a note instantly from the home screen.
@@ -56,12 +56,11 @@ const en = {
     },
 
     mobile: {
-      description_4_0_0: `• Sync your notes with your own FastMemo Server (PC, NAS, Raspberry Pi) as an alternative to Google Firebase.
-• Live sync: changes from your other devices show up as you work, and a note edited on two devices at once keeps both versions.
-• A faster, smarter AI Assistant with the new Qwen3.5 models: fix grammar, shorten, translate and summarize even long notes.
-• Tap an image in a text note to resize, align, rotate, view it full screen or share it.
-• A faster app, and small fixes now arrive on their own without waiting for a store update.
-• Various fixes and improvements.`,
+      description_4_0_0: `• Sync with your own FastMemo Server, instead of Firebase.
+• Real-time sync across your devices.
+• AI assistant with the new Qwen3.5 models: fix, shorten, translate and summarize.
+• Tap an image to resize, rotate or share it.
+• A faster app and various fixes.`,
 
       description_3_2_0: `• End-to-end encrypted cloud sync: your notes are sealed with your own key.
 • New quick-note bar to capture a note instantly from the home screen.
