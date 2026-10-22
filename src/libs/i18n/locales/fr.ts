@@ -340,13 +340,12 @@ const fr = {
     server: {
       url: "Adresse du serveur",
       key: "Clé d'accès",
-      http_warning:
-        "Cette adresse n'est pas chiffrée (HTTP). Sur n'importe quel réseau où se trouve votre appareil (Wi-Fi public, routeur partagé, le chemin jusqu'à votre serveur), quiconque voit le trafic pourrait lire les titres de vos notes et les identifiants de votre appareil, et s'en servir sur votre serveur. Le contenu de vos notes reste chiffré de bout en bout. Si possible, utilisez HTTPS : un reverse proxy avec un certificat, ou Tailscale, qui donne gratuitement une adresse HTTPS au serveur (voir le guide).",
+      http_warning: "HTTP n'est pas chiffré : sans souci via Tailscale ou un VPN comme WireGuard. Sinon, préférez HTTPS.",
       http_blocked:
-        "Ici, FastMemo ne peut joindre que des adresses HTTPS (ou un serveur sur ce même ordinateur) : le moteur du navigateur bloque HTTP. Placez le serveur derrière HTTPS : un reverse proxy avec un certificat, ou Tailscale, qui lui donne gratuitement une adresse HTTPS (voir le guide).",
+        "Dans le navigateur, FastMemo ne joint que des adresses HTTPS. Pour HTTP, utilisez l'app Android ou de bureau.",
       http_confirm_title: "Se connecter en HTTP ?",
       http_confirm_desc:
-        "Sans HTTPS, ce qu'envoie votre appareil n'est pas chiffré, quel que soit le réseau : à la maison, sur un Wi-Fi public, sur le chemin jusqu'à votre serveur. Quiconque le voit pourrait lire les titres de vos notes et les identifiants de votre appareil. Avec eux, il pourrait se connecter à votre serveur : il ne pourrait pas lire vos notes sans votre mot de passe de chiffrement, mais il pourrait les supprimer ou les modifier, et retirer vos appareils.\n\nLe guide explique comment obtenir HTTPS gratuitement avec Tailscale.",
+        "HTTP n'est pas chiffré. Avec Tailscale ou un VPN comme WireGuard, aucun souci : le tunnel chiffre déjà le trafic. Sur un réseau ouvert, quiconque voit le trafic pourrait lire les titres de vos notes et les identifiants de votre appareil ; le contenu de vos notes reste chiffré de bout en bout.",
       http_confirm_ok: "Utiliser HTTP",
       handshake_failed_desc:
         "Impossible de joindre le serveur, ou la clé d'accès est incorrecte. Vérifiez l'adresse (par ex. https://notes.exemple.fr), la clé, et que le serveur est allumé. Pour un serveur sans HTTPS, tapez http:// devant l'adresse. L'application web exige une adresse HTTPS.",

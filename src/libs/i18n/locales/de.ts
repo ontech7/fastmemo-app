@@ -339,13 +339,11 @@ const de = {
     server: {
       url: "Serveradresse",
       key: "Zugangsschlüssel",
-      http_warning:
-        "Diese Adresse ist nicht verschlüsselt (HTTP). In jedem Netzwerk, in dem Ihr Gerät ist (öffentliches WLAN, gemeinsamer Router, der Weg zu Ihrem Server), könnte jeder, der den Datenverkehr sieht, die Titel Ihrer Notizen und die Zugangsdaten Ihres Geräts lesen und sie auf Ihrem Server verwenden. Der Inhalt Ihrer Notizen bleibt Ende-zu-Ende-verschlüsselt. Verwenden Sie wenn möglich HTTPS: einen Reverse-Proxy mit Zertifikat oder Tailscale, das dem Server kostenlos eine HTTPS-Adresse gibt (siehe Anleitung).",
-      http_blocked:
-        "Hier kann FastMemo nur HTTPS-Adressen erreichen (oder einen Server auf diesem Computer): Die Browser-Engine blockiert HTTP. Stellen Sie den Server hinter HTTPS: einen Reverse-Proxy mit Zertifikat oder Tailscale, das ihm kostenlos eine HTTPS-Adresse gibt (siehe Anleitung).",
+      http_warning: "HTTP ist unverschlüsselt: über Tailscale oder ein VPN wie WireGuard unbedenklich. Sonst besser HTTPS.",
+      http_blocked: "Im Browser erreicht FastMemo nur HTTPS-Adressen. Für HTTP nutzen Sie die Android- oder Desktop-App.",
       http_confirm_title: "Über HTTP verbinden?",
       http_confirm_desc:
-        "Ohne HTTPS ist, was Ihr Gerät sendet, unverschlüsselt, egal in welchem Netzwerk: zu Hause, im öffentlichen WLAN, auf dem Weg zu Ihrem Server. Wer es sieht, könnte die Titel Ihrer Notizen und die Zugangsdaten Ihres Geräts lesen. Damit könnte er sich mit Ihrem Server verbinden: Ihre Notizen könnte er ohne Ihr Verschlüsselungspasswort nicht lesen, aber löschen oder ändern und Ihre Geräte entfernen.\n\nDie Anleitung zeigt, wie Sie mit Tailscale kostenlos HTTPS bekommen.",
+        "HTTP ist unverschlüsselt. Über Tailscale oder ein VPN wie WireGuard ist das kein Problem: Der Tunnel verschlüsselt den Datenverkehr bereits. In einem offenen Netzwerk könnte jeder, der den Datenverkehr sieht, die Titel Ihrer Notizen und die Zugangsdaten Ihres Geräts lesen; der Inhalt Ihrer Notizen bleibt Ende-zu-Ende-verschlüsselt.",
       http_confirm_ok: "HTTP verwenden",
       handshake_failed_desc:
         "Der Server ist nicht erreichbar oder der Zugangsschlüssel ist falsch. Prüfen Sie die Adresse (z. B. https://notizen.beispiel.de), den Schlüssel und ob der Server läuft. Bei einem Server ohne HTTPS geben Sie http:// vor der Adresse ein. Die Web-App benötigt eine HTTPS-Adresse.",
