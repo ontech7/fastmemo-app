@@ -12,13 +12,17 @@ metadata:
 # FastMemo Release Skill
 
 > The single source of truth for cutting a FastMemo release. A release is always the same mechanical sequence: bump versions,
-> write the changelog (short, for users, translated), refresh the README badges, and reconcile the docs. Follow every step in
-> order.
+> write the changelog (short, for users, translated) and the release notes, refresh the README badges, and reconcile the docs.
+> Follow every step in order.
 
-There is **one changelog**: the user changelog in the app's locales. The app shows it, Play gets it as release notes, the
-desktop updater shows it (`latest.json`), and the `publish` workflow writes the GitHub release from its English text
-(`scripts/changelog-notes.mjs`) plus a link to the full comparison. The details of a change live in the commits, ADRs and
-lessons, never in a changelog.
+Two texts per release, both written for people, not for the codebase (ADR-030):
+
+- **The changelog** (Step 3): ≤5 short bullets in the 7 locales. The app shows it, Play gets it, the desktop updater shows it
+  (`latest.json`), the website's `/api/version` serves it.
+- **The release notes** (Step 3b): `docs/RELEASE_NOTES.md`, English, the GitHub release page. The same bullets, each explained
+  in nested bullets for the curious reader (how the start got faster, what runs where).
+
+Neither is a log: no ADR/LL numbers, no refactors, CI or trivia (a label in About). The rest is in the commits.
 
 FastMemo has **two independent version tracks** — Mobile (Expo/React Native) and Desktop (Tauri). A release may bump one or
 both. If a platform had no changes, leave its version untouched and skip its changelog.
@@ -106,6 +110,29 @@ Rules:
   sync" or "smoother editor" — collapses into the final `• Various fixes and improvements.` bullet (translated).
 - Written for users: what they can do now, in their words. No ADR/LL numbers, file names, library names or internal terms.
 - It's also the Play release notes: **at most 500 characters per language**.
+
+### 3b. Release notes — `docs/RELEASE_NOTES.md` (GitHub release)
+
+Replace the file's content with this release's notes (git keeps the old ones, and the GitHub releases show them):
+
+```markdown
+## 📱 Mobile X.Y.Z
+
+- <the English bullet of the changelog, as is>
+  - <how it works or what it means, for a curious reader: one fact per bullet>
+- A faster app and various fixes.
+  - <the notable fixes and what made it faster>
+
+## 🖥 Desktop A.B.C
+
+- ...
+```
+
+- Top-level bullets: the English changelog bullets (Markdown `-`, not `•`). `/api/version` keeps only these, as plain text.
+- Nested bullets: optional, 1-5 per bullet, concrete (what changed and why it matters), with links where useful (the server
+  repo, a library). No ADR/LL numbers, file names or internal names.
+- Only the tracks being released: a desktop hotfix has only the Desktop section. The headings must carry the versions: the
+  `publish` workflow refuses notes whose headings don't match what ships, then adds a "Full changes" comparison link.
 - **Translate the text** into each language (don't leave English in the other locales). Match the existing per-locale phrasing
   for "Various fixes and improvements".
 - Every locale must get the key, or `t()` will render the raw key string. The 7 locales: en, it, es, fr, de, zh, ja.
@@ -165,7 +192,7 @@ A desktop-only fix (mobile unchanged) is a signed desktop release, offered by th
 
 1. Do Steps 1–4 for the **Desktop** track only: the 4 desktop version files, the `app/changelog.tsx` entry with
    `changelog.web.description_X_Y_Z` in the 7 locales (the English one becomes the update's notes in `latest.json` and the
-   release text), the README desktop badge.
+   release text), `docs/RELEASE_NOTES.md` with only its Desktop section, the README desktop badge.
 2. The website must be live with `/api/version`'s `desktop.downloadUrl` (fastmemo-website `8f6be53`, 2026-10-21): older deploys
    build the download links on the latest release, where a hotfix's installers aren't (404).
 3. Merge to `main`, then run the **publish** workflow with **desktop_only** ticked (Actions tab, from `main`) or
@@ -188,6 +215,7 @@ version in their name) and a desktop version older than the published one (a bra
 - [ ] All 6 version files bumped for each released track (+ `Cargo.lock`)
 - [ ] `app/changelog.tsx` — new entry in the right branch, `description_X_Y_Z` key
 - [ ] 7 locales — concise (≤5 bullets, ≤500 characters), for users, translated, "Various fixes and improvements" catch-all
+- [ ] `docs/RELEASE_NOTES.md` — this release's versions in the headings, the changelog bullets with nested details
 - [ ] README badge(s) updated
 - [ ] CLAUDE.md / knowledge reconciled if stack or structure changed
 - [ ] `tsc` clean

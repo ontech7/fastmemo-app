@@ -117,15 +117,21 @@ jobs:
           DESKTOP: ${{ steps.release.outputs.desktop_version }}
         run: |
           set -eo pipefail
-          # The user changelog (en.ts), the same text the app, Play and the desktop updater show; the step fails if it's missing.
-          desktop_notes=$(node scripts/changelog-notes.mjs web "$DESKTOP")
-          body="## 🖥 Desktop $DESKTOP"$'\n\n'"$desktop_notes"
+          notes=docs/RELEASE_NOTES.md
+          mobile=$(jq -r '.version' package.json)
+          # The short changelog in the app (also latest.json's notes and Play's) must exist for what ships.
+          node scripts/changelog-notes.mjs web "$DESKTOP" > /dev/null
+          [ "$DESKTOP_ONLY" = "true" ] || node scripts/changelog-notes.mjs mobile "$mobile" > /dev/null
 
-          if [ "$DESKTOP_ONLY" != "true" ]; then
-            mobile=$(jq -r '.version' package.json)
-            mobile_notes=$(node scripts/changelog-notes.mjs mobile "$mobile")
-            body="## 📱 Mobile $mobile"$'\n\n'"$mobile_notes"$'\n\n'"$body"
-
+          # The release text: docs/RELEASE_NOTES.md, written for this release (top-level bullets for users, nested ones
+          # with details). Its headings must name the versions going out, or it's last release's text.
+          has() { grep -qxF "$1" "$notes" || { echo "::error::$notes has no '$1' heading: write the notes of this release"; exit 1; }; }
+          has "## 🖥 Desktop $DESKTOP"
+          if [ "$DESKTOP_ONLY" = "true" ]; then
+            body=$(awk '/^## 🖥 Desktop /{f=1} /^## 📱 Mobile /{f=0} f' "$notes")
+          else
+            has "## 📱 Mobile $mobile"
+            body=$(cat "$notes")
             # Everything else is in the commits: link the comparison with the release before this one.
             previous=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)
             if [ -n "$previous" ] && [ "$previous" != "$TAG" ]; then
