@@ -23,7 +23,7 @@ import type { NoteType } from "@/types/note";
 import { toast } from "@/utils/toast";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ViewStyle } from "react-native";
+import type { NativeScrollEvent, NativeSyntheticEvent, ScrollViewInstance, ViewStyle } from "react-native";
 import {
   ActivityIndicator,
   Keyboard,
@@ -33,6 +33,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import CheckBadgeIcon from "react-native-heroicons/outline/CheckBadgeIcon";
@@ -64,6 +65,15 @@ const ANIM_CLOSE = 150;
 const FEEDBACK_DURATION = 1500;
 
 const AI_COLOR = "#6C63FF";
+
+/** The share of the window a preview box takes before it scrolls: the result, what the user reads, gets more. */
+const BEFORE_MAX_HEIGHT = 0.2;
+const AFTER_MAX_HEIGHT = 0.3;
+/** How near its end the result box still counts as at the end, where it follows what the model writes. */
+const AT_END_SLACK = 24;
+
+const isAtEnd = ({ contentOffset, contentSize, layoutMeasurement }: NativeScrollEvent) =>
+  contentOffset.y + layoutMeasurement.height >= contentSize.height - AT_END_SLACK;
 
 type FeedbackState = "idle" | "processing" | "success" | "error";
 
@@ -157,6 +167,7 @@ export default function AIEditorActions({
   menuBottomOffset = 200,
 }: Props) {
   const { t } = useTranslation();
+  const { height: windowHeight } = useWindowDimensions();
 
   const aiSettings = useSelector(selectorAIAssistant);
 
@@ -195,6 +206,10 @@ export default function AIEditorActions({
   const runningRef = useRef(false);
   const triggerRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The result box keeps its end in sight while the model writes, until the user scrolls up to read; scrolled back to the
+  // end, it follows again. Only a drag changes it: a scroll the box makes itself never does.
+  const afterScrollRef = useRef<ScrollViewInstance>(null);
+  const followAfterRef = useRef(true);
 
   const editsHtml = !!getHtml && !!onHtmlChanged;
   const actionItems = getActionsForType(noteType).filter((item) => editsHtml || !LONG_NOTE_ACTIONS.has(item.id));
@@ -286,6 +301,7 @@ export default function AIEditorActions({
         if (run === runRef.current) setPreview((p) => (p ? { ...p, after } : p));
       };
       if (staged) {
+        followAfterRef.current = true;
         setPreview({
           action,
           title: lang
@@ -455,6 +471,18 @@ export default function AIEditorActions({
     setPreview(null);
   }, [preview?.streaming, preview?.html, handleCancel]);
 
+  const followAfter = useCallback(() => {
+    if (followAfterRef.current) afterScrollRef.current?.scrollToEnd({ animated: false });
+  }, []);
+
+  const stopFollowingAfter = useCallback(() => {
+    followAfterRef.current = false;
+  }, []);
+
+  const settleAfterScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    followAfterRef.current = isAtEnd(e.nativeEvent);
+  }, []);
+
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: menuProgress.value,
   }));
@@ -566,7 +594,7 @@ export default function AIEditorActions({
             <View style={styles.previewHeader}>
               <SparklesIcon size={18} color={AI_COLOR} />
               <Text style={styles.previewTitle}>{preview?.title}</Text>
-              {/* in the header: a long note's "before" fills the screen, the progress stays in sight */}
+              {/* in the header, always in sight whatever the boxes show */}
               {preview?.streaming && preview.progress && preview.progress.total > 1 ? (
                 <Text style={styles.previewProgress}>
                   {t("ai.editor.progress", {
@@ -577,25 +605,41 @@ export default function AIEditorActions({
               ) : null}
             </View>
 
-            <ScrollView style={styles.previewScroll} contentContainerStyle={{ gap: PADDING_MARGIN.md }}>
-              <View>
+            {/* each box scrolls on its own: a long note never pushes the result out of sight */}
+            <View style={styles.previewBody}>
+              <View style={styles.previewSection}>
                 <Text style={styles.previewLabel}>{t("ai.editor.before")}</Text>
-                <Text style={[styles.previewBlock, styles.previewBefore]}>
-                  {preview?.before?.trim() ? preview.before : "—"}
-                </Text>
+                <ScrollView
+                  style={[styles.previewBox, styles.previewBefore, { maxHeight: windowHeight * BEFORE_MAX_HEIGHT }]}
+                  contentContainerStyle={styles.previewBoxContent}
+                >
+                  <Text style={[styles.previewText, styles.previewBeforeText]}>
+                    {preview?.before?.trim() ? preview.before : "—"}
+                  </Text>
+                </ScrollView>
               </View>
-              <View>
+              <View style={styles.previewSection}>
                 <Text style={[styles.previewLabel, { color: AI_COLOR }]}>{t("ai.editor.after")}</Text>
                 {preview?.streaming && !preview.after ? (
-                  <View style={[styles.previewBlock, styles.previewAfter]}>
+                  <View style={[styles.previewBox, styles.previewAfter, styles.previewBoxContent]}>
                     <ActivityIndicator size="small" color={AI_COLOR} />
                   </View>
                 ) : (
-                  <Text style={[styles.previewBlock, styles.previewAfter]}>{preview?.after}</Text>
+                  <ScrollView
+                    ref={afterScrollRef}
+                    style={[styles.previewBox, styles.previewAfter, { maxHeight: windowHeight * AFTER_MAX_HEIGHT }]}
+                    contentContainerStyle={styles.previewBoxContent}
+                    onContentSizeChange={followAfter}
+                    onScrollBeginDrag={stopFollowingAfter}
+                    onScrollEndDrag={settleAfterScroll}
+                    onMomentumScrollEnd={settleAfterScroll}
+                  >
+                    <Text style={[styles.previewText, styles.previewAfterText]}>{preview?.after}</Text>
+                  </ScrollView>
                 )}
                 {preview?.hint ? <Text style={styles.previewHint}>{preview.hint}</Text> : null}
               </View>
-            </ScrollView>
+            </View>
 
             <View style={styles.previewFooter}>
               <TouchableOpacity activeOpacity={0.7} style={[styles.previewAction, styles.previewCancel]} onPress={closePreview}>
@@ -792,19 +836,37 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.small,
     marginTop: PADDING_MARGIN.xs,
   },
-  previewBlock: {
-    fontSize: FONTSIZE.medium,
-    lineHeight: 22,
-    padding: PADDING_MARGIN.md,
+  previewBody: {
+    flexShrink: 1,
+    gap: PADDING_MARGIN.md,
+  },
+  // On a short window the boxes give way first, so the header and the buttons always fit.
+  previewSection: {
+    flexShrink: 1,
+  },
+  previewBox: {
+    flexGrow: 0,
+    flexShrink: 1,
     borderRadius: BORDER.normal,
   },
+  previewBoxContent: {
+    padding: PADDING_MARGIN.md,
+  },
+  previewText: {
+    fontSize: FONTSIZE.medium,
+    lineHeight: 22,
+  },
   previewBefore: {
-    color: COLOR.lightBlue,
     backgroundColor: "rgba(255, 255, 255, 0.04)",
   },
+  previewBeforeText: {
+    color: COLOR.lightBlue,
+  },
   previewAfter: {
-    color: COLOR.softWhite,
     backgroundColor: "rgba(108, 99, 255, 0.12)",
+  },
+  previewAfterText: {
+    color: COLOR.softWhite,
   },
   previewFooter: {
     flexDirection: "row",
