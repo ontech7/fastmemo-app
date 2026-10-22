@@ -27,6 +27,9 @@
 - Help brought up to date, with new topics on the quick-note bar, the conflict copies and the desktop shortcuts; translations fixed (German "Sie" and umlauts, accents in Italian, Spanish and French, several wrong strings).
 - The website moved to fastmemo.losav.cc: the app's links and update check use it, and its version API now answers the desktop app (CORS).
 - A cloud out of reach while the device is online (a FastMemo server behind a VPN left off, or down) gets a quiet line under the home's title after 30 s, in place of the category, gone once it answers; a tap says the changes stay on the device and go out by themselves, the notes waiting and the last sync, and offers Retry (ADR-029). No toast, nothing for an offline device.
+- The cloud's state at a glance (ADR-029): a dot next to Settings → Cloud Sync, green and pinging when the cloud answers, grey offline, red when it doesn't answer; the Cloud Sync page says it in words, with Retry and what to check. A server or Firebase that stops answering while the app is open is now noticed within about 30 s (a listener that gets no answer says so: LL-069), not at the next 5-minute check.
+- The devices screen says why it can't list the devices (offline, the server or Firebase out of reach, an error), with Retry and proper margins, and a list that arrives late replaces the message.
+- The developer's role in "About me" reads Senior Software Engineer.
 
 ## v1.2.0
 

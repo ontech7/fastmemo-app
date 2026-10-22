@@ -1887,6 +1887,30 @@ space can be reserved ahead). Files in `Android/data/<package>` are deleted thro
 
 ---
 
+### LL-069: A server that went down while the app was open stayed "reachable" for minutes
+
+**Date:** 2026-10-22  
+**Severity:** Medium (found while testing the status dot: the home's line of ADR-029 never showed for a server stopped mid-session)  
+**Category:** Bug / Cloud sync / FastMemo server  
+**What happened:** ADR-029 learns that the cloud doesn't answer from failed reads: a listener error, a failed pull or vault read.
+The server backend's long poll never failed its listener: it retried with a backoff (1 s to 30 s) and said nothing, the way a
+Firestore listener serves its cache without an error. With the app open, a server stopped stayed "reachable" until the
+engine's next pull: the 5-minute poll or a return to the foreground. At startup it worked (the first pull fails).
+
+**Fix:** `subscribeDevices` takes an `onLost` callback: the server's poll calls it when a request gets no answer (and asks for
+the state at once on the next poll, so the listener hears when the server answers again), Firestore when a snapshot comes from
+its cache. The engine reports it as a failed read. Measured on the web against a local server: red 32 s after the server
+stopped; on Firebase with its requests blocked, red after ~95 s (Firestore drops its open channel slowly), green 2 s after
+Retry.
+
+**Rule:** a listener that keeps retrying on its own must still say when it gets no answer: "no error" is not "the cloud
+answers". Test reachability with the cloud going away mid-session, not only at startup.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-22 **Resolved in:** branch
+`feat/cloud-status-dot`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
