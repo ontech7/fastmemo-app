@@ -43,8 +43,8 @@ path the user wants, then it reconciles that with reality through the gate.
 - Branches: `dev` (integration) and `main` (what ships). Everything that publishes runs **from `main`**.
 - Android only: iOS isn't distributed through this flow (ADR-014).
 - Tags: store release `vX.Y.Z` and its GitHub Release are created by the **`publish` workflow** (it also builds the desktop app
-  and writes the release body from `docs/CHANGELOG_MOBILE.md` / `CHANGELOG_DESKTOP.md`); an OTA is `vX.Y.Z+ota.N` + a GitHub
-  Release `--latest=false`, created by the **Publish OTA** workflow. The skill creates neither tag.
+  and writes the release body from the English user changelog, `scripts/changelog-notes.mjs`); an OTA is `vX.Y.Z+ota.N` + a
+  GitHub Release `--latest=false`, created by the **Publish OTA** workflow. The skill creates neither tag.
 - `releases/latest` must stay the store/desktop release: the website's `/api/version`, the in-app update check and the Tauri
   updater read it.
 - Run every script from the `fastmemo-app` root with `bash .claude/skills/mobile-release/scripts/…` (the shell's cwd persists
@@ -159,9 +159,9 @@ workflow always builds the desktop app at the version in `src-tauri/tauri.conf.j
 
 - **Mobile + desktop** — bump both tracks (the 6 mobile + desktop files via `prepare-release`), both changelogs.
 - **Solo mobile** — leave the desktop version untouched and its changelog alone. The workflow still builds the desktop at its
-  current version (fine: the same version as the published one passes its guard), but the release body takes the **latest
-  section of `docs/CHANGELOG_DESKTOP.md`**, which is then the previous desktop release's text: warn the user it will appear in
-  the body.
+  current version (fine: the same version as the published one passes its guard), but the release body also shows that version's
+  desktop changelog (`changelog.web.description_X_Y_Z`), which is then the previous desktop release's text: warn the user it
+  will appear in the body.
 
 Check the desktop guards now, not at dispatch: the desktop version must not be **older** than the one published (`latest.json`
 of the latest release; a branch that misses a desktop hotfix fails here), and a `vX.Y.Z` release that already holds builds of
@@ -169,12 +169,12 @@ another desktop version is refused. Compare `desktop_version` from `state.sh` wi
 `gh release download <latest_store_tag> -p latest.json -O - | jq -r .version`; if `main` has a desktop hotfix `dev` lacks, merge
 it first.
 
-Run [`prepare-release`](../prepare-release/SKILL.md) **Steps 1–7** for the track(s) being released: mobile `package.json` +
-`app.config.ts` + `src/configs/index.ts` (and the 4 desktop files if the desktop ships too), `docs/CHANGELOG_*.md`, the
-`app/changelog.tsx` entry with `description_X_Y_Z` in the 7 locales, README badges, and its verify step. Ask patch/minor/major
-with `AskUserQuestion` (Recommended: any `feat:` since the last tag → minor, only fixes → patch, a breaking change/data
-migration → major). Show the changelog text and **wait for the user's confirmation before committing**: it ships in the release
-body and in-app. Then commit on `dev` (`chore(release): bump to X.Y.Z`); the push is the user's.
+Run [`prepare-release`](../prepare-release/SKILL.md) **Steps 1–6** for the track(s) being released: mobile `package.json` +
+`app.config.ts` + `src/configs/index.ts` (and the 4 desktop files if the desktop ships too), the `app/changelog.tsx` entry with
+`description_X_Y_Z` in the 7 locales, README badges, and its verify step. Ask patch/minor/major with `AskUserQuestion`
+(Recommended: any `feat:` since the last tag → minor, only fixes → patch, a breaking change/data migration → major). Show the
+changelog text and **wait for the user's confirmation before committing**: it ships in the release body and in-app. Then commit
+on `dev` (`chore(release): bump to X.Y.Z`); the push is the user's.
 
 A `vX.Y.Z` that already exists (`tag_exists=true`) means this version was already cut: don't re-tag, check its release and go to
 B4.
@@ -185,7 +185,7 @@ The merge to `main` triggers nothing (both workflows are `workflow_dispatch`-onl
 blocked): the PR route used for earlier releases, or a local merge:
 
 ```bash
-gh pr create --base main --head dev --title "Update to vX.Y.Z" --body "<the developer changelog section>"
+gh pr create --base main --head dev --title "Update to vX.Y.Z" --body "<the English changelog: node scripts/changelog-notes.mjs mobile X.Y.Z>"
 # or: git checkout main && git merge dev && git push origin main
 ```
 
@@ -283,7 +283,7 @@ It is read-only. `unknown` is never `match`: ask the user.
 3. **Phase 0:** ask OTA vs build (override to build if there's no production baseline, and say why).
 4. **OTA:** O1 gate (→ Sì/No to build if exit 2) → O2 device check → O3 land on `main`, one-line message, go-ahead, dispatch,
    watch → O4 verify the release and that Latest is still the store one.
-5. **Build:** B1 confirm native → B2 `prepare-release` Steps 1–7 on `dev` (changelog confirmed, then commit) → B3 hand off the
+5. **Build:** B1 confirm native → B2 `prepare-release` Steps 1–6 on `dev` (changelog confirmed, then commit) → B3 hand off the
    merge → B4 hand off the build + Play notes with character counts → B5 ask when to dispatch `publish` → B6 close out.
 6. Final summary: path taken, tag (`vX.Y.Z+ota.N` or `vX.Y.Z`), the release URL, and on the build path the exact commands still
    owed to the user, restating that no build is running yet.

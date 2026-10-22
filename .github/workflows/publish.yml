@@ -111,43 +111,26 @@ jobs:
         id: release_body
         shell: bash
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DESKTOP_ONLY: ${{ inputs.desktop_only }}
+          TAG: ${{ steps.release.outputs.tag }}
+          DESKTOP: ${{ steps.release.outputs.desktop_version }}
         run: |
           set -eo pipefail
+          # The user changelog (en.ts), the same text the app, Play and the desktop updater show; the step fails if it's missing.
+          desktop_notes=$(node scripts/changelog-notes.mjs web "$DESKTOP")
+          body="## 🖥 Desktop $DESKTOP"$'\n\n'"$desktop_notes"
 
-          # Extract latest version section (from first ## to next ## or EOF)
-          extract_latest() {
-            awk '/^## /{if(found) exit; found=1; next} found' "$1"
-          }
+          if [ "$DESKTOP_ONLY" != "true" ]; then
+            mobile=$(jq -r '.version' package.json)
+            mobile_notes=$(node scripts/changelog-notes.mjs mobile "$mobile")
+            body="## 📱 Mobile $mobile"$'\n\n'"$mobile_notes"$'\n\n'"$body"
 
-          mobile_file="docs/CHANGELOG_MOBILE.md"
-          desktop_file="docs/CHANGELOG_DESKTOP.md"
-
-          mobile_section=""
-          desktop_section=""
-
-          if [ -s "$mobile_file" ] && [ "$DESKTOP_ONLY" != "true" ]; then
-            mobile_content=$(extract_latest "$mobile_file")
-            if [ -n "$mobile_content" ]; then
-              mobile_section="📱 Mobile"$'\n\n'"$mobile_content"
+            # Everything else is in the commits: link the comparison with the release before this one.
+            previous=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)
+            if [ -n "$previous" ] && [ "$previous" != "$TAG" ]; then
+              body+=$'\n\n'"**Full changes:** https://github.com/$GITHUB_REPOSITORY/compare/$previous...$TAG"
             fi
-          fi
-
-          if [ -s "$desktop_file" ]; then
-            desktop_content=$(extract_latest "$desktop_file")
-            if [ -n "$desktop_content" ]; then
-              desktop_section="🖥 Desktop"$'\n\n'"$desktop_content"
-            fi
-          fi
-
-          if [ -n "$mobile_section" ] && [ -n "$desktop_section" ]; then
-            body="$mobile_section"$'\n\n'"$desktop_section"
-          elif [ -n "$mobile_section" ]; then
-            body="$mobile_section"
-          elif [ -n "$desktop_section" ]; then
-            body="$desktop_section"
-          else
-            body="Checkout GitHub latest release for more details."
           fi
 
           # A delimiter no changelog line can be.
@@ -248,31 +231,14 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.desktop_version }}
         run: |
           set -eo pipefail
-
-          # Pull the user-facing notes from the i18n source so latest.json shows
-          # exactly what the average user reads in-app (changelog.web.description_X_Y_Z).
-          # The desktop version (e.g. 1.2.0) maps to the key description_1_2_0.
-          node -e '
-            const fs = require("fs");
-            const version = process.env.VERSION;
-            const key = "description_" + version.replace(/\./g, "_");
-            const content = fs.readFileSync("src/libs/i18n/locales/en.ts", "utf8");
-
-            // Scope the lookup to the changelog.web block to avoid matching mobile keys.
-            const webStart = content.indexOf("web:");
-            const mobileStart = content.indexOf("mobile:", webStart);
-            const webBlock = webStart >= 0
-              ? content.slice(webStart, mobileStart >= 0 ? mobileStart : undefined)
-              : content;
-
-            const match = webBlock.match(new RegExp(key + "\\s*:\\s*`([\\s\\S]*?)`"));
-            const notes = match && match[1].trim()
-              ? match[1].trim()
-              : "Checkout GitHub latest release for more details.";
-
-            const delimiter = "EOF_" + require("crypto").randomBytes(16).toString("hex");
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, "content<<" + delimiter + "\n" + notes + "\n" + delimiter + "\n");
-          '
+          # latest.json shows what users read in-app (changelog.web.description_X_Y_Z); prepare already checked it exists.
+          notes=$(node scripts/changelog-notes.mjs web "$VERSION")
+          delimiter="EOF_$(openssl rand -hex 16)"
+          {
+            echo "content<<$delimiter"
+            echo "$notes"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
 
       - name: reconstruct latest.json from release assets
         env:
