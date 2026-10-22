@@ -4,7 +4,7 @@ description:
   "Prepare a FastMemo release: bump versions and write the changelogs + translations, or ship an OTA update between releases.
   Use whenever the user wants to cut/prepare a release, bump the app/desktop version, or update changelogs for a new version.
   Triggers on: release, prepara la release, prepare the release, bump version, version bump, new version, changelog, aggiorna i
-  changelog, 3.2.0, 1.2.0, OTA, OTA update, eas update, hotfix."
+  changelog, 3.2.0, 1.2.0, desktop hotfix. (Shipping a mobile OTA or the whole store release flow is /mobile-release.)"
 metadata:
   origin: extracted from the (removed) github-issue-workflow release section + the v3.2.0 / v1.2.0 release
 ---
@@ -162,15 +162,9 @@ English (missing from `en` too: the raw key).
 ## Between releases: OTA updates (mobile, Android)
 
 A JS-only fix can reach installed apps without a store release (ADR-014). It is **not** a release: no version bump, no changelog
-entry, no README badge.
-
-1. Merge the fix to `main`, then `yarn ota:check`: it must say a production build has the current fingerprint. If it fails the
-   change is native (new native dependency, config plugin, permission, native field in `app.config.ts`, `modules/`): do a store
-   release instead.
-2. Publish with the **Publish OTA** workflow (Actions tab, from `main`) or
-   `gh workflow run publish-ota.yml --ref main -f message="<what it fixes>"`. Publishing to production needs the user's explicit
-   go-ahead.
-3. The run tags it `vX.Y.Z+ota.N` and the app shows "X.Y.Z · OTA N". The next store release (new X.Y.Z) restarts N at 1.
+entry, no README badge. The flow (gate with `yarn ota:check`, dispatch of the Publish OTA workflow, tags, close-out) lives in
+the **`mobile-release`** skill (`/mobile-release`, user-invoked): don't duplicate it here. The store release itself (this
+skill's Steps 1–7, then the build and the `publish` workflow) is also driven by it.
 
 ---
 
