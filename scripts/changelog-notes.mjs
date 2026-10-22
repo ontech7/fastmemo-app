@@ -1,5 +1,6 @@
-// The user changelog of a version, in English: changelog.mobile / changelog.web in the app's i18n source (en.ts). It's the
-// one changelog: what users read in the app, on Play, in the desktop updater (latest.json) and in the GitHub release.
+// The user changelog of a version, in English: changelog.mobile / changelog.web in the app's i18n source (en.ts). It's what
+// users read in the app, on Play and in the desktop updater (latest.json); the publish workflow checks it exists. The GitHub
+// release has its own, longer text: docs/RELEASE_NOTES.md (ADR-030).
 //
 //   node scripts/changelog-notes.mjs mobile 4.0.0   # changelog.mobile.description_4_0_0
 //   node scripts/changelog-notes.mjs web 2.0.0      # changelog.web.description_2_0_0 (the desktop app)

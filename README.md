@@ -159,7 +159,7 @@ chmod +x Fast_Memo_*.AppImage
 | [Expo](https://expo.dev/)                                                                      | React Native framework for cross-platform development |
 | [React Native](https://reactnative.dev/)                                                       | Core framework for iOS and Android                    |
 | [Tauri](https://tauri.app/)                                                                    | Desktop application framework                         |
-| [llama.rn](https://github.com/a-ghorbani/llama.rn)                                             | On-device LLM inference (Qwen3.5 GGUF)                |
+| [llama.rn](https://github.com/mybigday/llama.rn)                                               | On-device LLM inference (Qwen3.5 GGUF)                |
 | [CodeMirror 6](https://codemirror.net/)                                                        | Code editor engine (bundled via esbuild)              |
 | [Google Firebase](https://firebase.google.com/)                                                | Cloud sync on your own Firebase project               |
 | [FastMemo Server](https://github.com/ontech7/fastmemo-server)                                  | Self-hosted cloud sync (Node.js, SQLite/PostgreSQL)   |

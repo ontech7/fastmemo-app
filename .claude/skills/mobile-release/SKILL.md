@@ -43,8 +43,8 @@ path the user wants, then it reconciles that with reality through the gate.
 - Branches: `dev` (integration) and `main` (what ships). Everything that publishes runs **from `main`**.
 - Android only: iOS isn't distributed through this flow (ADR-014).
 - Tags: store release `vX.Y.Z` and its GitHub Release are created by the **`publish` workflow** (it also builds the desktop app
-  and writes the release body from the English user changelog, `scripts/changelog-notes.mjs`); an OTA is `vX.Y.Z+ota.N` + a
-  GitHub Release `--latest=false`, created by the **Publish OTA** workflow. The skill creates neither tag.
+  and writes the release body from `docs/RELEASE_NOTES.md`); an OTA is `vX.Y.Z+ota.N` + a GitHub Release `--latest=false`,
+  created by the **Publish OTA** workflow. The skill creates neither tag.
 - `releases/latest` must stay the store/desktop release: the website's `/api/version`, the in-app update check and the Tauri
   updater read it.
 - Run every script from the `fastmemo-app` root with `bash .claude/skills/mobile-release/scripts/…` (the shell's cwd persists
@@ -185,7 +185,7 @@ The merge to `main` triggers nothing (both workflows are `workflow_dispatch`-onl
 blocked): the PR route used for earlier releases, or a local merge:
 
 ```bash
-gh pr create --base main --head dev --title "Update to vX.Y.Z" --body "<the English changelog: node scripts/changelog-notes.mjs mobile X.Y.Z>"
+gh pr create --base main --head dev --title "Update to vX.Y.Z" --body "$(cat docs/RELEASE_NOTES.md)"
 # or: git checkout main && git merge dev && git push origin main
 ```
 

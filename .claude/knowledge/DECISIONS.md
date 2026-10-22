@@ -1277,24 +1277,28 @@ left the device.
 
 ---
 
-## ADR-030: One Changelog, Written for Users
+## ADR-030: Release Texts Written for People: a Short Changelog and Release Notes with Details
 
-**Status:** Accepted (2026-10-22, user decision after the v4.0.0 release: the GitHub release was "un papiro" with ADR numbers and
-a line on the developer's role in About; "overkill, over-engineered")  
-**Context:** Each release had two changelogs: `docs/CHANGELOG_MOBILE.md` / `CHANGELOG_DESKTOP.md`, verbose and complete for
-developers (every fix, refactor, SDK bump, ADR/LL references), which the `publish` workflow put in the GitHub release; and the
-user changelog in the 7 locales (≤5 bullets), shown in the app, on Play and by the desktop updater. The release, the page users
-open to see what's new, showed the developer one, and every release meant writing both.
+**Status:** Accepted (2026-10-22, user decisions after the v4.0.0 release: the GitHub release was "un papiro" with ADR numbers and
+a line on the developer's role in About, "overkill, over-engineered"; then: the release page may go further on the technical
+side, in nested bullets, for curious readers, while `/api/version` stays short)  
+**Context:** Each release had two changelogs: `docs/CHANGELOG_MOBILE.md` / `CHANGELOG_DESKTOP.md`, a complete developer log
+(every fix, refactor, SDK bump, ADR/LL references) that the `publish` workflow put in the GitHub release; and the user changelog
+in the 7 locales (≤5 bullets), shown in the app, on Play and by the desktop updater. The release page showed the log.
 
 **Decision:**
 
-- **One changelog:** the user changelog in the locales (`changelog.mobile` / `changelog.web`, `description_X_Y_Z`). The app,
-  Play, `latest.json` and the GitHub release all show it.
-- **The GitHub release** is built by `publish.yml` from the English entries (`scripts/changelog-notes.mjs`): "📱 Mobile X.Y.Z"
-  and "🖥 Desktop A.B.C" sections, then a "Full changes" link comparing with the previous release. A missing entry stops the
-  run before anything is built.
-- **It's written for users:** what they can do now, no ADR/LL numbers, file or library names, nothing they never see.
-- `docs/CHANGELOG_*.md` are removed: the history is in the GitHub releases and git; the details of a change live in its commits,
-  ADRs and lessons.
+- **The changelog** stays the user changelog in the locales (`changelog.mobile` / `changelog.web`, `description_X_Y_Z`): the
+  app, Play, `latest.json`. `scripts/changelog-notes.mjs` reads the English one; `publish` fails early if it's missing.
+- **The release notes** are `docs/RELEASE_NOTES.md`, rewritten for each release: the same bullets in English, each explained
+  in nested bullets (how it works, what made it faster), then a "Full changes" comparison link added by `publish`. Its
+  headings must name the versions going out, or `publish` stops (a stale file is last release's text).
+- **`/api/version`** (website) serves the short version: the release's top-level mobile bullets as plain text, the desktop
+  ones from `latest.json`.
+- Both texts are for people: no ADR/LL numbers, refactors, CI or trivia. `docs/CHANGELOG_*.md` are removed: the history is in
+  the GitHub releases and git.
 
-**Alternatives rejected:** keeping the developer changelogs but shorter (still two texts per release, and the same drift).
+**Alternatives rejected:**
+
+- the release built only from the short changelog: right for the API, too thin for the release page;
+- keeping the developer logs: nobody reads them, the commits and ADRs already hold that detail.
