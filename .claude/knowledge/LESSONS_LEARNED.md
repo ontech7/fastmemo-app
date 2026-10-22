@@ -1854,6 +1854,33 @@ can't take is made offline, never left to be refused in silence.
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-22 **Resolved in:** branch
 `feat/note-size-per-cloud`
 
+
+### LL-068: A model download died with the screen off, and a cut-off one could pass for whole
+
+**Date:** 2026-10-22  
+**Severity:** Medium (reported by the user: a model takes minutes, the screen had to stay on, leaving undid everything)  
+**Category:** Bug / AI / Android  
+**What happened:** The app downloaded the model itself, only while its process lived. Leaving the screen didn't stop it, but the
+screen kept no hold on it (reopened, it said "Not downloaded" while the file grew, and a second tap restarted it), and Android
+stops a background app's network work with the screen off. A download that died left its file at its catalog name: not an old
+model to the "old models" card, never cleaned. Moving the download to Android's DownloadManager (ADR-028) showed two traps:
+the download manager reserves the file's whole size at the start, so the size check (`isModelDownloaded`) would take a cut-off
+file for whole; and expo-file-system (legacy) can't delete a file in the app's folder on the shared storage, where the
+download manager writes ("isn't deletable": it checks write access on `<file>/..`, which only resolves inside the private
+files).
+
+**Fix (ADR-028):** a local module (`modules/fastmemo-downloads`) downloads through the DownloadManager into a staging folder and
+renames the finished file into the models folder; the download under way is written down and picked up at the next start (a
+check of one file, the AI module loaded only when there is one) and on each return to the foreground; the settings screen
+follows the module (`useSyncExternalStore`); the module deletes in its folder; a catalog file short of its size counts as an
+old model. Tested on the emulator: app force-stopped mid-download, network off and on, cancel, delete.
+
+**Rule:** never let a file that's still being written sit where the app looks for a finished one (a size check is not enough:
+space can be reserved ahead). Files in `Android/data/<package>` are deleted through native code, not expo-file-system (legacy).
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-22 **Resolved in:** branch
+`feat/ai-background-download`
+
 ---
 
 ## Template for New Entries
