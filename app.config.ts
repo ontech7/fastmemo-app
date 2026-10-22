@@ -213,7 +213,9 @@ export default ({ config }: ConfigContext): ExpoConfig =>
                 backgroundColor,
               },
             ],
-            "llama.rn",
+            // Its iOS memory entitlements are added only when EAS_BUILD_PROFILE or NODE_ENV says production, so the config
+            // (and the fingerprint) differed between EAS and this machine: OTAs would never match the build. iOS isn't shipped.
+            ["llama.rn", { enableEntitlements: false }],
             ["expo-alternate-app-icons", alternateAppIcons],
             [
               "@sentry/react-native",
