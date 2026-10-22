@@ -51,7 +51,7 @@ src/
       # ... 8 more settings screens
 
   components/          # UI components (domain-grouped)
-    cloud/             # CloudUnreachableLine: the home's line when the cloud can't be reached (ADR-029)
+    cloud/             # CloudUnreachableLine (the home's line when the cloud can't be reached), CloudStatusDot (ADR-029)
     buttons/           # 26 button components (each a single-purpose TouchableOpacity)
     cards/             # NoteCard, TrashedNoteCard, OrganizeCategoryCard, OrderedCategoryCard
     notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor; NoteImageMenu (ADR-024)
@@ -95,7 +95,7 @@ src/
     useRouter.ts       # Expo Router wrapper with push-debounce (1000ms guard)
     useSecret.ts       # Secret code / biometric authentication
     useNetInfo.ts      # Network connectivity state
-    useTimeoutTask.ts  # Debounced async task runner with loading states
+    useCloudStatus.ts  # The cloud's state (ok / offline / unreachable) for the home's line and the status dot (ADR-029)
     useVaultUnlocked.ts # useSyncExternalStore over vaultSession (is the DEK loaded?)
     useVaultPrompt.ts  # useSyncExternalStore over vaultPrompt (does encryption need attention?)
     useVaultProgress.ts # useSyncExternalStore over vaultProgress (re-upload progress bar)

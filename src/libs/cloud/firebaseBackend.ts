@@ -36,6 +36,7 @@ import type {
   ChangeSet,
   CloudBackend,
   CloudDevice,
+  CloudFailure,
   DeviceInfo,
   DevicesSnapshot,
   NoteRef,
@@ -95,6 +96,9 @@ const HANDSHAKE_TIMEOUT_MS = 5000;
 
 /** Error codes that won't go away by retrying the same write (e.g. a note over the 1 MiB document limit). */
 const PERMANENT_ERRORS = new Set(["invalid-argument", "out-of-range"]);
+
+/** The codes Firestore fails with when its servers gave no answer (offline, or not in time). */
+const NO_ANSWER = new Set(["unavailable", "deadline-exceeded"]);
 
 const errorCode = (e: unknown): string => (e && typeof e === "object" && "code" in e ? String(e.code) : "");
 
@@ -402,13 +406,13 @@ export class FirebaseBackend implements CloudBackend {
 
   // --- Devices ---
 
-  async listDevices(): Promise<CloudDevice[] | null> {
+  async listDevices(): Promise<CloudDevice[] | CloudFailure> {
     try {
       const snapshot = await getDocsFromServer(collection(this.requireDb(), DEVICES));
       return snapshot.docs.filter(isDevice).map(toDevice);
     } catch (e) {
       console.log("listDevices:", e);
-      return null;
+      return NO_ANSWER.has(errorCode(e)) ? "unreachable" : "error";
     }
   }
 
@@ -498,7 +502,12 @@ export class FirebaseBackend implements CloudBackend {
     }
   }
 
-  subscribeDevices(me: string, onDevices: (snapshot: DevicesSnapshot) => void, onError: (error: unknown) => void): () => void {
+  subscribeDevices(
+    me: string,
+    onDevices: (snapshot: DevicesSnapshot) => void,
+    onError: (error: unknown) => void,
+    onLost?: () => void
+  ): () => void {
     const db = this.db;
     if (!db) {
       onError(new Error("cloud not initialised"));
@@ -509,8 +518,11 @@ export class FirebaseBackend implements CloudBackend {
       collection(db, DEVICES),
       { includeMetadataChanges: true },
       // Server-confirmed only: not the cache (LL-027), nor this client's own writes before the server has them.
-      (snapshot) =>
-        onDevices(toDevicesSnapshot(me, snapshot.docs, !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites)),
+      (snapshot) => {
+        // Firestore doesn't fail a listener that gets no answer: it serves its cache (from the server again once it answers)
+        if (snapshot.metadata.fromCache) onLost?.();
+        onDevices(toDevicesSnapshot(me, snapshot.docs, !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites));
+      },
       (error) => {
         this.listening.delete(onError);
         onError(error);

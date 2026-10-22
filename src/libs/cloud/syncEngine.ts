@@ -100,8 +100,8 @@ export interface SyncEvents {
   /** Notes too large for this cloud became device-only (ADR-026). */
   onTooLarge(notes: { id: string; title: string }[]): void;
   /**
-   * The cloud stopped answering, or answers again (ADR-029): `failingSince` is when its reads started failing with no
-   * answer since (null: it answers), `lastContact` its last answer. Only on a change.
+   * The cloud's first answer, its reads failing (none since `failingSince`) or answering again, the engine stopping
+   * (`lastContact` null) (ADR-029). `lastContact` is its last answer. Only on a change.
    */
   onReachability(state: CloudReachability): void;
 }
@@ -270,7 +270,7 @@ export class SyncEngine {
     this.retryDelay = 0;
     this.pendingSnapshot = null;
     // stopped (sync off, locked, removed): nothing to tell about the cloud any more
-    if (this.reach.failingSince !== null) this.reached(null);
+    this.reached(null);
     // Merged again (it's idempotent) and acknowledged on the next start.
     this.merged.clear();
     this.toAck.clear();
@@ -312,7 +312,7 @@ export class SyncEngine {
         this.adoptLegacyOutbox();
         const seq = this.snapshotSeq;
         const snapshot = await this.o.backend.pullDevices(this.o.me);
-        this.reached(!!snapshot);
+        if (!this.outlived) this.reached(!!snapshot);
         if (!snapshot) return false;
         if (this.snapshotSeq === seq) this.pendingSnapshot = snapshot;
         if (!(await this.processDevices())) return false;
@@ -425,7 +425,8 @@ export class SyncEngine {
         this.pendingSnapshot = snapshot;
         this.serial(() => this.processDevices());
       },
-      onError
+      onError,
+      () => this.reached(false)
     );
     const vault = backend.subscribeVault((read) => {
       if (read.status === "error") return;
@@ -454,7 +455,7 @@ export class SyncEngine {
       if (!(await this.checkVault())) return;
       const seq = this.snapshotSeq;
       const snapshot = await this.o.backend.pullDevices(this.o.me);
-      this.reached(!!snapshot);
+      if (!this.outlived) this.reached(!!snapshot);
       if (!snapshot) return;
       // A listener snapshot that came meanwhile is the newer one.
       if (this.snapshotSeq === seq) this.pendingSnapshot = snapshot;
@@ -471,7 +472,7 @@ export class SyncEngine {
   /** Server read of the vault: true if this device's key opens it. */
   private async checkVault(): Promise<boolean> {
     const read = await this.o.backend.readVault();
-    this.reached(read.status !== "error");
+    if (!this.outlived) this.reached(read.status !== "error");
     if (read.status === "error") return false;
     // Locked here (no key): it can't be told, and nothing can be synced either.
     const opens = read.status === "present" ? this.o.crypto.matches(read.vault) : false;
@@ -717,14 +718,16 @@ export class SyncEngine {
   }
 
   /**
-   * A read of the cloud answered (true), failed (false), or the engine stopped (null). Reported on a change only: the cloud
-   * failing with no answer since, or answering again.
+   * A read of the cloud answered (true), failed (false), or the engine stopped (null). Reported on a change only: the first
+   * answer, the cloud failing with no answer since or answering again, the stop.
    */
   private reached(ok: boolean | null): void {
+    // A listener or a task still going after the stop: nothing to tell about a cloud it no longer follows.
+    if (ok !== null && !this.running) return;
     const now = Date.now();
     const failingSince = ok === false ? (this.reach.failingSince ?? now) : null;
-    const lastContact = ok ? now : this.reach.lastContact;
-    const changed = failingSince !== this.reach.failingSince;
+    const lastContact = ok === null ? null : ok ? now : this.reach.lastContact;
+    const changed = failingSince !== this.reach.failingSince || (lastContact === null) !== (this.reach.lastContact === null);
     this.reach = { failingSince, lastContact };
     if (changed) this.o.events.onReachability(this.reach);
   }

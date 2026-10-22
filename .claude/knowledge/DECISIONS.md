@@ -1251,3 +1251,26 @@ left the device.
 - 30 s with a server that times out slowly can mean a minute before the line shows;
 - Firebase rarely fails while online: the line will mostly be seen with a server.
 
+**Update (2026-10-22, user request: "un pallino verde che fa ping [...] che si capiscano a vista d'occhio"):**
+
+- **A status dot** next to Settings → Cloud Sync (`CloudStatusDot`, `BlinkingDot` with `animation`): green and pinging when the
+  cloud answers, grey when the device is offline, red when it doesn't answer while online (`CLOUD_STATE_COLOR`). Nothing while
+  not connected or before the first answer. Only the green one moves: the state reads without the color too. It adds to the
+  home's line, it doesn't replace it (the "status in Settings only" rejected above was about it being the only signal).
+- **The Cloud Sync page** shows the state in words under the switch ("Server reachable", "Server unreachable" with Retry and
+  what to check, "No internet connection"), naming the cloud in use, not the one being picked in the form.
+- **The devices screen** says why it has no list: offline, the cloud doesn't answer (no answer in 5 s, or
+  `listDevices` → `"unreachable"`), or an error; with Retry, which also asks the engine (`reconnectNow`). A list that comes later
+  replaces the message.
+- **No answer vs an error:** `listDevices` returns `CloudDevice[] | CloudFailure`. On a server, no answer is a fetch that
+  failed, a timeout, or a proxy saying the server behind it didn't answer (502-504, Cloudflare's 52x and 530); on Firestore,
+  `unavailable` / `deadline-exceeded`.
+- **A listener that loses the cloud says so** (`subscribeDevices`' `onLost`): Firestore when it serves its cache, the server's
+  poll when it gets no answer (it then asks for the state at once on the next poll, to hear when the server is back). Before,
+  the server's poll retried silently and a server down mid-session went unnoticed until the 5-minute poll (LL-069).
+- `useCloudStatus().state` is `"ok" | "offline" | "unreachable" | null`; the engine also reports its first answer and its stop
+  (`lastContact` null), so the dot doesn't show a cloud nobody has asked yet.
+- **Time offline doesn't count** toward the 30 s: back online, a cloud still failing gets its 30 s again (`sync.ts` follows
+  NetInfo, in the same tick as `useNetInfo`), and the server's poll starts its backoff over when woken on purpose. A stopped
+  engine, and a task from before a stop, report nothing (sync turned off while a read was timing out showed the line).
+

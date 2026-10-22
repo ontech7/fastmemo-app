@@ -13,6 +13,7 @@ export type {
   ChangeSet,
   CloudBackend,
   CloudDevice,
+  CloudFailure,
   DeviceInfo,
   DevicesSnapshot,
   NoteRef,

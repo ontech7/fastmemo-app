@@ -9,6 +9,7 @@ import type {
   ChangeSet,
   CloudBackend,
   CloudDevice,
+  CloudFailure,
   DeviceInfo,
   DevicesSnapshot,
   Pacing,
@@ -79,8 +80,18 @@ class ServerError extends Error {
   }
 }
 
+/** The server gave no answer: the request didn't get through (server off, no network or VPN), or no answer in time. */
+class NoAnswerError extends Error {}
+
 /** No answer in time: the link may be slow rather than down. */
-class TimeoutError extends Error {}
+class TimeoutError extends NoAnswerError {}
+
+/** A proxy's answer that the server behind it didn't (down, or not in time): 502-504, and Cloudflare's 52x and 530. */
+const GATEWAY_FAILURES = new Set([502, 503, 504, 521, 522, 523, 524, 530]);
+
+/** Whether a request failed because the server gave no answer, rather than an error of its own. */
+const noAnswer = (e: unknown): boolean =>
+  e instanceof NoAnswerError || (e instanceof ServerError && GATEWAY_FAILURES.has(e.status));
 
 /** The scheme, the host (lower-cased, without credentials or a trailing dot) and the port (the scheme's default if none). */
 function originOf(url: string): { scheme: string; host: string; port: number } | null {
@@ -163,6 +174,7 @@ const timed = <T>(promise: Promise<T>): Promise<T> =>
 interface DeviceListener {
   onDevices: (snapshot: DevicesSnapshot) => void;
   onError: (error: unknown) => void;
+  onLost?: () => void;
 }
 
 const tokenKey = (scope: string) => `serverToken_${scope}`.replace(/[^\w.-]/g, "_");
@@ -360,7 +372,7 @@ export class ServerBackend implements CloudBackend {
 
   // --- Devices ---
 
-  async listDevices(): Promise<CloudDevice[] | null> {
+  async listDevices(): Promise<CloudDevice[] | CloudFailure> {
     const { generation } = this;
     try {
       const { devices, ...limits } = await this.request<{ devices: CloudDevice[] } & Limits>("GET", "/v1/devices", {
@@ -371,7 +383,7 @@ export class ServerBackend implements CloudBackend {
       return devices;
     } catch (e) {
       console.log("listDevices:", e);
-      return null;
+      return noAnswer(e) ? "unreachable" : "error";
     }
   }
 
@@ -432,13 +444,18 @@ export class ServerBackend implements CloudBackend {
     return this.call("clearFullSyncDue", "POST", `/v1/devices/${encodeURIComponent(me)}/full-sync-done`, { due });
   }
 
-  subscribeDevices(me: string, onDevices: (snapshot: DevicesSnapshot) => void, onError: (error: unknown) => void): () => void {
+  subscribeDevices(
+    me: string,
+    onDevices: (snapshot: DevicesSnapshot) => void,
+    onError: (error: unknown) => void,
+    onLost?: () => void
+  ): () => void {
     if (!this.url) {
       onError(new Error("cloud not initialised"));
       return () => {};
     }
     this.me = me;
-    const listener: DeviceListener = { onDevices, onError };
+    const listener: DeviceListener = { onDevices, onError, onLost };
     this.deviceListeners.add(listener);
     this.refresh();
     return () => {
@@ -757,12 +774,16 @@ export class ServerBackend implements CloudBackend {
     try {
       let res: Response;
       let text: string;
+      let answered = false;
       try {
         res = await this.fetchImpl(base + path, { method, headers, body, signal: controller.signal, redirect: "manual" });
+        answered = true;
         if (redirected(res, base + path)) throw new Error(`${method} ${path}: redirected, not the server's answer`);
         text = await res.text();
       } catch (e) {
         if (timedOut) throw new TimeoutError(`${method} ${path}: no answer in time`);
+        // fetch fails only when no answer came at all (or the caller aborted)
+        if (!answered && !options.signal?.aborted) throw new NoAnswerError(`${method} ${path}: ${e}`);
         throw e;
       }
       let data: unknown;
@@ -885,8 +906,10 @@ export class ServerBackend implements CloudBackend {
       delay = Math.min(Math.max(delay * 2, POLL_RETRY_MIN_MS), POLL_RETRY_MAX_MS);
       await new Promise<void>((resolve) => {
         const timer = setTimeout(resolve, delay);
+        // Woken on purpose (back online, in the foreground, Retry): the backoff starts over.
         this.wake = () => {
           clearTimeout(timer);
+          delay = 0;
           resolve();
         };
       });
@@ -932,6 +955,11 @@ export class ServerBackend implements CloudBackend {
           }
           if (this.restart) continue;
           console.log("sync poll:", e);
+          if (noAnswer(e)) {
+            // The listeners are told; the next poll asks for the state at once, so they hear when it answers again.
+            this.version = null;
+            [...this.deviceListeners].forEach((listener) => listener.onLost?.());
+          }
           await backoff();
         } finally {
           if (this.poll === controller) this.poll = null;

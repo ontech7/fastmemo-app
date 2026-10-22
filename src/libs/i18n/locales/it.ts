@@ -307,6 +307,10 @@ const it = {
     unreachable_pending_notes: "Note in attesa di invio: {{count}}.",
     unreachable_last: "Ultima sincronizzazione: {{time}}.",
     unreachable_vpn: "Se ti colleghi con una VPN (per esempio WireGuard), controlla che sia attiva.",
+    reachable_server: "Server raggiungibile",
+    reachable_firebase: "Firebase raggiungibile",
+    unreachable_check_server: "Controlla che il tuo FastMemo Server sia acceso.",
+    unreachable_check_firebase: "Controlla la connessione e riprova.",
     conflict_copies:
       "Modificata su due dispositivi prima della sincronizzazione: sono state tenute entrambe le versioni (una come copia)",
     open_on: "Aperta su {{devices}}",
@@ -422,7 +426,9 @@ const it = {
   synceddevices: {
     title: "Dispositivi Connessi",
     lastSync: "Ultima sincr.: ",
-    error_fetching: "Errore durante il recupero dei dispositivi",
+    error_fetching: "Impossibile caricare i dispositivi",
+    error_body: "Qualcosa è andato storto durante la lettura. Riprova tra poco.",
+    offline_body: "I tuoi dispositivi compariranno qui appena torni online.",
     upToDate: "Aggiornato",
     pending: "{{count}} in attesa",
     mostRecent: "Più recente",
@@ -538,7 +544,7 @@ const it = {
   },
   aboutdeveloper: {
     title: "Su di me",
-    freelance: "Sviluppatore Web Freelance",
+    role: "Senior Software Engineer",
     information: "Informazioni",
     developer: "Sviluppatore",
     website: "Sito web",

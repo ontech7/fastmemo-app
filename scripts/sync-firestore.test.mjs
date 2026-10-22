@@ -161,9 +161,14 @@ try {
   ok("readVault answers from the server", vault.status !== "error", vault.status);
 
   console.log("\ndevices");
+  // The devices, or null when the read failed ("unreachable" / "error").
+  const listed = async () => {
+    const devices = await backend.listDevices();
+    return Array.isArray(devices) ? devices : null;
+  };
   ok("register A", await backend.registerDevice({ uuid: A, modelName: "test A", brand: "test" }));
   ok("register B", await backend.registerDevice({ uuid: B, modelName: "test B", brand: "test" }));
-  const devices = await backend.listDevices();
+  const devices = await listed();
   ok("both are listed", devices?.some((d) => d.uuid === A) && devices?.some((d) => d.uuid === B));
 
   // B listens, as the engine does.
@@ -213,7 +218,7 @@ try {
   let afterAck = null;
   for (let i = 0; i < 25 && !cleared(afterAck); i++) {
     if (i > 0) await sleep(200);
-    afterAck = (await backend.listDevices())?.find((d) => d.uuid === A);
+    afterAck = (await listed())?.find((d) => d.uuid === A);
   }
   ok("A's queues are cleared once no recipient is left", cleared(afterAck), afterAck);
 
@@ -241,13 +246,13 @@ try {
   ok("a newer deletion applies", result.committed.notes.delete.includes(n1.id) && (await backend.fetchNote(n1.id)) === null);
   let tombstones = await backend.fetchTombstones();
   ok("...and leaves a tombstone with its revision", tombstones?.[n1.id]?.rev === r1 + 9 && !tombstones[n1.id].detach);
-  const writesBefore = (await backend.listDevices())?.find((d) => d.uuid === A)?.lastSync;
+  const writesBefore = (await listed())?.find((d) => d.uuid === A)?.lastSync;
   await sleep(5);
   result = await backend.push(A, ops([note("n2", r1 - 20)], [], { [n2.id]: r1 - 30 }), [B]);
   await sleep(500);
   ok(
     "a push that applies nothing doesn't write the device doc",
-    result.superseded.length === 1 && (await backend.listDevices())?.find((d) => d.uuid === A)?.lastSync === writesBefore
+    result.superseded.length === 1 && (await listed())?.find((d) => d.uuid === A)?.lastSync === writesBefore
   );
 
   console.log("\nundefined fields");
@@ -286,7 +291,7 @@ try {
   let afterPush = null;
   for (let i = 0; i < 25 && !onlyB(afterPush); i++) {
     if (i > 0) await sleep(200);
-    afterPush = (await backend.listDevices())?.find((d) => d.uuid === A);
+    afterPush = (await listed())?.find((d) => d.uuid === A);
   }
   ok("a push makes the current devices its recipients (a removed one's id goes)", onlyB(afterPush), afterPush?.devicesToSync);
   change = await incomingFrom(A, (c) => !!c.notes.add[n3.id]);
@@ -304,7 +309,7 @@ try {
   // What an older version's write leaves after its device was removed: a doc without uuid.
   const ghost = `${tag}-ghost`;
   await setDoc(doc(db(), "connectedDevices", ghost), { lastSync: "1", devicesToSync: [B] });
-  ok("a doc without uuid isn't listed as a device", !(await backend.listDevices())?.some((d) => d.uuid === ghost));
+  ok("a doc without uuid isn't listed as a device", !(await listed())?.some((d) => d.uuid === ghost));
   ok("...nor brings changes", !(await backend.pullDevices(B))?.incoming.some((c) => c.source === ghost));
   await deleteDoc(doc(db(), "connectedDevices", ghost));
   ok(
@@ -389,7 +394,7 @@ try {
   let afterDrop = null;
   for (let i = 0; i < 25 && !cleared(afterDrop); i++) {
     if (i > 0) await sleep(200);
-    afterDrop = (await backend.listDevices())?.find((d) => d.uuid === A);
+    afterDrop = (await listed())?.find((d) => d.uuid === A);
   }
   ok("...clears the queues that only waited for the removed device", cleared(afterDrop), afterDrop);
 } finally {

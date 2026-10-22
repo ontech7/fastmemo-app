@@ -488,7 +488,7 @@ class FakeBackend {
   }
 
   async listDevices() {
-    return this.online ? this.cloud.snapshot(this.me).devices : null;
+    return this.online ? this.cloud.snapshot(this.me).devices : "unreachable";
   }
   async registerDevice({ uuid }) {
     this.cloud.devices.set(uuid, {
@@ -531,8 +531,8 @@ class FakeBackend {
     this.cloud.changed();
     return true;
   }
-  subscribeDevices(me, onSnapshot, onError) {
-    this.listener = { onSnapshot, onError };
+  subscribeDevices(me, onSnapshot, onError, onLost) {
+    this.listener = { onSnapshot, onError, onLost };
     this.emit();
     return () => {
       this.listener = null;
@@ -1085,26 +1085,68 @@ await scenario("the cloud stops answering, then answers again: said once each wa
   const a = await add("A");
   a.engine.start();
   await settle();
-  ok("it answers: nothing said", a.reach.length === 0, a.reach);
+  ok(
+    "its first answer: said once",
+    a.reach.length === 1 && a.reach[0].failingSince === null && a.reach[0].lastContact !== null,
+    a.reach
+  );
   goOffline(a);
   await a.engine.resume();
   await settle();
   ok(
     "it fails: said once, with when it started and its last answer",
-    a.reach.length === 1 && a.reach[0].failingSince !== null && a.reach[0].lastContact !== null,
+    a.reach.length === 2 && a.reach[1].failingSince !== null && a.reach[1].lastContact === a.reach[0].lastContact,
     a.reach
   );
   await a.engine.resume();
   await settle();
-  ok("it still fails: not said again", a.reach.length === 1, a.reach);
+  ok("it still fails: not said again", a.reach.length === 2, a.reach);
   await goOnline(a);
   await settle();
-  ok("it answers again: said", a.reach.length === 2 && a.reach[1].failingSince === null, a.reach);
+  ok("it answers again: said", a.reach.length === 3 && a.reach[2].failingSince === null, a.reach);
+  await a.engine.resume();
+  await settle();
+  ok("it keeps answering: not said again", a.reach.length === 3, a.reach);
   goOffline(a);
   await a.engine.resume();
   await settle();
   a.engine.stop();
-  ok("stopped while failing: nothing to tell any more", a.reach.at(-1)?.failingSince === null, a.reach);
+  const last = a.reach.at(-1);
+  ok("stopped: nothing to tell any more", last?.failingSince === null && last?.lastContact === null, a.reach);
+});
+
+await scenario("a listener that gets no answer tells, and keeps going (ADR-029)", async ({ add, settle }) => {
+  const a = await add("A");
+  a.engine.start();
+  await settle();
+  const said = a.reach.length;
+  a.backend.listener.onLost();
+  ok("lost: failing", a.reach.length === said + 1 && a.reach.at(-1).failingSince !== null, a.reach);
+  a.backend.listener.onSnapshot({ ...a.backend.cloud.snapshot("A"), fromServer: false });
+  ok("a snapshot not from the server: nothing said", a.reach.length === said + 1, a.reach);
+  a.backend.emit();
+  await settle();
+  ok("its next snapshot from the server: it answers again", a.reach.at(-1).failingSince === null, a.reach);
+});
+
+await scenario("a stopped engine says nothing more about the cloud (ADR-029)", async ({ add, settle }) => {
+  const a = await add("A");
+  a.engine.start();
+  await settle();
+  // a slow vault read that fails (a server timing out), and sync turned off while it runs
+  let release;
+  a.backend.readVault = () => new Promise((resolve) => (release = () => resolve({ status: "error", vault: null })));
+  a.engine.resume();
+  await sleep(20);
+  const listener = a.backend.listener;
+  a.engine.stop();
+  const said = a.reach.length;
+  release();
+  await a.engine.idle();
+  ok("a read that fails after the stop: nothing said", a.reach.length === said, a.reach);
+  listener.onLost();
+  listener.onSnapshot(a.backend.cloud.snapshot("A"));
+  ok("nor its listener's news", a.reach.length === said && a.reach.at(-1).lastContact === null, a.reach);
 });
 
 await scenario("full sync offline fails without touching anything", async ({ add }) => {

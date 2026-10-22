@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
 import { t } from "i18next";
 
 import type { Note } from "@/types";
@@ -42,12 +43,15 @@ const UNREACHABLE_AFTER_MS = 30_000;
 export interface CloudStatus {
   /** The cloud's reads have failed for UNREACHABLE_AFTER_MS, with no answer since. */
   unreachable: boolean;
-  /** Its last answer (null: none since the app started). */
+  /** Its last answer (null: none since sync started). */
   lastContact: number | null;
 }
 
 let cloudStatus: CloudStatus = { unreachable: false, lastContact: null };
 let unreachableTimer: ReturnType<typeof setTimeout> | null = null;
+// The engine's last report, and whether the device is online (see below).
+let lastReach: CloudReachability = { failingSince: null, lastContact: null };
+let online = true;
 
 const setCloudStatus = (next: CloudStatus) => {
   if (next.unreachable === cloudStatus.unreachable && next.lastContact === cloudStatus.lastContact) return;
@@ -55,8 +59,10 @@ const setCloudStatus = (next: CloudStatus) => {
   emit({ type: "reachability" });
 };
 
-/** The engine's report, turned into what the home shows: unreachable only once it has failed long enough. */
-const onReachability = ({ failingSince, lastContact }: CloudReachability) => {
+/** The engine's report, turned into what the home and the dot show: unreachable only once it has failed long enough. */
+const onReachability = (reach: CloudReachability) => {
+  lastReach = reach;
+  const { failingSince, lastContact } = reach;
   if (unreachableTimer) clearTimeout(unreachableTimer);
   unreachableTimer = null;
   if (failingSince === null) return setCloudStatus({ unreachable: false, lastContact });
@@ -69,7 +75,16 @@ const onReachability = ({ failingSince, lastContact }: CloudReachability) => {
   }, wait);
 };
 
-/** Whether the cloud can be reached, for the home (`useCloudStatus`). */
+// Time offline isn't the cloud failing (the user knows): back online, a cloud still failing gets its 30 s again, rather than
+// showing as unreachable the moment the network returns (before the VPN or the route is up). Told in the same tick as
+// `useNetInfo`, so no frame shows the old state.
+NetInfo.addEventListener((state) => {
+  const now = !!state.isConnected;
+  if (now && !online && lastReach.failingSince !== null) onReachability({ ...lastReach, failingSince: Date.now() });
+  online = now;
+});
+
+/** Whether the cloud can be reached, for the home and the status dot (`useCloudStatus`). */
 export const getCloudStatus = (): CloudStatus => cloudStatus;
 
 /** Asks the cloud again now ("Retry"): reopens the connection, then pulls and pushes. */

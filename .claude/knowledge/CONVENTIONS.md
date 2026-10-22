@@ -318,7 +318,10 @@ offline-first flow is:
 - One exception (ADR-029): a cloud whose reads have failed for 30 s with no answer between, while the device is online (a
   server behind a VPN left off), shows a quiet line in the home in place of the category (`CloudUnreachableLine`, through
   `useCloudStatus`), gone once it answers. Never a toast or a banner, never for an offline device, nothing in Redux: the
-  engine reports `onReachability` on a change, `sync.ts` keeps the state and the 30 s timer.
+  engine reports `onReachability` on a change, `sync.ts` keeps the state and the 30 s timer. The same state is the status dot
+  of Settings → Cloud Sync and the line under its switch (`CloudStatusDot`, `useCloudStatus().state`). A backend's listener
+  that stops getting answers calls `onLost` instead of retrying silently; a read that fails says whether the cloud gave no
+  answer or an error (`CloudFailure`) when the user is told which.
 
 If observability is needed for a new cloud-sync feature, use Sentry breadcrumbs inside the engine, not Redux state. See LL-004.
 

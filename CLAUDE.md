@@ -154,7 +154,7 @@ src/
   components/   -> UI components (domain-grouped: buttons/, cards/, notes/, kanban/, settings/, etc.)
   slicers/      -> Redux slices (notesSlice, categoriesSlice, settingsSlice) + thunks/
   types/        -> TypeScript type definitions (barrel export via index.ts)
-  hooks/        -> Custom hooks (useCloudSync, useLiveNote, useRouter, useSecret, useNetInfo, useTimeoutTask, useVaultUnlocked, useVaultPrompt, useVaultProgress)
+  hooks/        -> Custom hooks (useCloudSync, useLiveNote, useRouter, useSecret, useNetInfo, useCloudStatus, useVaultUnlocked, useVaultPrompt, useVaultProgress)
   libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), haptics/, i18n/, storage/, registry, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, desktopCommands, desktopMenu)
   utils/        -> Pure utility functions (sort, string, date, crypt, vault, secureRandom, ui, toast, webhook, export, platform, openUrl)
   providers/    -> React context providers (KanbanDragProvider, SyncOnProvider)

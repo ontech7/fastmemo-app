@@ -292,6 +292,11 @@ try {
     const closed = makeBackend(`http://127.0.0.1:${await freePort()}`).backend;
     const started = Date.now();
     ok("verify: nothing listening fails, quickly", !(await closed.verify()) && Date.now() - started < 6000);
+    ok("the devices, nothing listening: unreachable", (await closed.listDevices()) === "unreachable");
+    ok(
+      "the devices, a wrong key: an error (the server answered)",
+      (await makeBackend(server.url, "wrong-key-wrong-key-123").backend.listDevices()) === "error"
+    );
 
     const other = http.createServer((_, res) => res.end(JSON.stringify({ hello: "world" })));
     await new Promise((resolve) => other.listen(0, "127.0.0.1", resolve));
@@ -418,7 +423,7 @@ try {
     };
     const devicesJson = JSON.stringify({ devices: [], maxDevices: 5 });
     const browser = answering(server.url, () => ({ status: 0, type: "opaqueredirect", url: "" }));
-    ok("a browser's redirect (handed back, not followed) is an error", (await browser.listDevices()) === null);
+    ok("a browser's redirect (handed back, not followed) is an error", (await browser.listDevices()) === "error");
     const hsts = answering("http://notes.example", (url) => ({
       body: devicesJson,
       type: "cors",
@@ -429,19 +434,19 @@ try {
       Array.isArray(await hsts.listDevices())
     );
     const desktop = answering(server.url, () => ({ status: 308 }));
-    ok("a 3xx (the desktop app doesn't follow) is an error", (await desktop.listDevices()) === null);
+    ok("a 3xx (the desktop app doesn't follow) is an error", (await desktop.listDevices()) === "error");
     const flagged = answering(server.url, () => ({ body: devicesJson, redirected: true }));
-    ok("an answer marked as redirected is an error", (await flagged.listDevices()) === null);
+    ok("an answer marked as redirected is an error", (await flagged.listDevices()) === "error");
     const elsewhere = answering("http://notes.example", () => ({
       body: devicesJson,
       url: "http://login.example/v1/devices",
     }));
-    ok("another host is a redirect", (await elsewhere.listDevices()) === null);
+    ok("another host is a redirect", (await elsewhere.listDevices()) === "error");
     const otherPort = answering("http://notes.example:8787", () => ({
       body: devicesJson,
       url: "http://notes.example:8788/v1/devices",
     }));
-    ok("...so is another port", (await otherPort.listDevices()) === null);
+    ok("...so is another port", (await otherPort.listDevices()) === "error");
     const sameServer = [
       ["https://notes.example:443", "https://notes.example/v1/devices"],
       ["http://notes.example:080", "http://notes.example/v1/devices"],
@@ -464,7 +469,7 @@ try {
       body: devicesJson,
       url: "https://xn--ntes-5qa.example/v1/devices",
     }));
-    ok("...but moved to https it is", (await upgraded.listDevices()) === null);
+    ok("...but moved to https it is", (await upgraded.listDevices()) === "error");
     const portal = answering(server.url, () => ({ body: "<html>Log in to the Wi-Fi</html>" }));
     ok("a 200 that isn't JSON (a captive portal) is an error", !(await portal.writeVault({ key: "k1" })));
     const foreignVault = answering(server.url, () => ({ status: 201, body: "{}" }));
@@ -503,10 +508,12 @@ try {
 
     const snapshots = [];
     const vaultReads = [];
+    let lost = 0;
     const unsubscribe = b.backend.subscribeDevices(
       "B",
       (s) => snapshots.push(s),
-      (e) => snapshots.push({ error: e })
+      (e) => snapshots.push({ error: e }),
+      () => lost++
     );
     const unsubscribeVault = b.backend.subscribeVault((read) => vaultReads.push(read));
     ok("a listener gets the current state at once", await until(() => snapshots.length > 0 && vaultReads.length > 0, 3000));
@@ -579,6 +586,15 @@ try {
         Date.now() - reconnected < 2000
     );
 
+    b.net.online = false;
+    await b.backend.reconnect();
+    ok("a poll with no answer: the listener is told it lost the cloud", await until(() => lost > 0, 3000));
+    ok("...not as an error (it keeps polling)", !snapshots.some((s) => s.error));
+    const heard = snapshots.length;
+    b.net.online = true;
+    await b.backend.reconnect();
+    ok("...and it hears at once when the server answers again", await until(() => snapshots.length > heard, 2000));
+
     unsubscribe();
     unsubscribeVault();
     ok("unsubscribing stops the long poll", await until(() => true, 300));
@@ -645,11 +661,11 @@ try {
 
     a.net.online = false;
     ok(
-      "offline: reads say they failed (null / error / undefined), never empty",
+      "offline: reads say they failed (null / error / undefined / unreachable), never empty",
       (await a.backend.fetchNotes()) === null &&
         (await a.backend.readVault()).status === "error" &&
         (await a.backend.fetchNote("x")) === undefined &&
-        (await a.backend.listDevices()) === null
+        (await a.backend.listDevices()) === "unreachable"
     );
     const offline = await a.backend.push("A", ops([note("o1", 1)]), []);
     ok("offline: a push is incomplete, nothing committed", !offline.complete && offline.committed.notes.add.length === 0);
