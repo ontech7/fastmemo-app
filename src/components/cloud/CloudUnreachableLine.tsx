@@ -19,7 +19,7 @@ const selectorPendingNotes = (state: RootState): number => {
 };
 
 interface Props {
-  /** The cloud's last answer (null: none since the app started). */
+  /** The cloud's last answer (null: none since sync started). */
   lastContact: number | null;
 }
 

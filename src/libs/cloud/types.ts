@@ -32,7 +32,8 @@ export interface CloudBackend {
 
   // --- Devices ---
 
-  listDevices(): Promise<CloudDevice[] | null>;
+  /** The registered devices, or why they couldn't be read (the devices screen tells the user). */
+  listDevices(): Promise<CloudDevice[] | CloudFailure>;
   /** Registers a device with empty queues. */
   registerDevice(device: DeviceInfo): Promise<boolean>;
   unregisterDevice(uuid: string): Promise<boolean>;
@@ -43,8 +44,17 @@ export interface CloudBackend {
   setPresence(uuid: string, presence: Presence): Promise<boolean>;
   /** Clears `me`'s `fullSyncDue` once that full sync ran, unless another device set it again since. */
   clearFullSyncDue(me: string, due: number): Promise<boolean>;
-  /** Live device list, with the changes queued for `me`. `onError` fires when the listener dies (call again to resume). */
-  subscribeDevices(me: string, onSnapshot: (snapshot: DevicesSnapshot) => void, onError: (error: unknown) => void): Unsubscribe;
+  /**
+   * Live device list, with the changes queued for `me`. `onError` fires when the listener dies (call again to resume);
+   * `onLost` when it gets no answer from the cloud and keeps trying (ADR-029): Firestore serves its cache, the server's poll
+   * fails. Its next snapshot from the server says it answers again.
+   */
+  subscribeDevices(
+    me: string,
+    onSnapshot: (snapshot: DevicesSnapshot) => void,
+    onError: (error: unknown) => void,
+    onLost?: () => void
+  ): Unsubscribe;
   /** One-off server read of the same data (fallback when a listener is silently dead). */
   pullDevices(me: string): Promise<DevicesSnapshot | null>;
   /**
@@ -169,6 +179,9 @@ export interface Tombstone {
   /** Made device-only rather than deleted. */
   detach?: boolean;
 }
+
+/** A read that failed: the cloud gave no answer (no network, VPN or server down, no answer in time), or answered an error. */
+export type CloudFailure = "unreachable" | "error";
 
 export type VaultRead = { status: "present"; vault: VaultDoc } | { status: "absent" | "error"; vault: null };
 

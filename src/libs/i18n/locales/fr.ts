@@ -308,6 +308,10 @@ const fr = {
     unreachable_pending_notes: "Notes en attente d'envoi : {{count}}.",
     unreachable_last: "Dernière synchronisation : {{time}}.",
     unreachable_vpn: "Si vous vous connectez via un VPN (WireGuard, par exemple), vérifiez qu'il est activé.",
+    reachable_server: "Serveur joignable",
+    reachable_firebase: "Firebase joignable",
+    unreachable_check_server: "Vérifiez que votre FastMemo Server est allumé.",
+    unreachable_check_firebase: "Vérifiez votre connexion, puis réessayez.",
     conflict_copies:
       "Modifiée sur deux appareils avant la synchronisation : les deux versions ont été gardées (l'une en copie)",
     open_on: "Ouverte sur {{devices}}",
@@ -426,7 +430,9 @@ const fr = {
   synceddevices: {
     title: "Des appareils connectés",
     lastSync: "Dernière synch.: ",
-    error_fetching: "Erreur lors de la récupération des appareils",
+    error_fetching: "Impossible de charger les appareils",
+    error_body: "Le cloud a répondu par une erreur. Réessayez dans un instant.",
+    offline_body: "Vos appareils s'afficheront ici dès que vous serez de nouveau en ligne.",
     upToDate: "À jour",
     pending: "{{count}} en attente",
     mostRecent: "Plus récent",

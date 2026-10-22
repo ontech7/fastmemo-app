@@ -42,7 +42,7 @@ const UNREACHABLE_AFTER_MS = 30_000;
 export interface CloudStatus {
   /** The cloud's reads have failed for UNREACHABLE_AFTER_MS, with no answer since. */
   unreachable: boolean;
-  /** Its last answer (null: none since the app started). */
+  /** Its last answer (null: none since sync started). */
   lastContact: number | null;
 }
 
@@ -55,7 +55,7 @@ const setCloudStatus = (next: CloudStatus) => {
   emit({ type: "reachability" });
 };
 
-/** The engine's report, turned into what the home shows: unreachable only once it has failed long enough. */
+/** The engine's report, turned into what the home and the dot show: unreachable only once it has failed long enough. */
 const onReachability = ({ failingSince, lastContact }: CloudReachability) => {
   if (unreachableTimer) clearTimeout(unreachableTimer);
   unreachableTimer = null;
@@ -69,7 +69,7 @@ const onReachability = ({ failingSince, lastContact }: CloudReachability) => {
   }, wait);
 };
 
-/** Whether the cloud can be reached, for the home (`useCloudStatus`). */
+/** Whether the cloud can be reached, for the home and the status dot (`useCloudStatus`). */
 export const getCloudStatus = (): CloudStatus => cloudStatus;
 
 /** Asks the cloud again now ("Retry"): reopens the connection, then pulls and pushes. */

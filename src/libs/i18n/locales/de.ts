@@ -307,6 +307,10 @@ const de = {
     unreachable_pending_notes: "Notizen, die auf das Senden warten: {{count}}.",
     unreachable_last: "Letzte Synchronisierung: {{time}}.",
     unreachable_vpn: "Wenn Sie sich über ein VPN verbinden (zum Beispiel WireGuard), prüfen Sie, ob es aktiv ist.",
+    reachable_server: "Server erreichbar",
+    reachable_firebase: "Firebase erreichbar",
+    unreachable_check_server: "Prüfen Sie, ob Ihr FastMemo Server läuft.",
+    unreachable_check_firebase: "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     conflict_copies: "Vor dem Synchronisieren auf zwei Geräten bearbeitet: Beide Versionen wurden behalten (eine als Kopie)",
     open_on: "Geöffnet auf {{devices}}",
     note_deleted_elsewhere:
@@ -427,7 +431,9 @@ const de = {
   synceddevices: {
     title: "Verbundene Geräte",
     lastSync: "Letzte Sync.: ",
-    error_fetching: "Fehler beim Abrufen der Geräte",
+    error_fetching: "Geräte konnten nicht geladen werden",
+    error_body: "Die Cloud hat mit einem Fehler geantwortet. Versuchen Sie es gleich noch einmal.",
+    offline_body: "Ihre Geräte erscheinen hier, sobald Sie wieder online sind.",
     upToDate: "Aktuell",
     pending: "{{count}} ausstehend",
     mostRecent: "Neueste",

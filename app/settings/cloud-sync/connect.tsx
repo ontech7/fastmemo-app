@@ -1,4 +1,5 @@
 import BackButton from "@/components/buttons/BackButton";
+import CloudStatusDot from "@/components/cloud/CloudStatusDot";
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import CloudProviderIcon from "@/components/icons/CloudProviderIcon";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
@@ -8,6 +9,7 @@ import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { cloudStateKey, useCloudStatus } from "@/hooks/useCloudStatus";
 import { useCloudSync } from "@/hooks/useCloudSync";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useRouter } from "@/hooks/useRouter";
@@ -15,7 +17,10 @@ import { useSecret } from "@/hooks/useSecret";
 import { useVaultProgress } from "@/hooks/useVaultProgress";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import { isCloudSettingsComplete as settingsComplete, isLoopbackUrl, isPlainHttp, isTailscaleUrl } from "@/libs/cloud";
+import { providerOf } from "@/libs/cloud/scope";
+import { reconnectNow } from "@/libs/cloud/sync";
 import { probeVault } from "@/libs/vaultManager";
+import { getCloudSettings } from "@/slicers/settingsSlice";
 import type { CloudProvider } from "@/types";
 import { openUrl } from "@/utils/openUrl";
 import { isTauri } from "@/utils/platform";
@@ -24,6 +29,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { useSelector } from "react-redux";
 import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import DevicePhoneMobileIcon from "react-native-heroicons/outline/DevicePhoneMobileIcon";
@@ -44,6 +50,15 @@ export default function CloudSyncScreen() {
   const progress = useVaultProgress();
 
   const { methods, state, cloudSettings, provider } = useCloudSync();
+  const cloudState = useCloudStatus().state;
+  // The cloud in use, not the one being picked in the form.
+  const connectedServer = providerOf(useSelector(getCloudSettings)) === "server";
+  const [retrying, setRetrying] = useState(false);
+
+  const retry = () => {
+    setRetrying(true);
+    reconnectNow().finally(() => setRetrying(false));
+  };
 
   const providerItems = useMemo<SelectableCardItem<CloudProvider>[]>(
     () => [
@@ -208,7 +223,7 @@ export default function CloudSyncScreen() {
         >
           <View style={styles.sectionWrapper}>
             <View style={styles.sectionList}>
-              <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
+              <View style={[styles.sectionItemList, !cloudState && styles.sectionItemList_last]}>
                 <View style={styles.sectionItemList_button}>
                   <Text style={styles.sectionItemList_title}>{t("cloudsync.enable")}</Text>
 
@@ -224,6 +239,27 @@ export default function CloudSyncScreen() {
                   />
                 </View>
               </View>
+
+              {cloudState && (
+                <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
+                  <View style={styles.statusRow}>
+                    <CloudStatusDot decorative />
+                    <Text style={styles.statusText}>{t(cloudStateKey(cloudState, connectedServer))}</Text>
+                    {cloudState === "unreachable" && (
+                      <TouchableOpacity activeOpacity={0.7} disabled={retrying} onPress={retry} accessibilityRole="button">
+                        <Text style={[styles.statusRetry, retrying && styles.statusRetryBusy]}>{t("retry")}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {cloudState === "unreachable" && (
+                    <Text style={styles.statusHint}>
+                      {connectedServer
+                        ? `${t("cloudsync.unreachable_check_server")} ${t("cloudsync.unreachable_vpn")}`
+                        : t("cloudsync.unreachable_check_firebase")}
+                    </Text>
+                  )}
+                </View>
+              )}
             </View>
 
             <Text style={styles.encryptionHint}>{t("cloudsync.vault.enable_hint")}</Text>
@@ -631,6 +667,32 @@ const styles = StyleSheet.create({
     color: COLOR.textPrimary,
     fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+  },
+  statusText: {
+    flex: 1,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.medium,
+    fontSize: FONTSIZE.medium,
+  },
+  statusRetry: {
+    color: COLOR.accentSoft,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.medium,
+  },
+  statusRetryBusy: {
+    color: COLOR.textMuted,
+  },
+  statusHint: {
+    marginTop: PADDING_MARGIN.sm,
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    lineHeight: 18,
   },
   textInputContainer: {
     flexDirection: "row",

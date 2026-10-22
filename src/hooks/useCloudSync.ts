@@ -279,7 +279,7 @@ export const useCloudSync = () => {
         case Handshake.Success: {
           const cloudDevices = await cloud.listDevices();
 
-          if (!cloudDevices) {
+          if (!Array.isArray(cloudDevices)) {
             setIsLoading(false);
             toast(t("cloudsync.vault.verify_failed"));
             return;

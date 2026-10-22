@@ -50,8 +50,8 @@ export class CloudRouter implements CloudBackend {
   touchLastSync: CloudBackend["touchLastSync"] = (uuid) => this.current.touchLastSync(uuid);
   setPresence: CloudBackend["setPresence"] = (uuid, presence) => this.current.setPresence(uuid, presence);
   clearFullSyncDue: CloudBackend["clearFullSyncDue"] = (me, due) => this.current.clearFullSyncDue(me, due);
-  subscribeDevices: CloudBackend["subscribeDevices"] = (me, onSnapshot, onError) =>
-    this.current.subscribeDevices(me, onSnapshot, onError);
+  subscribeDevices: CloudBackend["subscribeDevices"] = (me, onSnapshot, onError, onLost) =>
+    this.current.subscribeDevices(me, onSnapshot, onError, onLost);
   pullDevices: CloudBackend["pullDevices"] = (me) => this.current.pullDevices(me);
   ackChanges: CloudBackend["ackChanges"] = (me, change) => this.current.ackChanges(me, change);
 

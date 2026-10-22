@@ -49,6 +49,16 @@ export const COLOR = {
   scrim: "rgba(2, 4, 14, 0.82)",
 } as const;
 
+/**
+ * The cloud's state as a dot (Settings, Cloud sync): green when it answers, grey when this device is offline, red when it
+ * doesn't answer while online (ADR-029). Told apart at a glance, and only the green one pings.
+ */
+export const CLOUD_STATE_COLOR = {
+  ok: "#34D399",
+  offline: "#717BA6",
+  unreachable: "#F26D6D",
+} as const;
+
 export const KANBAN_COLUMN_COLORS = ["#A7ABB9", "#799EDC", "#00c951", "#EEE78E", "#ff6900", "#A43D3F", "#DAD9DE"] as const;
 
 /**
