@@ -1909,6 +1909,28 @@ answers". Test reachability with the cloud going away mid-session, not only at s
 **Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-22 **Resolved in:** branch
 `feat/cloud-status-dot`
 
+### LL-070: The 4.0.0 store build's fingerprint differed between EAS and the Mac
+
+**Date:** 2026-10-22  
+**Severity:** High (caught at the first 4.0.0 production build: no OTA would ever have matched the build)  
+**Category:** Release / EAS / Fingerprint  
+**What happened:** EAS reported "Runtime version mismatch": the fingerprint computed on the Mac and the one computed on the
+EAS worker differed in `expoConfig` only. llama.rn's config plugin adds two iOS entitlements
+(`kernel.extended-virtual-addressing`, `kernel.increased-memory-limit`) to `config.ios.entitlements` only when
+`EAS_BUILD_PROFILE` equals `production` or `NODE_ENV` is `production`: set on the worker, not when the CLI computes the
+fingerprint locally, nor in the Publish OTA workflow. The build would carry a runtime version that no published update has.
+
+**Fix:** `["llama.rn", { enableEntitlements: false }]` in `app.config.ts` (iOS isn't distributed, ADR-014). The Android
+fingerprint is now the same with no variable, `EAS_BUILD_PROFILE=production` or `NODE_ENV=production` (checked with
+`npx fingerprint fingerprint:generate --platform android`); without the fix the first two differed.
+
+**Rule:** the app config must not depend on the environment in a way the fingerprint sees: a config plugin that reads
+`EAS_BUILD_PROFILE`/`NODE_ENV` gets a fixed option. After adding or upgrading a plugin, compare the fingerprint with and without
+`EAS_BUILD_PROFILE=production`.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-22 **Resolved in:** branch
+`fix/fingerprint-llama-entitlements`
+
 ---
 
 ## Template for New Entries
