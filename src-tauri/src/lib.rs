@@ -121,9 +121,9 @@ fn show_main(app: &AppHandle, focus: bool) {
     }
     if let Some(window) = app.get_webview_window("main") {
         app.state::<WindowShown>().0.store(true, Ordering::SeqCst);
-        // macOS: a closed (hidden) window comes back on the Space (desktop) the user is on, not on the one it was closed on,
-        // which macOS would switch to. On every Space while it's shown, then on none again: it stays on the current one, at
-        // its place and size. A window still on screen elsewhere is left to macOS.
+        // macOS: a closed (hidden) or minimized window comes back on the Space (desktop) the user is on, not on the one it was
+        // closed on, which macOS would switch to. On every Space while it's shown, then back on one: the current one, at its
+        // place and size. A window still on screen on another Space is left to macOS.
         #[cfg(target_os = "macos")]
         let hidden = !window.is_visible().unwrap_or(true);
         #[cfg(target_os = "macos")]

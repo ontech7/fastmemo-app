@@ -925,7 +925,8 @@ ends it).
   another app); the Dock, a second launch and the menu's commands do. A reload doesn't show it again.
 - macOS: the close button / Cmd+W hide the window and the frontend flushes pending edits (`fastmemo://hidden`, no exit, nothing
   waits for it: the app goes on running); the Dock icon, opening the app again (`RunEvent::Reopen`), a second launch and the
-  menu's commands (New Note, Settings…) show it. Cmd+Q keeps the held quit (ADR-015). A full screen window leaves full screen
+  menu's commands (New Note, Settings…) show it, on the Space the user is on (2026-10-22, user request: on every Space while
+  shown, then back on the current one; size and place kept). Cmd+Q keeps the held quit (ADR-015). A full screen window leaves full screen
   first and is kept hidden from the end of that animation (LL-061); asking for it back meanwhile cancels that.
 - Windows and Linux: unchanged, closing the window quits after the flush.
 - `tauri-plugin-window-state` (approved): size, position and zoom remembered; not the visibility (it would show the window
