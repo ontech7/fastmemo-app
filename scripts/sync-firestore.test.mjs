@@ -279,7 +279,12 @@ try {
   created.add(tooBig.id);
   created.add(small.id);
   result = await backend.push(A, ops([tooBig, small]), []);
-  ok("a note over 1 MiB is rejected for good", result.rejected.includes(`addNotes:${tooBig.id}`), result.rejected);
+  // Over the cloud's limit: handed back as too large, and the app keeps it on the device (ADR-026), not "rejected".
+  ok(
+    "a note over the limit comes back as too large, not committed",
+    result.tooLarge?.includes(tooBig.id) && !result.committed.notes.add.includes(tooBig.id),
+    { tooLarge: result.tooLarge, rejected: result.rejected }
+  );
   ok("...without blocking the other one", result.committed.notes.add.includes(small.id) && result.complete);
 
   console.log("\nrecipients and full syncs");
