@@ -2,6 +2,7 @@
 
 - Migrated to Tauri 2 in place (ADR-015): same identifier, data and update channel, so 1.x installs update and keep their notes; tighter capabilities, a safer in-app update flow, and Cmd+Q waits for the notes to be saved before quitting.
 - Faster start without an empty window (ADR-022): the window stays hidden until the home screen is drawn. On macOS, closing the window leaves the app running like other Mac apps (the Dock icon brings it back, Quit closes it, edits are saved when the window hides). The window remembers its size, position and zoom, and a quit in full screen reopens it as it was before.
+- macOS: the window closed and brought back (the Dock, a second launch, a menu command) opens on the Space (desktop) you're on, at its size and place, instead of switching to the Space it was closed on.
 - Single instance: launching Fast Memo again focuses the running window instead of opening a second one.
 - Keyboard shortcuts: Esc goes back (in a text field it only leaves the field), Cmd/Ctrl+N a new note, Cmd/Ctrl+F the search or find in the note, Cmd/Ctrl+Enter saves the quick note. F5, Cmd/Ctrl+R and the history keys no longer reload or leave a screen and lose unsaved edits.
 - macOS menu bar in the app's language, with the same commands: every note type, find, settings, Export/Import, Help. A command runs only when its control is reachable, one at a time, never under a native open/save panel. The bundle declares its languages, so what macOS adds (Edit menu items, panels) follows the system language too.
