@@ -427,7 +427,7 @@ const es = {
     title: "Dispositivos conectados",
     lastSync: "Última sinc.: ",
     error_fetching: "No se pudieron cargar los dispositivos",
-    error_body: "La nube respondió con un error. Vuelve a intentarlo en un momento.",
+    error_body: "Algo salió mal al leerlos. Vuelve a intentarlo en un momento.",
     offline_body: "Tus dispositivos aparecerán aquí cuando vuelvas a estar en línea.",
     upToDate: "Actualizado",
     pending: "{{count}} pendientes",

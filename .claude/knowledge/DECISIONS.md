@@ -1270,4 +1270,7 @@ left the device.
   the server's poll retried silently and a server down mid-session went unnoticed until the 5-minute poll (LL-069).
 - `useCloudStatus().state` is `"ok" | "offline" | "unreachable" | null`; the engine also reports its first answer and its stop
   (`lastContact` null), so the dot doesn't show a cloud nobody has asked yet.
+- **Time offline doesn't count** toward the 30 s: back online, a cloud still failing gets its 30 s again (`sync.ts` follows
+  NetInfo, in the same tick as `useNetInfo`), and the server's poll starts its backoff over when woken on purpose. A stopped
+  engine, and a task from before a stop, report nothing (sync turned off while a read was timing out showed the line).
 

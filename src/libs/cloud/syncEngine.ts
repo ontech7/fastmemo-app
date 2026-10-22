@@ -312,7 +312,7 @@ export class SyncEngine {
         this.adoptLegacyOutbox();
         const seq = this.snapshotSeq;
         const snapshot = await this.o.backend.pullDevices(this.o.me);
-        this.reached(!!snapshot);
+        if (!this.outlived) this.reached(!!snapshot);
         if (!snapshot) return false;
         if (this.snapshotSeq === seq) this.pendingSnapshot = snapshot;
         if (!(await this.processDevices())) return false;
@@ -455,7 +455,7 @@ export class SyncEngine {
       if (!(await this.checkVault())) return;
       const seq = this.snapshotSeq;
       const snapshot = await this.o.backend.pullDevices(this.o.me);
-      this.reached(!!snapshot);
+      if (!this.outlived) this.reached(!!snapshot);
       if (!snapshot) return;
       // A listener snapshot that came meanwhile is the newer one.
       if (this.snapshotSeq === seq) this.pendingSnapshot = snapshot;
@@ -472,7 +472,7 @@ export class SyncEngine {
   /** Server read of the vault: true if this device's key opens it. */
   private async checkVault(): Promise<boolean> {
     const read = await this.o.backend.readVault();
-    this.reached(read.status !== "error");
+    if (!this.outlived) this.reached(read.status !== "error");
     if (read.status === "error") return false;
     // Locked here (no key): it can't be told, and nothing can be synced either.
     const opens = read.status === "present" ? this.o.crypto.matches(read.vault) : false;
@@ -722,6 +722,8 @@ export class SyncEngine {
    * answer, the cloud failing with no answer since or answering again, the stop.
    */
   private reached(ok: boolean | null): void {
+    // A listener or a task still going after the stop: nothing to tell about a cloud it no longer follows.
+    if (ok !== null && !this.running) return;
     const now = Date.now();
     const failingSince = ok === false ? (this.reach.failingSince ?? now) : null;
     const lastContact = ok === null ? null : ok ? now : this.reach.lastContact;

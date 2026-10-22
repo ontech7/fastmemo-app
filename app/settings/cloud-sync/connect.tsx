@@ -246,7 +246,13 @@ export default function CloudSyncScreen() {
                     <CloudStatusDot decorative />
                     <Text style={styles.statusText}>{t(cloudStateKey(cloudState, connectedServer))}</Text>
                     {cloudState === "unreachable" && (
-                      <TouchableOpacity activeOpacity={0.7} disabled={retrying} onPress={retry} accessibilityRole="button">
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        disabled={retrying}
+                        onPress={retry}
+                        accessibilityRole="button"
+                        aria-disabled={retrying}
+                      >
                         <Text style={[styles.statusRetry, retrying && styles.statusRetryBusy]}>{t("retry")}</Text>
                       </TouchableOpacity>
                     )}
@@ -254,7 +260,7 @@ export default function CloudSyncScreen() {
                   {cloudState === "unreachable" && (
                     <Text style={styles.statusHint}>
                       {connectedServer
-                        ? `${t("cloudsync.unreachable_check_server")} ${t("cloudsync.unreachable_vpn")}`
+                        ? `${t("cloudsync.unreachable_check_server")}\n${t("cloudsync.unreachable_vpn")}`
                         : t("cloudsync.unreachable_check_firebase")}
                     </Text>
                   )}

@@ -906,8 +906,10 @@ export class ServerBackend implements CloudBackend {
       delay = Math.min(Math.max(delay * 2, POLL_RETRY_MIN_MS), POLL_RETRY_MAX_MS);
       await new Promise<void>((resolve) => {
         const timer = setTimeout(resolve, delay);
+        // Woken on purpose (back online, in the foreground, Retry): the backoff starts over.
         this.wake = () => {
           clearTimeout(timer);
+          delay = 0;
           resolve();
         };
       });

@@ -166,6 +166,9 @@ export default function SyncedDevicesScreen() {
     () =>
       onSyncEvent((event) => {
         if (event.type !== "devices") return;
+        // A fresh list: the request under way (its "no answer", a late failure) no longer counts.
+        requestRef.current++;
+        setLoading(false);
         setConnectedDevices(event.devices);
         setFailure(null);
       }),
@@ -266,7 +269,7 @@ export default function SyncedDevicesScreen() {
                   ? t("synceddevices.offline_body")
                   : shownFailure === "unreachable"
                     ? server
-                      ? `${t("cloudsync.unreachable_check_server")} ${t("cloudsync.unreachable_vpn")}`
+                      ? `${t("cloudsync.unreachable_check_server")}\n${t("cloudsync.unreachable_vpn")}`
                       : t("cloudsync.unreachable_check_firebase")
                     : t("synceddevices.error_body")}
               </Text>

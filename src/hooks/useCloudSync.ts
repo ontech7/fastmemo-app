@@ -281,7 +281,11 @@ export const useCloudSync = () => {
 
           if (!Array.isArray(cloudDevices)) {
             setIsLoading(false);
-            toast(t("cloudsync.vault.verify_failed"));
+            toast(
+              cloudDevices === "unreachable"
+                ? t(provider === "server" ? "cloudsync.unreachable_server" : "cloudsync.unreachable_firebase")
+                : t("cloudsync.vault.verify_failed")
+            );
             return;
           }
 

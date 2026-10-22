@@ -423,7 +423,7 @@ const ja = {
     title: "同期済みデバイス",
     lastSync: "最終同期: ",
     error_fetching: "デバイスを読み込めませんでした",
-    error_body: "クラウドがエラーを返しました。しばらくしてからもう一度お試しください。",
+    error_body: "読み込み中に問題が発生しました。しばらくしてからもう一度お試しください。",
     offline_body: "オンラインに戻ると、ここにデバイスが表示されます。",
     upToDate: "最新",
     pending: "{{count}} 件保留中",

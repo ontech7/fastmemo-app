@@ -1129,6 +1129,26 @@ await scenario("a listener that gets no answer tells, and keeps going (ADR-029)"
   ok("its next snapshot from the server: it answers again", a.reach.at(-1).failingSince === null, a.reach);
 });
 
+await scenario("a stopped engine says nothing more about the cloud (ADR-029)", async ({ add, settle }) => {
+  const a = await add("A");
+  a.engine.start();
+  await settle();
+  // a slow vault read that fails (a server timing out), and sync turned off while it runs
+  let release;
+  a.backend.readVault = () => new Promise((resolve) => (release = () => resolve({ status: "error", vault: null })));
+  a.engine.resume();
+  await sleep(20);
+  const listener = a.backend.listener;
+  a.engine.stop();
+  const said = a.reach.length;
+  release();
+  await a.engine.idle();
+  ok("a read that fails after the stop: nothing said", a.reach.length === said, a.reach);
+  listener.onLost();
+  listener.onSnapshot(a.backend.cloud.snapshot("A"));
+  ok("nor its listener's news", a.reach.length === said && a.reach.at(-1).lastContact === null, a.reach);
+});
+
 await scenario("full sync offline fails without touching anything", async ({ add }) => {
   const b = await add("B");
   b.dispatch(N.addNote(newNote("b1", "mine")));

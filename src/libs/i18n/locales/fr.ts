@@ -431,7 +431,7 @@ const fr = {
     title: "Des appareils connectés",
     lastSync: "Dernière synch.: ",
     error_fetching: "Impossible de charger les appareils",
-    error_body: "Le cloud a répondu par une erreur. Réessayez dans un instant.",
+    error_body: "Un problème est survenu lors de la lecture. Réessayez dans un instant.",
     offline_body: "Vos appareils s'afficheront ici dès que vous serez de nouveau en ligne.",
     upToDate: "À jour",
     pending: "{{count}} en attente",

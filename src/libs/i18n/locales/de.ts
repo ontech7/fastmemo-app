@@ -432,7 +432,7 @@ const de = {
     title: "Verbundene Geräte",
     lastSync: "Letzte Sync.: ",
     error_fetching: "Geräte konnten nicht geladen werden",
-    error_body: "Die Cloud hat mit einem Fehler geantwortet. Versuchen Sie es gleich noch einmal.",
+    error_body: "Beim Lesen ist etwas schiefgelaufen. Versuchen Sie es gleich noch einmal.",
     offline_body: "Ihre Geräte erscheinen hier, sobald Sie wieder online sind.",
     upToDate: "Aktuell",
     pending: "{{count}} ausstehend",

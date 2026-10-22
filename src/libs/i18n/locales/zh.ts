@@ -414,7 +414,7 @@ const zh = {
     title: "连接的设备",
     lastSync: "上次同步：",
     error_fetching: "无法加载设备",
-    error_body: "云端返回了错误，请稍后重试。",
+    error_body: "读取时出了点问题，请稍后重试。",
     offline_body: "恢复联网后，你的设备会显示在这里。",
     upToDate: "已是最新",
     pending: "{{count}} 项待同步",

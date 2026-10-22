@@ -51,6 +51,7 @@ export default function BlinkingDot({
       style={[{ width: size, height: size }, style]}
       accessibilityLabel={accessibilityLabel}
       aria-hidden={!accessibilityLabel}
+      focusable={false}
     >
       {animation === "ping" && <Animated.View style={[StyleSheet.absoluteFill, dot, ringStyle]} />}
       <Animated.View style={[dot, animatedStyle]} />

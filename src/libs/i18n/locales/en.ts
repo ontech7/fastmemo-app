@@ -423,7 +423,7 @@ const en = {
     title: "Synced Devices",
     lastSync: "Last sync: ",
     error_fetching: "Couldn't load the devices",
-    error_body: "The cloud answered with an error. Try again in a moment.",
+    error_body: "Something went wrong while reading them. Try again in a moment.",
     offline_body: "Your devices will show up here once you're back online.",
     upToDate: "Up to date",
     pending: "{{count}} pending",
