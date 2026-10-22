@@ -12,8 +12,13 @@ metadata:
 # FastMemo Release Skill
 
 > The single source of truth for cutting a FastMemo release. A release is always the same mechanical sequence: bump versions,
-> write the developer changelogs (verbose), write the user changelogs (concise, translated), refresh the README badges, and
-> reconcile the docs. Follow every step in order.
+> write the changelog (short, for users, translated), refresh the README badges, and reconcile the docs. Follow every step in
+> order.
+
+There is **one changelog**: the user changelog in the app's locales. The app shows it, Play gets it as release notes, the
+desktop updater shows it (`latest.json`), and the `publish` workflow writes the GitHub release from its English text
+(`scripts/changelog-notes.mjs`) plus a link to the full comparison. The details of a change live in the commits, ADRs and
+lessons, never in a changelog.
 
 FastMemo has **two independent version tracks** — Mobile (Expo/React Native) and Desktop (Tauri). A release may bump one or
 both. If a platform had no changes, leave its version untouched and skip its changelog.
@@ -63,30 +68,13 @@ Split every change into:
 
 - **Platform** — mobile-only (e.g. an Android keyboard fix), desktop-only (e.g. the Tauri launch-flash / splash window), or
   both. Put each change only where it applies.
-- **Audience** — a headline feature users actually notice, or everything else (internal plumbing, perf/reliability tweaks, minor
-  fixes). The developer changelog lists **both**; the user changelog keeps only the headline features and buckets all the rest.
+- **Audience** — a headline feature users actually notice, or everything else. Only the headline features get a bullet; the rest
+  collapses into the final catch-all bullet, and what users never see (refactors, SDK bumps, CI, a label in About) isn't
+  mentioned at all.
 
 ---
 
-## Step 3 — Developer changelogs (`docs/`) — VERBOSE, complete, English
-
-Prepend a new `## vX.Y.Z` section at the **top** of:
-
-- `docs/CHANGELOG_MOBILE.md` (mobile version)
-- `docs/CHANGELOG_DESKTOP.md` (desktop version)
-
-Rules:
-
-- English, one `- ` bullet per change, clear and concise but **complete**.
-- List **everything** since the last release — features, fixes, refactors, build/infra, dependency bumps, SDK upgrades. **No
-  `- Various fixes and improvements.` catch-all here**: that bucket belongs only to the user changelog. This file is the full
-  record for developers.
-- Lead with the biggest items (a new security model, a major feature) so the section reads top-down by impact.
-- Tailor each file to its platform (don't put a desktop-only launch fix in the mobile changelog, and vice-versa).
-
----
-
-## Step 4 — User changelogs — CONCISE, max 5 bullets, translated
+## Step 3 — The changelog — short, for users, max 5 bullets, translated
 
 Two parts, kept in sync.
 
@@ -116,13 +104,15 @@ Rules:
 - **Max 5 bullets, often 3–4.** Keep only the headline features users actually care about (e.g. a new encryption model, a new
   capture flow, a revamped screen). Everything else — including changes users don't perceive as features, like "more reliable
   sync" or "smoother editor" — collapses into the final `• Various fixes and improvements.` bullet (translated).
+- Written for users: what they can do now, in their words. No ADR/LL numbers, file names, library names or internal terms.
+- It's also the Play release notes: **at most 500 characters per language**.
 - **Translate the text** into each language (don't leave English in the other locales). Match the existing per-locale phrasing
   for "Various fixes and improvements".
 - Every locale must get the key, or `t()` will render the raw key string. The 7 locales: en, it, es, fr, de, zh, ja.
 
 ---
 
-## Step 5 — README badges
+## Step 4 — README badges
 
 `README.md` has two version badges near the top — update the one(s) for the released track(s):
 
@@ -134,7 +124,7 @@ Also update any README prose only if a user-facing feature changed the documente
 
 ---
 
-## Step 6 — Reconcile docs (CLAUDE.md + knowledge)
+## Step 5 — Reconcile docs (CLAUDE.md + knowledge)
 
 If the release changed the **stack or structure**, update the now-stale facts:
 
@@ -146,10 +136,11 @@ Skip this step for a pure feature/fix release that didn't move files or bump the
 
 ---
 
-## Step 7 — Verify
+## Step 6 — Verify
 
 ```bash
 npx tsc --noEmit                 # locale .ts + changelog.tsx must still type-check
+node scripts/changelog-notes.mjs mobile X.Y.Z   # the English notes the GitHub release will show (and web X.Y.Z for desktop)
 npx prettier --check "src/libs/i18n/locales/*.ts" app/changelog.tsx
 node scripts/i18n.test.mjs       # every locale has exactly the keys of en.ts
 ```
@@ -164,7 +155,7 @@ English (missing from `en` too: the raw key).
 A JS-only fix can reach installed apps without a store release (ADR-014). It is **not** a release: no version bump, no changelog
 entry, no README badge. The flow (gate with `yarn ota:check`, dispatch of the Publish OTA workflow, tags, close-out) lives in
 the **`mobile-release`** skill (`/mobile-release`, user-invoked): don't duplicate it here. The store release itself (this
-skill's Steps 1–7, then the build and the `publish` workflow) is also driven by it.
+skill's Steps 1–6, then the build and the `publish` workflow) is also driven by it.
 
 ---
 
@@ -172,9 +163,9 @@ skill's Steps 1–7, then the build and the `publish` workflow) is also driven b
 
 A desktop-only fix (mobile unchanged) is a signed desktop release, offered by the in-app updater:
 
-1. Do Steps 1–5 for the **Desktop** track only: the 4 desktop version files, `docs/CHANGELOG_DESKTOP.md`, the
-   `app/changelog.tsx` entry with `changelog.web.description_X_Y_Z` in the 7 locales (the English one becomes the update's notes
-   in `latest.json`), the README desktop badge.
+1. Do Steps 1–4 for the **Desktop** track only: the 4 desktop version files, the `app/changelog.tsx` entry with
+   `changelog.web.description_X_Y_Z` in the 7 locales (the English one becomes the update's notes in `latest.json` and the
+   release text), the README desktop badge.
 2. The website must be live with `/api/version`'s `desktop.downloadUrl` (fastmemo-website `8f6be53`, 2026-10-21): older deploys
    build the download links on the latest release, where a hotfix's installers aren't (404).
 3. Merge to `main`, then run the **publish** workflow with **desktop_only** ticked (Actions tab, from `main`) or
@@ -195,9 +186,8 @@ version in their name) and a desktop version older than the published one (a bra
 ## Final checklist
 
 - [ ] All 6 version files bumped for each released track (+ `Cargo.lock`)
-- [ ] `docs/CHANGELOG_*.md` — verbose, complete, platform-correct, prepended at top
 - [ ] `app/changelog.tsx` — new entry in the right branch, `description_X_Y_Z` key
-- [ ] 7 locales — concise (≤5 bullets), translated, "Various fixes and improvements" catch-all
+- [ ] 7 locales — concise (≤5 bullets, ≤500 characters), for users, translated, "Various fixes and improvements" catch-all
 - [ ] README badge(s) updated
 - [ ] CLAUDE.md / knowledge reconciled if stack or structure changed
 - [ ] `tsc` clean

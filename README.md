@@ -99,13 +99,12 @@ How it all works, from the first sync to the encryption design: [Cloud Sync](doc
 
 ## Documentation
 
-| Document                                         | Description                                   |
-| ------------------------------------------------ | --------------------------------------------- |
-| [Cloud Sync](docs/CLOUD_SYNC.md)                 | Firebase or FastMemo Server, encryption       |
-| [Changelog (Mobile)](docs/CHANGELOG_MOBILE.md)   | Version history for Android                   |
-| [Changelog (Desktop)](docs/CHANGELOG_DESKTOP.md) | Version history for Desktop                   |
-| [Self-Hosting Guide](docs/SELF_HOSTING.md)       | Host the Fast Memo web app yourself           |
-| [Tauri Setup](docs/TAURI_SETUP.md)               | Build the desktop app (macOS, Windows, Linux) |
+| Document                                                     | Description                                   |
+| ------------------------------------------------------------ | --------------------------------------------- |
+| [Cloud Sync](docs/CLOUD_SYNC.md)                             | Firebase or FastMemo Server, encryption       |
+| [Releases](https://github.com/ontech7/fastmemo-app/releases) | What's new in each version (Android, desktop) |
+| [Self-Hosting Guide](docs/SELF_HOSTING.md)                   | Host the Fast Memo web app yourself           |
+| [Tauri Setup](docs/TAURI_SETUP.md)                           | Build the desktop app (macOS, Windows, Linux) |
 
 ## Desktop Installation
 

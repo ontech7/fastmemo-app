@@ -21,7 +21,7 @@
 - Some libraries require native-side patching (metro.config.js has WebView + Sentry patches)
 
 **Updated (June 2026):** upgraded to Expo SDK 56 / React Native 0.85 (React 19.2). The decision stands; only the baseline
-versions moved. See `docs/CHANGELOG_MOBILE.md` v3.2.0.
+versions moved (release v3.2.0).
 
 ---
 
@@ -1274,3 +1274,27 @@ left the device.
   NetInfo, in the same tick as `useNetInfo`), and the server's poll starts its backoff over when woken on purpose. A stopped
   engine, and a task from before a stop, report nothing (sync turned off while a read was timing out showed the line).
 
+
+---
+
+## ADR-030: One Changelog, Written for Users
+
+**Status:** Accepted (2026-10-22, user decision after the v4.0.0 release: the GitHub release was "un papiro" with ADR numbers and
+a line on the developer's role in About; "overkill, over-engineered")  
+**Context:** Each release had two changelogs: `docs/CHANGELOG_MOBILE.md` / `CHANGELOG_DESKTOP.md`, verbose and complete for
+developers (every fix, refactor, SDK bump, ADR/LL references), which the `publish` workflow put in the GitHub release; and the
+user changelog in the 7 locales (≤5 bullets), shown in the app, on Play and by the desktop updater. The release, the page users
+open to see what's new, showed the developer one, and every release meant writing both.
+
+**Decision:**
+
+- **One changelog:** the user changelog in the locales (`changelog.mobile` / `changelog.web`, `description_X_Y_Z`). The app,
+  Play, `latest.json` and the GitHub release all show it.
+- **The GitHub release** is built by `publish.yml` from the English entries (`scripts/changelog-notes.mjs`): "📱 Mobile X.Y.Z"
+  and "🖥 Desktop A.B.C" sections, then a "Full changes" link comparing with the previous release. A missing entry stops the
+  run before anything is built.
+- **It's written for users:** what they can do now, no ADR/LL numbers, file or library names, nothing they never see.
+- `docs/CHANGELOG_*.md` are removed: the history is in the GitHub releases and git; the details of a change live in its commits,
+  ADRs and lessons.
+
+**Alternatives rejected:** keeping the developer changelogs but shorter (still two texts per release, and the same drift).
