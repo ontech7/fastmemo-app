@@ -41,10 +41,10 @@ walk you through it, from trying it on your computer in five minutes to a Raspbe
 
 You'll need:
 
-- **Server address** - `https://...` (the web app needs HTTPS; Android and the desktop app also accept `http://` after a
-  warning: over HTTP your device's credentials and note titles travel unencrypted on every network it joins, so prefer HTTPS:
-  the guide shows the easy ways, such as Tailscale)
-- **Access key** - set on the server, or generated on its first start
+- **Server address** - `https://...` or `http://...`. The web app needs HTTPS; Android and the desktop app also accept HTTP.
+  HTTP isn't encrypted, which is fine through Tailscale or a VPN like WireGuard (the tunnel encrypts it): the app doesn't warn
+  for Tailscale addresses, and asks for a confirmation for the others
+- **Access key** - the `FASTMEMO_ACCESS_KEY` set on the server
 
 The server is one **vault** too: every device connects with the same address and key, plus the **encryption password**. It
 allows 10 devices by default (`MAX_DEVICES`). Its dashboard (the server's address in a browser) shows the devices, the reads,

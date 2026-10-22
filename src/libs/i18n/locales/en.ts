@@ -338,12 +338,11 @@ const en = {
       url: "Server address",
       key: "Access key",
       http_warning:
-        "This address isn't encrypted (HTTP). On any network your device is on (public Wi-Fi, a shared router, the way to your server), whoever can see the traffic could read your note titles and your device's credentials, and use them on your server. The content of your notes stays end-to-end encrypted. Use HTTPS if you can: a reverse proxy with a certificate, or Tailscale, which gives the server an HTTPS address for free (see the guide).",
-      http_blocked:
-        "Here FastMemo can only reach HTTPS addresses (or a server on this same computer): the browser engine blocks HTTP. Put the server behind HTTPS: a reverse proxy with a certificate, or Tailscale, which gives it an HTTPS address for free (see the guide).",
+        "HTTP isn't encrypted: fine through Tailscale or a VPN like WireGuard, which encrypt it. Elsewhere, prefer HTTPS.",
+      http_blocked: "In the browser, FastMemo only reaches HTTPS addresses. For HTTP, use the Android or desktop app.",
       http_confirm_title: "Connect over HTTP?",
       http_confirm_desc:
-        "Without HTTPS, what your device sends isn't encrypted, on whatever network it's on: at home, on public Wi-Fi, on the way to your server. Whoever can see it could read your note titles and your device's credentials. With those they could connect to your server: they couldn't read your notes without your encryption password, but they could delete or change them and remove your devices.\n\nThe guide shows how to get HTTPS for free with Tailscale.",
+        "HTTP isn't encrypted. Through Tailscale or a VPN like WireGuard that's fine: the tunnel already encrypts the traffic. On an open network, whoever sees the traffic could read your note titles and your device's credentials; your notes' content stays end-to-end encrypted.",
       http_confirm_ok: "Use HTTP",
       handshake_failed_desc:
         "Couldn't reach the server, or the access key is wrong. Check the address (e.g. https://notes.example.com), the key, and that the server is running. A server without HTTPS needs http:// typed before its address. The web app needs an HTTPS address.",

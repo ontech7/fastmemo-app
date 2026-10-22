@@ -338,13 +338,12 @@ const es = {
     server: {
       url: "Dirección del servidor",
       key: "Clave de acceso",
-      http_warning:
-        "Esta dirección no está cifrada (HTTP). En cualquier red en la que esté tu dispositivo (wifi pública, un router compartido, el camino hasta tu servidor), quien pueda ver el tráfico podría leer los títulos de tus notas y las credenciales de tu dispositivo, y usarlas en tu servidor. El contenido de tus notas sigue cifrado de extremo a extremo. Si puedes, usa HTTPS: un proxy inverso con certificado, o Tailscale, que le da al servidor una dirección HTTPS gratis (consulta la guía).",
+      http_warning: "HTTP no está cifrado: sin problema con Tailscale o una VPN como WireGuard. Si no, mejor HTTPS.",
       http_blocked:
-        "Aquí FastMemo solo puede conectarse a direcciones HTTPS (o a un servidor en este mismo ordenador): el motor del navegador bloquea HTTP. Pon el servidor detrás de HTTPS: un proxy inverso con certificado, o Tailscale, que le da una dirección HTTPS gratis (consulta la guía).",
+        "En el navegador, FastMemo solo se conecta a direcciones HTTPS. Para HTTP, usa la app de Android o de escritorio.",
       http_confirm_title: "¿Conectar por HTTP?",
       http_confirm_desc:
-        "Sin HTTPS, lo que envía tu dispositivo no está cifrado, en cualquier red en la que esté: en casa, en una wifi pública, en el camino hasta tu servidor. Quien pueda verlo podría leer los títulos de tus notas y las credenciales de tu dispositivo. Con ellas podría conectarse a tu servidor: no podría leer tus notas sin tu contraseña de cifrado, pero sí borrarlas o cambiarlas y quitar tus dispositivos.\n\nLa guía explica cómo tener HTTPS gratis con Tailscale.",
+        "HTTP no está cifrado. Con Tailscale o una VPN como WireGuard no hay problema: el túnel ya cifra el tráfico. En una red abierta, quien vea el tráfico podría leer los títulos de tus notas y las credenciales de tu dispositivo; el contenido de tus notas sigue cifrado de extremo a extremo.",
       http_confirm_ok: "Usar HTTP",
       handshake_failed_desc:
         "No se pudo conectar con el servidor o la clave de acceso es incorrecta. Revisa la dirección (p. ej. https://notas.ejemplo.com), la clave y que el servidor esté encendido. Para un servidor sin HTTPS, escribe http:// delante de la dirección. La app web necesita una dirección HTTPS.",
