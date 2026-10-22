@@ -315,6 +315,10 @@ offline-first flow is:
 - On transient failures, items stay in the outbox and are retried automatically; nothing leaves the outbox until committed.
 - Only handshake-level failures (invalid credentials, device evicted) and the user-visible outcomes of a merge (data synced, a
   conflict copy made, the open note trashed elsewhere) are surfaced, from `SyncOnProvider` / `useLiveNote`.
+- One exception (ADR-029): a cloud whose reads have failed for 30 s with no answer between, while the device is online (a
+  server behind a VPN left off), shows a quiet line in the home in place of the category (`CloudUnreachableLine`, through
+  `useCloudStatus`), gone once it answers. Never a toast or a banner, never for an offline device, nothing in Redux: the
+  engine reports `onReachability` on a change, `sync.ts` keeps the state and the 30 s timer.
 
 If observability is needed for a new cloud-sync feature, use Sentry breadcrumbs inside the engine, not Redux state. See LL-004.
 

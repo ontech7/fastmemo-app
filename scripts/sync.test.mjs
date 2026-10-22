@@ -732,6 +732,8 @@ const makeDevice = async (cloud, name, opts = {}) => {
     locked: false,
     /** The notes the engine made offline for their size (onTooLarge). */
     tooLarge: [],
+    /** What the engine said about the cloud answering (onReachability), in order. */
+    reach: [],
     /** What the engine reported, in order, with persist() calls ("persist" when one starts, "persisted" when done). */
     log: [],
     /** How long persist() takes. */
@@ -781,6 +783,7 @@ const makeDevice = async (cloud, name, opts = {}) => {
       onRemoved: () => (device.removed = true),
       onVaultStale: () => (device.stale = true),
       onTooLarge: (notes) => device.tooLarge.push(...notes),
+      onReachability: (state) => device.reach.push({ ...state }),
     },
   });
   return device;
@@ -1076,6 +1079,32 @@ await scenario("full sync merges, never drops", async ({ cloud, add, settle }) =
   await settle();
   ok("the cloud gets B's notes again", cloud.notes.has("n1") && cloud.notes.has("b1"));
   ok("no note was dropped anywhere", b.live().length === 2 && a.live().length === 2);
+});
+
+await scenario("the cloud stops answering, then answers again: said once each way (ADR-029)", async ({ add, settle }) => {
+  const a = await add("A");
+  a.engine.start();
+  await settle();
+  ok("it answers: nothing said", a.reach.length === 0, a.reach);
+  goOffline(a);
+  await a.engine.resume();
+  await settle();
+  ok(
+    "it fails: said once, with when it started and its last answer",
+    a.reach.length === 1 && a.reach[0].failingSince !== null && a.reach[0].lastContact !== null,
+    a.reach
+  );
+  await a.engine.resume();
+  await settle();
+  ok("it still fails: not said again", a.reach.length === 1, a.reach);
+  await goOnline(a);
+  await settle();
+  ok("it answers again: said", a.reach.length === 2 && a.reach[1].failingSince === null, a.reach);
+  goOffline(a);
+  await a.engine.resume();
+  await settle();
+  a.engine.stop();
+  ok("stopped while failing: nothing to tell any more", a.reach.at(-1)?.failingSince === null, a.reach);
 });
 
 await scenario("full sync offline fails without touching anything", async ({ add }) => {

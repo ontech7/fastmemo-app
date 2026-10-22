@@ -83,7 +83,8 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
     keyed cache
 16. **Never surface cloud-sync transient failures to the user** (no banners/toasts for `.rejected` of sync thunks, no
     `syncStatus`/`syncError` in slices). Cloud sync is silent by design: offline is not an error, the outbox retries
-    automatically, and only handshake-level failures are surfaced (see LL-004)
+    automatically, and only handshake-level failures are surfaced (see LL-004). The one exception: a cloud that hasn't
+    answered for 30 s while the device is online gets a quiet line in the home, gone once it answers (ADR-029)
 17. **Never let an errored/empty cloud read drive a destructive write** -- model reads as tri-state (present/absent/error), and
     on doubt skip-and-keep-local (a missed sync self-heals; a wrongful overwrite is permanent). See LL-023 and ADR-012
 18. **Never trust a decrypt that didn't throw** -- AES-CBC produces valid-looking garbage on the wrong key. Verify the

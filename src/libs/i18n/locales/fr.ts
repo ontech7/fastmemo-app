@@ -301,6 +301,13 @@ const fr = {
       "« {{title}} » est trop volumineuse pour ce cloud : elle est maintenant hors ligne, sur cet appareil uniquement.",
     notes_too_large:
       "{{count}} notes sont trop volumineuses pour ce cloud : elles sont maintenant hors ligne, sur cet appareil uniquement.",
+    unreachable_server: "Serveur injoignable",
+    unreachable_firebase: "Firebase injoignable",
+    unreachable_pending: "{{count}} en attente",
+    unreachable_body: "Vos modifications restent sur cet appareil et partent d'elles-mêmes dès qu'il est de nouveau joignable.",
+    unreachable_pending_notes: "Notes en attente d'envoi : {{count}}.",
+    unreachable_last: "Dernière synchronisation : {{time}}.",
+    unreachable_vpn: "Si vous vous connectez via un VPN (WireGuard, par exemple), vérifiez qu'il est activé.",
     conflict_copies:
       "Modifiée sur deux appareils avant la synchronisation : les deux versions ont été gardées (l'une en copie)",
     open_on: "Ouverte sur {{devices}}",

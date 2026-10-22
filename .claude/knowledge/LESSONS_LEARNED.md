@@ -160,6 +160,10 @@ Sentry breadcrumbs around the thunk, not Redux state.
 The outbox pattern + `netInfo` gate + implicit retry is the supported mechanism for eventual consistency. Only handshake-level
 failures (which imply the connection itself is invalid) are surfaced to the user.
 
+**Update (2026-10-22, ADR-029):** a self-hosted server made one failure user-actionable: the device online but the server out
+of reach (a VPN left off, the server down). It is shown, quietly: a line in the home after 30 s with no answer, gone once it
+answers; no toast, nothing for an offline device, nothing in Redux. Everything else above still holds.
+
 **Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/21 **Status:** Resolved (wontfix, by design)  
 **Resolved:** 2026-04-22  
 **Resolved in:** docs/issue-21-ll-004-wontfix (LESSONS_LEARNED + CONVENTIONS)

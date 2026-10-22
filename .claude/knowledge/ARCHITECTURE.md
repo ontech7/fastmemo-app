@@ -51,6 +51,7 @@ src/
       # ... 8 more settings screens
 
   components/          # UI components (domain-grouped)
+    cloud/             # CloudUnreachableLine: the home's line when the cloud can't be reached (ADR-029)
     buttons/           # 26 button components (each a single-purpose TouchableOpacity)
     cards/             # NoteCard, TrashedNoteCard, OrganizeCategoryCard, OrderedCategoryCard
     notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor; NoteImageMenu (ADR-024)

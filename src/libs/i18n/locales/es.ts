@@ -300,6 +300,13 @@ const es = {
     note_too_large: "«{{title}}» es demasiado grande para esta nube: ahora está sin conexión, solo en este dispositivo.",
     notes_too_large:
       "{{count}} notas son demasiado grandes para esta nube: ahora están sin conexión, solo en este dispositivo.",
+    unreachable_server: "Servidor inaccesible",
+    unreachable_firebase: "Firebase inaccesible",
+    unreachable_pending: "{{count}} en espera",
+    unreachable_body: "Tus cambios se quedan en este dispositivo y se envían solos en cuanto vuelva a estar accesible.",
+    unreachable_pending_notes: "Notas pendientes de envío: {{count}}.",
+    unreachable_last: "Última sincronización: {{time}}.",
+    unreachable_vpn: "Si te conectas con una VPN (por ejemplo WireGuard), comprueba que esté activa.",
     conflict_copies: "Editada en dos dispositivos antes de sincronizar: se guardaron ambas versiones (una como copia)",
     open_on: "Abierta en {{devices}}",
     note_deleted_elsewhere: "Esta nota se movió a la papelera en otro dispositivo. Editarla la recupera.",

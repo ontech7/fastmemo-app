@@ -25,6 +25,7 @@
 - Smaller fixes: longer auto-titles cut at a word boundary, changelog bullets with hanging indents, the to-do progress as one translated sentence, no splash logo stuck on screen after closing every screen at once on a reloaded page.
 - Help brought up to date, with new topics on the quick-note bar, the conflict copies and the desktop shortcuts; translations fixed (German "Sie" and umlauts, accents in Italian, Spanish and French, several wrong strings).
 - The website moved to fastmemo.losav.cc: the app's links and update check use it, and its version API now answers the desktop app (CORS).
+- A cloud out of reach while the device is online (a FastMemo server behind a VPN left off, or down) gets a quiet line under the home's title after 30 s, in place of the category, gone once it answers; a tap says the changes stay on the device and go out by themselves, the notes waiting and the last sync, and offers Retry (ADR-029). No toast, nothing for an offline device.
 
 ## v1.2.0
 
