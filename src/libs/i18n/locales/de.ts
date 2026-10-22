@@ -299,6 +299,14 @@ const de = {
     conflict_suffix: "(Konflikt)",
     note_too_large: "„{{title}}“ ist zu groß für diese Cloud: Die Notiz ist jetzt offline, nur auf diesem Gerät.",
     notes_too_large: "{{count}} Notizen sind zu groß für diese Cloud: Sie sind jetzt offline, nur auf diesem Gerät.",
+    unreachable_server: "Server nicht erreichbar",
+    unreachable_firebase: "Firebase nicht erreichbar",
+    unreachable_pending: "{{count}} wartend",
+    unreachable_body:
+      "Ihre Änderungen bleiben auf diesem Gerät und werden automatisch gesendet, sobald er wieder erreichbar ist.",
+    unreachable_pending_notes: "Notizen, die auf das Senden warten: {{count}}.",
+    unreachable_last: "Letzte Synchronisierung: {{time}}.",
+    unreachable_vpn: "Wenn Sie sich über ein VPN verbinden (zum Beispiel WireGuard), prüfen Sie, ob es aktiv ist.",
     conflict_copies: "Vor dem Synchronisieren auf zwei Geräten bearbeitet: Beide Versionen wurden behalten (eine als Kopie)",
     open_on: "Geöffnet auf {{devices}}",
     note_deleted_elsewhere:

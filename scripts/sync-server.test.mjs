@@ -995,6 +995,7 @@ try {
         onRemoved: () => (device.removed = true),
         onVaultStale: () => (device.stale = true),
         onTooLarge: () => {},
+        onReachability: () => {},
       },
     });
     cleanups.push(() => device.engine.stop());

@@ -12,7 +12,7 @@ import { CryptNote, tryDecryptNote } from "@/utils/crypt";
 import { dekMatchesVault } from "@/utils/vault";
 
 import { cloud, getDeviceUuid } from "./index";
-import { SyncEngine, type SyncEvents, type SyncStore } from "./syncEngine";
+import { type CloudReachability, SyncEngine, type SyncEvents, type SyncStore } from "./syncEngine";
 import type { CloudDevice } from "./types";
 
 /** What the sync engine reports to the app (UI, editors, presence). */
@@ -22,7 +22,8 @@ export type SyncEvent =
   | { type: "devices"; devices: CloudDevice[] }
   | { type: "removed" }
   | { type: "vaultStale" }
-  | { type: "tooLarge"; notes: { id: string; title: string }[] };
+  | { type: "tooLarge"; notes: { id: string; title: string }[] }
+  | { type: "reachability" };
 
 const listeners = new Set<(event: SyncEvent) => void>();
 
@@ -34,6 +35,47 @@ export const onSyncEvent = (listener: (event: SyncEvent) => void): (() => void) 
 };
 
 const emit = (event: SyncEvent) => listeners.forEach((listener) => listener(event));
+
+/** How long the cloud fails, with no answer between, before the home says it can't be reached (ADR-029). */
+const UNREACHABLE_AFTER_MS = 30_000;
+
+export interface CloudStatus {
+  /** The cloud's reads have failed for UNREACHABLE_AFTER_MS, with no answer since. */
+  unreachable: boolean;
+  /** Its last answer (null: none since the app started). */
+  lastContact: number | null;
+}
+
+let cloudStatus: CloudStatus = { unreachable: false, lastContact: null };
+let unreachableTimer: ReturnType<typeof setTimeout> | null = null;
+
+const setCloudStatus = (next: CloudStatus) => {
+  if (next.unreachable === cloudStatus.unreachable && next.lastContact === cloudStatus.lastContact) return;
+  cloudStatus = next;
+  emit({ type: "reachability" });
+};
+
+/** The engine's report, turned into what the home shows: unreachable only once it has failed long enough. */
+const onReachability = ({ failingSince, lastContact }: CloudReachability) => {
+  if (unreachableTimer) clearTimeout(unreachableTimer);
+  unreachableTimer = null;
+  if (failingSince === null) return setCloudStatus({ unreachable: false, lastContact });
+  const wait = failingSince + UNREACHABLE_AFTER_MS - Date.now();
+  if (wait <= 0) return setCloudStatus({ unreachable: true, lastContact });
+  setCloudStatus({ unreachable: false, lastContact });
+  unreachableTimer = setTimeout(() => {
+    unreachableTimer = null;
+    setCloudStatus({ unreachable: true, lastContact });
+  }, wait);
+};
+
+/** Whether the cloud can be reached, for the home (`useCloudStatus`). */
+export const getCloudStatus = (): CloudStatus => cloudStatus;
+
+/** Asks the cloud again now ("Retry"): reopens the connection, then pulls and pushes. */
+export const reconnectNow = async (): Promise<void> => {
+  await (await getSyncEngine())?.resume();
+};
 
 let engine: SyncEngine | null = null;
 
@@ -82,6 +124,7 @@ export const getSyncEngine = async (): Promise<SyncEngine | null> => {
       onRemoved: () => emit({ type: "removed" }),
       onVaultStale: () => emit({ type: "vaultStale" }),
       onTooLarge: (notes) => emit({ type: "tooLarge", notes }),
+      onReachability,
     },
   });
   return engine;

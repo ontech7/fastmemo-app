@@ -300,6 +300,13 @@ const it = {
     conflict_suffix: "(conflitto)",
     note_too_large: "«{{title}}» è troppo grande per questo cloud: ora è offline, solo su questo dispositivo.",
     notes_too_large: "{{count}} note sono troppo grandi per questo cloud: ora sono offline, solo su questo dispositivo.",
+    unreachable_server: "Server non raggiungibile",
+    unreachable_firebase: "Firebase non raggiungibile",
+    unreachable_pending: "{{count}} in attesa",
+    unreachable_body: "Le modifiche restano su questo dispositivo e partono da sole appena torna raggiungibile.",
+    unreachable_pending_notes: "Note in attesa di invio: {{count}}.",
+    unreachable_last: "Ultima sincronizzazione: {{time}}.",
+    unreachable_vpn: "Se ti colleghi con una VPN (per esempio WireGuard), controlla che sia attiva.",
     conflict_copies:
       "Modificata su due dispositivi prima della sincronizzazione: sono state tenute entrambe le versioni (una come copia)",
     open_on: "Aperta su {{devices}}",

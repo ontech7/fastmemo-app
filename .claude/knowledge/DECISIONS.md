@@ -1213,3 +1213,40 @@ background app's network work. The user had to stay on the screen with the scree
   like the private files, and not readable by other apps;
 - the progress shows in a system notification with the download manager's look, title the model's name;
 - a download that ends while the app is closed is moved into place at the next start: until then the AI stays off.
+
+## ADR-029: A Cloud Out of Reach Gets a Quiet Line in the Home
+
+**Status:** Accepted (2026-10-22, user decision: "niente di invasivo, niente spam"; a line under the title, in place of the
+category, over an icon in the header or a status in the settings only)  
+**Context:** Cloud sync is silent by design (LL-004): offline is not an error and the outbox retries. With Firebase, a device
+online that can't reach the cloud is rare. A self-hosted FastMemo server makes it common and actionable: a server reached
+through a VPN (WireGuard) the user forgot to turn on, a server at home that's down. The app then looked synced while nothing
+left the device.
+
+**Decision:**
+
+- **The engine tells whether the cloud answers** (`SyncEvents.onReachability`): a read that answers (a snapshot from the
+  server, a pull, the vault) or fails (a listener error, a failed pull or vault read). Only on a change: `failingSince` set when
+  the reads start failing with no answer since, null when one answers again or the engine stops; `lastContact` its last
+  answer. Pushes don't count: a refused push is not an unreachable cloud.
+- **`sync.ts` turns it into what the home shows** (`getCloudStatus`, the `reachability` sync event): unreachable once the cloud
+  has failed for 30 s (`UNREACHABLE_AFTER_MS`), a timer from the first failure. `useCloudStatus` adds the network: offline,
+  nothing (the user knows).
+- **The line** (`CloudUnreachableLine`) takes the place of the category and count under the home's title: "Server
+  unreachable · 3 waiting" (or Firebase), in yellow on the category's pill. A tap opens a dialog: the changes stay on the device
+  and go out by themselves, the notes waiting, the last sync, for a server a hint to check the VPN; Close or Retry
+  (`reconnectNow`: reopen the connection, pull, push).
+- Nothing else: no toast when it goes or comes back, nothing in Redux, nothing per note.
+
+**Alternatives rejected:**
+
+- an icon in the header: quieter, but its meaning has to be guessed;
+- a status in Settings → Cloud Sync only: never seen when it matters;
+- a toast when the cloud stops answering: the spam LL-004 rules out (flaky networks, a server restarting).
+
+**Trade-offs:**
+
+- the category and count aren't shown while the line is (the sidebar still marks the category);
+- 30 s with a server that times out slowly can mean a minute before the line shows;
+- Firebase rarely fails while online: the line will mostly be seen with a server.
+

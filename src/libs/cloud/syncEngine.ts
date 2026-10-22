@@ -99,6 +99,16 @@ export interface SyncEvents {
   onVaultStale(): void;
   /** Notes too large for this cloud became device-only (ADR-026). */
   onTooLarge(notes: { id: string; title: string }[]): void;
+  /**
+   * The cloud stopped answering, or answers again (ADR-029): `failingSince` is when its reads started failing with no
+   * answer since (null: it answers), `lastContact` its last answer. Only on a change.
+   */
+  onReachability(state: CloudReachability): void;
+}
+
+export interface CloudReachability {
+  failingSince: number | null;
+  lastContact: number | null;
 }
 
 export interface SyncEngineOptions {
@@ -154,6 +164,8 @@ export class SyncEngine {
   private devices: CloudDevice[] = [];
   /** The latest server snapshot not processed yet. */
   private pendingSnapshot: DevicesSnapshot | null = null;
+  /** Whether the cloud answers its reads (see `reached`). */
+  private reach: CloudReachability = { failingSince: null, lastContact: null };
   /** Counts the listener's snapshots: a read that started before one is older than it. */
   private snapshotSeq = 0;
   /** A server snapshot was merged since start: pushes may go out. */
@@ -257,6 +269,8 @@ export class SyncEngine {
     this.pollTimer = this.heartbeatTimer = null;
     this.retryDelay = 0;
     this.pendingSnapshot = null;
+    // stopped (sync off, locked, removed): nothing to tell about the cloud any more
+    if (this.reach.failingSince !== null) this.reached(null);
     // Merged again (it's idempotent) and acknowledged on the next start.
     this.merged.clear();
     this.toAck.clear();
@@ -298,6 +312,7 @@ export class SyncEngine {
         this.adoptLegacyOutbox();
         const seq = this.snapshotSeq;
         const snapshot = await this.o.backend.pullDevices(this.o.me);
+        this.reached(!!snapshot);
         if (!snapshot) return false;
         if (this.snapshotSeq === seq) this.pendingSnapshot = snapshot;
         if (!(await this.processDevices())) return false;
@@ -389,6 +404,7 @@ export class SyncEngine {
     const { backend, me } = this.o;
     const onError = (error: unknown) => {
       console.log("sync listener:", error);
+      this.reached(false);
       this.unsubscribeListeners();
       // Firestore doesn't restart a listener that errored: subscribe again, pulling meanwhile.
       this.resubscribeDelay = Math.min(Math.max(this.resubscribeDelay * 2, RETRY_MIN_MS), RETRY_MAX_MS);
@@ -403,6 +419,7 @@ export class SyncEngine {
       me,
       (snapshot) => {
         if (!snapshot.fromServer) return;
+        this.reached(true);
         this.resubscribeDelay = 0;
         this.snapshotSeq++;
         this.pendingSnapshot = snapshot;
@@ -437,6 +454,7 @@ export class SyncEngine {
       if (!(await this.checkVault())) return;
       const seq = this.snapshotSeq;
       const snapshot = await this.o.backend.pullDevices(this.o.me);
+      this.reached(!!snapshot);
       if (!snapshot) return;
       // A listener snapshot that came meanwhile is the newer one.
       if (this.snapshotSeq === seq) this.pendingSnapshot = snapshot;
@@ -453,6 +471,7 @@ export class SyncEngine {
   /** Server read of the vault: true if this device's key opens it. */
   private async checkVault(): Promise<boolean> {
     const read = await this.o.backend.readVault();
+    this.reached(read.status !== "error");
     if (read.status === "error") return false;
     // Locked here (no key): it can't be told, and nothing can be synced either.
     const opens = read.status === "present" ? this.o.crypto.matches(read.vault) : false;
@@ -695,6 +714,19 @@ export class SyncEngine {
       this.o.events.onApplied({ changed: plan.changed, conflicts: plan.conflicts, categories: false, full: false });
     }
     return this.persisted();
+  }
+
+  /**
+   * A read of the cloud answered (true), failed (false), or the engine stopped (null). Reported on a change only: the cloud
+   * failing with no answer since, or answering again.
+   */
+  private reached(ok: boolean | null): void {
+    const now = Date.now();
+    const failingSince = ok === false ? (this.reach.failingSince ?? now) : null;
+    const lastContact = ok ? now : this.reach.lastContact;
+    const changed = failingSince !== this.reach.failingSince;
+    this.reach = { failingSince, lastContact };
+    if (changed) this.o.events.onReachability(this.reach);
   }
 
   private retry(): void {

@@ -6,6 +6,7 @@ import NoteFiltersButton from "@/components/buttons/NoteFiltersButton";
 import ProtectNotesButton from "@/components/buttons/ProtectNotesButton";
 import ReadOnlyNotesButton from "@/components/buttons/ReadOnlyNotesButton";
 import NoteCard from "@/components/cards/NoteCard";
+import CloudUnreachableLine from "@/components/cloud/CloudUnreachableLine";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import VaultPromptDialog from "@/components/dialogs/VaultPromptDialog";
 import SearchInput from "@/components/inputs/SearchInput";
@@ -16,6 +17,7 @@ import TourSpotlight from "@/components/ui/TourSpotlight";
 import WebViewWarmup from "@/components/WebViewWarmup";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { useCloudStatus } from "@/hooks/useCloudStatus";
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
 import { useVaultPrompt } from "@/hooks/useVaultPrompt";
@@ -68,6 +70,7 @@ export default function HomeScreen() {
   }, []);
 
   const router = useRouter();
+  const cloudStatus = useCloudStatus();
 
   const isFocused = useIsFocused();
   const vaultPromptNeeded = useVaultPrompt();
@@ -444,14 +447,19 @@ export default function HomeScreen() {
                 <View style={styles.titleBlock}>
                   <Text style={styles.headerTitle}>{t("home.notes")}</Text>
 
-                  <View style={styles.headerMeta}>
-                    <Text style={styles.categoryName} numberOfLines={1}>
-                      {currentCategory.name != "All" ? currentCategory.name : t("All")}
-                    </Text>
-                    <View style={styles.countBadge}>
-                      <Text style={styles.countText}>{filteredNotes.length}</Text>
+                  {/* the cloud out of reach takes the category's place, until it answers (ADR-029) */}
+                  {cloudStatus.unreachable ? (
+                    <CloudUnreachableLine lastContact={cloudStatus.lastContact} />
+                  ) : (
+                    <View style={styles.headerMeta}>
+                      <Text style={styles.categoryName} numberOfLines={1}>
+                        {currentCategory.name != "All" ? currentCategory.name : t("All")}
+                      </Text>
+                      <View style={styles.countBadge}>
+                        <Text style={styles.countText}>{filteredNotes.length}</Text>
+                      </View>
                     </View>
-                  </View>
+                  )}
                 </View>
 
                 {isDeleteMode && (
