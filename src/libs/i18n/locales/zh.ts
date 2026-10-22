@@ -522,7 +522,7 @@ const zh = {
   },
   aboutdeveloper: {
     title: "关于我",
-    freelance: "自由网络开发人员",
+    role: "Senior Software Engineer",
     information: "信息",
     developer: "开发商",
     website: "网站",

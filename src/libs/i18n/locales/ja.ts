@@ -532,7 +532,7 @@ const ja = {
   },
   aboutdeveloper: {
     title: "私について",
-    freelance: "フリーランスウェブ開発者",
+    role: "Senior Software Engineer",
     information: "情報",
     developer: "開発者",
     website: "ウェブサイト",

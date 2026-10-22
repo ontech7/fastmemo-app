@@ -42,7 +42,7 @@ export default function AboutDeveloperScreen() {
         <View style={styles.appWrapper}>
           <Image style={styles.appIcon} source={authorImage} />
 
-          <Text style={styles.appName}>{t("aboutdeveloper.freelance")}</Text>
+          <Text style={styles.appName}>{t("aboutdeveloper.role")}</Text>
         </View>
 
         <View style={styles.sectionWrapper}>

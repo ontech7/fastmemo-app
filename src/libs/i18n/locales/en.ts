@@ -534,7 +534,7 @@ const en = {
   },
   aboutdeveloper: {
     title: "About me",
-    freelance: "Freelance Web Developer",
+    role: "Senior Software Engineer",
     information: "Information",
     developer: "Developer",
     website: "Website",
