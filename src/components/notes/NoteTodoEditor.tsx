@@ -1,30 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import {
   Keyboard,
   Platform,
   StyleSheet,
   Text,
   TextInput,
+  type TextInputInstance,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
 import DraggableFlatList from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PlusIcon } from "react-native-heroicons/outline";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import uuid from "react-uuid";
 
 import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem.native";
 import AppBackground from "@/components/ui/AppBackground";
+import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName } from "@/libs/ai";
@@ -61,7 +65,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
     defaultType: "todo",
     addWebhookSelector: selectorWebhook_addTodoNote,
@@ -138,23 +142,21 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   // nothing so the user can just read. `focusId` is seeded synchronously so the
   // target row mounts with autoFocus already set — setting it after mount is a
   // no-op because RN reads `autoFocus` only once.
-  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
-  const [focusId, setFocusId] = useState<string | null>(
-    isNewNote && !initialNote.readOnly ? (memoInitialNote.list[0]?.id ?? null) : null
-  );
+  const autofocus = useAutofocusNewNote(initialNote);
+  const [focusId, setFocusId] = useState<string | null>(autofocus ? (memoInitialNote.list[0]?.id ?? null) : null);
 
   // Mount-time autoFocus is frequently dropped while the screen transition is
   // still running, so re-focus the seeded row imperatively once it settles.
   const transitionDone = useScreenTransitionEnd();
-  const focusInputRef = useRef<TextInput>(null);
+  const focusInputRef = useRef<TextInputInstance>(null);
   const didFocusRef = useRef(false);
 
   useEffect(() => {
     if (didFocusRef.current) return;
-    if (!isNewNote || initialNote.readOnly || !transitionDone) return;
+    if (!autofocus || !transitionDone) return;
     didFocusRef.current = true;
     focusInputRef.current?.focus();
-  }, [transitionDone, isNewNote, initialNote.readOnly]);
+  }, [transitionDone, autofocus]);
 
   const currentMode = stepMode ? "steps" : "free";
 
@@ -248,7 +250,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         <SafeAreaView style={styles.container}>
           <View>
             <View style={styles.header}>
-              <BackButton chip callback={updateNoteWebhook} />
+              <BackButton chip tourTarget="back" callback={updateNoteWebhook} />
 
               <TextInput
                 style={styles.titleInput}
@@ -261,20 +263,22 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                 maxLength={96}
               />
 
-              <NoteSettingsButton note={note} setNote={setNoteAsync} />
+              <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
+            <NotePresenceBanner noteId={note.id} />
 
             <View style={styles.subtitleWrapper}>
               <Text style={[styles.subtitle, { flexGrow: 1 }]}>
-                {t("note.completed")}{" "}
-                <Text
-                  style={{
-                    color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon,
+                <Trans
+                  t={t}
+                  i18nKey="note.progress"
+                  values={{ done: numberOfCheckedItems, total: numberOfAllItems }}
+                  components={{
+                    hl: (
+                      <Text style={{ color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon }} />
+                    ),
                   }}
-                >
-                  {numberOfCheckedItems}
-                </Text>{" "}
-                {t("note.on")} {numberOfAllItems}
+                />
               </Text>
             </View>
           </View>
@@ -316,24 +320,26 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                 <AIEditorActions
                   noteType="todo"
                   getContent={() =>
+                    // one item per line: the suggestions leave out what the list already has, line by line
                     note.list
                       .map((item) => item.text)
                       .filter(Boolean)
-                      .join(", ")
+                      .join("\n")
                   }
                   noteTitle={note.title}
-                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                  categoryName={note.category.name}
+                  onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                   onItemsSuggested={(items) => {
                     const newItems = items.map((text) => ({
                       id: uuid(),
                       text: capitalize(text),
                       checked: false,
                     }));
-                    setNoteAsync({ ...note, list: [...note.list, ...newItems] });
+                    updateNoteAsync((current) => ({ ...current, list: [...current.list, ...newItems] }));
                   }}
                   onCategorySuggested={(name) => {
                     const cat = findCategoryByName(name);
-                    if (cat) setNoteAsync({ ...note, category: cat });
+                    if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                   }}
                   style={dockButtonStyle}
                   menuBottomOffset={110}
@@ -361,17 +367,26 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                     setNoteAsync({ ...note, list: mutableList });
                   }}
                   aiCleanup
+                  asItems
                   style={dockButtonStyle}
                 />
               </View>
 
-              <TouchableOpacity activeOpacity={0.7} style={styles.addButton} onPress={addListItem}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.addButton}
+                onPress={addListItem}
+                accessibilityRole="button"
+                accessibilityLabel={t("a11y.add_item")}
+              >
                 <PlusIcon size={28} color={COLOR.softWhite} />
               </TouchableOpacity>
             </EditorActionDock>
           )}
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      <EditorTourTip />
     </View>
   );
 }

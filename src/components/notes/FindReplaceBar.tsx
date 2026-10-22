@@ -1,8 +1,11 @@
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ViewStyle } from "react-native";
-import { ChevronDownIcon, ChevronUpIcon, XMarkIcon } from "react-native-heroicons/outline";
+import { Platform, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View, ViewStyle } from "react-native";
+import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
+import ChevronUpIcon from "react-native-heroicons/outline/ChevronUpIcon";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
 
 /**
@@ -36,7 +39,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
   const [currentMatch, setCurrentMatch] = useState(0);
   const [showReplace, setShowReplace] = useState(false);
 
-  const searchInputRef = useRef<TextInput>(null);
+  const searchInputRef = useRef<TextInputInstance>(null);
 
   const wasVisibleRef = useRef(false);
   useEffect(() => {
@@ -219,21 +222,44 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
           placeholderTextColor={COLOR.textSecondary}
           cursorColor={COLOR.softWhite}
           returnKeyType="search"
+          testID={SHORTCUT_TARGET.find}
           onSubmitEditing={() => navigateMatch("next")}
         />
         <Text style={styles.matchCount}>{matchCount > 0 ? `${currentMatch}/${matchCount}` : "0/0"}</Text>
-        <TouchableOpacity style={styles.iconButton} onPress={() => navigateMatch("prev")} disabled={matchCount === 0}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => navigateMatch("prev")}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.previous_match")}
+          disabled={matchCount === 0}
+        >
           <ChevronUpIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.textMuted} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton} onPress={() => navigateMatch("next")} disabled={matchCount === 0}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => navigateMatch("next")}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.next_match")}
+          disabled={matchCount === 0}
+        >
           <ChevronDownIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.textMuted} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton} onPress={() => setShowReplace(!showReplace)}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => setShowReplace(!showReplace)}
+          accessibilityRole="button"
+          aria-expanded={showReplace}
+        >
           <Text style={[styles.toggleText, showReplace && { color: COLOR.accentSoft }]}>
             {t("note.find_replace.replace_short")}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton} onPress={onClose}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.close")}
+        >
           <XMarkIcon size={18} color={COLOR.softWhite} />
         </TouchableOpacity>
       </View>

@@ -27,19 +27,29 @@ export interface VoiceRecognitionSettings {
   language: string;
 }
 
+/** Where the notes sync: the user's own Firebase project, or a self-hosted FastMemo server (ADR-017). */
+export type CloudProvider = "firebase" | "server";
+
 export interface CloudSettings {
+  /** Missing in settings saved before the self-hosted server existed: Firebase. Read it with `providerOf()`. */
+  provider?: CloudProvider;
   apiKey: string;
   authDomain: string;
   projectId: string;
   storageBucket: string;
   messagingSenderId: string;
   appId: string;
+  /** The FastMemo server's address (e.g. https://notes.example.com). */
+  serverUrl?: string;
+  /** Its access key: enrolls this device (which then gets its own token). */
+  serverKey?: string;
 }
 
 export interface AIAssistantSettings {
   enabled: boolean;
   modelDownloaded: boolean;
-  selectedModel: "qwen-0.5b" | "qwen-1.5b" | "qwen-3b" | "qwen-7b";
+  /** Earlier versions stored a Qwen 2.5 id (`qwen-0.5b` ...): `selectorAIAssistant` reads it as the tier replacing it. */
+  selectedModel: "qwen3.5-0.8b" | "qwen3.5-2b" | "qwen3.5-4b";
   voiceOnly: boolean;
 }
 
@@ -62,6 +72,9 @@ export interface DeveloperModeSettings {
   customAppIcon: string | null;
 }
 
+/** Where a new install is in the first-note tour: the add button, the editor, then the note list; "done" once it's over. */
+export type TourStep = "create" | "write" | "explore" | "done";
+
 export interface SettingsState {
   language: string;
   isIntroFinished: boolean;
@@ -77,4 +90,9 @@ export interface SettingsState {
   reportDate: string | null;
   developerMode: DeveloperModeSettings;
   noteCreation: NoteCreationSettings;
+  /**
+   * A new install's first-note tour (absent for everyone else, existing users included). It ends on "done", not on a
+   * removed key: the settings are stored twice, and a key missing from one copy doesn't remove it from the other.
+   */
+  tour?: TourStep;
 }

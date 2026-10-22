@@ -137,21 +137,56 @@ export function formatVoiceTranscript(raw: string, language: string, options: Fo
 
 const escapeHtml = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+/** A list line as the AI cleanup writes it ("- milk"), or a bullet ("• milk"). */
+const LIST_LINE = /^\s*[-•*]\s+(.*)$/;
+
 /**
  * Convert formatted dictation text into HTML suitable for `RichEditor.insertHTML`,
- * turning `\n` into line breaks. A leading space keeps it detached from the word
- * before the caret.
+ * turning `\n` into line breaks and, with `lists` (text the AI wrote), runs of "- "
+ * lines into a bulleted list. A leading space keeps it detached from the word before
+ * the caret.
  */
-export function voiceTextToHtml(text: string, { leadingSpace = true }: { leadingSpace?: boolean } = {}): string {
+export function voiceTextToHtml(
+  text: string,
+  { leadingSpace = true, lists = false }: { leadingSpace?: boolean; lists?: boolean } = {}
+): string {
   if (!text) return "";
-  const html = escapeHtml(text).replace(/\n/g, "<br>");
-  return (leadingSpace ? " " : "") + html;
+  const lines = text.split("\n");
+  if (!lists || !lines.some((line) => LIST_LINE.test(line))) {
+    return (leadingSpace ? " " : "") + escapeHtml(text).replace(/\n/g, "<br>");
+  }
+
+  // text lines joined by <br>; a list is a block of its own, so no <br> (and no blank line) next to it
+  let html = "";
+  let items: string[] = [];
+  let previous: "start" | "text" | "list" = "start";
+  const flushList = () => {
+    if (!items.length) return;
+    html += `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+    items = [];
+    previous = "list";
+  };
+  lines.forEach((line, i) => {
+    const item = LIST_LINE.exec(line);
+    if (item) {
+      items.push(item[1].trim());
+      return;
+    }
+    flushList();
+    const nextIsList = i + 1 < lines.length && LIST_LINE.test(lines[i + 1]);
+    if (!line.trim() && (previous === "list" || nextIsList)) return;
+    if (previous === "text") html += "<br>";
+    html += escapeHtml(line);
+    previous = "text";
+  });
+  flushList();
+  return (leadingSpace && !html.startsWith("<ul>") ? " " : "") + html;
 }
 
-/** Split formatted dictation into individual lines (used by list-based editors). */
+/** Split formatted dictation into individual lines (used by list-based editors), without list markers. */
 export function voiceTextToLines(text: string): string[] {
   return text
     .split("\n")
-    .map((line) => line.trim())
+    .map((line) => (LIST_LINE.exec(line)?.[1] ?? line).trim())
     .filter(Boolean);
 }

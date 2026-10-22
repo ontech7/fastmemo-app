@@ -1,9 +1,9 @@
 import { createAction, createAsyncThunk } from "@reduxjs/toolkit";
 
-import type { Note } from "@/types";
 import type { AppRootState } from "@/slicers/store";
 
-import { COLLECTIONS, deleteCollectionInCloud, deleteElementInCloud, setElementInCloud } from "@/libs/firebase";
+import { cloud } from "@/libs/cloud";
+import { noteStore } from "@/libs/storage/notes";
 
 /**
  * Pure action that wipes all local notes (live + trash).
@@ -13,140 +13,21 @@ import { COLLECTIONS, deleteCollectionInCloud, deleteElementInCloud, setElementI
  */
 export const wipeNotes = createAction("notes/wipe");
 
-interface ProcessNotesParams {
-  notes: Note[];
-  deviceUuid: string;
-  devicesToSync: string[];
-  areMoreThanOneDevice: boolean;
-  operation: "add" | "delete" | "detach";
-}
-
-interface CloudSyncParams {
-  deviceUuid: string;
-  devicesToSync: string[];
-  areMoreThanOneDevice: boolean;
-}
-
-const getTimestampedNote = (note: Note): Note => ({
-  ...note,
-  createdAt: note.createdAt ?? Date.now(),
-  updatedAt: note.updatedAt ?? Date.now(),
-});
-
-const processNotes = async ({
-  notes,
-  deviceUuid,
-  devicesToSync,
-  areMoreThanOneDevice,
-  operation,
-}: ProcessNotesParams): Promise<Record<string, Note>> => {
-  const results: Record<string, Note> = {};
-
-  for (const note of notes) {
-    let primaryDone = false;
-    let secondaryDone = true;
-
-    const payload = getTimestampedNote(note);
-
-    if (operation === "add") {
-      primaryDone = await setElementInCloud({
-        collection: COLLECTIONS.data.notes,
-        identifier: note.id,
-        payload,
-      });
-    } else if (operation === "delete" || operation === "detach") {
-      // detach also removes the note from the cloud; the difference is the
-      // fan-out bucket below ("detachNotes"), which tells other devices to keep
-      // their copy but mark it offline instead of trashing it
-      primaryDone = await deleteElementInCloud({
-        collection: COLLECTIONS.data.notes,
-        identifier: note.id,
-      });
-    }
-
-    if (areMoreThanOneDevice) {
-      secondaryDone = await setElementInCloud({
-        collection: COLLECTIONS.various.connectedDevices,
-        identifier: deviceUuid,
-        payload: {
-          [`${operation}Notes`]: {
-            [note.id]: payload,
-          },
-          devicesToSync,
-        },
-        merge: true,
-      });
-    }
-
-    if (primaryDone && secondaryDone) {
-      results[note.id] = note;
-    }
-  }
-
-  return results;
-};
-
-export const addCloudNotesAsync = createAsyncThunk<Record<string, Note>, CloudSyncParams, { state: AppRootState }>(
-  "notes/addCloudNotesAsync",
-  async ({ deviceUuid, devicesToSync, areMoreThanOneDevice }, thunkAPI) => {
-    const { cloud } = thunkAPI.getState().notes;
-    const notesToAdd = Object.values(cloud.items.add);
-
-    return await processNotes({
-      notes: notesToAdd,
-      deviceUuid,
-      devicesToSync,
-      areMoreThanOneDevice,
-      operation: "add",
-    });
-  }
-);
-
-export const deleteCloudNotesAsync = createAsyncThunk<Record<string, Note>, CloudSyncParams, { state: AppRootState }>(
-  "notes/deleteCloudNotesAsync",
-  async ({ deviceUuid, devicesToSync, areMoreThanOneDevice }, thunkAPI) => {
-    const { cloud } = thunkAPI.getState().notes;
-    const notesToDelete = Object.values(cloud.items.delete);
-
-    return await processNotes({
-      notes: notesToDelete,
-      deviceUuid,
-      devicesToSync,
-      areMoreThanOneDevice,
-      operation: "delete",
-    });
-  }
-);
-
-export const detachCloudNotesAsync = createAsyncThunk<Record<string, Note>, CloudSyncParams, { state: AppRootState }>(
-  "notes/detachCloudNotesAsync",
-  async ({ deviceUuid, devicesToSync, areMoreThanOneDevice }, thunkAPI) => {
-    const { cloud } = thunkAPI.getState().notes;
-    const notesToDetach = Object.values(cloud.items.detach);
-
-    return await processNotes({
-      notes: notesToDetach,
-      deviceUuid,
-      devicesToSync,
-      areMoreThanOneDevice,
-      operation: "detach",
-    });
-  }
-);
-
 /**
  * Wipes all local notes and, when requested, the corresponding cloud
  * collection. Dispatches the pure `wipeNotes` action first so the local state
- * is cleared immediately, then performs the async cloud deletion side effect
- * outside of the reducer.
+ * is cleared immediately, then performs the async side effects outside of the
+ * reducer: the notes' other copies on this device (kept for a rollback or a
+ * recovery, ADR-018) are removed, then the cloud's.
  */
 export const wipeNotesThunk = createAsyncThunk<void, { wipeCloud: boolean }, { state: AppRootState }>(
   "notes/wipeNotesThunk",
   async ({ wipeCloud }, { dispatch }) => {
     dispatch(wipeNotes());
+    await noteStore?.removeCopies();
 
     if (wipeCloud) {
-      await deleteCollectionInCloud(COLLECTIONS.data.notes);
+      await cloud.wipeNotes();
     }
   }
 );

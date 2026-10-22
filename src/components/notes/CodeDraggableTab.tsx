@@ -5,7 +5,7 @@ import { isStringEmpty } from "@/utils/string";
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { XMarkIcon } from "react-native-heroicons/outline";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
 interface Props {
@@ -121,6 +121,8 @@ export default function CodeDraggableTab({
             <TouchableOpacity
               style={styles.tabDeleteButton}
               onPress={() => setShowDeleteConfirm(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("code.delete_tab")}
               activeOpacity={0.7}
               hitSlop={{ top: 6, bottom: 6, right: 6, left: 4 }}
             >

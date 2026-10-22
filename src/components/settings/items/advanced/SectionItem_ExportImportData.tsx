@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Keyboard, Platform } from "react-native";
-import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
+import ExclamationTriangleIcon from "react-native-heroicons/outline/ExclamationTriangleIcon";
 import { KeyboardController } from "react-native-keyboard-controller";
 
 import ComplexDialog from "@/components/dialogs/ComplexDialog";

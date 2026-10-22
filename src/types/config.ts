@@ -7,7 +7,8 @@ export interface AppVersionResponse {
   publishedAt: string;
   releaseUrl: string;
   mobile: AppVersionPlatformInfo;
-  desktop: AppVersionPlatformInfo;
+  /** `releaseUrl`: the release holding the desktop builds (a desktop-only hotfix has its own); missing on older sites. */
+  desktop: AppVersionPlatformInfo & { releaseUrl?: string };
 }
 
 export interface AppConfigs {

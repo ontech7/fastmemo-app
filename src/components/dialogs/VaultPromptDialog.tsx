@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { LockClosedIcon } from "react-native-heroicons/outline";
+import LockClosedIcon from "react-native-heroicons/outline/LockClosedIcon";
 
 import { COLOR } from "@/constants/styles";
 

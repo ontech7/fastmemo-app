@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" data-bleed="#F1ECFF">
+<defs>
+<radialGradient id="glow-tr" cx="1024" cy="0" r="640" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#FFC2DA" stop-opacity="0.9"/>
+<stop offset="1" stop-color="#F1ECFF" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="glow-bl" cx="0" cy="1024" r="600" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#BFF0DA" stop-opacity="1"/>
+<stop offset="1" stop-color="#F1ECFF" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="f" x1="0" y1="278" x2="0" y2="745" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#7465F0"/>
+<stop offset="1" stop-color="#5242C8"/>
+</linearGradient>
+<clipPath id="egg1">
+<path d="M0,-92 C52.5,-92 70,-9.2 70,23 C70,69 38.5,92 0,92 C-38.5,92 -70,69 -70,23 C-70,-9.2 -52.5,-92 0,-92 Z"/>
+</clipPath>
+<clipPath id="egg2">
+<path d="M0,-70 C40.5,-70 54,-7 54,17.5 C54,52.5 29.7,70 0,70 C-29.7,70 -54,52.5 -54,17.5 C-54,-7 -40.5,-70 0,-70 Z"/>
+</clipPath>
+</defs>
+<g id="background">
+<rect width="1024" height="1024" fill="#F1ECFF"/>
+<rect width="1024" height="1024" fill="url(#glow-tr)"/>
+<rect width="1024" height="1024" fill="url(#glow-bl)"/>
+<circle cx="150" cy="170" r="10" fill="#FF8FB8"/>
+<circle cx="214" cy="122" r="7" fill="#FFB938"/>
+<circle cx="112" cy="250" r="6" fill="#4FCB9C"/>
+<circle cx="930" cy="420" r="8" fill="#FFB938"/>
+<circle cx="120" cy="880" r="8" fill="#FF8FB8"/>
+<circle cx="560" cy="900" r="6" fill="#7465F0" opacity="0.5"/>
+<ellipse cx="785" cy="862" rx="150" ry="16" fill="#5242C8" opacity="0.12"/>
+<g transform="translate(835 790) rotate(14)">
+<path d="M0,-70 C40.5,-70 54,-7 54,17.5 C54,52.5 29.7,70 0,70 C-29.7,70 -54,52.5 -54,17.5 C-54,-7 -40.5,-70 0,-70 Z" fill="#9FE3C6"/>
+<g clip-path="url(#egg2)">
+<path d="M-70,-14 Q-50,-28 -30,-14 T10,-14 T50,-14 T90,-14" fill="none" stroke="#FFFFFF" stroke-width="10"/>
+<path d="M-70,22 Q-50,8 -30,22 T10,22 T50,22 T90,22" fill="none" stroke="#7465F0" stroke-width="8"/>
+<circle cx="-18" cy="48" r="6" fill="#FF8FB8"/>
+<circle cx="6" cy="52" r="6" fill="#FF8FB8"/>
+<circle cx="-6" cy="-44" r="6" fill="#FFFFFF"/>
+</g>
+</g>
+<g transform="translate(725 765) rotate(-12)">
+<path d="M0,-92 C52.5,-92 70,-9.2 70,23 C70,69 38.5,92 0,92 C-38.5,92 -70,69 -70,23 C-70,-9.2 -52.5,-92 0,-92 Z" fill="#FFD166"/>
+<g clip-path="url(#egg1)">
+<polyline points="-90,4 -70,-16 -50,4 -30,-16 -10,4 10,-16 30,4 50,-16 70,4 90,-16" fill="none" stroke="#FF8FB8" stroke-width="14" stroke-linejoin="round"/>
+<rect x="-90" y="40" width="180" height="10" fill="#7465F0"/>
+<circle cx="-24" cy="-50" r="7" fill="#FFFFFF"/>
+<circle cx="0" cy="-58" r="7" fill="#FFFFFF"/>
+<circle cx="24" cy="-50" r="7" fill="#FFFFFF"/>
+</g>
+</g>
+</g>
+<g id="foreground">
+<g transform="translate(690 200) rotate(24)">
+<ellipse cx="0" cy="0" rx="38" ry="105" fill="#7465F0"/>
+<ellipse cx="0" cy="-12" rx="17" ry="72" fill="#FFB3CF"/>
+</g>
+<g transform="translate(792 198) rotate(34)">
+<ellipse cx="0" cy="0" rx="36" ry="100" fill="#7465F0"/>
+<ellipse cx="0" cy="-12" rx="16" ry="68" fill="#FFB3CF"/>
+</g>
+<polygon fill="#FF8FB8" points="234,278 512,278 489,318 215,318"/>
+<polygon fill="#FFB938" points="195,345 472,345 450,385 175,385"/>
+<polygon fill="#4FCB9C" points="155,412 432,412 410,452 136,452"/>
+<polygon fill="url(#f)" points="540,278 891,278 832,381 643,381 588,475 776,475 717,578 528,578 433,745 278,745"/>
+</g>
+</svg>

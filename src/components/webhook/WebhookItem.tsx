@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { CheckIcon } from "react-native-heroicons/outline";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
@@ -22,7 +22,14 @@ function WebhookItem({ title, webhook, setWebhookUrl, toggleWebhook }: Props) {
       <View style={[styles.row, { opacity: webhook.enabled ? 1 : 0.5 }]}>
         {/* checkbox */}
 
-        <TouchableOpacity activeOpacity={0.7} style={styles.checkboxWrapper} onPress={toggleWebhook}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.checkboxWrapper}
+          onPress={toggleWebhook}
+          accessibilityRole="checkbox"
+          accessibilityLabel={title}
+          aria-checked={webhook.enabled}
+        >
           <View style={[styles.checkbox, webhook.enabled && styles.checkboxChecked]}>
             {webhook.enabled && (
               <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)}>
@@ -45,6 +52,10 @@ function WebhookItem({ title, webhook, setWebhookUrl, toggleWebhook }: Props) {
           textAlignVertical="center"
           onChangeText={setWebhookUrl}
           value={webhook.url}
+          keyboardType="url"
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
           placeholder="https://"
           placeholderTextColor={COLOR.textMuted}
           cursorColor={COLOR.textPrimary}

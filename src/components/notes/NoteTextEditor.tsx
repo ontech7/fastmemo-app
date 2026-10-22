@@ -2,17 +2,26 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import NoteImageMenu from "@/components/notes/NoteImageMenu";
+import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
-import { configs } from "@/configs";
+import { noteTextLimit } from "@/libs/cloud";
+import { EDITOR_SANITIZE_JS } from "@/generated/editor-sanitize";
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
+import i18n from "@/libs/i18n";
+import type { EditorImage, ImageChange } from "@/libs/richTextEditor";
+import { IMAGE_FAILED_MESSAGE, IMAGE_MESSAGE, imageCommand, RICH_TEXT_SCRIPT, RICH_TEXT_STYLE } from "@/libs/richTextEditor";
 import {
   selectorAIAssistant,
   selectorDeveloperMode,
@@ -26,10 +35,12 @@ import { voiceTextToHtml } from "@/utils/voiceTranscript";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactElement } from "react";
+import { cloneElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TouchableOpacityProps, ViewInstance } from "react-native";
 import { Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
+import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
 import { KeyboardAvoidingView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
 import { useSelector } from "react-redux";
@@ -43,7 +54,139 @@ interface Props {
 // replaced by the real measured height on its first layout. It only needs to be at
 // least the real height so the bar parks fully below the screen while the keyboard
 // is down (and so the editor reserves enough room for it while the keyboard is up).
-const BAR_HEIGHT_ESTIMATE = 76;
+const BAR_HEIGHT_ESTIMATE = 100;
+
+// DOMPurify in the editor's page, before any note is loaded (LL-060). What guarantees it is `injectedJavaScript`: the
+// script ends the web iframe's page, and Android evaluates it when the page finished, ahead of the onLoad that sets the
+// note. `injectedJavaScriptBeforeContentLoaded` is only an earlier try (Android may run it before the page exists).
+// `true;` ends what the phone's WebView evaluates.
+const EDITOR_SANITIZE_SCRIPT = `${EDITOR_SANITIZE_JS}\ntrue;`;
+
+const TOOLBAR_LABEL_KEYS: Record<string, string> = {
+  [actions.undo]: "a11y.format.undo",
+  [actions.redo]: "a11y.format.redo",
+  [actions.insertImage]: "a11y.format.image",
+  [actions.heading1]: "a11y.format.heading",
+  [actions.setBold]: "a11y.format.bold",
+  [actions.setItalic]: "a11y.format.italic",
+  [actions.setStrikethrough]: "a11y.format.strikethrough",
+  [actions.setUnderline]: "a11y.format.underline",
+  [actions.alignLeft]: "a11y.format.align_left",
+  [actions.alignCenter]: "a11y.format.align_center",
+  [actions.setSubscript]: "a11y.format.subscript",
+  [actions.setSuperscript]: "a11y.format.superscript",
+  [actions.insertBulletsList]: "a11y.format.bullet_list",
+  [actions.insertOrderedList]: "a11y.format.numbered_list",
+  [actions.code]: "a11y.format.code",
+};
+
+// Run inside the editor's page (`command`, where `$` is its document) around a reload with another device's change:
+// a focused editor's caret keeps its place in the text, shifted by what changed before it, instead of jumping to the
+// start. The page handles messages in order, so the save sees the old content and the restore the new one.
+
+// The content as text with a line break before each line (block) and for each <br>, so the end of a line and the start
+// of the next are different positions; `points` maps positions back into the DOM.
+const LINEAR_TEXT = `
+  function linear(root) {
+    var text = "", points = [], blocks = /^(DIV|P|LI|H[1-6]|PRE|BLOCKQUOTE|UL|OL)$/;
+    (function walk(node) {
+      for (var child = node.firstChild; child; child = child.nextSibling) {
+        if (child.nodeType === 3) {
+          points.push({ node: child, start: text.length });
+          text += child.data;
+        } else if (child.nodeName === "BR") {
+          text += "\\n";
+        } else if (child.nodeType === 1) {
+          var block = blocks.test(child.nodeName);
+          if (block && text) text += "\\n";
+          if (block) points.push({ node: child, start: text.length, block: true });
+          walk(child);
+        }
+      }
+    })(root);
+    return { text: text, points: points };
+  }
+`;
+const SAVE_CARET = `${LINEAR_TEXT}
+  var c = $.querySelector(".pell-content"), s = $.getSelection();
+  window.__fmCaret = null;
+  if (!c || !$.hasFocus() || !s.rangeCount || !c.contains(s.focusNode)) return;
+  var r = $.createRange();
+  r.selectNodeContents(c);
+  r.setEnd(s.focusNode, s.focusOffset);
+  var before = $.createElement("div");
+  before.appendChild(r.cloneContents());
+  window.__fmCaret = { at: linear(before).text.length, text: linear(c).text };
+`;
+/** The page's message that a reload is on screen. */
+const RELOAD_SHOWN = "FASTMEMO_RELOAD_SHOWN";
+/** Tells the screen that reload `reload` is on the page (see `reloadsSentRef`), then restores the caret. */
+const restoreCaret = (reload: number) => `${LINEAR_TEXT}
+  (window.ReactNativeWebView || window.parent).postMessage(JSON.stringify({ type: "${RELOAD_SHOWN}", data: ${reload} }));
+  var saved = window.__fmCaret, c = $.querySelector(".pell-content");
+  window.__fmCaret = null;
+  if (!saved || !c) return;
+  var now = linear(c), old = saved.text, text = now.text, from = 0, tail = 0;
+  while (from < old.length && from < text.length && old[from] === text[from]) from++;
+  while (tail < old.length - from && tail < text.length - from && old[old.length - 1 - tail] === text[text.length - 1 - tail]) tail++;
+  var at = saved.at <= from ? saved.at : saved.at >= old.length - tail ? saved.at + text.length - old.length : text.length - tail;
+  var point = null;
+  for (var i = 0; i < now.points.length && now.points[i].start <= at; i++) {
+    var p = now.points[i];
+    if (p.block ? p.start === at : at <= p.start + p.node.length) point = p;
+  }
+  var s = $.getSelection();
+  if (point) s.collapse(point.node, point.block ? 0 : at - point.start);
+  else { s.selectAllChildren(c); s.collapseToEnd(); }
+`;
+
+// Every other action is a format the cursor's text either has or not.
+const NON_TOGGLE_ACTIONS = new Set<string>([actions.undo, actions.redo, actions.insertImage]);
+
+const renderToolbarAction = (
+  RichToolbar.prototype as unknown as {
+    _defaultRenderAction(action: string, selected: boolean): ReactElement;
+  }
+)._defaultRenderAction;
+const pressToolbarAction = (RichToolbar.prototype as unknown as { _onPress(action: string): void })._onPress;
+
+// The buttons that set what a line is, done by the page script (RICH_TEXT_SCRIPT) instead of pell.
+const LINE_TYPES: Record<string, string> = {
+  [actions.heading1]: "h1",
+  [actions.code]: "code",
+  [actions.insertBulletsList]: "ul",
+  [actions.insertOrderedList]: "ol",
+};
+
+// RichToolbar renders its action buttons with no role or name and has no prop to add them, so decorate the
+// buttons its default renderer returns (`_renderAction` calls it through `this`, so the override is used). It has no
+// prop for its list's padding either: the first and last buttons get a margin, so they don't touch the screen edges.
+// Nor for its own actions: the line types go to the page script.
+class LabeledRichToolbar extends RichToolbar {
+  _onPress(action: string) {
+    const editor = (this as unknown as { editor?: RichEditor }).editor;
+    const type = LINE_TYPES[action];
+    if (!type || !editor) return pressToolbarAction.call(this, action);
+    editor.focusContentEditor();
+    editor.command(`window.__fm && window.__fm.toggle(${JSON.stringify(type)})`);
+  }
+
+  _defaultRenderAction(action: string, selected: boolean) {
+    const isToggle = !NON_TOGGLE_ACTIONS.has(action);
+    const button = renderToolbarAction.call(this, action, selected) as ReactElement<TouchableOpacityProps>;
+    const list = this.props.actions ?? [];
+    return cloneElement(button, {
+      style: [
+        button.props.style,
+        action === list[0] && styles.firstToolbarAction,
+        action === list[list.length - 1] && styles.lastToolbarAction,
+      ],
+      accessibilityRole: isToggle ? "checkbox" : "button",
+      accessibilityLabel: TOOLBAR_LABEL_KEYS[action] ? i18n.t(TOOLBAR_LABEL_KEYS[action]) : undefined,
+      "aria-checked": isToggle ? selected : undefined,
+    });
+  }
+}
 
 export default function NoteTextEditor({ initialNote }: Props) {
   const { t } = useTranslation();
@@ -59,7 +202,24 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const isEmpty = useCallback((n: TextNote) => isStringEmpty(n.title) && isStringEmpty(n.text), []);
   const buildPayloadExtras = useCallback((n: TextNote) => ({ text: n.text }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<TextNote>({
+  const [noteTextLength, setNoteTextLength] = useState(() => getTextLength(memoInitialNote.text));
+  const [noteTextSize, setNoteTextSize] = useState(() => getTextSize(memoInitialNote.text));
+
+  const richTextEditor = useRef(null);
+  const editorReadyRef = useRef(false);
+
+  // Reloads sent to the editor's page, and the last one it has on screen: until it does, what the page reports was typed
+  // over the content the reload replaces, and would undo the other device's change.
+  const reloadsSentRef = useRef(0);
+  const reloadsShownRef = useRef(0);
+  const showRemote = useCallback((html: string) => {
+    const reload = ++reloadsSentRef.current;
+    richTextEditor.current?.command(SAVE_CARET);
+    richTextEditor.current?.setContentHTML(html);
+    richTextEditor.current?.command(restoreCaret(reload));
+  }, []);
+
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TextNote>({
     initialNote: memoInitialNote,
     defaultType: "text",
     addWebhookSelector: selectorWebhook_addTextNote,
@@ -67,14 +227,20 @@ export default function NoteTextEditor({ initialNote }: Props) {
     isEmpty,
     buildPayloadExtras,
     getTitleSource: (n) => stripHtml(n.text),
+    // Changed on another device while open here: the WebView editor holds its own copy of the content (a page still
+    // loading gets it once it's up).
+    onRemoteChange: (remote, previous) => {
+      if (remote.text === previous.text) return;
+      if (editorReadyRef.current) showRemote(remote.text);
+      setNoteTextLength(getTextLength(remote.text));
+      setNoteTextSize(getTextSize(remote.text));
+    },
   });
 
-  const [noteTextLength, setNoteTextLength] = useState(getTextLength(note.text));
-  const [noteTextSize, setNoteTextSize] = useState(getTextSize(note.text));
-
-  const richTextEditor = useRef(null);
-
   const [showFindReplace, setShowFindReplace] = useState(false);
+  // An image tapped in the editor, and where on screen: its menu is open.
+  const [tappedImage, setTappedImage] = useState<{ image: EditorImage; at: { x: number; y: number } } | null>(null);
+  const editorBoxRef = useRef<ViewInstance>(null);
   // The RichEditor (a WebView) is mounted immediately into a reserved, flex-sized
   // box — never gated behind an idle timer — so the editor is present as the
   // screen fades in instead of flashing empty and popping in later. The WebView
@@ -89,7 +255,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   // Only a brand-new note (created and never updated) autofocuses the editor, so
   // opening an existing note just lets the user read without popping the keyboard.
-  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const autofocus = useAutofocusNewNote(initialNote);
   const transitionDone = useScreenTransitionEnd();
   const didFocusRef = useRef(false);
 
@@ -98,11 +264,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
   // bridge (so it often no-op'd) and fired mid-transition (causing the jumps).
   useEffect(() => {
     if (didFocusRef.current) return;
-    if (!isNewNote || initialNote.readOnly) return;
+    if (!autofocus) return;
     if (!editorInitialized || !transitionDone) return;
     didFocusRef.current = true;
     richTextEditor.current?.focusContentEditor();
-  }, [editorInitialized, transitionDone, isNewNote, initialNote.readOnly]);
+  }, [editorInitialized, transitionDone, autofocus]);
 
   // Safety net: never leave the loading cover up forever if pell's init callback
   // somehow never fires.
@@ -150,7 +316,9 @@ export default function NoteTextEditor({ initialNote }: Props) {
       base64: true,
     });
 
-    richTextEditor.current?.insertImage(`data:image/jpeg;base64,${manipResult.base64}`);
+    const src = `data:image/jpeg;base64,${manipResult.base64}`;
+    richTextEditor.current?.focusContentEditor();
+    richTextEditor.current?.command(`window.__fm && window.__fm.insertImage(${JSON.stringify(src)})`);
   }, []);
 
   const setTitle = useCallback(
@@ -167,7 +335,10 @@ export default function NoteTextEditor({ initialNote }: Props) {
       const dm = devModeRef.current;
       const isUnlimited = dm.enabled && dm.unlimitedTextSpace;
 
-      if (!isUnlimited && textSize > configs.notes.sizeLimit) {
+      // Over the limit, only what makes the note smaller goes in: a note already over it (a cloud with a smaller limit)
+      // can still be cut down.
+      const limit = noteTextLimit(noteRef.current.local);
+      if (!isUnlimited && textSize > limit && textSize > getTextSize(noteRef.current.text)) {
         toast(t("noteLimitReached"));
         richTextEditor.current?.setContentHTML(noteRef.current.text); // revert
         return;
@@ -180,6 +351,38 @@ export default function NoteTextEditor({ initialNote }: Props) {
     },
     [setNoteAsync, t]
   );
+
+  const onEditorChange = useCallback(
+    (html: string) => {
+      // Typed over the content a reload has replaced since (see reloadsSentRef).
+      if (reloadsShownRef.current !== reloadsSentRef.current) return;
+      setText(html);
+    },
+    [setText]
+  );
+
+  const onEditorMessage = useCallback((message: { type?: string; data?: unknown }) => {
+    if (message?.type === RELOAD_SHOWN) reloadsShownRef.current = message.data as number;
+    if (message?.type === IMAGE_MESSAGE) {
+      const image = message.data as EditorImage;
+      // The page gives the point in itself: the editor's box is where the page is on screen.
+      editorBoxRef.current?.measureInWindow((x, y) => setTappedImage({ image, at: { x: x + image.x, y: y + image.y } }));
+    }
+    if (message?.type === IMAGE_FAILED_MESSAGE) toast(i18n.t("note.image.failed"));
+  }, []);
+
+  const changeImage = useCallback((image: EditorImage, change: ImageChange, value?: string) => {
+    richTextEditor.current?.command(imageCommand(image, change, value));
+  }, []);
+  const closeImageMenu = useCallback(() => setTappedImage(null), []);
+
+  const onEditorInitialized = useCallback(() => {
+    editorReadyRef.current = true;
+    richTextEditor.current?.command(RICH_TEXT_SCRIPT);
+    setEditorInitialized(true);
+    // Changed on another device while the page was loading: it loaded the text the screen opened with.
+    if (noteRef.current.text !== initialNote.text) showRemote(noteRef.current.text);
+  }, [initialNote.text, showRemote]);
 
   // The formatting toolbar rides on top of the keyboard in a KeyboardStickyView
   // (see render): it stays glued to the keyboard's top edge and slides off-screen
@@ -197,23 +400,6 @@ export default function NoteTextEditor({ initialNote }: Props) {
         richTextEditor.current?.dismissKeyboard();
       };
     }, [])
-  );
-
-  const editorStyle = useMemo(
-    () => ({
-      backgroundColor: "transparent",
-      color: COLOR.softWhite,
-      placeholderColor: COLOR.textMuted,
-      cssText: richTextSyle,
-      // Horizontal inset lives here (not on containerStyle) so it matches the header
-      // and toolbar margins on every platform: on web the webview is a plain <iframe>
-      // that ignores containerStyle, so only this content padding aligns the text.
-      // The gap from the toolbar is handled by editorWrapper's paddingBottom (a real
-      // layout gap outside the iframe) — content padding-bottom can't do it because the
-      // iframe's bottom edge is the scroll viewport edge, so the caret always lands on it.
-      contentCSSText: `padding: ${PADDING_MARGIN.sm}px ${PADDING_MARGIN.lg}px ${PADDING_MARGIN.sm}px;`,
-    }),
-    []
   );
 
   const toolbarActions = useMemo(
@@ -253,7 +439,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
       <SafeAreaView style={styles.container}>
         <View>
           <View style={styles.header}>
-            <BackButton chip callback={updateNoteWebhook} />
+            <BackButton chip tourTarget="back" callback={updateNoteWebhook} />
 
             <View style={{ flex: 1, minWidth: 0 }}>
               <TextInput
@@ -268,14 +454,22 @@ export default function NoteTextEditor({ initialNote }: Props) {
               />
             </View>
 
-            <TouchableOpacity style={styles.searchToggle} onPress={() => setShowFindReplace((prev) => !prev)}>
+            <TouchableOpacity
+              style={styles.searchToggle}
+              onPress={() => setShowFindReplace((prev) => !prev)}
+              testID={showFindReplace ? undefined : SHORTCUT_TARGET.find}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.search_in_note")}
+              aria-expanded={showFindReplace}
+            >
               <IconChip>
                 <MagnifyingGlassIcon size={20} color={showFindReplace ? COLOR.accentSoft : COLOR.softWhite} />
               </IconChip>
             </TouchableOpacity>
 
-            <NoteSettingsButton note={note} setNote={setNoteAsync} />
+            <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
           </View>
+          <NotePresenceBanner noteId={note.id} />
 
           <View style={styles.subtitleWrapper}>
             <Text style={[styles.subtitle, { flexGrow: 1 }]}>
@@ -283,7 +477,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
             </Text>
             <Text style={[styles.subtitle, { flexGrow: 1 }]}>
               {convertToMB(noteTextSize)} MB /{" "}
-              {devMode.enabled && devMode.unlimitedTextSpace ? "∞" : `${convertToMB(configs.notes.sizeLimit)} MB`}
+              {devMode.enabled && devMode.unlimitedTextSpace ? "∞" : `${convertToMB(noteTextLimit(note.local))} MB`}
             </Text>
           </View>
         </View>
@@ -313,7 +507,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
           {/* The editor fades in from transparent once pell has painted (see effect
               above), so the rich content dissolves over the app background — the user
               briefly sees an empty editor, never a flash of unformatted text. */}
-          <Animated.View style={[styles.editorWrapper, { opacity: editorOpacity }]}>
+          <Animated.View ref={editorBoxRef} style={[styles.editorWrapper, { opacity: editorOpacity }]}>
             <RichEditor
               containerStyle={styles.richTextContainer}
               androidLayerType="hardware"
@@ -321,12 +515,15 @@ export default function NoteTextEditor({ initialNote }: Props) {
               disabled={note.readOnly}
               ref={richTextEditor}
               allowFileAccess={true}
-              onChange={setText}
+              onChange={onEditorChange}
+              onMessage={onEditorMessage}
               initialContentHTML={initialNote.text}
               placeholder={t("note.description_placeholder")}
               pasteAsPlainText
-              editorStyle={editorStyle}
-              editorInitializedCallback={() => setEditorInitialized(true)}
+              injectedJavaScriptBeforeContentLoaded={EDITOR_SANITIZE_SCRIPT}
+              injectedJavaScript={EDITOR_SANITIZE_SCRIPT}
+              editorStyle={RICH_TEXT_STYLE}
+              editorInitializedCallback={onEditorInitialized}
             />
           </Animated.View>
 
@@ -341,18 +538,15 @@ export default function NoteTextEditor({ initialNote }: Props) {
                   <AIEditorActions
                     noteType="text"
                     getContent={() => stripHtml(note.text)}
+                    getHtml={() => note.text}
                     noteTitle={note.title}
-                    onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
-                    onSummaryGenerated={(summary) => {
-                      richTextEditor.current?.setContentHTML(summary);
-                      setText(summary);
-                    }}
+                    categoryName={note.category.name}
+                    onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                     onCategorySuggested={(name) => {
                       const cat = findCategoryByName(name);
-                      if (cat) setNoteAsync({ ...note, category: cat });
+                      if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                     }}
-                    onTextRewritten={(rewritten) => {
-                      const html = voiceTextToHtml(rewritten, { leadingSpace: false });
+                    onHtmlChanged={(html) => {
                       richTextEditor.current?.setContentHTML(html);
                       setText(html);
                     }}
@@ -364,7 +558,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
                 {showVoiceButton && (
                   <VoiceRecognitionButton
                     onInsert={(text) => {
-                      const html = voiceTextToHtml(text);
+                      const html = voiceTextToHtml(text, { lists: true });
                       // the dictation sheet dismissed the keyboard; refocus so the
                       // text lands at the caret, then insert
                       richTextEditor.current?.focusContentEditor();
@@ -383,7 +577,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
             KeyboardStickyView outside the KAV (see below) so it can stick to the
             keyboard's edge. */}
           {Platform.OS === "web" && (
-            <RichToolbar
+            <LabeledRichToolbar
               style={[styles.richToolbarContainer, styles.richToolbarContainerDesktop]}
               // On web, capping the inner list at the bar width (rather than pinning it to
               // 100%) lets it keep its intrinsic width when the icons fit — so the bar's
@@ -392,9 +586,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
               flatContainerStyle={styles.richToolbarFlatContainer}
               editor={richTextEditor}
               onPressAddImage={pickImage}
-              iconSize={20}
+              iconSize={22}
               iconTint={COLOR.softWhite}
               selectedIconTint={COLOR.accentSoft}
+              unselectedButtonStyle={styles.toolbarAction}
+              selectedButtonStyle={styles.toolbarActionSelected}
               actions={toolbarActions}
               iconMap={toolbarIconMap}
             />
@@ -411,19 +607,30 @@ export default function NoteTextEditor({ initialNote }: Props) {
             {Platform.OS === "ios" && (
               <DismissKeyboardButton showKeyboardDismiss onPress={() => richTextEditor.current?.dismissKeyboard()} />
             )}
-            <RichToolbar
+            <LabeledRichToolbar
               style={styles.richToolbarContainer}
               editor={richTextEditor}
               onPressAddImage={pickImage}
-              iconSize={20}
+              iconSize={22}
               iconTint={COLOR.softWhite}
               selectedIconTint={COLOR.accentSoft}
+              unselectedButtonStyle={styles.toolbarAction}
+              selectedButtonStyle={styles.toolbarActionSelected}
               actions={toolbarActions}
               iconMap={toolbarIconMap}
             />
           </View>
         </KeyboardStickyView>
       )}
+
+      <NoteImageMenu
+        image={tappedImage?.image ?? null}
+        at={tappedImage?.at ?? null}
+        onChange={changeImage}
+        onClose={closeImageMenu}
+      />
+
+      <EditorTourTip />
     </View>
   );
 }
@@ -495,8 +702,30 @@ const styles = StyleSheet.create({
   },
   richToolbarContainer: {
     width: SIZE.full,
-    height: 38,
+    // The 44 high buttons centered in the padding (the height counts the top border too).
+    height: 44 + 2 * PADDING_MARGIN.sm + 1,
+    paddingVertical: PADDING_MARGIN.sm,
     backgroundColor: COLOR.surface,
+    borderTopWidth: 1,
+    borderTopColor: GLASS.border,
+  },
+  // A 48x44 touch target per button; the selected format gets a soft fill besides its tint.
+  toolbarAction: {
+    width: 48,
+    height: 44,
+    borderRadius: BORDER.normal,
+  },
+  toolbarActionSelected: {
+    width: 48,
+    height: 44,
+    borderRadius: BORDER.normal,
+    backgroundColor: GLASS.fillStrong,
+  },
+  firstToolbarAction: {
+    marginLeft: PADDING_MARGIN.md,
+  },
+  lastToolbarAction: {
+    marginRight: PADDING_MARGIN.md,
   },
   // Native formatting bar: pinned to the bottom of the screen, full width. The
   // KeyboardStickyView translates it up to sit on the keyboard's edge (and below the
@@ -515,6 +744,10 @@ const styles = StyleSheet.create({
     // bar from the window edges (the parent stretches it back to fill the gap).
     width: "auto",
     marginHorizontal: PADDING_MARGIN.lg,
+    // A border all round: one more pixel than the pinned bar's top one.
+    height: 44 + 2 * PADDING_MARGIN.sm + 2,
+    borderWidth: 1,
+    borderColor: GLASS.border,
   },
   richToolbarFlatContainer: {
     maxWidth: SIZE.full,
@@ -529,15 +762,3 @@ const styles = StyleSheet.create({
     paddingBottom: PADDING_MARGIN.lg,
   },
 });
-
-/* RICH TEXT STYLE */
-
-const richTextSyle = `
-  pre {
-    background-color: ${COLOR.surfaceMuted};
-  }
-  img {
-    width: auto;
-    border-radius: ${BORDER.normal}px;
-  }
-`;

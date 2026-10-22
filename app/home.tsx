@@ -6,19 +6,24 @@ import NoteFiltersButton from "@/components/buttons/NoteFiltersButton";
 import ProtectNotesButton from "@/components/buttons/ProtectNotesButton";
 import ReadOnlyNotesButton from "@/components/buttons/ReadOnlyNotesButton";
 import NoteCard from "@/components/cards/NoteCard";
+import CloudUnreachableLine from "@/components/cloud/CloudUnreachableLine";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import VaultPromptDialog from "@/components/dialogs/VaultPromptDialog";
 import SearchInput from "@/components/inputs/SearchInput";
 import QuickNoteBar, { QUICK_NOTE_BAR_RESERVED } from "@/components/notes/QuickNoteBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
+import TourSpotlight from "@/components/ui/TourSpotlight";
+import WebViewWarmup from "@/components/WebViewWarmup";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { useCloudStatus } from "@/hooks/useCloudStatus";
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
 import { useVaultPrompt } from "@/hooks/useVaultPrompt";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import Haptics from "@/libs/haptics";
+import { windowReady } from "@/libs/windowReady";
 import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import {
@@ -34,20 +39,22 @@ import {
   selectorDeveloperMode,
   selectorNoteCreation,
   selectorShowHidden,
+  selectorTourStep,
   selectorWebhook_deleteNote,
   selectorWebhook_temporaryDeleteNote,
   selectorWebhook_updateNote,
+  setTourStep,
 } from "@/slicers/settingsSlice";
-import type { CodeNote, Note, TextNote, TodoItem, TodoNote } from "@/types";
+import type { CodeNote, Note, RootState, TextNote, TodoItem, TodoNote } from "@/types";
 import { formatToPlainText } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FlashList } from "@shopify/flash-list";
-import { useIsFocused, useNavigation } from "expo-router";
+import { useFocusEffect, useIsFocused, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
-import { DocumentMagnifyingGlassIcon } from "react-native-heroicons/outline";
+import DocumentMagnifyingGlassIcon from "react-native-heroicons/outline/DocumentMagnifyingGlassIcon";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,7 +63,14 @@ import { useDispatch, useSelector, useStore } from "react-redux";
 export default function HomeScreen() {
   const { t } = useTranslation();
 
+  // Desktop: the window, hidden at launch, shows now that home is drawn (the first launch shows it for the logo
+  // animation already).
+  useEffect(() => {
+    windowReady();
+  }, []);
+
   const router = useRouter();
+  const cloudStatus = useCloudStatus();
 
   const isFocused = useIsFocused();
   const vaultPromptNeeded = useVaultPrompt();
@@ -88,6 +102,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const noteCreation = useSelector(selectorNoteCreation);
+  const tourStep = useSelector(selectorTourStep);
   // Default ON for state persisted before the setting existed.
   const quickNoteEnabled = noteCreation.quickNote ?? true;
 
@@ -214,6 +229,24 @@ export default function HomeScreen() {
           });
     }
   }, [filterText, deepFilterText, showDeepSearch, notes]);
+
+  // Stable across unrelated re-renders (focus changes, quick-note bar height, ...), so FlashList
+  // only re-renders its cells when the selection or delete mode actually change (LL-019).
+  const renderNote = useCallback(
+    ({ item, index }: { item: Note; index: number }) => (
+      <NoteCard
+        content={item}
+        isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
+        selectNote={selectNote}
+        isDeleteMode={isDeleteMode}
+        toggleDeleteMode={toggleDeleteMode}
+        // The tour's last step points at the first note.
+        tourTarget={tourStep === "explore" && index === 0 ? "firstNote" : undefined}
+      />
+    ),
+    [selectedNotes, selectNote, isDeleteMode, toggleDeleteMode, tourStep]
+  );
+  const listExtraData = useMemo(() => ({ isDeleteMode, selectedNotes, tourStep }), [isDeleteMode, selectedNotes, tourStep]);
 
   // hardware back for resetting deleteMode
   useEffect(() => {
@@ -365,6 +398,17 @@ export default function HomeScreen() {
   const showQuickBar = quickNoteEnabled && !isDeleteMode;
   const fabBottom = insets.bottom + barHeight + PADDING_MARGIN.xl;
 
+  // The first-note tour's steps on this screen (once the changelog check has settled; not over the note-type menu).
+  const [typeMenuOpen, setTypeMenuOpen] = useState(false);
+  const showTour = isFocused && changelogChecked && !isDeleteMode && !typeMenuOpen;
+
+  // A tour left on its editor step (the app closed in the editor) goes on here, with the list's step.
+  useFocusEffect(
+    useCallback(() => {
+      if (selectorTourStep(store.getState() as RootState) === "write") dispatch(setTourStep("explore"));
+    }, [store, dispatch])
+  );
+
   return (
     <>
       <ConfirmOrCancelDialog
@@ -403,14 +447,19 @@ export default function HomeScreen() {
                 <View style={styles.titleBlock}>
                   <Text style={styles.headerTitle}>{t("home.notes")}</Text>
 
-                  <View style={styles.headerMeta}>
-                    <Text style={styles.categoryName} numberOfLines={1}>
-                      {currentCategory.name != "All" ? currentCategory.name : t("All")}
-                    </Text>
-                    <View style={styles.countBadge}>
-                      <Text style={styles.countText}>{filteredNotes.length}</Text>
+                  {/* the cloud out of reach takes the category's place, until it answers (ADR-029) */}
+                  {cloudStatus.unreachable ? (
+                    <CloudUnreachableLine lastContact={cloudStatus.lastContact} />
+                  ) : (
+                    <View style={styles.headerMeta}>
+                      <Text style={styles.categoryName} numberOfLines={1}>
+                        {currentCategory.name != "All" ? currentCategory.name : t("All")}
+                      </Text>
+                      <View style={styles.countBadge}>
+                        <Text style={styles.countText}>{filteredNotes.length}</Text>
+                      </View>
                     </View>
-                  </View>
+                  )}
                 </View>
 
                 {isDeleteMode && (
@@ -446,17 +495,9 @@ export default function HomeScreen() {
                   keyboardShouldPersistTaps="handled"
                   keyboardDismissMode="on-drag"
                   data={filteredNotes}
-                  extraData={{ isDeleteMode }}
-                  renderItem={({ item }) => (
-                    <NoteCard
-                      content={item}
-                      isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
-                      selectNote={selectNote}
-                      isDeleteMode={isDeleteMode}
-                      toggleDeleteMode={toggleDeleteMode}
-                    />
-                  )}
-                  keyExtractor={(item) => item.id}
+                  extraData={listExtraData}
+                  renderItem={renderNote}
+                  keyExtractor={keyExtractor}
                 />
               </View>
 
@@ -475,25 +516,55 @@ export default function HomeScreen() {
           </View>
         </SafeAreaView>
 
-        <Animated.View style={[styles.editModeToolbar, animatedTranslate, animatedOpacity]}>
-          <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} />
+        <Animated.View style={[styles.editModeToolbar, animatedTranslate, animatedOpacity]} aria-hidden={!isDeleteMode}>
+          {/* aria-hidden keeps the hidden toolbar from screen readers; focusable keeps it out of the web tab order */}
+          <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} focusable={isDeleteMode} />
 
-          <ProtectNotesButton onPressProtect={toggleProtectedNotesFromItems} />
+          <ProtectNotesButton onPressProtect={toggleProtectedNotesFromItems} focusable={isDeleteMode} />
 
-          <HiddenNotesButton onPressHidden={toggleHiddenNotesFromItems} />
+          <HiddenNotesButton onPressHidden={toggleHiddenNotesFromItems} focusable={isDeleteMode} />
 
-          <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} />
+          <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} focusable={isDeleteMode} />
         </Animated.View>
+
+        <WebViewWarmup />
 
         <AddNoteOverlayButton
           isDeleteMode={isDeleteMode}
           toggleDeleteMode={toggleDeleteMode}
           bottomOffset={showQuickBar ? fabBottom : undefined}
+          onMenuToggle={setTypeMenuOpen}
         />
+
+        {showTour && tourStep === "create" && (
+          <TourSpotlight
+            targets={["addNoteGroup"]}
+            pointAt="addNote"
+            passThrough
+            step={1}
+            total={3}
+            title={t("tour.create_title")}
+            text={t("tour.create_text")}
+            onSkip={() => dispatch(setTourStep("done"))}
+          />
+        )}
+        {showTour && tourStep === "explore" && (
+          <TourSpotlight
+            targets={["firstNote", "sidebar"]}
+            step={3}
+            total={3}
+            title={t("tour.explore_title")}
+            text={t("tour.explore_text")}
+            actionLabel={t("tour.got_it")}
+            onAction={() => dispatch(setTourStep("done"))}
+          />
+        )}
       </View>
     </>
   );
 }
+
+const keyExtractor = (note: Note) => note.id;
 
 /* STYLES */
 

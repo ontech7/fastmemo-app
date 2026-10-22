@@ -1,31 +1,62 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import ArrowDownTrayIcon from "react-native-heroicons/outline/ArrowDownTrayIcon";
 
+import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import useNetInfo from "@/hooks/useNetInfo";
 import { checkLatestAppVersion } from "@/libs/api/checkLatestVersion";
+import { checkDesktopUpdate as checkSignedDesktopUpdate, installDesktopUpdate } from "@/libs/desktopUpdater";
+import type { DesktopUpdate } from "@/libs/desktopUpdater";
+import { flushNow } from "@/libs/flushOnExit";
 import { openUrl } from "@/utils/openUrl";
+import { isTauri } from "@/utils/platform";
+import { toast } from "@/utils/toast";
 import { getCurrentAppVersion, isDesktopOrWeb, isNewerVersion, pickUpdateUrl } from "@/utils/version";
+
+import { COLOR } from "@/constants/styles";
 
 interface AppUpdateContextValue {
   /** True when a newer app version is published for the current platform. */
   updateAvailable: boolean;
   /** Raw release URL from the API (platform-agnostic). */
   releaseUrl: string | null;
-  /** Open the right update destination for the current platform. */
+  /** Open the right update destination for the current platform (the in-app installer on desktop). */
   openUpdate: () => void;
+  /**
+   * Desktop only: ask the updater for a newer signed build and offer to install it. Resolves to whether one was found;
+   * rejects when the check fails.
+   */
+  checkDesktopUpdate: () => Promise<boolean>;
 }
+
+/** Desktop: how often a running app looks for a newer build. */
+const DESKTOP_RECHECK_MS = 6 * 60 * 60 * 1000;
+/** How often it looks at the time since the last check (a sleeping computer pauses timers). */
+const DESKTOP_RECHECK_TICK_MS = 60 * 60 * 1000;
 
 const AppUpdateContext = createContext<AppUpdateContextValue>({
   updateAvailable: false,
   releaseUrl: null,
   openUpdate: () => {},
+  checkDesktopUpdate: async () => false,
 });
 
 /** Shared "an update is available" state, checked once for the whole app. */
 export const useAppUpdate = () => useContext(AppUpdateContext);
 
 export default function AppUpdateProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+
   const [releaseUrl, setReleaseUrl] = useState<string | null>(null);
+  // Desktop: the signed update the Tauri updater found, and whether its install prompt is showing.
+  const [desktopUpdate, setDesktopUpdate] = useState<DesktopUpdate | null>(null);
+  const [isDesktopPromptOpen, setIsDesktopPromptOpen] = useState(false);
+  const desktopUpdateRef = useRef<DesktopUpdate | null>(null);
+  // The version whose prompt was shown, so a later check doesn't show it again.
+  const offeredVersionRef = useRef<string | null>(null);
+  // An install runs once: a second one would download and swap the app again.
+  const isInstallingRef = useRef(false);
 
   const { isConnected } = useNetInfo();
 
@@ -40,11 +71,13 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
       const data = await checkLatestAppVersion();
       if (cancelled || !data) return;
 
-      const latest = isDesktopOrWeb() ? data.desktop.version : data.mobile.version;
+      const desktop = isDesktopOrWeb();
+      const latest = desktop ? data.desktop.version : data.mobile.version;
       const current = getCurrentAppVersion();
 
       if (isNewerVersion(current, latest)) {
-        setReleaseUrl(data.releaseUrl);
+        // A desktop hotfix isn't in the latest release (that one is the store version's): its own page has its builds.
+        setReleaseUrl((desktop && data.desktop.releaseUrl) || data.releaseUrl);
       }
     };
 
@@ -55,14 +88,114 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
     };
   }, [isConnected]);
 
+  // `offerAgain`: show the prompt even for the version already offered (the user asked, from Settings).
+  const findDesktopUpdate = useCallback(async (offerAgain: boolean) => {
+    if (isInstallingRef.current) return true;
+    const update = await checkSignedDesktopUpdate();
+    // Each found update holds a resource on the Rust side until closed.
+    desktopUpdateRef.current?.close().catch(() => {});
+    desktopUpdateRef.current = update;
+    setDesktopUpdate(update);
+    if (!update) {
+      setIsDesktopPromptOpen(false);
+    } else if (offerAgain || update.version !== offeredVersionRef.current) {
+      offeredVersionRef.current = update.version;
+      setIsDesktopPromptOpen(true);
+    }
+    return update !== null;
+  }, []);
+
+  const checkDesktopUpdate = useCallback(() => findDesktopUpdate(true), [findDesktopUpdate]);
+
+  // Desktop: offer a found update at launch, like the old built-in updater did (without its native dialog, which could
+  // hang the app), then look again every DESKTOP_RECHECK_MS while the app runs: on macOS closing the window leaves it
+  // running for days (ADR-022). A version already offered isn't offered again (Settings still shows it). A failed check
+  // (e.g. offline) is retried on the next connection, or the next tick.
+  const lastDesktopCheckRef = useRef(0);
+  const recheckDesktop = useCallback(() => {
+    if (!isTauri() || Date.now() - lastDesktopCheckRef.current < DESKTOP_RECHECK_MS) return;
+    lastDesktopCheckRef.current = Date.now();
+    findDesktopUpdate(false).catch(() => {
+      lastDesktopCheckRef.current = 0;
+    });
+  }, [findDesktopUpdate]);
+
+  useEffect(() => {
+    if (isConnected) recheckDesktop();
+  }, [isConnected, recheckDesktop]);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    const timer = setInterval(recheckDesktop, DESKTOP_RECHECK_TICK_MS);
+    // The window coming back is when an update is worth offering.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") recheckDesktop();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [recheckDesktop]);
+
+  const confirmDesktopUpdate = useCallback(async () => {
+    setIsDesktopPromptOpen(false);
+    const update = desktopUpdateRef.current;
+    if (!update || isInstallingRef.current) return;
+
+    isInstallingRef.current = true;
+    toast(t("generalsettings.update_installing"));
+    try {
+      await installDesktopUpdate(update, flushNow);
+    } catch (error) {
+      isInstallingRef.current = false;
+      toast(`${t("error")}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, [t]);
+
   const openUpdate = useCallback(() => {
+    if (isInstallingRef.current) {
+      toast(t("generalsettings.update_installing"));
+      return;
+    }
+    if (desktopUpdate) {
+      setIsDesktopPromptOpen(true);
+      return;
+    }
     if (!releaseUrl) return;
+    // Desktop: the API saw a release the launch check missed (e.g. it ran offline): prefer the in-app installer.
+    if (isTauri()) {
+      checkDesktopUpdate()
+        .then((found) => {
+          if (!found) openUrl(pickUpdateUrl(releaseUrl));
+        })
+        .catch(() => openUrl(pickUpdateUrl(releaseUrl)));
+      return;
+    }
     openUrl(pickUpdateUrl(releaseUrl));
-  }, [releaseUrl]);
+  }, [desktopUpdate, releaseUrl, checkDesktopUpdate, t]);
 
   return (
-    <AppUpdateContext.Provider value={{ updateAvailable: releaseUrl != null, releaseUrl, openUpdate }}>
+    <AppUpdateContext.Provider
+      value={{
+        updateAvailable: releaseUrl != null || desktopUpdate != null,
+        releaseUrl,
+        openUpdate,
+        checkDesktopUpdate,
+      }}
+    >
       {children}
+
+      {desktopUpdate && (
+        <ComplexDialog
+          open={isDesktopPromptOpen}
+          adornmentStart={<ArrowDownTrayIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}
+          title={`${t("generalsettings.update_available")}: v${desktopUpdate.version}`}
+          description={t("generalsettings.update_confirm")}
+          cancel={{ label: t("cancel"), handler: () => setIsDesktopPromptOpen(false) }}
+          confirm={{ label: t("generalsettings.update_install"), handler: confirmDesktopUpdate }}
+        />
+      )}
     </AppUpdateContext.Provider>
   );
 }

@@ -1,10 +1,5 @@
+import { postWebhook } from "@/libs/net";
 import type { WebhookPayload } from "@/types";
-
-AbortSignal.timeout ??= function timeout(ms: number) {
-  const ctrl = new AbortController();
-  setTimeout(() => ctrl.abort(), ms);
-  return ctrl.signal;
-};
 
 export const webhook = async (payload: WebhookPayload, body: Record<string, unknown> = {}): Promise<void> => {
   if (!payload || !payload.enabled || !payload.url) {
@@ -12,18 +7,13 @@ export const webhook = async (payload: WebhookPayload, body: Record<string, unkn
   }
 
   try {
-    await fetch(payload.url, {
-      method: "POST",
-      signal: AbortSignal.timeout(5000),
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    await postWebhook(
+      payload.url,
+      JSON.stringify({
         success: true,
         ...body,
-      }),
-    });
+      })
+    );
   } catch (err) {
     console.log(err);
   }

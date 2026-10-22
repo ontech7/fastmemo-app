@@ -15,6 +15,12 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
+      description_2_0_0: `• Sincronizza con il tuo FastMemo Server, in alternativa a Firebase.
+• Sincronizzazione in tempo reale tra i tuoi dispositivi.
+• Scorciatoie da tastiera e, su Mac, la barra dei menu.
+• Fai clic su un'immagine per ridimensionarla, ruotarla o salvarla.
+• App più veloce e varie correzioni.`,
+
       description_1_2_0: `• Sincronizzazione cloud con crittografia end-to-end: le tue note sono protette con una chiave solo tua.
 • Nuova barra "nota rapida" per scrivere al volo una nota dalla home.
 • Sezione Aiuto rinnovata con ricerca intelligente basata su AI.
@@ -22,7 +28,7 @@ const it = {
 
       description_1_1_1: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
 • Riconoscimento vocale 2.0: dettatura vocale migliorata con pulizia automatica tramite AI.
-• L'Assistente AI ora puo' suggerire una categoria a partire dal titolo della nota.
+• L'Assistente AI ora può suggerire una categoria a partire dal titolo della nota.
 • Aggiunti annulla/ripeti e barrato nell'editor di testo.
 • Lo sblocco desktop ora supporta Touch ID e Windows Hello.
 • Fix varie.`,
@@ -31,7 +37,7 @@ const it = {
 • Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.
 • Onboarding ridisegnato con nuovi step introduttivi.
 • Aggiunte impostazioni di creazione nota per personalizzare i valori predefiniti.
-• Aggiunta modalita' a step per le note To-Do.
+• Aggiunta modalità a step per le note To-Do.
 • Fix varie.`,
 
       description_0_3_0: `• Aggiunta nuova tipologia di nota: Codice, con editor integrato, syntax highlighting, tab multiple e rilevamento automatico del linguaggio.
@@ -39,7 +45,7 @@ const it = {
 • Aggiunta esportazione note.
 • Fix varie.`,
 
-      description_0_2_0: `• Aggiunta possibilita' di spostare le colonne kanban.
+      description_0_2_0: `• Aggiunta possibilità di spostare le colonne kanban.
 • Migliorate animazioni.
 • Fix varie.`,
 
@@ -50,6 +56,12 @@ const it = {
     },
 
     mobile: {
+      description_4_0_0: `• Sincronizza con il tuo FastMemo Server, in alternativa a Firebase.
+• Sincronizzazione in tempo reale tra i tuoi dispositivi.
+• Assistente AI con i nuovi modelli Qwen3.5: correggi, accorcia, traduci e riassumi.
+• Tocca un'immagine per ridimensionarla, ruotarla o condividerla.
+• App più veloce e varie correzioni.`,
+
       description_3_2_0: `• Sincronizzazione cloud con crittografia end-to-end: le tue note sono protette con una chiave solo tua.
 • Nuova barra "nota rapida" per scrivere al volo una nota dalla home.
 • Sezione Aiuto rinnovata con ricerca intelligente basata su AI.
@@ -57,14 +69,14 @@ const it = {
 
       description_3_1_1: `• Aggiunte le note offline: mantieni una nota solo su questo dispositivo, senza sincronizzarla sul cloud.
 • Riconoscimento vocale 2.0: dettatura vocale migliorata con pulizia automatica tramite AI.
-• L'Assistente AI ora puo' suggerire una categoria a partire dal titolo della nota.
+• L'Assistente AI ora può suggerire una categoria a partire dal titolo della nota.
 • Aggiunti annulla/ripeti e barrato nell'editor di testo.
 • Fix varie.`,
 
       description_3_0_0: `• Nuovo design moderno in tutta l'app, con il nuovo font Geist, superfici glass e gradienti.
 • Onboarding ridisegnato con nuovi step introduttivi.
 • Aggiunte impostazioni di creazione nota per personalizzare i valori predefiniti.
-• Aggiunta modalita' a step per le note To-Do.
+• Aggiunta modalità a step per le note To-Do.
 • Rinnovate icona dell'app e schermata di avvio.
 • Fix varie.`,
 
@@ -74,8 +86,8 @@ const it = {
 • Aggiunta esportazione note.
 • Fix varie.`,
 
-      description_2_8_0: `• Aggiunta AI Assistant self-hosted nel cellulare (Qwen 2.5) con funzionalita' smart per le note. Configuralo in Impostazioni -> Assistente AI.
-• Aggiunta possibilita' di spostare le colonne kanban.
+      description_2_8_0: `• Aggiunta AI Assistant self-hosted nel cellulare (Qwen 2.5) con funzionalità smart per le note. Configuralo in Impostazioni -> Assistente AI.
+• Aggiunta possibilità di spostare le colonne kanban.
 • Migliorate animazioni.
 • Fix varie.`,
 
@@ -147,7 +159,7 @@ const it = {
     step5: "Prendi nota dei tuoi snippets.",
     step6: "Crea la tua categoria in base alle tue esigenze.",
     step7: "Inserisci un codice segreto per nascondere le tue note.",
-    step8: "Sincronizza le tue note su Google Firebase.",
+    step8: "Sincronizza le note tra i tuoi dispositivi: sul tuo Firebase o sul tuo server.",
     title: "Cos'è Fast Memo?",
     continue: "Continua",
   },
@@ -168,8 +180,17 @@ const it = {
     unlockCode: "Inserisci il tuo codice segreto",
     error: "Il codice inserito non corrisponde. Riprova.",
   },
-  firstMemo: {
-    title: "Benvenuto su Fast Memo! 🔊",
+  tour: {
+    step: "{{current}} di {{total}}",
+    skip: "Salta",
+    got_it: "Ho capito",
+    create_title: "La tua prima nota",
+    create_text: "Tocca + per iniziare a scrivere. La freccia accanto apre gli altri tipi: Lista, Kanban e Codice.",
+    write_title: "Scrivi e basta",
+    write_text: "Tutto si salva mentre scrivi. Quando hai finito, tocca la freccia in alto a sinistra.",
+    explore_title: "Un ultimo consiglio",
+    explore_text:
+      "Tieni premuta una nota per selezionarla: puoi renderla importante, bloccarla, nasconderla o eliminarla. Categorie, cestino e impostazioni sono nella barra a sinistra.",
   },
   home: {
     notes: "Note",
@@ -190,8 +211,7 @@ const it = {
     description_placeholder: "Scrivi qualcosa qui…",
     no_items: "Non sono presenti elementi.\nAggiungine uno premendo il tasto in basso a destra.",
     characters: "caratteri",
-    completed: "completati",
-    on: "su",
+    progress: "<hl>{{done}}</hl> su {{total}} completati",
     mode_free: "Lista",
     mode_steps: "Step",
     ongoing: "In corso",
@@ -238,6 +258,20 @@ const it = {
       replace_one: "Sostituisci",
       replace_all: "Tutti",
     },
+    image: {
+      size: "Dimensione",
+      size_s: "S",
+      size_m: "M",
+      size_l: "L",
+      size_full: "Intera",
+      align: "Allineamento",
+      view: "Visualizza",
+      rotate: "Ruota",
+      share: "Condividi",
+      save: "Salva",
+      delete: "Cancella",
+      failed: "Questa immagine non si può modificare né condividere",
+    },
   },
   kanban: {
     add_column: "Aggiungi colonna",
@@ -263,6 +297,24 @@ const it = {
     title: "Cambia Categoria",
   },
   cloudsync: {
+    conflict_suffix: "(conflitto)",
+    note_too_large: "«{{title}}» è troppo grande per questo cloud: ora è offline, solo su questo dispositivo.",
+    notes_too_large: "{{count}} note sono troppo grandi per questo cloud: ora sono offline, solo su questo dispositivo.",
+    unreachable_server: "Server non raggiungibile",
+    unreachable_firebase: "Firebase non raggiungibile",
+    unreachable_pending: "{{count}} in attesa",
+    unreachable_body: "Le modifiche restano su questo dispositivo e partono da sole appena torna raggiungibile.",
+    unreachable_pending_notes: "Note in attesa di invio: {{count}}.",
+    unreachable_last: "Ultima sincronizzazione: {{time}}.",
+    unreachable_vpn: "Se ti colleghi con una VPN (per esempio WireGuard), controlla che sia attiva.",
+    reachable_server: "Server raggiungibile",
+    reachable_firebase: "Firebase raggiungibile",
+    unreachable_check_server: "Controlla che il tuo FastMemo Server sia acceso.",
+    unreachable_check_firebase: "Controlla la connessione e riprova.",
+    conflict_copies:
+      "Modificata su due dispositivi prima della sincronizzazione: sono state tenute entrambe le versioni (una come copia)",
+    open_on: "Aperta su {{devices}}",
+    note_deleted_elsewhere: "Questa nota è stata spostata nel cestino su un altro dispositivo. Modificarla la ripristina.",
     title: "Sincronizzazione Cloud",
     syncing_1: "Sincronizzazione in corso…",
     syncing_2: "Aspetta fino al termine",
@@ -276,6 +328,27 @@ const it = {
     deleteDevices: "Gestisci dispositivi",
     handshakeFailed: "Tentativo di connessione fallito",
     handshakeFailedDesc: "Non è stato possibile connettersi al server di Firebase.",
+    example: "es.: {{value}}",
+    provider: {
+      title: "Sincronizza con",
+      firebase: "Google Firebase",
+      firebase_desc: "Il tuo progetto Firebase: gratuito e veloce da configurare, ospitato da Google.",
+      server: "FastMemo Server",
+      server_desc: "Il tuo server (PC, NAS, Raspberry Pi, VPS): le note restano sotto il tuo controllo.",
+    },
+    server: {
+      url: "Indirizzo del server",
+      key: "Chiave di accesso",
+      http_warning:
+        "HTTP non è cifrato: va bene con Tailscale o una VPN come WireGuard, che lo cifrano. Altrimenti meglio HTTPS.",
+      http_blocked: "Nel browser FastMemo raggiunge solo indirizzi HTTPS. Per HTTP usa l'app Android o desktop.",
+      http_confirm_title: "Collegarsi in HTTP?",
+      http_confirm_desc:
+        "HTTP non è cifrato. Con Tailscale o una VPN come WireGuard va bene: il tunnel cifra già il traffico. Su una rete aperta, chi vede il traffico potrebbe leggere i titoli delle note e le credenziali del dispositivo; il contenuto delle note resta cifrato end-to-end.",
+      http_confirm_ok: "Usa HTTP",
+      handshake_failed_desc:
+        "Server non raggiungibile, o chiave di accesso errata. Controlla l'indirizzo (es. https://note.esempio.it), la chiave e che il server sia acceso. Per un server senza HTTPS scrivi http:// prima dell'indirizzo. La web app richiede un indirizzo HTTPS.",
+    },
     vault: {
       setup_title: "Proteggi le tue note",
       setup_desc:
@@ -284,7 +357,7 @@ const it = {
       migrate_desc:
         "Stiamo aggiornando la sincronizzazione cloud alla crittografia end-to-end. Scegli una password di crittografia: le note già nel tuo cloud verranno ricifrate con essa, e la inserirai una volta su ogni dispositivo.",
       point_private:
-        "Solo tu puoi leggere le tue note — non noi, non Google. Vengono cifrate sul tuo dispositivo prima di essere caricate.",
+        "Solo tu puoi leggere le tue note — non noi, né chi le conserva. Vengono cifrate sul tuo dispositivo prima di essere caricate.",
       point_password: "Le tue note sono protette da una password di crittografia che scegli tu e che conosci solo tu.",
       point_devices: "Inserirai questa password una volta su ogni dispositivo che sincronizzi.",
       point_norecover:
@@ -337,7 +410,8 @@ const it = {
       locked_cta_title: "Sincronizzazione in pausa",
       locked_cta_hint:
         "Le tue note sono cifrate e bloccate su questo dispositivo, quindi la sincronizzazione cloud è sospesa. Inserisci la tua password di crittografia per sbloccarle e riprendere la sincronizzazione.",
-      enable_hint: "La sincronizzazione cloud è cifrata end-to-end — solo tu puoi leggere le tue note, non noi e non Google.",
+      enable_hint:
+        "La sincronizzazione cloud è cifrata end-to-end — solo tu puoi leggere le tue note, non noi né chi le conserva.",
       prompt_title: "Sincronizzazione in pausa",
       prompt_desc:
         "Le tue note non si stanno sincronizzando. Completa la crittografia nelle impostazioni Cloud per riattivare il sync.",
@@ -351,10 +425,17 @@ const it = {
   synceddevices: {
     title: "Dispositivi Connessi",
     lastSync: "Ultima sincr.: ",
-    error_fetching: "Errore durante il recupero dei dispositivi",
+    error_fetching: "Impossibile caricare i dispositivi",
+    error_body: "Qualcosa è andato storto durante la lettura. Riprova tra poco.",
+    offline_body: "I tuoi dispositivi compariranno qui appena torni online.",
     upToDate: "Aggiornato",
     pending: "{{count}} in attesa",
     mostRecent: "Più recente",
+    count: "({{count}}/{{limit}}) dispositivi",
+    remove_title: "Rimuovere il dispositivo?",
+    remove_description:
+      "{{name}} verrà scollegato dalla sincronizzazione. Le sue note restano su quel dispositivo, ma non si sincronizzeranno più finché non lo ricolleghi.",
+    remove_confirm: "Rimuovi",
   },
   createcategory: {
     title_create: "Crea Categoria",
@@ -427,6 +508,8 @@ const it = {
     checking_updates: "Controllo...",
     update_available: "Aggiornamento disponibile",
     update_confirm: "Vuoi installarlo adesso?",
+    update_installing: "Download dell'aggiornamento: l'app si riavvia appena è installato.",
+    update_install: "Installa",
     no_updates: "Stai utilizzando l'ultima versione.",
     feedback_and_help: "Feedback e Assistenza",
     help: "Aiuto",
@@ -460,7 +543,7 @@ const it = {
   },
   aboutdeveloper: {
     title: "Su di me",
-    freelance: "Sviluppatore Web Freelance",
+    role: "Senior Software Engineer",
     information: "Informazioni",
     developer: "Sviluppatore",
     website: "Sito web",
@@ -476,28 +559,38 @@ const it = {
     not_downloaded: "Non scaricato",
     downloading: "Download in corso...",
     download_model: "Scarica modello",
+    download_notification: "Modello AI per FastMemo",
+    download_waiting: "In attesa della rete...",
+    download_failed: "Il download non è riuscito: riprova.",
+    download_no_space: "Spazio insufficiente per il modello: liberane un po' e riprova.",
+    download_background:
+      "Puoi uscire da questa pagina o spegnere lo schermo: il download continua, con il progresso nelle notifiche.",
     cancel: "Annulla",
     delete_model: "Elimina modello",
-    info: "L'assistente AI funziona interamente sul tuo dispositivo. Nessun dato viene inviato a server esterni. Il modello deve essere scaricato una volta (~400 MB) e verra' salvato localmente.",
-    model_light: "Veloce, qualita' base. 3GB+ RAM richiesti.",
-    model_powerful: "Buon equilibrio tra velocita' e qualita'. 4GB+ RAM richiesti.",
-    model_advanced: "Alta qualita'. 6GB+ RAM richiesti.",
-    model_pro: "Qualita' massima, vicino a un desktop. 8GB+ RAM richiesti.",
+    info: "L'assistente AI funziona interamente sul tuo dispositivo. Nessun dato viene inviato a server esterni. Il modello si scarica una volta (da ~530 MB) e resta salvato sul dispositivo.",
+    model_light: "Veloce, qualità base. 3GB+ RAM richiesti.",
+    model_powerful: "Buon equilibrio tra velocità e qualità. 4GB+ RAM richiesti.",
+    model_advanced: "Qualità massima. 6GB+ RAM richiesti.",
     model_unavailable: "RAM insufficiente su questo dispositivo",
+    recommended: "Consigliato",
+    old_models_title: "Vecchi modelli AI: {{size}}",
+    old_models_desc:
+      "FastMemo ora usa i modelli Qwen3.5: più veloci e più bravi. I vecchi file non servono più: eliminali ora, oppure scarica un nuovo modello e se ne vanno da soli.",
+    old_models_delete: "Elimina i vecchi modelli",
+    old_models_confirm: "Eliminare i vecchi modelli AI ({{size}})? FastMemo non li usa più.",
+    old_models_deleted: "Vecchi modelli eliminati: {{size}} liberati",
     capabilities_title: "Cosa posso fare?",
     cap: {
       generate_title: "Genera un titolo dal contenuto della nota",
       summarize: "Riassumi una nota di testo in poche frasi",
       fix_grammar: "Correggi ortografia e grammatica",
       shorten: "Rendi un testo più breve e conciso",
-      translate: "Traduci una nota nella lingua dell'app",
+      translate: "Traduci una nota nella lingua che scegli",
       suggest_items: "Suggerisci nuovi elementi per una checklist",
       suggest_category: "Suggerisci la categoria migliore per una nota",
       voice_cleanup: "Sistema il testo dettato con la punteggiatura",
-      explain_code: "Spiega cosa fa il codice",
-      add_comments: "Aggiungi commenti inline al codice",
     },
-    unavailable_web: "L'Assistente AI e' disponibile solo su dispositivi mobili.",
+    unavailable_web: "L'Assistente AI è disponibile solo su dispositivi mobili.",
     native_rebuild_needed: "L'Assistente AI richiede una rebuild nativa.\nEsegui: npx expo run:android",
     voice_only: "Solo voce",
     voice_only_hint: "Interagisci con l'assistente usando solo la voce",
@@ -519,16 +612,16 @@ const it = {
       category_switched: 'Passato a "{{name}}"',
       no_notes_found: "Nessuna nota trovata",
       category_not_found: "Categoria non trovata",
-      not_todo_note: "Quella nota non e' una lista",
-      category_exists: "La categoria esiste gia'",
+      not_todo_note: "Quella nota non è una lista",
+      category_exists: "La categoria esiste già",
       note_converted: 'Nota "{{title}}" convertita',
       notes_merged: 'Note unite in "{{title}}"',
       setting_changed: "Impostazione aggiornata",
       help_message:
         'Posso creare note, liste e board, eliminare, rinominare, convertire e unire note, e altro.\nProva: "Fammi una lista della spesa con latte e pane"\nVedi tutto in Impostazioni > Assistente AI.',
-      same_type: "La nota e' gia' di quel tipo",
+      same_type: "La nota è già di quel tipo",
       not_understood: "Posso solo aiutarti con le note",
-      error: "Qualcosa e' andato storto, riprova",
+      error: "Qualcosa è andato storto, riprova",
       voice_unavailable: "Voce non disponibile",
     },
     editor: {
@@ -536,17 +629,27 @@ const it = {
       summarize: "Riassumi",
       suggest_items: "Suggerisci elementi",
       suggest_category: "Suggerisci categoria",
-      explain_code: "Spiega il codice",
-      add_comments: "Aggiungi commenti",
       fix_grammar: "Correggi grammatica",
       shorten: "Accorcia",
       translate: "Traduci",
+      translate_to: "Traduci in",
+      app_language: "Lingua dell'app",
       min_model: "Minimo",
       before: "Prima",
       after: "Dopo",
       apply: "Applica",
+      content_changed: "La nota è cambiata mentre l'AI lavorava: riprova.",
       no_content: "Scrivi qualcosa prima",
       no_category_match: "Nessuna categoria corrispondente",
+      category_unchanged: "La nota è già in «{{name}}»",
+      category_unsure: "L'AI è indecisa tra queste due: scegli tu.",
+      no_improvement: "L'AI non è riuscita a migliorare questo testo: è rimasto com'era.",
+      too_long: "Il testo è troppo lungo per l'AI: prova con una parte più breve.",
+      note_too_long: "Nota troppo lunga per questo modello",
+      progress: "Parte {{current}} di {{total}}",
+      summary_label: "Riassunto",
+      summary_on_top: "Va in cima alla nota; sotto, la nota resta com'è.",
+      summary_replaces: "Va in cima alla nota, al posto del riassunto di prima.",
       error: "Impossibile generare, riprova",
     },
   },
@@ -601,7 +704,7 @@ const it = {
     how_to_create_todo_note: {
       title: "Come creo una lista di cose da fare?",
       text_1_0: "Tocca il pulsante",
-      text_1_1: "in basso a destra nella schermata principale.",
+      text_1_1: "accanto a [+] in basso a destra nella schermata principale e scegli 'Lista'.",
       text_2_0: "Si apre una nuova pagina dove puoi aggiungere un titolo e i tuoi elementi da fare.",
       text_3_0: "Trascina i sei puntini a destra di un elemento per spostarlo su o giù.",
       text_4_0: "Tocca la crocetta a destra per eliminare un elemento.",
@@ -615,7 +718,7 @@ const it = {
     how_to_create_kanban_note: {
       title: "Come creo una bacheca Kanban?",
       text_1_0: "Tocca il pulsante",
-      text_1_1: "in basso a destra nella schermata principale e scegli 'Kanban'.",
+      text_1_1: "accanto a [+] in basso a destra nella schermata principale e scegli 'Kanban'.",
       text_2_0: "Si apre una bacheca con una colonna già pronta.",
       text_3_0: "• Aggiungere una colonna — tocca 'Aggiungi colonna' a destra (fino a 10).",
       text_4_0: "• Rinominare una colonna — modifica il testo nella sua intestazione.",
@@ -629,14 +732,23 @@ const it = {
     how_to_create_code_note: {
       title: "Come creo una nota di codice?",
       text_1_0: "Tocca il pulsante",
-      text_1_1: "in basso a destra nella schermata principale e scegli 'Codice'.",
+      text_1_1: "accanto a [+] in basso a destra nella schermata principale e scegli 'Codice'.",
       text_2_0: "Ottieni un vero editor di codice con evidenziazione della sintassi.",
       text_3_0:
         "• Schede — tieni più snippet in una sola nota; aggiungile, rinominale, eliminale o trascinale per riordinarle (fino a 6).",
       text_4_0:
         "• Linguaggio — tocca la barra del linguaggio per sceglierlo, oppure lascia che venga rilevato automaticamente.",
-      text_5_0: "• Trova e sostituisci — tocca l'icona di ricerca in alto, come nelle note di testo.",
       text_6_0: "Per salvarla basta tornare alla schermata principale.",
+    },
+    what_quick_note: {
+      title: "Cos'è la barra nota rapida?",
+      text_1_0: "È il campo 'Nota rapida…' in fondo alla schermata principale. Toccalo, scrivi e poi tocca",
+      text_1_1: "per salvare subito una nota di testo, senza aprire l'editor.",
+      text_2_0: "La nota finisce nella categoria che stai guardando e il titolo viene preso dalle sue prime parole.",
+      text_3_0: "Per aggiungere formattazione o immagini, tocca invece",
+      text_3_1: "e quello che hai scritto si apre nell'editor completo.",
+      text_4_0: "Al computer, Ctrl/⌘+Invio salva la nota e Invio va a capo.",
+      text_5_0: "Puoi disattivare la barra in Impostazioni → Creazione nota.",
     },
     how_to_edit_note: {
       title: "Come modifico una nota?",
@@ -665,10 +777,12 @@ const it = {
       text_1_0: "Serve a formattare e arricchire il testo. Ecco cosa fanno i pulsanti:",
       text_2_0: "• Annulla / Ripeti — torna indietro o avanti tra le ultime modifiche.",
       text_3_0: "• Immagine — inserisci una foto dalla galleria.",
+      text_heading: "• Titolo — trasforma la riga in un titolo.",
       text_4_0: "• Grassetto — rende il testo in grassetto.",
       text_5_0: "• Corsivo — rende il testo in corsivo.",
       text_6_0: "• Barrato — barra il testo selezionato.",
       text_7_0: "• Sottolineato — sottolinea il testo.",
+      text_align: "• Allinea a sinistra / al centro — allinea il paragrafo a sinistra o al centro.",
       text_8_0: "• Pedice — abbassa leggermente il testo sotto la riga.",
       text_9_0: "• Apice — alza leggermente il testo sopra la riga.",
       text_10_0: "• Elenco puntato — crea un elenco puntato.",
@@ -677,9 +791,19 @@ const it = {
     },
     what_find_replace: {
       title: "Come trovo e sostituisco il testo?",
-      text_1_0: "Mentre modifichi una nota di testo o di codice, tocca l'icona di ricerca in alto a destra.",
+      text_1_0: "Mentre modifichi una nota di testo, tocca l'icona di ricerca in alto a destra.",
       text_2_0: "Scrivi cosa cerchi: le frecce ti spostano tra i risultati e ti mostrano quanti sono.",
       text_3_0: "Attiva 'Sostituisci' per cambiare il risultato corrente, oppure sostituiscili tutti in una volta.",
+    },
+    what_voice_dictation: {
+      title: "Come faccio a dettare una nota?",
+      text_1_0: "In una nota di testo o in una lista di cose da fare, tocca il pulsante del microfono e parla.",
+      text_2_0: 'Di\' "virgola", "punto", "punto interrogativo" o "a capo" per la punteggiatura.',
+      text_3_0:
+        "Tocca 'Inserisci' per aggiungere il testo dove si trova il cursore. In una lista di cose da fare, ogni riga diventa un elemento.",
+      text_4_0:
+        "Con l'Assistente AI configurato, 'Sistema con AI' rifinisce il testo (punteggiatura, maiuscole, intercalari) prima di inserirlo; in una lista di cose da fare, invece, trasforma quello che hai detto in elementi.",
+      text_5_0: "Puoi cambiare la lingua o disattivare la dettatura in Impostazioni → Riconoscimento vocale.",
     },
     what_are_settings_note: {
       title: "Quali sono le opzioni di una nota?",
@@ -689,7 +813,8 @@ const it = {
       text_4_0: "• Proteggi — blocca la nota dietro il tuo codice segreto o l'impronta.",
       text_5_0: "• Sola lettura — evita modifiche accidentali alla nota.",
       text_6_0: "• Nascondi — tiene la nota fuori dalla schermata principale finché non mostri le note nascoste.",
-      text_7_0: "• Rendi offline — tiene la nota solo su questo dispositivo, senza sincronizzarla sul cloud.",
+      text_7_0:
+        "• Rendi offline — tiene la nota solo su questo dispositivo, senza sincronizzarla sul cloud. Con 'Sincronizza nel cloud' viene caricata di nuovo come nuova nota, con \"(2)\" alla fine del titolo.",
       text_8_0: "• Cambia categoria — sposta la nota in un'altra categoria.",
       text_9_0: "• Esporta (note di testo) — salva la nota come file .txt, Markdown o PDF.",
       text_10_0: "• Informazioni — vedi tipo, categoria e date della nota.",
@@ -733,7 +858,7 @@ const it = {
       title: "Cos'è il cestino?",
       text_1_0: "Quando elimini una nota non sparisce subito: prima finisce nel cestino.",
       text_2_0:
-        "Le note vi restano 7 giorni, poi vengono eliminate definitivamente. Puoi cambiare la durata nelle impostazioni di base.",
+        "Le note vi restano 30 giorni, poi vengono eliminate definitivamente. Nelle impostazioni di base puoi tenerle 3, 7, 15 o 30 giorni.",
     },
     how_restore_trashed_notes: {
       title: "Come ripristino le note eliminate?",
@@ -759,17 +884,25 @@ const it = {
     what_cloud_sync: {
       title: "Cos'è la sincronizzazione Cloud?",
       text_1_0:
-        "Puoi sincronizzare le tue note tra i dispositivi collegando il tuo progetto Google Firebase e attivando la sincronizzazione. Non esiste un server centrale di Fast Memo: i tuoi dati vivono solo nel tuo Firebase.",
+        "Puoi sincronizzare le tue note tra i dispositivi collegando il tuo progetto Google Firebase o il tuo FastMemo Server (su PC, NAS, Raspberry Pi o VPS) e attivando la sincronizzazione. Non esiste un server centrale di Fast Memo: i tuoi dati vivono solo dove scegli tu.",
       text_2_0:
         "Le tue note vengono cifrate end-to-end sul dispositivo prima di essere caricate, così nessuno tranne te può leggerle.",
       text_link: "Leggi la guida passo passo per configurare Google Firebase →",
+      text_link_server: "Leggi la guida per configurare il tuo FastMemo Server →",
+    },
+    what_conflict_copy: {
+      title: 'Perché c\'è una nota con "(conflitto)"?',
+      text_1_0:
+        "Se la stessa nota viene modificata su due dispositivi prima che si sincronizzino, Fast Memo tiene entrambe le versioni invece di sceglierne una, così non perdi niente di quello che hai scritto.",
+      text_2_0:
+        'Una delle due diventa una copia con "(conflitto)" alla fine del titolo: confrontale, tieni quello che ti serve ed elimina l\'altra.',
     },
     what_encryption: {
       title: "Come vengono cifrate le mie note?",
       text_1_0:
         "Il Cloud Sync usa la crittografia end-to-end. Alla prima configurazione scegli una password di crittografia, e il dispositivo ne deriva la chiave che protegge le tue note.",
       text_2_0:
-        "La chiave non lascia mai il dispositivo e non viene salvata nel cloud: anche chi avesse accesso al tuo Firebase non può leggere il contenuto delle note senza la tua password.",
+        "La chiave non lascia mai il dispositivo e non viene salvata nel cloud: anche chi avesse accesso al tuo Firebase o al tuo server non può leggere il contenuto delle note senza la tua password.",
       text_3_0:
         "Viene cifrato il contenuto delle note; titoli e date restano leggibili per permettere all'app di ordinarle e sincronizzarle.",
     },
@@ -837,6 +970,7 @@ const it = {
       text_2_0: "• Semplice — [+] crea una nota di testo; usa il menu per gli altri tipi.",
       text_3_0: "• Smart — [+] crea sempre il tipo che hai scelto come preferito.",
       text_4_0: "• Adattiva — [+] crea lo stesso tipo dell'ultima nota su cui hai lavorato.",
+      text_5_0: "• Barra nota rapida — mostra o nasconde la barra per le note rapide in fondo alla schermata principale.",
     },
     what_home_filters: {
       title: "Come funzionano i filtri della Home?",
@@ -856,6 +990,8 @@ const it = {
       text_1_0: "Sì: quando apri Fast Memo controlla in background se è disponibile una nuova versione.",
       text_2_0:
         "Quando c'è un aggiornamento, una schermata 'Cosa c'è di nuovo?' ti mostra le novità. Puoi comunque controllare quando vuoi dalle impostazioni.",
+      text_3_0:
+        "Nell'app desktop fai clic su 'Installa': l'aggiornamento si scarica e si installa da solo, poi l'app si riavvia. Sul telefono le piccole correzioni possono anche arrivare da sole e si applicano alla successiva apertura dell'app.",
     },
     what_report_problem: {
       title: "Come segnalo un problema?",
@@ -869,20 +1005,38 @@ const it = {
       text_1_0:
         "I webhook sono per utenti esperti: permettono a Fast Memo di avvisare un altro servizio ogni volta che succede qualcosa — una nota creata, modificata o eliminata, una categoria cambiata, dati esportati e così via.",
       text_2_0: "Ogni azione può richiamare un indirizzo web a tua scelta. Li configuri in Impostazioni → Webhook.",
+      text_link: "Leggi la guida ai webhook →",
     },
     what_platforms: {
       title: "Dove posso usare Fast Memo?",
       text_1_0: "Fast Memo funziona sia su mobile sia su desktop (Windows, macOS e Linux), oltre che in versione web.",
-      text_2_0: "Collega lo stesso progetto Google Firebase su ogni dispositivo e le tue note restano sincronizzate ovunque.",
+      text_2_0:
+        "Collega ogni dispositivo allo stesso progetto Google Firebase o allo stesso FastMemo Server e le tue note restano sincronizzate ovunque.",
+    },
+    what_desktop_shortcuts: {
+      title: "Ci sono scorciatoie da tastiera sul computer?",
+      text_1_0: "Sì, nell'app desktop:",
+      text_2_0: "• Ctrl/⌘+N — nuova nota.",
+      text_3_0: "• Ctrl/⌘+F — cerca tra le note, o trova un testo in una nota di testo aperta.",
+      text_4_0: "• Esc — torna indietro; in un campo di testo il primo Esc esce solo dal campo.",
+      text_5_0: "• Ctrl/⌘+Invio — salva la nota rapida.",
+      text_6_0:
+        "Su Mac gli stessi comandi sono nella barra dei menu, insieme agli altri tipi di nota e a Esporta/Importa dati. Chiudere la finestra lascia Fast Memo aperto: fai clic sulla sua icona nel Dock per riaprirlo, o esci con ⌘Q.",
+      text_7_0: "Su Windows e Linux, chiudere la finestra chiude Fast Memo.",
     },
     what_ai_assistant: {
       title: "Cos'è l'Assistente AI?",
       text_1_0:
         "Fast Memo include un Assistente AI self-hosted che funziona interamente sul tuo dispositivo. Nessun dato viene inviato a server esterni.",
-      text_2_0: "Per configurarlo, vai in Impostazioni -> Assistente AI, scegli un modello e scaricalo.",
+      text_2_0: "Per configurarlo, vai in Impostazioni → Assistente AI, scegli un modello e scaricalo.",
       text_3_0:
-        "Una volta attivato, un bottone a forma di stella appare dentro ogni editor. Toccalo per accedere ad azioni smart come: genera titolo, riassumi, continua a scrivere, formatta testo, suggerisci elementi checklist o suggerisci categoria.",
-      text_4_0: "L'AI funziona offline e supporta piu' lingue.",
+        "Una volta attivato, nell'editor delle note compare un pulsante a forma di stella. A seconda del tipo di nota, toccalo per generare un titolo, riassumere (il riassunto va in cima alla nota), correggere la grammatica, accorciare il testo, tradurlo nella lingua che scegli, suggerire elementi per una checklist o suggerire una categoria.",
+      text_4_0:
+        "Alcune azioni richiedono un modello più grande: in Impostazioni → Assistente AI vedi cosa sa fare ciascun modello.",
+      text_5_0:
+        "Può anche sistemare la dettatura vocale e, qui nell'Aiuto, trovare l'argomento giusto a partire dalle tue parole.",
+      text_6_0: "L'AI funziona offline e supporta più lingue.",
+      text_link: "Leggi la guida all'Assistente AI →",
     },
   },
   report: {
@@ -946,6 +1100,108 @@ const it = {
     generic_success_description: "L'operazione è andata a buon fine.",
   },
 
+  // The macOS menu bar (Apple's own wording in each language).
+  menu: {
+    about: "Informazioni su {{name}}",
+    settings: "Impostazioni…",
+    services: "Servizi",
+    hide: "Nascondi {{name}}",
+    hide_others: "Nascondi altre",
+    show_all: "Mostra tutte",
+    quit: "Esci da {{name}}",
+    file: "File",
+    new_note: "Nuova nota",
+    new_text: "Nuova nota di testo",
+    new_todo: "Nuova lista",
+    new_kanban: "Nuova bacheca Kanban",
+    new_code: "Nuova nota di codice",
+    export_import: "Esporta/Importa dati…",
+    close_window: "Chiudi finestra",
+    edit: "Composizione",
+    undo: "Annulla",
+    redo: "Ripristina",
+    cut: "Taglia",
+    copy: "Copia",
+    paste: "Incolla",
+    select_all: "Seleziona tutto",
+    find: "Trova…",
+    view: "Vista",
+    fullscreen: "Attiva modalità a tutto schermo",
+    window: "Finestra",
+    minimize: "Contrai",
+    zoom: "Ridimensiona",
+    help: "Aiuto",
+    help_item: "Aiuto di {{name}}",
+  },
+
+  a11y: {
+    back: "Indietro",
+    close: "Chiudi",
+    save: "Salva",
+    edit: "Modifica",
+    discard_changes: "Annulla modifiche",
+    previous: "Precedente",
+    next: "Successivo",
+    previous_match: "Risultato precedente",
+    next_match: "Risultato successivo",
+    sync_device: "Sincronizza questo dispositivo",
+    remove_device: "Rimuovi dispositivo",
+    remove_attachment: "Rimuovi allegato",
+    start_over: "Ricomincia",
+    delete_digit: "Cancella cifra",
+    new_note: "Nuova nota",
+    exit_selection: "Esci dalla selezione",
+    note_types: "Scegli il tipo di nota",
+    organize_categories: "Organizza categorie",
+    delete_category: "Elimina categoria",
+    dictate: "Detta",
+    start_listening: "Avvia ascolto",
+    stop_listening: "Interrompi ascolto",
+    clear_search: "Cancella ricerca",
+    delete_item: "Elimina elemento",
+    change_column_color: "Cambia colore colonna",
+    move_column_left: "Sposta colonna a sinistra",
+    move_column_right: "Sposta colonna a destra",
+    search_in_note: "Cerca nella nota",
+    add_item: "Aggiungi elemento",
+    open_full_note: "Apri come nota completa",
+    save_note: "Salva nota",
+    list_mode: "Modalità lista",
+    more_options: "Altre opzioni",
+    sort_filter: "Ordina e filtra",
+    hide_keyboard: "Nascondi tastiera",
+    open_guide: "Apri la guida",
+    page: "Pagina {{page}}",
+    item: "Elemento",
+    format: {
+      undo: "Annulla",
+      redo: "Ripeti",
+      image: "Inserisci immagine",
+      heading: "Titolo",
+      bold: "Grassetto",
+      italic: "Corsivo",
+      strikethrough: "Barrato",
+      underline: "Sottolineato",
+      align_left: "Allinea a sinistra",
+      align_center: "Centra",
+      subscript: "Pedice",
+      superscript: "Apice",
+      bullet_list: "Elenco puntato",
+      numbered_list: "Elenco numerato",
+      code: "Codice",
+    },
+    image: {
+      picture: "Immagine",
+      small: "Piccola",
+      medium: "Media",
+      large: "Grande",
+      full: "Larghezza intera",
+      align_left: "Allinea a sinistra",
+      align_center: "Centra",
+      align_right: "Allinea a destra",
+    },
+  },
+
   /* generic */
   All: "Tutte",
   delete_and_move: "Elimina e Sposta",
@@ -974,7 +1230,35 @@ const it = {
     unlimited_trash_time: "Tempo cestino illimitato",
     unlimited_trash_time_desc: "Limite attuale: 30 giorni",
     change_app_icon: "Cambia icona app",
-    change_app_icon_desc: "Prossimamente",
+    change_app_icon_desc: "Icone stagionali per la schermata Home",
+    ai_eval: "Valutazione AI",
+    ai_eval_desc: "Esegue testi fissi sul modello selezionato: tempi e risposte",
+  },
+
+  appicon: {
+    title: "Icona dell'app",
+    default: "Predefinita",
+    halloween: "Halloween",
+    christmas: "Natale",
+    easter: "Pasqua",
+    summer: "Estate",
+    close_title: "Cambia icona",
+    close_description: "Per applicare la nuova icona Fast Memo si chiude. Riaprila dalla schermata Home.",
+    close_confirm: "Cambia e chiudi",
+    failed: "Non è stato possibile cambiare l'icona.",
+    unavailable: "Non disponibile su questo dispositivo",
+  },
+
+  aieval: {
+    title: "Valutazione AI",
+    run: "Esegui tutto",
+    stop: "Ferma",
+    share: "Condividi risultati",
+    progress: "{{done}} / {{total}} completati",
+    load: "Modello caricato in {{ms}} ms",
+    no_model: "Scarica prima questo modello in Assistente AI.",
+    unavailable: "L'AI sul dispositivo qui non è disponibile.",
+    failed: "Il modello non si è caricato.",
   },
 
   /* toast */
@@ -983,9 +1267,9 @@ const it = {
   noInternetConnection: "Nessuna connessione a internet",
   devicesLimitReached: "Limite dispositivi superato",
   noteLimitReached: "Limite nota raggiunto",
-  developerModeActivated: "Modalita' sviluppatore attivata!",
-  developerModeAlready: "La modalita' sviluppatore e' gia' attiva",
-  developerModeTaps: "{{remaining}} tap per attivare la modalita' sviluppatore",
+  developerModeActivated: "Modalità sviluppatore attivata!",
+  developerModeAlready: "La modalità sviluppatore è già attiva",
+  developerModeTaps: "{{remaining}} tap per attivare la modalità sviluppatore",
 
   empty_title: "(Senza titolo)",
 };

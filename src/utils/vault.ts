@@ -1,6 +1,7 @@
 import CryptoJS from "crypto-js";
 
 import { randomBytes, randomBytesHex } from "@/utils/secureRandom";
+import FastmemoCrypto from "~/modules/fastmemo-crypto";
 
 /**
  * Per-vault end-to-end encryption primitives.
@@ -25,10 +26,15 @@ import { randomBytes, randomBytesHex } from "@/utils/secureRandom";
  *    wipe.
  *
  * Crypto choices and their constraints:
+ *  - PBKDF2-SHA256 (KDF) runs natively (`modules/fastmemo-crypto`: the platform's
+ *    HMAC on Android/iOS, WebCrypto on web/Tauri), off the JS thread: in pure JS
+ *    it froze the app for seconds. Every implementation is byte-identical to
+ *    crypto-js, which stays the fallback (no native module, no secure context)
+ *    and the reference the native output is checked against on first use.
  *  - `crypto-js` (full, pure-JS, synchronous, identical on iOS/Android/web/Tauri)
- *    for PBKDF2-SHA256 (KDF) and AES (wrapping). It must be synchronous because
- *    note encryption runs inside Redux reducers; WebCrypto is async and absent
- *    on native RN, and a native GCM module would not run in the Tauri WebView.
+ *    for AES (wrapping). It must be synchronous because note encryption runs
+ *    inside Redux reducers; WebCrypto is async and absent on native RN, and a
+ *    native GCM module would not run in the Tauri WebView.
  *  - secure randomness comes from `@/utils/secureRandom` (OS CSPRNG), never from
  *    CryptoJS's Math.random-backed WordArray.random.
  *  - passphrase correctness is verified deterministically via the canary, so a
@@ -44,17 +50,17 @@ import { randomBytes, randomBytesHex } from "@/utils/secureRandom";
 export const VAULT_VERSION = 2 as const;
 
 /**
- * PBKDF2 iterations. Pure-JS PBKDF2 is slow, and this runs only at
- * init/unlock/passphrase-change (never per note, because the DEK is cached), so
- * we can afford a meaningful count while keeping unlock to ~1-2s on a phone.
- * Stored in the vault doc so future builds can raise it without breaking old vaults.
+ * PBKDF2 iterations. This runs only at init/unlock/passphrase-change (never per
+ * note, because the DEK is cached). Stored in the vault doc so future builds can
+ * raise it without breaking old vaults — but every device must still derive it,
+ * including old app versions that only have the slow pure-JS implementation.
  */
 const DEFAULT_KDF_ITERATIONS = 100_000;
 
 const DEK_BYTES = 32; // 256-bit data key
 const SALT_BYTES = 16;
 const RECOVERY_BYTES = 20; // 160-bit recovery key -> 32 Base32 chars
-const KEK_KEYSIZE_WORDS = 256 / 32; // 8 words = 256-bit derived key
+const KEK_BYTES = 32; // 256-bit derived key
 
 /** Known plaintext sealed under the DEK; used to verify a candidate DEK is correct. */
 const CANARY_PLAINTEXT = "fastmemo-vault-canary-v1";
@@ -119,14 +125,54 @@ export const generateRecoveryKey = (): string => {
 /** Normalize a recovery key the user typed back in (strip spaces/dashes, uppercase). */
 export const normalizeRecoveryKey = (recoveryKey: string): string => recoveryKey.replace(/[\s-]/g, "").toUpperCase();
 
-const deriveKEKHex = (secret: string, saltHex: string, iterations: number): string => {
+const deriveKEKHexJs = (secret: string, saltHex: string, iterations: number, keyLength = KEK_BYTES): string => {
   const salt = CryptoJS.enc.Hex.parse(saltHex);
   const key = CryptoJS.PBKDF2(secret, salt, {
-    keySize: KEK_KEYSIZE_WORDS,
+    keySize: keyLength / 4,
     iterations,
     hasher: CryptoJS.algo.SHA256,
   });
   return key.toString(CryptoJS.enc.Hex);
+};
+
+/**
+ * Whether the native PBKDF2 can be trusted, decided once: it must reproduce crypto-js' output (a
+ * cheap 2-iteration check: multi-byte UTF-8 up to an emoji, a passphrase longer than the 64-byte HMAC
+ * block, an empty one), or a vault created on one platform could not be unlocked on another.
+ */
+let nativeKdfVerified: Promise<boolean> | null = null;
+
+const isNativeKdfUsable = (): Promise<boolean> => {
+  nativeKdfVerified ??= (async () => {
+    if (!FastmemoCrypto) return false;
+    const saltHex = "00112233445566778899aabbccddeeff";
+    try {
+      for (const secret of ["pässwörd ✓ 密码 🔑", "long passphrase ".repeat(5), ""]) {
+        const native = await FastmemoCrypto.pbkdf2Sha256Async(secret, saltHex, 2, KEK_BYTES);
+        if (native !== deriveKEKHexJs(secret, saltHex, 2)) return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  return nativeKdfVerified;
+};
+
+// Half an emoji (a lone UTF-16 surrogate) has no UTF-8 form: crypto-js throws on it, while WebCrypto and
+// the native code would hash U+FFFD instead, a key the JS path could never reproduce. Such a secret
+// takes the JS path, so it fails the same way everywhere (as it did before the native path existed).
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+
+const deriveKEKHex = async (secret: string, saltHex: string, iterations: number): Promise<string> => {
+  if (!LONE_SURROGATE.test(secret) && (await isNativeKdfUsable())) {
+    try {
+      return await FastmemoCrypto!.pbkdf2Sha256Async(secret, saltHex, iterations, KEK_BYTES);
+    } catch {
+      // fall through to the JS implementation
+    }
+  }
+  return deriveKEKHexJs(secret, saltHex, iterations);
 };
 
 const aesEncrypt = (plaintext: string, keyStr: string): string => CryptoJS.AES.encrypt(plaintext, keyStr).toString();
@@ -162,14 +208,16 @@ export interface CreatedVault {
 }
 
 /** Create a brand-new vault from a chosen passphrase. Returns the DEK to cache and the recovery key to show once. */
-export const createVault = (passphrase: string, iterations: number = DEFAULT_KDF_ITERATIONS): CreatedVault => {
+export const createVault = async (passphrase: string, iterations: number = DEFAULT_KDF_ITERATIONS): Promise<CreatedVault> => {
   const dek = generateDEK();
   const salt = randomBytesHex(SALT_BYTES);
   const recoverySalt = randomBytesHex(SALT_BYTES);
   const recoveryKey = generateRecoveryKey();
 
-  const kekHex = deriveKEKHex(passphrase, salt, iterations);
-  const recoveryKekHex = deriveKEKHex(normalizeRecoveryKey(recoveryKey), recoverySalt, iterations);
+  const [kekHex, recoveryKekHex] = await Promise.all([
+    deriveKEKHex(passphrase, salt, iterations),
+    deriveKEKHex(normalizeRecoveryKey(recoveryKey), recoverySalt, iterations),
+  ]);
 
   const now = Date.now();
   const vault: VaultDoc = {
@@ -188,15 +236,15 @@ export const createVault = (passphrase: string, iterations: number = DEFAULT_KDF
 };
 
 /** Unlock with the passphrase. Returns the DEK or null if the passphrase is wrong. */
-export const unlockVaultWithPassphrase = (vault: VaultDoc, passphrase: string): string | null => {
-  const kekHex = deriveKEKHex(passphrase, vault.salt, vault.kdf.iterations);
+export const unlockVaultWithPassphrase = async (vault: VaultDoc, passphrase: string): Promise<string | null> => {
+  const kekHex = await deriveKEKHex(passphrase, vault.salt, vault.kdf.iterations);
   const dek = aesDecrypt(vault.wrappedDEK, kekHex);
   return isDEKValid(vault, dek) ? dek : null;
 };
 
 /** Unlock with the recovery key. Returns the DEK or null if the recovery key is wrong. */
-export const unlockVaultWithRecoveryKey = (vault: VaultDoc, recoveryKey: string): string | null => {
-  const kekHex = deriveKEKHex(normalizeRecoveryKey(recoveryKey), vault.recoverySalt, vault.kdf.iterations);
+export const unlockVaultWithRecoveryKey = async (vault: VaultDoc, recoveryKey: string): Promise<string | null> => {
+  const kekHex = await deriveKEKHex(normalizeRecoveryKey(recoveryKey), vault.recoverySalt, vault.kdf.iterations);
   const dek = aesDecrypt(vault.wrappedDEKRecovery, kekHex);
   return isDEKValid(vault, dek) ? dek : null;
 };
@@ -206,9 +254,9 @@ export const unlockVaultWithRecoveryKey = (vault: VaultDoc, recoveryKey: string)
  * note is re-encrypted and already-unlocked devices keep working untouched.
  * Caller must hold a valid DEK (i.e. be unlocked) before calling this.
  */
-export const rewrapWithNewPassphrase = (vault: VaultDoc, dek: string, newPassphrase: string): VaultDoc => {
+export const rewrapWithNewPassphrase = async (vault: VaultDoc, dek: string, newPassphrase: string): Promise<VaultDoc> => {
   const salt = randomBytesHex(SALT_BYTES);
-  const kekHex = deriveKEKHex(newPassphrase, salt, vault.kdf.iterations);
+  const kekHex = await deriveKEKHex(newPassphrase, salt, vault.kdf.iterations);
   return { ...vault, salt, wrappedDEK: aesEncrypt(dek, kekHex), updatedAt: Date.now() };
 };
 
@@ -218,10 +266,10 @@ export interface RewrappedRecovery {
 }
 
 /** Generate a fresh recovery key wrapping the existing DEK (e.g. right after a recovery, or on demand). */
-export const rewrapRecovery = (vault: VaultDoc, dek: string): RewrappedRecovery => {
+export const rewrapRecovery = async (vault: VaultDoc, dek: string): Promise<RewrappedRecovery> => {
   const recoverySalt = randomBytesHex(SALT_BYTES);
   const recoveryKey = generateRecoveryKey();
-  const recoveryKekHex = deriveKEKHex(normalizeRecoveryKey(recoveryKey), recoverySalt, vault.kdf.iterations);
+  const recoveryKekHex = await deriveKEKHex(normalizeRecoveryKey(recoveryKey), recoverySalt, vault.kdf.iterations);
   return {
     vault: { ...vault, recoverySalt, wrappedDEKRecovery: aesEncrypt(dek, recoveryKekHex), updatedAt: Date.now() },
     recoveryKey,

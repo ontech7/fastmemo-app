@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { LockClosedIcon } from "react-native-heroicons/outline";
+import LockClosedIcon from "react-native-heroicons/outline/LockClosedIcon";
 import { useSelector } from "react-redux";
 
 import { useRouter } from "@/hooks/useRouter";

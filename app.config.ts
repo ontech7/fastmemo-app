@@ -1,4 +1,123 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
+import {
+  type AndroidConfig,
+  type ConfigPlugin,
+  withAndroidManifest,
+  withDangerousMod,
+  withMainApplication,
+} from "expo/config-plugins";
+import fs from "node:fs";
+import path from "node:path";
+
+// R8 is on for Android release builds since SDK 57, and llama.rn ships no consumer rules: keep
+// its JNI classes (as its README asks), otherwise on-device AI breaks in release builds only.
+const LLAMA_PROGUARD_RULE = "-keep class com.rnllama.** { *; }";
+
+const withLlamaProguardRules: ConfigPlugin = (config) =>
+  withDangerousMod(config, [
+    "android",
+    (modConfig) => {
+      const file = path.join(modConfig.modRequest.platformProjectRoot, "app", "proguard-rules.pro");
+      const rules = fs.readFileSync(file, "utf8");
+      if (!rules.includes(LLAMA_PROGUARD_RULE)) {
+        fs.writeFileSync(file, `${rules.trimEnd()}\n\n# llama.rn (JNI)\n${LLAMA_PROGUARD_RULE}\n`);
+      }
+      return modConfig;
+    },
+  ]);
+
+// A self-hosted FastMemo server on a home network is often plain http (a LAN address), which Android release builds
+// refuse by default. The connect screen warns before saving an http address and recommends HTTPS (ADR-017). The
+// manifest flag and a network security config: newer Android versions only read the config.
+const NETWORK_SECURITY_CONFIG = `<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+  <base-config cleartextTrafficPermitted="true">
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
+</network-security-config>
+`;
+
+const withCleartextTraffic: ConfigPlugin = (config) =>
+  withDangerousMod(
+    withAndroidManifest(config, (modConfig) => {
+      const application = modConfig.modResults.manifest.application?.[0];
+      if (application) {
+        application.$["android:usesCleartextTraffic"] = "true";
+        application.$["android:networkSecurityConfig"] = "@xml/network_security_config";
+      }
+      return modConfig;
+    }),
+    [
+      "android",
+      (modConfig) => {
+        const dir = path.join(modConfig.modRequest.platformProjectRoot, "app", "src", "main", "res", "xml");
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "network_security_config.xml"), NETWORK_SECURITY_CONFIG);
+        return modConfig;
+      },
+    ]
+  );
+
+// Changing the app icon on Android disables MainActivity and enables one of its <activity-alias> (expo-alternate-app-icons),
+// which only gets the launcher intent filter: give every alias MainActivity's other filters too, otherwise the app's URL
+// scheme (expo-router, the dev client) stops opening it once an alternate icon is chosen.
+// It wraps the config, so it is registered before the `plugins` array, and Expo runs the mods registered last first: the
+// aliases exist when it runs. Moved into `plugins` after expo-alternate-app-icons, it would find none and do nothing.
+const isLauncherFilter = (filter: AndroidConfig.Manifest.ManifestIntentFilter) =>
+  filter.action?.some((action) => action.$["android:name"] === "android.intent.action.MAIN") ?? false;
+
+const withAlternateIconIntentFilters: ConfigPlugin = (config) =>
+  withAndroidManifest(config, (modConfig) => {
+    const application = modConfig.modResults.manifest.application?.[0] as
+      | (AndroidConfig.Manifest.ManifestApplication & { "activity-alias"?: AndroidConfig.Manifest.ManifestActivity[] })
+      | undefined;
+    const mainActivity = application?.activity?.find((activity) => activity.$["android:name"] === ".MainActivity");
+    const filters = (mainActivity?.["intent-filter"] ?? []).filter((filter) => !isLauncherFilter(filter));
+
+    for (const alias of application?.["activity-alias"] ?? []) {
+      if (alias.$["android:targetActivity" as keyof typeof alias.$] !== ".MainActivity") continue;
+      alias["intent-filter"] = [...(alias["intent-filter"] ?? []).filter(isLauncherFilter), ...filters];
+    }
+    return modConfig;
+  });
+
+// At launch the stored notes are read with expo-file-system, and expo-modules builds the options object of that first call
+// through kotlin-reflect, whose first use loads its metadata: the rest of the notes and every other Expo call wait behind it
+// (~120 ms on the emulator, more on an older phone). Started on a thread of its own as the app starts, it runs while the JS
+// engine starts instead. By name: a class renamed in an expo-file-system update only skips the warm-up.
+const KOTLIN_REFLECT_WARMUP = "// FastMemo: kotlin-reflect warm-up (app.config.ts)";
+const KOTLIN_REFLECT_WARMUP_CLASSES = [
+  "InfoOptionsLegacy",
+  "ReadingOptions",
+  "WritingOptions",
+  "RelocatingOptions",
+  "DeletingOptions",
+  "MakeDirectoryOptions",
+].map((name) => `expo.modules.filesystem.legacy.${name}`);
+
+const withKotlinReflectWarmup: ConfigPlugin = (config) =>
+  withMainApplication(config, (modConfig) => {
+    const { contents, language } = modConfig.modResults;
+    if (language !== "kt" || contents.includes(KOTLIN_REFLECT_WARMUP)) return modConfig;
+    const names = KOTLIN_REFLECT_WARMUP_CLASSES.map((name) => `"${name}"`).join(", ");
+    modConfig.modResults.contents = contents.replace(
+      /^([ \t]*)super\.onCreate\(\)\n/m,
+      (line, indent: string) =>
+        `${line}${indent}${KOTLIN_REFLECT_WARMUP}\n` +
+        `${indent}Thread({\n` +
+        `${indent}  for (name in listOf(${names})) {\n` +
+        `${indent}    runCatching { Class.forName(name).kotlin.constructors.forEach { it.parameters } }\n` +
+        `${indent}  }\n` +
+        `${indent}}, "kotlin-reflect-warmup").start()\n`
+    );
+    return modConfig;
+  });
+
+// The Geist weights, built into the apps (no font to load at launch). On Android the file name is the family name, as
+// FONT in src/constants/styles.ts uses it. The web loads them (src/hooks/useAppFonts.web.ts).
+const GEIST_FONTS = ["Regular", "Medium", "SemiBold", "Bold"].map((weight) => `./assets/fonts/Geist-${weight}.ttf`);
 
 const isDev = process.env.EXPO_PUBLIC_ENV === "DEV";
 
@@ -10,81 +129,111 @@ const adaptiveIcon = isDev ? "./assets/images/test/adaptive-icon.png" : "./asset
 const favicon = isDev ? "./assets/images/test/favicon.png" : "./assets/images/favicon.png";
 const backgroundColor = "#05091A";
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
-  ...config,
-  owner: "dontrok1",
-  name: appName,
-  slug: appSlug,
-  version: "3.2.0",
-  orientation: "portrait",
-  icon: appIcon,
-  scheme: appSlug,
-  userInterfaceStyle: "automatic",
-  backgroundColor,
-  ios: {
-    supportsTablet: true,
-    bundleIdentifier: appBundle,
-  },
-  android: {
-    adaptiveIcon: {
-      foregroundImage: adaptiveIcon,
-      backgroundImage: "./assets/images/adaptive-icon-bg.png",
+// The alternate app icons (Settings > Developer options > Change app icon). Same names as AppIconName in
+// src/constants/app-icons.ts; the images come from scripts/build-app-icons.mjs.
+const alternateAppIcons = ["Halloween", "Christmas", "Easter", "Summer"].map((name) => {
+  const image = `./assets/images/app-icons/${name.toLowerCase()}`;
+  return {
+    name,
+    ios: `${image}.png`,
+    android: {
+      foregroundImage: `${image}-foreground.png`,
+      backgroundImage: `${image}-background.png`,
       backgroundColor,
     },
-    package: appBundle,
-    blockedPermissions: [
-      "android.permission.READ_MEDIA_IMAGES",
-      "android.permission.READ_MEDIA_VIDEO",
-      "android.permission.READ_MEDIA_AUDIO",
-    ],
-  },
-  web: {
-    bundler: "metro",
-    output: "single",
-    favicon,
-  },
-  plugins: [
-    "expo-router",
-    "expo-status-bar",
-    "expo-font",
-    "expo-image",
-    "expo-image-picker",
-    "expo-localization",
-    "expo-secure-store",
-    "expo-sharing",
-    [
-      "expo-speech-recognition",
-      {
-        microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
-        speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
-        androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
-      },
-    ],
-    [
-      "expo-splash-screen",
-      {
-        image: "./assets/images/splash-logo.png",
-        imageWidth: 150,
-        backgroundColor,
-      },
-    ],
-    "llama.rn",
-    [
-      "@sentry/react-native",
-      {
-        url: "https://sentry.io/",
-        note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
-        project: "fastmemo-app",
-        organization: "andrea-losavio",
-      },
-    ],
-  ],
-  experiments: {
-    typedRoutes: true,
-  },
-  extra: {
-    eas: {
-      projectId: "44c5f162-d9f8-40db-ae28-269fe48982ca", // DEV
-    },
-  },
+  };
 });
+
+// The production EAS project (the old DEV project is no longer used).
+const EAS_PROJECT_ID = "44c5f162-d9f8-40db-ae28-269fe48982ca";
+
+export default ({ config }: ConfigContext): ExpoConfig =>
+  withAlternateIconIntentFilters(
+    withKotlinReflectWarmup(
+      withCleartextTraffic(
+        withLlamaProguardRules({
+          ...config,
+          owner: "dontrok1",
+          name: appName,
+          slug: appSlug,
+          version: "4.0.0",
+          runtimeVersion: { policy: "fingerprint" },
+          updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
+          orientation: "portrait",
+          icon: appIcon,
+          scheme: appSlug,
+          userInterfaceStyle: "automatic",
+          backgroundColor,
+          ios: {
+            supportsTablet: true,
+            bundleIdentifier: appBundle,
+          },
+          android: {
+            adaptiveIcon: {
+              foregroundImage: adaptiveIcon,
+              backgroundImage: "./assets/images/adaptive-icon-bg.png",
+              backgroundColor,
+            },
+            package: appBundle,
+            blockedPermissions: [
+              "android.permission.READ_MEDIA_IMAGES",
+              "android.permission.READ_MEDIA_VIDEO",
+              "android.permission.READ_MEDIA_AUDIO",
+            ],
+          },
+          web: {
+            bundler: "metro",
+            output: "single",
+            favicon,
+          },
+          plugins: [
+            // Every screen in the main bundle on web, as up to SDK 57: SDK 58 loads each route's code on first visit by default,
+            // and the desktop app showed an empty screen before every screen it opened.
+            ["expo-router", { asyncRoutes: { web: false } }],
+            "expo-status-bar",
+            ["expo-font", { fonts: GEIST_FONTS }],
+            "expo-image",
+            "expo-image-picker",
+            "expo-localization",
+            "expo-secure-store",
+            "expo-sharing",
+            [
+              "expo-speech-recognition",
+              {
+                microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
+                speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
+                androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
+              },
+            ],
+            [
+              "expo-splash-screen",
+              {
+                image: "./assets/images/splash-logo.png",
+                imageWidth: 150,
+                backgroundColor,
+              },
+            ],
+            "llama.rn",
+            ["expo-alternate-app-icons", alternateAppIcons],
+            [
+              "@sentry/react-native",
+              {
+                url: "https://sentry.io/",
+                note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
+                project: "fastmemo-app",
+                organization: "andrea-losavio",
+              },
+            ],
+          ],
+          experiments: {
+            typedRoutes: true,
+          },
+          extra: {
+            eas: {
+              projectId: EAS_PROJECT_ID,
+            },
+          },
+        })
+      )
+    )
+  );

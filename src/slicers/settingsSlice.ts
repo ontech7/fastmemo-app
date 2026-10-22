@@ -5,12 +5,15 @@ import type {
   NoteCreationSettings,
   RootState,
   SettingsState,
+  TourStep,
   VoiceRecognitionSettings,
   Webhooks,
 } from "@/types";
+import { isLegacyModelId, normalizeModelId } from "@/libs/ai/constants";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSlice } from "@reduxjs/toolkit";
 import { Platform } from "react-native";
+import { createSelector } from "reselect";
 
 const initialState: SettingsState = {
   language: "system",
@@ -53,7 +56,7 @@ const initialState: SettingsState = {
   aiAssistant: {
     enabled: false,
     modelDownloaded: false,
-    selectedModel: "qwen-0.5b",
+    selectedModel: "qwen3.5-0.8b",
     voiceOnly: false,
   },
   reportDate: null,
@@ -118,6 +121,10 @@ const settingsSlice = createSlice({
     setNoteCreation: (state, action: PayloadAction<NoteCreationSettings>) => {
       state.noteCreation = action.payload;
     },
+    /** Moves the first-note tour on ("done" ends it). */
+    setTourStep: (state, action: PayloadAction<TourStep>) => {
+      state.tour = action.payload;
+    },
   },
 });
 
@@ -136,6 +143,7 @@ export const {
   setAIAssistant,
   setDeveloperMode,
   setNoteCreation,
+  setTourStep,
 } = settingsSlice.actions;
 
 export const getAllSettings = (state: RootState): SettingsState => state.settings;
@@ -144,6 +152,7 @@ export const selectorIsIntroFinished = (state: RootState): boolean => state.sett
 export const selectorCurrentSecretCode = (state: RootState): string => state.settings.secretCode;
 export const selectorIsFingerprintEnabled = (state: RootState): boolean => state.settings.isFingerprintEnabled;
 export const selectorShowHidden = (state: RootState): boolean => state.settings.showHidden;
+export const selectorTourStep = (state: RootState): TourStep | undefined => state.settings.tour;
 export const selectorReportDate = (state: RootState): string | null => state.settings.reportDate;
 export const selectorIsCloudSyncEnabled = (state: RootState): boolean => state.settings.isCloudSyncEnabled;
 export const getCloudSettings = (state: RootState): CloudSettings => state.settings.cloud;
@@ -170,11 +179,21 @@ export const selectorWebhook_wipeData = (state: RootState) => state.settings.web
 const DEFAULT_AI_ASSISTANT: AIAssistantSettings = {
   enabled: false,
   modelDownloaded: false,
-  selectedModel: "qwen-0.5b",
+  selectedModel: "qwen3.5-0.8b",
   voiceOnly: false,
 };
-export const selectorAIAssistant = (state: RootState): AIAssistantSettings =>
-  state.settings.aiAssistant || DEFAULT_AI_ASSISTANT;
+const selectorStoredAIAssistant = (state: RootState): AIAssistantSettings => state.settings.aiAssistant || DEFAULT_AI_ASSISTANT;
+/**
+ * The AI settings with one of today's models. A Qwen 2.5 id stored by an earlier version reads as the tier replacing it,
+ * not downloaded (the file on the device is the old model's); the AI settings screen then stores it so.
+ */
+export const selectorAIAssistant = createSelector([selectorStoredAIAssistant], (ai): AIAssistantSettings => {
+  const selectedModel = normalizeModelId(ai.selectedModel);
+  return selectedModel === ai.selectedModel ? ai : { ...ai, selectedModel, modelDownloaded: false };
+});
+/** Whether the stored model is a Qwen 2.5 one of an earlier version. */
+export const selectorAIModelIsLegacy = (state: RootState): boolean =>
+  isLegacyModelId(state.settings.aiAssistant?.selectedModel);
 const DEFAULT_DEVELOPER_MODE: DeveloperModeSettings = {
   enabled: false,
   unlimitedTextSpace: false,

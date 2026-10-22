@@ -3,7 +3,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { CheckIcon, TrashIcon } from "react-native-heroicons/outline";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
@@ -95,6 +96,9 @@ export default function TodoItem({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => checkItem(item.id)}
+            accessibilityRole="checkbox"
+            accessibilityLabel={item.text || t("a11y.item")}
+            aria-checked={item.checked}
             onPressIn={() => setPressing(true)}
             onPressOut={() => setPressing(false)}
             disabled={disabled}
@@ -124,6 +128,8 @@ export default function TodoItem({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => deleteItem(item.id)}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.delete_item")}
             disabled={disabled}
             style={styles.deleteButton}
           >
@@ -149,6 +155,9 @@ export default function TodoItem({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => checkItem(item.id)}
+            accessibilityRole="checkbox"
+            accessibilityLabel={item.text || t("a11y.item")}
+            aria-checked={isStepDone}
             onPressIn={() => setPressing(true)}
             onPressOut={() => setPressing(false)}
             disabled={disabled}
@@ -198,6 +207,8 @@ export default function TodoItem({
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => deleteItem(item.id)}
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.delete_item")}
           disabled={disabled}
           style={[styles.deleteButton, styles.stepDeleteAlign]}
         >

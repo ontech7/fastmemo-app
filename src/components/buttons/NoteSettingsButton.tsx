@@ -1,18 +1,16 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ArrowUpTrayIcon,
-  BookOpenIcon,
-  CheckIcon,
-  EllipsisVerticalIcon,
-  EyeSlashIcon,
-  InformationCircleIcon,
-  KeyIcon,
-  SignalSlashIcon,
-  StarIcon,
-  TagIcon,
-  TrashIcon,
-} from "react-native-heroicons/outline";
+import ArrowUpTrayIcon from "react-native-heroicons/outline/ArrowUpTrayIcon";
+import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import EllipsisVerticalIcon from "react-native-heroicons/outline/EllipsisVerticalIcon";
+import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
+import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
+import KeyIcon from "react-native-heroicons/outline/KeyIcon";
+import SignalSlashIcon from "react-native-heroicons/outline/SignalSlashIcon";
+import StarIcon from "react-native-heroicons/outline/StarIcon";
+import TagIcon from "react-native-heroicons/outline/TagIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import { useDispatch, useSelector, useStore } from "react-redux";
 import uuid from "react-uuid";
 
@@ -37,9 +35,11 @@ import type { Note, RootState, TextNote } from "@/types";
 interface Props {
   note: Note;
   setNote: (note: Note) => void;
+  /** Commits the editor's pending batch of edits, so actions on the stored note see the latest content. */
+  flushNote: () => void;
 }
 
-export default function NoteSettingsButton({ note, setNote }: Props) {
+export default function NoteSettingsButton({ note, setNote, flushNote }: Props) {
   const { t } = useTranslation();
 
   const router = useRouter();
@@ -111,6 +111,8 @@ export default function NoteSettingsButton({ note, setNote }: Props) {
   }, [note, title, type, t]);
 
   const deleteNoteFromItems = () => {
+    // Trash the latest content, and leave no pending commit to bring the note back on the way out.
+    flushNote();
     dispatch(temporaryDeleteNote(id));
     webhook(webhook_temporaryDeleteNote, {
       action: "note/temporaryDeleteNote",
@@ -140,6 +142,7 @@ export default function NoteSettingsButton({ note, setNote }: Props) {
   // synced -> offline: detach from the cloud and keep the editor state in sync so a
   // later edit does not re-queue the note for upload
   const makeNoteOffline = () => {
+    flushNote();
     dispatch(detachNote(id));
     setNote({ ...note, local: true });
     toast(t("note.settings.made_offline"));
@@ -148,6 +151,8 @@ export default function NoteSettingsButton({ note, setNote }: Props) {
   // offline -> synced: republished as a brand-new note (new id + " (2)") to avoid any
   // overlap with stale cloud/other-device versions
   const syncNoteToCloud = () => {
+    // Republish the latest content, and leave no pending commit to bring the old id back.
+    flushNote();
     dispatch(reattachNote({ id, newId: uuid() }));
     toast(t("note.settings.synced_as_duplicate"));
     router.back();
@@ -165,11 +170,11 @@ export default function NoteSettingsButton({ note, setNote }: Props) {
   };
 
   const changeCategory = () => {
-    // A brand-new note only enters the Redux store on its first edit, so persist the
-    // current state first. setNoteAsync drops empty notes instead of saving them, so
+    // A brand-new note only enters the Redux store on its first committed edit, so
+    // commit the pending batch first. Empty notes are dropped instead of saved, so
     // confirm it actually landed before navigating — the change-category screen looks
     // the note up by id and would silently bounce back if it is missing.
-    setNote(note);
+    flushNote();
 
     const persisted = store.getState().notes.items.some((n) => n.id === id);
     if (!persisted) {
@@ -188,6 +193,7 @@ export default function NoteSettingsButton({ note, setNote }: Props) {
   return (
     <>
       <PopupMenu
+        accessibilityLabel={t("a11y.more_options")}
         trigger={
           <IconChip>
             <EllipsisVerticalIcon size={20} color={COLOR.softWhite} />

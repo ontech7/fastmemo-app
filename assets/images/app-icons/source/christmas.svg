@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" data-bleed="#04140E">
+<defs>
+<radialGradient id="glow-tr" cx="1024" cy="0" r="680" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#1C8C5A" stop-opacity="0.6"/>
+<stop offset="1" stop-color="#04140E" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="glow-bl" cx="0" cy="1024" r="560" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#A1122B" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#04140E" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="f" x1="0" y1="278" x2="0" y2="745" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#F04A57"/>
+<stop offset="1" stop-color="#B5162B"/>
+</linearGradient>
+<g id="flake">
+<path d="M0,-28 L0,28 M-8,-21 L0,-13 L8,-21 M-8,21 L0,13 L8,21"/>
+<path transform="rotate(60)" d="M0,-28 L0,28 M-8,-21 L0,-13 L8,-21 M-8,21 L0,13 L8,21"/>
+<path transform="rotate(120)" d="M0,-28 L0,28 M-8,-21 L0,-13 L8,-21 M-8,21 L0,13 L8,21"/>
+</g>
+</defs>
+<g id="background">
+<rect width="1024" height="1024" fill="#04140E"/>
+<rect width="1024" height="1024" fill="url(#glow-tr)"/>
+<rect width="1024" height="1024" fill="url(#glow-bl)"/>
+<g fill="none" stroke="#F7F9FF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.85">
+<use href="#flake" transform="translate(170 180)"/>
+<use href="#flake" transform="translate(870 860) scale(1.15)"/>
+<use href="#flake" transform="translate(660 150) scale(0.7)"/>
+<use href="#flake" transform="translate(150 650) scale(0.8)"/>
+<use href="#flake" transform="translate(900 610) scale(0.65)"/>
+</g>
+<g fill="#F7F9FF" opacity="0.7">
+<circle cx="330" cy="200" r="5"/>
+<circle cx="790" cy="190" r="4"/>
+<circle cx="950" cy="420" r="5"/>
+<circle cx="230" cy="560" r="4"/>
+<circle cx="640" cy="700" r="5"/>
+<circle cx="560" cy="880" r="6"/>
+<circle cx="300" cy="880" r="4"/>
+<circle cx="110" cy="860" r="6"/>
+<circle cx="980" cy="740" r="4"/>
+<circle cx="470" cy="130" r="3"/>
+<circle cx="80" cy="420" r="4"/>
+</g>
+</g>
+<g id="foreground">
+<g fill="#F2C14E">
+<polygon points="234,278 512,278 489,318 215,318"/>
+<polygon points="195,345 472,345 450,385 175,385"/>
+<polygon points="155,412 432,412 410,452 136,452"/>
+</g>
+<polygon fill="url(#f)" points="540,278 891,278 832,381 643,381 588,475 776,475 717,578 528,578 433,745 278,745"/>
+<g fill="#F7F9FF">
+<path d="M532,300 C530,268 556,250 584,256 C606,238 650,238 670,254 C696,238 742,240 762,252 C790,238 838,240 856,256 C880,250 904,262 898,284 C896,296 888,300 878,300 L866,300 C866,318 846,320 846,300 L798,300 C798,330 774,334 772,302 L702,300 C700,318 680,320 678,300 L604,300 C602,336 574,338 572,304 L548,304 C540,304 532,306 532,300 Z"/>
+<path d="M592,490 C590,466 612,456 636,462 C660,450 694,452 710,464 C734,452 772,456 782,474 C786,486 780,492 770,492 L752,492 C752,510 732,512 732,492 L668,492 C666,514 644,516 642,494 L600,494 C596,494 592,494 592,490 Z"/>
+</g>
+</g>
+</svg>

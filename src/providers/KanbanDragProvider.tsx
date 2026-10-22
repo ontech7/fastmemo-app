@@ -1,7 +1,7 @@
 import type { KanbanColumn, KanbanItem } from "@/types";
 import { createContext, useCallback, useContext, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
-import type { ScrollView } from "react-native";
+import type { ScrollViewInstance } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
 
@@ -34,7 +34,7 @@ interface KanbanDragContextValue {
   setOverlayOffset: (x: number, y: number) => void;
   columnWidth: number;
   columnGap: number;
-  scrollViewRef: RefObject<ScrollView | null>;
+  scrollViewRef: RefObject<ScrollViewInstance | null>;
 }
 
 interface KanbanDragProviderProps {
@@ -42,7 +42,7 @@ interface KanbanDragProviderProps {
   columns: KanbanColumn[];
   onMoveCard: (itemId: string, sourceColumnId: string, targetColumnId: string, dropIndex: number) => void;
   onReorderCards: (columnId: string, newItems: KanbanItem[]) => void;
-  scrollViewRef: RefObject<ScrollView | null>;
+  scrollViewRef: RefObject<ScrollViewInstance | null>;
   columnWidth: number;
   columnGap: number;
 }

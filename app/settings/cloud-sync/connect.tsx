@@ -1,34 +1,44 @@
 import BackButton from "@/components/buttons/BackButton";
+import CloudStatusDot from "@/components/cloud/CloudStatusDot";
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
+import CloudProviderIcon from "@/components/icons/CloudProviderIcon";
+import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { cloudStateKey, useCloudStatus } from "@/hooks/useCloudStatus";
 import { useCloudSync } from "@/hooks/useCloudSync";
 import useNetInfo from "@/hooks/useNetInfo";
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
 import { useVaultProgress } from "@/hooks/useVaultProgress";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
+import { isCloudSettingsComplete as settingsComplete, isLoopbackUrl, isPlainHttp, isTailscaleUrl } from "@/libs/cloud";
+import { providerOf } from "@/libs/cloud/scope";
+import { reconnectNow } from "@/libs/cloud/sync";
 import { probeVault } from "@/libs/vaultManager";
+import { getCloudSettings } from "@/slicers/settingsSlice";
+import type { CloudProvider } from "@/types";
 import { openUrl } from "@/utils/openUrl";
+import { isTauri } from "@/utils/platform";
 import { toast } from "@/utils/toast";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
-import {
-  ArrowPathIcon,
-  CheckIcon,
-  DevicePhoneMobileIcon,
-  ExclamationTriangleIcon,
-  InformationCircleIcon,
-  KeyIcon,
-  LockOpenIcon,
-  PencilIcon,
-  ShieldCheckIcon,
-} from "react-native-heroicons/outline";
+import { Platform, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { useSelector } from "react-redux";
+import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import DevicePhoneMobileIcon from "react-native-heroicons/outline/DevicePhoneMobileIcon";
+import ExclamationTriangleIcon from "react-native-heroicons/outline/ExclamationTriangleIcon";
+import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
+import KeyIcon from "react-native-heroicons/outline/KeyIcon";
+import LockOpenIcon from "react-native-heroicons/outline/LockOpenIcon";
+import PencilIcon from "react-native-heroicons/outline/PencilIcon";
+import ShieldCheckIcon from "react-native-heroicons/outline/ShieldCheckIcon";
 
 export default function CloudSyncScreen() {
   const { t } = useTranslation();
@@ -39,7 +49,34 @@ export default function CloudSyncScreen() {
   const vaultUnlocked = useVaultUnlocked();
   const progress = useVaultProgress();
 
-  const { methods, state, cloudSettings } = useCloudSync();
+  const { methods, state, cloudSettings, provider } = useCloudSync();
+  const cloudState = useCloudStatus().state;
+  // The cloud in use, not the one being picked in the form.
+  const connectedServer = providerOf(useSelector(getCloudSettings)) === "server";
+  const [retrying, setRetrying] = useState(false);
+
+  const retry = () => {
+    setRetrying(true);
+    reconnectNow().finally(() => setRetrying(false));
+  };
+
+  const providerItems = useMemo<SelectableCardItem<CloudProvider>[]>(
+    () => [
+      {
+        id: "firebase",
+        label: t("cloudsync.provider.firebase"),
+        description: t("cloudsync.provider.firebase_desc"),
+        icon: <CloudProviderIcon provider="firebase" />,
+      },
+      {
+        id: "server",
+        label: t("cloudsync.provider.server"),
+        description: t("cloudsync.provider.server_desc"),
+        icon: <CloudProviderIcon provider="server" />,
+      },
+    ],
+    [t]
+  );
 
   // When connected but no key is loaded yet, find out whether encryption has
   // ever been set up, so the action reads "Unlock" (vault exists) vs "Turn on
@@ -60,7 +97,20 @@ export default function CloudSyncScreen() {
     };
   }, [state.isConnected, vaultUnlocked, netInfo?.isConnected]);
 
-  const isCloudSettingsComplete = cloudSettings.apiKey != "" && cloudSettings.projectId != "" && cloudSettings.appId != "";
+  const isCloudSettingsComplete = settingsComplete(cloudSettings);
+  const plainHttp = provider === "server" && !!cloudSettings.serverUrl && isPlainHttp(cloudSettings.serverUrl);
+  // A page served over HTTPS (the web app in a browser) can't fetch an http address other than this machine: the browser
+  // engine blocks it as mixed content. The desktop app calls the server from Rust (`@/libs/net`), so it can.
+  const httpBlocked =
+    plainHttp &&
+    Platform.OS === "web" &&
+    !isTauri() &&
+    globalThis.location?.protocol === "https:" &&
+    !isLoopbackUrl(cloudSettings.serverUrl ?? "");
+  // Plain HTTP crossing a network, worth a warning: not this machine, not Tailscale (encrypted on the way).
+  const httpExposed =
+    plainHttp && !isLoopbackUrl(cloudSettings.serverUrl ?? "") && !isTailscaleUrl(cloudSettings.serverUrl ?? "");
+  const saveDisabled = state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected || httpBlocked;
 
   const toggleCloudSync = () => {
     if (!netInfo?.isConnected) {
@@ -71,6 +121,11 @@ export default function CloudSyncScreen() {
   };
 
   const [showResyncDialog, setShowResyncDialog] = useState(false);
+  const [showHttpDialog, setShowHttpDialog] = useState(false);
+  // The dialog stays tappable while it fades out: one save per confirmation.
+  const httpConfirmed = useRef(false);
+
+  const saveSettings = () => unlockWithSecret(methods.saveCloudSettings);
 
   return (
     <>
@@ -90,7 +145,10 @@ export default function CloudSyncScreen() {
           label: t("confirm"),
           handler: () => {
             setShowResyncDialog(false);
-            methods.syncCloudData(false);
+            methods
+              .syncCloudData(false)
+              .then((ok) => !ok && toast(t("cloudsync.vault.error_generic")))
+              .catch(() => toast(t("cloudsync.vault.error_generic")));
           },
         }}
         cancel={{
@@ -100,10 +158,31 @@ export default function CloudSyncScreen() {
       />
 
       <ComplexDialog
+        open={showHttpDialog}
+        adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.yellow} style={{ marginBottom: -3 }} />}
+        title={t("cloudsync.server.http_confirm_title")}
+        description={t("cloudsync.server.http_confirm_desc")}
+        confirm={{
+          label: t("cloudsync.server.http_confirm_ok"),
+          handler: () => {
+            if (httpConfirmed.current) return;
+            httpConfirmed.current = true;
+            setShowHttpDialog(false);
+            saveSettings();
+          },
+        }}
+        cancel={{
+          label: t("cancel"),
+          handler: () => setShowHttpDialog(false),
+        }}
+        onDismiss={() => setShowHttpDialog(false)}
+      />
+
+      <ComplexDialog
         open={state.handshakeFailed}
         adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.yellow} style={{ marginBottom: -3 }} />}
         title={t("cloudsync.handshakeFailed")}
-        description={t("cloudsync.handshakeFailedDesc")}
+        description={t(provider === "server" ? "cloudsync.server.handshake_failed_desc" : "cloudsync.handshakeFailedDesc")}
         confirm={{
           label: t("confirm"),
           handler: () => methods.dismissHandshakeFailed(),
@@ -115,13 +194,19 @@ export default function CloudSyncScreen() {
         <AppBackground style={StyleSheet.absoluteFill} />
 
         <View style={styles.header}>
-          <BackButton chip />
+          <BackButton chip shortcut={false} />
 
           <Text style={styles.headerTitle}>{t("cloudsync.title")}</Text>
 
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => openUrl(`${configs.app.websiteUrl}/${t("languageCode")}/guides/google-firebase`)}
+            onPress={() =>
+              openUrl(
+                `${configs.app.websiteUrl}/${t("languageCode")}/guides/${provider === "server" ? "self-hosting" : "google-firebase"}`
+              )
+            }
+            accessibilityRole="link"
+            accessibilityLabel={t("a11y.open_guide")}
           >
             <IconChip>
               <InformationCircleIcon size={20} color={COLOR.softWhite} />
@@ -129,10 +214,16 @@ export default function CloudSyncScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {/* Keeps the focused field above the keyboard (under KeyboardProvider the window doesn't resize for it). */}
+        <KeyboardAwareScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={PADDING_MARGIN.xl}
+        >
           <View style={styles.sectionWrapper}>
             <View style={styles.sectionList}>
-              <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
+              <View style={[styles.sectionItemList, !cloudState && styles.sectionItemList_last]}>
                 <View style={styles.sectionItemList_button}>
                   <Text style={styles.sectionItemList_title}>{t("cloudsync.enable")}</Text>
 
@@ -148,6 +239,33 @@ export default function CloudSyncScreen() {
                   />
                 </View>
               </View>
+
+              {cloudState && (
+                <View style={[styles.sectionItemList, styles.sectionItemList_last]}>
+                  <View style={styles.statusRow}>
+                    <CloudStatusDot decorative />
+                    <Text style={styles.statusText}>{t(cloudStateKey(cloudState, connectedServer))}</Text>
+                    {cloudState === "unreachable" && (
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        disabled={retrying}
+                        onPress={retry}
+                        accessibilityRole="button"
+                        aria-disabled={retrying}
+                      >
+                        <Text style={[styles.statusRetry, retrying && styles.statusRetryBusy]}>{t("retry")}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {cloudState === "unreachable" && (
+                    <Text style={styles.statusHint}>
+                      {connectedServer
+                        ? `${t("cloudsync.unreachable_check_server")}\n${t("cloudsync.unreachable_vpn")}`
+                        : t("cloudsync.unreachable_check_firebase")}
+                    </Text>
+                  )}
+                </View>
+              )}
             </View>
 
             <Text style={styles.encryptionHint}>{t("cloudsync.vault.enable_hint")}</Text>
@@ -156,57 +274,136 @@ export default function CloudSyncScreen() {
               <>
                 <View style={styles.sectionWrapper}>
                   <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionHeaderTitle}>API Key</Text>
+                    <Text style={styles.sectionHeaderTitle}>{t("cloudsync.provider.title")}</Text>
                   </View>
 
-                  <View style={styles.textInputContainer}>
-                    <TextInput
-                      editable={state.isEditable}
-                      style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
-                      cursorColor={COLOR.textPrimary}
-                      placeholderTextColor={COLOR.textMuted}
-                      placeholder="e.g.: AIzaF0Ba0wDdkde893DR9rkfAE03"
-                      onChangeText={(text: string) => methods.setCloudSetting("apiKey", text)}
-                      value={!state.isConnected ? cloudSettings.apiKey : "***********"}
-                    />
-                  </View>
+                  <SelectableCardList<CloudProvider>
+                    // Connected: only the cloud in use (edit the settings to switch).
+                    items={state.isEditable ? providerItems : providerItems.filter((item) => item.id === provider)}
+                    selectedId={provider}
+                    onSelect={methods.setCloudProvider}
+                    readOnly={!state.isEditable}
+                  />
                 </View>
 
-                <View style={styles.sectionWrapper}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionHeaderTitle}>Project Id</Text>
-                  </View>
+                {provider === "server" ? (
+                  <>
+                    <View style={styles.sectionWrapper}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderTitle}>{t("cloudsync.server.url")}</Text>
+                      </View>
 
-                  <View style={styles.textInputContainer}>
-                    <TextInput
-                      editable={state.isEditable}
-                      style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
-                      cursorColor={COLOR.textPrimary}
-                      placeholderTextColor={COLOR.textMuted}
-                      placeholder="e.g.: fastmemo-xyzw"
-                      onChangeText={(text: string) => methods.setCloudSetting("projectId", text)}
-                      value={!state.isConnected ? cloudSettings.projectId : "***********"}
-                    />
-                  </View>
-                </View>
+                      <View style={styles.textInputContainer}>
+                        <TextInput
+                          editable={state.isEditable}
+                          style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                          cursorColor={COLOR.textPrimary}
+                          placeholderTextColor={COLOR.textMuted}
+                          placeholder={t("cloudsync.example", { value: "https://notes.example.com" })}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          keyboardType="url"
+                          onChangeText={(text: string) => methods.setCloudSetting("serverUrl", text)}
+                          value={cloudSettings.serverUrl ?? ""}
+                        />
+                      </View>
 
-                <View style={[styles.sectionWrapper, { marginBottom: PADDING_MARGIN.lg }]}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionHeaderTitle}>App Id</Text>
-                  </View>
+                      {(httpBlocked || httpExposed) && (
+                        <Text style={styles.fieldWarning}>
+                          {t(httpBlocked ? "cloudsync.server.http_blocked" : "cloudsync.server.http_warning")}
+                        </Text>
+                      )}
+                    </View>
 
-                  <View style={styles.textInputContainer}>
-                    <TextInput
-                      editable={state.isEditable}
-                      style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
-                      cursorColor={COLOR.textPrimary}
-                      placeholderTextColor={COLOR.textMuted}
-                      placeholder="e.g.: 1:2137892387:web:9g7a6s6f8gf8df878787s6"
-                      onChangeText={(text: string) => methods.setCloudSetting("appId", text)}
-                      value={!state.isConnected ? cloudSettings.appId : "***********"}
-                    />
-                  </View>
-                </View>
+                    <View style={[styles.sectionWrapper, { marginBottom: PADDING_MARGIN.lg }]}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderTitle}>{t("cloudsync.server.key")}</Text>
+                      </View>
+
+                      <View style={styles.textInputContainer}>
+                        <TextInput
+                          editable={state.isEditable}
+                          style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                          cursorColor={COLOR.textPrimary}
+                          placeholderTextColor={COLOR.textMuted}
+                          placeholder={t("cloudsync.example", { value: "3kQ9-x7Lm2P..." })}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          secureTextEntry
+                          onChangeText={(text: string) => methods.setCloudSetting("serverKey", text)}
+                          value={!state.isConnected ? (cloudSettings.serverKey ?? "") : "***********"}
+                        />
+                      </View>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.sectionWrapper}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderTitle}>API Key</Text>
+                      </View>
+
+                      <View style={styles.textInputContainer}>
+                        <TextInput
+                          editable={state.isEditable}
+                          style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                          cursorColor={COLOR.textPrimary}
+                          placeholderTextColor={COLOR.textMuted}
+                          placeholder={t("cloudsync.example", { value: "AIzaF0Ba0wDdkde893DR9rkfAE03" })}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          onChangeText={(text: string) => methods.setCloudSetting("apiKey", text)}
+                          value={!state.isConnected ? cloudSettings.apiKey : "***********"}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.sectionWrapper}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderTitle}>Project Id</Text>
+                      </View>
+
+                      <View style={styles.textInputContainer}>
+                        <TextInput
+                          editable={state.isEditable}
+                          style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                          cursorColor={COLOR.textPrimary}
+                          placeholderTextColor={COLOR.textMuted}
+                          placeholder={t("cloudsync.example", { value: "fastmemo-xyzw" })}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          onChangeText={(text: string) => methods.setCloudSetting("projectId", text)}
+                          value={!state.isConnected ? cloudSettings.projectId : "***********"}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={[styles.sectionWrapper, { marginBottom: PADDING_MARGIN.lg }]}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderTitle}>App Id</Text>
+                      </View>
+
+                      <View style={styles.textInputContainer}>
+                        <TextInput
+                          editable={state.isEditable}
+                          style={[styles.textInput, !state.isEditable && styles.textInput_disabled]}
+                          cursorColor={COLOR.textPrimary}
+                          placeholderTextColor={COLOR.textMuted}
+                          placeholder={t("cloudsync.example", { value: "1:2137892387:web:9g7a6s6f8gf8df878787s6" })}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          onChangeText={(text: string) => methods.setCloudSetting("appId", text)}
+                          value={!state.isConnected ? cloudSettings.appId : "***********"}
+                        />
+                      </View>
+                    </View>
+                  </>
+                )}
 
                 {state.isEditable && (
                   <View style={styles.sectionWrapper}>
@@ -214,13 +411,16 @@ export default function CloudSyncScreen() {
                       <Text style={styles.saveSettingsText}>{t("cloudsync.save")}</Text>
 
                       <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel={t("cloudsync.save")}
                         activeOpacity={0.7}
-                        disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
-                        style={[
-                          styles.saveButton,
-                          (state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected) && styles.saveButton_disabled,
-                        ]}
-                        onPress={() => unlockWithSecret(methods.saveCloudSettings)}
+                        disabled={saveDisabled}
+                        style={[styles.saveButton, saveDisabled && styles.saveButton_disabled]}
+                        onPress={() => {
+                          if (!httpExposed) return saveSettings();
+                          httpConfirmed.current = false;
+                          setShowHttpDialog(true);
+                        }}
                       >
                         <CheckIcon size={24} color={COLOR.softWhite} />
                       </TouchableOpacity>
@@ -275,6 +475,8 @@ export default function CloudSyncScreen() {
                         <Text style={styles.saveSettingsText}>{t("cloudsync.edit")}</Text>
 
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={t("cloudsync.edit")}
                           activeOpacity={0.7}
                           disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
                           style={[
@@ -294,6 +496,8 @@ export default function CloudSyncScreen() {
                         <Text style={styles.saveSettingsText}>{t("cloudsync.resync")}</Text>
 
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={t("cloudsync.resync")}
                           activeOpacity={0.7}
                           disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected || !vaultUnlocked}
                           style={[
@@ -314,6 +518,8 @@ export default function CloudSyncScreen() {
                           <Text style={styles.saveSettingsText}>{t("cloudsync.vault.changePassphrase")}</Text>
 
                           <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={t("cloudsync.vault.changePassphrase")}
                             activeOpacity={0.7}
                             disabled={state.isLoading || !netInfo?.isConnected}
                             style={[
@@ -341,6 +547,8 @@ export default function CloudSyncScreen() {
                         <Text style={styles.saveSettingsText}>{t("cloudsync.deleteDevices")}</Text>
 
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={t("cloudsync.deleteDevices")}
                           activeOpacity={0.7}
                           disabled={state.isLoading || !isCloudSettingsComplete || !netInfo?.isConnected}
                           style={[
@@ -369,6 +577,8 @@ export default function CloudSyncScreen() {
                           <Text style={styles.saveSettingsText}>{t("cloudsync.vault.resetVault")}</Text>
 
                           <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={t("cloudsync.vault.resetVault")}
                             activeOpacity={0.7}
                             disabled={state.isLoading || !netInfo?.isConnected}
                             style={[
@@ -390,7 +600,7 @@ export default function CloudSyncScreen() {
               </>
             )}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </>
   );
@@ -464,6 +674,32 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+  },
+  statusText: {
+    flex: 1,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.medium,
+    fontSize: FONTSIZE.medium,
+  },
+  statusRetry: {
+    color: COLOR.accentSoft,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.medium,
+  },
+  statusRetryBusy: {
+    color: COLOR.textMuted,
+  },
+  statusHint: {
+    marginTop: PADDING_MARGIN.sm,
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    lineHeight: 18,
+  },
   textInputContainer: {
     flexDirection: "row",
     paddingHorizontal: PADDING_MARGIN.md,
@@ -509,6 +745,13 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     backgroundColor: COLOR.darkImportant,
+  },
+  fieldWarning: {
+    marginTop: PADDING_MARGIN.sm,
+    color: COLOR.yellow,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    lineHeight: 18,
   },
   encryptionHint: {
     marginTop: PADDING_MARGIN.md,

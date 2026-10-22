@@ -1,8 +1,11 @@
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.web";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
 import { isStringEmpty } from "@/utils/string";
@@ -18,9 +21,9 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useCallback, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { PlusIcon } from "react-native-heroicons/outline";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import uuid from "react-uuid";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
@@ -61,7 +64,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
+  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
     defaultType: "todo",
     addWebhookSelector: selectorWebhook_addTodoNote,
@@ -136,10 +139,8 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   // nothing so the user can just read. `focusId` is seeded synchronously so the
   // target row mounts with autoFocus already set — setting it after mount is a
   // no-op because the input reads `autoFocus` only once.
-  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
-  const [focusId, setFocusId] = useState<string | null>(
-    isNewNote && !initialNote.readOnly ? (memoInitialNote.list[0]?.id ?? null) : null
-  );
+  const autofocus = useAutofocusNewNote(initialNote);
+  const [focusId, setFocusId] = useState<string | null>(autofocus ? (memoInitialNote.list[0]?.id ?? null) : null);
 
   const currentMode = stepMode ? "steps" : "free";
 
@@ -200,7 +201,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
       <View>
         <View style={styles.header}>
-          <BackButton chip callback={updateNoteWebhook} />
+          <BackButton chip tourTarget="back" callback={updateNoteWebhook} />
 
           <TextInput
             style={styles.titleInput}
@@ -213,20 +214,20 @@ export default function NoteTodoEditor({ initialNote }: Props) {
             maxLength={96}
           />
 
-          <NoteSettingsButton note={note} setNote={setNoteAsync} />
+          <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
         </View>
+        <NotePresenceBanner noteId={note.id} />
 
         <View style={styles.subtitleWrapper}>
           <Text style={[styles.subtitle, { flexGrow: 1 }]}>
-            {t("note.completed")}{" "}
-            <Text
-              style={{
-                color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon,
+            <Trans
+              t={t}
+              i18nKey="note.progress"
+              values={{ done: numberOfCheckedItems, total: numberOfAllItems }}
+              components={{
+                hl: <Text style={{ color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon }} />,
               }}
-            >
-              {numberOfCheckedItems}
-            </Text>{" "}
-            {t("note.on")} {numberOfAllItems}
+            />
           </Text>
         </View>
       </View>
@@ -314,11 +315,19 @@ export default function NoteTodoEditor({ initialNote }: Props) {
             />
           </View>
 
-          <TouchableOpacity activeOpacity={0.7} style={styles.addButton} onPress={addListItem}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.addButton}
+            onPress={addListItem}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.add_item")}
+          >
             <PlusIcon size={28} color={COLOR.softWhite} />
           </TouchableOpacity>
         </EditorActionDock>
       )}
+
+      <EditorTourTip />
     </SafeAreaView>
   );
 }

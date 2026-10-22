@@ -1,27 +1,25 @@
 import BackButton from "@/components/buttons/BackButton";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import DeviceAndroidIcon from "@/components/icons/DeviceAndroidIcon";
 import DeviceAppleIcon from "@/components/icons/DeviceAppleIcon";
 import NoCloudIcon from "@/components/icons/NoCloudIcon";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
-import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import useNetInfo from "@/hooks/useNetInfo";
-import { useTimeoutTask } from "@/hooks/useTimeoutTask";
-import {
-  getAllConnectedDevices,
-  getDeviceUuid,
-  removeDeviceFromCloud,
-  removeDeviceFromDevicesToSync,
-  type ConnectedDevice,
-} from "@/libs/firebase";
-import { triggerSyncNow } from "@/libs/registry";
+import { cloud, getDeviceUuid, type CloudDevice, type CloudFailure } from "@/libs/cloud";
+import { providerOf } from "@/libs/cloud/scope";
+import { onSyncEvent, reconnectNow, syncNow } from "@/libs/cloud/sync";
+import { isVaultUnlocked } from "@/libs/vaultSession";
+import { getCloudSettings } from "@/slicers/settingsSlice";
 import { toast } from "@/utils/toast";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ArrowPathIcon, ComputerDesktopIcon, TrashIcon } from "react-native-heroicons/outline";
+import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
+import ComputerDesktopIcon from "react-native-heroicons/outline/ComputerDesktopIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import Animated, {
   cancelAnimation,
   Easing,
@@ -30,11 +28,15 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+import { useSelector } from "react-redux";
+
+/** How long the list may take before the screen says the cloud doesn't answer (it keeps waiting: a late list replaces it). */
+const NO_ANSWER_MS = 5000;
 
 export default function SyncedDevicesScreen() {
   const { t, i18n } = useTranslation();
 
-  const [connectedDevices, setConnectedDevices] = useState<ConnectedDevice[]>([]);
+  const [connectedDevices, setConnectedDevices] = useState<CloudDevice[]>([]);
   const numberOfDevices = connectedDevices.length;
   const [currentDeviceUuid, setCurrentDeviceUuid] = useState("");
 
@@ -67,9 +69,15 @@ export default function SyncedDevicesScreen() {
       return "";
     }
   };
-  const { timeoutStates, setTimeoutTask } = useTimeoutTask();
-
   const netInfo = useNetInfo();
+  const server = providerOf(useSelector(getCloudSettings)) === "server";
+
+  const [loading, setLoading] = useState(true);
+  // Why the list isn't there: the cloud doesn't answer, or it answered an error. Offline says so before either.
+  const [failure, setFailure] = useState<CloudFailure | null>(null);
+  const shownFailure = netInfo.isConnected ? failure : "offline";
+  // Only the latest request's outcome is shown.
+  const requestRef = useRef(0);
 
   const blinkOpacity = useSharedValue(0);
 
@@ -96,27 +104,76 @@ export default function SyncedDevicesScreen() {
   // retrieve devices
 
   const deleteDeviceFromCloud = async (uuid: string) => {
-    const res_removeDeviceCloud = await removeDeviceFromCloud(uuid);
-    const res_removeDeviceSync = await removeDeviceFromDevicesToSync(uuid);
+    // Removed first, so the others stop making it a recipient; then nobody waits for its acks anymore (their queues
+    // would only clear at their next push otherwise).
+    if (!(await cloud.unregisterDevice(uuid))) return;
+    await cloud.dropRecipient(uuid);
 
-    if (!res_removeDeviceCloud || !res_removeDeviceSync) {
-      return;
-    }
-
-    setConnectedDevices((prevConnectedDevices: ConnectedDevice[]) =>
-      prevConnectedDevices.filter((prevConnectedDevice: ConnectedDevice) => prevConnectedDevice.uuid != uuid)
+    setConnectedDevices((prevConnectedDevices) =>
+      prevConnectedDevices.filter((prevConnectedDevice) => prevConnectedDevice.uuid != uuid)
     );
   };
 
-  const getDevices = async () => {
-    await setTimeoutTask(async () => {
-      const currDeviceUuid = await getDeviceUuid();
-      setCurrentDeviceUuid(currDeviceUuid);
+  // The device the user asked to remove. It's kept while the dialog fades out, so its name doesn't vanish from the text.
+  const [removing, setRemoving] = useState<CloudDevice | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-      const cloudDevices = await getAllConnectedDevices();
-      setConnectedDevices(cloudDevices);
-    }, 5000);
+  const askRemove = (device: CloudDevice) => {
+    setRemoving(device);
+    setConfirmOpen(true);
   };
+
+  const confirmRemove = () => {
+    // The dialog stays tappable while it fades out: one removal per confirmation.
+    if (!confirmOpen || !removing) return;
+    setConfirmOpen(false);
+    deleteDeviceFromCloud(removing.uuid);
+  };
+
+  /** Asks the cloud for the devices. A list that comes after the "no answer" still replaces it. */
+  const getDevices = () => {
+    const request = ++requestRef.current;
+    const latest = () => request === requestRef.current;
+    const noAnswer = setTimeout(() => {
+      if (!latest()) return;
+      setLoading(false);
+      setFailure("unreachable");
+    }, NO_ANSWER_MS);
+
+    getDeviceUuid().then((uuid) => setCurrentDeviceUuid(uuid ?? ""));
+    return cloud.listDevices().then((cloudDevices) => {
+      clearTimeout(noAnswer);
+      if (!latest()) return;
+      setLoading(false);
+      if (!Array.isArray(cloudDevices)) {
+        setFailure(cloudDevices);
+        return;
+      }
+      setFailure(null);
+      setConnectedDevices(cloudDevices);
+    });
+  };
+
+  const retry = () => {
+    setLoading(true);
+    getDevices();
+    // the sync engine asks too: the home and the status dot learn it answers again
+    void reconnectNow();
+  };
+
+  // The list follows the sync engine's live view of the devices (sync status, last sync).
+  useEffect(
+    () =>
+      onSyncEvent((event) => {
+        if (event.type !== "devices") return;
+        // A fresh list: the request under way (its "no answer", a late failure) no longer counts.
+        requestRef.current++;
+        setLoading(false);
+        setConnectedDevices(event.devices);
+        setFailure(null);
+      }),
+    []
+  );
 
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -134,9 +191,13 @@ export default function SyncedDevicesScreen() {
       toast(t("noInternetConnection"));
       return;
     }
+    if (!isVaultUnlocked()) {
+      toast(t("cloudsync.vault.locked_prompt"));
+      return;
+    }
     setSyncing(true);
     try {
-      await triggerSyncNow();
+      if (!(await syncNow())) toast(t("cloudsync.vault.error_generic"));
       await getDevices();
     } catch (e) {
       console.log("manual sync error:", e);
@@ -146,17 +207,23 @@ export default function SyncedDevicesScreen() {
   };
 
   useEffect(() => {
-    if (netInfo?.isConnected) {
-      getDevices();
-    } else {
-      timeoutStates.error.set(true); // if connection is lost
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (netInfo.isConnected) getDevices();
+    // a request under way when the connection went is dropped: the one made when it comes back answers
+    else requestRef.current++;
   }, [netInfo]);
 
   return (
     <>
-      <LoadingSpinner visible={timeoutStates.loading.get() || syncing} color={COLOR.accentSoft} text={t("loading")} />
+      <LoadingSpinner visible={(loading && netInfo.isConnected) || syncing} color={COLOR.accentSoft} text={t("loading")} />
+
+      <ConfirmOrCancelDialog
+        open={confirmOpen}
+        title={t("synceddevices.remove_title")}
+        description={t("synceddevices.remove_description", { name: removing?.modelName ?? "" })}
+        confirmLabel={t("synceddevices.remove_confirm")}
+        onConfirm={confirmRemove}
+        onCancel={() => setConfirmOpen(false)}
+      />
 
       <SafeAreaView style={styles.container}>
         <AppBackground style={StyleSheet.absoluteFill} />
@@ -170,11 +237,11 @@ export default function SyncedDevicesScreen() {
               style={[
                 styles.headerSubtitle,
                 {
-                  color: numberOfDevices != configs.cloud.deviceLimit ? COLOR.accentSoft : COLOR.important,
+                  color: numberOfDevices < cloud.deviceLimit ? COLOR.accentSoft : COLOR.important,
                 },
               ]}
             >
-              ({numberOfDevices}/{configs.cloud.deviceLimit}) dispositivi
+              {t("synceddevices.count", { count: numberOfDevices, limit: cloud.deviceLimit })}
             </Text>
           </View>
 
@@ -185,11 +252,37 @@ export default function SyncedDevicesScreen() {
           style={styles.scroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshDevices} tintColor={COLOR.accentSoft} />}
         >
-          {timeoutStates.error.get() ? (
-            <View style={styles.errorWrapper}>
-              <NoCloudIcon size={32} color={COLOR.textSecondary} />
+          {shownFailure ? (
+            <View style={styles.failure}>
+              <NoCloudIcon size={40} color={COLOR.textMuted} />
 
-              <Text style={styles.error_text}>{t("synceddevices.error_fetching")}</Text>
+              <Text style={styles.failureTitle}>
+                {shownFailure === "offline"
+                  ? t("noInternetConnection")
+                  : shownFailure === "unreachable"
+                    ? t(server ? "cloudsync.unreachable_server" : "cloudsync.unreachable_firebase")
+                    : t("synceddevices.error_fetching")}
+              </Text>
+
+              <Text style={styles.failureText}>
+                {shownFailure === "offline"
+                  ? t("synceddevices.offline_body")
+                  : shownFailure === "unreachable"
+                    ? server
+                      ? `${t("cloudsync.unreachable_check_server")}\n${t("cloudsync.unreachable_vpn")}`
+                      : t("cloudsync.unreachable_check_firebase")
+                    : t("synceddevices.error_body")}
+              </Text>
+
+              {/* Offline, the list comes back by itself with the connection. */}
+              {shownFailure !== "offline" && (
+                <TouchableOpacity activeOpacity={0.7} disabled={loading} onPress={retry} accessibilityRole="button">
+                  <View style={styles.retryButton}>
+                    <ArrowPathIcon size={16} color={COLOR.accentSoft} />
+                    <Text style={styles.retryText}>{t("retry")}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             connectedDevices?.map((connectedDevice) => {
@@ -243,6 +336,8 @@ export default function SyncedDevicesScreen() {
                           activeOpacity={0.7}
                           disabled={syncing || !netInfo?.isConnected}
                           onPress={syncCurrentDevice}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("a11y.sync_device")}
                         >
                           <View style={[styles.syncChip, (syncing || !netInfo?.isConnected) && styles.syncChipDisabled]}>
                             <ArrowPathIcon size={16} color={COLOR.accentSoft} />
@@ -251,7 +346,12 @@ export default function SyncedDevicesScreen() {
                         <Animated.View style={[styles.currentDeviceDot, blinkStyle]} />
                       </View>
                     ) : (
-                      <TouchableOpacity activeOpacity={0.7} onPress={() => deleteDeviceFromCloud(connectedDevice.uuid)}>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => askRemove(connectedDevice)}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("a11y.remove_device")}
+                      >
                         <View style={styles.deleteChip}>
                           <TrashIcon size={16} color={COLOR.textMuted} />
                         </View>
@@ -301,18 +401,42 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 42,
   },
-  errorWrapper: {
-    flexDirection: "row",
-    height: 200,
-    justifyContent: "center",
+  failure: {
     alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+    paddingTop: PADDING_MARGIN.xxl,
+    paddingHorizontal: PADDING_MARGIN.lg,
   },
-  error_text: {
-    marginLeft: PADDING_MARGIN.md,
+  failureTitle: {
+    marginTop: PADDING_MARGIN.sm,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.inputTitle,
+    textAlign: "center",
+  },
+  failureText: {
     color: COLOR.textSecondary,
     fontFamily: FONT.regular,
-    fontSize: FONTSIZE.subtitle,
+    fontSize: FONTSIZE.medium,
+    lineHeight: 20,
     textAlign: "center",
+  },
+  retryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+    marginTop: PADDING_MARGIN.md,
+    paddingHorizontal: PADDING_MARGIN.lg,
+    paddingVertical: PADDING_MARGIN.sm,
+    borderRadius: BORDER.rounded,
+    backgroundColor: GLASS.fill,
+    borderWidth: 1,
+    borderColor: GLASS.border,
+  },
+  retryText: {
+    color: COLOR.accentSoft,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.medium,
   },
   deviceCard: {
     backgroundColor: COLOR.surface,

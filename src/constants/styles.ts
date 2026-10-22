@@ -45,6 +45,18 @@ export const COLOR = {
   // where the full accent reads too loud against the dark surface.
   accentMuted: "#475AA6",
   accentMutedBorder: "#5E72C4",
+  // The dim layer over everything but what a tour step shows
+  scrim: "rgba(2, 4, 14, 0.82)",
+} as const;
+
+/**
+ * The cloud's state as a dot (Settings, Cloud sync): green when it answers, grey when this device is offline, red when it
+ * doesn't answer while online (ADR-029). Told apart at a glance, and only the green one pings.
+ */
+export const CLOUD_STATE_COLOR = {
+  ok: "#34D399",
+  offline: "#717BA6",
+  unreachable: "#F26D6D",
 } as const;
 
 export const KANBAN_COLUMN_COLORS = ["#A7ABB9", "#799EDC", "#00c951", "#EEE78E", "#ff6900", "#A43D3F", "#DAD9DE"] as const;
@@ -111,8 +123,9 @@ export const FONTWEIGHT = {
 } as const;
 
 /**
- * Geist font families. Weights are separate font files (loaded in _layout via useFonts),
- * so apply weight through `fontFamily` instead of `fontWeight` when using Geist.
+ * Geist font families. Weights are separate font files (built into the apps by the expo-font plugin in app.config.ts,
+ * where the file name is the family name; loaded on the web by useAppFonts), so apply weight through `fontFamily` instead
+ * of `fontWeight` when using Geist.
  */
 export const FONT = {
   regular: "Geist-Regular",

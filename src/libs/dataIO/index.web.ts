@@ -1,21 +1,24 @@
+import { withNativeDialog } from "@/libs/desktopCommands";
 import { isTauri } from "@/utils/platform";
 
 /**
  * Web / Tauri variant of the encrypted-data IO module used by the
  * \`useExportImport\` hook. Browser uses a Blob + <a download> for export and a
  * hidden \`<input type="file">\` for import; Tauri uses the native save/open
- * dialogs via \`@tauri-apps/api\`.
+ * dialogs (dialog + fs plugins).
  */
 
 export async function exportEncryptedData(encryptedData: string, defaultFilename: string): Promise<boolean> {
   if (isTauri()) {
-    const { save } = await import("@tauri-apps/api/dialog");
-    const { writeTextFile } = await import("@tauri-apps/api/fs");
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { writeTextFile } = await import("@tauri-apps/plugin-fs");
 
-    const filePath = await save({
-      defaultPath: defaultFilename,
-      filters: [{ name: "Text Files", extensions: ["txt"] }],
-    });
+    const filePath = await withNativeDialog(() =>
+      save({
+        defaultPath: defaultFilename,
+        filters: [{ name: "Text Files", extensions: ["txt"] }],
+      })
+    );
 
     if (!filePath) return false;
 
@@ -38,13 +41,15 @@ export async function exportEncryptedData(encryptedData: string, defaultFilename
 
 export async function importEncryptedData(): Promise<string | null> {
   if (isTauri()) {
-    const { open } = await import("@tauri-apps/api/dialog");
-    const { readTextFile } = await import("@tauri-apps/api/fs");
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
 
-    const filePath = await open({
-      filters: [{ name: "Text Files", extensions: ["txt"] }],
-      multiple: false,
-    });
+    const filePath = await withNativeDialog(() =>
+      open({
+        filters: [{ name: "Text Files", extensions: ["txt"] }],
+        multiple: false,
+      })
+    );
 
     if (!filePath || typeof filePath !== "string") {
       return null;

@@ -1,4 +1,7 @@
-import { CodeBracketIcon, DocumentTextIcon, ListBulletIcon, ViewColumnsIcon } from "react-native-heroicons/outline";
+import CodeBracketIcon from "react-native-heroicons/outline/CodeBracketIcon";
+import DocumentTextIcon from "react-native-heroicons/outline/DocumentTextIcon";
+import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
+import ViewColumnsIcon from "react-native-heroicons/outline/ViewColumnsIcon";
 
 export const NOTE_TYPES = [
   {

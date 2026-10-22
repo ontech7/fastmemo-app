@@ -10,18 +10,30 @@ import WebView from "react-native-webview";
  * — a moment after launch, while the user is on home — shaves time off the first
  * editor open.
  *
+ * Rendered by home, and only once its first frame has had time to reach the screen:
+ * that load blocks the UI thread, so starting it any earlier holds home's first paint
+ * back. It stays mounted (frozen with home), which keeps the engine warm afterwards.
+ *
  * This only shortens how long the editor takes to become interactive; the visible
  * "empty blue area" on first open is handled deterministically by the editors
  * themselves (they keep a content placeholder up until their WebView reports it
  * has painted). No-op on web, where the editor is a plain <iframe>.
  */
+const WARMUP_DELAY_MS = 1000;
+
 export default function WebViewWarmup() {
   const [mount, setMount] = useState(false);
 
   useEffect(() => {
     if (Platform.OS === "web") return;
-    const task = runWhenIdle(() => setMount(true), 1200);
-    return () => task.cancel();
+    let task: ReturnType<typeof runWhenIdle> | undefined;
+    const timer = setTimeout(() => {
+      task = runWhenIdle(() => setMount(true), 1200);
+    }, WARMUP_DELAY_MS);
+    return () => {
+      clearTimeout(timer);
+      task?.cancel();
+    };
   }, []);
 
   if (Platform.OS === "web" || !mount) return null;

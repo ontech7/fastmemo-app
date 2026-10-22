@@ -1,6 +1,8 @@
 import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import EditorTourTip from "@/components/notes/EditorTourTip";
 import CodeDraggableTab from "@/components/notes/CodeDraggableTab";
 import CodeEditorWebView, { type CodeEditorWebViewRef } from "@/components/notes/CodeEditorWebView";
 import CodeLanguagePickerModal from "@/components/notes/CodeLanguagePickerModal";
@@ -9,6 +11,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { inferLanguageFromTitle, LANGUAGE_LABELS } from "@/constants/code-languages";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, MONOSPACE_FONT, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName } from "@/libs/ai";
@@ -18,9 +21,18 @@ import { isStringEmpty } from "@/utils/string";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Platform,
+  ScrollView,
+  type ScrollViewInstance,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PlusIcon } from "react-native-heroicons/outline";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSelector } from "react-redux";
 import uuid from "react-uuid";
@@ -43,7 +55,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
 
   const aiSettings = useSelector(selectorAIAssistant);
 
-  const tabScrollRef = useRef<ScrollView>(null);
+  const tabScrollRef = useRef<ScrollViewInstance>(null);
   const editorRef = useRef<CodeEditorWebViewRef>(null);
 
   // The CodeMirror WebView mounts immediately (never gated behind an idle timer)
@@ -54,18 +66,18 @@ export default function NoteCodeEditor({ initialNote }: Props) {
 
   // Only a brand-new note autofocuses the editor content (not the tab title), so
   // opening an existing note just lets the user read without popping the keyboard.
-  const isNewNote = useMemo(() => initialNote.createdAt === initialNote.updatedAt, [initialNote]);
+  const autofocus = useAutofocusNewNote(initialNote);
   const transitionDone = useScreenTransitionEnd();
   const didFocusRef = useRef(false);
 
   // Focus once the editor has painted AND the screen transition has settled.
   useEffect(() => {
     if (didFocusRef.current) return;
-    if (!isNewNote || initialNote.readOnly) return;
+    if (!autofocus) return;
     if (!editorPainted || !transitionDone) return;
     didFocusRef.current = true;
     editorRef.current?.focus();
-  }, [editorPainted, transitionDone, isNewNote, initialNote.readOnly]);
+  }, [editorPainted, transitionDone, autofocus]);
 
   // Safety net: never leave the loading cover up forever if the WebView's ready
   // signal somehow never arrives.
@@ -85,7 +97,21 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: CodeNote) => ({ tabs: n.tabs, activeTabId: n.activeTabId }), []);
 
-  const { note, setNoteAsync, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
+  // Changed on another device while open here: this device stays on its tab (if it still exists), and the WebView
+  // editor, which holds its own copy of the code, loads the new one.
+  const keepOnRemote = useCallback(
+    (remote: CodeNote, current: CodeNote) =>
+      remote.tabs.some((tab) => tab.id === current.activeTabId) ? { ...remote, activeTabId: current.activeTabId } : remote,
+    []
+  );
+  const onRemoteChange = useCallback((remote: CodeNote, previous: CodeNote) => {
+    const tab = remote.tabs.find((candidate) => candidate.id === remote.activeTabId) ?? remote.tabs[0];
+    // Same tab: an edit of the document on screen (the cursor stays). Another tab: a new document.
+    editorRef.current?.setCode(tab?.code || "", { remote: tab?.id === previous.activeTabId });
+    editorRef.current?.setLanguage(tab?.language || "plaintext");
+  }, []);
+
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
     initialNote: memoInitialNote,
     defaultType: "code",
     addWebhookSelector: selectorWebhook_addCodeNote,
@@ -97,6 +123,8 @@ export default function NoteCodeEditor({ initialNote }: Props) {
         .map((tab) => tab.code)
         .filter(Boolean)
         .join(" "),
+    keepOnRemote,
+    onRemoteChange,
   });
 
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -206,7 +234,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
         <SafeAreaView style={styles.container}>
           <View>
             <View style={styles.header}>
-              <BackButton chip callback={updateNoteWebhook} />
+              <BackButton chip tourTarget="back" callback={updateNoteWebhook} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <TextInput
                   style={styles.titleInput}
@@ -219,8 +247,9 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   maxLength={96}
                 />
               </View>
-              <NoteSettingsButton note={note} setNote={setNoteAsync} />
+              <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
+            <NotePresenceBanner noteId={note.id} />
           </View>
 
           <View style={styles.tabBarContainer}>
@@ -250,7 +279,13 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   />
                 ))}
                 {note.tabs.length < MAX_TABS && !note.readOnly && (
-                  <TouchableOpacity style={styles.addTabButton} onPress={addTab} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    style={styles.addTabButton}
+                    onPress={addTab}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("code.add_tab")}
+                    activeOpacity={0.7}
+                  >
                     <PlusIcon size={16} color={COLOR.textSecondary} />
                   </TouchableOpacity>
                 )}
@@ -298,17 +333,11 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   noteType="code"
                   getContent={() => activeTab?.code || ""}
                   noteTitle={note.title}
-                  onTitleGenerated={(title) => setNoteAsync({ ...note, title })}
+                  categoryName={note.category.name}
+                  onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
                   onCategorySuggested={(name) => {
                     const cat = findCategoryByName(name);
-                    if (cat) setNoteAsync({ ...note, category: cat });
-                  }}
-                  onCodeCommented={(commentedCode) => {
-                    const updatedTabs = note.tabs.map((tab) =>
-                      tab.id === note.activeTabId ? { ...tab, code: commentedCode } : tab
-                    );
-                    setNoteAsync({ ...note, tabs: updatedTabs });
-                    editorRef.current?.setCode(commentedCode);
+                    if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                   }}
                   style={dockButtonStyle}
                   menuBottomOffset={110}
@@ -326,6 +355,8 @@ export default function NoteCodeEditor({ initialNote }: Props) {
           />
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      <EditorTourTip />
     </View>
   );
 }

@@ -1,14 +1,18 @@
+import DOMPurify from "dompurify";
+import type { DOMPurify as DOMPurifyInstance } from "dompurify";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
+import { addNoteHooks, NOTE_HTML_CONFIG } from "@/editor/sanitizeConfig";
+import { withNativeDialog } from "@/libs/desktopCommands";
+import { parseImageDataUrl } from "@/utils/dataUrl";
 import { isTauri } from "@/utils/platform";
-import { wrapHtmlForPdf } from "@/utils/html";
 
 export { htmlToMarkdown, wrapHtmlForPdf } from "@/utils/html";
 
 /**
  * Save content to a file on web.
- * - Tauri: uses native Save dialog via @tauri-apps/api
+ * - Tauri: uses the native Save dialog (dialog + fs plugins)
  * - Browser: uses <a download> fallback
  */
 async function saveFileWeb(
@@ -17,20 +21,22 @@ async function saveFileWeb(
   filters?: { name: string; extensions: string[] }[]
 ): Promise<void> {
   if (isTauri()) {
-    const { save } = await import("@tauri-apps/api/dialog");
-    const { writeTextFile, writeBinaryFile } = await import("@tauri-apps/api/fs");
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { writeTextFile, writeFile } = await import("@tauri-apps/plugin-fs");
 
-    const filePath = await save({
-      defaultPath: defaultFilename,
-      filters: filters || [{ name: "All Files", extensions: ["*"] }],
-    });
+    const filePath = await withNativeDialog(() =>
+      save({
+        defaultPath: defaultFilename,
+        filters: filters || [{ name: "All Files", extensions: ["*"] }],
+      })
+    );
     if (!filePath) return; // user cancelled
 
     if (typeof content === "string") {
       await writeTextFile(filePath, content);
     } else {
       const buffer = await content.arrayBuffer();
-      await writeBinaryFile(filePath, new Uint8Array(buffer));
+      await writeFile(filePath, new Uint8Array(buffer));
     }
     return;
   }
@@ -50,13 +56,28 @@ async function saveFileWeb(
   }, 1000);
 }
 
-export async function exportAsPdf(title: string, htmlContent: string): Promise<{ uri: string } | null> {
-  const fullHtml = wrapHtmlForPdf(title, htmlContent);
+let purifier: DOMPurifyInstance | null = null;
+function notePurifier(): DOMPurifyInstance {
+  if (!purifier) {
+    purifier = DOMPurify(window);
+    addNoteHooks(purifier);
+  }
+  return purifier;
+}
 
-  // Render the HTML in a temporary off-screen container
+export async function exportAsPdf(title: string, htmlContent: string): Promise<{ uri: string } | null> {
+  // Render the note in a temporary off-screen container: the body of `wrapHtmlForPdf`, built as nodes. It is the app's
+  // own page: whatever ran in the note's HTML would run as the app (LL-060), so it comes as DOMPurify's nodes, never
+  // parsed again.
   const container = document.createElement("div");
   container.style.cssText = "position:fixed;left:-9999px;top:0;width:800px;background:#fff;padding:40px;";
-  container.innerHTML = fullHtml.replace(/.*<body[^>]*>/is, "").replace(/<\/body>.*/is, "");
+  if (title) {
+    const heading = document.createElement("h1");
+    heading.className = "note-title";
+    heading.textContent = title;
+    container.appendChild(heading);
+  }
+  container.appendChild(notePurifier().sanitize(htmlContent, { ...NOTE_HTML_CONFIG, RETURN_DOM_FRAGMENT: true }));
   document.body.appendChild(container);
 
   const canvas = await html2canvas(container, { scale: 2, useCORS: true });
@@ -81,18 +102,20 @@ export async function exportAsPdf(title: string, htmlContent: string): Promise<{
   }
 
   if (isTauri()) {
-    const { save } = await import("@tauri-apps/api/dialog");
-    const { writeBinaryFile } = await import("@tauri-apps/api/fs");
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { writeFile } = await import("@tauri-apps/plugin-fs");
 
     const defaultName = `${(title || "note").replace(/[^a-zA-Z0-9-_ ]/g, "").substring(0, 50)}.pdf`;
-    const filePath = await save({
-      defaultPath: defaultName,
-      filters: [{ name: "PDF", extensions: ["pdf"] }],
-    });
+    const filePath = await withNativeDialog(() =>
+      save({
+        defaultPath: defaultName,
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      })
+    );
     if (!filePath) return null;
 
     const pdfBytes = pdf.output("arraybuffer");
-    await writeBinaryFile(filePath, new Uint8Array(pdfBytes));
+    await writeFile(filePath, new Uint8Array(pdfBytes));
   } else {
     pdf.save(`${(title || "note").replace(/[^a-zA-Z0-9-_ ]/g, "")}.pdf`);
   }
@@ -109,4 +132,14 @@ export async function exportAsTextFile(content: string, filename: string): Promi
   const ext = filename.split(".").pop() || "txt";
   const filters = [{ name: ext === "md" ? "Markdown" : "Text", extensions: [ext] }];
   await saveFileWeb(content, filename, filters);
+}
+
+/** Saves an image of a note (a data: URL) to a file: the save dialog on desktop, a download in the browser. */
+export async function exportImage(dataUrl: string): Promise<void> {
+  const image = parseImageDataUrl(dataUrl);
+  if (!image) throw new Error("not an image's data URL");
+  const bytes = Uint8Array.from(atob(image.base64), (c) => c.charCodeAt(0));
+  await saveFileWeb(new Blob([bytes], { type: image.mime }), `fastmemo-${Date.now()}.${image.extension}`, [
+    { name: image.extension.toUpperCase(), extensions: [image.extension] },
+  ]);
 }

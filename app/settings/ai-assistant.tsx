@@ -1,42 +1,67 @@
 import * as Device from "expo-device";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
-import { selectorAIAssistant, setAIAssistant } from "@/slicers/settingsSlice";
+import { selectorAIAssistant, selectorAIModelIsLegacy, setAIAssistant } from "@/slicers/settingsSlice";
+import { toast } from "@/utils/toast";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
-import type { AIModelId, AIModelInfo } from "@/libs/ai";
+import type { AIModelId, AIModelInfo, ModelDownloadProgress } from "@/libs/ai";
 import {
+  addAIStatusListener,
   AI_MODELS,
   cancelDownload,
   DEFAULT_MODEL_ID,
   deleteModel,
+  deleteOrphanedModelFiles,
   downloadModel,
+  getDownloadFailure,
+  getModelDownload,
+  getOrphanedModelFiles,
   isModelDownloaded,
   isNativeModuleAvailable,
   releaseContext,
 } from "@/libs/ai";
+
+const MB = 1024 * 1024;
+const GB = 1024 * MB;
+
+const formatBytes = (bytes: number) => (bytes >= GB ? `${(bytes / GB).toFixed(1)} GB` : `${Math.round(bytes / MB)} MB`);
+
+/** Bytes taken by model files no model of today uses (the Qwen 2.5 ones of earlier versions, partial downloads). */
+const oldModelsBytes = async () => (await getOrphanedModelFiles()).reduce((sum, file) => sum + file.size, 0);
+
+const subscribeToAI = (onChange: () => void) => addAIStatusListener(onChange);
 
 export default function AIAssistantScreen() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
 
   const aiSettings = useSelector(selectorAIAssistant);
+  const storedModelIsLegacy = useSelector(selectorAIModelIsLegacy);
   const selectedModelId = aiSettings.selectedModel || DEFAULT_MODEL_ID;
+  const [oldBytes, setOldBytes] = useState(0);
+  const [confirmDeleteOld, setConfirmDeleteOld] = useState(false);
 
   const [modelDownloaded, setModelDownloaded] = useState(aiSettings.modelDownloaded);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
+  // A download goes on when the screen closes, the screen off or the app in the background (ADR-028): opened again, the
+  // screen shows it.
+  const download: ModelDownloadProgress | null = useSyncExternalStore(subscribeToAI, getModelDownload);
+  const isDownloading = download !== null;
+  const downloadProgress = download?.progress ?? 0;
   const [nativeAvailable, setNativeAvailable] = useState(true);
 
   const deviceRam = Device.totalMemory ?? 0;
+  // The 2B where it runs comfortably (a 6 GB class phone and up), the 0.8B below.
+  const recommendedId: AIModelId = deviceRam >= 5 * GB ? "qwen3.5-2b" : "qwen3.5-0.8b";
 
   const modelCardItems = useMemo<SelectableCardItem<AIModelId>[]>(() => {
     const models = Platform.OS === "web" ? [] : (Object.values(AI_MODELS) as AIModelInfo[]);
@@ -46,12 +71,17 @@ export default function AIAssistantScreen() {
         id: model.id,
         label: model.name,
         description: t(model.description),
-        extra: <Text style={styles.modelSize}>{model.sizeLabel}</Text>,
+        extra: (
+          <View style={styles.modelExtra}>
+            {model.id === recommendedId && canRun && <Text style={styles.recommended}>{t("ai.recommended")}</Text>}
+            <Text style={styles.modelSize}>{model.sizeLabel}</Text>
+          </View>
+        ),
         disabled: !canRun,
         disabledLabel: t("ai.model_unavailable"),
       };
     });
-  }, [deviceRam, t]);
+  }, [deviceRam, recommendedId, t]);
 
   useEffect(() => {
     if (Platform.OS === "web") return;
@@ -64,12 +94,14 @@ export default function AIAssistantScreen() {
     const checkModel = async () => {
       const downloaded = await isModelDownloaded(selectedModelId);
       setModelDownloaded(downloaded);
-      if (downloaded !== aiSettings.modelDownloaded) {
+      // A Qwen 2.5 id stored by an earlier version is stored as the tier replacing it (read so already).
+      if (downloaded !== aiSettings.modelDownloaded || storedModelIsLegacy) {
         dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: downloaded }));
       }
     };
 
     checkModel();
+    oldModelsBytes().then(setOldBytes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedModelId]);
 
@@ -102,29 +134,39 @@ export default function AIAssistantScreen() {
     [aiSettings, dispatch]
   );
 
-  const handleDownload = useCallback(async () => {
+  // A download's end, even one before the screen opened: done (the module turned the AI on), cancelled or failed.
+  useEffect(() => {
+    if (isDownloading || Platform.OS === "web") return;
+    isModelDownloaded(selectedModelId).then(setModelDownloaded);
+    // a download clears the old models' files
+    oldModelsBytes().then(setOldBytes);
+  }, [isDownloading, selectedModelId]);
+
+  // A failure while the screen is open is said.
+  useEffect(() => {
     if (Platform.OS === "web") return;
-
-    setIsDownloading(true);
-    setDownloadProgress(0);
-
-    const success = await downloadModel(selectedModelId, (progress) => {
-      setDownloadProgress(progress);
+    return addAIStatusListener((status) => {
+      const failure = status === "error" ? getDownloadFailure() : null;
+      if (failure) toast(t(failure === "no_space" ? "ai.download_no_space" : "ai.download_failed"));
     });
+  }, [t]);
 
-    setIsDownloading(false);
-    setModelDownloaded(success);
-    dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: success, enabled: success ? aiSettings.enabled : false }));
-  }, [aiSettings, selectedModelId, dispatch]);
+  const handleDownload = useCallback(() => {
+    if (Platform.OS === "web") return;
+    void downloadModel(selectedModelId);
+  }, [selectedModelId]);
 
   const handleCancelDownload = useCallback(async () => {
     if (Platform.OS === "web") return;
-
     await cancelDownload();
-    setIsDownloading(false);
-    setDownloadProgress(0);
-    setModelDownloaded(false);
   }, []);
+
+  const handleDeleteOld = useCallback(async () => {
+    setConfirmDeleteOld(false);
+    const freed = await deleteOrphanedModelFiles();
+    setOldBytes(await oldModelsBytes());
+    toast(t("ai.old_models_deleted", { size: formatBytes(freed) }));
+  }, [t]);
 
   const handleDelete = useCallback(async () => {
     if (Platform.OS === "web") return;
@@ -162,7 +204,31 @@ export default function AIAssistantScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
+      <ConfirmOrCancelDialog
+        open={confirmDeleteOld}
+        description={t("ai.old_models_confirm", { size: formatBytes(oldBytes) })}
+        confirmLabel={t("ai.old_models_delete")}
+        onConfirm={handleDeleteOld}
+        onCancel={() => setConfirmDeleteOld(false)}
+      />
+
       <ScrollView style={styles.scroll}>
+        {/* The Qwen 2.5 files of earlier versions: dead weight now */}
+        {oldBytes > 0 && !isDownloading && (
+          <View style={[styles.sectionWrapper, styles.oldModelsCard]}>
+            <Text style={styles.oldModelsTitle}>{t("ai.old_models_title", { size: formatBytes(oldBytes) })}</Text>
+            <Text style={styles.oldModelsText}>{t("ai.old_models_desc")}</Text>
+            <TouchableOpacity
+              style={styles.oldModelsButton}
+              onPress={() => setConfirmDeleteOld(true)}
+              accessibilityRole="button"
+              activeOpacity={0.7}
+            >
+              <Text style={styles.deleteText}>{t("ai.old_models_delete")}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Model selection */}
         <View style={styles.sectionWrapper}>
           <View style={styles.sectionHeader}>
@@ -179,7 +245,9 @@ export default function AIAssistantScreen() {
               <Text style={styles.sectionItemList_title}>{t("ai.status")}</Text>
               <Text style={[styles.sectionItemList_text, modelDownloaded && styles.statusReady]}>
                 {isDownloading
-                  ? `${t("ai.downloading")} ${Math.round(downloadProgress * 100)}%`
+                  ? download.waiting
+                    ? t("ai.download_waiting")
+                    : `${t("ai.downloading")} ${Math.round(downloadProgress * 100)}%`
                   : modelDownloaded
                     ? t("ai.downloaded")
                     : t("ai.not_downloaded")}
@@ -198,7 +266,9 @@ export default function AIAssistantScreen() {
             {isDownloading && (
               <View style={[styles.sectionItemList, styles.sectionItemList_last, styles.downloadingRow]}>
                 <Text style={[styles.sectionItemList_title, styles.actionText]}>
-                  {`${t("ai.downloading")} ${Math.round(downloadProgress * 100)}%`}
+                  {download.waiting
+                    ? t("ai.download_waiting")
+                    : `${t("ai.downloading")} ${Math.round(downloadProgress * 100)}%`}
                 </Text>
                 <TouchableOpacity onPress={handleCancelDownload} activeOpacity={0.7}>
                   <Text style={styles.cancelText}>{t("ai.cancel")}</Text>
@@ -217,9 +287,12 @@ export default function AIAssistantScreen() {
           </View>
 
           {isDownloading && (
-            <View style={styles.progressBarContainer}>
-              <View style={[styles.progressBar, { width: `${downloadProgress * 100}%` }]} />
-            </View>
+            <>
+              <View style={styles.progressBarContainer}>
+                <View style={[styles.progressBar, { width: `${downloadProgress * 100}%` }]} />
+              </View>
+              <Text style={styles.downloadHint}>{t("ai.download_background")}</Text>
+            </>
           )}
         </View>
 
@@ -254,15 +327,13 @@ export default function AIAssistantScreen() {
           <View style={styles.sectionList}>
             {[
               { key: "ai.cap.generate_title" },
-              { key: "ai.cap.summarize", min: "1.5B" },
-              { key: "ai.cap.fix_grammar", min: "1.5B" },
-              { key: "ai.cap.shorten", min: "1.5B" },
-              { key: "ai.cap.translate", min: "3B" },
-              { key: "ai.cap.suggest_items" },
+              { key: "ai.cap.summarize", min: "2B" },
+              { key: "ai.cap.fix_grammar", min: "2B" },
+              { key: "ai.cap.shorten", min: "2B" },
+              { key: "ai.cap.translate", min: "2B" },
+              { key: "ai.cap.suggest_items", min: "2B" },
               { key: "ai.cap.suggest_category" },
               { key: "ai.cap.voice_cleanup" },
-              { key: "ai.cap.explain_code", min: "7B" },
-              { key: "ai.cap.add_comments", min: "7B" },
             ].map((item, index, arr) => (
               <View key={item.key} style={[styles.capabilityItem, index === arr.length - 1 && styles.sectionItemList_last]}>
                 <Text style={styles.capabilityText}>{t(item.key)}</Text>
@@ -385,6 +456,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLOR.accentMuted,
     borderRadius: 2,
   },
+  downloadHint: {
+    marginTop: PADDING_MARGIN.sm,
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+  },
   infoText: {
     color: COLOR.textSecondary,
     fontFamily: FONT.regular,
@@ -406,6 +483,44 @@ const styles = StyleSheet.create({
     color: COLOR.textSecondary,
     fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
+  },
+  modelExtra: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: PADDING_MARGIN.sm,
+  },
+  recommended: {
+    color: COLOR.accentSoft,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.small,
+    paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER.rounded,
+    backgroundColor: GLASS.fill,
+    overflow: "hidden",
+  },
+  oldModelsCard: {
+    backgroundColor: COLOR.surface,
+    borderRadius: BORDER.normal,
+    borderWidth: 1,
+    borderColor: GLASS.border,
+    padding: PADDING_MARGIN.lg,
+    gap: PADDING_MARGIN.sm,
+  },
+  oldModelsTitle: {
+    color: COLOR.textPrimary,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.paragraph,
+  },
+  oldModelsText: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    lineHeight: 18,
+  },
+  oldModelsButton: {
+    alignSelf: "flex-start",
+    paddingVertical: PADDING_MARGIN.xs,
   },
   capabilityItem: {
     backgroundColor: COLOR.surface,

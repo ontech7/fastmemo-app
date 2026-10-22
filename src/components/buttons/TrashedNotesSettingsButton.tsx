@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowPathIcon, EllipsisVerticalIcon, TrashIcon } from "react-native-heroicons/outline";
+import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
+import EllipsisVerticalIcon from "react-native-heroicons/outline/EllipsisVerticalIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import { webhook } from "@/utils/webhook";
@@ -119,6 +121,7 @@ export default function TrashedNotesSettingsButton({
       />
 
       <PopupMenu
+        accessibilityLabel={t("a11y.more_options")}
         trigger={
           <IconChip>
             <EllipsisVerticalIcon size={20} color={COLOR.softWhite} />

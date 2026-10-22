@@ -19,7 +19,9 @@ export async function checkLatestAppVersion(): Promise<AppVersionResponse | null
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-    const response = await fetch(`${configs.apiUrl}/version`, {
+    // With the trailing slash: the site redirects to it (`trailingSlash`), and a redirect without CORS headers would fail
+    // the desktop and web builds' request.
+    const response = await fetch(`${configs.apiUrl}/version/`, {
       method: "GET",
       signal: controller.signal,
       headers: {

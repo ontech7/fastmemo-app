@@ -3,43 +3,49 @@ const de = {
   languageName: "Deutsch",
 
   date: {
-    mon: "Mon",
-    tue: "Die",
-    wed: "Mit",
-    thu: "Don",
-    fri: "Fre",
-    sat: "Sam",
-    sun: "Son",
+    mon: "Mo",
+    tue: "Di",
+    wed: "Mi",
+    thu: "Do",
+    fri: "Fr",
+    sat: "Sa",
+    sun: "So",
   },
   changelog: {
     title: "Was gibt's Neues?",
 
     web: {
-      description_1_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Deine Notizen werden mit deinem eigenen Schlüssel geschützt.
+      description_2_0_0: `• Synchronisieren Sie mit Ihrem eigenen FastMemo Server statt mit Firebase.
+• Echtzeit-Synchronisierung zwischen Ihren Geräten.
+• Tastenkürzel und auf dem Mac eine Menüleiste.
+• Klicken Sie auf ein Bild, um es zu skalieren, zu drehen oder zu speichern.
+• Eine schnellere App und verschiedene Korrekturen.`,
+
+      description_1_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Ihre Notizen werden mit Ihrem eigenen Schlüssel geschützt.
 • Neue Schnellnotiz-Leiste, um direkt vom Startbildschirm eine Notiz zu erfassen.
 • Überarbeiteter Hilfe-Bereich mit KI-gestützter intelligenter Suche.
 • Verschiedene Fehlerbehebungen und Verbesserungen.`,
 
-      description_1_1_1: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
+      description_1_1_1: `• Offline-Notizen hinzugefügt: Behalten Sie eine Notiz nur auf diesem Gerät, ohne sie mit der Cloud zu synchronisieren.
 • Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
 • Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
-• Ruckgangig/Wiederholen und Durchstreichen im Texteditor hinzugefugt.
-• Das Entsperren am Desktop unterstutzt jetzt Touch ID und Windows Hello.
+• Rückgängig/Wiederholen und Durchstreichen im Texteditor hinzugefügt.
+• Das Entsperren am Desktop unterstützt jetzt Touch ID und Windows Hello.
 • Verschiedene Fehlerbehebungen.`,
 
       description_1_0_0: `• Erste stabile Version von Fast Memo Desktop (kein BETA mehr).
-• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
-• Onboarding mit neuen Einfuhrungsschritten neu gestaltet.
-• Einstellungen zur Notizerstellung hinzugefugt, um Standardwerte anzupassen.
-• Schritt-Modus fur To-Do-Notizen hinzugefugt.
+• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflächen und Verläufen.
+• Onboarding mit neuen Einführungsschritten neu gestaltet.
+• Einstellungen zur Notizerstellung hinzugefügt, um Standardwerte anzupassen.
+• Schritt-Modus für To-Do-Notizen hinzugefügt.
 • Verschiedene Fehlerbehebungen.`,
 
       description_0_3_0: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
-• Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
-• Notiz-Export hinzugefugt.
+• Such- und Ersetzungsfunktion in Textnotizen hinzugefügt.
+• Notiz-Export hinzugefügt.
 • Verschiedene Fehlerbehebungen.`,
 
-      description_0_2_0: `• Kanban-Spalten koennen jetzt verschoben werden.
+      description_0_2_0: `• Kanban-Spalten können jetzt verschoben werden.
 • Animationen verbessert.
 • Verschiedene Korrekturen.`,
 
@@ -50,32 +56,38 @@ const de = {
     },
 
     mobile: {
-      description_3_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Deine Notizen werden mit deinem eigenen Schlüssel geschützt.
+      description_4_0_0: `• Synchronisieren Sie mit Ihrem eigenen FastMemo Server statt mit Firebase.
+• Echtzeit-Synchronisierung zwischen Ihren Geräten.
+• KI-Assistent mit den neuen Qwen3.5-Modellen: korrigieren, kürzen, übersetzen und zusammenfassen.
+• Tippen Sie auf ein Bild, um es zu skalieren, zu drehen oder zu teilen.
+• Eine schnellere App und verschiedene Korrekturen.`,
+
+      description_3_2_0: `• Ende-zu-Ende-verschlüsselte Cloud-Synchronisierung: Ihre Notizen werden mit Ihrem eigenen Schlüssel geschützt.
 • Neue Schnellnotiz-Leiste, um direkt vom Startbildschirm eine Notiz zu erfassen.
 • Überarbeiteter Hilfe-Bereich mit KI-gestützter intelligenter Suche.
 • Verschiedene Fehlerbehebungen und Verbesserungen.`,
 
-      description_3_1_1: `• Offline-Notizen hinzugefugt: behalte eine Notiz nur auf diesem Gerat, ohne sie mit der Cloud zu synchronisieren.
+      description_3_1_1: `• Offline-Notizen hinzugefügt: Behalten Sie eine Notiz nur auf diesem Gerät, ohne sie mit der Cloud zu synchronisieren.
 • Spracherkennung 2.0: verbesserte Sprachdiktierung mit automatischer KI-Bereinigung.
 • Der KI-Assistent kann jetzt eine Kategorie aus dem Notiztitel vorschlagen.
-• Ruckgangig/Wiederholen und Durchstreichen im Texteditor hinzugefugt.
+• Rückgängig/Wiederholen und Durchstreichen im Texteditor hinzugefügt.
 • Verschiedene Fehlerbehebungen.`,
 
-      description_3_0_0: `• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflachen und Verlaufen.
-• Onboarding mit neuen Einfuhrungsschritten neu gestaltet.
-• Einstellungen zur Notizerstellung hinzugefugt, um Standardwerte anzupassen.
-• Schritt-Modus fur To-Do-Notizen hinzugefugt.
+      description_3_0_0: `• Komplett neues, modernes Design in der gesamten App, mit der neuen Geist-Schriftart, Glass-Oberflächen und Verläufen.
+• Onboarding mit neuen Einführungsschritten neu gestaltet.
+• Einstellungen zur Notizerstellung hinzugefügt, um Standardwerte anzupassen.
+• Schritt-Modus für To-Do-Notizen hinzugefügt.
 • App-Icon und Startbildschirm aufgefrischt.
 • Verschiedene Fehlerbehebungen.`,
 
       description_2_9_1: `• Neuer Notiztyp: Code, mit integriertem Editor, Syntaxhervorhebung, mehreren Tabs und automatischer Spracherkennung.
-• Qwen 2.5 7B Modell mit Gerate-RAM-Erkennung hinzugefugt. Neue AI-Aktionen fur Code: Code erklaren und Kommentare hinzufugen.
-• Such- und Ersetzungsfunktion in Textnotizen hinzugefugt.
-• Notiz-Export hinzugefugt.
+• Qwen 2.5 7B Modell mit Geräte-RAM-Erkennung hinzugefügt. Neue AI-Aktionen für Code: Code erklären und Kommentare hinzufügen.
+• Such- und Ersetzungsfunktion in Textnotizen hinzugefügt.
+• Notiz-Export hinzugefügt.
 • Verschiedene Fehlerbehebungen.`,
 
-      description_2_8_0: `• Self-hosted KI-Assistent (Qwen 2.5) mit smarten Funktionen fuer Notizen hinzugefuegt. Einrichtung unter Einstellungen -> KI-Assistent.
-• Kanban-Spalten koennen jetzt verschoben werden.
+      description_2_8_0: `• Self-hosted KI-Assistent (Qwen 2.5) mit smarten Funktionen für Notizen hinzugefügt. Einrichtung unter Einstellungen -> KI-Assistent.
+• Kanban-Spalten können jetzt verschoben werden.
 • Animationen verbessert.
 • Verschiedene Korrekturen.`,
 
@@ -146,7 +158,7 @@ const de = {
     step5: "Halten Sie Ihre Snippets fest.",
     step6: "Erstellen Sie Ihre eigene Kategorie entsprechend Ihren Anforderungen.",
     step7: "Geben Sie einen Geheimcode ein, um Ihre Notizen zu verbergen.",
-    step8: "Synchronisieren Sie Ihre Notizen auf Google Firebase.",
+    step8: "Synchronisieren Sie Ihre Notizen zwischen Ihren Geräten: über Ihr Firebase oder Ihren eigenen Server.",
     title: "Was ist Fast Memo?",
     continue: "Geht weiter",
   },
@@ -167,11 +179,20 @@ const de = {
     unlockCode: "Geben Sie Ihren Geheimcode ein",
     error: "Der von Ihnen eingegebene Code stimmt nicht überein. Versuchen Sie es erneut.",
   },
-  firstMemo: {
-    title: "Willkommen bei FastMemo! 🔊",
+  tour: {
+    step: "{{current}} von {{total}}",
+    skip: "Überspringen",
+    got_it: "Verstanden",
+    create_title: "Ihre erste Notiz",
+    create_text: "Tippen Sie auf +, um zu schreiben. Der Pfeil daneben öffnet die anderen Typen: Liste, Kanban und Code.",
+    write_title: "Einfach schreiben",
+    write_text: "Alles wird beim Schreiben gespeichert. Wenn Sie fertig sind, tippen Sie oben links auf den Pfeil.",
+    explore_title: "Ein letzter Tipp",
+    explore_text:
+      "Halten Sie eine Notiz gedrückt, um sie auszuwählen: Sie können sie als wichtig markieren, sperren, ausblenden oder löschen. Kategorien, Papierkorb und Einstellungen finden Sie in der Leiste links.",
   },
   home: {
-    notes: "Notiz",
+    notes: "Notizen",
     search: "Nach etwas suchen…",
     quickNote: "Schnelle Notiz…",
     deepSearch: "Tiefensuche (Text, Listen…)",
@@ -189,8 +210,7 @@ const de = {
     description_placeholder: "Schreiben Sie hier etwas…",
     no_items: "Es sind keine Elemente vorhanden.\nFügen Sie eines hinzu, indem Sie auf die Schaltfläche unten rechts klicken.",
     characters: "Textzeichen",
-    completati: "vollendet",
-    on: "von",
+    progress: "<hl>{{done}}</hl> von {{total}} erledigt",
     mode_free: "Liste",
     mode_steps: "Schritte",
     ongoing: "Laufend",
@@ -213,7 +233,7 @@ const de = {
       made_offline: "Notiz ist jetzt offline",
       synced_as_duplicate: "Als Kopie in die Cloud synchronisiert",
       changecategory: "Kategorie ändern",
-      share: "Aktie",
+      share: "Teilen",
       export: "Exportieren",
       export_description: "Wählen Sie das Exportformat",
       export_txt: "Klartext (.txt)",
@@ -237,6 +257,20 @@ const de = {
       replace_one: "Ersetzen",
       replace_all: "Alle",
     },
+    image: {
+      size: "Größe",
+      size_s: "S",
+      size_m: "M",
+      size_l: "L",
+      size_full: "Voll",
+      align: "Ausrichtung",
+      view: "Ansehen",
+      rotate: "Drehen",
+      share: "Teilen",
+      save: "Speichern",
+      delete: "Löschen",
+      failed: "Dieses Bild kann nicht geändert oder geteilt werden",
+    },
   },
   kanban: {
     add_column: "Spalte hinzufügen",
@@ -250,36 +284,162 @@ const de = {
     cards_count: "Karten",
   },
   code: {
-    add_tab: "Tab hinzufugen",
+    add_tab: "Tab hinzufügen",
     tab_title_placeholder: "Dateiname",
     code_placeholder: "Schreiben Sie Ihren Code hier...",
     max_tabs_reached: "Maximum von 6 Tabs erreicht",
-    delete_tab: "Tab loschen",
-    delete_tab_confirm: "Möchtest du diesen Tab wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+    delete_tab: "Tab löschen",
+    delete_tab_confirm: "Möchten Sie diesen Tab wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
     language: "Sprache",
   },
   changecategory: {
     title: "Kategorie ändern",
   },
   cloudsync: {
+    conflict_suffix: "(Konflikt)",
+    note_too_large: "„{{title}}“ ist zu groß für diese Cloud: Die Notiz ist jetzt offline, nur auf diesem Gerät.",
+    notes_too_large: "{{count}} Notizen sind zu groß für diese Cloud: Sie sind jetzt offline, nur auf diesem Gerät.",
+    unreachable_server: "Server nicht erreichbar",
+    unreachable_firebase: "Firebase nicht erreichbar",
+    unreachable_pending: "{{count}} wartend",
+    unreachable_body:
+      "Ihre Änderungen bleiben auf diesem Gerät und werden automatisch gesendet, sobald er wieder erreichbar ist.",
+    unreachable_pending_notes: "Notizen, die auf das Senden warten: {{count}}.",
+    unreachable_last: "Letzte Synchronisierung: {{time}}.",
+    unreachable_vpn: "Wenn Sie sich über ein VPN verbinden (zum Beispiel WireGuard), prüfen Sie, ob es aktiv ist.",
+    reachable_server: "Server erreichbar",
+    reachable_firebase: "Firebase erreichbar",
+    unreachable_check_server: "Prüfen Sie, ob Ihr FastMemo Server läuft.",
+    unreachable_check_firebase: "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    conflict_copies: "Vor dem Synchronisieren auf zwei Geräten bearbeitet: Beide Versionen wurden behalten (eine als Kopie)",
+    open_on: "Geöffnet auf {{devices}}",
+    note_deleted_elsewhere:
+      "Diese Notiz wurde auf einem anderen Gerät in den Papierkorb verschoben. Bearbeiten stellt sie wieder her.",
     title: "Cloud Sync",
     syncing_1: "Synchronisierung läuft…",
     syncing_2: "Warten Sie, bis der Vorgang abgeschlossen ist",
     enable: "Aktivieren Sie die Cloud-Sync",
     save: "Einstellungen speichern",
     edit: "Einstellungen bearbeiten",
-    resync: "Daten erneut sync",
+    resync: "Daten erneut synchronisieren",
+    resync_confirm_title: "Daten erneut synchronisieren?",
+    resync_confirm_desc:
+      "Dabei werden Ihre Notizen und Kategorien in die Cloud hochgeladen und die dort bereits gespeicherten heruntergeladen, sodass beide zusammengeführt werden. Möchten Sie fortfahren?",
     deleteDevices: "Geräte verwalten",
     handshakeFailed: "Verbindungsversuch fehlgeschlagen",
     handshakeFailedDesc: "Es konnte keine Verbindung zum Firebase-Server hergestellt werden.",
+    example: "z. B.: {{value}}",
+    provider: {
+      title: "Synchronisieren mit",
+      firebase: "Google Firebase",
+      firebase_desc: "Ihr eigenes Firebase-Projekt: kostenlos und schnell eingerichtet, gehostet von Google.",
+      server: "FastMemo Server",
+      server_desc: "Ihr eigener Server (PC, NAS, Raspberry Pi, VPS): Ihre Notizen bleiben bei Ihnen.",
+    },
+    server: {
+      url: "Serveradresse",
+      key: "Zugangsschlüssel",
+      http_warning: "HTTP ist unverschlüsselt: über Tailscale oder ein VPN wie WireGuard unbedenklich. Sonst besser HTTPS.",
+      http_blocked: "Im Browser erreicht FastMemo nur HTTPS-Adressen. Für HTTP nutzen Sie die Android- oder Desktop-App.",
+      http_confirm_title: "Über HTTP verbinden?",
+      http_confirm_desc:
+        "HTTP ist unverschlüsselt. Über Tailscale oder ein VPN wie WireGuard ist das kein Problem: Der Tunnel verschlüsselt den Datenverkehr bereits. In einem offenen Netzwerk könnte jeder, der den Datenverkehr sieht, die Titel Ihrer Notizen und die Zugangsdaten Ihres Geräts lesen; der Inhalt Ihrer Notizen bleibt Ende-zu-Ende-verschlüsselt.",
+      http_confirm_ok: "HTTP verwenden",
+      handshake_failed_desc:
+        "Der Server ist nicht erreichbar oder der Zugangsschlüssel ist falsch. Prüfen Sie die Adresse (z. B. https://notizen.beispiel.de), den Schlüssel und ob der Server läuft. Bei einem Server ohne HTTPS geben Sie http:// vor der Adresse ein. Die Web-App benötigt eine HTTPS-Adresse.",
+    },
+    vault: {
+      setup_title: "Schützen Sie Ihre Notizen",
+      setup_desc:
+        "Sie aktivieren die Ende-zu-Ende-Verschlüsselung für Cloud Sync. Wählen Sie ein Verschlüsselungspasswort – es ist der Schlüssel, der Ihre Notizen privat hält.",
+      migrate_title: "Verschlüsselung aktivieren",
+      migrate_desc:
+        "Wir stellen Ihre Cloud-Synchronisierung auf Ende-zu-Ende-Verschlüsselung um. Wählen Sie ein Verschlüsselungspasswort – die bereits in Ihrer Cloud gespeicherten Notizen werden damit neu verschlüsselt, und Sie geben dieses Passwort auf jedem Gerät einmal ein.",
+      point_private:
+        "Nur Sie können Ihre Notizen lesen – nicht wir und nicht der, der sie speichert. Sie werden auf Ihrem Gerät verschlüsselt, bevor sie hochgeladen werden.",
+      point_password:
+        "Ihre Notizen sind durch ein Verschlüsselungspasswort geschützt, das Sie selbst wählen und nur Sie kennen.",
+      point_devices: "Sie geben dieses Passwort auf jedem Gerät, das Sie synchronisieren, einmal ein.",
+      point_norecover:
+        "Wir können es nicht für Sie zurücksetzen. Wenn Sie es vergessen, benötigen Sie den Wiederherstellungsschlüssel, den wir Ihnen als Nächstes zeigen – bewahren Sie ihn also sicher auf.",
+      unlock_title: "Notizen entsperren",
+      unlock_desc:
+        "Geben Sie Ihr Verschlüsselungspasswort ein, um Ihre Notizen auf diesem Gerät zu lesen und zu synchronisieren.",
+      unlock_action: "Entsperren",
+      recover_title: "Zugriff wiederherstellen",
+      recover_desc:
+        "Passwort verloren? Geben Sie Ihren Wiederherstellungsschlüssel ein und wählen Sie ein neues Verschlüsselungspasswort.",
+      recovery_title: "Wiederherstellungsschlüssel",
+      recovery_desc:
+        "Notieren Sie ihn und bewahren Sie ihn sicher auf. Er ist der einzige Weg zurück zu Ihren Notizen, falls Sie Ihr Passwort einmal vergessen – und wir zeigen ihn nicht noch einmal an.",
+      recovery_saved: "Ich habe ihn gespeichert",
+      change_title: "Passwort ändern",
+      change_desc:
+        "Geben Sie Ihr aktuelles Passwort ein und wählen Sie ein neues. Ihre Notizen bleiben verschlüsselt und unverändert, und bereits entsperrte Geräte funktionieren weiter – nur das Passwort selbst ändert sich. Ab jetzt benötigt jedes neue Gerät das neue Passwort zum Entsperren.",
+      change_action: "Passwort ändern",
+      change_success: "Verschlüsselungspasswort geändert",
+      changePassphrase: "Passwort ändern",
+      reset_title: "Verschlüsselung zurücksetzen",
+      reset_desc:
+        "Verwenden Sie dies nur, wenn Sie sowohl Ihr Passwort als auch Ihren Wiederherstellungsschlüssel verloren haben. Dabei werden die verschlüsselten Notizen in der Cloud gelöscht und alles beginnt von vorn. Die Notizen auf diesem Gerät bleiben erhalten und werden mit einem neuen Passwort erneut hochgeladen.",
+      reset_action: "Verschlüsselung zurücksetzen",
+      resetVault: "Verschlüsselung zurücksetzen",
+      passphrase_placeholder: "Verschlüsselungspasswort",
+      passphrase_confirm_placeholder: "Passwort bestätigen",
+      current_passphrase_placeholder: "Aktuelles Passwort",
+      new_passphrase_placeholder: "Neues Passwort",
+      recovery_key_placeholder: "Wiederherstellungsschlüssel",
+      passphrase_too_short: "Verwenden Sie mindestens 8 Zeichen",
+      passphrase_mismatch: "Die Passwörter stimmen nicht überein",
+      wrong_passphrase: "Falsches Passwort, bitte erneut versuchen",
+      wrong_recovery_key: "Dieser Wiederherstellungsschlüssel ist ungültig",
+      forgot_passphrase: "Passwort vergessen?",
+      continue: "Weiter",
+      creating: "Verschlüsselung wird eingerichtet…",
+      migrating: "Ihre Notizen werden verschlüsselt…",
+      unlocking: "Wird entsperrt…",
+      saving: "Wird gespeichert…",
+      finishing: "Wird abgeschlossen…",
+      uploading: "Ihre Notizen werden verschlüsselt und hochgeladen…",
+      resetting: "Wird zurückgesetzt…",
+      error_generic: "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+      verify_failed:
+        "Der Verschlüsselungsstatus konnte nicht geprüft werden. Überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      locked_prompt: "Ihre Notizen sind gesperrt – entsperren Sie sie in den Cloud-Einstellungen, um zu synchronisieren.",
+      setup_prompt:
+        "Richten Sie in den Cloud-Einstellungen die Ende-zu-Ende-Verschlüsselung ein, um Ihre Notizen zu schützen und zu synchronisieren.",
+      setup_action: "Verschlüsselung aktivieren",
+      setup_cta_hint:
+        "Ihre Notizen sind noch nicht verschlüsselt. Aktivieren Sie die Ende-zu-Ende-Verschlüsselung, um sie zu schützen – es dauert nur einen Moment.",
+      locked_cta_title: "Synchronisierung pausiert",
+      locked_cta_hint:
+        "Ihre Notizen sind auf diesem Gerät verschlüsselt und gesperrt, daher ist die Cloud-Synchronisierung angehalten. Geben Sie Ihr Verschlüsselungspasswort ein, um sie zu entsperren und die Synchronisierung fortzusetzen.",
+      enable_hint:
+        "Cloud Sync ist Ende-zu-Ende-verschlüsselt – nur Sie können Ihre Notizen lesen, nicht wir und nicht der, der sie speichert.",
+      prompt_title: "Synchronisierung pausiert",
+      prompt_desc:
+        "Ihre Notizen werden noch nicht synchronisiert. Schließen Sie die Einrichtung der Verschlüsselung in den Cloud-Einstellungen ab, um die Synchronisierung wieder zu aktivieren.",
+      prompt_close: "Schließen",
+      prompt_go: "Zu Cloud Sync",
+      backup_hint:
+        "Tipp: Exportieren Sie vor dem Fortfahren eine verschlüsselte Sicherung Ihrer Notizen. Das ist optional, aber eine sichere Rückfallebene, falls etwas schiefgeht.",
+      backup_action: "Schnelle Sicherung",
+    },
   },
   synceddevices: {
     title: "Verbundene Geräte",
     lastSync: "Letzte Sync.: ",
-    error_fetching: "Fehler beim Abrufen der Geräte",
+    error_fetching: "Geräte konnten nicht geladen werden",
+    error_body: "Beim Lesen ist etwas schiefgelaufen. Versuchen Sie es gleich noch einmal.",
+    offline_body: "Ihre Geräte erscheinen hier, sobald Sie wieder online sind.",
     upToDate: "Aktuell",
     pending: "{{count}} ausstehend",
     mostRecent: "Neueste",
+    count: "({{count}}/{{limit}}) Geräte",
+    remove_title: "Dieses Gerät entfernen?",
+    remove_description:
+      "{{name}} wird von der Synchronisierung getrennt. Seine Notizen bleiben auf dem Gerät, werden aber erst wieder synchronisiert, wenn Sie es erneut verbinden.",
+    remove_confirm: "Entfernen",
   },
   createcategory: {
     title_create: "Kategorie Erstellen",
@@ -309,8 +469,8 @@ const de = {
     addTextNote: "Textnotiz hinzufügen",
     addTodoNote: "Todo-Notiz hinzufügen",
     addKanbanNote: "Kanban-Notiz hinzufügen",
-    addCodeNote: "Code-Notiz hinzufugen",
-    updateNote: "Nota de actualización",
+    addCodeNote: "Code-Notiz hinzufügen",
+    updateNote: "Notiz aktualisieren",
     temporaryDeleteNote: "Notiz vorübergehend löschen",
     deleteNote: "Notiz löschen",
     restoreNote: "Notiz wiederherstellen",
@@ -324,14 +484,14 @@ const de = {
   },
   generalsettings: {
     title: "Einstellungen",
-    basic: "Basic",
+    basic: "Grundeinstellungen",
     cloudsync: "Cloud Sync",
     temporary_trash_lifespan: "Temporäre Papierkorbdauer",
     days: "Tage",
     change_secret_code: "Ändern Sie Ihren Geheimcode",
     enable_fingerprint: "Fingerabdruck aktivieren",
-    fingerprint_reason: "Entsperre deine Notizen",
-    advanced: "Fortschrittlich",
+    fingerprint_reason: "Entsperren Sie Ihre Notizen",
+    advanced: "Erweitert",
     show_hidden: "Versteckte Notizen anzeigen",
     export_import_data: "Daten exportieren/importieren",
     export_import_popup_title: "Geheime Passphrase",
@@ -352,6 +512,8 @@ const de = {
     checking_updates: "Überprüfung...",
     update_available: "Update verfügbar",
     update_confirm: "Möchten Sie es jetzt installieren?",
+    update_installing: "Update wird heruntergeladen: Die App startet nach der Installation neu.",
+    update_install: "Installieren",
     no_updates: "Sie verwenden die neueste Version.",
     feedback_and_help: "Feedback und Hilfe",
     help: "Hilfe",
@@ -380,12 +542,12 @@ const de = {
       smart: "Intelligent",
       smart_description: "Tippen erstellt immer den unten gewählten Typ.",
       adaptive: "Adaptiv",
-      adaptive_description: "Tippen erstellt denselben Typ wie deine letzte Notiz.",
+      adaptive_description: "Tippen erstellt denselben Typ wie Ihre letzte Notiz.",
     },
   },
   aboutdeveloper: {
     title: "Über mich",
-    freelance: "Freiberuflicher Webentwickler",
+    role: "Senior Software Engineer",
     information: "Information",
     developer: "Entwickler",
     website: "Webseite",
@@ -401,35 +563,45 @@ const de = {
     not_downloaded: "Nicht heruntergeladen",
     downloading: "Wird heruntergeladen...",
     download_model: "Modell herunterladen",
+    download_notification: "KI-Modell für FastMemo",
+    download_waiting: "Warten auf das Netzwerk...",
+    download_failed: "Der Download ist fehlgeschlagen: Bitte erneut versuchen.",
+    download_no_space: "Nicht genug Speicherplatz für das Modell: Geben Sie etwas frei und versuchen Sie es erneut.",
+    download_background:
+      "Sie können diesen Bildschirm verlassen oder ausschalten: Der Download läuft weiter, mit dem Fortschritt in den Benachrichtigungen.",
     cancel: "Abbrechen",
-    delete_model: "Modell loeschen",
-    info: "Der KI-Assistent laeuft vollstaendig auf Ihrem Geraet. Es werden keine Daten an externe Server gesendet. Das Modell muss einmal heruntergeladen werden (~400 MB) und wird lokal gespeichert.",
-    model_light: "Schnell, Basisqualitat. 3GB+ RAM erforderlich.",
-    model_powerful: "Gute Balance zwischen Geschwindigkeit und Qualitat. 4GB+ RAM erforderlich.",
-    model_advanced: "Hohe Qualitat. 6GB+ RAM erforderlich.",
-    model_pro: "Beste Qualitat, Desktop-nahe Leistung. 8GB+ RAM erforderlich.",
-    model_unavailable: "Nicht genug RAM auf diesem Gerat",
+    delete_model: "Modell löschen",
+    info: "Der KI-Assistent läuft vollständig auf Ihrem Gerät. Es werden keine Daten an externe Server gesendet. Das Modell wird einmal heruntergeladen (ab ~530 MB) und lokal gespeichert.",
+    model_light: "Schnell, Basisqualität. 3GB+ RAM erforderlich.",
+    model_powerful: "Gute Balance zwischen Geschwindigkeit und Qualität. 4GB+ RAM erforderlich.",
+    model_advanced: "Beste Qualität. 6GB+ RAM erforderlich.",
+    model_unavailable: "Nicht genug RAM auf diesem Gerät",
+    recommended: "Empfohlen",
+    old_models_title: "Alte KI-Modelle: {{size}}",
+    old_models_desc:
+      "FastMemo verwendet jetzt die Qwen3.5-Modelle: schneller und klüger. Die alten Dateien werden nicht mehr gebraucht: Löschen Sie sie jetzt, oder laden Sie ein neues Modell herunter, dann verschwinden sie von selbst.",
+    old_models_delete: "Alte Modelle löschen",
+    old_models_confirm: "Die alten KI-Modelle ({{size}}) löschen? FastMemo verwendet sie nicht mehr.",
+    old_models_deleted: "Alte Modelle gelöscht: {{size}} frei",
     capabilities_title: "Was kann ich?",
     cap: {
       generate_title: "Titel aus dem Notizinhalt generieren",
-      summarize: "Textnotiz in wenigen Saetzen zusammenfassen",
+      summarize: "Textnotiz in wenigen Sätzen zusammenfassen",
       fix_grammar: "Rechtschreibung und Grammatik korrigieren",
       shorten: "Einen Text kürzer und prägnanter machen",
-      translate: "Eine Notiz in deine App-Sprache übersetzen",
-      suggest_items: "Neue Elemente fuer eine Checkliste vorschlagen",
-      suggest_category: "Die beste Kategorie fuer eine Notiz vorschlagen",
+      translate: "Eine Notiz in eine Sprache Ihrer Wahl übersetzen",
+      suggest_items: "Neue Elemente für eine Checkliste vorschlagen",
+      suggest_category: "Die beste Kategorie für eine Notiz vorschlagen",
       voice_cleanup: "Diktierten Text mit Satzzeichen aufräumen",
-      explain_code: "Erklaren was der Code macht",
-      add_comments: "Kommentare zum Code hinzufugen",
     },
-    unavailable_web: "KI-Assistent ist nur auf Mobilgeraeten verfuegbar.",
-    native_rebuild_needed: "KI-Assistent erfordert einen nativen Rebuild.\nFuehre aus: npx expo run:android",
+    unavailable_web: "KI-Assistent ist nur auf Mobilgeräten verfügbar.",
+    native_rebuild_needed: "KI-Assistent erfordert einen nativen Rebuild.\nFühren Sie aus: npx expo run:android",
     voice_only: "Nur Sprache",
     voice_only_hint: "Mit dem Assistenten nur per Sprache interagieren",
-    listening: "Hoere zu...",
+    listening: "Höre zu...",
     tap_to_speak: "Tippen Sie auf das Mikrofon zum Sprechen",
     sending_soon: "Wird gesendet...",
-    placeholder: "Was moechten Sie tun?",
+    placeholder: "Was möchten Sie tun?",
     processing: "Denke nach...",
     feedback: {
       note_created: 'Notiz "{{title}}" erstellt',
@@ -438,7 +610,7 @@ const de = {
       category_changed: "{{count}} Notiz(en) verschoben",
       done: "Fertig",
       note_renamed: 'Notiz umbenannt in "{{title}}"',
-      items_added: "{{count}} Element(e) hinzugefuegt",
+      items_added: "{{count}} Element(e) hinzugefügt",
       category_created: 'Kategorie "{{name}}" erstellt',
       note_restored: "{{count}} Notiz(en) wiederhergestellt",
       category_switched: 'Gewechselt zu "{{name}}"',
@@ -447,32 +619,42 @@ const de = {
       not_todo_note: "Diese Notiz ist keine Checkliste",
       category_exists: "Kategorie existiert bereits",
       note_converted: 'Notiz "{{title}}" konvertiert',
-      notes_merged: 'Notizen zu "{{title}}" zusammengefuegt',
+      notes_merged: 'Notizen zu "{{title}}" zusammengeführt',
       setting_changed: "Einstellung aktualisiert",
       help_message:
-        'Ich kann Notizen, Listen und Boards erstellen, loeschen, umbenennen, konvertieren und zusammenfuegen.\nVersuche: "Erstelle eine Einkaufsliste mit Milch und Brot"\nAlle Funktionen unter Einstellungen > KI-Assistent.',
+        'Ich kann Notizen, Listen und Boards erstellen, löschen, umbenennen, konvertieren und zusammenführen.\nVersuchen Sie: "Erstelle eine Einkaufsliste mit Milch und Brot"\nAlle Funktionen unter Einstellungen > KI-Assistent.',
       same_type: "Die Notiz ist bereits von diesem Typ",
       not_understood: "Ich kann nur bei Notizen helfen",
-      error: "Etwas ist schiefgelaufen, versuche es erneut",
-      voice_unavailable: "Sprache nicht verfuegbar",
+      error: "Etwas ist schiefgelaufen, bitte versuchen Sie es erneut",
+      voice_unavailable: "Sprache nicht verfügbar",
     },
     editor: {
       generate_title: "Titel generieren",
       summarize: "Zusammenfassen",
       suggest_items: "Elemente vorschlagen",
       suggest_category: "Kategorie vorschlagen",
-      explain_code: "Code erklaren",
-      add_comments: "Kommentare hinzufugen",
       fix_grammar: "Grammatik korrigieren",
       shorten: "Kürzen",
       translate: "Übersetzen",
+      translate_to: "Übersetzen in",
+      app_language: "App-Sprache",
       min_model: "Minimum",
       before: "Vorher",
       after: "Nachher",
       apply: "Anwenden",
-      no_content: "Schreibe zuerst etwas",
+      content_changed: "Die Notiz hat sich geändert, während die KI gearbeitet hat: Bitte erneut ausführen.",
+      no_content: "Schreiben Sie zuerst etwas",
       no_category_match: "Keine passende Kategorie gefunden",
-      error: "Konnte nicht generieren, versuche es erneut",
+      category_unchanged: "Die Notiz ist schon in „{{name}}“",
+      category_unsure: "Die KI schwankt zwischen diesen beiden: Wählen Sie eine aus.",
+      no_improvement: "Die KI konnte diesen Text nicht verbessern: Er bleibt unverändert.",
+      too_long: "Der Text ist zu lang für die KI: Versuchen Sie es mit einem kürzeren Teil.",
+      note_too_long: "Notiz zu lang für dieses Modell",
+      progress: "Teil {{current}} von {{total}}",
+      summary_label: "Zusammenfassung",
+      summary_on_top: "Sie steht oben in der Notiz; darunter bleibt die Notiz unverändert.",
+      summary_replaces: "Sie steht oben in der Notiz, anstelle der vorherigen Zusammenfassung.",
+      error: "Generierung fehlgeschlagen, bitte versuchen Sie es erneut",
     },
   },
   voicerecognition: {
@@ -485,7 +667,7 @@ const de = {
     dictation: {
       listening: "Höre zu…",
       paused: "Pausiert",
-      hint: 'Sprich jetzt. Sage "Komma", "Punkt", "Fragezeichen" oder "neue Zeile" für Satzzeichen.',
+      hint: 'Sprechen Sie jetzt. Sagen Sie "Komma", "Punkt", "Fragezeichen" oder "neue Zeile" für Satzzeichen.',
       insert: "Einfügen",
       cancel: "Abbrechen",
       ai_cleanup: "Mit KI aufräumen",
@@ -526,7 +708,7 @@ const de = {
     how_to_create_todo_note: {
       title: "Wie erstelle ich eine To-Do-Liste?",
       text_1_0: "Tippen Sie auf die",
-      text_1_1: "Schaltfläche unten rechts auf der Startseite.",
+      text_1_1: "Schaltfläche neben [+] unten rechts auf der Startseite und wählen Sie 'Liste'.",
       text_2_0: "Es öffnet sich eine neue Seite, auf der Sie einen Titel und Ihre To-Do-Einträge hinzufügen können.",
       text_3_0: "Ziehen Sie an den sechs Punkten rechts neben einem Eintrag, um ihn nach oben oder unten zu verschieben.",
       text_4_0: "Tippen Sie auf das Kreuz rechts, um einen Eintrag zu entfernen.",
@@ -540,7 +722,7 @@ const de = {
     how_to_create_kanban_note: {
       title: "Wie erstelle ich ein Kanban-Board?",
       text_1_0: "Tippen Sie auf die",
-      text_1_1: "Schaltfläche unten rechts auf der Startseite und wählen Sie 'Kanban'.",
+      text_1_1: "Schaltfläche neben [+] unten rechts auf der Startseite und wählen Sie 'Kanban'.",
       text_2_0: "Es öffnet sich ein Board mit einer einsatzbereiten Spalte.",
       text_3_0: "• Spalte hinzufügen — tippen Sie rechts auf 'Spalte hinzufügen' (bis zu 10).",
       text_4_0: "• Spalte umbenennen — bearbeiten Sie den Text in ihrer Überschrift.",
@@ -554,13 +736,23 @@ const de = {
     how_to_create_code_note: {
       title: "Wie erstelle ich eine Code-Notiz?",
       text_1_0: "Tippen Sie auf die",
-      text_1_1: "Schaltfläche unten rechts auf der Startseite und wählen Sie 'Code'.",
+      text_1_1: "Schaltfläche neben [+] unten rechts auf der Startseite und wählen Sie 'Code'.",
       text_2_0: "Sie erhalten einen echten Code-Editor mit Syntaxhervorhebung.",
       text_3_0:
         "• Tabs — bewahren Sie mehrere Snippets in einer Notiz auf; fügen Sie welche hinzu, benennen Sie sie um, löschen Sie sie oder ziehen Sie sie zum Umsortieren (bis zu 6).",
       text_4_0: "• Sprache — tippen Sie auf die Sprachleiste, um eine auszuwählen, oder lassen Sie sie automatisch erkennen.",
-      text_5_0: "• Suchen & Ersetzen — tippen Sie oben auf das Suchsymbol, genau wie bei einer Textnotiz.",
       text_6_0: "Um sie zu speichern, kehren Sie einfach zur Startseite zurück.",
+    },
+    what_quick_note: {
+      title: "Was ist die Schnellnotiz-Leiste?",
+      text_1_0:
+        "Das ist das Feld 'Schnelle Notiz…' unten auf der Startseite: Tippen Sie darauf, schreiben Sie und speichern Sie mit",
+      text_1_1: "sofort eine Textnotiz, ohne den Editor zu öffnen.",
+      text_2_0: "Die Notiz landet in der Kategorie, die Sie gerade ansehen, und ihr Titel stammt aus ihren ersten Wörtern.",
+      text_3_0: "Für Formatierung oder Bilder tippen Sie stattdessen auf",
+      text_3_1: "und Ihr Text öffnet sich im vollständigen Editor.",
+      text_4_0: "Am Computer speichert Strg/⌘+Enter die Notiz, und Enter beginnt eine neue Zeile.",
+      text_5_0: "Sie können die Leiste unter Einstellungen → Notiz erstellen ausschalten.",
     },
     how_to_edit_note: {
       title: "Wie bearbeite ich eine Notiz?",
@@ -590,10 +782,12 @@ const de = {
       text_1_0: "Damit können Sie Ihren Text formatieren und anreichern. Das machen die Schaltflächen:",
       text_2_0: "• Rückgängig / Wiederherstellen — gehen Sie in Ihren letzten Änderungen vor oder zurück.",
       text_3_0: "• Bild — fügen Sie ein Bild aus Ihrer Galerie ein.",
+      text_heading: "• Überschrift — machen Sie die aktuelle Zeile zu einer Überschrift.",
       text_4_0: "• Fett — formatieren Sie den ausgewählten Text fett.",
       text_5_0: "• Kursiv — formatieren Sie den ausgewählten Text kursiv.",
       text_6_0: "• Durchgestrichen — streichen Sie den ausgewählten Text durch.",
       text_7_0: "• Unterstrichen — unterstreichen Sie den ausgewählten Text.",
+      text_align: "• Linksbündig / Zentriert — richten Sie den Absatz links oder mittig aus.",
       text_8_0: "• Tiefgestellt — setzen Sie den Text leicht unter die Zeile.",
       text_9_0: "• Hochgestellt — setzen Sie den Text leicht über die Zeile.",
       text_10_0: "• Aufzählungsliste — beginnen Sie eine Aufzählungsliste.",
@@ -602,9 +796,19 @@ const de = {
     },
     what_find_replace: {
       title: "Wie suche und ersetze ich Text?",
-      text_1_0: "Tippen Sie beim Bearbeiten einer Text- oder Code-Notiz oben rechts auf das Suchsymbol.",
+      text_1_0: "Tippen Sie beim Bearbeiten einer Textnotiz oben rechts auf das Suchsymbol.",
       text_2_0: "Geben Sie ein, wonach Sie suchen: Die Pfeile springen zwischen den Treffern und zeigen an, wie viele es gibt.",
       text_3_0: "Aktivieren Sie 'Ersetzen', um den aktuellen Treffer auszutauschen, oder ersetzen Sie alle Treffer auf einmal.",
+    },
+    what_voice_dictation: {
+      title: "Wie diktiere ich eine Notiz?",
+      text_1_0: "Tippen Sie in einer Textnotiz oder einer To-Do-Liste auf die Mikrofon-Schaltfläche und sprechen Sie.",
+      text_2_0: 'Sagen Sie "Komma", "Punkt", "Fragezeichen" oder "neue Zeile" für Satzzeichen.',
+      text_3_0:
+        "Tippen Sie auf 'Einfügen', um den Text an der Cursorposition einzufügen. In einer To-Do-Liste wird jede Zeile zu einem Eintrag.",
+      text_4_0:
+        "Ist der KI-Assistent eingerichtet, glättet 'Mit KI aufräumen' den Text (Satzzeichen, Großschreibung, Füllwörter), bevor Sie ihn einfügen; in einer To-Do-Liste macht es aus dem Gesagten stattdessen Einträge.",
+      text_5_0: "Sprache ändern oder das Diktat ausschalten können Sie unter Einstellungen → Spracherkennung.",
     },
     what_are_settings_note: {
       title: "Welche Notizoptionen gibt es?",
@@ -615,7 +819,8 @@ const de = {
       text_5_0: "• Schreibgeschützt — die Notiz vor versehentlichem Bearbeiten schützen.",
       text_6_0:
         "• Ausblenden — die Notiz von der Startseite fernhalten, bis Sie sich entscheiden, ausgeblendete Notizen anzuzeigen.",
-      text_7_0: "• Offline schalten — die Notiz nur auf diesem Gerät behalten, niemals in die Cloud synchronisieren.",
+      text_7_0:
+        "• Offline schalten — die Notiz nur auf diesem Gerät behalten, niemals in die Cloud synchronisieren. Über 'Mit Cloud synchronisieren' wird sie erneut als neue Notiz hochgeladen, mit \"(2)\" am Ende des Titels.",
       text_8_0: "• Kategorie ändern — die Notiz in eine andere Kategorie verschieben.",
       text_9_0: "• Exportieren (Textnotizen) — die Notiz als .txt-, Markdown- oder PDF-Datei speichern.",
       text_10_0: "• Information — Typ, Kategorie und Daten der Notiz anzeigen.",
@@ -662,7 +867,7 @@ const de = {
       title: "Was ist der Papierkorb?",
       text_1_0: "Wenn Sie eine Notiz löschen, ist sie nicht sofort weg — sie landet zuerst im Papierkorb.",
       text_2_0:
-        "Notizen bleiben dort 7 Tage und werden dann endgültig entfernt. Wie lange sie aufbewahrt werden, können Sie in den Grundeinstellungen ändern.",
+        "Notizen bleiben dort standardmäßig 30 Tage und werden dann endgültig entfernt. In den Grundeinstellungen können Sie sie 3, 7, 15 oder 30 Tage aufbewahren.",
     },
     how_restore_trashed_notes: {
       title: "Wie stelle ich gelöschte Notizen wieder her?",
@@ -690,17 +895,25 @@ const de = {
     what_cloud_sync: {
       title: "Was ist Cloud Sync?",
       text_1_0:
-        "Sie können Ihre Notizen geräteübergreifend synchronisieren, indem Sie Ihr eigenes Google-Firebase-Projekt verbinden und die Synchronisierung aktivieren. Es gibt keinen zentralen Fast-Memo-Server — Ihre Daten liegen nur in Ihrem Firebase.",
+        "Sie können Ihre Notizen geräteübergreifend synchronisieren, indem Sie Ihr eigenes Google-Firebase-Projekt oder Ihren eigenen FastMemo Server (auf einem PC, NAS, Raspberry Pi oder VPS) verbinden und die Synchronisierung aktivieren. Es gibt keinen zentralen Fast-Memo-Server — Ihre Daten liegen nur dort, wo Sie es wählen.",
       text_2_0:
         "Ihre Notizen werden auf Ihrem Gerät Ende-zu-Ende verschlüsselt, bevor sie hochgeladen werden, sodass niemand außer Ihnen sie lesen kann.",
       text_link: "Schritt-für-Schritt-Anleitung zur Einrichtung von Google Firebase lesen →",
+      text_link_server: "Anleitung zur Einrichtung Ihres eigenen FastMemo Servers lesen →",
+    },
+    what_conflict_copy: {
+      title: 'Warum ist eine Notiz mit "(Konflikt)" markiert?',
+      text_1_0:
+        "Wird dieselbe Notiz auf zwei Geräten geändert, bevor sie synchronisiert werden, behält Fast Memo beide Versionen, statt eine auszuwählen: So geht nichts verloren, was Sie geschrieben haben.",
+      text_2_0:
+        'Eine davon wird zu einer Kopie mit "(Konflikt)" am Ende des Titels: Vergleichen Sie beide, behalten Sie, was Sie brauchen, und löschen Sie die andere.',
     },
     what_encryption: {
       title: "Wie werden meine Notizen verschlüsselt?",
       text_1_0:
         "Cloud Sync verwendet Ende-zu-Ende-Verschlüsselung. Bei der ersten Einrichtung wählen Sie ein Verschlüsselungspasswort, aus dem Ihr Gerät den Schlüssel ableitet, der Ihre Notizen schützt.",
       text_2_0:
-        "Der Schlüssel verlässt nie Ihr Gerät und wird nie in der Cloud gespeichert, sodass selbst jemand mit Zugriff auf Ihr Firebase den Inhalt Ihrer Notizen ohne Ihr Passwort nicht lesen kann.",
+        "Der Schlüssel verlässt nie Ihr Gerät und wird nie in der Cloud gespeichert, sodass selbst jemand mit Zugriff auf Ihr Firebase oder Ihren Server den Inhalt Ihrer Notizen ohne Ihr Passwort nicht lesen kann.",
       text_3_0:
         "Der Inhalt der Notizen wird verschlüsselt; Titel und Daten bleiben lesbar, damit die App sie sortieren und synchronisieren kann.",
     },
@@ -767,10 +980,11 @@ const de = {
     what_note_creation: {
       title: "Was bewirkt die Einstellung zur Notizerstellung?",
       text_1_0:
-        "Sie legt fest, was passiert, wenn Sie auf der Startseite auf die [+]-Schaltfläche tippen. Unter Einstellungen → Notizerstellung können Sie wählen:",
+        "Sie legt fest, was passiert, wenn Sie auf der Startseite auf die [+]-Schaltfläche tippen. Unter Einstellungen → Notiz erstellen können Sie wählen:",
       text_2_0: "• Einfach — [+] erstellt eine Textnotiz; nutzen Sie das Menü für die anderen Typen.",
       text_3_0: "• Smart — [+] erstellt immer den Typ, den Sie als Favoriten gewählt haben.",
       text_4_0: "• Adaptiv — [+] erstellt denselben Typ wie die zuletzt bearbeitete Notiz.",
+      text_5_0: "• Schnellnotiz-Leiste — die Leiste für Schnellnotizen unten auf der Startseite ein- oder ausblenden.",
     },
     what_home_filters: {
       title: "Wie funktionieren die Filter auf der Startseite?",
@@ -790,6 +1004,8 @@ const de = {
       text_1_0: "Ja — wenn Sie Fast Memo öffnen, prüft sie im Hintergrund, ob eine neuere Version verfügbar ist.",
       text_2_0:
         "Wenn es ein Update gibt, zeigt ein 'Was ist neu?'-Bildschirm, was sich geändert hat. Sie können auch jederzeit in den Einstellungen nachsehen.",
+      text_3_0:
+        "Klicken Sie in der Desktop-App auf 'Installieren': Das Update wird von selbst heruntergeladen und installiert, danach startet die App neu. Auf dem Telefon können kleine Korrekturen auch von selbst ankommen und werden beim nächsten Öffnen der App übernommen.",
     },
     what_report_problem: {
       title: "Wie melde ich ein Problem?",
@@ -803,21 +1019,38 @@ const de = {
       text_1_0:
         "Webhooks sind für fortgeschrittene Nutzer: Sie lassen Fast Memo einen anderen Dienst benachrichtigen, sobald etwas passiert — eine Notiz erstellt, aktualisiert oder gelöscht, eine Kategorie geändert, Daten exportiert und so weiter.",
       text_2_0: "Jede Aktion kann eine Webadresse Ihrer Wahl aufrufen. Sie richten sie unter Einstellungen → Webhooks ein.",
+      text_link: "Anleitung zu Webhooks lesen →",
     },
     what_platforms: {
       title: "Wo kann ich Fast Memo nutzen?",
       text_1_0:
         "Fast Memo funktioniert sowohl auf Mobilgeräten als auch auf dem Desktop (Windows, macOS und Linux) sowie als Web-Version.",
-      text_2_0: "Verbinden Sie auf jedem Gerät dasselbe Google-Firebase-Projekt, und Ihre Notizen bleiben überall synchron.",
+      text_2_0:
+        "Verbinden Sie jedes Gerät mit demselben Google-Firebase-Projekt oder demselben FastMemo Server, und Ihre Notizen bleiben überall synchron.",
+    },
+    what_desktop_shortcuts: {
+      title: "Gibt es Tastenkürzel am Computer?",
+      text_1_0: "Ja, in der Desktop-App:",
+      text_2_0: "• Strg/⌘+N — neue Notiz.",
+      text_3_0: "• Strg/⌘+F — Ihre Notizen durchsuchen oder Text in einer geöffneten Textnotiz finden.",
+      text_4_0: "• Esc — zurückgehen; in einem Textfeld verlässt das erste Esc nur das Feld.",
+      text_5_0: "• Strg/⌘+Enter — die Schnellnotiz speichern.",
+      text_6_0:
+        "Auf dem Mac finden Sie dieselben Befehle in der Menüleiste, zusammen mit den anderen Notiztypen und 'Daten exportieren/importieren'. Wenn Sie das Fenster schließen, läuft Fast Memo weiter: Klicken Sie auf das Symbol im Dock, um es zurückzuholen, oder beenden Sie es mit ⌘Q.",
+      text_7_0: "Unter Windows und Linux beendet das Schließen des Fensters Fast Memo.",
     },
     what_ai_assistant: {
       title: "Was ist der KI-Assistent?",
       text_1_0:
         "Fast Memo enthält einen selbst gehosteten KI-Assistenten, der vollständig auf Ihrem Gerät läuft. Es werden keine Daten an externe Server gesendet.",
-      text_2_0: "Zum Einrichten gehen Sie zu Einstellungen -> KI-Assistent, wählen ein Modell und laden es herunter.",
+      text_2_0: "Zum Einrichten gehen Sie zu Einstellungen → KI-Assistent, wählen ein Modell und laden es herunter.",
       text_3_0:
-        "Nach der Aktivierung erscheint eine Sparkle-Schaltfläche in jedem Notiz-Editor. Tippen Sie darauf, um auf smarte Aktionen zuzugreifen, wie: Titel generieren, zusammenfassen, weiterschreiben, Text formatieren, Checklisten-Elemente vorschlagen oder eine Kategorie vorschlagen.",
-      text_4_0: "Die KI funktioniert offline und unterstützt mehrere Sprachen.",
+        "Nach der Aktivierung erscheint im Notiz-Editor eine Sparkle-Schaltfläche. Je nach Notiztyp können Sie damit einen Titel generieren, zusammenfassen (die Zusammenfassung steht oben in der Notiz), die Grammatik korrigieren, den Text kürzen, ihn in eine Sprache Ihrer Wahl übersetzen, Checklisten-Elemente vorschlagen oder eine Kategorie vorschlagen.",
+      text_4_0:
+        "Manche Aktionen brauchen ein größeres Modell: Unter Einstellungen → KI-Assistent sehen Sie, was jedes Modell kann.",
+      text_5_0: "Er kann auch Ihr Diktat aufräumen und hier in der Hilfe anhand Ihrer eigenen Worte das passende Thema finden.",
+      text_6_0: "Die KI funktioniert offline und unterstützt mehrere Sprachen.",
+      text_link: "Anleitung zum KI-Assistenten lesen →",
     },
   },
   report: {
@@ -835,8 +1068,8 @@ const de = {
       other: "Andere",
     },
     descriptionPlaceholder: "Bitte beschreiben Sie das Problem ausführlich (erforderlich)",
-    deviceInfoCheckbox: "Für eine genauere Diagnose bitten wir Sie, uns bitte Gerätedetails bereitzustellen.",
-    attachments: "Füge Bilder hinzu",
+    deviceInfoCheckbox: "Für eine genauere Diagnose bitten wir Sie, uns Gerätedetails bereitzustellen.",
+    attachments: "Bilder hinzufügen",
     sendReport: "Bericht senden",
 
     sent_message_1: "Vielen Dank für das Einreichen des Berichts.",
@@ -883,6 +1116,108 @@ const de = {
     generic_success_description: "Der Vorgang war erfolgreich.",
   },
 
+  // The macOS menu bar (Apple's own wording in each language).
+  menu: {
+    about: "Über {{name}}",
+    settings: "Einstellungen\u00a0…",
+    services: "Dienste",
+    hide: "{{name}} ausblenden",
+    hide_others: "Andere ausblenden",
+    show_all: "Alle einblenden",
+    quit: "{{name}} beenden",
+    file: "Ablage",
+    new_note: "Neue Notiz",
+    new_text: "Neue Textnotiz",
+    new_todo: "Neue Liste",
+    new_kanban: "Neues Kanban-Board",
+    new_code: "Neue Code-Notiz",
+    export_import: "Daten exportieren/importieren\u00a0…",
+    close_window: "Fenster schließen",
+    edit: "Bearbeiten",
+    undo: "Widerrufen",
+    redo: "Wiederholen",
+    cut: "Ausschneiden",
+    copy: "Kopieren",
+    paste: "Einsetzen",
+    select_all: "Alles auswählen",
+    find: "Suchen\u00a0…",
+    view: "Darstellung",
+    fullscreen: "Vollbildmodus",
+    window: "Fenster",
+    minimize: "Minimieren",
+    zoom: "Zoomen",
+    help: "Hilfe",
+    help_item: "{{name}}-Hilfe",
+  },
+
+  a11y: {
+    back: "Zurück",
+    close: "Schließen",
+    save: "Speichern",
+    edit: "Bearbeiten",
+    discard_changes: "Änderungen verwerfen",
+    previous: "Vorherige",
+    next: "Nächste",
+    previous_match: "Vorheriger Treffer",
+    next_match: "Nächster Treffer",
+    sync_device: "Dieses Gerät synchronisieren",
+    remove_device: "Gerät entfernen",
+    remove_attachment: "Anhang entfernen",
+    start_over: "Neu beginnen",
+    delete_digit: "Ziffer löschen",
+    new_note: "Neue Notiz",
+    exit_selection: "Auswahl beenden",
+    note_types: "Notiztyp wählen",
+    organize_categories: "Kategorien organisieren",
+    delete_category: "Kategorie löschen",
+    dictate: "Diktieren",
+    start_listening: "Zuhören starten",
+    stop_listening: "Zuhören beenden",
+    clear_search: "Suche löschen",
+    delete_item: "Eintrag löschen",
+    change_column_color: "Spaltenfarbe ändern",
+    move_column_left: "Spalte nach links verschieben",
+    move_column_right: "Spalte nach rechts verschieben",
+    search_in_note: "In der Notiz suchen",
+    add_item: "Eintrag hinzufügen",
+    open_full_note: "Als vollständige Notiz öffnen",
+    save_note: "Notiz speichern",
+    list_mode: "Listenmodus",
+    more_options: "Weitere Optionen",
+    sort_filter: "Sortieren und filtern",
+    hide_keyboard: "Tastatur ausblenden",
+    open_guide: "Anleitung öffnen",
+    page: "Seite {{page}}",
+    item: "Eintrag",
+    format: {
+      undo: "Rückgängig",
+      redo: "Wiederholen",
+      image: "Bild einfügen",
+      heading: "Überschrift",
+      bold: "Fett",
+      italic: "Kursiv",
+      strikethrough: "Durchgestrichen",
+      underline: "Unterstrichen",
+      align_left: "Linksbündig",
+      align_center: "Zentriert",
+      subscript: "Tiefgestellt",
+      superscript: "Hochgestellt",
+      bullet_list: "Aufzählung",
+      numbered_list: "Nummerierte Liste",
+      code: "Code",
+    },
+    image: {
+      picture: "Bild",
+      small: "Klein",
+      medium: "Mittel",
+      large: "Groß",
+      full: "Volle Breite",
+      align_left: "Linksbündig",
+      align_center: "Zentriert",
+      align_right: "Rechtsbündig",
+    },
+  },
+
   /* generic */
   All: "Alle",
   delete_and_move: "Löschen und Verschieben",
@@ -912,7 +1247,36 @@ const de = {
     unlimited_trash_time: "Unbegrenzte Papierkorb-Zeit",
     unlimited_trash_time_desc: "Aktuelles Limit: 30 Tage",
     change_app_icon: "App-Symbol ändern",
-    change_app_icon_desc: "Demnächst",
+    change_app_icon_desc: "Saisonale Icons für den Startbildschirm",
+    ai_eval: "KI-Auswertung",
+    ai_eval_desc: "Führt feste Texte auf dem gewählten Modell aus: Zeiten und Antworten",
+  },
+
+  appicon: {
+    title: "App-Icon",
+    default: "Standard",
+    halloween: "Halloween",
+    christmas: "Weihnachten",
+    easter: "Ostern",
+    summer: "Sommer",
+    close_title: "Icon ändern",
+    close_description:
+      "Um das neue Icon zu übernehmen, wird Fast Memo geschlossen. Öffnen Sie die App danach wieder über den Startbildschirm.",
+    close_confirm: "Ändern und schließen",
+    failed: "Das Icon konnte nicht geändert werden.",
+    unavailable: "Auf diesem Gerät nicht verfügbar",
+  },
+
+  aieval: {
+    title: "KI-Auswertung",
+    run: "Alle ausführen",
+    stop: "Stoppen",
+    share: "Ergebnisse teilen",
+    progress: "{{done}} / {{total}} erledigt",
+    load: "Modell in {{ms}} ms geladen",
+    no_model: "Laden Sie dieses Modell zuerst im KI-Assistenten herunter.",
+    unavailable: "Die KI auf dem Gerät ist hier nicht verfügbar.",
+    failed: "Das Modell wurde nicht geladen.",
   },
 
   /* toast */

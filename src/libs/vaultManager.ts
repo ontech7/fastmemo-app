@@ -1,15 +1,6 @@
 import type { Note } from "@/types";
 
-import {
-  COLLECTIONS,
-  createVaultExclusive,
-  deleteCollectionInCloud,
-  getAllElementsInCloud,
-  getVault,
-  readVault,
-  setElementInCloud,
-  setVault,
-} from "@/libs/firebase";
+import { cloud } from "@/libs/cloud";
 import { getDEK, loadPersistedDEK, persistDEK, wipePersistedDEK } from "@/libs/vaultSession";
 import { CryptNote, tryDecryptNote } from "@/utils/crypt";
 import {
@@ -55,13 +46,17 @@ export interface VaultProbe {
  * never fall through to creating a vault over one that actually exists.
  */
 export const probeVault = async (): Promise<VaultProbe> => {
-  const { status, vault } = await readVault();
+  const { status, vault } = await cloud.readVault();
   if (status === "error") return { presence: "error", vault: null, needsMigration: false };
   if (status === "present") return { presence: "present", vault, needsMigration: false };
 
-  const notes = await getAllElementsInCloud({ collection: COLLECTIONS.data.notes, queryConstraints: [] });
-  return { presence: "absent", vault: null, needsMigration: notes.isPresent && notes.data.length > 0 };
+  const notes = await cloud.fetchNotes();
+  if (!notes) return { presence: "error", vault: null, needsMigration: false };
+  return { presence: "absent", vault: null, needsMigration: notes.length > 0 };
 };
+
+/** The vault doc, or null when there's none or it couldn't be read. */
+const getVault = async (): Promise<VaultDoc | null> => (await cloud.readVault()).vault;
 
 export interface VaultInitResult {
   recoveryKey: string;
@@ -74,9 +69,9 @@ export interface VaultInitResult {
  * orphan every already-encrypted note).
  */
 export const initializeVault = async (projectId: string, passphrase: string): Promise<VaultInitResult | null> => {
-  const { vault, dek, recoveryKey } = createVault(passphrase);
+  const { vault, dek, recoveryKey } = await createVault(passphrase);
 
-  const result = await createVaultExclusive(vault);
+  const result = await cloud.createVaultExclusive(vault);
   if (result !== "created") return null; // "exists" (race -> unlock instead) or "error" -> don't proceed
 
   await persistDEK(projectId, dek);
@@ -94,12 +89,12 @@ export const migrateLegacyVault = async (
   passphrase: string,
   legacyKey: string
 ): Promise<VaultInitResult | null> => {
-  const { vault, dek, recoveryKey } = createVault(passphrase);
+  const { vault, dek, recoveryKey } = await createVault(passphrase);
 
   // Claim the vault FIRST (atomically). If this succeeds, presence flips to
   // "present", so any interruption/retry/other device takes the safe unlock
   // path instead of re-running migration over partially re-encrypted data.
-  const result = await createVaultExclusive(vault);
+  const result = await cloud.createVaultExclusive(vault);
   if (result !== "created") return null; // raced / unverifiable -> abort, route to unlock
   await persistDEK(projectId, dek);
 
@@ -107,11 +102,10 @@ export const migrateLegacyVault = async (
   // overwrite a note we can't decrypt (that would turn it into garbage forever).
   // Notes that live on this device are also re-uploaded from local plaintext by
   // the full sync that runs right after, so this mainly covers cloud-only notes.
-  const res = await getAllElementsInCloud({ collection: COLLECTIONS.data.notes, queryConstraints: [] });
-  if (res.isPresent) {
-    for (const raw of res.data) {
-      const note = raw as Note;
-
+  const cloudNotes = await cloud.fetchNotes();
+  if (cloudNotes) {
+    const migrated: Note[] = [];
+    for (const note of cloudNotes) {
       // Already migrated (carries our auth marker) -> leave it. This check is
       // reliable thanks to the marker, so we never re-process a DEK note.
       if (tryDecryptNote(note, dek) !== null) continue;
@@ -126,14 +120,9 @@ export const migrateLegacyVault = async (
       // NOT skip on an empty key: that guard dropped every real legacy note,
       // making them vanish after migration (see LL-028).
       const plain = CryptNote.decrypt(note, legacyKey);
-
-      await setElementInCloud({
-        collection: COLLECTIONS.data.notes,
-        identifier: note.id,
-        payload: CryptNote.encrypt(plain, dek),
-        noUpdateLastSync: true,
-      });
+      migrated.push(CryptNote.encrypt(plain, dek));
     }
+    await cloud.writeNotes(migrated);
   }
 
   return { recoveryKey };
@@ -144,7 +133,7 @@ export const unlockWithPassphrase = async (projectId: string, passphrase: string
   const vault = await getVault();
   if (!vault) return false;
 
-  const dek = unlockVaultWithPassphrase(vault, passphrase);
+  const dek = await unlockVaultWithPassphrase(vault, passphrase);
   if (!dek) return false;
 
   await persistDEK(projectId, dek);
@@ -160,15 +149,15 @@ export const recoverWithRecoveryKey = async (
   const vault = await getVault();
   if (!vault) return null;
 
-  const dek = unlockVaultWithRecoveryKey(vault, recoveryKey);
+  const dek = await unlockVaultWithRecoveryKey(vault, recoveryKey);
   if (!dek) return null; // wrong recovery key
 
-  const rewrapped = rewrapWithNewPassphrase(vault, dek, newPassphrase);
-  const { vault: rotated, recoveryKey: nextRecoveryKey } = rewrapRecovery(rewrapped, dek);
+  const rewrapped = await rewrapWithNewPassphrase(vault, dek, newPassphrase);
+  const { vault: rotated, recoveryKey: nextRecoveryKey } = await rewrapRecovery(rewrapped, dek);
 
   // The key WAS valid; a write failure here must not look like "wrong key".
   // Throw so the UI shows a generic retry error instead, and the vault stays as-is.
-  const ok = await setVault(rotated);
+  const ok = await cloud.writeVault(rotated);
   if (!ok) throw new Error("vault write failed");
 
   await persistDEK(projectId, dek);
@@ -188,13 +177,13 @@ export const changePassphrase = async (currentPassphrase: string, newPassphrase:
   if (!vault) return false;
 
   // confirm the current passphrase really maps to the active DEK before rotating
-  if (unlockVaultWithPassphrase(vault, currentPassphrase) !== dek) return false; // wrong current passphrase
+  if ((await unlockVaultWithPassphrase(vault, currentPassphrase)) !== dek) return false; // wrong current passphrase
 
-  const rewrapped = rewrapWithNewPassphrase(vault, dek, newPassphrase);
+  const rewrapped = await rewrapWithNewPassphrase(vault, dek, newPassphrase);
 
   // current passphrase WAS correct; a write failure must not read as "wrong
   // password" — throw so the UI shows a generic retry error, vault unchanged.
-  const ok = await setVault(rewrapped);
+  const ok = await cloud.writeVault(rewrapped);
   if (!ok) throw new Error("vault write failed");
   return true;
 };
@@ -221,17 +210,17 @@ export const forgetDeviceVault = async (projectId: string): Promise<void> => {
  * is a no-op — the existing vault and notes stay intact.
  */
 export const recreateVault = async (projectId: string, passphrase: string): Promise<VaultInitResult | null> => {
-  const { vault, dek, recoveryKey } = createVault(passphrase);
+  const { vault, dek, recoveryKey } = await createVault(passphrase);
 
   // Overwrite (not exclusive): a reset deliberately replaces the existing vault.
-  const ok = await setVault(vault);
+  const ok = await cloud.writeVault(vault);
   if (!ok) return null;
 
   await persistDEK(projectId, dek);
 
   // Old notes are encrypted under the lost DEK — unrecoverable dead data. Drop
   // them; the continuation re-uploads this device's local notes under the new DEK.
-  await deleteCollectionInCloud(COLLECTIONS.data.notes);
+  await cloud.wipeNotes();
 
   return { recoveryKey };
 };

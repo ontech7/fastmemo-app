@@ -109,16 +109,21 @@ export function htmlToMarkdown(html: string): string {
   return md.trim();
 }
 
+/** Text made safe to put in HTML as text (a title can hold `<` and quotes). */
+export const escapeHtml = (text: string): string =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
 /**
- * Create an HTML document wrapper for PDF export.
+ * Create an HTML document wrapper for PDF export. `htmlContent` is the note's own HTML: on web the caller sanitizes it.
  */
 export function wrapHtmlForPdf(title: string, htmlContent: string): string {
+  const safeTitle = escapeHtml(title);
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${title || "Note"}</title>
+  <title>${safeTitle || "Note"}</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -177,7 +182,7 @@ export function wrapHtmlForPdf(title: string, htmlContent: string): string {
   </style>
 </head>
 <body>
-  ${title ? `<h1 class="note-title">${title}</h1>` : ""}
+  ${safeTitle ? `<h1 class="note-title">${safeTitle}</h1>` : ""}
   ${htmlContent}
 </body>
 </html>`;

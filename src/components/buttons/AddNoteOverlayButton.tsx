@@ -1,7 +1,9 @@
+import type { Ref } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
-import { ChevronUpIcon, PlusIcon } from "react-native-heroicons/outline";
+import ChevronUpIcon from "react-native-heroicons/outline/ChevronUpIcon";
+import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import Animated, {
   Easing,
   Extrapolation,
@@ -19,14 +21,19 @@ import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useRouter } from "@/hooks/useRouter";
+import { useTourTarget } from "@/hooks/useTourTarget";
 import { selectorNoteCreation, setNoteCreation } from "@/slicers/settingsSlice";
 import type { Href } from "expo-router";
 
 import { NOTE_TYPES } from "@/constants/note-types";
+import { noteTypeTarget, SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import type { NoteCreationType } from "@/types";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const FAB_RIGHT = 40;
+const FAB_BOTTOM = 60;
 
 const ANIMATION_DURATION_OPEN = 300;
 const ANIMATION_DURATION_CLOSE = 180;
@@ -34,8 +41,10 @@ const ANIMATION_DURATION_CLOSE = 180;
 interface Props {
   isDeleteMode: boolean;
   toggleDeleteMode: () => void;
-  /** Lifts the FAB group so it rides just above a bottom bar (e.g. the quick-note bar). Defaults to 60. */
+  /** Lifts the FAB group so it rides just above a bottom bar (e.g. the quick-note bar). Defaults to `FAB_BOTTOM`. */
   bottomOffset?: number;
+  /** Told when the note-type menu opens or closes. */
+  onMenuToggle?: (open: boolean) => void;
 }
 
 interface MenuItemProps {
@@ -45,9 +54,11 @@ interface MenuItemProps {
   menuProgress: SharedValue<number>;
   onPress: () => void;
   label: string;
+  focusable: boolean;
+  testID: string;
 }
 
-function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, label }: MenuItemProps) {
+function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, label, focusable, testID }: MenuItemProps) {
   const reverseIndex = totalItems - 1 - index;
   const Icon = noteType.icon;
 
@@ -71,7 +82,14 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
 
   return (
     <Animated.View style={animatedStyle}>
-      <TouchableOpacity style={styles.noteTypeButton} activeOpacity={0.7} onPress={onPress}>
+      <TouchableOpacity
+        style={styles.noteTypeButton}
+        activeOpacity={0.7}
+        onPress={onPress}
+        testID={testID}
+        accessibilityRole="button"
+        focusable={focusable}
+      >
         <Text style={styles.noteTypeLabel}>{label}</Text>
         <View style={styles.noteTypeIconContainer}>
           <Icon size={28} color={COLOR.softWhite} />
@@ -81,7 +99,7 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
   );
 }
 
-export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, bottomOffset }: Props) {
+export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, bottomOffset, onMenuToggle }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
   const dispatch = useDispatch();
@@ -90,6 +108,10 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
   const insets = useSafeAreaInsets();
 
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+
+  // What the first-note tour shows: the whole group, and the add button it points at.
+  const groupTarget = useTourTarget("addNoteGroup");
+  const addTarget = useTourTarget("addNote");
 
   const chevronRotation = useSharedValue(0);
   const closeRotation = useSharedValue(0);
@@ -188,6 +210,10 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
   }, [showCloseIcon, isDeleteMode]);
 
   useEffect(() => {
+    onMenuToggle?.(isOverlayOpen);
+  }, [isOverlayOpen, onMenuToggle]);
+
+  useEffect(() => {
     chevronRotation.value = withTiming(isOverlayOpen ? 1 : 0, {
       duration: isOverlayOpen ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
       easing: Easing.out(Easing.cubic),
@@ -223,9 +249,12 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
           styles.fullscreenOverlay,
           backdropAnimatedStyle,
           // Keep the type menu aligned just above the FAB even when it's lifted above the quick-note bar.
-          { paddingBottom: (bottomOffset ?? 60) + 70, pointerEvents: isOverlayOpen ? "auto" : "none" },
+          { paddingBottom: (bottomOffset ?? FAB_BOTTOM) + 70, pointerEvents: isOverlayOpen ? "auto" : "none" },
         ]}
         onPress={closeOverlay}
+        accessible={false}
+        focusable={false}
+        aria-hidden={!isOverlayOpen}
       >
         <View style={styles.overlayContainer}>
           {NOTE_TYPES.map((noteType, index) => (
@@ -237,6 +266,9 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
               menuProgress={menuProgress}
               onPress={() => handleNoteTypePress(noteType)}
               label={t(noteType.labelKey)}
+              // aria-hidden doesn't take a closed menu out of the web tab order
+              focusable={isOverlayOpen}
+              testID={noteTypeTarget(noteType.key)}
             />
           ))}
         </View>
@@ -245,18 +277,40 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
       {/* Ride above the quick-note bar via `bottom` (set by the parent from the bar's height) and
           stick to the keyboard with the same offset as the bar, so the two move together 1:1. */}
       <KeyboardStickyView
+        // Its ref type names the View component instead of its instance.
+        ref={groupTarget as unknown as Ref<View>}
         offset={{ closed: 0, opened: insets.bottom }}
-        style={[styles.fabGroup, { bottom: bottomOffset ?? 60, pointerEvents: "box-none" }]}
+        style={[styles.fabGroup, { bottom: bottomOffset ?? FAB_BOTTOM, pointerEvents: "box-none" }]}
       >
-        <Animated.View style={[secondaryFabAnimatedStyle, { pointerEvents: isDeleteMode ? "none" : "auto" }]}>
-          <TouchableOpacity style={styles.fabSecondary} activeOpacity={0.7} onPress={toggleOverlay}>
+        <Animated.View
+          style={[secondaryFabAnimatedStyle, { pointerEvents: isDeleteMode ? "none" : "auto" }]}
+          aria-hidden={isDeleteMode}
+        >
+          <TouchableOpacity
+            style={styles.fabSecondary}
+            activeOpacity={0.7}
+            onPress={toggleOverlay}
+            testID={isDeleteMode ? undefined : SHORTCUT_TARGET.noteTypes}
+            focusable={!isDeleteMode}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.note_types")}
+            aria-expanded={isOverlayOpen}
+          >
             <Animated.View style={chevronAnimatedStyle}>
               <ChevronUpIcon size={20} color={COLOR.softWhite} />
             </Animated.View>
           </TouchableOpacity>
         </Animated.View>
 
-        <TouchableOpacity style={styles.fab} activeOpacity={0.7} onPress={createDirect}>
+        <TouchableOpacity
+          ref={addTarget}
+          style={styles.fab}
+          activeOpacity={0.7}
+          onPress={createDirect}
+          testID={isDeleteMode ? SHORTCUT_TARGET.back : SHORTCUT_TARGET.newNote}
+          accessibilityRole="button"
+          accessibilityLabel={isDeleteMode ? t("a11y.exit_selection") : t("a11y.new_note")}
+        >
           <Animated.View style={closeIconAnimatedStyle}>
             <PlusIcon size={28} color={COLOR.softWhite} />
           </Animated.View>
@@ -278,8 +332,8 @@ const styles = StyleSheet.create({
   fabGroup: {
     zIndex: 10,
     position: "absolute",
-    bottom: 60,
-    right: 40,
+    bottom: FAB_BOTTOM,
+    right: FAB_RIGHT,
     flexDirection: "row",
     alignItems: "center",
     gap: PADDING_MARGIN.lg,

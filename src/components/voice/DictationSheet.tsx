@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { MicrophoneIcon, SparklesIcon } from "react-native-heroicons/outline";
+import MicrophoneIcon from "react-native-heroicons/outline/MicrophoneIcon";
+import SparklesIcon from "react-native-heroicons/outline/SparklesIcon";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -25,7 +26,10 @@ interface Props {
   aiAvailable?: boolean;
   /** AI cleanup is running. */
   processing?: boolean;
+  /** A short message under the transcript (the AI cleanup gave nothing usable). */
+  notice?: string | null;
   onToggleListening: () => void;
+  /** Closes the sheet; while `processing`, stops the AI instead. */
   onCancel: () => void;
   onConfirm: () => void;
   /** Confirm, but run the transcript through AI cleanup before inserting. */
@@ -39,6 +43,7 @@ export default function DictationSheet({
   languageLabel,
   aiAvailable = false,
   processing = false,
+  notice,
   onToggleListening,
   onCancel,
   onConfirm,
@@ -72,7 +77,7 @@ export default function DictationSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onCancel}>
-      <Pressable style={styles.backdrop} onPress={onCancel} />
+      <Pressable style={styles.backdrop} onPress={onCancel} accessibilityRole="button" accessibilityLabel={t("a11y.close")} />
 
       <View style={styles.sheet}>
         <View style={styles.handle} />
@@ -84,6 +89,8 @@ export default function DictationSheet({
               activeOpacity={0.7}
               style={[styles.micButton, listening && styles.micButtonActive]}
               onPress={onToggleListening}
+              accessibilityRole="button"
+              accessibilityLabel={listening ? t("a11y.stop_listening") : t("a11y.start_listening")}
             >
               {listening ? <View style={styles.stopIcon} /> : <MicrophoneIcon size={22} color={COLOR.softWhite} />}
             </TouchableOpacity>
@@ -109,6 +116,12 @@ export default function DictationSheet({
           </Text>
         </ScrollView>
 
+        {!!notice && (
+          <Text style={styles.notice} accessibilityLiveRegion="polite">
+            {notice}
+          </Text>
+        )}
+
         <View style={styles.footer}>
           {aiAvailable && onConfirmWithAI && (
             <TouchableOpacity
@@ -127,12 +140,8 @@ export default function DictationSheet({
           )}
 
           <View style={styles.footerRow}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={[styles.action, styles.cancelAction, processing && styles.actionDisabled]}
-              onPress={onCancel}
-              disabled={processing}
-            >
+            {/* While the AI works, Cancel stops it and keeps the dictation (the parent decides). */}
+            <TouchableOpacity activeOpacity={0.7} style={[styles.action, styles.cancelAction]} onPress={onCancel}>
               <Text style={styles.cancelLabel}>{t("voicerecognition.dictation.cancel")}</Text>
             </TouchableOpacity>
 
@@ -254,6 +263,12 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
     lineHeight: 24,
+  },
+  notice: {
+    marginTop: PADDING_MARGIN.sm,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
   },
   transcriptHint: {
     color: COLOR.textSecondary,

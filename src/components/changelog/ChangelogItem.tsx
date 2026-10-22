@@ -23,7 +23,17 @@ export default function ChangelogItem({ version, text, isFirst, isLast }: Props)
 
         <Text style={styles.version}>{version}</Text>
 
-        <Text style={styles.text}>{text}</Text>
+        <View style={styles.list}>
+          {text.split("\n").map((line, i) => {
+            const bulleted = line.startsWith("•");
+            return (
+              <View key={i} style={styles.row}>
+                {bulleted && <Text style={styles.text}>•</Text>}
+                <Text style={[styles.text, styles.rowText]}>{bulleted ? line.replace(/^•\s*/, "") : line}</Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -88,10 +98,21 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.subtitle,
     color: COLOR.textPrimary,
   },
-  text: {
+  // One row per "• " line: wrapped lines hang under the text, not under the bullet.
+  list: {
     paddingLeft: PADDING_MARGIN.md,
     marginVertical: PADDING_MARGIN.md,
-    lineHeight: 30,
+    gap: PADDING_MARGIN.sm,
+  },
+  row: {
+    flexDirection: "row",
+    gap: PADDING_MARGIN.sm,
+  },
+  rowText: {
+    flex: 1,
+  },
+  text: {
+    lineHeight: 24,
     fontSize: FONTSIZE.paragraph,
     fontFamily: FONT.regular,
     color: COLOR.textSecondary,

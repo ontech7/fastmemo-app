@@ -1,10 +1,18 @@
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { BookOpenIcon, CheckIcon, EyeSlashIcon, KeyIcon, SignalSlashIcon, StarIcon } from "react-native-heroicons/outline";
+import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
+import KeyIcon from "react-native-heroicons/outline/KeyIcon";
+import SignalSlashIcon from "react-native-heroicons/outline/SignalSlashIcon";
+import StarIcon from "react-native-heroicons/outline/StarIcon";
+import UsersIcon from "react-native-heroicons/outline/UsersIcon";
 import { useSelector } from "react-redux";
 
 import { useRouter } from "@/hooks/useRouter";
+import { useTourTarget } from "@/hooks/useTourTarget";
+import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
 
@@ -23,6 +31,8 @@ interface Props {
   selectNote: (id: string, locked: boolean) => void;
   isDeleteMode: boolean;
   toggleDeleteMode: () => void;
+  /** Something the first-note tour can point at, under this name. */
+  tourTarget?: string;
 }
 
 /** Color of the card's left border — the type signal (red kept for important). */
@@ -41,7 +51,7 @@ function getCardAccent(type: Note["type"], important: boolean): string {
   }
 }
 
-function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode }: Props) {
+function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode, tourTarget }: Props) {
   const { t } = useTranslation();
 
   const router = useRouter();
@@ -50,6 +60,11 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
   const { sortBy } = useSelector(getNoteFilters);
 
   const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked, local } = content;
+
+  const targetRef = useTourTarget(tourTarget);
+
+  // Another synced device has it open right now.
+  const openElsewhere = useNoteOpenElsewhere(id);
 
   const onLongPressHandler = () => {
     if (!isDeleteMode) {
@@ -95,6 +110,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
 
   return (
     <TouchableOpacity
+      ref={targetRef}
       activeOpacity={0.7}
       style={[
         styles.container,
@@ -105,6 +121,8 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
       ]}
       onPress={onPressHandler}
       onLongPress={onLongPressHandler}
+      accessibilityRole={isDeleteMode ? "checkbox" : "button"}
+      aria-checked={isDeleteMode ? isSelected : undefined}
     >
       {isDeleteMode ? (
         <View
@@ -151,6 +169,15 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
           {metaLabel}
           <Text style={styles.dateValue}>{metaDate}</Text>
         </Text>
+
+        {!!openElsewhere && (
+          <View style={styles.presenceRow}>
+            <UsersIcon size={12} color={fg} />
+            <Text style={[styles.presence, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
+              {t("cloudsync.open_on", { devices: openElsewhere })}
+            </Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -225,6 +252,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   dateValue: { fontFamily: FONT.semiBold },
+  presenceRow: { flexDirection: "row", alignItems: "center", gap: PADDING_MARGIN.xs + 1 },
+  presence: { flexShrink: 1, fontSize: FONTSIZE.small, fontFamily: FONT.medium, opacity: 0.75 },
 });
 
 export default memo(NoteCard);

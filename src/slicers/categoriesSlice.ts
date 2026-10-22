@@ -1,17 +1,19 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, original } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSelector } from "reselect";
 
 import type { Category, CategoriesState, RootState } from "@/types";
 import type { CategoryMapEntry } from "@/constants/icons";
+import type { CategoryPlan } from "@/libs/cloud/merge";
+import type { CategoriesPushed } from "@/libs/cloud/syncEngine";
 
 import { defaultCategory } from "@/configs/default";
-import { only_if_cloudConnected } from "@/libs/firebase";
+import { only_if_cloudConnected } from "@/libs/cloud";
 import { order_asc_sort } from "@/utils/sort";
 
 import { CATEGORY_MAP } from "@/constants/icons";
 
-import { addCloudCategoriesAsync, deleteCloudCategoriesAsync, wipeCategories } from "./thunks/categories";
+import { wipeCategories } from "./thunks/categories";
 
 const initialState: CategoriesState = {
   items: [defaultCategory],
@@ -21,6 +23,28 @@ const initialState: CategoriesState = {
       delete: {},
     },
   },
+};
+
+type CloudQueue = CategoriesState["cloud"]["items"]["add"];
+
+// An id is in one queue only, the latest operation (LL-033): uploads run before deletions, so a
+// category deleted and then re-created would otherwise be deleted again right after its upload.
+const queueCloudAdd = (state: CategoriesState, category: Category): void => {
+  state.cloud.items.add[category.icon] = category;
+  delete state.cloud.items.delete[category.icon];
+};
+
+const queueCloudDelete = (state: CategoriesState, category: Category): void => {
+  state.cloud.items.delete[category.icon] = category;
+  delete state.cloud.items.add[category.icon];
+};
+
+/** Drops what a push committed, unless the entry was replaced meanwhile (that one still has to go out). */
+const dequeuePushed = (queue: CloudQueue, pushed: CategoriesPushed["add"]): void => {
+  const base = original(queue);
+  pushed.forEach(({ id, entry }) => {
+    if (base?.[id] === entry) delete queue[id];
+  });
 };
 
 const categoriesSlice = createSlice({
@@ -39,7 +63,7 @@ const categoriesSlice = createSlice({
       state.items.push(category);
 
       only_if_cloudConnected(() => {
-        state.cloud.items.add[category.icon] = category;
+        queueCloudAdd(state, category);
       });
     },
 
@@ -59,7 +83,7 @@ const categoriesSlice = createSlice({
         if (category.icon !== icon) {
           category.order = order++;
           only_if_cloudConnected(() => {
-            state.cloud.items.add[category.icon] = category;
+            queueCloudAdd(state, category);
           });
           return true;
         }
@@ -67,7 +91,7 @@ const categoriesSlice = createSlice({
       });
 
       only_if_cloudConnected(() => {
-        state.cloud.items.delete[icon] = action.payload;
+        queueCloudDelete(state, action.payload);
       });
     },
 
@@ -79,7 +103,7 @@ const categoriesSlice = createSlice({
       if (!fromSync) {
         only_if_cloudConnected(() => {
           state.items.forEach((category) => {
-            state.cloud.items.add[category.icon] = category;
+            queueCloudAdd(state, category);
           });
         });
       }
@@ -101,22 +125,28 @@ const categoriesSlice = createSlice({
 
       const category = state.items.find((cat) => cat.icon === prevCategory.icon);
       if (category) {
+        const previous = { ...category };
         category.name = nextCategory.name;
         category.icon = nextCategory.icon;
 
         only_if_cloudConnected(() => {
-          state.cloud.items.add[category.icon] = category;
+          // The cloud keys a category by its icon: a new icon is a new document, so the old one goes.
+          if (previous.icon !== category.icon) queueCloudDelete(state, previous);
+          queueCloudAdd(state, category);
         });
       }
     },
 
+    /** Incoming from another device. Which category is selected stays this device's choice. */
     addLocalCategories: (state, action: PayloadAction<Record<string, Category>>) => {
       Object.values(action.payload).forEach((cloudCategory) => {
+        // Changed or deleted here meanwhile (still to go out): this device's change is the later one, and goes out next.
+        if (cloudCategory.icon in state.cloud.items.add || cloudCategory.icon in state.cloud.items.delete) return;
         const idx = state.items.findIndex((localCategory) => localCategory.icon === cloudCategory.icon);
         if (idx === -1) {
-          state.items.push(cloudCategory);
+          state.items.push({ ...cloudCategory, selected: false });
         } else {
-          state.items[idx] = cloudCategory;
+          state.items[idx] = { ...cloudCategory, selected: state.items[idx].selected };
         }
       });
       state.items.sort(order_asc_sort);
@@ -124,37 +154,48 @@ const categoriesSlice = createSlice({
 
     deleteLocalCategories: (state, action: PayloadAction<Record<string, Category>>) => {
       Object.values(action.payload).forEach((cloudCategory) => {
-        if (cloudCategory.selected) {
+        // Changed here meanwhile (still to go out): this device's change is the later one.
+        if (cloudCategory.icon in state.cloud.items.add) return;
+        const removed = state.items.find((localCategory) => localCategory.icon === cloudCategory.icon);
+        if (!removed) return;
+        state.items = state.items.filter((localCategory) => localCategory !== removed);
+        // The one shown here: back to all notes.
+        if (removed.selected) {
           state.items.forEach((category) => {
             category.selected = category.icon === defaultCategory.icon;
           });
         }
-        state.items = state.items.filter((localCategory) => localCategory.icon !== cloudCategory.icon);
       });
       state.items.sort(order_asc_sort);
     },
 
-    resetCloudCategories: (state) => {
-      state.cloud.items.add = {};
-      state.cloud.items.delete = {};
+    /** Full sync result (see `reconcileCategories`). */
+    applyCategoriesPlan: (state, action: PayloadAction<CategoryPlan>) => {
+      const { items, upload } = action.payload;
+      const fallback = state.items.find((category) => category.index) ?? defaultCategory;
+      state.items = items.some((category) => category.index) ? items : [fallback, ...items];
+      if (!state.items.some((category) => category.selected)) {
+        state.items.forEach((category) => {
+          category.selected = category.icon === defaultCategory.icon;
+        });
+      }
+      upload.forEach((icon) => {
+        const category = state.items.find((c) => c.icon === icon);
+        if (category) only_if_cloudConnected(() => queueCloudAdd(state, category));
+      });
+    },
+
+    /** What a push committed. */
+    categoriesPushed: (state, action: PayloadAction<CategoriesPushed>) => {
+      dequeuePushed(state.cloud.items.add, action.payload.add);
+      dequeuePushed(state.cloud.items.delete, action.payload.delete);
     },
   },
 
   extraReducers: (builder) => {
-    builder
-      .addCase(addCloudCategoriesAsync.fulfilled, (state, action: PayloadAction<Record<string, Category>>) => {
-        Object.keys(action.payload).forEach((id) => {
-          delete state.cloud.items.add[id];
-        });
-      })
-      .addCase(deleteCloudCategoriesAsync.fulfilled, (state, action: PayloadAction<Record<string, Category>>) => {
-        Object.keys(action.payload).forEach((id) => {
-          delete state.cloud.items.delete[id];
-        });
-      })
-      .addCase(wipeCategories, (state) => {
-        state.items = [defaultCategory];
-      });
+    builder.addCase(wipeCategories, (state) => {
+      state.items = [defaultCategory];
+    });
   },
 });
 
@@ -166,12 +207,11 @@ export const {
   updateCategory,
   addLocalCategories,
   deleteLocalCategories,
-  resetCloudCategories,
+  applyCategoriesPlan,
+  categoriesPushed,
 } = categoriesSlice.actions;
 
 export const getCategories = (state: RootState): Category[] => state.categories.items;
-
-export const getCloudCategories = (state: RootState): CategoriesState["cloud"]["items"] => state.categories.cloud.items;
 
 export const getCurrentCategory = createSelector([getCategories], (categories): Category | undefined =>
   categories.find((cat) => cat.selected)

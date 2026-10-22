@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { CheckIcon, PencilSquareIcon, XMarkIcon } from "react-native-heroicons/outline";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import PencilSquareIcon from "react-native-heroicons/outline/PencilSquareIcon";
+import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import type { Category } from "@/types";
@@ -92,7 +94,7 @@ export default function OrganizeCategoriesScreen() {
         <AppBackground style={StyleSheet.absoluteFill} />
 
         <View style={styles.header}>
-          <BackButton chip />
+          <BackButton chip shortcut={!isEditMode} />
 
           {isEditMode && <View style={styles.editSpacer} />}
 
@@ -100,19 +102,34 @@ export default function OrganizeCategoriesScreen() {
 
           {isEditMode ? (
             <View style={styles.headerActions}>
-              <TouchableOpacity activeOpacity={0.7} onPress={undoCategoryOrganization}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={undoCategoryOrganization}
+                accessibilityRole="button"
+                accessibilityLabel={t("a11y.discard_changes")}
+              >
                 <IconChip>
                   <XMarkIcon size={20} color={COLOR.softWhite} />
                 </IconChip>
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} onPress={saveCategoryOrganization}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={saveCategoryOrganization}
+                accessibilityRole="button"
+                accessibilityLabel={t("a11y.save")}
+              >
                 <IconChip>
                   <CheckIcon size={20} color={COLOR.softWhite} />
                 </IconChip>
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity activeOpacity={0.7} onPress={() => setIsEditMode(true)}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsEditMode(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.edit")}
+            >
               <IconChip>
                 <PencilSquareIcon size={20} color={COLOR.softWhite} />
               </IconChip>

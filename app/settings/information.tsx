@@ -2,10 +2,10 @@ import BackButton from "@/components/buttons/BackButton";
 import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
-import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { selectorDeveloperMode, setDeveloperMode } from "@/slicers/settingsSlice";
 import { toast } from "@/utils/toast";
+import { getDisplayAppVersion } from "@/utils/version";
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -37,7 +37,7 @@ export default function InformationScreen() {
 
   const developerMode = useSelector(selectorDeveloperMode);
 
-  const currentAppVersion = Platform.OS === "web" ? configs.app.version.web : configs.app.version.mobile;
+  const currentAppVersion = getDisplayAppVersion();
 
   const logoAnimRef = useRef<any>(null);
   const tapCountRef = useRef(0);

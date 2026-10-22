@@ -2,9 +2,10 @@
 
 <img width="600" height="114" alt="GithubLogo" src="https://github.com/user-attachments/assets/2b91e421-2c6b-4739-bb16-1220bd591667" />
 
-**A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, and end-to-end encrypted cloud sync.**
+**A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, and end-to-end
+encrypted cloud sync.**
 
-![Android](https://badgen.net/badge/Android/v3.2.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v1.2.0/blue)
+![Android](https://badgen.net/badge/Android/v4.0.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v2.0.0/blue)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
 
 [Download](https://github.com/ontech7/fastmemo-app/releases) | [Documentation](docs/) |
@@ -19,6 +20,7 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 ## Table of Contents
 
 - [Features](#features)
+- [Cloud Sync](#cloud-sync)
 - [Screenshots](#screenshots)
 - [Documentation](#documentation)
 - [Desktop Installation](#desktop-installation)
@@ -30,22 +32,22 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 
 | Feature                  | Description                                                            |
 | ------------------------ | ---------------------------------------------------------------------- |
-| **AI Assistant (BETA)**  | On-device AI with Qwen 2.5 (0.5B-7B). No data leaves your phone        |
+| **AI Assistant (BETA)**  | On-device AI with Qwen3.5 (0.8B-4B). No data leaves your phone         |
 | **Rich Text Editor**     | Create beautifully formatted notes with full rich text support         |
 | **To-Do List**           | Organize your checklist                                                |
 | **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                        |
 | **Code Editor**          | Write code with syntax highlighting, tabs, and language detection      |
-| **Cloud Sync**           | End-to-end encrypted sync across devices (your key, no central server) |
+| **Cloud Sync**           | End-to-end encrypted sync on your Firebase or your own FastMemo Server |
 | **Biometric Protection** | Secure sensitive notes with fingerprint or secret code                 |
 | **Webhooks**             | Explore new stuff with Internet of Things                              |
 | **Voice Recognition**    | Dictate notes using speech-to-text on text and todo notes              |
-| **Multi-language**       | Available in English, Italian, French, German, Spanish, and Chinese    |
+| **Multi-language**       | English, Italian, French, German, Spanish, Chinese and Japanese        |
 
 <details>
 <summary><strong>View all features</strong></summary>
 
-- AI-powered actions inside note editors: generate title, summarize, continue writing, format text, suggest checklist items,
-  suggest category, explain code (7B), add comments (7B)
+- On-device AI actions inside note editors: generate title, summarize (long notes too, summary on top), fix grammar, make
+  shorter, translate into a chosen language, suggest checklist items, suggest category, clean up voice dictation
 - Notes and categories creation with custom icons
 - Sort notes by creation or update date
 - Filter and deep search across all notes
@@ -54,12 +56,42 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 - Read-only notes
 - Hidden notes
 - Bulk actions (delete, toggle important/protected/read-only)
-- Temporary trash (auto-delete after 7 days)
+- Temporary trash (deleted for good after 30 days by default; 3, 7, 15 or 30)
 - Category management and reordering
 - Share notes
 - Import/Export with encrypted passphrase
 
 </details>
+
+## Cloud Sync
+
+Fast Memo works fully offline: your notes live on your device and sync is optional. When you turn it on, **you choose where your
+notes are kept**. There is no Fast Memo account and no central Fast Memo server, and either way the note contents are
+**end-to-end encrypted** on your devices, with a password only you know, before they leave them.
+
+![Google Firebase](docs/images/cloud-firebase.png)
+
+![FastMemo Server](docs/images/cloud-fastmemo-server.png)
+
+|                                 | Google Firebase                                                               | FastMemo Server                                                                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **What it is**                  | Your own project on Google's cloud                                            | A small open-source server you run yourself (one Docker container)                                                                    |
+| **Where your notes are stored** | In your Firebase project, on Google's servers                                 | On your PC, NAS, Raspberry Pi or VPS                                                                                                  |
+| **Cost**                        | The free plan is enough                                                       | Free, on your own hardware                                                                                                            |
+| **What you enter in the app**   | API Key, Project ID and App ID                                                | The server's address and access key                                                                                                   |
+| **Devices**                     | Up to 3                                                                       | 10 by default (configurable)                                                                                                          |
+| **Best for**                    | The quickest setup, with nothing to keep running                              | Full control: your notes stay on your own hardware                                                                                    |
+| **Setup**                       | [Google Firebase guide](https://fastmemo.losav.cc/en/guides/google-firebase/) | [FastMemo Server guide](https://fastmemo.losav.cc/en/guides/self-hosting/) · [repository](https://github.com/ontech7/fastmemo-server) |
+
+Both work the same way in the app, on Android, desktop and the web:
+
+- **End-to-end encryption**: only your encryption password unlocks the notes, and it never leaves your devices; a recovery key
+  gets you back in if you forget it. Note titles are not encrypted yet.
+- **Live sync**: changes reach your other devices within seconds, and a note open elsewhere updates in place.
+- **Offline first**: changes made offline are queued and sent when you're back online.
+- **No lost edits**: a note changed on two devices before they synced keeps both versions, one as a "(conflict)" copy.
+
+How it all works, from the first sync to the encryption design: [Cloud Sync](docs/CLOUD_SYNC.md).
 
 ## Screenshots
 
@@ -69,10 +101,10 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 
 | Document                                         | Description                                   |
 | ------------------------------------------------ | --------------------------------------------- |
-| [Cloud Sync](docs/CLOUD_SYNC.md)                 | How online sync works                         |
+| [Cloud Sync](docs/CLOUD_SYNC.md)                 | Firebase or FastMemo Server, encryption       |
 | [Changelog (Mobile)](docs/CHANGELOG_MOBILE.md)   | Version history for Android                   |
 | [Changelog (Desktop)](docs/CHANGELOG_DESKTOP.md) | Version history for Desktop                   |
-| [Self-Hosting Guide](docs/SELF_HOSTING.md)       | Deploy Fast Memo on your own server           |
+| [Self-Hosting Guide](docs/SELF_HOSTING.md)       | Host the Fast Memo web app yourself           |
 | [Tauri Setup](docs/TAURI_SETUP.md)               | Build the desktop app (macOS, Windows, Linux) |
 
 ## Desktop Installation
@@ -128,9 +160,10 @@ chmod +x Fast_Memo_*.AppImage
 | [Expo](https://expo.dev/)                                                                      | React Native framework for cross-platform development |
 | [React Native](https://reactnative.dev/)                                                       | Core framework for iOS and Android                    |
 | [Tauri](https://tauri.app/)                                                                    | Desktop application framework                         |
-| [llama.rn](https://github.com/a-ghorbani/llama.rn)                                             | On-device LLM inference (Qwen 2.5 GGUF)               |
+| [llama.rn](https://github.com/a-ghorbani/llama.rn)                                             | On-device LLM inference (Qwen3.5 GGUF)                |
 | [CodeMirror 6](https://codemirror.net/)                                                        | Code editor engine (bundled via esbuild)              |
-| [Google Firebase](https://firebase.google.com/)                                                | Cloud sync and data storage                           |
+| [Google Firebase](https://firebase.google.com/)                                                | Cloud sync on your own Firebase project               |
+| [FastMemo Server](https://github.com/ontech7/fastmemo-server)                                  | Self-hosted cloud sync (Node.js, SQLite/PostgreSQL)   |
 | [Redux](https://react-redux.js.org/) + [Redux Persist](https://github.com/rt2zz/redux-persist) | State management and persistence                      |
 | [Heroicons](https://heroicons.com/)                                                            | Icon library                                          |
 

@@ -1,21 +1,37 @@
 import { ReactNode } from "react";
 import { Keyboard, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { CheckCircleIcon } from "react-native-heroicons/outline";
+import CheckCircleIcon from "react-native-heroicons/outline/CheckCircleIcon";
 
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
-/** Shared chrome for the vault flow screens (set/unlock/recover/change/reset). */
-export function VaultScreen({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * Shared chrome for the vault flow screens (set/unlock/recover/change/reset). `footer` holds the
+ * screen's actions, pinned under the content so they're never below the fold. `backShortcut={false}`: Esc doesn't leave
+ * (see `BackButton`); `back={false}`: no back button (the screen blocks leaving itself).
+ */
+export function VaultScreen({
+  title,
+  footer,
+  back = true,
+  backShortcut = true,
+  children,
+}: {
+  title: string;
+  footer?: ReactNode;
+  back?: boolean;
+  backShortcut?: boolean;
+  children: ReactNode;
+}) {
   return (
     <SafeAreaView style={styles.container}>
       <AppBackground style={StyleSheet.absoluteFill} />
 
       <View style={styles.header}>
-        <BackButton chip />
+        {back ? <BackButton chip shortcut={backShortcut} /> : <View style={styles.headerSpacer} />}
         <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} ellipsizeMode="tail">
           {title}
         </Text>
@@ -30,6 +46,8 @@ export function VaultScreen({ title, children }: { title: string; children: Reac
       >
         {children}
       </KeyboardAwareScrollView>
+
+      {footer && <View style={styles.footer}>{footer}</View>}
     </SafeAreaView>
   );
 }
@@ -132,7 +150,8 @@ const styles = StyleSheet.create({
   },
   headerSpacer: { width: 40 },
   scroll: { paddingHorizontal: PADDING_MARGIN.lg },
-  scrollContent: { paddingBottom: PADDING_MARGIN.xl },
+  scrollContent: { paddingBottom: PADDING_MARGIN.lg },
+  footer: { paddingHorizontal: PADDING_MARGIN.lg, paddingBottom: PADDING_MARGIN.md },
   description: {
     color: COLOR.textSecondary,
     fontFamily: FONT.regular,

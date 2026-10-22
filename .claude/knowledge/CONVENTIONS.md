@@ -14,8 +14,9 @@
 7. [Platform-Specific Conventions](#platform-specific-conventions)
 8. [Backward Compatibility & Data Migration](#backward-compatibility--data-migration)
 9. [Cloud Sync & Firestore Budget](#cloud-sync--firestore-budget)
-10. [Naming Conventions](#naming-conventions)
-11. [DO / DON'T Quick Reference](#do--dont-quick-reference)
+10. [On-Device AI](#on-device-ai)
+11. [Naming Conventions](#naming-conventions)
+12. [DO / DON'T Quick Reference](#do--dont-quick-reference)
 
 ---
 
@@ -100,13 +101,51 @@ The standard interactive element is `TouchableOpacity` with `activeOpacity={0.7}
 </TouchableOpacity>
 ```
 
+**Accessibility:** a pressable with no visible text (icon only) MUST have a screen-reader name:
+
+```tsx
+<TouchableOpacity
+  onPress={toggle}
+  accessibilityRole="checkbox" // or "button"
+  accessibilityLabel={t("a11y.delete_item")} // i18n, reuse an existing key when one fits
+  aria-checked={checked} // state: aria-checked / aria-selected / aria-expanded
+>
+```
+
+- The state attribute must be valid for the role (the web exposes it to assistive tech as is): an on/off control is a `checkbox`
+  with `aria-checked` (format toggles, a selectable note card in delete mode, a menu option with a `selected` state); one choice
+  out of a set is a `radio` with `aria-checked` (icon picker, language picker), or a `tab` with `aria-selected` when it switches
+  what's shown (category filter, carousel dots in a `tablist`). Never `aria-selected` on a `button` or `menuitem`. Something
+  that opens/closes a panel is a `button` with `aria-expanded`.
+- A control's name follows what it does now (the FAB is "New note", or "Exit selection" in delete mode).
+- A control that only reacts to `onPressIn` (a drag handle) is `accessible={false}`: a screen reader can't drive it.
+
+- Use `accessibilityRole` (not `role`): native `TouchableOpacity` silently drops `role`.
+- Use `aria-checked`/`aria-selected`/`aria-expanded` for state (not `accessibilityState`): react-native-web ignores
+  `accessibilityState` except `disabled`. `disabled` already maps on both platforms.
+- Content that is only hidden visually (opacity 0, translated off-screen, closed overlays) gets `aria-hidden` while inactive, or
+  screen readers still reach it, and its pressables `focusable={false}`: on web `aria-hidden` doesn't remove them from the
+  keyboard tab order (react-native-web has no `inert`).
+- Generic screen-reader names live under `a11y.*`.
+
 ### SafeAreaView
 
 Always use the project's custom `@/components/SafeAreaView`, not the one from `react-native-safe-area-context` directly.
 
+### Screens with Text Inputs
+
+Under `KeyboardProvider` (react-native-keyboard-controller, in `_layout`) Android doesn't resize the window for the keyboard: a
+plain `ScrollView` leaves a field near the bottom under it, and can't scroll it up. A screen whose inputs can sit low scrolls in
+`KeyboardAwareScrollView` (`keyboardShouldPersistTaps="handled"`, `bottomOffset={PADDING_MARGIN.xl}`, as `VaultScaffold`); a
+list passes one as `renderScrollComponent` (`app/settings/webhooks.tsx`).
+
 ### Icons
 
 All icons come from `react-native-heroicons/outline` (outline variant only). Standard size is 28.
+
+Import each icon by its **deep path**, never from the barrel: `import XIcon from "react-native-heroicons/outline/XIcon"`. Metro
+doesn't tree-shake, so a named import from `react-native-heroicons/outline` evaluates all ~300 icons at startup (~50-80ms per
+barrel, see LL-034).
 
 ---
 
@@ -244,30 +283,71 @@ Local mutations queue data for cloud sync via `only_if_cloudConnected()`, but on
 (`isVaultUnlocked()` reads the in-memory DEK from `libs/vaultSession`):
 
 ```ts
-// Inside reducer (mutates Immer draft):
-only_if_cloudConnected(state as unknown as RootState, () => {
-  if (!isVaultUnlocked()) return; // no DEK -> cannot encrypt; do not queue plaintext
-  state.cloud.items.add[note.id] = CryptNote.encrypt(note); // CryptNote reads the DEK from vaultSession
-});
+// Inside a reducer (mutates the Immer draft): every change that syncs stamps a revision, then queues.
+note.important = !note.important;
+touchNote(note); // rev = max(now, previous + 1): orders versions across devices (ADR-016)
+queueCloudAdd(state, note); // only_if_cloudConnected + isVaultUnlocked; the engine re-encrypts at push time
 ```
+
+**Every reducer that changes a synced note calls `touchNote()`** (or `trashNote` / `untrashNote`, which do), and never writes
+`syncedRev` itself: that is the sync engine's bookkeeping (`applyNotesPlan`, `notesPushed`). A change without a new revision is
+ignored by the other devices (their copy looks as new). `addNote` takes `rev`, `syncedRev` and `local` from the stored note, not
+from the editor's copy. A note last written by an older app version has no `rev`: `touchNote` records its own version as the
+base (`baseOf`), and outbox entries an older version left are stamped by `adoptLegacyOutbox` before the first push. A note an
+older version _received_ from a newer one keeps that `rev` but has no `syncedRev`. The notes' persist migration (version 1,
+`adoptLegacySyncState`) records that `rev` as synced. Without it, the merge would take the note for an unsynced change (LL-056).
 
 `CryptNote.encrypt` takes no key argument anymore -- it reads the per-vault DEK from `vaultSession` and **fails closed** if the
 vault is locked (never emits plaintext). The old global `secretKey` argument and build-time `SECRET_KEY` are superseded by
 per-vault envelope encryption (see ADR-012); the legacy key survives only as the migration `legacyKey` and is removed after the
 migration window. Deletes/detaches use a content-stripped `deletionStub` so they need no DEK and propagate even while locked.
 
-Thunks drain the outbox, and `extraReducers` cleans up on fulfillment. **Do not replicate this pattern in new reducers** -- the
-cloud sync queuing should ideally move to middleware.
+The sync engine (`libs/cloud/syncEngine.ts`) drains the outbox, and `notesPushed` / `categoriesPushed` dequeue what a push
+committed. **All cloud I/O goes through the `CloudBackend`** (`cloud` from `@/libs/cloud`): only `libs/cloud/firebaseBackend.ts`
+imports `firebase/*` (phase 4 adds a second backend behind the same contract). Merge rules live in `libs/cloud/merge.ts` as pure
+functions: change them there, with a case in `scripts/sync.test.mjs`.
 
-**Cloud sync is silent by design.** Do NOT add `.pending`/`.rejected` handlers to cloud sync thunks in order to surface
-loading/error state to the user (banners, toasts, status fields). The offline-first flow is:
+**Cloud sync is silent by design.** Do NOT surface transient sync failures to the user (banners, toasts, status fields). The
+offline-first flow is:
 
-- `SyncOnProvider` gates every sync loop on `netInfo?.isConnected`; while offline, thunks are not dispatched at all.
-- On transient failures, items stay in the outbox and are retried automatically on the next tick (implicit retry).
-- Only handshake-level failures (invalid credentials, device evicted) are surfaced -- these use the existing
-  `cloudsync.handshakeFailed` alert and `disconnected` toast in `useCloudSync.ts` / `SyncOnProvider.tsx`.
+- The engine runs while connected and unlocked; offline, its listeners wait and pushes fail into a backoff (2s -> 5 min),
+  restarted when the network or the app comes back.
+- On transient failures, items stay in the outbox and are retried automatically; nothing leaves the outbox until committed.
+- Only handshake-level failures (invalid credentials, device evicted) and the user-visible outcomes of a merge (data synced, a
+  conflict copy made, the open note trashed elsewhere) are surfaced, from `SyncOnProvider` / `useLiveNote`.
+- One exception (ADR-029): a cloud whose reads have failed for 30 s with no answer between, while the device is online (a
+  server behind a VPN left off), shows a quiet line in the home in place of the category (`CloudUnreachableLine`, through
+  `useCloudStatus`), gone once it answers. Never a toast or a banner, never for an offline device, nothing in Redux: the
+  engine reports `onReachability` on a change, `sync.ts` keeps the state and the 30 s timer. The same state is the status dot
+  of Settings → Cloud Sync and the line under its switch (`CloudStatusDot`, `useCloudStatus().state`). A backend's listener
+  that stops getting answers calls `onLost` instead of retrying silently; a read that fails says whether the cloud gave no
+  answer or an error (`CloudFailure`) when the user is told which.
 
-If observability is needed for a new cloud-sync feature, use Sentry breadcrumbs inside the thunk, not Redux state. See LL-004.
+If observability is needed for a new cloud-sync feature, use Sentry breadcrumbs inside the engine, not Redux state. See LL-004.
+
+**Queue entries are exclusive per id** (LL-033): `queueCloudAdd` / `queueCloudDelete` drop the id from the opposite queue;
+`notesPushed` dequeues only if the entry is still the pushed object (a newer version queued meanwhile survives); the backend's
+push writes each fan-out entry with a field path and deletes the id from the device's other queues in the same transaction.
+
+**Never decide on a cloud snapshot that isn't server-confirmed** (`DevicesSnapshot.fromServer`), and **acknowledge only after
+the merge is persisted** (`persistor.flush()`), through `ackChanges` (it refuses when the sender queued more meanwhile).
+
+### Note Editor Commits and Persistence
+
+- Editors change notes through `setNoteAsync` from `useNoteEditor`: edits stay in local state and reach Redux in batches
+  (debounce 500ms / max wait 2s on native, 300ms / 1s on web). Never dispatch `addNote` per keystroke (LL-031).
+- Before acting on the **stored** note (delete, detach, make offline, sync, change category, fire a webhook, navigate away
+  programmatically), call `flushNote()` so the action sees the latest edits.
+- `flushOnExit` (installed once in `_layout`) flushes pending batches and `persistor.flush()` when the app leaves the
+  foreground, the page is hidden, or a desktop window closes; edits that arrive while the app is in the background are written
+  at once (JS timers don't run there, LL-032). New editors must register through `useNoteEditor`, not their own timers.
+- Every `PersistConfig` sets `timeout: 0`: a slow read must never rehydrate the empty initial state (LL-029). Notes persist only
+  through the note store (ADR-018): one value per note, written only when that note's object changed. Change notes immutably
+  (reducers, never in place outside them): a note mutated in place isn't seen as changed and isn't written. Anything that
+  deletes all notes for good also removes their copies outside the store (`noteStore.removeCopies()`, as `wipeNotesThunk`).
+- Device file I/O that runs per note goes through the asynchronous API, a few calls at a time: the synchronous one costs
+  milliseconds per file on the JS thread (LL-053). File names given to expo-file-system are the real names, without `%` (`File`
+  segments are encoded, legacy URIs decoded, LL-052).
 
 ### Dispatching Actions
 
@@ -373,7 +453,9 @@ t("ai.feedback.note_created", { title }) -> with interpolation
 
 When adding a new UI string:
 
-1. Add the key to ALL 7 locale files: `en.ts`, `it.ts`, `es.ts`, `fr.ts`, `de.ts`, `zh.ts`, `ja.ts`
+1. Add the key to ALL 7 locale files: `en.ts`, `it.ts`, `es.ts`, `fr.ts`, `de.ts`, `zh.ts`, `ja.ts` (a missing key silently
+   falls back to English: the whole vault UI shipped untranslated in 5 locales that way). Never translate the key name itself
+   (`es` once had `título:` instead of `title:`)
 2. Place it in the correct section (or create a new section if it's a new feature)
 3. Use interpolation for dynamic values: `"Created {{count}} notes"`
 4. Use `useTranslation()` hook in the component: `const { t } = useTranslation();`
@@ -386,6 +468,16 @@ t("trashednotes.countdown", { days: 3, hours: 12, minutes: 30 });
 ```
 
 Note: Pluralization currently uses manual "(s)" pattern rather than i18next's built-in plural system.
+
+A sentence that contains values is **one key** with interpolation, never translated fragments concatenated in code (word order
+differs per language, see LL-035). When part of the sentence is styled, use `<Trans>` with a component placeholder:
+
+```tsx
+// en: progress: "<hl>{{done}}</hl> of {{total}} completed"   zh: progress: "已完成 <hl>{{done}}</hl>/{{total}}"
+<Text style={styles.subtitle}>
+  <Trans t={t} i18nKey="note.progress" values={{ done, total }} components={{ hl: <Text style={styles.count} /> }} />
+</Text>
+```
 
 ---
 
@@ -437,7 +529,7 @@ inside function bodies, and (3) it defeats TypeScript and tree-shaking clarity.
 Legitimate remaining uses of dynamic `require`:
 
 - **Metro asset imports:** `require("../assets/foo.png")` -- this is Metro's asset syntax, not a module require.
-- **Inside an already-web file, for Tauri-only paths:** e.g. `await import("@tauri-apps/api/fs")` inside an `if (isTauri())`
+- **Inside an already-web file, for Tauri-only paths:** e.g. `await import("@tauri-apps/plugin-fs")` inside an `if (isTauri())`
   branch of a `.web.ts` file. Tauri shares the web bundle, so this is runtime detection, not bundle-time resolution.
 
 If a module genuinely has no web equivalent (e.g. `expo-local-authentication`, `@react-native-community/netinfo`, `llama.rn`),
@@ -459,6 +551,40 @@ src/hooks/useNetInfo.web.ts     // web -- polls fetch() + visibilitychange
 ```
 
 Consumers keep writing `import useNetInfo from "@/hooks/useNetInfo"` and Metro/Webpack picks the correct file at bundle time.
+
+### Raw DOM Elements in Web Files
+
+Raw DOM nodes (`<div>` in a `.web.tsx`, e.g. for Embla) don't get react-native-web's `box-sizing: border-box`; set
+`boxSizing: "border-box"` when they're sized with padding. UI that can be resized (web, Tauri windows) reads dimensions with
+`useWindowDimensions()`, never `Dimensions.get()` at module scope (LL-036).
+
+### Desktop Keyboard Shortcuts and Menu
+
+On desktop (Tauri), `useKeyboardShortcuts` (in `_layout`) makes a key press a control on screen, marked with a `SHORTCUT_TARGET`
+`testID` (`@/constants/shortcuts`): Esc presses `BackButton`, Cmd/Ctrl+F focuses a search field or presses the note's find
+button. A key does nothing when its control is covered (a dialog, menu or dimmed overlay over its center), so a shortcut never
+does more than a click could. Esc in a text field only leaves the field, and F5/Cmd/Ctrl+R are blocked in release builds (a
+reload drops the edits not yet saved).
+
+Commands that start from the home screen (Cmd/Ctrl+N new note, the menu's Settings, Help and New Text Note/List/Kanban
+Board/Code Note, which go through the note-type menu) first press the back buttons one screen at a time, the same path and saves
+as clicking them, and stop at a screen whose back button is off or covered (`@/libs/desktopCommands`). The macOS menu bar
+(`installDesktopMenu`, `src-tauri/src/lib.rs`) runs the same commands: its labels come from i18n (`menu.*`, Apple's wording per
+language) and are sent again on every language change. Windows and Linux have no menu bar. A shortcut the page handles never
+reaches the menu item with the same key; one it leaves alone (nothing to do, an IME composition) does, so a held key's repeats
+are stopped in the page. One command at a time, with a 1 s pause after each (a second Cmd+N would close the note the first
+opened), and none while a native open/save panel is up (`withNativeDialog` around the dialog plugin's `open`/`save`). Leaving a
+form this way drops what was typed there, as clicking back would; the note editors save as they go.
+
+- A screen's back control is `BackButton` (or `CloseButton`), so Esc works there; a search field is `SearchInput` or carries
+  `testID={SHORTCUT_TARGET.find}`.
+- `BackButton shortcut={false}` where leaving would lose what's on screen (the one-time recovery key, a form being typed:
+  report, connect, recovery key entry) and while a mode is on that Android's back ends first (trash selection, category
+  organizing). The home FAB is the Esc target in delete mode, since it ends the selection.
+- A control that changes meaning (the FAB in delete mode, the find button once the bar is open) changes or drops its `testID`
+  meanwhile.
+- The window listens in the capture phase: react-native-web's `TextInput` stops keys from bubbling. Iframes (the rich text and
+  code editors) get the same listener when they load.
 
 ### Never Import with Explicit Platform Suffix
 
@@ -570,11 +696,14 @@ reads, writes, and deletes.
 3. **Never read entire collections when a single document read suffices.** Use `getDoc()` for single documents, reserve
    `getDocs()` with collection queries for bulk operations (initial sync, device handshake).
 
-4. **Minimize polling reads.** `SyncOnProvider` polls on an interval and on app foreground. Each poll that reads cloud state
-   counts against the 50K read limit. Keep polling intervals reasonable and avoid triggering unnecessary syncs.
+4. **Listen, don't poll.** The engine keeps one listener on `connectedDevices` and one on the vault doc (a changed doc costs one
+   read per listening device); every 5 min and on resume it re-opens the transport and reads the device docs (a read "from the
+   server" of a listened collection is answered by the listener, so it can't replace this). Don't add intervals that read the
+   cloud.
 
-5. **Debounce rapid changes.** When a user edits a note rapidly (typing), the system must debounce before queuing for cloud
-   sync. The current `DEBOUNCE_NOTES_DELAY` in `SyncOnProvider` handles this -- do not bypass or reduce it.
+5. **Debounce rapid changes.** Editors commit in batches (`useNoteEditor`); the engine pushes 200ms after the outbox changes and
+   at most every 2 s, one transaction per batch of up to 200 entries; receivers ack once the sender is quiet for 5 s (at most 30
+   s). Do not bypass any of them: each push and each ack also costs a read on every listening device.
 
 6. **Delete operations are cheap but not free.** The 20K delete limit is generous, but bulk operations (wipe all notes, wipe
    categories) should still use batch deletes and warn the user if the operation is large.
@@ -587,25 +716,69 @@ reads, writes, and deletes.
 
    Document the estimate in the PR description.
 
-8. **Avoid redundant device sync.** The current thunk pattern processes a primary sync and an optional secondary device sync per
-   item. When adding new sync logic, verify that you are not duplicating writes to the same document.
+8. **Avoid redundant device sync.** A push writes each note doc and one merged update of the sender's device doc (queues,
+   recipients, `lastSync`) per transaction, and nothing when the cloud took none of it. Never write a document others listen to
+   (`connectedDevices`, `vault`) when nothing changed: a no-op write still wakes every listener (one read each), and a write
+   that triggers the next one loops. When adding new sync logic, verify that you are not duplicating writes to the same
+   document.
 
 9. **Never store large blobs in Firestore.** Notes with embedded images should store references (URLs or base64 within the
-   encrypted note body), not separate Firestore documents per image. Firestore documents have a 1 MB size limit.
+   encrypted note body), not separate Firestore documents per image. Firestore documents have a 1 MiB size limit and 40,000
+   index entries (every field of every nested map counts: a queued note is ~50), whichever comes first: size anything that
+   accumulates in one document (the fan-out queues, `planFanout`) by both.
 
 10. **Test with Firestore usage monitoring.** During development of cloud-related features, check the Firebase console usage tab
     to verify that operations are within expected ranges.
 
+11. **One `lastSync` write per batch.** `lastSync` rides on the push transaction's device-doc update (it's only displayed in the
+    devices list, see LL-021); a full sync with nothing to push calls `touchLastSync` once.
+
 ### Operation Cost Examples
 
-| User Action                     | Expected Firestore Operations     |
-| ------------------------------- | --------------------------------- |
-| Create a note (synced)          | 1 write (add to cloud)            |
-| Edit a note (synced, debounced) | 1 write (update in cloud)         |
-| Delete a note (synced)          | 1 delete                          |
-| Open app with sync enabled      | 1-2 reads (check pending changes) |
-| Full initial sync (100 notes)   | ~100 reads + ~100 writes          |
-| Wipe all notes from cloud       | N deletes (1 per note)            |
+| User Action                   | Expected Firestore Operations                                                                 |
+| ----------------------------- | --------------------------------------------------------------------------------------------- |
+| Create / edit a note (synced) | 2 reads (note + device doc, in the guard transaction) + 2 writes per push (at most every 2 s) |
+| ...on each other device       | 1 listener read per push; 1 ack (1 read + 1 write) after 5 s quiet, read by every device      |
+| Delete a note (synced)        | 2 reads + 1 delete + 2 writes (device doc + tombstone) per push                               |
+| Open app with sync enabled    | N device docs + 1 vault read (listeners' first snapshot)                                      |
+| Idle, app open                | N device docs every 5 min; presence: 1 write per open/close, 1 per 5 min while a note is open |
+| Typing for an hour, 3 devices | ~9k reads + ~3.7k writes                                                                      |
+| Full sync (100 notes)         | ~100 reads + 1 per tombstone + writes only for what this device has newer                     |
+| Wipe all notes from cloud     | N deletes, tombstones included (batched, 200 per batch)                                       |
+
+### FastMemo Server (self-hosted, ADR-017)
+
+The server has no quota, but its dashboard counts operations the way Firestore bills them, and the same code paths serve both
+clouds, so the rules above still apply. In addition:
+
+1. **Nothing above `CloudBackend` knows which cloud it is.** Ask `cloud` for what differs (`deviceLimit`, `pacing`), key
+   per-cloud data with `cloudScope(settings)` (the DEK cache, the server token), and keep user-facing texts provider-neutral
+   ("whoever stores them", not "Google"). `configs.cloud.deviceLimit` is the Firebase backend's own value (LL-048).
+2. **The server's protocol only grows.** `/v1` keeps working for every app version that speaks it: add optional fields; anything
+   else is a new protocol number, which older apps refuse at the handshake.
+3. **Same guard on both sides.** A change to the push guard or the merge rules is made in the app's adapters and in the server
+   (`fastmemo-server/src/service.ts`) together, and `scripts/sync-server.test.mjs` passes against the real server.
+4. **An id a client caches must not repeat across a restore.** Restoring a backup rewinds the server's counters; tie such ids to
+   the boot (the feed's page ids do, LL-049).
+5. **HTTPS by default, HTTP only with a warning** (ADR-017). Android, macOS and Linux can reach an `http://` server (the
+   cleartext plugin, `src-tauri/Info.plist`); an `https://` page (the web app, Windows) can't, except this machine. UI copy
+   recommends HTTPS (a reverse proxy, Tailscale); an http address is saved only after the warning dialog. The access key travels
+   only to connect: never add it to calls an enrolled device makes with its token.
+6. **"Removed" is the server refusing the token held now.** Never a token that can't be read (read it again), nor a refusal of a
+   token a registration replaced; write and remove tokens in order (LL-050).
+7. **Settings changes don't re-enroll.** New settings are proven with `cloud.check` (its own connection) before the working one
+   is touched; the same cloud then only takes them, another cloud is left first. Change the connection only with the engine
+   stopped and `idle()`; a task that outlived `stop()` must not act (`outlived`) (LL-050).
+8. **A request carries the connection it started on.** Re-check after every `await` that the backend wasn't re-initialised
+   before reading its URL, key or token: another server's key must never go to this one.
+9. **An error the client acts on must be readable.** The server drains an oversized body before its `413`; the client never
+   retries a timeout at the same size forever (LL-051).
+
+| User Action (server)          | Server operations                                                           |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| Create / edit a note (synced) | 1 push (1 read + 1 write per note), every other device: 1 sync read + 1 ack |
+| Idle, app open                | 1 long poll every 25 s per device, counted as 1 read (the vault check)      |
+| Full sync (100 notes)         | ~100 reads + 1 per tombstone + writes only for what this device has newer   |
 
 ### End-to-End Encryption (per-vault) -- safety rules
 
@@ -634,6 +807,38 @@ hard rules (each maps to a lesson learned):
    `await yieldToUI()` after `setLoading(true)` so the spinner paints (LL-026). PBKDF2 (key derivation) runs only at
    setup/unlock/reset/password-change — it is slow on Hermes (no JIT) but never per note; per-note `CryptNote.encrypt` is plain
    AES with the cached DEK and cannot lose notes (local-first save + synchronous encrypt-into-outbox + retried upload).
+
+---
+
+## On-Device AI
+
+Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file that talks to llama.rn.
+
+1. **Every completion passes `CHAT_TEMPLATE`** (`jinja: true, enable_thinking: false, reasoning_format: "none"`) and its
+   action's `ACTION_SAMPLING` + `ACTION_MAX_TOKENS`. A new action adds an entry to both maps, a prompt in
+   `EDITOR_SYSTEM_PROMPTS`, and a fixture in `evalFixtures.ts`.
+2. **Run completions through `whileBusy`** (as `generateEditorContent` and `searchHelpByIntent` do): it queues them (one context
+   runs one completion; a second fails "Context is busy") and the idle/background release never frees a context under a running
+   one. A run takes the cancel generation when it is called and checks it after the queue, after the load and at every token:
+   `stopCompletion` alone is lost while the model loads.
+3. **Nothing the model writes replaces user content without a look.** A rewrite streams into a before/after preview (or the
+   dictation sheet), Apply waits for the end, Cancel stops the model (`cancelCommand`) and keeps the original. A rewrite action
+   gets a `REWRITE_LENGTH_RATIO` range so `isPlausibleRewrite` can discard a runaway answer.
+4. **Number each run** (`runRef`/`aiRunRef`): a cancelled or superseded run never writes into the UI, and unmounting advances
+   the number and calls `cancelCommand`. An interrupted or token-limited answer is never applied (`cancelled` / `too_long`): it
+   is cut short. One exception, never shown alone: a part of a long note's summary keeps its complete sentences (only the merge
+   reads it).
+5. **Pre-warm where an action is likely** (`prewarmContext` when the dictation sheet or the AI menu opens), never at app start:
+   a loaded 2B holds over a gigabyte.
+6. **Measure before changing a prompt, sampling or tier**: run Developer options -> AI evaluation on a phone before and after,
+   and compare the saved JSON reports.
+7. **A note's text goes to the model through `rewriteNote` / `summarizeNote`** (`libs/ai/longNote.ts`), never whole: they work
+   line by line on the HTML (`blocks.ts`) and give HTML back with the structure kept. Never `stripHtml` a note, rewrite it and
+   `setContentHTML` the plain answer.
+8. **Remove from the user's text only what the app can prove it added** (LL-058): `cleanAnswer` strips quotes only when they
+   wrap the whole answer, not the input, and no other quote of the kind is inside (dialogue keeps its quotes); a "Title:" or
+   "Summary:" label only from a title or a summary. An AI summary is recognized by its `data-fm="summary"` mark at the very top,
+   never by a label's wording, and on doubt (the mark copied onto the next line) nothing is taken for it.
 
 ---
 
@@ -692,6 +897,24 @@ hard rules (each maps to a lesson learned):
 | 25  | Never let an errored/empty cloud read drive a destructive write                           | Reads are tri-state (present/absent/error); skip-and-keep-local on doubt, a missed sync self-heals (see LL-023)                  |
 | 26  | Never trust a decrypt that didn't throw                                                   | AES-CBC yields valid-looking garbage on the wrong key; verify the `CONTENT_MAGIC` marker before using output (see LL-024)        |
 | 27  | Never read authoritative cross-device state with cache-eligible `getDoc`/`getDocs`        | Use `getDocFromServer`/`getDocsFromServer`; the Firestore cache serves stale data and survives restarts (see LL-027)             |
+| 28  | Never import icons from the `react-native-heroicons` barrels                              | Each barrel evaluates ~300 icons at startup; use deep imports (see LL-034)                                                       |
+| 29  | Never dispatch a persisted-slice update per keystroke                                     | Every commit re-serializes the whole slice; editors batch through `setNoteAsync` (see LL-031)                                    |
+| 30  | Never rely on a JS timer for work that must finish before the app may be killed           | Android pauses timers in background; flush synchronously (see LL-032)                                                            |
+| 31  | Never concatenate translated fragments into a sentence                                    | Word order differs per language; one interpolated key, `<Trans>` for styled parts (see LL-035)                                   |
+| 32  | Never write a cloud document other devices listen to when nothing changed                 | Each write costs a read per listener and can wake the loop that writes again (see LL-044)                                        |
+| 33  | Never size what accumulates in one Firestore document by bytes alone                      | The 40,000 index-entry limit comes first (~50 per queued note); budget both (see LL-043)                                         |
+| 34  | Never read a per-cloud value from config, or name a provider, above `CloudBackend`        | Two clouds: ask `cloud` (`deviceLimit`, `pacing`), key by `cloudScope`, keep texts neutral (see LL-048)                          |
+| 35  | Never put a `%` in a file name given to expo-file-system                                  | `File` segments are encoded (`%` -> `%25`), legacy URIs decoded: either way it names another file (see LL-052)                   |
+| 36  | Never trust a cache of what's stored where another writer can write (browser tabs)        | Check what's there first, under a lock; a write skipped for a newer one settles with it (see LL-053)                             |
+| 37  | Never keep a copy of user data without a wipe path and an end date                        | "Wipe data" must reach it; record migrations instead of inferring them from absent data (see LL-054)                             |
+| 38  | Never apply an AI answer that stopped early, or cancel only the native completion         | Queue completions, check the cancel generation at every step, drop `interrupted`/token-limited answers (see LL-055)              |
+| 39  | Never give persisted data a new meaning without bumping its persist `version`             | Migrate once, by version, never guess at read time; test older versions' data as they store it, newer fields included (LL-056)   |
+| 40  | Never interpret a server answer that came through a redirect                              | Fetch drops the token across hosts: the refusal reads as "removed"; absent/removed only with the server's error code (LL-059)    |
+| 41  | Never turn a note's HTML or text into DOM unsanitized                                     | Notes come from imports, other devices: DOMPurify (`NOTE_HTML_CONFIG`, `addNoteHooks`), `escapeHtml`/`textContent` (LL-060)      |
+| 42  | Never send a block format or list command to pell directly                                | They nest and never turn off: go through `window.__fm.toggle` (RICH_TEXT_SCRIPT), test in `scripts/richtext.test.mjs` (LL-062)   |
+| 43  | Never leave an element selected after a page-script edit                                  | A key replaces it: put back the selection saved (as a `Range`) before the `execCommand`, as `__fm.image` does (LL-065)           |
+| 44  | Never judge or measure performance on a debuggable build                                  | Its Java/Kotlin runs interpreted: a startup measured 10x slower (LL-066). Measure a release APK not marked debuggable            |
+| 45  | Never hardcode a note size limit                                                          | The cloud in use decides (`cloud.maxNoteBytes`, `noteTextLimit`); a note over it goes offline (ADR-026)                          |
 
 ### ALWAYS
 
@@ -711,3 +934,6 @@ hard rules (each maps to a lesson learned):
 | 12  | Always place `/* STYLES */` comment above StyleSheet     | Visual separator convention                                   |
 | 13  | Always make new fields optional with defaults            | Backward compat: old persisted data must load without crashes |
 | 14  | Always estimate Firestore ops for cloud-related features | Document reads/writes/deletes per user action in the PR       |
+| 15  | Always call `flushNote()` before acting on a stored note | Delete/detach/sync/category change must see the latest edits  |
+| 16  | Always set `timeout: 0` on a `PersistConfig`             | A timed-out read rehydrates empty state and wipes storage     |
+| 17  | Always keep sync queue entries exclusive per id          | Latest operation replaces the others (see LL-033)             |

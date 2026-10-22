@@ -1,14 +1,24 @@
 import { CODEMIRROR_HTML } from "@/generated/codemirror-html";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
-import { Platform, StyleSheet, TextInput } from "react-native";
+import { Platform, StyleSheet, TextInput, type TextInputInstance } from "react-native";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
 
 const isWeb = Platform.OS === "web";
 
 const EDITOR_BG = "#282c34";
 
+interface SetCodeOptions {
+  undoable?: boolean;
+  remote?: boolean;
+}
+
 export interface CodeEditorWebViewRef {
-  setCode: (code: string) => void;
+  /**
+   * Replaces the document. By default as a new document with its own undo history (e.g. a tab
+   * switch); `undoable` makes it an edit of the current one instead (e.g. AI-commented code);
+   * `remote` is another device's edit of it: the cursor stays, and undo doesn't revert it.
+   */
+  setCode: (code: string, options?: SetCodeOptions) => void;
   setLanguage: (language: string) => void;
   setReadOnly: (readOnly: boolean) => void;
   focus: () => void;
@@ -25,10 +35,15 @@ interface Props {
 
 const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
   ({ initialCode, language, readOnly, onChange, onReady }, ref) => {
-    const webViewRef = useRef<WebView>(null);
-    const hiddenInputRef = useRef<TextInput>(null);
+    // `WebView<object>`, not bare `WebView`: v14 defaults the props generic to
+    // `undefined`, which collapses the props type to `undefined` under strict: false.
+    const webViewRef = useRef<WebView<object>>(null);
+    const hiddenInputRef = useRef<TextInputInstance>(null);
     const isReady = useRef(false);
     const pendingMessages = useRef<string[]>([]);
+    // Documents sent to the editor: a change it reports carries the one it was made in, and one made in a document
+    // replaced since (a keystroke on its way as another device's edit or a tab switch arrives) would undo the new one.
+    const docRef = useRef(0);
 
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
@@ -58,7 +73,16 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
     );
 
     useImperativeHandle(ref, () => ({
-      setCode: (code: string) => sendMessage(JSON.stringify({ type: "setCode", code })),
+      setCode: (code: string, options?: SetCodeOptions) =>
+        sendMessage(
+          JSON.stringify({
+            type: "setCode",
+            code,
+            doc: ++docRef.current,
+            undoable: !!options?.undoable,
+            remote: !!options?.remote,
+          })
+        ),
       setLanguage: (lang: string) => sendMessage(JSON.stringify({ type: "setLanguage", language: lang })),
       setReadOnly: (ro: boolean) => sendMessage(JSON.stringify({ type: "setReadOnly", readOnly: ro })),
       focus: () => {
@@ -88,7 +112,7 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
             }
             pendingMessages.current = [];
             onReadyRef.current?.();
-          } else if (data.type === "change") {
+          } else if (data.type === "change" && (data.doc ?? 0) === docRef.current) {
             onChangeRef.current(data.code);
           }
         } catch {}
@@ -96,16 +120,14 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
       [sendToEditor]
     );
 
+    // Not gated on isReady: sendMessage queues until the editor is up, so a change made while it
+    // loads still lands (the editor ignores a language it already has).
     useEffect(() => {
-      if (isReady.current) {
-        sendMessage(JSON.stringify({ type: "setLanguage", language }));
-      }
+      sendMessage(JSON.stringify({ type: "setLanguage", language }));
     }, [language, sendMessage]);
 
     useEffect(() => {
-      if (isReady.current) {
-        sendMessage(JSON.stringify({ type: "setReadOnly", readOnly }));
-      }
+      sendMessage(JSON.stringify({ type: "setReadOnly", readOnly }));
     }, [readOnly, sendMessage]);
 
     // Compute HTML ONCE on mount — never changes, never causes WebView reload

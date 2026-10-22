@@ -17,12 +17,14 @@ export type {
   WebhookPayload,
   Webhooks,
   VoiceRecognitionSettings,
+  CloudProvider,
   CloudSettings,
   AIAssistantSettings,
   DeveloperModeSettings,
   NoteCreationMode,
   NoteCreationType,
   NoteCreationSettings,
+  TourStep,
   SettingsState,
 } from "./settings";
 export type { NoteFilters, NotesState, CategoriesState, RootState } from "./store";

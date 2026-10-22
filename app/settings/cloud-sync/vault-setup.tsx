@@ -54,7 +54,7 @@ export default function VaultSetupScreen() {
 
     setError(null);
     setLoading(true);
-    await yieldToUI(); // paint the spinner before the synchronous PBKDF2 freeze
+    await yieldToUI(); // paint the spinner first: the key derivation freezes the JS thread on the pure-JS fallback
 
     try {
       const result = isMigrate
@@ -89,7 +89,10 @@ export default function VaultSetupScreen() {
         text={t(isMigrate ? "cloudsync.vault.migrating" : "cloudsync.vault.creating")}
       />
 
-      <VaultScreen title={t(isMigrate ? "cloudsync.vault.migrate_title" : "cloudsync.vault.setup_title")}>
+      <VaultScreen
+        title={t(isMigrate ? "cloudsync.vault.migrate_title" : "cloudsync.vault.setup_title")}
+        footer={<VaultButton label={t("cloudsync.vault.continue")} onPress={submit} disabled={loading} />}
+      >
         <VaultDescription>{t(isMigrate ? "cloudsync.vault.migrate_desc" : "cloudsync.vault.setup_desc")}</VaultDescription>
 
         <VaultInfoCard
@@ -115,13 +118,13 @@ export default function VaultSetupScreen() {
           placeholder={t("cloudsync.vault.passphrase_confirm_placeholder")}
           value={confirm}
           onChangeText={setConfirm}
+          returnKeyType="done"
+          onSubmitEditing={submit}
         />
 
         <VaultError message={error} />
 
         <VaultBackupButton />
-
-        <VaultButton label={t("cloudsync.vault.continue")} onPress={submit} disabled={loading} />
       </VaultScreen>
     </>
   );
