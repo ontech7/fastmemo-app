@@ -58,7 +58,8 @@ src/
     kanban/            # KanbanBoard, KanbanColumn, KanbanCard, KanbanDragOverlay
     settings/          # Settings UI system (Section, SectionHeader, SectionWrapper, items/)
     vault/             # VaultScaffold (shared chrome for the 6 vault screens) + VaultBackupButton (optional quick export before a risky op)
-    dialogs/           # ComplexDialog, ConfirmOrCancelDialog, SecretPassphraseDialog, VaultPromptDialog
+    dialogs/           # ComplexDialog, ConfirmOrCancelDialog, SecretPassphraseDialog, VaultPromptDialog; KEEP_DIALOG_TOUCHES (spread
+                       #   onto a library <Dialog>: a tap on its own content doesn't reach the backdrop and close it, native + web)
     inputs/            # BaseInput, CodeInput, SearchNotesInput
     lists/             # FavoriteCategoryList, OrderedCategoryList, OrganizeCategoryList
     todo/              # TodoItem.native.tsx, TodoItem.web.tsx

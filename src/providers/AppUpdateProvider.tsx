@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,7 +9,13 @@ import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import ProgressBar from "@/components/ui/ProgressBar";
 import useNetInfo from "@/hooks/useNetInfo";
 import { checkLatestAppVersion } from "@/libs/api/checkLatestVersion";
-import { clearDownloadedApk, downloadAndInstallApk, ensureInstallAllowed, isApkBuild } from "@/libs/apkUpdater";
+import {
+  clearDownloadedApk,
+  downloadAndInstallApk,
+  ensureInstallAllowed,
+  isApkBuild,
+  isTrustedApkUrl,
+} from "@/libs/apkUpdater";
 import type { ApkDownload } from "@/libs/apkUpdater";
 import { checkDesktopUpdate as checkSignedDesktopUpdate, installDesktopUpdate } from "@/libs/desktopUpdater";
 import type { DesktopUpdate } from "@/libs/desktopUpdater";
@@ -46,6 +53,8 @@ interface ApkUpdate {
   version: string;
   changelog: string;
   apkUrl: string;
+  /** Bytes, when the site says (older sites don't). */
+  apkSize?: number;
 }
 
 /** GitHub APK: the download under way (bytes). */
@@ -114,9 +123,15 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
 
     // A desktop hotfix isn't in the latest release (that one is the store version's): its own page has its builds.
     setReleaseUrl((desktop && data.desktop.releaseUrl) || data.releaseUrl);
-    // A release without an APK: the icon opens its GitHub page instead (pickUpdateUrl).
-    if (!desktop && isApkBuild() && data.mobile.apkUrl) {
-      setApkUpdate({ version: latest, changelog: data.mobile.changelog, apkUrl: data.mobile.apkUrl });
+    // A release without an APK: the icon opens its GitHub page instead (pickUpdateUrl). An APK from anywhere else than the
+    // app's GitHub releases is never offered. The release being downloaded stays the one shown until it's done.
+    const { apkUrl, apkSize } = data.mobile;
+    if (!desktop && isApkBuild() && apkUrl && isTrustedApkUrl(apkUrl)) {
+      setApkUpdate((previous) =>
+        apkDownloadRef.current || isAskingInstallRef.current
+          ? previous
+          : { version: latest, changelog: data.mobile.changelog, apkUrl, apkSize }
+      );
     }
     return true;
   }, []);
@@ -177,8 +192,11 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
     download.done
       .then(() => setIsApkPromptOpen(false))
       .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message !== "cancelled") toast(`${t("error")}: ${message}`);
+        if (error instanceof Error && error.message === "cancelled") return;
+        Sentry.captureException(error);
+        // the native check: the file isn't FastMemo signed with this app's key (a tampered or wrong asset)
+        const notVerified = (error as { code?: string } | null)?.code === "E_NOT_VERIFIED";
+        toast(t(notVerified ? "generalsettings.update_not_verified" : "generalsettings.update_download_failed"));
       })
       .finally(() => {
         apkDownloadRef.current = null;
@@ -330,6 +348,9 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
               </View>
             )}
             <Text style={styles.noteText}>{t("generalsettings.update_confirm")}</Text>
+            {apkUpdate.apkSize != null && apkUpdate.apkSize > 0 && (
+              <Text style={styles.size}>{t("generalsettings.update_size", { size: toMegabytes(apkUpdate.apkSize) })}</Text>
+            )}
           </ComplexDialog>
         ) : (
           // Hide (or a tap outside) and the download goes on: the icon shows it again.
@@ -379,6 +400,13 @@ const styles = StyleSheet.create({
   // the wrapped lines stay under the text, not under the bullet
   noteLine: {
     flex: 1,
+  },
+  size: {
+    marginTop: PADDING_MARGIN.sm,
+    color: COLOR.textMuted,
+    fontFamily: FONT.medium,
+    fontSize: FONTSIZE.small,
+    fontVariant: ["tabular-nums"],
   },
   download: {
     gap: PADDING_MARGIN.md,

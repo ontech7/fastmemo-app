@@ -519,6 +519,10 @@ const fr = {
     update_hide: "Masquer",
     update_check_failed: "Impossible de vérifier les mises à jour : réessayez plus tard.",
     update_not_allowed: "Sans cette autorisation, Fast Memo ne peut pas installer la mise à jour.",
+    update_download_failed: "Impossible de télécharger la mise à jour : réessayez plus tard.",
+    update_not_verified:
+      "Le fichier téléchargé n'est pas une mise à jour de Fast Memo signée comme cette app : il n'a pas été installé.",
+    update_size: "Téléchargement : {{size}} Mo",
     no_updates: "Vous utilisez la dernière version.",
     feedback_and_help: "Commentaires et Aide",
     help: "Aider",

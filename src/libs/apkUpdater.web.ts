@@ -9,6 +9,10 @@ export function isApkBuild(): boolean {
   return false;
 }
 
+export function isTrustedApkUrl(_url: string): boolean {
+  return false;
+}
+
 export async function ensureInstallAllowed(): Promise<boolean> {
   return false;
 }

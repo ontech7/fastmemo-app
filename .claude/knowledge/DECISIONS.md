@@ -1332,6 +1332,12 @@ packages: it can't be in the Play build.
   a progress bar in the dialog, cancel; tapping outside hides it and the download goes on), flushes the editors, and hands it to the
   installer (a content URI from expo-file-system's provider). The first time, Android asks to let FastMemo install apps.
   Settings → Check updates asks the API again. A release without an APK: the icon opens its GitHub page.
+- **Only FastMemo, signed by its key.** The app downloads only from `https://github.com/ontech7/fastmemo-app/releases/download/`
+  (`isTrustedApkUrl`: the site relays the URL, it isn't trusted to choose it), and the native module checks the file before
+  the installer opens: the same package name and the same signing certificates as the installed app (`getPackageArchiveInfo`),
+  else `E_NOT_VERIFIED` and a toast. Android would refuse a wrong signature anyway, but only after the user confirmed. The
+  dialog shows the APK's size (`mobile.apkSize`) before the download; a newer release seen during a download doesn't replace
+  the one being downloaded. Download errors reach Sentry, the user gets a translated message.
 - **OTAs for both.** The APK's fingerprint differs, so each OTA is published twice from the same code: once as before, once
   with `FASTMEMO_DISTRIBUTION=github` (Publish OTA workflow, `builds` input to finish a half-done run). `ota-guard.sh` checks
   both fingerprints: an OTA that would reach no APK is refused instead of published unseen.

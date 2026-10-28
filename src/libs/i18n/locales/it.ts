@@ -515,6 +515,10 @@ const it = {
     update_hide: "Nascondi",
     update_check_failed: "Impossibile controllare gli aggiornamenti: riprova più tardi.",
     update_not_allowed: "Senza quel permesso Fast Memo non può installare l'aggiornamento.",
+    update_download_failed: "Impossibile scaricare l'aggiornamento: riprova più tardi.",
+    update_not_verified:
+      "Il file scaricato non è un aggiornamento di Fast Memo firmato come questa app: non è stato installato.",
+    update_size: "Download: {{size}} MB",
     no_updates: "Stai utilizzando l'ultima versione.",
     feedback_and_help: "Feedback e Assistenza",
     help: "Aiuto",

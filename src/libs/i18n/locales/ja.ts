@@ -510,6 +510,10 @@ const ja = {
     update_hide: "隠す",
     update_check_failed: "アップデートを確認できませんでした。後でもう一度お試しください。",
     update_not_allowed: "この権限がないと、Fast Memo はアップデートをインストールできません。",
+    update_download_failed: "アップデートをダウンロードできませんでした。後でもう一度お試しください。",
+    update_not_verified:
+      "ダウンロードしたファイルは、このアプリと同じ署名の Fast Memo アップデートではないため、インストールしませんでした。",
+    update_size: "ダウンロード: {{size}} MB",
     no_updates: "最新バージョンを使用しています。",
     feedback_and_help: "フィードバックとヘルプ",
     help: "ヘルプ",

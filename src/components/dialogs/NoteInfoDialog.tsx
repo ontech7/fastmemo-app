@@ -8,6 +8,7 @@ import KeyIcon from "react-native-heroicons/outline/KeyIcon";
 import SignalSlashIcon from "react-native-heroicons/outline/SignalSlashIcon";
 import StarIcon from "react-native-heroicons/outline/StarIcon";
 
+import { KEEP_DIALOG_TOUCHES } from "@/components/dialogs/keepDialogTouches";
 import { NOTE_TYPES } from "@/constants/note-types";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { formatDateTime, reverseDate } from "@/utils/date";
@@ -54,8 +55,7 @@ export default function NoteInfoDialog({ open, note, onClose }: Props) {
   ].filter(Boolean) as { key: string; label: string; Icon: typeof StarIcon }[];
 
   return (
-    // claims its own touches: a tap on its text would reach the backdrop's touchable and close it (see ComplexDialog)
-    <Dialog open={open} slideFrom="center" onPressOut={onClose} onStartShouldSetResponder={() => true}>
+    <Dialog open={open} slideFrom="center" onPressOut={onClose} {...KEEP_DIALOG_TOUCHES}>
       <DialogHeader>
         <DialogTitle adornmentStart={<InformationCircleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}>
           {t("note.info.title")}

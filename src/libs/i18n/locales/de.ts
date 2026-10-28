@@ -519,6 +519,10 @@ const de = {
     update_hide: "Ausblenden",
     update_check_failed: "Updates konnten nicht geprüft werden: Versuchen Sie es später erneut.",
     update_not_allowed: "Ohne diese Berechtigung kann Fast Memo das Update nicht installieren.",
+    update_download_failed: "Das Update konnte nicht heruntergeladen werden: Versuchen Sie es später erneut.",
+    update_not_verified:
+      "Die heruntergeladene Datei ist kein Fast-Memo-Update mit der Signatur dieser App: Sie wurde nicht installiert.",
+    update_size: "Download: {{size}} MB",
     no_updates: "Sie verwenden die neueste Version.",
     feedback_and_help: "Feedback und Hilfe",
     help: "Hilfe",

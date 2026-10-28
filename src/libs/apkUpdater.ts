@@ -7,16 +7,28 @@ import { AppState, NativeModules } from "react-native";
 interface FastmemoInstallerApi {
   canInstallAsync(): Promise<boolean>;
   openInstallSettingsAsync(): Promise<void>;
-  installAsync(contentUri: string): Promise<void>;
+  /** Rejects with code E_NOT_VERIFIED when the APK isn't this app signed with this app's key. */
+  installAsync(fileUri: string, contentUri: string): Promise<void>;
 }
 
 const installer: FastmemoInstallerApi | undefined = NativeModules.FastmemoInstaller;
 
 const APK_PATH = `${FileSystem.cacheDirectory}fastmemo-update.apk`;
 
+/** The only place an update is downloaded from: the app's GitHub releases (the API only relays the asset's URL). */
+const APK_URL_PREFIX = "https://github.com/ontech7/fastmemo-app/releases/download/";
+
+/** Past this, the wait for the user to come back from the system settings ends (e.g. split screen: the app never left). */
+const INSTALL_SETTINGS_TIMEOUT_MS = 2 * 60 * 1000;
+
 /** True in the APK published on GitHub: it updates itself, the Play build updates through the store. */
 export function isApkBuild(): boolean {
   return installer != null;
+}
+
+/** Whether `url` is an APK attached to one of the app's GitHub releases. */
+export function isTrustedApkUrl(url: string): boolean {
+  return url.startsWith(APK_URL_PREFIX) && !url.includes("..") && url.toLowerCase().endsWith(".apk");
 }
 
 export interface ApkDownload {
@@ -25,15 +37,21 @@ export interface ApkDownload {
   cancel(): void;
 }
 
-/** Resolves the next time the app comes back to the foreground. */
-function nextForeground(): Promise<void> {
-  return new Promise((resolve) => {
+/** Resolves the next time the app comes back to the foreground, or after INSTALL_SETTINGS_TIMEOUT_MS. */
+function nextForeground(): { back: Promise<void>; stop: () => void } {
+  let stop = () => {};
+  const back = new Promise<void>((resolve) => {
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state !== "active") return;
-      subscription.remove();
-      resolve();
+      if (state === "active") stop();
     });
+    const timer = setTimeout(() => stop(), INSTALL_SETTINGS_TIMEOUT_MS);
+    stop = () => {
+      subscription.remove();
+      clearTimeout(timer);
+      resolve();
+    };
   });
+  return { back, stop };
 }
 
 /**
@@ -43,8 +61,13 @@ function nextForeground(): Promise<void> {
 export async function ensureInstallAllowed(): Promise<boolean> {
   if (!installer) return false;
   if (await installer.canInstallAsync()) return true;
-  const back = nextForeground();
-  await installer.openInstallSettingsAsync();
+  const { back, stop } = nextForeground();
+  try {
+    await installer.openInstallSettingsAsync();
+  } catch (error) {
+    stop();
+    throw error;
+  }
   await back;
   return installer.canInstallAsync();
 }
@@ -65,6 +88,7 @@ export function downloadAndInstallApk(
 
   const done = (async () => {
     if (!installer) throw new Error("No installer in this build");
+    if (!isTrustedApkUrl(url)) throw new Error(`Not a FastMemo release asset: ${url}`);
     await FileSystem.deleteAsync(APK_PATH, { idempotent: true });
     if (cancelled) throw new Error("cancelled");
     const result = await download.downloadAsync();
@@ -72,7 +96,7 @@ export function downloadAndInstallApk(
     if (cancelled || !result) throw new Error("cancelled");
     if (result.status !== 200) throw new Error(`HTTP ${result.status}`);
     await flush();
-    await installer.installAsync(await FileSystem.getContentUriAsync(APK_PATH));
+    await installer.installAsync(APK_PATH, await FileSystem.getContentUriAsync(APK_PATH));
   })();
 
   return {

@@ -9,6 +9,8 @@ import {
 } from "@ontech7/react-native-dialog";
 import { ReactNode } from "react";
 
+import { KEEP_DIALOG_TOUCHES } from "@/components/dialogs/keepDialogTouches";
+
 interface DialogActionConfig {
   label: string;
   handler: () => void;
@@ -43,13 +45,7 @@ export default function ComplexDialog({
   children = null,
 }: Props) {
   return (
-    <Dialog
-      open={open}
-      slideFrom="center"
-      onPressOut={onDismiss ?? undefined}
-      // The backdrop's touchable wraps the dialog too: a tap on its text would close it. The dialog claims its own touches.
-      onStartShouldSetResponder={() => true}
-    >
+    <Dialog open={open} slideFrom="center" onPressOut={onDismiss ?? undefined} {...KEEP_DIALOG_TOUCHES}>
       <DialogHeader>
         <DialogTitle adornmentStart={adornmentStart}>{title}</DialogTitle>
         {description && <DialogDescription>{description}</DialogDescription>}
