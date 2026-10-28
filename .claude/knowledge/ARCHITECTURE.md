@@ -58,7 +58,8 @@ src/
     kanban/            # KanbanBoard, KanbanColumn, KanbanCard, KanbanDragOverlay
     settings/          # Settings UI system (Section, SectionHeader, SectionWrapper, items/)
     vault/             # VaultScaffold (shared chrome for the 6 vault screens) + VaultBackupButton (optional quick export before a risky op)
-    dialogs/           # ComplexDialog, ConfirmOrCancelDialog, SecretPassphraseDialog, VaultPromptDialog
+    dialogs/           # ComplexDialog, ConfirmOrCancelDialog, SecretPassphraseDialog, VaultPromptDialog; KEEP_DIALOG_TOUCHES (spread
+                       #   onto a library <Dialog>: a tap on its own content doesn't reach the backdrop and close it, native + web)
     inputs/            # BaseInput, CodeInput, SearchNotesInput
     lists/             # FavoriteCategoryList, OrderedCategoryList, OrganizeCategoryList
     todo/              # TodoItem.native.tsx, TodoItem.web.tsx
@@ -68,7 +69,8 @@ src/
     webhook/           # WebhookItem
     renderers/         # ContextMenu
     ui/                # Design primitives: AppBackground, GlassSurface, IconChip, PopupMenu (under a trigger, or `at` a point),
-                       # ImageViewer (full screen, pinch/pan/double tap), TourSpotlight, TourTip, BlinkingDot
+                       # ImageViewer (full screen, pinch/pan/double tap), TourSpotlight, TourTip, BlinkingDot,
+                       # ProgressBar (a download: AI model, APK update)
     # Standalone: CategoryIcon, LoadingSpinner, SafeAreaView, Sidebar, VirtualNumberKeyboard
 
   slicers/             # Redux state management
@@ -118,6 +120,9 @@ src/
       index.ts         # Barrel export (native)
       index.web.ts     # No-op stubs for web
     haptics/           # Platform-split: native (expo-haptics) / web (no-op stubs)
+    apkUpdater.ts      # GitHub APK only (ADR-031): isApkBuild() (its installer module is linked), download + hand-off to
+                       # the system installer; .web.ts stubs. The module: modules-apk/fastmemo-installer, linked by
+                       # react-native.config.js only with FASTMEMO_DISTRIBUTION=github (eas.json production-apk)
     i18n/              # i18next setup + 7 locale files
     storage/           # noteStore.ts: the notes one value per note (ADR-018), over noteStoreBackend (native: files in
                        #   fastmemo-notes/, async legacy API; web: IndexedDB `v2:*`, Web Locks); notes.ts: the app's
@@ -172,6 +177,7 @@ src/
     openUrl.ts         # Cross-platform URL opener
 
   providers/           # React context providers
+    AppUpdateProvider.tsx   # Update check (/api/version): the icon, the desktop installer prompt, the APK's prompt + download
     KanbanDragProvider.tsx  # Kanban drag-and-drop state (reanimated shared values)
     SyncOnProvider.tsx      # Headless: runs the sync engine while connected + unlocked, turns its events into UI
 

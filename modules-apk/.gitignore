@@ -1,0 +1,2 @@
+# Gradle output of the GitHub APK's modules. Not in the root .gitignore: that one is part of the fingerprint (LL-071).
+*/android/build/

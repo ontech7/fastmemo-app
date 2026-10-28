@@ -6,6 +6,11 @@
 # version), so each one is counted on top of it: tag vX.Y.Z+ota.N, shown in-app as "X.Y.Z · OTA N"
 # (EXPO_PUBLIC_OTA_REVISION).
 #
+# Two builds share the channel (ADR-031): the Play build and the GitHub APK, whose fingerprint differs (its updater is
+# linked only with FASTMEMO_DISTRIBUTION=github). Each OTA is published once per build, same code and revision. If the
+# second publish fails, run again with `builds: github` (or `play`): the tag is created only once both are live, so the
+# rerun gets the same revision number.
+#
 # Needs the EXPO_TOKEN repository secret (expo.dev → Account settings → Access tokens).
 
 name: Publish OTA
@@ -17,6 +22,12 @@ on:
         description: "What the OTA fixes (default: last commit subject)"
         required: false
         type: string
+      builds:
+        description: "Which builds get it: both, or only one to finish a run that published the other"
+        required: false
+        type: choice
+        options: [both, play, github]
+        default: both
 
 concurrency:
   group: publish-ota
@@ -71,7 +82,8 @@ jobs:
       - name: Guard against native changes
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: EAS=eas bash scripts/ota-guard.sh
+          BUILDS: ${{ inputs.builds || 'both' }}
+        run: EAS=eas bash scripts/ota-guard.sh "$BUILDS"
 
       - name: Resolve version, revision and message
         id: meta
@@ -108,7 +120,8 @@ jobs:
             echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Publish OTA
+      - name: Publish OTA (Play build)
+        if: inputs.builds != 'github'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           # Inlined into the bundle (not into app.config.ts: that would change the fingerprint and orphan the update).
@@ -118,6 +131,19 @@ jobs:
         run: |
           eas update --channel production --environment production --platform android \
             --message "$TAG · $MESSAGE" --non-interactive
+
+      # The same code for the GitHub APK: FASTMEMO_DISTRIBUTION gives the update the APK's runtime (ADR-031).
+      - name: Publish OTA (GitHub APK)
+        if: inputs.builds != 'play'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          FASTMEMO_DISTRIBUTION: github
+          EXPO_PUBLIC_OTA_REVISION: ${{ steps.meta.outputs.revision }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          MESSAGE: ${{ steps.meta.outputs.message }}
+        run: |
+          eas update --channel production --environment production --platform android \
+            --message "$TAG · $MESSAGE · APK" --non-interactive
 
       # The OTA is already live here: a failure below must not hide that, so it only warns.
       - name: Tag and GitHub Release
