@@ -1302,3 +1302,62 @@ in the 7 locales (≤5 bullets), shown in the app, on Play and by the desktop up
 
 - the release built only from the short changelog: right for the API, too thin for the release page;
 - keeping the developer logs: nobody reads them, the commits and ADRs already hold that detail.
+
+---
+
+## ADR-031: A GitHub APK That Updates Itself, Next to the Play Build
+
+**Status:** Accepted (2026-10-28, user decisions: an APK on GitHub for anyone without Google Play, the same app and modules as
+the Play build; in-app install over a browser download; OTAs for both builds, published twice, over an APK without OTAs; the
+first APK ships as 4.0.0)  
+**Context:** FastMemo was only on Google Play. Users without Google services, or who don't want to depend on a store, had no
+way to install it on Android. An APK published on GitHub can't update through Play: it needs its own updater. Installing an
+APK from inside an app needs `REQUEST_INSTALL_PACKAGES`, which Google allows only to apps whose core function is installing
+packages: it can't be in the Play build.
+
+**Decision:**
+
+- **Two builds, one channel.** The `production-apk` EAS profile extends `production` (same EAS environment, channel
+  `production`, `buildType: apk`, `autoIncrement: false`) and sets `FASTMEMO_DISTRIBUTION=github`.
+- **The updater exists only in the APK.** `modules-apk/fastmemo-installer` (a plain React Native module, Kotlin) declares
+  `REQUEST_INSTALL_PACKAGES` and opens the system installer on a downloaded APK. `react-native.config.js` links it only when
+  `FASTMEMO_DISTRIBUTION=github`: Expo modules can't be linked conditionally (`expo.autolinking` is read from `package.json`
+  only), React Native ones can. Outside `modules/`, which Expo scans and would link everywhere. The Play build's native code
+  and fingerprint don't change (4.0.0's `689318…` stayed the same).
+- **The JS knows the build by the module** (`isApkBuild()`: `NativeModules.FastmemoInstaller` present). Not by an app config
+  field (an OTA's manifest replaces it, and it would move the Play build's fingerprint), not by the installer package (wrong for a
+  Play APK from a mirror).
+- **The update.** `/api/version` gives `mobile.apkUrl` (the latest release's first `.apk` asset). On a newer version the APK's
+  icon opens a dialog with the release's short notes; Install downloads the APK into the cache (`createDownloadResumable`,
+  a progress bar in the dialog, cancel; tapping outside hides it and the download goes on), flushes the editors, and hands it to the
+  installer (a content URI from expo-file-system's provider). The first time, Android asks to let FastMemo install apps.
+  Settings → Check updates asks the API again. A release without an APK: the icon opens its GitHub page.
+- **Only FastMemo, signed by its key.** The app downloads only from `https://github.com/ontech7/fastmemo-app/releases/download/`
+  (`isTrustedApkUrl`: the site relays the URL, it isn't trusted to choose it), and the native module checks the file before
+  the installer opens: the same package name and the same signing certificates as the installed app (`getPackageArchiveInfo`),
+  else `E_NOT_VERIFIED` and a toast. Android would refuse a wrong signature anyway, but only after the user confirmed. The
+  dialog shows the APK's size (`mobile.apkSize`) before the download; a newer release seen during a download doesn't replace
+  the one being downloaded. Download errors reach Sentry, the user gets a translated message.
+- **OTAs for both.** The APK's fingerprint differs, so each OTA is published twice from the same code: once as before, once
+  with `FASTMEMO_DISTRIBUTION=github` (Publish OTA workflow, `builds` input to finish a half-done run). `ota-guard.sh` checks
+  both fingerprints: an OTA that would reach no APK is refused instead of published unseen.
+- **Releases:** after the Play build, `npx eas-cli build -p android --profile production-apk` (no `package.json` script: the
+  scripts are in the fingerprint, LL-071), and the APK uploaded to the GitHub release (`FastMemo-X.Y.Z.apk`).
+
+**Alternatives rejected:**
+
+- the browser downloads the APK (no permission, identical builds): a detour through the browser's downloads and its own "install
+  unknown apps" grant, for every update;
+- the permission in both builds: Play review rejects it;
+- no OTAs for the APK (a new APK as the hotfix): simpler, but the two builds drift apart; the user wanted them 1:1;
+- an app config flag or a config plugin writing native code: an OTA's manifest replaces the flag, and a plugin writing Kotlin
+  into `android/` is fragile.
+
+**Trade-offs:**
+
+- each OTA is published twice (twice the upload and the workflow's time); an APK build is needed for every version, or the
+  OTA guard stops;
+- the Play and APK builds are signed with different keys: switching between them means uninstalling (and losing local data not
+  in the cloud);
+- the APK gets a new version as soon as the GitHub release is out, Play users after the review;
+- a cancelled install downloads the APK again next time.

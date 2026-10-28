@@ -1933,6 +1933,31 @@ fingerprint is now the same with no variable, `EAS_BUILD_PROFILE=production` or 
 
 ---
 
+### LL-071: A `package.json` script, then a `.gitignore` line, moved the fingerprint off the store build
+
+**Date:** 2026-10-28  
+**Severity:** Medium (caught before any build: an OTA from that code would have reached no installed app)  
+**Category:** Release / EAS / Fingerprint  
+**What happened:** Adding one script (`android-build:apk`) to `package.json` changed the Android fingerprint
+(`689318…` → `d1bb97…`): `eas fingerprint:compare` showed "Modified content: package.json scripts" and nothing else. The user
+saw the OTA lane to 4.0.0 close for a line of tooling. Later in the same work, a rule added to the root `.gitignore`
+(`modules-apk/*/android/build/`) moved it again (`npx fingerprint fingerprint:generate --debug` listed `.gitignore` as
+`bareGitIgnore`).
+
+**Root cause:** `@expo/fingerprint` hashes the `scripts` of `package.json` and the root `.gitignore` (its default sources),
+whatever they contain.
+
+**Fix:** the script removed (the GitHub APK is built with `npx eas-cli build --profile production-apk`); the ignore rule moved
+to `modules-apk/.gitignore` (not hashed). The fingerprint is back to the store build's.  
+**Rule:** between store releases, don't touch `package.json` scripts or the root `.gitignore`. After any change outside
+`src/` and `app/`, compare: `eas fingerprint:compare <store build hash> --environment production`, or locally
+`npx fingerprint fingerprint:generate --platform android --debug` with the production `EXPO_PUBLIC_*` values.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-10-28 **Resolved in:** branch
+`feat/apk-updater`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
