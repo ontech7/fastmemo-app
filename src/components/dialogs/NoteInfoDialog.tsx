@@ -54,7 +54,8 @@ export default function NoteInfoDialog({ open, note, onClose }: Props) {
   ].filter(Boolean) as { key: string; label: string; Icon: typeof StarIcon }[];
 
   return (
-    <Dialog open={open} slideFrom="center" onPressOut={onClose}>
+    // claims its own touches: a tap on its text would reach the backdrop's touchable and close it (see ComplexDialog)
+    <Dialog open={open} slideFrom="center" onPressOut={onClose} onStartShouldSetResponder={() => true}>
       <DialogHeader>
         <DialogTitle adornmentStart={<InformationCircleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}>
           {t("note.info.title")}

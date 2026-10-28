@@ -1,0 +1,6 @@
+{
+  "name": "fastmemo-installer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GitHub APK build only: opens the system installer on a downloaded update (ADR-031)"
+}

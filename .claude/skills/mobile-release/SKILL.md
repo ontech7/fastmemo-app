@@ -93,6 +93,11 @@ Run the gate on the code that will be published (`main` after the merge, or the 
 yarn ota:check     # 0 = safe · 2 = no build has this fingerprint/version · 3 = fingerprint or build query failed
 ```
 
+Two builds get each OTA (ADR-031): the Play build and the GitHub APK, whose fingerprint differs (its updater module is linked
+only with `FASTMEMO_DISTRIBUTION=github`). The gate checks both; `yarn ota:check play` / `github` checks one. A version whose APK
+was never built fails on `github`: build it (B4) or, if the user agrees to leave APK users out of this OTA, publish with
+`-f builds=play`.
+
 - **0** → OTA is valid, go to O2.
 - **2** → OTA is impossible (native change, or a version nobody built). Use `state.sh` to say which: `…_builds_for_version=0`
   with `…_builds_any>0` = new version not built yet; both 0 = no baseline; otherwise the fingerprint changed (native dependency,
@@ -123,7 +128,10 @@ gh workflow run publish-ota.yml --ref main -f message="<one line>"
 gh run watch "$(gh run list --workflow publish-ota.yml --branch main --limit 1 --json databaseId --jq '.[0].databaseId')" --exit-status
 ```
 
-- **Green** → live on `production`, tag `vX.Y.Z+ota.N` and its release created.
+- **Green** → live on `production` for both builds, tag `vX.Y.Z+ota.N` and its release created.
+- **Failed on "Publish OTA (GitHub APK)"** → the Play build has it, the APK doesn't, and no tag was created. Re-dispatch with
+  `-f builds=github` (same message): it gets the same revision number and creates the tag. Never re-dispatch `both`: that
+  publishes a second OTA to the Play build.
 - **Failed on the guard** → the change was native after all; nothing was published. Offer the build path (same Sì/No as O1).
 - **Green but the summary says the tag/release failed** → the OTA is live, only the tag step failed. Create the release by hand
   (`gh release create vX.Y.Z+ota.N --target <sha> --title "Mobile vX.Y.Z · OTA N" --notes-file <file> --latest=false`). NEVER
@@ -199,7 +207,12 @@ and ends in a store console the agent cannot reach. Print these, as plain text, 
 
 ```bash
 yarn android-build:prod    # eas build -p android --profile production (channel production, versionCode auto-incremented)
+npx eas-cli build -p android --profile production-apk    # the GitHub APK (ADR-031): same channel, its own fingerprint
 ```
+
+The APK build has no `package.json` script on purpose: the scripts are part of the fingerprint (adding one moved it off the
+4.0.0 store build). Run it after the Play build: it reuses that versionCode (`autoIncrement: false`). Without it, `ota:check`
+fails on `github` for the whole version.
 
 Tell the user, in order:
 
@@ -224,6 +237,10 @@ they say go: `gh workflow run publish.yml --ref main` (add `-f desktop_only=true
 desktop updater too: `latest.json` points installed desktop apps at these builds, so a wrong desktop version here reaches every
 desktop user. Restate the versions about to go out ("mobile vX.Y.Z, desktop vA.B.C") and get an explicit yes first. A failed
 run: **Re-run failed jobs** (the release already exists); a new dispatch is refused while the tag exists.
+
+Then attach the GitHub APK to the release: download it from its EAS build page and
+`gh release upload vX.Y.Z FastMemo-X.Y.Z.apk`. `/api/version` (`mobile.apkUrl`) serves the release's first `.apk`, and installed
+APKs offer it from the update icon; until it is attached, their icon opens the release page.
 
 ### B6 — Close out
 

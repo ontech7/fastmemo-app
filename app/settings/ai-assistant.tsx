@@ -8,6 +8,7 @@ import BackButton from "@/components/buttons/BackButton";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import ProgressBar from "@/components/ui/ProgressBar";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import { selectorAIAssistant, selectorAIModelIsLegacy, setAIAssistant } from "@/slicers/settingsSlice";
 import { toast } from "@/utils/toast";
@@ -288,9 +289,7 @@ export default function AIAssistantScreen() {
 
           {isDownloading && (
             <>
-              <View style={styles.progressBarContainer}>
-                <View style={[styles.progressBar, { width: `${downloadProgress * 100}%` }]} />
-              </View>
+              <ProgressBar progress={downloadProgress} style={styles.progressBar} />
               <Text style={styles.downloadHint}>{t("ai.download_background")}</Text>
             </>
           )}
@@ -444,17 +443,8 @@ const styles = StyleSheet.create({
     color: COLOR.importantIcon,
     fontFamily: FONT.semiBold,
   },
-  progressBarContainer: {
-    height: 4,
-    backgroundColor: COLOR.surfaceMuted,
-    borderRadius: 2,
-    marginTop: PADDING_MARGIN.sm,
-    overflow: "hidden",
-  },
   progressBar: {
-    height: "100%",
-    backgroundColor: COLOR.accentMuted,
-    borderRadius: 2,
+    marginTop: PADDING_MARGIN.sm,
   },
   downloadHint: {
     marginTop: PADDING_MARGIN.sm,

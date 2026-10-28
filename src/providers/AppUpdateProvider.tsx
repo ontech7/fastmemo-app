@@ -1,11 +1,15 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { StyleSheet, Text, View } from "react-native";
 import ArrowDownTrayIcon from "react-native-heroicons/outline/ArrowDownTrayIcon";
 
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
+import ProgressBar from "@/components/ui/ProgressBar";
 import useNetInfo from "@/hooks/useNetInfo";
 import { checkLatestAppVersion } from "@/libs/api/checkLatestVersion";
+import { clearDownloadedApk, downloadAndInstallApk, ensureInstallAllowed, isApkBuild } from "@/libs/apkUpdater";
+import type { ApkDownload } from "@/libs/apkUpdater";
 import { checkDesktopUpdate as checkSignedDesktopUpdate, installDesktopUpdate } from "@/libs/desktopUpdater";
 import type { DesktopUpdate } from "@/libs/desktopUpdater";
 import { flushNow } from "@/libs/flushOnExit";
@@ -14,7 +18,9 @@ import { isTauri } from "@/utils/platform";
 import { toast } from "@/utils/toast";
 import { getCurrentAppVersion, isDesktopOrWeb, isNewerVersion, pickUpdateUrl } from "@/utils/version";
 
-import { COLOR } from "@/constants/styles";
+import type { AppVersionResponse } from "@/types";
+
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 interface AppUpdateContextValue {
   /** True when a newer app version is published for the current platform. */
@@ -28,6 +34,39 @@ interface AppUpdateContextValue {
    * rejects when the check fails.
    */
   checkDesktopUpdate: () => Promise<boolean>;
+  /**
+   * GitHub APK only: ask the API for a newer release and offer to install it. Resolves to whether one was found, or null
+   * when the check failed.
+   */
+  checkApkUpdate: () => Promise<boolean | null>;
+}
+
+/** GitHub APK: a newer release it can install itself (ADR-031). */
+interface ApkUpdate {
+  version: string;
+  changelog: string;
+  apkUrl: string;
+}
+
+/** GitHub APK: the download under way (bytes). */
+interface ApkProgress {
+  percent: number;
+  written: number;
+  total: number;
+}
+
+/** Bytes as megabytes with one decimal ("42.3"). */
+const toMegabytes = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
+
+/** The APK prompt shows this many lines of the release notes at most: the dialog doesn't scroll, its buttons must fit. */
+const APK_NOTES_MAX_LINES = 6;
+
+/** The release notes' bullets, without their "•" (the list draws its own). */
+function noteLines(changelog: string): string[] {
+  return changelog
+    .split("\n")
+    .map((line) => line.replace(/^\s*[•*-]\s*/, "").trim())
+    .filter(Boolean);
 }
 
 /** Desktop: how often a running app looks for a newer build. */
@@ -40,6 +79,7 @@ const AppUpdateContext = createContext<AppUpdateContextValue>({
   releaseUrl: null,
   openUpdate: () => {},
   checkDesktopUpdate: async () => false,
+  checkApkUpdate: async () => false,
 });
 
 /** Shared "an update is available" state, checked once for the whole app. */
@@ -57,8 +97,34 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
   const offeredVersionRef = useRef<string | null>(null);
   // An install runs once: a second one would download and swap the app again.
   const isInstallingRef = useRef(false);
+  // GitHub APK: the release it can install, its prompt, and the download under way (null when none).
+  const [apkUpdate, setApkUpdate] = useState<ApkUpdate | null>(null);
+  const [isApkPromptOpen, setIsApkPromptOpen] = useState(false);
+  const [apkProgress, setApkProgress] = useState<ApkProgress | null>(null);
+  const apkDownloadRef = useRef<ApkDownload | null>(null);
+  const isAskingInstallRef = useRef(false);
 
   const { isConnected } = useNetInfo();
+
+  // Whether `data` has a newer version for this platform; records where to get it.
+  const applyLatest = useCallback((data: AppVersionResponse) => {
+    const desktop = isDesktopOrWeb();
+    const latest = desktop ? data.desktop.version : data.mobile.version;
+    if (!isNewerVersion(getCurrentAppVersion(), latest)) return false;
+
+    // A desktop hotfix isn't in the latest release (that one is the store version's): its own page has its builds.
+    setReleaseUrl((desktop && data.desktop.releaseUrl) || data.releaseUrl);
+    // A release without an APK: the icon opens its GitHub page instead (pickUpdateUrl).
+    if (!desktop && isApkBuild() && data.mobile.apkUrl) {
+      setApkUpdate({ version: latest, changelog: data.mobile.changelog, apkUrl: data.mobile.apkUrl });
+    }
+    return true;
+  }, []);
+
+  // The APK an installed update left in the cache.
+  useEffect(() => {
+    clearDownloadedApk();
+  }, []);
 
   // Check the remote API for a newer version. Re-runs when connectivity is
   // (re)gained; silently no-ops on any failure (see checkLatestAppVersion).
@@ -67,26 +133,63 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
 
     let cancelled = false;
 
-    const checkLatest = async () => {
-      const data = await checkLatestAppVersion();
-      if (cancelled || !data) return;
-
-      const desktop = isDesktopOrWeb();
-      const latest = desktop ? data.desktop.version : data.mobile.version;
-      const current = getCurrentAppVersion();
-
-      if (isNewerVersion(current, latest)) {
-        // A desktop hotfix isn't in the latest release (that one is the store version's): its own page has its builds.
-        setReleaseUrl((desktop && data.desktop.releaseUrl) || data.releaseUrl);
-      }
-    };
-
-    checkLatest();
+    checkLatestAppVersion().then((data) => {
+      if (!cancelled && data) applyLatest(data);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [isConnected]);
+  }, [isConnected, applyLatest]);
+
+  const checkApkUpdate = useCallback(async () => {
+    const data = await checkLatestAppVersion();
+    if (!data) return null;
+    const found = applyLatest(data);
+    if (found) setIsApkPromptOpen(true);
+    return found;
+  }, [applyLatest]);
+
+  const confirmApkUpdate = useCallback(async () => {
+    if (!apkUpdate || apkDownloadRef.current || isAskingInstallRef.current) return;
+
+    // The first time, the system page to let FastMemo install apps; the download starts once the user is back.
+    isAskingInstallRef.current = true;
+    const allowed = await ensureInstallAllowed().catch(() => false);
+    isAskingInstallRef.current = false;
+    if (!allowed) {
+      setIsApkPromptOpen(false);
+      toast(t("generalsettings.update_not_allowed"));
+      return;
+    }
+
+    setApkProgress({ percent: 0, written: 0, total: 0 });
+    // Once per whole percent: the provider re-renders on each change, not on each chunk.
+    const download = downloadAndInstallApk(
+      apkUpdate.apkUrl,
+      (written, total) => {
+        const percent = Math.floor((written / total) * 100);
+        setApkProgress((previous) => (previous?.percent === percent ? previous : { percent, written, total }));
+      },
+      flushNow
+    );
+    apkDownloadRef.current = download;
+    download.done
+      .then(() => setIsApkPromptOpen(false))
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message !== "cancelled") toast(`${t("error")}: ${message}`);
+      })
+      .finally(() => {
+        apkDownloadRef.current = null;
+        setApkProgress(null);
+      });
+  }, [apkUpdate, t]);
+
+  const cancelApkDownload = useCallback(() => {
+    apkDownloadRef.current?.cancel();
+    setIsApkPromptOpen(false);
+  }, []);
 
   // `offerAgain`: show the prompt even for the version already offered (the user asked, from Settings).
   const findDesktopUpdate = useCallback(async (offerAgain: boolean) => {
@@ -162,6 +265,11 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
       setIsDesktopPromptOpen(true);
       return;
     }
+    // GitHub APK: the prompt, or the download under way.
+    if (apkUpdate) {
+      setIsApkPromptOpen(true);
+      return;
+    }
     if (!releaseUrl) return;
     // Desktop: the API saw a release the launch check missed (e.g. it ran offline): prefer the in-app installer.
     if (isTauri()) {
@@ -173,7 +281,9 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
       return;
     }
     openUrl(pickUpdateUrl(releaseUrl));
-  }, [desktopUpdate, releaseUrl, checkDesktopUpdate, t]);
+  }, [desktopUpdate, apkUpdate, releaseUrl, checkDesktopUpdate, t]);
+
+  const apkNotes = apkUpdate ? noteLines(apkUpdate.changelog) : [];
 
   return (
     <AppUpdateContext.Provider
@@ -182,6 +292,7 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
         releaseUrl,
         openUpdate,
         checkDesktopUpdate,
+        checkApkUpdate,
       }}
     >
       {children}
@@ -196,6 +307,105 @@ export default function AppUpdateProvider({ children }: { children: ReactNode })
           confirm={{ label: t("generalsettings.update_install"), handler: confirmDesktopUpdate }}
         />
       )}
+
+      {apkUpdate &&
+        (apkProgress == null ? (
+          <ComplexDialog
+            open={isApkPromptOpen}
+            adornmentStart={<ArrowDownTrayIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}
+            title={`${t("generalsettings.update_available")}: v${apkUpdate.version}`}
+            cancel={{ label: t("cancel"), handler: () => setIsApkPromptOpen(false) }}
+            confirm={{ label: t("generalsettings.update_install"), handler: confirmApkUpdate }}
+            onDismiss={() => setIsApkPromptOpen(false)}
+          >
+            {apkNotes.length > 0 && (
+              <View style={styles.notes}>
+                {apkNotes.slice(0, APK_NOTES_MAX_LINES).map((line, i) => (
+                  <View key={i} style={styles.note}>
+                    <Text style={styles.noteText}>•</Text>
+                    <Text style={[styles.noteText, styles.noteLine]}>{line}</Text>
+                  </View>
+                ))}
+                {apkNotes.length > APK_NOTES_MAX_LINES && <Text style={styles.noteText}>…</Text>}
+              </View>
+            )}
+            <Text style={styles.noteText}>{t("generalsettings.update_confirm")}</Text>
+          </ComplexDialog>
+        ) : (
+          // Hide (or a tap outside) and the download goes on: the icon shows it again.
+          <ComplexDialog
+            open={isApkPromptOpen}
+            adornmentStart={<ArrowDownTrayIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}
+            title={t("generalsettings.update_downloading", { version: apkUpdate.version })}
+            cancel={{ label: t("generalsettings.update_hide"), handler: () => setIsApkPromptOpen(false) }}
+            confirm={{ label: t("cancel"), handler: cancelApkDownload }}
+            onDismiss={() => setIsApkPromptOpen(false)}
+          >
+            <View style={styles.download}>
+              <View style={styles.downloadFigures}>
+                <Text style={styles.downloadPercent}>{apkProgress.percent}%</Text>
+                {apkProgress.total > 0 && (
+                  <Text style={styles.downloadSize}>
+                    {toMegabytes(apkProgress.written)} / {toMegabytes(apkProgress.total)} MB
+                  </Text>
+                )}
+              </View>
+              <ProgressBar progress={apkProgress.percent / 100} thickness={6} glow />
+              <Text style={styles.downloadHint}>{t("generalsettings.update_download_hint")}</Text>
+            </View>
+          </ComplexDialog>
+        ))}
     </AppUpdateContext.Provider>
   );
 }
+
+/* STYLES */
+
+const styles = StyleSheet.create({
+  notes: {
+    gap: PADDING_MARGIN.xs,
+    marginBottom: PADDING_MARGIN.sm,
+  },
+  note: {
+    flexDirection: "row",
+    gap: PADDING_MARGIN.sm,
+  },
+  noteText: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.medium,
+    lineHeight: 21,
+  },
+  // the wrapped lines stay under the text, not under the bullet
+  noteLine: {
+    flex: 1,
+  },
+  download: {
+    gap: PADDING_MARGIN.md,
+    paddingBottom: PADDING_MARGIN.xs,
+  },
+  downloadFigures: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+  },
+  downloadPercent: {
+    color: COLOR.textPrimary,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.subtitle,
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -0.3,
+  },
+  downloadSize: {
+    color: COLOR.textMuted,
+    fontFamily: FONT.medium,
+    fontSize: FONTSIZE.small,
+    fontVariant: ["tabular-nums"],
+  },
+  downloadHint: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    lineHeight: 18,
+  },
+});

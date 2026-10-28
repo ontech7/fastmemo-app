@@ -6,7 +6,8 @@ export interface AppVersionPlatformInfo {
 export interface AppVersionResponse {
   publishedAt: string;
   releaseUrl: string;
-  mobile: AppVersionPlatformInfo;
+  /** `apkUrl`: the GitHub APK attached to the release (ADR-031); missing on older sites and on a release without one. */
+  mobile: AppVersionPlatformInfo & { apkUrl?: string };
   /** `releaseUrl`: the release holding the desktop builds (a desktop-only hotfix has its own); missing on older sites. */
   desktop: AppVersionPlatformInfo & { releaseUrl?: string };
 }

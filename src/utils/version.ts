@@ -1,4 +1,5 @@
 import { configs } from "@/configs";
+import { isApkBuild } from "@/libs/apkUpdater";
 import { isTauri } from "@/utils/platform";
 import { Platform } from "react-native";
 
@@ -74,12 +75,12 @@ export function isNewerVersion(current: string, latest: string): boolean {
  * Returns the best URL to send the user to in order to update the app
  * for the current platform.
  *
- * - Android  -> Play Store listing
+ * - Android  -> Play Store listing (the GitHub APK: `releaseUrl`, ADR-031)
  * - iOS      -> App Store listing
  * - Tauri/Web -> `releaseUrl` from the API response (GitHub release)
  */
 export function pickUpdateUrl(releaseUrl: string): string {
-  if (Platform.OS === "android") return configs.app.playStoreUrl;
+  if (Platform.OS === "android") return isApkBuild() ? releaseUrl : configs.app.playStoreUrl;
   if (Platform.OS === "ios") return configs.app.appStoreUrl;
   return releaseUrl;
 }

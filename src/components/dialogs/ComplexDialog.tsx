@@ -1,4 +1,12 @@
-import { Dialog, DialogAction, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@ontech7/react-native-dialog";
+import {
+  Dialog,
+  DialogAction,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@ontech7/react-native-dialog";
 import { ReactNode } from "react";
 
 interface DialogActionConfig {
@@ -18,6 +26,8 @@ interface Props {
   actionsColumn?: boolean;
   /** Called when the user taps outside the dialog (backdrop). Omit to make it non-dismissible. */
   onDismiss?: (() => void) | null;
+  /** Content between the description and the actions (a list, a progress bar). */
+  children?: ReactNode;
 }
 
 export default function ComplexDialog({
@@ -30,13 +40,21 @@ export default function ComplexDialog({
   alternative = null,
   actionsColumn = false,
   onDismiss = null,
+  children = null,
 }: Props) {
   return (
-    <Dialog open={open} slideFrom="center" onPressOut={onDismiss ?? undefined}>
+    <Dialog
+      open={open}
+      slideFrom="center"
+      onPressOut={onDismiss ?? undefined}
+      // The backdrop's touchable wraps the dialog too: a tap on its text would close it. The dialog claims its own touches.
+      onStartShouldSetResponder={() => true}
+    >
       <DialogHeader>
         <DialogTitle adornmentStart={adornmentStart}>{title}</DialogTitle>
         {description && <DialogDescription>{description}</DialogDescription>}
       </DialogHeader>
+      {children && <DialogBody>{children}</DialogBody>}
       <DialogFooter style={[actionsColumn && { flexDirection: "column", alignItems: "flex-end" }]}>
         {cancel && cancel.handler && (
           <DialogAction onPress={cancel.handler} adornmentEnd={cancel.adornment}>

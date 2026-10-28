@@ -19,6 +19,16 @@
       "environment": "production",
       "autoIncrement": true,
       "channel": "production"
+    },
+    "production-apk": {
+      "extends": "production",
+      "autoIncrement": false,
+      "env": {
+        "FASTMEMO_DISTRIBUTION": "github"
+      },
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {

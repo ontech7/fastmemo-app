@@ -1,4 +1,5 @@
 import { configs } from "@/configs";
+import { isApkBuild } from "@/libs/apkUpdater";
 import { useAppUpdate } from "@/providers/AppUpdateProvider";
 import { openUrl } from "@/utils/openUrl";
 import { isTauri } from "@/utils/platform";
@@ -19,7 +20,7 @@ interface Props {
 
 export default function SectionItem_CheckUpdates({ isLast }: Props) {
   const { t } = useTranslation();
-  const { updateAvailable, checkDesktopUpdate } = useAppUpdate();
+  const { updateAvailable, checkDesktopUpdate, checkApkUpdate } = useAppUpdate();
   const [isChecking, setIsChecking] = useState(false);
 
   // SectionItem_DeveloperOptions is the only entry after this one in SECTION_INFO,
@@ -42,6 +43,13 @@ export default function SectionItem_CheckUpdates({ isLast }: Props) {
       } finally {
         setIsChecking(false);
       }
+    } else if (isApkBuild()) {
+      setIsChecking(true);
+      // A found update opens the install prompt (AppUpdateProvider).
+      const found = await checkApkUpdate();
+      setIsChecking(false);
+      if (found === null) toast(t("generalsettings.update_check_failed"));
+      else if (!found) toast(t("generalsettings.no_updates"));
     } else {
       openUrl(
         Platform.OS === "web"
