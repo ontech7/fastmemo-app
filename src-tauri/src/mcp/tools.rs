@@ -94,18 +94,21 @@ impl Tool {
             Tool::CreateNote => {
                 "Creates a note in Fast Memo. Pick the type when the user didn't say; text is the usual choice. \
 Keep the title short, about 60 characters. `category` must be a name returned by fastmemo_list_categories; \
-omit it when none fits. For a text note, `text` is HTML: p, h1-h3, ul, ol, li, strong, em, code, pre, \
-blockquote and a are supported. Returns the note's id and rev."
+omit it when none fits. Give the content that matches the type: `text` for a text note, `items` for a todo, \
+`tabs` for a code note, `columns` for a kanban. For a text note, `text` is HTML: p, h1-h3, ul, ol, li, strong, \
+em, code, pre, blockquote and a are supported. Returns the note's id and rev."
             }
             Tool::ListCategories => "Lists the categories that exist in Fast Memo. Categories can't be created through MCP.",
             Tool::SearchNotes => {
                 "Finds notes by title or content. Without a query, returns the most recently updated notes. Each result \
 has the id, title, type, category, updated time, important and read-only flags, and a short snippet. Locked and \
-hidden notes never appear. Use `cursor` from the previous page to get the next one."
+hidden notes never appear. When there are more results, the reply has `nextOffset`: pass it as `offset` to get \
+the next page."
             }
             Tool::ReadNote => {
                 "Reads one note: its content and its rev. Images in a text note are replaced by a placeholder. \
-Locked and hidden notes can't be read."
+Locked and hidden notes can't be read. A long note comes in parts: when the result has `nextOffset`, call again \
+with that value as `offset` (in characters) to continue."
             }
             Tool::SetNoteFlags => {
                 "Sets flags on an existing note. `important` can be set or cleared; `readOnly` and `locked` can only be \
@@ -122,7 +125,13 @@ or that it is up to date. It doesn't install anything."
             Tool::EditNote => {
                 "Changes an existing note. Needs the `rev` from the last read or creation of that note; if the note \
 changed since, the edit is refused and the note must be read again. Read-only notes can't be edited. \
-Without the user's permission for edits, only notes created in this same session can be edited."
+Without the user's permission for edits, only notes created in this same session can be edited. \
+Give only the operations you need. All notes: `title`, `category` (a name from fastmemo_list_categories, or \
+null for the default category). Text notes: `appendHtml` adds HTML at the end, `replaceHtml` replaces the \
+whole content (refused when the note holds images); both are HTML. Todo notes: `addItems`, `updateItems` \
+(by item id), `removeItemIds`. Kanban notes: `addColumns`, `addCards` (to a column id), `moveCards` (to \
+another column), `removeCardIds`. Code notes: `addTabs`, `updateTabs` (by tab id). The ids come from \
+fastmemo_read_note. Returns the note's new rev."
             }
             Tool::TrashNote => {
                 "Moves a note to the trash, where the user can restore it. Read-only notes can't be trashed. \
@@ -132,7 +141,6 @@ It doesn't delete anything permanently."
     }
 
     fn input_schema(self) -> Value {
-        let id = json!({"type": "string", "description": "The note's id."});
         match self {
             Tool::CreateNote => json!({
                 "type": "object",
@@ -147,43 +155,18 @@ It doesn't delete anything permanently."
                         "type": "string",
                         "description": "For type text: the content as HTML (p, h1-h3, ul, ol, li, strong, em, code, pre, blockquote, a)."
                     },
-                    "items": {
-                        "type": "array",
-                        "description": "For type todo: the items.",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "text": {"type": "string"},
-                                "done": {"type": "boolean"}
-                            },
-                            "required": ["text"]
-                        }
-                    },
-                    "tabs": {
-                        "type": "array",
-                        "description": "For type code: the tabs.",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "name": {"type": "string"},
-                                "language": {"type": "string"},
-                                "code": {"type": "string"}
-                            },
-                            "required": ["code"]
-                        }
-                    },
-                    "columns": {
-                        "type": "array",
-                        "description": "For type kanban: the columns, each with its cards.",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "title": {"type": "string"},
-                                "cards": {"type": "array", "items": {"type": "string"}}
-                            },
-                            "required": ["title"]
-                        }
-                    },
+                    "items": array_of(
+                        "For type todo: the items.",
+                        todo_item_schema(),
+                    ),
+                    "tabs": array_of(
+                        "For type code: the tabs.",
+                        code_tab_schema(),
+                    ),
+                    "columns": array_of(
+                        "For type kanban: the columns, each with its cards.",
+                        kanban_column_schema(),
+                    ),
                     "category": {
                         "type": "string",
                         "description": "A name from fastmemo_list_categories. Omit it when none fits."
@@ -200,18 +183,30 @@ It doesn't delete anything permanently."
                 "properties": {
                     "query": {"type": "string", "description": "Text to look for in titles and content."},
                     "limit": {"type": "integer", "minimum": 1, "maximum": 50},
-                    "cursor": {"type": "string", "description": "The nextCursor of the previous page."}
+                    "offset": {"type": "integer", "minimum": 0, "description": "The nextOffset of the previous page."}
                 }
             }),
-            Tool::ReadNote | Tool::TrashNote => json!({
+            Tool::ReadNote => json!({
                 "type": "object",
-                "properties": {"id": id},
+                "properties": {
+                    "id": note_id(),
+                    "offset": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Where to continue, in characters: the nextOffset of the previous result."
+                    }
+                },
+                "required": ["id"]
+            }),
+            Tool::TrashNote => json!({
+                "type": "object",
+                "properties": {"id": note_id()},
                 "required": ["id"]
             }),
             Tool::SetNoteFlags => json!({
                 "type": "object",
                 "properties": {
-                    "id": id,
+                    "id": note_id(),
                     "important": {"type": "boolean"},
                     "readOnly": {"type": "boolean", "enum": [true], "description": "Can only be set to true."},
                     "locked": {"type": "boolean", "enum": [true], "description": "Can only be set to true."}
@@ -227,55 +222,113 @@ It doesn't delete anything permanently."
             Tool::EditNote => json!({
                 "type": "object",
                 "properties": {
-                    "id": id,
+                    "id": note_id(),
                     "rev": {"type": "integer", "description": "The rev from the last read or creation of this note."},
                     "title": {"type": "string"},
-                    "category": {"type": "string", "description": "A name from fastmemo_list_categories."},
-                    "text": {"type": "string", "description": "Text note: HTML content."},
-                    "textMode": {
-                        "type": "string",
-                        "enum": ["append", "replace"],
-                        "description": "Text note: add `text` at the end, or replace the content. Defaults to append."
+                    "category": {
+                        "type": ["string", "null"],
+                        "description": "A name from fastmemo_list_categories, or null for the default category."
                     },
-                    "items": {
-                        "type": "array",
-                        "description": "Todo note: the items to set.",
-                        "items": {
-                            "type": "object",
-                            "properties": {"text": {"type": "string"}, "done": {"type": "boolean"}},
-                            "required": ["text"]
-                        }
-                    },
-                    "columns": {
-                        "type": "array",
-                        "description": "Kanban note: the columns to set, each with its cards.",
-                        "items": {
+                    "appendHtml": {"type": "string", "description": "Text note: HTML added at the end."},
+                    "replaceHtml": {"type": "string", "description": "Text note: HTML that replaces the whole content."},
+                    "addItems": array_of("Todo note: items to add.", todo_item_schema()),
+                    "updateItems": array_of(
+                        "Todo note: items to change, by id.",
+                        json!({
                             "type": "object",
                             "properties": {
-                                "title": {"type": "string"},
-                                "cards": {"type": "array", "items": {"type": "string"}}
+                                "id": {"type": "string"},
+                                "text": {"type": "string"},
+                                "checked": {"type": "boolean"}
                             },
-                            "required": ["title"]
-                        }
-                    },
-                    "tabs": {
-                        "type": "array",
-                        "description": "Code note: the tabs to set.",
-                        "items": {
+                            "required": ["id"]
+                        }),
+                    ),
+                    "removeItemIds": array_of("Todo note: ids of the items to remove.", json!({"type": "string"})),
+                    "addColumns": array_of(
+                        "Kanban note: columns to add.",
+                        json!({
+                            "type": "object",
+                            "properties": {"name": {"type": "string"}, "color": {"type": "string"}},
+                            "required": ["name"]
+                        }),
+                    ),
+                    "addCards": array_of(
+                        "Kanban note: cards to add.",
+                        json!({
+                            "type": "object",
+                            "properties": {"columnId": {"type": "string"}, "text": {"type": "string"}},
+                            "required": ["columnId", "text"]
+                        }),
+                    ),
+                    "moveCards": array_of(
+                        "Kanban note: cards to move to another column.",
+                        json!({
+                            "type": "object",
+                            "properties": {"cardId": {"type": "string"}, "toColumnId": {"type": "string"}},
+                            "required": ["cardId", "toColumnId"]
+                        }),
+                    ),
+                    "removeCardIds": array_of("Kanban note: ids of the cards to remove.", json!({"type": "string"})),
+                    "addTabs": array_of("Code note: tabs to add.", code_tab_schema()),
+                    "updateTabs": array_of(
+                        "Code note: tabs to change, by id.",
+                        json!({
                             "type": "object",
                             "properties": {
-                                "name": {"type": "string"},
+                                "id": {"type": "string"},
+                                "title": {"type": "string"},
                                 "language": {"type": "string"},
                                 "code": {"type": "string"}
                             },
-                            "required": ["code"]
-                        }
-                    }
+                            "required": ["id"]
+                        }),
+                    )
                 },
                 "required": ["id", "rev"]
             }),
         }
     }
+}
+
+fn note_id() -> Value {
+    json!({"type": "string", "description": "The note's id."})
+}
+
+fn array_of(description: &str, items: Value) -> Value {
+    json!({"type": "array", "description": description, "items": items})
+}
+
+fn todo_item_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {"text": {"type": "string"}, "checked": {"type": "boolean"}},
+        "required": ["text"]
+    })
+}
+
+fn code_tab_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "title": {"type": "string"},
+            "language": {"type": "string"},
+            "code": {"type": "string"}
+        },
+        "required": ["title", "code"]
+    })
+}
+
+fn kanban_column_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "color": {"type": "string"},
+            "cards": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["name"]
+    })
 }
 
 #[cfg(test)]
