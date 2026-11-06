@@ -8,6 +8,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_window_state::StateFlags;
 
+pub mod mcp;
 mod net;
 
 /// Prompt the OS biometric dialog (Touch ID on macOS, Windows Hello on Windows)
