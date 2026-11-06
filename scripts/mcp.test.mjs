@@ -32,9 +32,13 @@ const STUBS = {
   "@/libs/net": `export const postWebhook = async () => {};`,
   "@/utils/date": `export const formatDateTime = () => "today";`,
   "@/utils/platform": `export const isTauri = () => globalThis.__page.tauri;`,
-  "@tauri-apps/api/event": `export const listen = async (name, handler) => { globalThis.__page.listeners[name] = handler; return () => {}; };`,
+  "@tauri-apps/api/event": `export const listen = async (name, handler) => {
+    globalThis.__page.listeners[name] = handler;
+    globalThis.__page.listens = (globalThis.__page.listens ?? 0) + 1;
+    return () => { globalThis.__page.unlistened = (globalThis.__page.unlistened ?? 0) + 1; };
+  };`,
   "@tauri-apps/api/core": `export const invoke = async (command, args) => { globalThis.__page.invoked.push({ command, args }); };`,
-  "react-native": `export const Platform = { OS: "web" };`,
+  "react-native": `export const Platform = { OS: "web", select: (options) => options.web ?? options.default };`,
 };
 
 const resolver = {
@@ -61,6 +65,8 @@ await build({
       export { handleMcpRequest } from "@/libs/mcp/handlers";
       export * as policy from "@/libs/mcp/policy";
       export * as view from "@/libs/mcp/noteView";
+      export * as input from "@/libs/mcp/noteInput";
+      export { KANBAN_COLUMN_COLORS } from "@/constants/styles";
       export { installMcpBridge } from "@/libs/mcp/bridge.web";
     `,
     resolveDir: src,
@@ -77,7 +83,7 @@ await build({
 });
 
 const M = await import(pathToFileURL(out).href);
-const { notes: N, categories: C, settings: S, policy: P, view: V } = M;
+const { notes: N, categories: C, settings: S, policy: P, view: V, input: I } = M;
 const { NOT_FOUND } = P;
 
 let passed = 0;
@@ -178,17 +184,20 @@ const notBuilt = () => {
 
 const harness = (notes = SEED, overrides = {}) => {
   const store = makeStore(notes);
-  const log = { commits: 0, dispatched: [] };
+  const log = { commits: 0, dispatched: [], order: [] };
   const deps = {
     getState: store.getState,
     dispatch: (action) => {
       log.dispatched.push(action);
+      log.order.push("dispatch");
       store.dispatch(action);
     },
     commitPending: () => {
       log.commits++;
     },
-    flush: async () => {},
+    flush: async () => {
+      log.order.push("flush");
+    },
     ready: () => true,
     persisted: () => true,
     sanitize: notBuilt,
@@ -408,6 +417,12 @@ console.log("\nsearch_notes");
   ok("search ignores image data", ids(await search("base64")).length === 0 && ids(await search("QUJD")).length === 0);
   ok("search ignores tags", ids(await search("strong")).length === 0 && ids(await search("<p>")).length === 0);
   ok("search ignores attributes", ids(await search("width")).length === 0);
+  ok("a picture isn't the word image", ids(await search("image")).length === 0, ids(await search("image")));
+  ok(
+    "...though it shows where it was, in a snippet",
+    found(await search("after"))[0].snippet.includes("[image]"),
+    found(await search("after"))
+  );
   ok(
     "the text around an image is found",
     ids(await search("before")).join() === "pic" && ids(await search("after")).join() === "pic"
@@ -512,19 +527,428 @@ console.log("\nlist_categories");
 }
 
 /* ------------------------------------------------------------------------------------------------------------------ */
+/* create_note                                                                                                         */
+/* ------------------------------------------------------------------------------------------------------------------ */
+
+console.log("\ncreate_note");
+
+const creator = (notes = SEED, overrides = {}) => {
+  const seen = { sanitized: [], webhooks: [] };
+  let counter = 0;
+  const h = harness(notes, {
+    newId: () => `gen-${++counter}`,
+    sanitize: (html) => {
+      seen.sanitized.push(html);
+      return html.replace(/<script[\s\S]*?<\/script>/gi, "");
+    },
+    sendWebhook: (payload, body) => {
+      seen.webhooks.push({ payload, body });
+    },
+    ...overrides,
+  });
+  h.store.dispatch(C.createCategory({ name: "Work", icon: "work" }));
+  const stored = (id) => h.store.getState().notes.items.find((note) => note.id === id);
+  const create = (args) => h.call("fastmemo_create_note", args);
+  /** Creates a note and returns the reply with the note as the store holds it. */
+  const made = async (args) => {
+    const reply = await create(args);
+    return { reply, note: reply.isError ? undefined : stored(JSON.parse(reply.text).id) };
+  };
+  return { ...h, seen, stored, create, made };
+};
+
+{
+  const { made, seen, log, store } = creator();
+  const { reply, note } = await made({
+    type: "text",
+    title: "  A title ",
+    text: "<h1>Hi</h1><p>body</p><script>bad()</script>",
+  });
+  ok(
+    "text note shape",
+    note.type === "text" && note.updatedAt === note.createdAt + 1 && note.deleteDate === null && note.hidden === false,
+    note
+  );
+  ok(
+    "...with the app's clock, date and a trimmed title",
+    note.createdAt === 1000 && note.date === "today" && note.title === "A title"
+  );
+  ok("...not important, not read-only, not locked", !note.important && !note.readOnly && !note.locked);
+  ok("html goes through sanitize", seen.sanitized[0] === "<h1>Hi</h1><p>body</p><script>bad()</script>", seen.sanitized);
+  ok("...and what it returns is stored", note.text === "<h1>Hi</h1><p>body</p>", note.text);
+  const body = JSON.parse(reply.text);
+  ok(
+    "result has id and rev",
+    reply.createdId === note.id && body.id === note.id && body.rev > 0 && body.rev === note.rev,
+    reply
+  );
+  ok(
+    "...the type, the title and no category",
+    body.type === "text" && body.title === "A title" && body.category === null && body.note === undefined,
+    body
+  );
+  ok("the note is the newest in the list", store.getState().notes.items[0].id === note.id);
+  ok("flushed before answering", log.order.join() === "dispatch,flush", log.order);
+}
+
+{
+  const { made, store } = creator();
+  const before = store.getState().categories.items.length;
+  const matched = await made({ type: "text", title: "t", text: "<p>x</p>", category: "work" });
+  ok(
+    "category matches ignoring case",
+    matched.note.category.name === "Work" && JSON.parse(matched.reply.text).category === "Work"
+  );
+  const exact = await made({ type: "text", title: "t", text: "<p>x</p>", category: "Work" });
+  ok("...and exactly", exact.note.category.name === "Work");
+  const near = await made({ type: "text", title: "t", text: "<p>x</p>", category: "Wor" });
+  ok(
+    "a near match isn't a match",
+    near.note.category.icon === "none" && /no category/i.test(JSON.parse(near.reply.text).note),
+    near.reply
+  );
+  const all = await made({ type: "text", title: "t", text: "<p>x</p>", category: "all" });
+  ok(
+    "the default category isn't one to ask for",
+    all.note.category.icon === "none" && /no category/i.test(JSON.parse(all.reply.text).note)
+  );
+  const none = await made({ type: "text", title: "t", text: "<p>x</p>" });
+  ok(
+    "no category asked: the default, no remark",
+    none.note.category.icon === "none" && JSON.parse(none.reply.text).note === undefined
+  );
+  const odd = await made({ type: "text", title: "t", text: "<p>x</p>", category: 5 });
+  ok("a category that isn't a name is refused", odd.reply.isError);
+  ok("categories never created", store.getState().categories.items.length === before);
+}
+
+{
+  const { made, create } = creator();
+  const todo = await made({ type: "todo", title: "List", items: [{ text: "milk" }, { text: "eggs", checked: true }] });
+  ok(
+    "todo items get ids",
+    todo.note.list.every((item) => item.id) && new Set(todo.note.list.map((i) => i.id)).size === 2,
+    todo.note.list
+  );
+  ok(
+    "...text and checked kept, unchecked by default",
+    todo.note.list[0].checked === false && todo.note.list[1].checked === true && todo.note.list[1].text === "eggs"
+  );
+  ok("...no mode: the editor's default", !("mode" in todo.note));
+  ok(
+    "a todo without items is refused",
+    (await create({ type: "todo", title: "x" })).isError && (await create({ type: "todo", title: "x", items: [] })).isError
+  );
+  ok("...and an item without text", (await create({ type: "todo", title: "x", items: [{ checked: true }] })).isError);
+  ok("...and items that aren't a list", (await create({ type: "todo", title: "x", items: "milk" })).isError);
+}
+
+{
+  const { made, create } = creator();
+  const column = (i) => ({ name: `col ${i}`, cards: [`card ${i}`] });
+  const ten = await create({ type: "kanban", title: "B", columns: Array.from({ length: 10 }, (_, i) => column(i)) });
+  const eleven = await create({ type: "kanban", title: "B", columns: Array.from({ length: 11 }, (_, i) => column(i)) });
+  ok("kanban: 10 columns pass, 11 are refused", !ten.isError && eleven.isError, eleven);
+  const board = await made({
+    type: "kanban",
+    title: "B",
+    columns: [{ name: "To do", cards: ["a", "b"] }, { name: "Done", color: M.KANBAN_COLUMN_COLORS[4] }, { name: "Later" }],
+  });
+  const [c0, c1, c2] = board.note.columns;
+  ok(
+    "kanban colors default in turn",
+    c0.color === M.KANBAN_COLUMN_COLORS[0] && c2.color === M.KANBAN_COLUMN_COLORS[2],
+    board.note.columns
+  );
+  ok("...a given one is kept", c1.color === M.KANBAN_COLUMN_COLORS[4]);
+  ok(
+    "...columns and cards have ids",
+    [c0, c1, c2].every((c) => c.id) && c0.items.every((card) => card.id && card.text) && c0.items.length === 2
+  );
+  ok("...a column without cards is empty", c1.items.length === 0 && c2.items.length === 0);
+  ok("...a card is just id and text", Object.keys(c0.items[0]).sort().join() === "id,text", c0.items[0]);
+  ok(
+    "a color the app doesn't have is refused",
+    (await create({ type: "kanban", title: "B", columns: [{ name: "x", color: "red" }] })).isError
+  );
+  ok(
+    "a kanban without columns is refused",
+    (await create({ type: "kanban", title: "B" })).isError &&
+      (await create({ type: "kanban", title: "B", columns: [] })).isError
+  );
+  ok(
+    "...and a column without a name, a card that isn't text",
+    (await create({ type: "kanban", title: "B", columns: [{ cards: [] }] })).isError &&
+      (await create({ type: "kanban", title: "B", columns: [{ name: "x", cards: [1] }] })).isError
+  );
+}
+
+{
+  const { made, create } = creator();
+  const code = await made({
+    type: "code",
+    title: "Snippets",
+    tabs: [
+      { title: "main.rs", code: "fn main() {}" },
+      { title: "script", code: "print(1)", language: "python" },
+      { title: "notes", code: "plain" },
+      { title: "wrong.ts", code: "let a", language: "klingon" },
+    ],
+  });
+  const tabs = code.note.tabs;
+  ok("code: first tab active", code.note.activeTabId === tabs[0].id && !!tabs[0].id);
+  ok("...a language from the file name", tabs[0].language === "rust", tabs);
+  ok("...the given language wins", tabs[1].language === "python");
+  ok("...the editor's default otherwise", tabs[2].language === "javascript");
+  ok("...a language the app doesn't have is replaced as if not given", tabs[3].language === "typescript", tabs[3]);
+  ok(
+    "...tabs have distinct ids and keep their code",
+    new Set(tabs.map((t) => t.id)).size === 4 && tabs[0].code === "fn main() {}"
+  );
+  ok(
+    "a code note without tabs is refused",
+    (await create({ type: "code", title: "x" })).isError && (await create({ type: "code", title: "x", tabs: [] })).isError
+  );
+  ok(
+    "...and a tab without code or title",
+    (await create({ type: "code", title: "x", tabs: [{ title: "a" }] })).isError &&
+      (await create({ type: "code", title: "x", tabs: [{ code: "a" }] })).isError
+  );
+}
+
+{
+  const { made, create } = creator();
+  const base = { type: "text", text: "<p>x</p>" };
+  ok(
+    "empty title refused",
+    (await create({ ...base, title: "" })).isError && (await create({ ...base, title: "  \n " })).isError
+  );
+  ok("a title that isn't text refused", (await create({ ...base })).isError && (await create({ ...base, title: 3 })).isError);
+  ok("title over 100 refused", (await create({ ...base, title: "x".repeat(101) })).isError);
+  ok("...100 is fine", !(await create({ ...base, title: "x".repeat(100) })).isError);
+  ok("...counted in characters, not code units", !(await create({ ...base, title: "🎉".repeat(100) })).isError);
+  const lines = await made({ ...base, title: "Riassunto 🎉\ncall\r\nfinale" });
+  ok("newlines in a title become spaces, emoji stay", lines.note.title === "Riassunto 🎉 call finale", lines.note.title);
+  ok(
+    "the title rules, on their own",
+    I.normalizeTitle("a\nb").title === "a b" &&
+      "error" in I.normalizeTitle("  ") &&
+      "error" in I.normalizeTitle(undefined) &&
+      "error" in I.normalizeTitle("x".repeat(I.MAX_TITLE + 1))
+  );
+
+  ok(
+    "no content refused",
+    (await create({ type: "text", title: "x" })).isError && (await create({ type: "text", title: "x", text: "  " })).isError
+  );
+  ok("text that isn't text refused", (await create({ type: "text", title: "x", text: ["<p>a</p>"] })).isError);
+  ok(
+    "an unknown type refused",
+    (await create({ type: "image", title: "x", text: "a" })).isError && (await create({ title: "x", text: "a" })).isError
+  );
+  ok("text over the limit refused", (await create({ type: "text", title: "x", text: `<p>${"a".repeat(2000)}</p>` })).isError);
+  ok("...also for the other types", (await create({ type: "todo", title: "x", items: [{ text: "a".repeat(2000) }] })).isError);
+  ok("the limit counts bytes, not characters", (await create({ type: "text", title: "x", text: "é".repeat(600) })).isError);
+  ok(
+    "...and what sanitize left, not what came in",
+    !(await create({ type: "text", title: "x", text: `<script>${"a".repeat(2000)}</script><p>ok</p>` })).isError
+  );
+
+  const sneaky = await made({
+    ...base,
+    title: "x",
+    hidden: true,
+    local: true,
+    deleteDate: 5,
+    rev: 99,
+    id: "mine",
+    updatedAt: 3,
+  });
+  ok("hidden and local in args are ignored", sneaky.note.hidden === false && sneaky.note.local === undefined);
+  ok(
+    "...so are an id, a deletion date and a revision",
+    sneaky.note.id === sneaky.reply.createdId &&
+      sneaky.note.id !== "mine" &&
+      sneaky.note.deleteDate === null &&
+      sneaky.note.rev !== 99
+  );
+}
+
+{
+  const { made, create, store, call } = creator();
+  const flagged = await made({ type: "text", title: "x", text: "<p>x</p>", important: true, readOnly: true });
+  ok("flags set", flagged.note.important && flagged.note.readOnly && !flagged.note.locked, flagged.note);
+  const not = await made({ type: "text", title: "x", text: "<p>x</p>", important: false, readOnly: false, locked: false });
+  ok("false just means not set", !not.reply.isError && !not.note.important && !not.note.readOnly && !not.note.locked);
+  ok(
+    "a flag that isn't true or false is refused",
+    (await create({ type: "text", title: "x", text: "<p>x</p>", important: "yes" })).isError
+  );
+
+  const locked = await create({ type: "text", title: "LOCKEDNEW", text: "<p>x</p>", locked: true });
+  const inStore = store.getState().notes.items.find((note) => note.title === "LOCKEDNEW");
+  ok("a locked note is created locked", inStore?.locked === true);
+  ok("a locked note reports no id", locked.createdId === undefined && !locked.isError, locked);
+  ok("...in words only: no id and no rev in the text", locked.text === "Created." && !locked.text.includes(inStore.id));
+  ok("...and is out of reach then", (await call("fastmemo_read_note", { id: inStore.id })).text === NOT_FOUND);
+}
+
+{
+  const { create, seen } = creator();
+  await create({ type: "text", title: "a", text: "<p>a</p>" });
+  await create({ type: "todo", title: "b", items: [{ text: "i" }] });
+  await create({ type: "kanban", title: "c", columns: [{ name: "n" }] });
+  await create({ type: "code", title: "d", tabs: [{ title: "t", code: "c" }] });
+  ok(
+    "webhook per type",
+    seen.webhooks.map((w) => w.body.action).join() === "note/addTextNote,note/addTodoNote,note/addKanbanNote,note/addCodeNote",
+    seen.webhooks.map((w) => w.body.action)
+  );
+  const [text, todo, kanban, code] = seen.webhooks.map((w) => w.body);
+  ok(
+    "...with the note as the editors send it",
+    text.title === "a" &&
+      text.text === "<p>a</p>" &&
+      text.category.name === "All" &&
+      text.hidden === false &&
+      text.type === "text",
+    text
+  );
+  ok(
+    "...and the content of its type",
+    todo.list.length === 1 && kanban.columns.length === 1 && code.tabs.length === 1 && code.activeTabId === code.tabs[0].id
+  );
+  ok(
+    "...to the user's setting for that type",
+    seen.webhooks.every((w) => "url" in w.payload && "enabled" in w.payload)
+  );
+}
+
+{
+  const { create } = creator(SEED, { persisted: () => false });
+  const failed = await create({ type: "text", title: "x", text: "<p>x</p>" });
+  ok("not persisted: an error, not a success", failed.isError && failed.createdId === undefined, failed);
+  ok("...saying so", /couldn't save/i.test(failed.text), failed.text);
+}
+
+{
+  const { create, log } = creator(SEED, { ready: () => false });
+  const reply = await create({ type: "text", title: "x", text: "<p>x</p>" });
+  ok("before the app is ready: refused, nothing dispatched", reply.isError && log.dispatched.length === 0);
+}
+
+/* ------------------------------------------------------------------------------------------------------------------ */
+/* set_note_flags                                                                                                      */
+/* ------------------------------------------------------------------------------------------------------------------ */
+
+console.log("\nset_note_flags");
+
+{
+  const { call, log, store, seen } = creator();
+  const stored = (id) => store.getState().notes.items.find((note) => note.id === id);
+  const flags = (id, args) => call("fastmemo_set_note_flags", { id, ...args });
+
+  const revBefore = stored("open").rev;
+  const set = await flags("open", { important: true, readOnly: true });
+  const body = JSON.parse(set.text);
+  ok("flags set", !set.isError && stored("open").important && stored("open").readOnly && !stored("open").locked, set);
+  ok("rev moves", stored("open").rev > revBefore && body.rev === stored("open").rev);
+  ok(
+    "the reply has the rev and the flags",
+    body.id === "open" && body.important === true && body.readOnly === true && body.locked === false,
+    body
+  );
+  ok("...and no created id", set.createdId === undefined);
+  ok(
+    "the update webhook fires, with the note",
+    seen.webhooks.length === 1 &&
+      seen.webhooks[0].body.action === "note/updateNote" &&
+      seen.webhooks[0].body.id === "open" &&
+      seen.webhooks[0].body.important === true,
+    seen.webhooks
+  );
+  ok("flushed before answering, after the change", log.order.join() === "dispatch,dispatch,flush", log.order);
+
+  const dispatchedBefore = log.dispatched.length;
+  const again = await flags("open", { important: true, readOnly: true });
+  ok(
+    "a flag already set isn't toggled back",
+    !again.isError && stored("open").important && stored("open").readOnly && log.dispatched.length === dispatchedBefore
+  );
+  ok("...no webhook for no change", seen.webhooks.length === 1);
+
+  await flags("open", { important: false });
+  ok("important both ways", stored("open").important === false);
+  await flags("open", { important: true });
+  ok("...true again", stored("open").important === true);
+
+  const countBefore = log.dispatched.length;
+  ok("locked:false refused", (await flags("open", { locked: false })).isError && log.dispatched.length === countBefore);
+  ok("readOnly:false refused", (await flags("open", { readOnly: false })).isError && log.dispatched.length === countBefore);
+  ok(
+    "...even with another flag that would be fine",
+    (await flags("open", { important: false, readOnly: false })).isError && stored("open").important === true
+  );
+  ok(
+    "a flag that isn't a boolean refused",
+    (await flags("open", { important: "yes" })).isError && log.dispatched.length === countBefore
+  );
+  ok("nothing to set refused", (await flags("open", {})).isError && log.dispatched.length === countBefore);
+
+  ok("already read-only: no toggle", (await flags("ro", { readOnly: true }), stored("ro").readOnly === true));
+  ok(
+    "a read-only note can still be marked important",
+    !(await flags("ro", { important: false })).isError && stored("ro").important === false
+  );
+
+  ok(
+    "locked and hidden notes: not found",
+    (await flags("lockedNote", { important: true })).text === NOT_FOUND &&
+      (await flags("hiddenNote", { important: true })).text === NOT_FOUND
+  );
+  ok("...and untouched", stored("lockedNote").important === false && stored("hiddenNote").important === false);
+  ok(
+    "a made-up id and a trashed one: not found",
+    (await flags("made-up", { important: true })).text === NOT_FOUND && (await flags("gone", { important: true })).isError
+  );
+  ok("an id that isn't text: not found", (await call("fastmemo_set_note_flags", { important: true })).text === NOT_FOUND);
+
+  const lock = await flags("todo", { locked: true });
+  ok("locked set", !lock.isError && stored("todo").locked === true && JSON.parse(lock.text).locked === true, lock);
+  ok(
+    "...and then out of reach",
+    (await flags("todo", { important: true })).text === NOT_FOUND &&
+      (await call("fastmemo_read_note", { id: "todo" })).text === NOT_FOUND
+  );
+}
+
+{
+  const typed = textNote("open", 100, { text: "<p>TYPED</p>" });
+  const context = {};
+  const h = creator(SEED, { commitPending: () => context.store.dispatch(N.addNote(typed)) });
+  context.store = h.store;
+  const reply = await h.call("fastmemo_set_note_flags", { id: "open", important: true });
+  const stored = h.store.getState().notes.items.find((note) => note.id === "open");
+  ok(
+    "what the editor still held is committed first",
+    stored.text === "<p>TYPED</p>" && stored.important === true && JSON.parse(reply.text).rev === stored.rev
+  );
+}
+
+{
+  const { call } = creator(SEED, { persisted: () => false });
+  const reply = await call("fastmemo_set_note_flags", { id: "open", important: true });
+  ok("not persisted: an error, not a success", reply.isError, reply);
+}
+
+/* ------------------------------------------------------------------------------------------------------------------ */
 /* Every tool                                                                                                          */
 /* ------------------------------------------------------------------------------------------------------------------ */
 
 console.log("\nevery tool");
 
-const LATER_TOOLS = [
-  "fastmemo_create_note",
-  "fastmemo_set_note_flags",
-  "fastmemo_help",
-  "fastmemo_check_update",
-  "fastmemo_edit_note",
-  "fastmemo_trash_note",
-];
+const WRITE_TOOLS = ["fastmemo_create_note", "fastmemo_set_note_flags"];
+const LATER_TOOLS = ["fastmemo_help", "fastmemo_check_update", "fastmemo_edit_note", "fastmemo_trash_note"];
 const READ_TOOLS = ["fastmemo_list_categories", "fastmemo_search_notes", "fastmemo_read_note"];
 
 {
@@ -552,7 +976,7 @@ const READ_TOOLS = ["fastmemo_list_categories", "fastmemo_search_notes", "fastme
 }
 {
   const { call, log } = harness(SEED, { ready: () => false });
-  for (const tool of [...READ_TOOLS, ...LATER_TOOLS]) {
+  for (const tool of [...READ_TOOLS, ...WRITE_TOOLS, ...LATER_TOOLS]) {
     const notReady = await call(tool, { id: "open", query: "x" });
     ok(
       `still starting: ${tool} refused, nothing dispatched`,
@@ -608,6 +1032,13 @@ const request = (id, tool = "fastmemo_list_categories", args = {}) => ({
   pageState.tauri = true;
   M.installMcpBridge();
   ok("in Tauri it listens for the requests", await until(() => pageState.listeners[REQUEST_EVENT] !== undefined));
+  M.installMcpBridge();
+  M.installMcpBridge();
+  await sleep(20);
+  ok("installed again (a Fast Refresh): one listener is left", pageState.listens - (pageState.unlistened ?? 0) === 1, [
+    pageState.listens,
+    pageState.unlistened,
+  ]);
   const send = pageState.listeners[REQUEST_EVENT];
   const replyTo = async (id) => {
     await until(() => pageState.invoked.some((call) => call.args.id === id));

@@ -1,6 +1,9 @@
 import type { UnknownAction } from "@reduxjs/toolkit";
+import DOMPurify from "dompurify";
+import type { DOMPurify as DOMPurifyInstance } from "dompurify";
 import uuid from "react-uuid";
 
+import { addNoteHooks, NOTE_HTML_CONFIG } from "@/editor/sanitizeConfig";
 import { noteTextLimit } from "@/libs/cloud";
 import { flushNow } from "@/libs/flushOnExit";
 import { handleMcpRequest } from "@/libs/mcp/handlers";
@@ -20,6 +23,17 @@ import { webhook } from "@/utils/webhook";
 
 const REQUEST_EVENT = "fastmemo://mcp-request";
 
+let purifier: DOMPurifyInstance | null = null;
+
+/** HTML from an agent comes from outside, like an import: it's cleaned as the editor's own is (ADR-021, LL-060). */
+const sanitize = (html: string): string => {
+  if (!purifier) {
+    purifier = DOMPurify(window);
+    addNoteHooks(purifier);
+  }
+  return purifier.sanitize(html, NOTE_HTML_CONFIG) as string;
+};
+
 const notAvailableYet = (): never => {
   throw new Error("not available yet");
 };
@@ -33,7 +47,7 @@ const deps: McpDeps = {
   flush: flushNow,
   ready: () => persistor.getState().bootstrapped && notesLoaded(),
   persisted: notesPersisted,
-  sanitize: notAvailableYet,
+  sanitize,
   textLimit: () => noteTextLimit(false),
   sendWebhook: (payload, body) => {
     webhook(payload, body as Record<string, unknown>);
@@ -57,14 +71,23 @@ const answer = async (request: McpRequest): Promise<McpReply> => {
   }
 };
 
+/** What stops listening for the requests, kept on `globalThis`: a Fast Refresh runs this module again, and the old listener would answer too. */
+const holder = globalThis as { __fastmemoMcpListening?: Promise<() => void> };
+
 export function installMcpBridge(): void {
   if (!isTauri()) return;
-  Promise.all([import("@tauri-apps/api/event"), import("@tauri-apps/api/core")])
+  const previous = holder.__fastmemoMcpListening;
+  // One listener at a time: a second install replaces the first, and each request is answered once (a note created twice).
+  holder.__fastmemoMcpListening = Promise.all([import("@tauri-apps/api/event"), import("@tauri-apps/api/core")])
     .then(([{ listen }, { invoke }]) =>
       listen<McpRequest>(REQUEST_EVENT, async ({ payload }) => {
         const reply = await answer(payload);
         await invoke("mcp_reply", { id: payload.id, reply }).catch(() => {});
       })
     )
-    .catch(() => {});
+    .catch((err) => {
+      console.warn("MCP: the bridge couldn't start", err);
+      return () => {};
+    });
+  previous?.then((unlisten) => unlisten()).catch(() => {});
 }

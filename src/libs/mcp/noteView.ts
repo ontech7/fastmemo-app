@@ -42,8 +42,8 @@ const noteContent = (note: Note): string => {
   }
 };
 
-/** The words a search looks in, as the user sees them: never tags, image data, or the keys of the JSON a read returns. */
-export function noteSearchText(note: Note): string {
+/** The words of a note as the user sees them: never tags, image data, or the keys of the JSON a read returns. */
+function noteWords(note: Note, withImages: (html: string) => string): string {
   switch (note.type) {
     case "todo":
       return (note.list ?? []).map((item) => item.text).join("\n");
@@ -54,9 +54,15 @@ export function noteSearchText(note: Note): string {
     case "code":
       return (note.tabs ?? []).flatMap((tab) => [tab.title, tab.code]).join("\n");
     default:
-      return stripHtml(withoutImageData(note.text ?? ""));
+      return stripHtml(withImages(note.text ?? ""));
   }
 }
+
+/** What a search compares with: no placeholder, so a picture isn't the word "image". */
+export const noteSearchText = (note: Note): string => noteWords(note, (html) => html.replace(IMAGE_TAG, " "));
+
+/** What a snippet quotes: the placeholder shows where a picture was. */
+const noteSnippetText = (note: Note): string => noteWords(note, withoutImageData);
 
 const snippetOf = (text: string, query: string): string => {
   const flat = text.replace(/\s+/g, " ").trim();
@@ -79,7 +85,7 @@ const noteHeader = (note: Note) => ({
 
 /** A search result. `query` is the lowercase text searched for, if any. */
 export function noteSummary(note: Note, query: string): object {
-  return { ...noteHeader(note), snippet: snippetOf(noteSearchText(note), query) };
+  return { ...noteHeader(note), snippet: snippetOf(noteSnippetText(note), query) };
 }
 
 /** A note as read: its revision, and `READ_LIMIT` characters of its content from `offset`, with where the next part starts. */
