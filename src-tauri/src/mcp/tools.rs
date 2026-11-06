@@ -98,7 +98,7 @@ Keep the title short, about 60 characters. When the user didn't name a category,
 first and pick the best fit. `category` must be a name it returned; omit it when none fits. \
 Give the content that matches the type: `text` for a text note, `items` for a todo, \
 `tabs` for a code note, `columns` for a kanban. For a text note, `text` is HTML: p, h1-h3, ul, ol, li, strong, \
-em, code, pre, blockquote and a are supported. Returns the note's id and rev."
+em, code, pre, blockquote and a are supported; images, media and styles are removed. Returns the note's id and rev."
             }
             Tool::ListCategories => "Lists the categories that exist in Fast Memo. Categories can't be created through MCP.",
             Tool::SearchNotes => {

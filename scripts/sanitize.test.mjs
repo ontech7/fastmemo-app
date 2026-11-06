@@ -70,5 +70,64 @@ ok(
   wrapHtmlForPdf("", "x").includes("<title>Note</title>") && !wrapHtmlForPdf("", "x").includes('<h1 class="note-title">')
 );
 
+console.log("\n=== What an agent's HTML may carry (ADR-032) ===");
+// The sanitizing needs a DOM, which node doesn't have and the repository carries no package for: what runs here is the
+// config. The real DOMPurify and Chrome (headless, 2026-11) turned `<img src>`, `srcset`, `<picture>`, `<video poster>`,
+// `<iframe>`, `<object>`, `<svg><image>`, `background=` and `style="background:url(...)"` (also written `u\72l(`) into
+// nothing, and kept p, h1-h3, ul, ol, li, strong, em, code, pre, blockquote and links.
+const agentOutfile = join(os.tmpdir(), "sanitize.agent.bundle.mjs");
+await build({
+  entryPoints: [join(root, "src/libs/mcp/agentHtml.ts")],
+  bundle: true,
+  format: "esm",
+  platform: "node",
+  outfile: agentOutfile,
+  logLevel: "error",
+  alias: { "@": join(root, "src") },
+});
+const { AGENT_HTML_CONFIG } = await import(pathToFileURL(agentOutfile).href);
+const forbiddenTags = (AGENT_HTML_CONFIG.FORBID_TAGS ?? []).map((tag) => tag.toLowerCase());
+const forbiddenAttrs = (AGENT_HTML_CONFIG.FORBID_ATTR ?? []).map((name) => name.toLowerCase());
+const FETCHING_TAGS = [
+  "img",
+  "picture",
+  "source",
+  "video",
+  "audio",
+  "track",
+  "iframe",
+  "object",
+  "embed",
+  "svg",
+  "image",
+  "feimage",
+  "use",
+  "math",
+];
+const FETCHING_ATTRS = ["src", "srcset", "poster", "background", "data", "style", "ping", "xlink:href"];
+ok(
+  "everything that loads on opening is forbidden: tags",
+  FETCHING_TAGS.every((tag) => forbiddenTags.includes(tag)),
+  forbiddenTags
+);
+ok(
+  "...and attributes (srcset, poster, background, style with url(...))",
+  FETCHING_ATTRS.every((name) => forbiddenAttrs.includes(name)),
+  forbiddenAttrs
+);
+const TOOL_TAGS = ["p", "h1", "h2", "h3", "ul", "ol", "li", "strong", "em", "code", "pre", "blockquote", "a"];
+ok(
+  "none of the tags the tool lists is forbidden, nor the link's href",
+  !TOOL_TAGS.some((tag) => forbiddenTags.includes(tag)) && !forbiddenAttrs.includes("href")
+);
+ok(
+  "the note's own forbidden tags stay forbidden for an agent",
+  ["form", "button", "style", "link"].every((tag) => forbiddenTags.includes(tag))
+);
+ok(
+  "the editor's sanitizer config isn't the agent's (images stay for the app)",
+  !readFileSync(join(root, "src/editor/sanitizeConfig.ts"), "utf8").includes('"img"')
+);
+
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed === 0 ? 0 : 1);

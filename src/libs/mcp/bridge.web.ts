@@ -3,12 +3,13 @@ import DOMPurify from "dompurify";
 import type { DOMPurify as DOMPurifyInstance } from "dompurify";
 import uuid from "react-uuid";
 
-import { addNoteHooks, NOTE_HTML_CONFIG } from "@/editor/sanitizeConfig";
+import { addNoteHooks } from "@/editor/sanitizeConfig";
 import { noteTextLimit } from "@/libs/cloud";
 import { notifyNoteChanged } from "@/libs/cloud/sync";
 import { checkDesktopUpdate } from "@/libs/desktopUpdater";
 import { flushNow } from "@/libs/flushOnExit";
 import i18n from "@/libs/i18n";
+import { AGENT_HTML_CONFIG } from "@/libs/mcp/agentHtml";
 import { handleMcpRequest } from "@/libs/mcp/handlers";
 import type { McpDeps } from "@/libs/mcp/handlers";
 import type { McpReply, McpRequest, UpdateCheck } from "@/libs/mcp/types";
@@ -28,13 +29,13 @@ const REQUEST_EVENT = "fastmemo://mcp-request";
 
 let purifier: DOMPurifyInstance | null = null;
 
-/** HTML from an agent comes from outside, like an import: it's cleaned as the editor's own is (ADR-021, LL-060). */
+/** HTML from an agent comes from outside, like an import: it's cleaned as the editor's own is (ADR-021, LL-060), and drops what fetches on opening the note. */
 const sanitize = (html: string): string => {
   if (!purifier) {
     purifier = DOMPurify(window);
     addNoteHooks(purifier);
   }
-  return purifier.sanitize(html, NOTE_HTML_CONFIG) as string;
+  return purifier.sanitize(html, AGENT_HTML_CONFIG) as string;
 };
 
 /**
