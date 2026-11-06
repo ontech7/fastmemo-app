@@ -78,6 +78,7 @@ const deps: McpDeps = {
   commitPending: flushPending,
   flush: flushNow,
   ready: () => persistor.getState().bootstrapped && notesLoaded(),
+  readFailed: () => !notesLoaded(),
   persisted: notesPersisted,
   sanitize,
   textLimit: () => noteTextLimit(false),

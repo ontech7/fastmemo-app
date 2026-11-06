@@ -39,6 +39,8 @@ export interface McpDeps {
   flush(): Promise<void>;
   /** Whether the store has rehydrated and the notes were read: before that, it holds empty state (LL-029, LL-039). */
   ready(): boolean;
+  /** Whether the notes' read failed at launch: not ready, and not going to be this session (LL-039). */
+  readFailed(): boolean;
   persisted(): boolean;
   sanitize(html: string): string;
   textLimit(): number;
@@ -55,6 +57,9 @@ export interface McpDeps {
 }
 
 const STILL_STARTING = "Fast Memo is still starting: try again in a moment.";
+// Refusing is right (writing now could replace the stored notes with an empty list), but "in a moment" would be a lie.
+const READ_FAILED =
+  "Fast Memo couldn't read its notes when it started, so it won't touch them. Trying again won't help: ask the user to restart Fast Memo.";
 const NOT_AVAILABLE = "Not available yet.";
 const UNKNOWN_TOPIC = "No help topic has that key. Call fastmemo_help without a topic for the list of topics.";
 const UPDATE_CHECK_FAILED = "Fast Memo couldn't check for updates. Try again later.";
@@ -345,7 +350,7 @@ async function trashNote(args: Record<string, unknown>, deps: McpDeps): Promise<
 }
 
 export async function handleMcpRequest(req: McpRequest, deps: McpDeps): Promise<McpReply> {
-  if (!deps.ready()) return refused(STILL_STARTING);
+  if (!deps.ready()) return refused(deps.readFailed() ? READ_FAILED : STILL_STARTING);
 
   switch (req.tool) {
     case "fastmemo_list_categories":

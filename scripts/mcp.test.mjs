@@ -217,6 +217,7 @@ const harness = (notes = SEED, overrides = {}) => {
       log.order.push("flush");
     },
     ready: () => true,
+    readFailed: () => false,
     persisted: () => true,
     sanitize: notBuilt,
     textLimit: () => 1000,
@@ -1759,6 +1760,23 @@ const READ_TOOLS = ["fastmemo_list_categories", "fastmemo_search_notes", "fastme
       `still starting: ${tool} refused, nothing dispatched`,
       notReady.isError && notReady.text.includes("starting") && log.dispatched.length === 0,
       notReady
+    );
+  }
+  ok("...and no pending edit committed", log.commits === 0, log.commits);
+}
+{
+  // The notes' read failed: refused as well, but not told to try again in a moment (it never comes right this session).
+  const { call, log } = harness(SEED, { ready: () => false, readFailed: () => true });
+  for (const tool of [...READ_TOOLS, ...WRITE_TOOLS, ...INFO_TOOLS]) {
+    const failed = await call(tool, { id: "open", query: "x" });
+    ok(
+      `notes not read: ${tool} refused, asks for a restart, nothing dispatched`,
+      failed.isError &&
+        failed.text.includes("restart Fast Memo") &&
+        !failed.text.includes("in a moment") &&
+        !failed.text.includes("starting") &&
+        log.dispatched.length === 0,
+      failed
     );
   }
   ok("...and no pending edit committed", log.commits === 0, log.commits);
