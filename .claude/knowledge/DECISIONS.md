@@ -1488,7 +1488,9 @@ periodic writes (NEVER #23).
 **Nothing reaches mobile.** No change in `package.json`, `yarn.lock`, `app.config.ts`, `.gitignore` or `android/`, so the
 fingerprint can't have moved; the tests run with `node scripts/...`, never as `package.json` scripts (LL-071).
 `scripts/mcp.test.mjs` covers the filter and the tool logic, `cargo test --lib mcp::` the protocol and the socket, and
-`scripts/mcp-e2e.test.mjs` is a fake client over stdio against a real test build.
+`scripts/mcp-e2e.test.mjs` is a fake client over stdio against a real test build. Any test showing or returning notes runs on a
+throwaway identifier with an empty store, because the test build's store may hold real notes; that script refuses a store
+holding notes it didn't make.
 
 **Alternatives rejected:**
 

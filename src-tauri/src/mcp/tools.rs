@@ -94,8 +94,9 @@ impl Tool {
         match self {
             Tool::CreateNote => {
                 "Creates a note in Fast Memo. Pick the type when the user didn't say; text is the usual choice. \
-Keep the title short, about 60 characters. `category` must be a name returned by fastmemo_list_categories; \
-omit it when none fits. Give the content that matches the type: `text` for a text note, `items` for a todo, \
+Keep the title short, about 60 characters. When the user didn't name a category, call fastmemo_list_categories \
+first and pick the best fit. `category` must be a name it returned; omit it when none fits. \
+Give the content that matches the type: `text` for a text note, `items` for a todo, \
 `tabs` for a code note, `columns` for a kanban. For a text note, `text` is HTML: p, h1-h3, ul, ol, li, strong, \
 em, code, pre, blockquote and a are supported. Returns the note's id and rev."
             }

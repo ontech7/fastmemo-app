@@ -4,8 +4,11 @@
 // Options:
 //   --restart           macOS: also quits the test app, makes a call on a bridge left running, and opens it again.
 //   --wait-minutes <n>  instead of the checks: one call, <n> minutes of nothing, then timed calls. Close the window first.
-// Only the test build's data: any other binary is refused. Titles are unique per run. The notes stay in the test app (trashed
-// if `trash_note` happens to be on), so it needs no empty store. Hidden notes can't be made here: see scripts/mcp.test.mjs.
+// Only on a store with nothing in it that this script didn't make, or it refuses: a test build's store may hold real notes, a
+// failing check prints what it got, and whoever reads that may be an AI agent. On a Mac that means a build with a throwaway
+// identifier: a copy of src-tauri/tauri.test.conf.json with its own `identifier`, passed to `tauri build -c` (ADR-032).
+// Any binary but the test one is refused. Titles are unique per run. The notes stay in that store (trashed if `trash_note`
+// happens to be on): remove its data afterwards. Hidden notes can't be made here: see scripts/mcp.test.mjs.
 
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -18,6 +21,15 @@ const REPLY_TIMEOUT_MS = 20_000;
 const APP_WAIT_MS = 60_000;
 const CLOSED_WINDOW_LIMIT_MS = 5_000;
 const CLIENT = { name: "fastmemo-e2e", version: "1.0.0" };
+/** Every note this script makes has a title starting with this. */
+const TITLE_PREFIX = "E2E ";
+/** `NOT_FOUND` in `src/libs/mcp/policy.ts`: the answer of an id out of reach, and of one that doesn't exist. */
+const UNKNOWN_NOTE = "No note with this id.";
+/** The refusals the checks expect, each with its own reason (`handlers.ts`). The write cap's isn't any of them. */
+const ONLY_TRUE = /can only be set to true/;
+const STALE_REV = /changed since it was read/;
+const READ_ONLY = /read-only/;
+const OUT_OF_SCOPE = /only notes created in this session can be edited/;
 const MODERN = {
   _meta: {
     "io.modelcontextprotocol/protocolVersion": "2026-07-28",
@@ -150,8 +162,16 @@ class Bridge {
 }
 
 const body = (reply) => JSON.parse(reply.text);
-const sameAnswer = (a, b) => a.isError === true && b.isError === true && a.text === b.text;
-const found = (reply) => (reply.isError ? [] : body(reply).notes);
+const refusedFor = (reply, reason) => reply.isError === true && reason.test(reply.text);
+/** Both are the answer an id that doesn't exist gets. */
+const sameAnswer = (a, b) => a.isError === true && b.isError === true && a.text === UNKNOWN_NOTE && b.text === UNKNOWN_NOTE;
+
+/** A search's notes. One that failed ends the run: "matches nothing" is what guards locked notes, and an error isn't that. */
+const found = (reply) => {
+  const notes = reply.isError ? null : body(reply).notes;
+  if (!Array.isArray(notes)) throw new Error(`a search didn't answer: ${reply.text}`);
+  return notes;
+};
 
 /** Asks until the page answers: the bridge answers from the first moment, the page once the store has rehydrated. */
 async function waitForPage(bridge) {
@@ -161,6 +181,27 @@ async function waitForPage(bridge) {
     if (!reply.isError || Date.now() > deadline) return reply;
     await sleep(1000);
   }
+}
+
+/** Ends the run on a store holding a note this script didn't make. It says nothing about the note. */
+async function refuseOtherNotes(bridge) {
+  let offset = 0;
+  while (offset !== undefined) {
+    const page = await bridge.call("fastmemo_search_notes", { limit: 50, offset });
+    if (found(page).some((note) => !note.title?.startsWith(TITLE_PREFIX))) {
+      throw new Error(
+        "Refused: this store holds notes this script didn't make. Use a throwaway identifier (see the top of this file)."
+      );
+    }
+    offset = body(page).nextOffset;
+  }
+}
+
+/** A session of its own for each section: a connection may make 30 writes a minute (`WRITES_PER_MINUTE`), and the run makes more. */
+async function newSession() {
+  const bridge = new Bridge();
+  await bridge.initialize();
+  return bridge;
 }
 
 async function runChecks() {
@@ -182,6 +223,7 @@ async function runChecks() {
 
   const categories = await waitForPage(first);
   if (categories.isError) throw new Error(`the test app doesn't answer: is it open, with MCP on? ${categories.text}`);
+  await refuseOtherNotes(first);
   ok("list_categories answers", Array.isArray(body(categories).categories), categories);
 
   const modernCall = await modern.call("fastmemo_list_categories", {}, MODERN);
@@ -208,14 +250,15 @@ async function runChecks() {
 
   // --- A note of each type ---
 
+  const content = await newSession();
   const emoji = "🦊🧠";
-  const roundTrip = await first.create({
+  const roundTrip = await content.create({
     type: "text",
     title: `E2E emoji ${emoji} ${stamp}`,
     text: `<p>${word("round")} ${emoji} caffè</p>`,
   });
   created.push(roundTrip.id);
-  const roundRead = await first.read(roundTrip.id);
+  const roundRead = await content.read(roundTrip.id);
   ok(
     "text note round trip with emoji",
     !roundRead.isError &&
@@ -227,7 +270,7 @@ async function runChecks() {
   );
   ok(
     "its words are found by search",
-    found(await first.search(word("round"))).some((note) => note.id === roundTrip.id)
+    found(await content.search(word("round"))).some((note) => note.id === roundTrip.id)
   );
 
   // Every tag the description promises, so there's a note to open and edit by hand in the test app. Same for the types below.
@@ -241,9 +284,9 @@ async function runChecks() {
     "<blockquote>Una citazione</blockquote>",
     "<pre>const x = 1;\nconsole.log(x);</pre>",
   ].join("");
-  const rich = await first.create({ type: "text", title: `E2E testo ${stamp}`, text: richHtml });
+  const rich = await content.create({ type: "text", title: `E2E testo ${stamp}`, text: richHtml });
   created.push(rich.id);
-  const richContent = body(await first.read(rich.id)).content;
+  const richContent = body(await content.read(rich.id)).content;
   const richTags = ["h1", "h2", "h3", "strong", "em", "code", "a", "ul", "ol", "li", "blockquote", "pre"];
   ok(
     "the tags create_note's description lists survive the real sanitizer",
@@ -251,39 +294,39 @@ async function runChecks() {
     richContent
   );
 
-  const hostile = await first.create({
+  const hostile = await content.create({
     type: "text",
     title: `E2E hostile ${stamp}`,
     text: `<p onclick="alert(1)">${word("hostile")}</p><script>alert(2)</script><a href="javascript:alert(3)">x</a>`,
   });
   created.push(hostile.id);
-  const hostileContent = body(await first.read(hostile.id)).content;
+  const hostileContent = body(await content.read(hostile.id)).content;
   ok(
     "hostile HTML comes out sanitized by the real DOMPurify",
     hostileContent.includes(word("hostile")) && !/<script|onclick|javascript:/i.test(hostileContent),
     hostileContent
   );
 
-  const todo = await first.create({
+  const todo = await content.create({
     type: "todo",
     title: `E2E todo ${stamp}`,
     items: [{ text: word("todo") }, { text: "Fatto", checked: true }],
   });
   created.push(todo.id);
-  const todoList = JSON.parse(body(await first.read(todo.id)).content);
+  const todoList = JSON.parse(body(await content.read(todo.id)).content);
   ok(
     "a todo note reads back with its items",
     todo.type === "todo" && todoList.length === 2 && todoList[0].text === word("todo") && todoList[1].checked === true,
     todoList
   );
 
-  const code = await first.create({
+  const code = await content.create({
     type: "code",
     title: `E2E code ${stamp}`,
     tabs: [{ title: "main.py", language: "python", code: `print("${word("code")}")\n` }],
   });
   created.push(code.id);
-  const codeTabs = JSON.parse(body(await first.read(code.id)).content);
+  const codeTabs = JSON.parse(body(await content.read(code.id)).content);
   ok(
     "a code note reads back with its tab",
     code.type === "code" &&
@@ -293,53 +336,57 @@ async function runChecks() {
     codeTabs
   );
 
-  const kanban = await first.create({
+  const kanban = await content.create({
     type: "kanban",
     title: `E2E kanban ${stamp}`,
     columns: [{ name: "Da fare", cards: [word("kanban"), "Altra"] }, { name: "Fatto" }],
   });
   created.push(kanban.id);
-  const kanbanColumns = JSON.parse(body(await first.read(kanban.id)).content);
+  const kanbanColumns = JSON.parse(body(await content.read(kanban.id)).content);
   ok(
     "a kanban note reads back with its columns and cards",
     kanban.type === "kanban" && kanbanColumns.length === 2 && kanbanColumns[0].items[0].text === word("kanban"),
     kanbanColumns
   );
+  await content.close();
 
   // --- Locked: out of reach, as if it didn't exist ---
 
-  const toLock = await first.create({
+  const locks = await newSession();
+  const toLock = await locks.create({
     type: "text",
     title: `E2E ${word("locktitle")}`,
     text: `<p>${word("lock")}</p>`,
   });
   created.push(toLock.id);
   ok(
-    "before the lock, search finds it",
-    found(await first.search(word("lock"))).some((note) => note.id === toLock.id)
+    "before the lock, search finds it by its words and by its title",
+    found(await locks.search(word("lock"))).some((note) => note.id === toLock.id) &&
+      found(await locks.search(word("locktitle"))).some((note) => note.id === toLock.id)
   );
-  const locking = await first.flags({ id: toLock.id, locked: true });
+  const locking = await locks.flags({ id: toLock.id, locked: true });
   ok("set_note_flags locks it", !locking.isError && body(locking).locked === true, locking);
-  ok("a locked note created here: unknown afterwards", sameAnswer(await first.read(toLock.id), await first.read(madeUpId)));
+  ok("a locked note created here: unknown afterwards", sameAnswer(await locks.read(toLock.id), await locks.read(madeUpId)));
   ok(
     "edit_note and set_note_flags on it: the answer of a made-up id, even for the session that made it",
     sameAnswer(
-      await first.edit({ id: toLock.id, rev: toLock.rev, title: "x" }),
-      await first.edit({ id: madeUpId, rev: madeUpRev, title: "x" })
-    ) && sameAnswer(await first.flags({ id: toLock.id, important: true }), await first.flags({ id: madeUpId, important: true }))
+      await locks.edit({ id: toLock.id, rev: toLock.rev, title: "x" }),
+      await locks.edit({ id: madeUpId, rev: madeUpRev, title: "x" })
+    ) && sameAnswer(await locks.flags({ id: toLock.id, important: true }), await locks.flags({ id: madeUpId, important: true }))
   );
   ok(
     "and the lock can't be taken off by id",
-    sameAnswer(await first.flags({ id: toLock.id, locked: false }), await first.read(madeUpId))
+    sameAnswer(await locks.flags({ id: toLock.id, locked: false }), await locks.read(madeUpId))
   );
-  ok("its words match nothing in search", found(await first.search(word("lock"))).length === 0);
-  ok("nor does its title", found(await first.search(word("locktitle"))).length === 0);
+  ok("its words match nothing in search", found(await locks.search(word("lock"))).length === 0);
+  ok("nor does its title", found(await locks.search(word("locktitle"))).length === 0);
+  const listed = found(await locks.call("fastmemo_search_notes", { limit: 50 }));
   ok(
-    "a search with no query leaves it out",
-    !found(await first.call("fastmemo_search_notes", { limit: 50 })).some((note) => note.id === toLock.id)
+    "a search with no query leaves it out, and lists the notes around it",
+    !listed.some((note) => note.id === toLock.id) && listed.some((note) => note.id === kanban.id)
   );
 
-  const lockedAtBirth = await first.call("fastmemo_create_note", {
+  const lockedAtBirth = await locks.call("fastmemo_create_note", {
     type: "text",
     title: `E2E ${word("borntitle")}`,
     text: `<p>${word("born")}</p>`,
@@ -351,30 +398,49 @@ async function runChecks() {
     lockedAtBirth
   );
   ok(
-    "its words match nothing in search",
-    found(await first.search(word("born"))).length === 0 && found(await first.search(word("borntitle"))).length === 0
+    "its words match nothing in search, nor does its title",
+    found(await locks.search(word("born"))).length === 0 && found(await locks.search(word("borntitle"))).length === 0
   );
+  // The same note with `locked: false`: the search above could otherwise be blind to a note just created, or to these words.
+  const bornOpen = await locks.create({
+    type: "text",
+    title: `E2E ${word("opentitle")}`,
+    text: `<p>${word("open")}</p>`,
+    locked: false,
+  });
+  created.push(bornOpen.id);
+  ok(
+    "the same note unlocked is found by the same two searches",
+    found(await locks.search(word("open"))).some((note) => note.id === bornOpen.id) &&
+      found(await locks.search(word("opentitle"))).some((note) => note.id === bornOpen.id)
+  );
+  await locks.close();
 
   // --- Flags ---
 
-  const flagged = await first.create({ type: "text", title: `E2E flags ${stamp}`, text: "<p>flags</p>" });
+  const flagSession = await newSession();
+  const flagged = await flagSession.create({ type: "text", title: `E2E flags ${stamp}`, text: "<p>flags</p>" });
   created.push(flagged.id);
-  const looseLock = await first.flags({ id: flagged.id, locked: false });
-  const looseReadOnly = await first.flags({ id: flagged.id, readOnly: false });
-  ok("flags can't be loosened", looseLock.isError === true && looseReadOnly.isError === true, { looseLock, looseReadOnly });
-  const important = await first.flags({ id: flagged.id, important: true });
-  const notImportant = await first.flags({ id: flagged.id, important: false });
+  const looseLock = await flagSession.flags({ id: flagged.id, locked: false });
+  const looseReadOnly = await flagSession.flags({ id: flagged.id, readOnly: false });
+  ok("flags can't be loosened", refusedFor(looseLock, ONLY_TRUE) && refusedFor(looseReadOnly, ONLY_TRUE), {
+    looseLock,
+    looseReadOnly,
+  });
+  const important = await flagSession.flags({ id: flagged.id, important: true });
+  const notImportant = await flagSession.flags({ id: flagged.id, important: false });
   ok("important goes both ways", body(important).important === true && body(notImportant).important === false, {
     important,
     notImportant,
   });
-  await first.flags({ id: flagged.id, readOnly: true });
-  const stillReadOnly = await first.flags({ id: flagged.id, readOnly: false });
+  await flagSession.flags({ id: flagged.id, readOnly: true });
+  const stillReadOnly = await flagSession.flags({ id: flagged.id, readOnly: false });
   ok(
     "read-only stays on once set",
-    stillReadOnly.isError === true && body(await first.read(flagged.id)).readOnly === true,
+    refusedFor(stillReadOnly, ONLY_TRUE) && body(await flagSession.read(flagged.id)).readOnly === true,
     stillReadOnly
   );
+  await flagSession.close();
 
   // --- The session right, with the edit_note switch off ---
 
@@ -390,7 +456,7 @@ async function runChecks() {
   const stale = await first.edit({ id: own.id, rev: own.rev, appendHtml: "<p>stale</p>" });
   ok(
     "an old rev is refused, and nothing changes",
-    stale.isError === true && !body(await first.read(own.id)).content.includes("stale"),
+    refusedFor(stale, STALE_REV) && !body(await first.read(own.id)).content.includes("stale"),
     stale
   );
 
@@ -398,28 +464,26 @@ async function runChecks() {
   created.push(ownReadOnly.id);
   const madeReadOnly = await first.flags({ id: ownReadOnly.id, readOnly: true });
   const readOnlyEdit = await first.edit({ id: ownReadOnly.id, rev: body(madeReadOnly).rev, appendHtml: "<p>no</p>" });
-  ok("edit_note off, own note after the note is read-only: refused", readOnlyEdit.isError === true, readOnlyEdit);
+  ok("edit_note off, own note after the note is read-only: refused", refusedFor(readOnlyEdit, READ_ONLY), readOnlyEdit);
 
-  const second = new Bridge();
-  await second.initialize();
+  const second = await newSession();
   const ownRev = body(await second.read(own.id)).rev;
   const secondEdit = await second.edit({ id: own.id, rev: ownRev, appendHtml: "<p>second</p>" });
-  ok("a second bridge can't edit the first one's note", secondEdit.isError === true, secondEdit);
+  ok("a second bridge can't edit the first one's note", refusedFor(secondEdit, OUT_OF_SCOPE), secondEdit);
   ok("though the first still can", !(await first.edit({ id: own.id, rev: ownRev, title: `E2E own again ${stamp}` })).isError);
   const theirs = await second.create({ type: "text", title: `E2E second ${stamp}`, text: "<p>second</p>" });
   created.push(theirs.id);
   const firstEdit = await first.edit({ id: theirs.id, rev: theirs.rev, appendHtml: "<p>first</p>" });
-  ok("nor the first the second's", firstEdit.isError === true, firstEdit);
+  ok("nor the first the second's", refusedFor(firstEdit, OUT_OF_SCOPE), firstEdit);
   await second.close();
 
   const afterEdits = body(await first.read(own.id));
   ok("what they tried isn't in the note", !afterEdits.content.includes("second"), afterEdits);
   await first.close();
 
-  const third = new Bridge();
-  await third.initialize();
+  const third = await newSession();
   const thirdEdit = await third.edit({ id: own.id, rev: afterEdits.rev, appendHtml: "<p>third</p>" });
-  ok("a new session can't edit it either", thirdEdit.isError === true, thirdEdit);
+  ok("a new session can't edit it either", refusedFor(thirdEdit, OUT_OF_SCOPE), thirdEdit);
 
   // --- The rest ---
 
@@ -502,23 +566,22 @@ async function waitChecks() {
     const start = performance.now();
     const reply = await call();
     const ms = Math.round(performance.now() - start);
-    ok(`${name}: answered in ${ms} ms`, !reply.isError && ms < CLOSED_WINDOW_LIMIT_MS, reply);
-    console.log(`      (${reply.text.slice(0, 200)})`);
+    // Only a tool error is printed: what a call returned can be a note.
+    ok(`${name}: answered in ${ms} ms`, !reply.isError && ms < CLOSED_WINDOW_LIMIT_MS, reply.isError ? reply : undefined);
     return reply;
   };
   const stamp = Date.now().toString(36);
 
-  const held = new Bridge();
-  await held.initialize();
+  const held = await newSession();
   const before = await waitForPage(held);
   if (before.isError) throw new Error(`the test app doesn't answer: is it open, with MCP on? ${before.text}`);
+  await refuseOtherNotes(held);
   console.log(`Started ${new Date().toISOString()}, waiting ${waitMinutes} minutes with no calls...`);
   await sleep(waitMinutes * 60_000);
   console.log(`Woke ${new Date().toISOString()}`);
 
   await timed("a call on the bridge held all along", () => held.call("fastmemo_search_notes", { limit: 1 }));
-  const fresh = new Bridge();
-  await fresh.initialize();
+  const fresh = await newSession();
   await timed("a call on a new bridge", () => fresh.call("fastmemo_list_categories"));
   const write = await timed("a write, on disk before it's answered", () =>
     held.call("fastmemo_create_note", { type: "text", title: `E2E closed window ${stamp}`, text: "<p>closed window</p>" })

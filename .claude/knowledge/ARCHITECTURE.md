@@ -166,6 +166,7 @@ src/
       help.ts          # A help topic's text from its i18n strings
       settingsApi.ts   # The settings page's way to Rust (switches, connection info), MCP_TOOLS
       snippets.ts      # What to paste into each AI client
+      types.ts         # What Rust and the page exchange: McpRequest, McpReply; and UpdateCheck
     windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
     richTextEditor.ts  # The text editor's page script (line types, code exit, bullets, images, the image menu's messages) and style
                        # (ADR-023, ADR-024, scripts/richtext.test.mjs)
