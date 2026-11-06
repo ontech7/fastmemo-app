@@ -315,7 +315,7 @@ const fr = {
     conflict_copies:
       "Modifiée sur deux appareils avant la synchronisation : les deux versions ont été gardées (l'une en copie)",
     open_on: "Ouverte sur {{devices}}",
-    note_deleted_elsewhere: "Cette note a été mise à la corbeille sur un autre appareil. La modifier la restaure.",
+    note_deleted_elsewhere: "Cette note a été mise à la corbeille. La modifier la restaure.",
     title: "Cloud Sync",
     syncing_1: "Synchronisation en cours...",
     syncing_2: "Attendre la fin",
@@ -510,12 +510,12 @@ const fr = {
       fastmemo_check_update: "Indique si une version plus récente existe. N'installe rien.",
       fastmemo_trash_note: "Met une note dans la corbeille temporaire, d'où vous pouvez la restaurer.",
     },
-    edit_note_line: "Désactivé : un agent ne peut modifier que les notes créées dans la même session.",
+    edit_note_line: "Si désactivé, un agent ne peut modifier que les notes créées dans la même session.",
     background_label: "Rester actif en arrière-plan",
     background_line:
       "Activé : en fermant la fenêtre, Fast Memo reste en cours d'exécution avec une icône dans la zone de notification. Désactivé : la fermeture quitte l'application, et les agents ne l'atteignent que fenêtre ouverte.",
     connect_section: "Connecter un agent",
-    connect_intro: "Ajoutez Fast Memo à votre agent avec le texte ci-dessous. Activez d'abord MCP.",
+    connect_intro: "Ajoutez Fast Memo à votre agent avec le texte ci-dessous. Cela fonctionne quand MCP est activé.",
     client_claude_code: "Claude Code",
     client_codex: "Codex",
     client_json: "Claude Desktop et Cursor",

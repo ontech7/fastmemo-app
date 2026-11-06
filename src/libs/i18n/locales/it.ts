@@ -314,7 +314,7 @@ const it = {
     conflict_copies:
       "Modificata su due dispositivi prima della sincronizzazione: sono state tenute entrambe le versioni (una come copia)",
     open_on: "Aperta su {{devices}}",
-    note_deleted_elsewhere: "Questa nota è stata spostata nel cestino su un altro dispositivo. Modificarla la ripristina.",
+    note_deleted_elsewhere: "Questa nota è stata spostata nel cestino. Modificarla la ripristina.",
     title: "Sincronizzazione Cloud",
     syncing_1: "Sincronizzazione in corso…",
     syncing_2: "Aspetta fino al termine",
@@ -505,12 +505,12 @@ const it = {
       fastmemo_check_update: "Dice se esiste una versione più recente. Non installa nulla.",
       fastmemo_trash_note: "Sposta una nota nel cestino temporaneo, da cui puoi ripristinarla.",
     },
-    edit_note_line: "Spento: un agente può modificare solo le note create nella stessa sessione.",
+    edit_note_line: "Da spento, un agente può modificare solo le note create nella stessa sessione.",
     background_label: "Resta attivo in background",
     background_line:
       "Attivo: chiudendo la finestra Fast Memo resta in esecuzione, con un'icona nell'area di notifica. Spento: la chiusura esce dall'app e gli agenti la raggiungono solo con la finestra aperta.",
     connect_section: "Collega un agente",
-    connect_intro: "Aggiungi Fast Memo al tuo agente con il testo qui sotto. Attiva prima MCP.",
+    connect_intro: "Aggiungi Fast Memo al tuo agente con il testo qui sotto. Funziona con MCP attivo.",
     client_claude_code: "Claude Code",
     client_codex: "Codex",
     client_json: "Claude Desktop e Cursor",
