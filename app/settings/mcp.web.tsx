@@ -32,10 +32,12 @@ interface SwitchRowProps {
   line: string;
   value: boolean;
   onChange: (value: boolean) => void;
+  /** While a change is being saved: the next one waits for it. */
+  disabled?: boolean;
   isLast?: boolean;
 }
 
-function SwitchRow({ label, line, value, onChange, isLast = false }: SwitchRowProps) {
+function SwitchRow({ label, line, value, onChange, disabled = false, isLast = false }: SwitchRowProps) {
   return (
     <View style={[styles.row, isLast && styles.rowLast]}>
       <View style={styles.rowContent}>
@@ -47,6 +49,7 @@ function SwitchRow({ label, line, value, onChange, isLast = false }: SwitchRowPr
         trackColor={{ false: COLOR.surfaceMuted, true: COLOR.accentMuted }}
         thumbColor={COLOR.softWhite}
         onValueChange={onChange}
+        disabled={disabled}
         value={value}
         accessibilityLabel={label}
         style={styles.switch}
@@ -210,6 +213,7 @@ export default function McpScreen() {
                   line={t("mcp.enable_line")}
                   value={settings.enabled}
                   onChange={(enabled) => apply({ ...settings, enabled })}
+                  disabled={saving}
                 />
                 <View style={[styles.row, styles.rowLast]}>
                   <Text style={styles.rowLine}>{t("mcp.provider_warning")}</Text>
@@ -227,6 +231,7 @@ export default function McpScreen() {
                     line={tool.name === EDIT_TOOL ? t("mcp.edit_note_line") : t(`mcp.tool_lines.${tool.name}`)}
                     value={settings.tools[tool.name] ?? tool.defaultOn}
                     onChange={toggleTool(tool.name, tool.defaultOn)}
+                    disabled={saving}
                     isLast={index === MCP_TOOLS.length - 1}
                   />
                 ))}
@@ -241,6 +246,7 @@ export default function McpScreen() {
                     line={t("mcp.background_line")}
                     value={settings.keepRunning}
                     onChange={(keepRunning) => apply({ ...settings, keepRunning })}
+                    disabled={saving}
                     isLast
                   />
                 </View>

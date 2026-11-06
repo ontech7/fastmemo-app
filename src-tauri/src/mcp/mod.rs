@@ -40,6 +40,9 @@ pub struct McpState {
     server: Mutex<Option<ServerHandle>>,
     /// One start or stop at a time: two at once could leave a server running that nothing can stop.
     switching: Mutex<()>,
+    /// One `apply_settings` at a time: its file write, settings swap and start or stop are one step, or two quick changes could
+    /// leave the server running while the settings say off. Apart from `switching`, which `start` and `stop` take inside it.
+    applying: Mutex<()>,
 }
 
 /// One connection: its session, and the way to the page.
@@ -123,17 +126,15 @@ pub async fn mcp_set_settings(app: AppHandle, settings: McpSettings) -> Result<(
 }
 
 fn apply_settings(app: &AppHandle, settings: McpSettings) -> Result<(), String> {
+    let state = app.state::<McpState>();
+    let _applying = state.applying.lock().unwrap();
     let path = settings_path(app)?;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|err| err.to_string())?;
     }
     settings.save(&path).map_err(|err| err.to_string())?;
     let enabled = settings.enabled;
-    let was_enabled = std::mem::replace(
-        &mut *app.state::<McpState>().settings.lock().unwrap(),
-        settings,
-    )
-    .enabled;
+    let was_enabled = std::mem::replace(&mut *state.settings.lock().unwrap(), settings).enabled;
     if enabled && !was_enabled {
         start(app)?;
     } else if !enabled && was_enabled {
