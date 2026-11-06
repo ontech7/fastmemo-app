@@ -1203,6 +1203,8 @@ const fr = {
     zoom: "Réduire/agrandir",
     help: "Aide",
     help_item: "Aide {{name}}",
+    tray_open: "Ouvrir Fast Memo",
+    tray_quit: "Quitter",
   },
 
   a11y: {

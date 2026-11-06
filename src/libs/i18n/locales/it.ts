@@ -1189,6 +1189,8 @@ const it = {
     zoom: "Ridimensiona",
     help: "Aiuto",
     help_item: "Aiuto di {{name}}",
+    tray_open: "Apri Fast Memo",
+    tray_quit: "Esci",
   },
 
   a11y: {

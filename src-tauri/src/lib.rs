@@ -10,6 +10,7 @@ use tauri_plugin_window_state::StateFlags;
 
 pub mod mcp;
 mod net;
+mod tray;
 
 /// The app's config, in one place: the MCP bridge reads the identifier from it without starting Tauri.
 fn context() -> tauri::Context<tauri::Wry> {
@@ -84,7 +85,7 @@ struct ExitState {
     requested: AtomicBool,
 }
 
-fn flush_then_exit(app: &AppHandle) {
+pub(crate) fn flush_then_exit(app: &AppHandle) {
     if app.state::<ExitState>().requested.swap(true, Ordering::SeqCst) {
         return;
     }
@@ -119,7 +120,7 @@ struct WindowShown(AtomicBool);
 /// Shows the window as the user left it. `focus`: bring the app to the front, for what the user just asked (the Dock, a
 /// second launch, a menu command); not for the launch's first show, which could come after the user moved on to another
 /// app (a slow start).
-fn show_main(app: &AppHandle, focus: bool) {
+pub(crate) fn show_main(app: &AppHandle, focus: bool) {
     // A closing full screen window asked back during its animation stays (`left_fullscreen`).
     #[cfg(target_os = "macos")]
     {
@@ -157,8 +158,8 @@ fn window_ready(app: AppHandle) {
     }
 }
 
-/// The event the frontend flushes on without quitting: the window was closed, the app goes on in the background.
-#[cfg(target_os = "macos")]
+/// The event the frontend flushes on without quitting: the window was closed, the app goes on in the background (macOS, and
+/// Windows and Linux with the tray: `tray.rs`).
 const HIDDEN_EVENT: &str = "fastmemo://hidden";
 
 /// macOS: closing the window leaves the app running, as Notes does (the Dock keeps its dot, a click on it brings the
@@ -556,11 +557,13 @@ pub fn run() {
         .manage(WindowShown::default())
         .manage(net::Net::default())
         .manage(mcp::McpState::default())
+        .manage(tray::TrayState::default())
         .invoke_handler(tauri::generate_handler![
             biometric_authenticate,
             exit_after_flush,
             window_ready,
             set_menu_labels,
+            tray::set_tray_labels,
             net::net_request,
             net::net_cancel,
             net::net_webhook,
@@ -598,7 +601,12 @@ pub fn run() {
                 #[cfg(target_os = "macos")]
                 hide_main(window);
                 #[cfg(not(target_os = "macos"))]
-                flush_then_exit(window.app_handle());
+                if tray::hides_on_close(window.app_handle()) {
+                    let _ = window.app_handle().emit_to("main", HIDDEN_EVENT, ());
+                    let _ = window.hide();
+                } else {
+                    flush_then_exit(window.app_handle());
+                }
             }
         })
         .build(context())

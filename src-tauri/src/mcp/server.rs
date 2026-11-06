@@ -210,7 +210,7 @@ pub(super) fn too_long_reply() -> String {
 }
 
 /// To stderr, never stdout, which is the client's in the bridge. Not `eprintln!`, which panics when stderr is closed.
-pub(super) fn log(message: std::fmt::Arguments) {
+pub(crate) fn log(message: std::fmt::Arguments) {
     let _ = writeln!(io::stderr(), "fastmemo mcp: {message}");
 }
 

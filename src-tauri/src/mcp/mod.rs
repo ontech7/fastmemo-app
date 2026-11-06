@@ -135,12 +135,17 @@ fn apply_settings(app: &AppHandle, settings: McpSettings) -> Result<(), String> 
     settings.save(&path).map_err(|err| err.to_string())?;
     let enabled = settings.enabled;
     let was_enabled = std::mem::replace(&mut *state.settings.lock().unwrap(), settings).enabled;
-    if enabled && !was_enabled {
-        start(app)?;
-    } else if !enabled && was_enabled {
-        stop(app);
-    }
-    Ok(())
+    let started = if enabled && !was_enabled {
+        start(app)
+    } else {
+        if !enabled && was_enabled {
+            stop(app);
+        }
+        Ok(())
+    };
+    // The icon follows the switches saved, a start that failed or not.
+    crate::tray::sync(app);
+    started
 }
 
 /// What an AI client needs to launch this app, and whether that's likely to keep working.
@@ -191,6 +196,7 @@ pub fn launch(app: &AppHandle) {
         .unwrap_or_default();
     let enabled = settings.enabled;
     *app.state::<McpState>().settings.lock().unwrap() = settings;
+    crate::tray::sync(app);
     if enabled {
         let app = app.clone();
         std::thread::spawn(move || {

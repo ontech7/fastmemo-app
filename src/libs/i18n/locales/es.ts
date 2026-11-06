@@ -1194,6 +1194,8 @@ const es = {
     zoom: "Zoom",
     help: "Ayuda",
     help_item: "Ayuda de {{name}}",
+    tray_open: "Abrir Fast Memo",
+    tray_quit: "Salir",
   },
 
   a11y: {

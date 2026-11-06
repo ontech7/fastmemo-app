@@ -1171,6 +1171,8 @@ const ja = {
     zoom: "拡大／縮小",
     help: "ヘルプ",
     help_item: "{{name}} ヘルプ",
+    tray_open: "Fast Memo を開く",
+    tray_quit: "終了",
   },
 
   a11y: {

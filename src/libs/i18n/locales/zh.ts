@@ -1141,6 +1141,8 @@ const zh = {
     zoom: "缩放",
     help: "帮助",
     help_item: "{{name}} 帮助",
+    tray_open: "打开 Fast Memo",
+    tray_quit: "退出",
   },
 
   a11y: {
