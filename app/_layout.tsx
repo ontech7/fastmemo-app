@@ -16,6 +16,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { installDesktopMenu } from "@/libs/desktopMenu";
 import { installFlushOnExit } from "@/libs/flushOnExit";
 import i18n from "@/libs/i18n";
+import { installMcpBridge } from "@/libs/mcp/bridge";
 import { installMessageGuard } from "@/libs/messageGuard";
 import AppUpdateProvider from "@/providers/AppUpdateProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
@@ -38,6 +39,7 @@ enableFreeze(true);
 
 installMessageGuard();
 installFlushOnExit();
+installMcpBridge();
 installDesktopMenu();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});

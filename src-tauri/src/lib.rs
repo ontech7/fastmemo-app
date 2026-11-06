@@ -555,6 +555,7 @@ pub fn run() {
         .manage(ExitState::default())
         .manage(WindowShown::default())
         .manage(net::Net::default())
+        .manage(mcp::McpState::default())
         .invoke_handler(tauri::generate_handler![
             biometric_authenticate,
             exit_after_flush,
@@ -562,7 +563,8 @@ pub fn run() {
             set_menu_labels,
             net::net_request,
             net::net_cancel,
-            net::net_webhook
+            net::net_webhook,
+            mcp::mcp_reply
         ])
         .setup(|app| {
             // The config's frame: window-state's restore lands just after (on the main queue), recorded through its
@@ -571,6 +573,7 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 remember_windowed_frame(&window.as_ref().window());
             }
+            mcp::launch(app.handle());
             let app = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(SHOW_FALLBACK);
