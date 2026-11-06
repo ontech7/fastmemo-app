@@ -11,6 +11,11 @@ use tauri_plugin_window_state::StateFlags;
 pub mod mcp;
 mod net;
 
+/// The app's config, in one place: the MCP bridge reads the identifier from it without starting Tauri.
+fn context() -> tauri::Context<tauri::Wry> {
+    tauri::generate_context!()
+}
+
 /// Prompt the OS biometric dialog (Touch ID on macOS, Windows Hello on Windows)
 /// and report whether it succeeded. Used by the frontend's web/Tauri unlock path
 /// to gate access to protected notes without the secret code. `reason` is the
@@ -590,7 +595,7 @@ pub fn run() {
                 flush_then_exit(window.app_handle());
             }
         })
-        .build(tauri::generate_context!())
+        .build(context())
         .expect("error while building tauri application")
         .run(|app, event| match event {
             // `code` is None when the last window is gone; `app.exit()` comes back here with Some and goes through.

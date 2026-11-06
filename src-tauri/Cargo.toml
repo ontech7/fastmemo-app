@@ -41,6 +41,17 @@ tokio = { version = "1", default-features = false, features = ["sync"] }
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 robius-authentication = "0.1.1"
 
+# The named pipe of the local MCP server (src/mcp/endpoint.rs). Win32_System_IO is what ConnectNamedPipe is gated on.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Pipes",
+] }
+
 [profile.dev]
 incremental = true
 opt-level = 0
