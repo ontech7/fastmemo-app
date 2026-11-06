@@ -1435,14 +1435,21 @@ AI client --stdio JSON-RPC--> bridge (--mcp) --local socket--> Fast Memo (Rust) 
   (`notifyNoteChanged` in `libs/cloud/sync.ts`, `full: true` so no toast; `useLiveNote` reloads), or its next commit would write
   the old copy, and the old flags, back. Pending typing is committed first, so it moves the revision and the agent gets the
   conflict: an edit needs the `rev` it read, and a stale one is refused with the typing kept.
+  The desktop hook renders the incoming note with `flushSync` (`useNoteEditor.web.ts`), so the editors' refs (`noteRef`) hold it
+  before any later message: a keystroke right after a lock would otherwise build its note from the copy before the lock and
+  write `locked: false` back. Nothing in `scripts/` exercises it (no DOM in the dependencies): a hand check.
 - **Tool shapes.** `false` for `readOnly` or `locked` on `create_note` just means not set (a new note has nothing to loosen);
   only `set_note_flags` refuses it. Search and read page with `offset`/`nextOffset`, one vocabulary. Kanban columns are
   `{ name, color?, cards: string[] }`: plain text is what an agent writes, the ids are the server's. `edit_note`'s title and
   category follow `create_note`'s rules (`MAX_TITLE`, newlines to spaces; a category only by exact or case-insensitive name,
-  never created). Text is HTML, cleaned on arrival with `NOTE_HTML_CONFIG` (ADR-021). A read replaces images with a placeholder
+  never created). Text is HTML, cleaned on arrival with `AGENT_HTML_CONFIG`: the app's `NOTE_HTML_CONFIG` (ADR-021) plus no media
+  and nothing that fetches when the note opens (images, video, audio, frames, SVG, `src`/`srcset`/`poster`/`background`, inline
+  `style`), so an agent can't make a note phone home; links stay. A read replaces images with a placeholder
   and returns 100,000 characters at a time; a search compares the text with images removed, not the placeholder, which the user
-  never wrote; `replaceHtml` is refused for a note holding images. The writes per connection are capped at 30 a minute, so a
-  looping agent can't burn Firestore's free quota (NEVER #11). The server's `instructions` say note content is data, not
+  never wrote; `replaceHtml` is refused for a note holding images. The writes per connection are capped at 30 a minute and 300 an
+  hour (`session.rs`), so at worst 7,200 a day per connection against Firestore's 20,000 free writes (NEVER #11). That slows a
+  looping agent, it doesn't bound a day by itself: the device document's fan-out isn't counted, and each new connection starts its
+  count again. A refused write says which limit it hit and when to retry. The server's `instructions` say note content is data, not
   instructions, and tools carry MCP annotations.
 - **The window closed** (`src-tauri/src/tray.rs`). macOS: unchanged (ADR-022). Windows and Linux, only while MCP is on and its
   "keep running" switch with it: closing hides the window and a tray icon stays, with Open and Quit (`flush_then_exit`). This
@@ -1460,12 +1467,15 @@ hidden view may be suspended after about 5 minutes.
 - **Windows (WebView2): pending,** measured at the end on the user's desktop PC, with a test build: a call after 35 minutes with
   the window closed must answer in under 5 s (`scripts/mcp-e2e.test.mjs --wait-minutes 35`). Result: _not measured yet_. If it
   fails: first a held Web Lock, then `SetIsVisible(true)` while hidden, both switched only while MCP is on, so a user with MCP
-  off keeps today's behavior. The pipe code has also only been type-checked so far: its first compile and run are on that same
-  test build's CI.
+  off keeps today's behavior. CI on `windows-latest` has built the pipe code and run the `mcp::` tests, named pipes included (60
+  passed, run 42272924109). Stdio under `windows_subsystem = "windows"`, the tray and the hidden page have never run: the hidden
+  page stays a blank until that run.
 - **Linux (WebKitGTK): untested by hand** (user decision: no Linux desktop is available, as for every desktop release so far).
   Linux is built, ships the same feature and isn't a gate for anything. The tray is unverified too: Tauri sends no click events
   there, so the icon has only its menu, and some GNOME setups, as far as we know, don't show tray icons at all. The "keep
-  running" switch is the way out of that.
+  running" switch is the way out of that. The deb's tray dependency is `libayatana-appindicator3-1`, which Debian 12 and later
+  still carry (`libappindicator3-1` is gone from Debian): CI installs `libayatana-appindicator3-dev` (`publish.yml`) so that
+  tauri-cli names the ayatana package in `Depends`. It applies to every user of the deb, MCP on or off.
 
 **With a real client** (Claude Code 2.1.319, Haiku, headless, 2026-11-06, on the test build). It negotiated 2026-07-28, so
 `initialize` has been exercised only by the fake client. "Save a note about this" gave a text note with a short title and no
