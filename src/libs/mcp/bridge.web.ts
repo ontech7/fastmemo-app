@@ -37,6 +37,12 @@ const sanitize = (html: string): string => {
   return purifier.sanitize(html, NOTE_HTML_CONFIG) as string;
 };
 
+/**
+ * How long the update check may take. Rust gives a tool call 10 s (`PAGE_TIMEOUT`) and then says Fast Memo isn't responding,
+ * which sends the user to the wrong place: a slow connection must end first, as a failed check.
+ */
+const UPDATE_CHECK_TIMEOUT_MS = 8_000;
+
 /** Whether a newer desktop version exists. Deb and rpm installs update through their package manager: that's said, not "up to date". */
 async function checkUpdate(): Promise<UpdateCheck> {
   const { BundleType, getBundleType, getVersion } = await import("@tauri-apps/api/app");
@@ -44,7 +50,7 @@ async function checkUpdate(): Promise<UpdateCheck> {
   const bundleType = await getBundleType();
   if (bundleType === BundleType.Deb || bundleType === BundleType.Rpm) return { kind: "packageManager", current };
 
-  const update = await checkDesktopUpdate();
+  const update = await checkDesktopUpdate({ timeout: UPDATE_CHECK_TIMEOUT_MS });
   if (!update) return { kind: "current", current };
   try {
     return { kind: "newer", current, latest: update.version };
