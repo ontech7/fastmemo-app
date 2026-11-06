@@ -5,6 +5,7 @@ import uuid from "react-uuid";
 
 import { addNoteHooks, NOTE_HTML_CONFIG } from "@/editor/sanitizeConfig";
 import { noteTextLimit } from "@/libs/cloud";
+import { notifyNoteChanged } from "@/libs/cloud/sync";
 import { flushNow } from "@/libs/flushOnExit";
 import { handleMcpRequest } from "@/libs/mcp/handlers";
 import type { McpDeps } from "@/libs/mcp/handlers";
@@ -52,7 +53,7 @@ const deps: McpDeps = {
   sendWebhook: (payload, body) => {
     webhook(payload, body as Record<string, unknown>);
   },
-  notifyNoteChanged: notAvailableYet,
+  notifyNoteChanged,
   newId: uuid,
   now: () => Date.now(),
   date: () => formatDateTime(),

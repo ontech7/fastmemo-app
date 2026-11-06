@@ -28,6 +28,7 @@ const STUBS = {
     export const notesLoaded = () => globalThis.__page.notesLoaded;
     export const notesPersisted = () => true;
   `,
+  "@/libs/cloud/sync": `export const notifyNoteChanged = () => {};`,
   "@/libs/flushOnExit": `export const flushNow = () => Promise.resolve();`,
   "@/libs/net": `export const postWebhook = async () => {};`,
   "@/utils/date": `export const formatDateTime = () => "today";`,
@@ -196,6 +197,8 @@ const harness = (notes = SEED, overrides = {}) => {
       log.commits++;
     },
     flush: async () => {
+      // A real wait: a handler that doesn't await the flush answers before this logs.
+      await sleep(5);
       log.order.push("flush");
     },
     ready: () => true,
@@ -533,7 +536,7 @@ console.log("\nlist_categories");
 console.log("\ncreate_note");
 
 const creator = (notes = SEED, overrides = {}) => {
-  const seen = { sanitized: [], webhooks: [] };
+  const seen = { sanitized: [], webhooks: [], notified: [] };
   let counter = 0;
   const h = harness(notes, {
     newId: () => `gen-${++counter}`,
@@ -543,6 +546,9 @@ const creator = (notes = SEED, overrides = {}) => {
     },
     sendWebhook: (payload, body) => {
       seen.webhooks.push({ payload, body });
+    },
+    notifyNoteChanged: (id) => {
+      seen.notified.push(id);
     },
     ...overrides,
   });
@@ -588,7 +594,8 @@ const creator = (notes = SEED, overrides = {}) => {
     body
   );
   ok("the note is the newest in the list", store.getState().notes.items[0].id === note.id);
-  ok("flushed before answering", log.order.join() === "dispatch,flush", log.order);
+  log.order.push("reply");
+  ok("flushed before answering", log.order.join() === "dispatch,flush,reply", log.order);
 }
 
 {
@@ -825,10 +832,44 @@ const creator = (notes = SEED, overrides = {}) => {
 }
 
 {
-  const { create } = creator(SEED, { persisted: () => false });
+  const { create, seen } = creator(SEED, { persisted: () => false });
   const failed = await create({ type: "text", title: "x", text: "<p>x</p>" });
   ok("not persisted: an error, not a success", failed.isError && failed.createdId === undefined, failed);
-  ok("...saying so", /couldn't save/i.test(failed.text), failed.text);
+  ok(
+    "...saying so, and not to try again: that would make a copy",
+    /isn't saved to disk/i.test(failed.text) && !/try again/i.test(failed.text) && /don't create it again/i.test(failed.text),
+    failed.text
+  );
+  ok("...and no webhook for a note that isn't on disk", seen.webhooks.length === 0, seen.webhooks);
+}
+{
+  // The write fails while it runs: `persisted()` reads true before the flush and false after it.
+  let flushed = false;
+  const { create, seen } = creator(SEED, {
+    flush: async () => {
+      await sleep(5);
+      flushed = true;
+    },
+    persisted: () => !flushed,
+  });
+  const failed = await create({ type: "text", title: "x", text: "<p>x</p>" });
+  ok(
+    "persisted read after the flush: a write that fails during it is an error",
+    failed.isError && failed.createdId === undefined && seen.webhooks.length === 0,
+    failed
+  );
+}
+{
+  const { create } = creator(SEED, {
+    sendWebhook: () => {
+      throw new Error("WEBHOOKBROKE");
+    },
+  });
+  const warn = console.warn;
+  console.warn = () => {};
+  const reply = await create({ type: "text", title: "x", text: "<p>x</p>" });
+  console.warn = warn;
+  ok("a failing webhook doesn't turn a saved note into an error", !reply.isError && !!reply.createdId, reply);
 }
 
 {
@@ -867,7 +908,9 @@ console.log("\nset_note_flags");
       seen.webhooks[0].body.important === true,
     seen.webhooks
   );
-  ok("flushed before answering, after the change", log.order.join() === "dispatch,dispatch,flush", log.order);
+  log.order.push("reply");
+  ok("flushed before answering, after the change", log.order.join() === "dispatch,dispatch,flush,reply", log.order);
+  ok("an open editor is told once, with the id", seen.notified.join() === "open", seen.notified);
 
   const dispatchedBefore = log.dispatched.length;
   const again = await flags("open", { important: true, readOnly: true });
@@ -876,6 +919,9 @@ console.log("\nset_note_flags");
     !again.isError && stored("open").important && stored("open").readOnly && log.dispatched.length === dispatchedBefore
   );
   ok("...no webhook for no change", seen.webhooks.length === 1);
+  ok("...and no telling the editor", seen.notified.length === 1, seen.notified);
+  const invalidCall = await flags("open", { readOnly: false });
+  ok("a refused call tells no editor", invalidCall.isError && seen.notified.length === 1);
 
   await flags("open", { important: false });
   ok("important both ways", stored("open").important === false);
@@ -936,9 +982,29 @@ console.log("\nset_note_flags");
 }
 
 {
-  const { call } = creator(SEED, { persisted: () => false });
+  const { call, store, seen } = creator(SEED, { persisted: () => false });
+  const first = await call("fastmemo_set_note_flags", { id: "open", important: true });
+  ok("not persisted: an error, not a success", first.isError, first);
+  ok("...and no webhook for what isn't on disk", seen.webhooks.length === 0, seen.webhooks);
+  const retry = await call("fastmemo_set_note_flags", { id: "open", important: true });
+  ok(
+    "a retry finds the flag set and still says it isn't on disk",
+    retry.isError && store.getState().notes.items.find((n) => n.id === "open").important === true,
+    retry
+  );
+  ok("...the editor was told only of the change", seen.notified.join() === "open", seen.notified);
+}
+{
+  let flushed = false;
+  const { call, seen } = creator(SEED, {
+    flush: async () => {
+      await sleep(5);
+      flushed = true;
+    },
+    persisted: () => !flushed,
+  });
   const reply = await call("fastmemo_set_note_flags", { id: "open", important: true });
-  ok("not persisted: an error, not a success", reply.isError, reply);
+  ok("a write that fails during the flush is an error", reply.isError && seen.webhooks.length === 0, reply);
 }
 
 /* ------------------------------------------------------------------------------------------------------------------ */

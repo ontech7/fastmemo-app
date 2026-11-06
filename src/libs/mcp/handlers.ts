@@ -47,6 +47,9 @@ const DEFAULT_SEARCH_LIMIT = 20;
 const MAX_SEARCH_LIMIT = 50;
 
 const NOT_SAVED = "Fast Memo couldn't save this to disk, so it may be lost when the app closes. Try again.";
+/** A created note stays in the app and is queued for upload: a second `create_note` would make a copy. */
+const CREATED_NOT_SAVED =
+  "The note was created in Fast Memo but isn't saved to disk yet, so it may be lost if the app closes. Don't create it again.";
 
 const refused = (text: string): McpReply => ({ text, isError: true });
 const result = (value: object): McpReply => ({ text: JSON.stringify(value), isError: false });
@@ -112,7 +115,7 @@ function webhookBody(action: string, note: Note): object {
     readOnly: note.readOnly,
     hidden: note.hidden,
     locked: note.locked,
-    category: { iconId: note.category.icon, name: note.category.name },
+    category: { iconId: note.category?.icon, name: note.category?.name },
     ...content,
   };
 }
@@ -123,6 +126,15 @@ const ADD_WEBHOOKS: Record<NoteType, { action: string; select: (state: RootState
   kanban: { action: "note/addKanbanNote", select: selectorWebhook_addKanbanNote },
   code: { action: "note/addCodeNote", select: selectorWebhook_addCodeNote },
 };
+
+/** The user's webhook, once the change is on disk. A failing one doesn't turn a saved change into an error. */
+function announce(deps: McpDeps, payload: WebhookPayload, body: object): void {
+  try {
+    deps.sendWebhook(payload, body);
+  } catch (err) {
+    console.warn("MCP: a webhook failed", err);
+  }
+}
 
 /** Writes what was dispatched to disk before the agent is told it's done. */
 async function saved(deps: McpDeps): Promise<boolean> {
@@ -139,11 +151,11 @@ async function createNote(args: Record<string, unknown>, deps: McpDeps): Promise
   deps.dispatch(addNote(built.note));
   // The note as the store keeps it: the reducer stamps its revision.
   const note = findStored(deps, built.note.id);
-  if (!note) return refused(NOT_SAVED);
+  if (!note) return refused(CREATED_NOT_SAVED);
 
+  if (!(await saved(deps))) return refused(CREATED_NOT_SAVED);
   const webhook = ADD_WEBHOOKS[note.type];
-  deps.sendWebhook(webhook.select(deps.getState()), webhookBody(webhook.action, note));
-  if (!(await saved(deps))) return refused(NOT_SAVED);
+  announce(deps, webhook.select(deps.getState()), webhookBody(webhook.action, note));
 
   // A locked note is out of the agent's reach from now on: it learns nothing to find it by.
   if (note.locked) return { text: "Created.", isError: false };
@@ -201,10 +213,11 @@ async function setNoteFlags(args: Record<string, unknown>, deps: McpDeps): Promi
 
   const note = findStored(deps, found.id);
   if (!note) return refused(NOT_FOUND);
-  if (changed) {
-    deps.sendWebhook(selectorWebhook_updateNote(deps.getState()), webhookBody("note/updateNote", note));
-    if (!(await saved(deps))) return refused(NOT_SAVED);
-  }
+  // An editor open on this note keeps its own copy: it reloads this one, or its next commit would write the old flags back.
+  if (changed) deps.notifyNoteChanged(note.id);
+  // On every path: a retry after a failed write finds the flags already set, and must still say whether they're on disk.
+  if (!(await saved(deps))) return refused(NOT_SAVED);
+  if (changed) announce(deps, selectorWebhook_updateNote(deps.getState()), webhookBody("note/updateNote", note));
   return result({
     id: note.id,
     rev: noteRev(note),
