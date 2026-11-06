@@ -20,10 +20,10 @@ const DEFAULT_LANGUAGE = "javascript";
 
 const NOTE_TYPES: readonly NoteType[] = ["text", "todo", "code", "kanban"];
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const byteSize = (text: string): number => new TextEncoder().encode(text).length;
+export const byteSize = (text: string): number => new TextEncoder().encode(text).length;
 
 /** A title as the list shows it: one line, trimmed, 1 to `MAX_TITLE` characters (emoji count as one). */
 export function normalizeTitle(raw: unknown): { title: string } | { error: string } {
@@ -52,6 +52,21 @@ export function booleanFlag(args: Record<string, unknown>, name: string): { valu
   return { value };
 }
 
+/** A column's color: one of `KANBAN_COLUMN_COLORS` (ignoring case), or by its place among the columns when none is given. */
+export function columnColor(raw: unknown, index: number): { color: string } | { error: string } {
+  if (raw === undefined || raw === null) return { color: KANBAN_COLUMN_COLORS[index % KANBAN_COLUMN_COLORS.length] };
+  const known = typeof raw === "string" ? KANBAN_COLUMN_COLORS.find((c) => c.toLowerCase() === raw.toLowerCase()) : undefined;
+  if (!known)
+    return { error: `A column's \`color\` must be one of: ${KANBAN_COLUMN_COLORS.join(", ")}. Omit it for the default.` };
+  return { color: known };
+}
+
+/** A code tab's language: the one given if the editor has it, else the title's extension, else the editor's default. */
+export function tabLanguage(raw: unknown, title: string): string {
+  const given = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return Object.hasOwn(LANGUAGE_LABELS, given) ? given : (inferLanguageFromTitle(title) ?? DEFAULT_LANGUAGE);
+}
+
 const needs = (field: string, what: string): { error: string } => ({ error: `${what} needs \`${field}\`.` });
 
 type Content = { error: string } | { content: Record<string, unknown> };
@@ -77,23 +92,15 @@ function kanbanContent(args: Record<string, unknown>, deps: McpDeps): Content {
   for (const [index, column] of args.columns.entries()) {
     if (!isRecord(column) || typeof column.name !== "string" || !column.name.trim())
       return { error: "Each column needs a `name`." };
-    let color: string = KANBAN_COLUMN_COLORS[index % KANBAN_COLUMN_COLORS.length];
-    if (column.color !== undefined && column.color !== null) {
-      const known =
-        typeof column.color === "string"
-          ? KANBAN_COLUMN_COLORS.find((c) => c.toLowerCase() === (column.color as string).toLowerCase())
-          : undefined;
-      if (!known)
-        return { error: `A column's \`color\` must be one of: ${KANBAN_COLUMN_COLORS.join(", ")}. Omit it for the default.` };
-      color = known;
-    }
+    const color = columnColor(column.color, index);
+    if ("error" in color) return color;
     const cards = column.cards ?? [];
     if (!Array.isArray(cards) || cards.some((card) => typeof card !== "string"))
       return { error: "A column's `cards` must be a list of text." };
     columns.push({
       id: deps.newId(),
       name: column.name.trim(),
-      color,
+      color: color.color,
       items: (cards as string[]).filter((card) => card.trim()).map((card) => ({ id: deps.newId(), text: card })),
     });
   }
@@ -107,11 +114,12 @@ function codeContent(args: Record<string, unknown>, deps: McpDeps): Content {
     if (!isRecord(tab) || typeof tab.title !== "string" || !tab.title.trim() || typeof tab.code !== "string") {
       return { error: "Each tab needs a `title` and its `code`." };
     }
-    const given = typeof tab.language === "string" ? tab.language.trim().toLowerCase() : "";
-    const language = Object.hasOwn(LANGUAGE_LABELS, given)
-      ? given
-      : (inferLanguageFromTitle(tab.title.trim()) ?? DEFAULT_LANGUAGE);
-    tabs.push({ id: deps.newId(), title: tab.title.trim(), code: tab.code, language });
+    tabs.push({
+      id: deps.newId(),
+      title: tab.title.trim(),
+      code: tab.code,
+      language: tabLanguage(tab.language, tab.title.trim()),
+    });
   }
   return { content: { tabs, activeTabId: tabs[0].id } };
 }

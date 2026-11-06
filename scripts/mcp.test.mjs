@@ -67,6 +67,7 @@ await build({
       export * as policy from "@/libs/mcp/policy";
       export * as view from "@/libs/mcp/noteView";
       export * as input from "@/libs/mcp/noteInput";
+      export * as editing from "@/libs/mcp/noteEdit";
       export { KANBAN_COLUMN_COLORS } from "@/constants/styles";
       export { installMcpBridge } from "@/libs/mcp/bridge.web";
     `,
@@ -215,7 +216,8 @@ const harness = (notes = SEED, overrides = {}) => {
     helpTitle: notBuilt,
     ...overrides,
   };
-  const call = (tool, args = {}) => M.handleMcpRequest({ id: 1, tool, args, scope: { editAll: false, ownedIds: [] } }, deps);
+  const call = (tool, args = {}, scope = { editAll: false, ownedIds: [] }) =>
+    M.handleMcpRequest({ id: 1, tool, args, scope }, deps);
   return {
     store,
     log,
@@ -1008,13 +1010,708 @@ console.log("\nset_note_flags");
 }
 
 /* ------------------------------------------------------------------------------------------------------------------ */
+/* edit_note and trash_note                                                                                            */
+/* ------------------------------------------------------------------------------------------------------------------ */
+
+console.log("\nedit_note");
+
+const ALL_NOTES = { editAll: true, ownedIds: [] };
+
+const editor = (notes = SEED, overrides = {}) => {
+  const c = creator(notes, overrides);
+  const edit = (id, rev, changes = {}, scope = ALL_NOTES) =>
+    c.call("fastmemo_edit_note", { ...(id !== undefined && { id }), ...(rev !== undefined && { rev }), ...changes }, scope);
+  /** The edit, at the revision the store holds. */
+  const editNow = (id, changes, scope) => edit(id, c.stored(id)?.rev, changes, scope);
+  const trash = (id) => c.call("fastmemo_trash_note", { ...(id !== undefined && { id }) });
+  const inItems = (id) => c.store.getState().notes.items.some((note) => note.id === id);
+  const inTrash = (id) => c.store.getState().notes.temporaryItems.some((note) => note.id === id);
+  return { ...c, edit, editNow, trash, inItems, inTrash };
+};
+
+{
+  const { edit, editNow, stored, log, seen } = editor();
+  const before = stored("open");
+
+  const noRev = await edit("open", undefined, { title: "x" });
+  ok("needs rev", noRev.isError && noRev.text.includes("`rev`"), noRev);
+  const badRev = await edit("open", "5", { title: "x" });
+  ok("a rev that isn't a number: refused the same way", badRev.isError && badRev.text.includes("`rev`"), badRev);
+  const stale = await edit("open", before.rev - 1, { title: "x" });
+  ok(
+    "stale rev refused, note unchanged",
+    stale.isError &&
+      stale.text.includes("changed") &&
+      stale.text.includes("Read it again") &&
+      stored("open").title === before.title,
+    stale
+  );
+  ok(
+    "...nothing dispatched, no editor told, no webhook",
+    log.dispatched.length === 0 && seen.notified.length === 0 && seen.webhooks.length === 0
+  );
+  ok("pending edits committed first", log.commits === 3, log.commits);
+
+  const reply = await editNow("open", { title: "  New title " });
+  const body = JSON.parse(reply.text);
+  ok("an edit at the right rev is made", !reply.isError && stored("open").title === "New title", reply);
+  ok(
+    "the reply has the id, new rev, type and title",
+    body.id === "open" &&
+      body.rev === stored("open").rev &&
+      body.rev > before.rev &&
+      body.type === "text" &&
+      body.title === "New title",
+    body
+  );
+  ok("rev and updatedAt move", stored("open").rev > before.rev && stored("open").updatedAt === 1000, stored("open"));
+  ok("the old rev is now stale", (await edit("open", before.rev, { title: "again" })).isError);
+}
+{
+  // The user's typing is committed by `commitPending`, which moves the revision: the edit at the old one loses.
+  const typed = textNote("open", 100, { text: "<p>TYPEDWORD</p>" });
+  const context = {};
+  let typedOnce = false;
+  const h = editor(SEED, {
+    commitPending: () => {
+      if (!typedOnce) context.store.dispatch(N.addNote(typed));
+      typedOnce = true;
+    },
+  });
+  context.store = h.store;
+  const oldRev = h.stored("open").rev;
+  const lost = await h.edit("open", oldRev, { appendHtml: "<p>from the agent</p>" });
+  ok("user typing wins: the edit at the old rev is refused", lost.isError && lost.text.includes("changed"), lost);
+  ok("...and the typed text stays", h.stored("open").text === "<p>TYPEDWORD</p>", h.stored("open").text);
+  const again = await h.edit("open", h.stored("open").rev, { appendHtml: "<p>from the agent</p>" });
+  ok(
+    "read again, the edit goes through on the typed text",
+    !again.isError && h.stored("open").text === "<p>TYPEDWORD</p><p>from the agent</p>",
+    again
+  );
+}
+{
+  const { edit, editNow, stored, trash, log } = editor();
+  const ro = await editNow("ro", { title: "x" });
+  ok("read-only refused", ro.isError && stored("ro").title === "title of ro", ro);
+  ok("...saying so", /read-only/i.test(ro.text), ro);
+
+  const owning = { editAll: true, ownedIds: ["lockedNote", "hiddenNote", "gone", "made-up"] };
+  const replies = [];
+  for (const id of ["lockedNote", "hiddenNote", "gone", "made-up", undefined, 7]) {
+    for (const [rev, scope] of [
+      [1, ALL_NOTES],
+      [undefined, ALL_NOTES],
+      [1, owning],
+      [1, { editAll: false, ownedIds: [] }],
+    ]) {
+      replies.push(await edit(id, rev, { title: "x" }, scope));
+    }
+  }
+  ok(
+    "locked, hidden, trashed, unknown: not found, whatever the rev or the scope",
+    replies.every((reply) => reply.isError && reply.text === NOT_FOUND),
+    replies.find((reply) => reply.text !== NOT_FOUND)
+  );
+  ok("...and none of them dispatched anything", log.dispatched.length === 0);
+  ok("trash says the same for a locked note", (await trash("lockedNote")).text === NOT_FOUND);
+}
+
+console.log("\nedit_note: the session rule");
+
+{
+  const { edit, stored, made } = editor();
+  const off = { editAll: false, ownedIds: [] };
+  const outOfScope = await edit("open", stored("open").rev, { title: "x" }, off);
+  ok(
+    "switch off, not owned: refused, and why",
+    outOfScope.isError &&
+      outOfScope.text.includes("session") &&
+      outOfScope.text.includes("settings") &&
+      stored("open").title === "title of open",
+    outOfScope
+  );
+  const owned = await edit("open", stored("open").rev, { title: "mine" }, { editAll: false, ownedIds: ["open"] });
+  ok("switch off, owned: allowed", !owned.isError && stored("open").title === "mine", owned);
+  const all = await edit("open", stored("open").rev, { title: "all" }, ALL_NOTES);
+  ok("switch on: allowed", !all.isError && stored("open").title === "all", all);
+  const ownedRo = await edit("ro", stored("ro").rev, { title: "x" }, { editAll: false, ownedIds: ["ro"] });
+  ok("owned and read-only: refused", ownedRo.isError && stored("ro").title === "title of ro", ownedRo);
+  const ownedLocked = await edit("lockedNote", 1, { title: "x" }, { editAll: false, ownedIds: ["lockedNote"] });
+  ok("owned and locked: not found", ownedLocked.isError && ownedLocked.text === NOT_FOUND, ownedLocked);
+
+  // What the bridge's scope is made of: a note created in this session, at the rev the creation returned.
+  const { reply, note } = await made({ type: "text", title: "fresh", text: "<p>x</p>" });
+  const fresh = await edit(
+    note.id,
+    JSON.parse(reply.text).rev,
+    { appendHtml: "<p>y</p>" },
+    { editAll: false, ownedIds: [note.id] }
+  );
+  ok(
+    "a note created through the tool can be edited at the rev it returned",
+    !fresh.isError && stored(note.id).text === "<p>x</p><p>y</p>",
+    fresh
+  );
+  const otherSession = await edit(note.id, stored(note.id).rev, { appendHtml: "<p>z</p>" }, off);
+  ok(
+    "...and not by a session that doesn't own it",
+    otherSession.isError && otherSession.text.includes("session"),
+    otherSession
+  );
+}
+
+console.log("\nedit_note: text");
+
+{
+  const { editNow, stored, seen, edit } = editor();
+  const picBefore = stored("pic").text;
+  const added = await editNow("pic", { appendHtml: "<p>added</p><script>bad()</script>" });
+  const text = stored("pic").text;
+  ok(
+    "appendHtml keeps images and is sanitized",
+    !added.isError &&
+      text === `${picBefore}<p>added</p>` &&
+      (text.match(/<img/g) ?? []).length === 2 &&
+      !text.includes("script"),
+    text
+  );
+  ok(
+    "...only the new part went through the sanitizer",
+    seen.sanitized.join() === "<p>added</p><script>bad()</script>",
+    seen.sanitized
+  );
+
+  const imgReplace = await editNow("pic", { replaceHtml: "<p>all new</p>" });
+  ok(
+    "replaceHtml refused when the note has images",
+    imgReplace.isError && /images/.test(imgReplace.text) && stored("pic").text === text,
+    imgReplace
+  );
+
+  const titleOnly = await editNow("pic", { title: "renamed" });
+  ok("a rename leaves the images and text byte for byte", !titleOnly.isError && stored("pic").text === text);
+
+  const replaced = await editNow("open", { replaceHtml: "<h1>new</h1><script>bad()</script>" });
+  ok(
+    "replaceHtml works without images, sanitized",
+    !replaced.isError && stored("open").text === "<h1>new</h1>",
+    stored("open").text
+  );
+
+  const both = await editNow("open", { replaceHtml: "<p>a</p>", appendHtml: "<p>b</p>" });
+  ok("replaceHtml and appendHtml together: refused", both.isError && stored("open").text === "<h1>new</h1>", both);
+  ok(
+    "replaceHtml with nothing left after cleaning: refused",
+    (await editNow("open", { replaceHtml: "<script>x</script>" })).isError
+  );
+  ok(
+    "appendHtml with nothing left after cleaning: refused",
+    (await editNow("open", { appendHtml: "<script>x</script>" })).isError
+  );
+  ok(
+    "html that isn't text: refused",
+    (await editNow("open", { appendHtml: 5 })).isError && (await editNow("open", { replaceHtml: {} })).isError
+  );
+
+  const tail = await editNow("open", { appendHtml: "<ul><li>one</li></ul>" });
+  ok(
+    "appendHtml joins at the end",
+    !tail.isError && stored("open").text === "<h1>new</h1><ul><li>one</li></ul>",
+    stored("open").text
+  );
+  const asked = seen.sanitized.length;
+  ok(
+    "an edit refused for the revision leaves the sanitizer unasked",
+    (await edit("open", 1, { appendHtml: "<p>q</p>" })).isError && seen.sanitized.length === asked,
+    seen.sanitized.length
+  );
+}
+
+console.log("\nedit_note: title, category, nothing to change");
+
+{
+  const { editNow, stored, store, log, seen } = editor();
+  ok("a title that is too long: refused", (await editNow("open", { title: "x".repeat(101) })).isError);
+  ok("an empty title: refused", (await editNow("open", { title: "  " })).isError);
+  const titled = await editNow("open", { title: "two\nlines" });
+  ok("a title is one line", !titled.isError && stored("open").title === "two lines", stored("open").title);
+
+  const categories = store.getState().categories.items.length;
+  const set = await editNow("open", { category: "work" });
+  ok(
+    "a category by name, ignoring case",
+    !set.isError && stored("open").category.name === "Work" && stored("open").category.icon === "work",
+    stored("open").category
+  );
+  const unknown = await editNow("open", { category: "Nonexistent" });
+  ok(
+    "a name with no match: refused, and says so",
+    unknown.isError && /Nonexistent/.test(unknown.text) && stored("open").category.name === "Work",
+    unknown
+  );
+  ok("...nothing is created", store.getState().categories.items.length === categories);
+  ok("the default category can't be chosen by name", (await editNow("open", { category: "All" })).isError);
+  ok("a category that isn't a name: refused", (await editNow("open", { category: 5 })).isError);
+  const back = await editNow("open", { category: null });
+  ok(
+    "null is the default category",
+    !back.isError && stored("open").category.icon === "none" && stored("open").category.name === "All",
+    stored("open").category
+  );
+
+  const dispatched = log.dispatched.length;
+  const hooks = seen.webhooks.length;
+  const notified = seen.notified.length;
+  const same = [
+    await editNow("open", {}),
+    await editNow("open", { unknownField: 1 }),
+    await editNow("open", { title: stored("open").title }),
+    await editNow("open", { category: null }),
+    await editNow("open", { appendHtml: undefined }),
+    await editNow("open", { replaceHtml: stored("open").text }),
+  ];
+  ok(
+    "no change at all: refused as nothing to change",
+    same.every((r) => r.isError && /nothing to change/i.test(r.text)),
+    same.find((r) => !r.isError || !/nothing/i.test(r.text))
+  );
+  ok(
+    "...no dispatch, no webhook, no editor told",
+    log.dispatched.length === dispatched && seen.webhooks.length === hooks && seen.notified.length === notified
+  );
+}
+
+console.log("\nedit_note: todo, kanban, code");
+
+{
+  const { editNow, stored } = editor();
+  const added = await editNow("todo", {
+    addItems: [{ text: "new one" }, { text: "done one", checked: true }, { text: "   " }],
+  });
+  const list = stored("todo").list;
+  ok(
+    "todo: add",
+    !added.isError &&
+      list.length === 4 &&
+      list[2].text === "new one" &&
+      list[2].checked === false &&
+      list[3].checked === true &&
+      list[2].id.startsWith("gen-"),
+    list
+  );
+  const updated = await editNow("todo", {
+    updateItems: [
+      { id: "i1", checked: true },
+      { id: "i2", text: "call Bob" },
+    ],
+  });
+  ok(
+    "todo: update",
+    !updated.isError &&
+      stored("todo").list[0].checked === true &&
+      stored("todo").list[0].text === "buy MILK" &&
+      stored("todo").list[1].text === "call Bob" &&
+      stored("todo").list[1].checked === true,
+    stored("todo").list
+  );
+  const removed = await editNow("todo", { removeItemIds: ["i1"] });
+  ok(
+    "todo: remove",
+    !removed.isError &&
+      stored("todo")
+        .list.map((i) => i.id)
+        .join() === "i2,gen-1,gen-2",
+    stored("todo").list
+  );
+
+  const before = JSON.stringify(stored("todo"));
+  ok(
+    "todo: removing an unknown id: refused, nothing applied",
+    (await editNow("todo", { addItems: [{ text: "z" }], removeItemIds: ["nope"] })).isError &&
+      JSON.stringify(stored("todo")) === before
+  );
+  ok("todo: updating an unknown id: refused", (await editNow("todo", { updateItems: [{ id: "nope", text: "z" }] })).isError);
+  ok("todo: an update that changes nothing named: refused", (await editNow("todo", { updateItems: [{ id: "i2" }] })).isError);
+  ok(
+    "todo: checked that isn't true or false: refused",
+    (await editNow("todo", { updateItems: [{ id: "i2", checked: "yes" }] })).isError
+  );
+  ok("todo: a list that isn't a list: refused", (await editNow("todo", { addItems: "x" })).isError);
+}
+{
+  const { editNow, stored } = editor();
+  const colors = M.KANBAN_COLUMN_COLORS;
+  const added = await editNow("board", { addColumns: [{ name: " Doing " }, { name: "Done", color: colors[3].toUpperCase() }] });
+  const columns = stored("board").columns;
+  ok(
+    "kanban: add columns, colors as in create",
+    !added.isError &&
+      columns.length === 3 &&
+      columns[1].name === "Doing" &&
+      columns[1].color === colors[1 % colors.length] &&
+      columns[2].color === colors[3],
+    columns
+  );
+  const doing = columns[1].id;
+  const cards = await editNow("board", {
+    addCards: [
+      { columnId: "c1", text: "second" },
+      { columnId: doing, text: "in doing" },
+    ],
+  });
+  ok(
+    "kanban: add cards",
+    !cards.isError && stored("board").columns[0].items.length === 2 && stored("board").columns[1].items[0].text === "in doing",
+    stored("board").columns
+  );
+  const moved = await editNow("board", { moveCards: [{ cardId: "k1", toColumnId: doing }] });
+  ok(
+    "kanban: move a card",
+    !moved.isError &&
+      stored("board")
+        .columns[0].items.map((i) => i.text)
+        .join() === "second" &&
+      stored("board").columns[1].items.some((i) => i.id === "k1"),
+    stored("board").columns
+  );
+  const removed = await editNow("board", { removeCardIds: ["k1"] });
+  ok(
+    "kanban: remove a card",
+    !removed.isError && !stored("board").columns.some((c) => c.items.some((i) => i.id === "k1")),
+    stored("board").columns
+  );
+
+  const before = JSON.stringify(stored("board"));
+  const unknownCard = await editNow("board", { addColumns: [{ name: "X" }], removeCardIds: ["nope"] });
+  ok(
+    "kanban: a card id that doesn't exist: refused, nothing applied",
+    unknownCard.isError && JSON.stringify(stored("board")) === before,
+    unknownCard
+  );
+  ok(
+    "kanban: a column id that doesn't exist: refused (add and move)",
+    (await editNow("board", { addCards: [{ columnId: "nope", text: "z" }] })).isError &&
+      (await editNow("board", { moveCards: [{ cardId: "k2", toColumnId: "nope" }] })).isError
+  );
+  ok(
+    "kanban: a color outside the list: refused",
+    (await editNow("board", { addColumns: [{ name: "X", color: "#123456" }] })).isError
+  );
+  ok("kanban: a column without a name: refused", (await editNow("board", { addColumns: [{ color: colors[0] }] })).isError);
+  ok("kanban: a card without text: refused", (await editNow("board", { addCards: [{ columnId: "c1", text: " " }] })).isError);
+}
+{
+  const { editNow, stored } = editor();
+  const before = JSON.stringify(stored("board"));
+  const many = Array.from({ length: 8 }, (_, i) => ({ name: `col ${i}` }));
+  ok(
+    "kanban: 10 columns at most",
+    (await editNow("board", { addColumns: [...many, { name: "one too many" }, { name: "two" }] })).isError &&
+      JSON.stringify(stored("board")) === before
+  );
+  const ten = await editNow("board", { addColumns: [...many, { name: "last" }] });
+  ok("...ten are fine", !ten.isError && stored("board").columns.length === 10, ten);
+  ok(
+    "...and the eleventh isn't",
+    (await editNow("board", { addColumns: [{ name: "11th" }] })).isError && stored("board").columns.length === 10
+  );
+}
+{
+  const { editNow, stored } = editor();
+  const added = await editNow("snippet", {
+    addTabs: [
+      { title: "util.py", code: "print(1)" },
+      { title: "notes", code: "x", language: "TypeScript" },
+    ],
+  });
+  const tabs = stored("snippet").tabs;
+  ok(
+    "code: add tabs, language as in create",
+    !added.isError &&
+      tabs.length === 3 &&
+      tabs[1].language === "python" &&
+      tabs[2].language === "typescript" &&
+      tabs[1].id.startsWith("gen-"),
+    tabs
+  );
+  const updated = await editNow("snippet", {
+    updateTabs: [
+      { id: "t1", code: "fn BYE() {}", title: " lib.rs " },
+      { id: tabs[1].id, language: "javascript" },
+    ],
+  });
+  ok(
+    "code: update tabs",
+    !updated.isError &&
+      stored("snippet").tabs[0].code === "fn BYE() {}" &&
+      stored("snippet").tabs[0].title === "lib.rs" &&
+      stored("snippet").tabs[0].language === "rust" &&
+      stored("snippet").tabs[1].language === "javascript",
+    stored("snippet").tabs
+  );
+  ok(
+    "code: the active tab is still one of the tabs",
+    stored("snippet").tabs.some((t) => t.id === stored("snippet").activeTabId) && stored("snippet").activeTabId === "t1"
+  );
+  ok("code: an unknown tab: refused", (await editNow("snippet", { updateTabs: [{ id: "nope", code: "x" }] })).isError);
+  ok(
+    "code: a language the editor hasn't: refused",
+    (await editNow("snippet", { updateTabs: [{ id: "t1", language: "klingon" }] })).isError
+  );
+  ok("code: a tab without code: refused", (await editNow("snippet", { addTabs: [{ title: "x" }] })).isError);
+}
+
+console.log("\nedit_note: types, size, the pure function");
+
+{
+  const { editNow, stored } = editor();
+  const before = JSON.stringify(stored("todo"));
+  const wrong = await editNow("todo", { title: "renamed", appendHtml: "<p>x</p>" });
+  ok(
+    "a field of another type refused, naming both",
+    wrong.isError && wrong.text.includes("appendHtml") && wrong.text.includes("todo"),
+    wrong
+  );
+  ok("...with no partial application: the title stayed", JSON.stringify(stored("todo")) === before);
+  const cases = [
+    ["open", { addItems: [{ text: "x" }] }, "addItems", "text"],
+    ["board", { addTabs: [{ title: "a", code: "b" }] }, "addTabs", "kanban"],
+    ["snippet", { addColumns: [{ name: "a" }] }, "addColumns", "code"],
+    ["todo", { moveCards: [] }, "moveCards", "todo"],
+  ];
+  for (const [id, changes, field, type] of cases) {
+    const reply = await editNow(id, changes);
+    ok(`${field} on a ${type} note: refused`, reply.isError && reply.text.includes(field) && reply.text.includes(type), reply);
+  }
+}
+{
+  const { editNow, stored } = editor(SEED, { textLimit: () => 300 });
+  const big = await editNow("open", { appendHtml: `<p>${"x".repeat(400)}</p>` });
+  ok(
+    "the size limit applies to the edited note",
+    big.isError && /too big/.test(big.text) && stored("open").text === "<p>body of open</p>",
+    big
+  );
+  ok("...below it, fine", !(await editNow("open", { appendHtml: "<p>ok</p>" })).isError);
+  const todoBig = await editNow("todo", { addItems: [{ text: "y".repeat(400) }] });
+  ok("...for the other types too", todoBig.isError && /too big/.test(todoBig.text), todoBig);
+  const over = editor([textNote("fat", 5, { text: `<p>${"z".repeat(400)}</p>` })], { textLimit: () => 300 });
+  ok("a note already over the limit can still be renamed", !(await over.editNow("fat", { title: "slimmer" })).isError);
+}
+{
+  const { editing } = M;
+  const h = creator();
+  const deps = { getState: h.store.getState, newId: () => "n1", sanitize: (html) => html, textLimit: () => 1000 };
+  const frozen = (value) => {
+    Object.values(value).forEach((inner) => typeof inner === "object" && inner !== null && frozen(inner));
+    return Object.freeze(value);
+  };
+  const todo = frozen(structuredClone(h.stored("todo")));
+  const snapshot = JSON.stringify(todo);
+  const fails = editing.applyEdit(
+    todo,
+    { title: "new", updateItems: [{ id: "i1", text: "changed" }], removeItemIds: ["nope"] },
+    deps
+  );
+  ok("applyEdit: an error, and the note it was given is as it was", "error" in fails && JSON.stringify(todo) === snapshot);
+  const works = editing.applyEdit(
+    todo,
+    { title: "new", updateItems: [{ id: "i1", text: "changed" }], addItems: [{ text: "more" }] },
+    deps
+  );
+  ok(
+    "applyEdit: a result that isn't the input, which is as it was",
+    "note" in works && works.note !== todo && JSON.stringify(todo) === snapshot,
+    works
+  );
+  ok(
+    "...with the changes",
+    works.note.title === "new" &&
+      works.note.list[0].text === "changed" &&
+      works.note.list.length === 3 &&
+      works.note.id === "todo"
+  );
+  const board = frozen(structuredClone(h.stored("board")));
+  const boardSnapshot = JSON.stringify(board);
+  const moved = editing.applyEdit(
+    board,
+    { addCards: [{ columnId: "c1", text: "a" }], moveCards: [{ cardId: "k1", toColumnId: "c1" }] },
+    deps
+  );
+  ok("applyEdit: kanban doesn't touch the input either", "note" in moved && JSON.stringify(board) === boardSnapshot, moved);
+}
+
+console.log("\nedit_note: the store, the editor, the webhook, the disk");
+
+{
+  const { editNow, stored, store, seen, log } = editor();
+  store.dispatch(N.setNoteFilters({ sortBy: "updatedAt", order: "desc" }));
+  store.dispatch(N.reorderNotes());
+  ok("(sorted by update time, 'open' is not first)", store.getState().notes.items[0].id !== "open");
+  const oldRev = stored("open").rev;
+  log.dispatched.length = 0;
+  log.order.length = 0;
+  await editNow("open", { title: "moved up" });
+  ok(
+    "rev and updatedAt move, sorted again",
+    stored("open").rev > oldRev && store.getState().notes.items[0].id === "open",
+    store.getState().notes.items.map((n) => n.id)
+  );
+  ok(
+    "dispatched as a change to the stored note, then sorted",
+    log.dispatched.length === 2 &&
+      log.dispatched[0].type === "notes/addNote" &&
+      log.dispatched[1].type === "notes/reorderNotes",
+    log.dispatched.map((a) => a.type)
+  );
+  ok("the upload is queued", store.getState().notes.cloud.items.add.open !== undefined, store.getState().notes.cloud.items.add);
+  ok("open editor told, once, with the id", seen.notified.join() === "open", seen.notified);
+  ok(
+    "the webhook note/updateNote, with the note as stored",
+    seen.webhooks.length === 1 &&
+      seen.webhooks[0].body.action === "note/updateNote" &&
+      seen.webhooks[0].body.id === "open" &&
+      seen.webhooks[0].body.title === "moved up" &&
+      seen.webhooks[0].body.text === "<p>body of open</p>" &&
+      seen.webhooks[0].body.updatedAt === 1000,
+    seen.webhooks
+  );
+  ok("...through the update webhook's settings", "url" in seen.webhooks[0].payload && "enabled" in seen.webhooks[0].payload);
+  ok(
+    "flushed before answering: the write came after the dispatches",
+    log.order.join() === "dispatch,dispatch,flush",
+    log.order
+  );
+}
+{
+  const { editNow, seen } = editor();
+  await editNow("todo", { addItems: [{ text: "item" }] });
+  await editNow("board", { addColumns: [{ name: "col" }] });
+  await editNow("snippet", { addTabs: [{ title: "a.js", code: "1" }] });
+  const [todo, board, code] = seen.webhooks.map((w) => w.body);
+  ok(
+    "the webhook has the content of each type",
+    todo.list.length === 3 &&
+      board.columns.length === 2 &&
+      code.tabs.length === 2 &&
+      code.activeTabId === "t1" &&
+      !("text" in todo),
+    seen.webhooks.map((w) => Object.keys(w.body))
+  );
+}
+{
+  let flushed = false;
+  const { editNow, stored, seen } = editor(SEED, {
+    flush: async () => {
+      await sleep(5);
+      flushed = true;
+    },
+    persisted: () => !flushed,
+  });
+  const failed = await editNow("open", { appendHtml: "<p>once</p>" });
+  ok(
+    "a failed save is an error that says the change is made and not to repeat it",
+    failed.isError &&
+      /isn't saved to disk/.test(failed.text) &&
+      /don't repeat/i.test(failed.text) &&
+      !/try again/i.test(failed.text),
+    failed.text
+  );
+  ok(
+    "...the change is in the store (a retry is a stale rev), the editor was told, no webhook",
+    stored("open").text === "<p>body of open</p><p>once</p>" && seen.notified.join() === "open" && seen.webhooks.length === 0
+  );
+}
+{
+  const { editNow } = editor(SEED, {
+    sendWebhook: () => {
+      throw new Error("WEBHOOKBROKE");
+    },
+  });
+  const warn = console.warn;
+  console.warn = () => {};
+  const reply = await editNow("open", { title: "still saved" });
+  console.warn = warn;
+  ok("a failing webhook doesn't turn a saved edit into an error", !reply.isError, reply);
+}
+
+console.log("\ntrash_note");
+
+{
+  const { trash, inItems, inTrash, seen, log, store } = editor();
+  const reply = await trash("open");
+  ok("trash: moved, not deleted", !reply.isError && !inItems("open") && inTrash("open"), reply);
+  ok(
+    "...whole, so it can be restored",
+    store.getState().notes.temporaryItems.find((n) => n.id === "open").text === "<p>body of open</p>"
+  );
+  ok(
+    "...and the reply says which",
+    JSON.parse(reply.text).id === "open" && JSON.parse(reply.text).trashed === true,
+    reply.text
+  );
+  ok(
+    "trash: webhook note/temporaryDeleteNote",
+    seen.webhooks.length === 1 &&
+      seen.webhooks[0].body.action === "note/temporaryDeleteNote" &&
+      seen.webhooks[0].body.id === "open",
+    seen.webhooks
+  );
+  ok("...through the trash webhook's settings", "url" in seen.webhooks[0].payload && "enabled" in seen.webhooks[0].payload);
+  ok("an open editor is told", seen.notified.join() === "open", seen.notified);
+  ok("flushed before answering", log.order.join() === "dispatch,flush", log.order);
+  ok("pending edits committed first", log.commits === 1);
+
+  const again = await trash("open");
+  ok("trashed already: not found", again.isError && again.text === NOT_FOUND);
+  const ro = await trash("ro");
+  ok("trash: read-only refused", ro.isError && /read-only/.test(ro.text) && inItems("ro") && !inTrash("ro"), ro);
+  for (const id of ["lockedNote", "hiddenNote", "gone", "made-up", undefined]) {
+    const hidden = await trash(id);
+    ok(`trash: ${id} is not found`, hidden.isError && hidden.text === NOT_FOUND, hidden);
+  }
+  ok(
+    "trash: locked and hidden notes stay where they were",
+    inItems("lockedNote") && inItems("hiddenNote") && !inTrash("lockedNote") && !inTrash("hiddenNote")
+  );
+  ok("(the one trashed at the start is the only webhook)", seen.webhooks.length === 1);
+}
+{
+  let flushed = false;
+  const { trash, inTrash, seen } = editor(SEED, {
+    flush: async () => {
+      await sleep(5);
+      flushed = true;
+    },
+    persisted: () => !flushed,
+  });
+  const failed = await trash("open");
+  ok(
+    "trash: a failed save is an error that says it's done and not to repeat it",
+    failed.isError &&
+      /isn't saved to disk/.test(failed.text) &&
+      /don't trash it again/i.test(failed.text) &&
+      !/try again/i.test(failed.text) &&
+      inTrash("open"),
+    failed.text
+  );
+  ok("...no webhook", seen.webhooks.length === 0);
+}
+{
+  const { call, log } = editor(SEED, { ready: () => false });
+  const reply = await call("fastmemo_trash_note", { id: "open" });
+  ok("trash: before the app is ready, refused", reply.isError && log.dispatched.length === 0);
+}
+
+/* ------------------------------------------------------------------------------------------------------------------ */
 /* Every tool                                                                                                          */
 /* ------------------------------------------------------------------------------------------------------------------ */
 
 console.log("\nevery tool");
 
-const WRITE_TOOLS = ["fastmemo_create_note", "fastmemo_set_note_flags"];
-const LATER_TOOLS = ["fastmemo_help", "fastmemo_check_update", "fastmemo_edit_note", "fastmemo_trash_note"];
+const WRITE_TOOLS = ["fastmemo_create_note", "fastmemo_set_note_flags", "fastmemo_edit_note", "fastmemo_trash_note"];
+const LATER_TOOLS = ["fastmemo_help", "fastmemo_check_update"];
 const READ_TOOLS = ["fastmemo_list_categories", "fastmemo_search_notes", "fastmemo_read_note"];
 
 {

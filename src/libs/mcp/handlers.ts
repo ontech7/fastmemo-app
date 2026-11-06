@@ -1,14 +1,24 @@
 import { noteRev } from "@/libs/cloud/revision";
+import { applyEdit } from "@/libs/mcp/noteEdit";
+import type { EditChanges } from "@/libs/mcp/noteEdit";
 import { booleanFlag, buildNote } from "@/libs/mcp/noteInput";
 import { noteForAgent, noteSearchText, noteSummary } from "@/libs/mcp/noteView";
 import { findVisibleNote, isVisibleToAgent, NOT_FOUND } from "@/libs/mcp/policy";
 import type { McpReply, McpRequest, UpdateCheck } from "@/libs/mcp/types";
-import { addNote, toggleImportantNotes, toggleProtectedNotes, toggleReadOnlyNotes } from "@/slicers/notesSlice";
+import {
+  addNote,
+  reorderNotes,
+  temporaryDeleteNote,
+  toggleImportantNotes,
+  toggleProtectedNotes,
+  toggleReadOnlyNotes,
+} from "@/slicers/notesSlice";
 import {
   selectorWebhook_addCodeNote,
   selectorWebhook_addKanbanNote,
   selectorWebhook_addTextNote,
   selectorWebhook_addTodoNote,
+  selectorWebhook_temporaryDeleteNote,
   selectorWebhook_updateNote,
 } from "@/slicers/settingsSlice";
 import type { Note, NoteType, RootState, WebhookPayload } from "@/types";
@@ -42,6 +52,12 @@ export interface McpDeps {
 
 const STILL_STARTING = "Fast Memo is still starting: try again in a moment.";
 const NOT_AVAILABLE = "Not available yet.";
+const READ_ONLY = "This note is read-only, so Fast Memo's tools can't change it. The user makes it editable in Fast Memo.";
+const NEEDS_REV = "`rev` is required: the `rev` from the last read or creation of this note.";
+const STALE_REV =
+  "The note changed since it was read, so nothing was edited. Read it again and redo the edit on what it holds now.";
+const OUT_OF_SCOPE =
+  "Editing existing notes is off in Fast Memo's settings, and only notes created in this session can be edited. The user can turn it on in the settings.";
 
 const DEFAULT_SEARCH_LIMIT = 20;
 const MAX_SEARCH_LIMIT = 50;
@@ -50,6 +66,12 @@ const NOT_SAVED = "Fast Memo couldn't save this to disk, so it may be lost when 
 /** A created note stays in the app and is queued for upload: a second `create_note` would make a copy. */
 const CREATED_NOT_SAVED =
   "The note was created in Fast Memo but isn't saved to disk yet, so it may be lost if the app closes. Don't create it again.";
+
+/** Not `NOT_SAVED`: an edit made twice is applied twice (an append), so the agent is told not to repeat it. */
+const EDITED_NOT_SAVED =
+  "The change was made in Fast Memo but isn't saved to disk yet, so it may be lost if the app closes. Don't repeat the edit: read the note to see what it holds.";
+const TRASHED_NOT_SAVED =
+  "The note was moved to the trash in Fast Memo but isn't saved to disk yet, so it may come back if the app closes. Don't trash it again.";
 
 const refused = (text: string): McpReply => ({ text, isError: true });
 const result = (value: object): McpReply => ({ text: JSON.stringify(value), isError: false });
@@ -227,6 +249,49 @@ async function setNoteFlags(args: Record<string, unknown>, deps: McpDeps): Promi
   });
 }
 
+async function editNote(req: McpRequest, deps: McpDeps): Promise<McpReply> {
+  const { args, scope } = req;
+  deps.commitPending();
+  // Whatever the scope, a note out of reach is unknown: nothing else is said before this.
+  const found = findVisibleNote(deps.getState().notes.items, args.id);
+  if (!found) return refused(NOT_FOUND);
+  if (found.readOnly) return refused(READ_ONLY);
+  if (!scope.editAll && !scope.ownedIds.includes(found.id)) return refused(OUT_OF_SCOPE);
+
+  if (typeof args.rev !== "number" || !Number.isFinite(args.rev)) return refused(NEEDS_REV);
+  if (args.rev !== noteRev(found)) return refused(STALE_REV);
+
+  const edit = applyEdit(found, args as EditChanges, deps);
+  if ("error" in edit) return refused(edit.error);
+
+  // The edited copy is the payload of a change to the stored note: the reducer stamps its revision and queues the upload.
+  deps.dispatch(addNote({ ...edit.note, updatedAt: Math.max(deps.now(), (Number(found.updatedAt) || 0) + 1) }));
+  deps.dispatch(reorderNotes());
+  const note = findStored(deps, found.id);
+  if (!note) return refused(EDITED_NOT_SAVED);
+
+  // An editor open on this note reloads it, or its next commit would write the old copy over this one.
+  deps.notifyNoteChanged(note.id);
+  if (!(await saved(deps))) return refused(EDITED_NOT_SAVED);
+  announce(deps, selectorWebhook_updateNote(deps.getState()), webhookBody("note/updateNote", note));
+  return result({ id: note.id, rev: noteRev(note), type: note.type, title: note.title });
+}
+
+async function trashNote(args: Record<string, unknown>, deps: McpDeps): Promise<McpReply> {
+  deps.commitPending();
+  const found = findVisibleNote(deps.getState().notes.items, args.id);
+  if (!found) return refused(NOT_FOUND);
+  if (found.readOnly) return refused(READ_ONLY);
+
+  deps.dispatch(temporaryDeleteNote(found.id));
+  // An editor open on the note gets what a trash from another device gives it: a message, and typing brings the note back.
+  deps.notifyNoteChanged(found.id);
+  if (!(await saved(deps))) return refused(TRASHED_NOT_SAVED);
+  // The same body the editors send for a note moved to the trash.
+  announce(deps, selectorWebhook_temporaryDeleteNote(deps.getState()), { action: "note/temporaryDeleteNote", id: found.id });
+  return result({ id: found.id, trashed: true });
+}
+
 export async function handleMcpRequest(req: McpRequest, deps: McpDeps): Promise<McpReply> {
   if (!deps.ready()) return refused(STILL_STARTING);
 
@@ -241,6 +306,10 @@ export async function handleMcpRequest(req: McpRequest, deps: McpDeps): Promise<
       return createNote(req.args, deps);
     case "fastmemo_set_note_flags":
       return setNoteFlags(req.args, deps);
+    case "fastmemo_edit_note":
+      return editNote(req, deps);
+    case "fastmemo_trash_note":
+      return trashNote(req.args, deps);
     default:
       return refused(NOT_AVAILABLE);
   }
