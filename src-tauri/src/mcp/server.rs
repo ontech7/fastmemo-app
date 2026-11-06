@@ -28,6 +28,8 @@ struct LiveConnection {
 
 pub struct ServerHandle {
     endpoint: PathBuf,
+    /// This very server, whatever `endpoint` leads to by now.
+    address: PathBuf,
     stop: Arc<AtomicBool>,
     accept_thread: JoinHandle<()>,
     connections: Connections,
@@ -38,12 +40,12 @@ impl ServerHandle {
     /// own thread, within the runner's own time limit, so this can run on the app's main thread.
     pub fn stop(self) {
         self.stop.store(true, Ordering::SeqCst);
-        if wake_accept(&self.endpoint, &self.accept_thread) {
+        if wake_accept(&self.address, &self.accept_thread) {
             let _ = self.accept_thread.join();
         } else {
             log(format_args!("the MCP listener didn't stop"));
         }
-        endpoint::remove(&self.endpoint);
+        endpoint::remove(&self.endpoint, &self.address);
         // Out of the lock: a connection thread takes it to leave, and closing may wait for that thread.
         let connections = std::mem::take(&mut *self.connections.lock().unwrap());
         for connection in connections.values() {
@@ -54,9 +56,9 @@ impl ServerHandle {
 
 /// `accept` wakes only for a client, so be that client. On Windows nobody listens for a moment between two pipe instances,
 /// hence a few tries. Returns whether the listener will end.
-fn wake_accept(endpoint: &Path, accept_thread: &JoinHandle<()>) -> bool {
+fn wake_accept(address: &Path, accept_thread: &JoinHandle<()>) -> bool {
     for _ in 0..WAKE_TRIES {
-        if accept_thread.is_finished() || endpoint::connect(endpoint).is_ok() {
+        if accept_thread.is_finished() || endpoint::connect_to(address).is_ok() {
             return true;
         }
         thread::sleep(WAKE_PAUSE);
@@ -69,7 +71,7 @@ pub fn serve(
     make_runner: impl Fn() -> Box<dyn ToolRunner + Send> + Send + 'static,
     version: String,
 ) -> io::Result<ServerHandle> {
-    let listener = Listener::bind(endpoint)?;
+    let (listener, address) = Listener::bind(endpoint)?;
     let stop = Arc::new(AtomicBool::new(false));
     let connections = Connections::default();
     let accept_thread = thread::Builder::new()
@@ -81,6 +83,7 @@ pub fn serve(
         })?;
     Ok(ServerHandle {
         endpoint: endpoint.to_path_buf(),
+        address,
         stop,
         accept_thread,
         connections,
@@ -243,7 +246,43 @@ pub(super) mod test_socket {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mcp::protocol::ToolOutcome;
+    use crate::mcp::tools::Tool;
+    use serde_json::Value;
     use std::io::Cursor;
+
+    const PATIENCE: Duration = Duration::from_secs(5);
+
+    /// Counts its own calls, so a runner shared between connections would show.
+    #[derive(Default)]
+    struct Counting {
+        calls: usize,
+    }
+
+    impl ToolRunner for Counting {
+        fn listed(&self) -> Vec<Tool> {
+            Tool::ALL.to_vec()
+        }
+        fn call(&mut self, _tool: Tool, _args: Value) -> ToolOutcome {
+            self.calls += 1;
+            ToolOutcome {
+                text: self.calls.to_string(),
+                is_error: false,
+            }
+        }
+    }
+
+    fn start(path: &Path) -> ServerHandle {
+        serve(path, || Box::new(Counting::default()), "1.0.0".to_string()).unwrap()
+    }
+
+    fn call() -> Value {
+        json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fastmemo_help","arguments":{}}})
+    }
+
+    fn text(reply: &Value) -> &str {
+        reply["result"]["content"][0]["text"].as_str().unwrap()
+    }
 
     fn line_of(reader: &mut Cursor<Vec<u8>>, max: usize) -> Line {
         read_line(reader, max).unwrap()
@@ -268,45 +307,112 @@ mod tests {
         assert!(matches!(line_of(&mut cut, 100), Line::End));
     }
 
+    #[cfg(windows)]
+    mod on_a_pipe {
+        use super::*;
+        use std::fs;
+        use std::path::PathBuf;
+        use std::sync::atomic::AtomicUsize;
+        use std::time::Instant;
+
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+
+        /// `endpoint_for`'s shape under a temp directory, removed at the end of a test.
+        struct TempEndpoint {
+            root: PathBuf,
+            path: PathBuf,
+        }
+
+        impl TempEndpoint {
+            fn new() -> TempEndpoint {
+                let n = NEXT.fetch_add(1, Ordering::SeqCst);
+                let root = std::env::temp_dir().join(format!("fm-mcp-{}-{n}", std::process::id()));
+                let path = root
+                    .join("com.ontech7.fastmemo.test")
+                    .join("mcp")
+                    .join("pipe-name");
+                TempEndpoint { root, path }
+            }
+        }
+
+        impl Drop for TempEndpoint {
+            fn drop(&mut self) {
+                let _ = fs::remove_dir_all(&self.root);
+            }
+        }
+
+        fn ask(connection: Connection) -> (BufReader<Connection>, String) {
+            let mut reader = BufReader::new(connection);
+            write_line(reader.get_mut(), call().to_string().as_bytes()).unwrap();
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            let reply: Value = serde_json::from_str(&line).unwrap();
+            let answer = text(&reply).to_string();
+            (reader, answer)
+        }
+
+        #[test]
+        fn an_idle_client_doesnt_stop_the_app_listening_again() {
+            let endpoint = TempEndpoint::new();
+            let first = start(&endpoint.path);
+            let (mut idle, answer) = ask(endpoint::connect(&endpoint.path).unwrap());
+            assert_eq!(answer, "1");
+
+            // The client keeps its handle, so the old pipe's name stays alive.
+            first.stop();
+            assert!(!endpoint.path.exists());
+
+            let second = start(&endpoint.path);
+            let (_client, answer) = ask(endpoint::connect(&endpoint.path).unwrap());
+            assert_eq!(answer, "1");
+
+            // The old client finds out on its next write, which is what makes the bridge connect again.
+            let deadline = Instant::now() + PATIENCE;
+            while write_line(idle.get_mut(), b"{}").is_ok() {
+                assert!(Instant::now() < deadline, "writes still accepted");
+                thread::sleep(Duration::from_millis(1));
+            }
+            second.stop();
+        }
+
+        #[test]
+        fn stopping_an_old_server_leaves_a_newer_ones_file() {
+            let endpoint = TempEndpoint::new();
+            let old = start(&endpoint.path);
+            let new = start(&endpoint.path);
+
+            old.stop();
+
+            assert!(endpoint.path.exists());
+            let (_client, answer) = ask(endpoint::connect(&endpoint.path).unwrap());
+            assert_eq!(answer, "1");
+            new.stop();
+            assert!(!endpoint.path.exists());
+        }
+
+        #[test]
+        fn with_no_file_or_a_wrong_one_nothing_is_opened() {
+            let endpoint = TempEndpoint::new();
+            let missing = endpoint::connect(&endpoint.path).err().unwrap();
+            assert_eq!(missing.kind(), io::ErrorKind::NotFound);
+
+            fs::create_dir_all(endpoint.path.parent().unwrap()).unwrap();
+            fs::write(&endpoint.path, r"C:\Windows\notepad.exe").unwrap();
+            assert!(endpoint::connect(&endpoint.path).is_err());
+        }
+    }
+
     #[cfg(unix)]
     mod on_a_socket {
         use super::super::test_socket::TempSocket;
-        use super::super::*;
-        use crate::mcp::protocol::ToolOutcome;
-        use crate::mcp::tools::Tool;
-        use serde_json::{json, Value};
+        use super::*;
         use std::fs;
         use std::io::{BufRead, BufReader, ErrorKind, Write};
         use std::os::unix::fs::PermissionsExt;
         use std::os::unix::net::{UnixListener, UnixStream};
         use std::sync::mpsc;
         use std::sync::{Arc, Mutex};
-        use std::time::{Duration, Instant};
-
-        const PATIENCE: Duration = Duration::from_secs(5);
-
-        /// Counts its own calls, so a runner shared between connections would show.
-        #[derive(Default)]
-        struct Counting {
-            calls: usize,
-        }
-
-        impl ToolRunner for Counting {
-            fn listed(&self) -> Vec<Tool> {
-                Tool::ALL.to_vec()
-            }
-            fn call(&mut self, _tool: Tool, _args: Value) -> ToolOutcome {
-                self.calls += 1;
-                ToolOutcome {
-                    text: self.calls.to_string(),
-                    is_error: false,
-                }
-            }
-        }
-
-        fn start(path: &Path) -> ServerHandle {
-            serve(path, || Box::new(Counting::default()), "1.0.0".to_string()).unwrap()
-        }
+        use std::time::Instant;
 
         struct Client {
             reader: BufReader<UnixStream>,
@@ -351,14 +457,6 @@ mod tests {
 
         fn list() -> Value {
             json!({"jsonrpc":"2.0","id":1,"method":"tools/list"})
-        }
-
-        fn call() -> Value {
-            json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fastmemo_help","arguments":{}}})
-        }
-
-        fn text(reply: &Value) -> &str {
-            reply["result"]["content"][0]["text"].as_str().unwrap()
         }
 
         #[test]
