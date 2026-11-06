@@ -12,6 +12,7 @@ import { webhook } from "@/utils/webhook";
 import { useLiveNote } from "@/hooks/useLiveNote";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -262,7 +263,10 @@ export function useNoteEditor<T extends Note>({
         next = { ...next, title: "" };
       }
       currentRef.current = next;
-      setNote(next);
+      // Rendered, with its effects, before this returns: the editors keep the note in refs their effects update
+      // (`noteRef`), and an edit typed right after (a lock or a title an agent just set) must be made on this note, not on the
+      // copy it replaces: that would write it back (ADR-032). Not on native, where nothing but sync changes a note.
+      flushSync(() => setNote(next));
       onRemoteChange?.(next, previous);
     },
     onDeleted: () => toast(t("cloudsync.note_deleted_elsewhere")),
