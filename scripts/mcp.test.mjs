@@ -6,6 +6,7 @@
 import { build } from "esbuild";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
+import { readFileSync } from "node:fs";
 import os from "node:os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -39,6 +40,14 @@ const STUBS = {
     return () => { globalThis.__page.unlistened = (globalThis.__page.unlistened ?? 0) + 1; };
   };`,
   "@tauri-apps/api/core": `export const invoke = async (command, args) => { globalThis.__page.invoked.push({ command, args }); };`,
+  // The update check and the help texts: what the page's i18n and the Tauri app API would answer.
+  "@tauri-apps/api/app": `
+    export const BundleType = { Deb: "deb", Rpm: "rpm", AppImage: "appimage" };
+    export const getVersion = async () => globalThis.__page.version;
+    export const getBundleType = async () => globalThis.__page.bundleType;
+  `,
+  "@/libs/desktopUpdater": `export const checkDesktopUpdate = async () => globalThis.__page.checkDesktopUpdate();`,
+  "@/libs/i18n": `export default { t: (key, options) => globalThis.__page.t(key, options) };`,
   "react-native": `export const Platform = { OS: "web", select: (options) => options.web ?? options.default };`,
 };
 
@@ -70,6 +79,9 @@ await build({
       export * as editing from "@/libs/mcp/noteEdit";
       export { KANBAN_COLUMN_COLORS } from "@/constants/styles";
       export { installMcpBridge } from "@/libs/mcp/bridge.web";
+      export { HELP_TOPICS, HELP_MOBILE_ONLY } from "@/constants/help-topics";
+      export { helpText } from "@/libs/mcp/help";
+      export { default as en } from "@/libs/i18n/locales/en";
     `,
     resolveDir: src,
     loader: "ts",
@@ -1711,7 +1723,7 @@ console.log("\ntrash_note");
 console.log("\nevery tool");
 
 const WRITE_TOOLS = ["fastmemo_create_note", "fastmemo_set_note_flags", "fastmemo_edit_note", "fastmemo_trash_note"];
-const LATER_TOOLS = ["fastmemo_help", "fastmemo_check_update"];
+const INFO_TOOLS = ["fastmemo_help", "fastmemo_check_update"];
 const READ_TOOLS = ["fastmemo_list_categories", "fastmemo_search_notes", "fastmemo_read_note"];
 
 {
@@ -1739,7 +1751,7 @@ const READ_TOOLS = ["fastmemo_list_categories", "fastmemo_search_notes", "fastme
 }
 {
   const { call, log } = harness(SEED, { ready: () => false });
-  for (const tool of [...READ_TOOLS, ...WRITE_TOOLS, ...LATER_TOOLS]) {
+  for (const tool of [...READ_TOOLS, ...WRITE_TOOLS, ...INFO_TOOLS]) {
     const notReady = await call(tool, { id: "open", query: "x" });
     ok(
       `still starting: ${tool} refused, nothing dispatched`,
@@ -1749,13 +1761,223 @@ const READ_TOOLS = ["fastmemo_list_categories", "fastmemo_search_notes", "fastme
   }
   ok("...and no pending edit committed", log.commits === 0, log.commits);
 }
+
+/* ------------------------------------------------------------------------------------------------------------------ */
+/* help and check_update                                                                                               */
+/* ------------------------------------------------------------------------------------------------------------------ */
+
+console.log("\nhelp");
+
+const { HELP_TOPICS, HELP_MOBILE_ONLY, helpText, en } = M;
+const lookup = (key) => key.split(".").reduce((value, part) => value?.[part], en);
+const helpDeps = {
+  helpBody: (base) => {
+    const value = lookup(base);
+    return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+  },
+  helpTitle: (key) => String(lookup(key) ?? key),
+};
+
 {
-  const { call, log } = harness();
-  for (const tool of LATER_TOOLS) {
-    const reply = await call(tool, { id: "open" });
-    ok(`${tool}: not available yet`, reply.isError && reply.text === "Not available yet.", reply);
+  // The help screen builds its own list inside the component: this keeps the shared one in step with it.
+  const source = readFileSync(join(__dirname, "..", "app", "settings", "help.tsx"), "utf8");
+  const screen = [...source.matchAll(/(catKey|base): "([^"]+)"/g)];
+  const screenBases = screen.filter((m) => m[1] === "base").map((m) => m[2]);
+  const screenCategory = {};
+  let category = null;
+  for (const [, kind, value] of screen) {
+    if (kind === "catKey") category = value;
+    else screenCategory[value] = category;
   }
-  ok("...and nothing dispatched", log.dispatched.length === 0);
+  const listed = HELP_TOPICS.flatMap((c) => c.bases);
+  const setEq = (a, b) => a.length === new Set(a).size && a.length === b.length && b.every((x) => a.includes(x));
+
+  ok("topics match the help screen", setEq(listed.concat(HELP_MOBILE_ONLY), screenBases), [listed.length, screenBases.length]);
+  ok(
+    "...each under the screen's category",
+    HELP_TOPICS.every((c) => c.bases.every((base) => screenCategory[base] === c.catKey))
+  );
+  ok("...in the screen's order", listed.join() === screenBases.filter((base) => listed.includes(base)).join());
+  ok(
+    "no category without a topic",
+    HELP_TOPICS.every((c) => c.bases.length > 0)
+  );
+  ok(
+    "every listed topic has a title and text in English",
+    listed.every((base) => typeof lookup(base)?.title === "string" && helpText(lookup(base)).length > 0),
+    listed.filter((base) => helpText(lookup(base) ?? {}).length === 0)
+  );
+}
+{
+  const { call, log } = harness(SEED, helpDeps);
+  const reply = await call("fastmemo_help");
+  const { topics } = JSON.parse(reply.text);
+  const list = topics.map((topic) => topic.key);
+  ok("no topic: the list", !reply.isError && topics.length === HELP_TOPICS.flatMap((c) => c.bases).length, reply);
+  ok("no mobile-only topic listed", !list.includes("help.what_ai_assistant") && !list.includes("help.what_voice_dictation"));
+  ok("desktop shortcuts listed", list.includes("help.what_desktop_shortcuts"));
+  ok(
+    "each entry: key, title and category",
+    topics.every((topic) => topic.key.startsWith("help.") && topic.title && topic.category && topic.title !== topic.key),
+    topics[0]
+  );
+  ok(
+    "the first topic, as the screen shows it",
+    topics[0].key === "help.how_to_create_note" &&
+      topics[0].title === en.help.how_to_create_note.title &&
+      topics[0].category === en.help.cat_notes
+  );
+  ok("the AI category isn't listed", !topics.some((topic) => topic.category === en.help.cat_ai));
+  ok("...and nothing dispatched or sent", log.dispatched.length === 0 && log.order.length === 0 && log.commits === 0);
+}
+{
+  const { call } = harness(SEED, helpDeps);
+  const reply = await call("fastmemo_help", { topic: "help.how_to_create_note" });
+  const topic = JSON.parse(reply.text);
+  ok(
+    "a topic: key, title and text",
+    !reply.isError &&
+      topic.key === "help.how_to_create_note" &&
+      topic.title === en.help.how_to_create_note.title &&
+      topic.text === helpText(en.help.how_to_create_note) &&
+      topic.text.length > 0,
+    reply
+  );
+  ok("...the text has no title and no i18n key", !topic.text.includes(topic.title) && !topic.text.includes("text_"));
+
+  const toolbar = JSON.parse((await call("fastmemo_help", { topic: "help.what_toolbar_below" })).text).text.split("\n");
+  const at = (word) => toolbar.findIndex((line) => line.startsWith(`• ${word}`));
+  ok(
+    "toolbar: the named lines sit between the numbered ones, and text_10_0 comes after text_9_0",
+    at("Image") < at("Heading") &&
+      at("Heading") < at("Bold") &&
+      at("Underline") < at("Align left") &&
+      at("Align left") < at("Subscript") &&
+      at("Superscript") < at("Bullet list") &&
+      toolbar.length === 14,
+    toolbar
+  );
+  ok(
+    "...the link texts are left out",
+    !(await call("fastmemo_help", { topic: "help.what_webhooks" })).text.includes("guide →")
+  );
+
+  const desktop = await call("fastmemo_help", { topic: "help.what_desktop_shortcuts" });
+  ok("the desktop shortcuts topic is readable", !desktop.isError && JSON.parse(desktop.text).text.length > 0, desktop);
+}
+{
+  let asked = 0;
+  const { call, log } = harness(SEED, {
+    ...helpDeps,
+    helpBody: (base) => {
+      asked++;
+      return helpDeps.helpBody(base);
+    },
+  });
+  const refusals = {
+    "a mobile-only topic": "help.what_ai_assistant",
+    "voice dictation": "help.what_voice_dictation",
+    "an unknown topic": "help.nope",
+    "a topic without its prefix": "how_to_create_note",
+    "a category key": "help.cat_notes",
+    "an object key": "constructor",
+    "a prototype key": "__proto__",
+    "an empty topic": "",
+    "a topic that isn't text": 42,
+  };
+  for (const [name, topic] of Object.entries(refusals)) {
+    const reply = await call("fastmemo_help", { topic });
+    ok(
+      `${name} is refused, with the way to the list`,
+      reply.isError && reply.text.includes("without a topic") && !reply.text.includes("text_"),
+      reply
+    );
+  }
+  ok("...none of them read the strings", asked === 0, asked);
+  const nothing = await call("fastmemo_help", { topic: null });
+  ok("a null topic lists the topics", !nothing.isError && JSON.parse(nothing.text).topics.length > 0);
+  ok("...nothing dispatched", log.dispatched.length === 0);
+
+  const empty = harness(SEED, { ...helpDeps, helpBody: () => null });
+  ok("a listed topic with no strings is refused", (await empty.call("fastmemo_help", { topic: "help.what_language" })).isError);
+}
+{
+  ok("lines in order", helpText({ title: "T", text_1_0: "a", text_1_1: "b", text_2_0: "c" }) === "a b\nc");
+  ok(
+    "ordered by their numbers, not the object's",
+    helpText({ text_10_0: "j", text_2_0: "b", text_1_1: "a2", text_1_0: "a1", text_2_1: "b2" }) === "a1 a2\nb b2\nj"
+  );
+  ok(
+    "values that aren't strings, and other keys, are left out",
+    helpText({
+      title: "T",
+      text_1_0: "a",
+      text_2_0: { x: "no" },
+      text_3_0: ["no"],
+      text_4_0: 5,
+      text_link: "L",
+      other: "o",
+      text_1: "x",
+    }) === "a"
+  );
+  ok("nothing to say is an empty text", helpText({ title: "T" }) === "");
+  ok(
+    "a named line follows its numbered one",
+    helpText({ text_1_0: "a", text_heading: "h", text_4_0: "d", text_3_0: "c", text_align: "g", text_7_0: "z" }) ===
+      "a\nc\nh\nd\nz\ng"
+  );
+}
+
+console.log("\ncheck_update");
+
+{
+  const answers = {
+    newer: { kind: "newer", current: "2.1.0", latest: "2.2.0" },
+    current: { kind: "current", current: "2.1.0" },
+    packageManager: { kind: "packageManager", current: "2.1.0" },
+  };
+  const ask = async (check, overrides = {}) => {
+    const { call, log } = harness(SEED, { checkUpdate: async () => check, ...overrides });
+    return { reply: await call("fastmemo_check_update"), log };
+  };
+
+  const newer = await ask(answers.newer);
+  ok(
+    "newer: both versions, and that it installs in the app",
+    !newer.reply.isError &&
+      newer.reply.text.includes("2.1.0") &&
+      newer.reply.text.includes("2.2.0") &&
+      newer.reply.text.includes("app"),
+    newer.reply
+  );
+  ok("...not as up to date", !newer.reply.text.includes("up to date"));
+
+  const current = await ask(answers.current);
+  ok(
+    "current: up to date, with the version",
+    !current.reply.isError && current.reply.text.includes("up to date") && current.reply.text.includes("2.1.0"),
+    current.reply
+  );
+
+  const pm = (await ask(answers.packageManager)).reply;
+  ok("deb and rpm never read as up to date", pm.text.includes("package manager") && !pm.text.includes("up to date"), pm);
+  ok("...with the version, and not an error", pm.text.includes("2.1.0") && !pm.isError);
+
+  const warn = console.warn;
+  console.warn = () => {};
+  const failing = await ask(null, {
+    checkUpdate: async () => {
+      throw new Error("ECONNREFUSED https://updates.example/secret");
+    },
+  });
+  console.warn = warn;
+  ok("failed check is an error", failing.reply.isError && failing.reply.text.includes("couldn't check"), failing.reply);
+  ok("...without what the error said", !failing.reply.text.includes("ECONNREFUSED") && !failing.reply.text.includes("secret"));
+
+  ok(
+    "it isn't a write: nothing dispatched, flushed, committed or sent",
+    [newer, current].every(({ log }) => log.dispatched.length === 0 && log.order.length === 0 && log.commits === 0)
+  );
 }
 {
   const { call } = harness();
@@ -1848,6 +2070,104 @@ const request = (id, tool = "fastmemo_list_categories", args = {}) => ({
     broken
   );
   ok("...without what the error said", !broken.args.reply.text.includes("BROKENSTATE"), broken.args.reply.text);
+
+  // The tools that read the app's version and its help strings, through the bridge's own wiring.
+  pageState.getState = appStore.getState;
+  pageState.version = "2.1.0";
+  pageState.bundleType = "appimage";
+  pageState.checked = 0;
+  pageState.update = null;
+  pageState.checkError = null;
+  pageState.checkDesktopUpdate = async () => {
+    pageState.checked++;
+    if (pageState.checkError) throw pageState.checkError;
+    return pageState.update;
+  };
+  pageState.t = (key) => key.split(".").reduce((value, part) => value?.[part], M.en) ?? key;
+  let next = 100;
+  const tool = async (name, args = {}) => {
+    const id = next++;
+    send(request(id, name, args));
+    return (await replyTo(id)).args.reply;
+  };
+  const updateWith = (close) => ({ version: "2.2.0", close });
+
+  let closed = 0;
+  pageState.update = updateWith(async () => {
+    closed++;
+  });
+  const newer = await tool("fastmemo_check_update");
+  ok(
+    "bridge: a newer version, both versions said",
+    !newer.isError && newer.text.includes("2.1.0") && newer.text.includes("2.2.0"),
+    newer
+  );
+  ok("...and the update released", closed === 1, closed);
+
+  closed = 0;
+  pageState.update = updateWith(async () => {
+    closed++;
+    throw new Error("CLOSEFAILED");
+  });
+  const unclosed = await tool("fastmemo_check_update");
+  ok(
+    "a close that fails doesn't fail the check",
+    closed === 1 && !unclosed.isError && unclosed.text.includes("2.2.0"),
+    unclosed
+  );
+
+  closed = 0;
+  pageState.update = updateWith(() => {
+    closed++;
+    throw new Error("CLOSEFAILED");
+  });
+  const unclosedSync = await tool("fastmemo_check_update");
+  ok("...nor one that throws at once", closed === 1 && !unclosedSync.isError, unclosedSync);
+
+  pageState.update = null;
+  const current = await tool("fastmemo_check_update");
+  ok(
+    "no update: up to date",
+    !current.isError && current.text.includes("up to date") && current.text.includes("2.1.0"),
+    current
+  );
+
+  for (const bundle of ["deb", "rpm"]) {
+    pageState.bundleType = bundle;
+    pageState.checked = 0;
+    pageState.update = updateWith(async () => {});
+    const managed = await tool("fastmemo_check_update");
+    ok(
+      `${bundle}: the package manager, never up to date`,
+      managed.text.includes("package manager") && !managed.text.includes("up to date") && !managed.isError,
+      managed
+    );
+    ok(`...${bundle} doesn't ask the updater`, pageState.checked === 0, pageState.checked);
+  }
+  pageState.bundleType = "appimage";
+
+  const warnUpdate = console.warn;
+  console.warn = () => {};
+  pageState.checkError = new Error("NETWORKDOWN");
+  const failed = await tool("fastmemo_check_update");
+  pageState.checkError = null;
+  console.warn = warnUpdate;
+  ok("a failed check is an error", failed.isError && failed.text.includes("couldn't check"), failed);
+  ok("...without what the error said", !failed.text.includes("NETWORKDOWN"), failed.text);
+
+  const topics = await tool("fastmemo_help");
+  ok(
+    "bridge: the topics, from the app's strings",
+    !topics.isError && JSON.parse(topics.text).topics.some((topic) => topic.key === "help.what_desktop_shortcuts"),
+    topics
+  );
+  const topic = JSON.parse((await tool("fastmemo_help", { topic: "help.how_to_create_note" })).text);
+  ok(
+    "...a topic's text",
+    topic.title === M.en.help.how_to_create_note.title && topic.text === helpText(M.en.help.how_to_create_note),
+    topic
+  );
+  ok("...and a mobile-only one refused", (await tool("fastmemo_help", { topic: "help.what_ai_assistant" })).isError);
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

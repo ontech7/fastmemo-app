@@ -6,10 +6,12 @@ import uuid from "react-uuid";
 import { addNoteHooks, NOTE_HTML_CONFIG } from "@/editor/sanitizeConfig";
 import { noteTextLimit } from "@/libs/cloud";
 import { notifyNoteChanged } from "@/libs/cloud/sync";
+import { checkDesktopUpdate } from "@/libs/desktopUpdater";
 import { flushNow } from "@/libs/flushOnExit";
+import i18n from "@/libs/i18n";
 import { handleMcpRequest } from "@/libs/mcp/handlers";
 import type { McpDeps } from "@/libs/mcp/handlers";
-import type { McpReply, McpRequest } from "@/libs/mcp/types";
+import type { McpReply, McpRequest, UpdateCheck } from "@/libs/mcp/types";
 import { flushPending } from "@/libs/registry";
 import { notesLoaded, notesPersisted, persistor, store } from "@/slicers/store";
 import type { RootState } from "@/types";
@@ -35,9 +37,32 @@ const sanitize = (html: string): string => {
   return purifier.sanitize(html, NOTE_HTML_CONFIG) as string;
 };
 
-const notAvailableYet = (): never => {
-  throw new Error("not available yet");
-};
+/** Whether a newer desktop version exists. Deb and rpm installs update through their package manager: that's said, not "up to date". */
+async function checkUpdate(): Promise<UpdateCheck> {
+  const { BundleType, getBundleType, getVersion } = await import("@tauri-apps/api/app");
+  const current = await getVersion();
+  const bundleType = await getBundleType();
+  if (bundleType === BundleType.Deb || bundleType === BundleType.Rpm) return { kind: "packageManager", current };
+
+  const update = await checkDesktopUpdate();
+  if (!update) return { kind: "current", current };
+  try {
+    return { kind: "newer", current, latest: update.version };
+  } finally {
+    // The update holds a resource on the Rust side; a failed release doesn't fail the check.
+    try {
+      await update.close();
+    } catch {
+      // Nothing more to do with it.
+    }
+  }
+}
+
+/** The strings under an i18n key, or null when the key holds one string or none. */
+function helpBody(base: string): Record<string, string> | null {
+  const body: unknown = i18n.t(base, { returnObjects: true });
+  return body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, string>) : null;
+}
 
 const deps: McpDeps = {
   getState: () => store.getState() as RootState,
@@ -57,9 +82,9 @@ const deps: McpDeps = {
   newId: uuid,
   now: () => Date.now(),
   date: () => formatDateTime(),
-  checkUpdate: notAvailableYet,
-  helpBody: notAvailableYet,
-  helpTitle: notAvailableYet,
+  checkUpdate,
+  helpBody,
+  helpTitle: (key) => String(i18n.t(key)),
 };
 
 /** Always an answer, even for a page error: without one, Rust would wait for its timeout. */

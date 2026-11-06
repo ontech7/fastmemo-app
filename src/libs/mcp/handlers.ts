@@ -1,4 +1,6 @@
+import { HELP_TOPICS } from "@/constants/help-topics";
 import { noteRev } from "@/libs/cloud/revision";
+import { helpText } from "@/libs/mcp/help";
 import { applyEdit } from "@/libs/mcp/noteEdit";
 import type { EditChanges } from "@/libs/mcp/noteEdit";
 import { booleanFlag, buildNote } from "@/libs/mcp/noteInput";
@@ -46,12 +48,16 @@ export interface McpDeps {
   now(): number;
   date(): string;
   checkUpdate(): Promise<UpdateCheck>;
+  /** The strings under an i18n key, in the app's language (`null` when there are none). */
   helpBody(base: string): Record<string, string> | null;
-  helpTitle(base: string): string;
+  /** The string at an i18n key: a topic's `help.<topic>.title`, or a category's `help.cat_*`. */
+  helpTitle(key: string): string;
 }
 
 const STILL_STARTING = "Fast Memo is still starting: try again in a moment.";
 const NOT_AVAILABLE = "Not available yet.";
+const UNKNOWN_TOPIC = "No help topic has that key. Call fastmemo_help without a topic for the list of topics.";
+const UPDATE_CHECK_FAILED = "Fast Memo couldn't check for updates. Try again later.";
 const READ_ONLY = "This note is read-only, so Fast Memo's tools can't change it. The user makes it editable in Fast Memo.";
 const NEEDS_REV = "`rev` is required: the `rev` from the last read or creation of this note.";
 const STALE_REV =
@@ -165,6 +171,52 @@ async function saved(deps: McpDeps): Promise<boolean> {
 }
 
 const findStored = (deps: McpDeps, id: string): Note | undefined => deps.getState().notes.items.find((note) => note.id === id);
+
+/** The listed topics, with the key an agent passes back as `topic`. */
+function helpTopics(deps: McpDeps): McpReply {
+  const topics = HELP_TOPICS.flatMap(({ catKey, bases }) =>
+    bases.map((base) => ({ key: base, title: deps.helpTitle(`${base}.title`), category: deps.helpTitle(catKey) }))
+  );
+  return result({ topics });
+}
+
+function help(args: Record<string, unknown>, deps: McpDeps): McpReply {
+  if (args.topic === undefined || args.topic === null) return helpTopics(deps);
+
+  // Only the listed topics: a mobile-only one has its i18n keys too, but isn't about this app.
+  const base = typeof args.topic === "string" ? args.topic : "";
+  if (!HELP_TOPICS.some((category) => category.bases.includes(base))) return refused(UNKNOWN_TOPIC);
+
+  const body = deps.helpBody(base);
+  if (!body) return refused(UNKNOWN_TOPIC);
+  return result({ key: base, title: deps.helpTitle(`${base}.title`), text: helpText(body) });
+}
+
+async function checkUpdate(deps: McpDeps): Promise<McpReply> {
+  let update: UpdateCheck;
+  try {
+    update = await deps.checkUpdate();
+  } catch (err) {
+    // Not the error's text: it can hold addresses and paths.
+    console.warn("MCP: the update check failed", err);
+    return refused(UPDATE_CHECK_FAILED);
+  }
+
+  switch (update.kind) {
+    case "newer":
+      return {
+        text: `Fast Memo ${update.current} is installed and ${update.latest} is available. The user installs it in the app: this tool doesn't install anything.`,
+        isError: false,
+      };
+    case "current":
+      return { text: `Fast Memo ${update.current} is installed and up to date.`, isError: false };
+    case "packageManager":
+      return {
+        text: `Fast Memo ${update.current} is installed. This install is updated through its package manager, so a newer version has to be looked for there.`,
+        isError: false,
+      };
+  }
+}
 
 async function createNote(args: Record<string, unknown>, deps: McpDeps): Promise<McpReply> {
   const built = buildNote(args, deps);
@@ -310,6 +362,10 @@ export async function handleMcpRequest(req: McpRequest, deps: McpDeps): Promise<
       return editNote(req, deps);
     case "fastmemo_trash_note":
       return trashNote(req.args, deps);
+    case "fastmemo_help":
+      return help(req.args, deps);
+    case "fastmemo_check_update":
+      return checkUpdate(deps);
     default:
       return refused(NOT_AVAILABLE);
   }
