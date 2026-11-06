@@ -200,6 +200,7 @@ export default Sentry.wrap(function RootLayout() {
                         options={{ headerShown: false, animation: "fade_from_bottom" }}
                       />
                       <Stack.Screen name="settings/webhooks" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen name="settings/mcp" options={{ headerShown: false, animation: "ios_from_left" }} />
                       <Stack.Screen
                         name="settings/voice-recognition"
                         options={{ headerShown: false, animation: "ios_from_left" }}

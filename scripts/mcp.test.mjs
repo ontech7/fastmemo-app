@@ -82,6 +82,8 @@ await build({
       export { HELP_TOPICS, HELP_MOBILE_ONLY } from "@/constants/help-topics";
       export { helpText } from "@/libs/mcp/help";
       export { default as en } from "@/libs/i18n/locales/en";
+      export { connectionSnippets } from "@/libs/mcp/snippets";
+      export { MCP_TOOLS } from "@/libs/mcp/settingsApi";
     `,
     resolveDir: src,
     loader: "ts",
@@ -2168,6 +2170,62 @@ const request = (id, tool = "fastmemo_list_categories", args = {}) => ({
     topic
   );
   ok("...and a mobile-only one refused", (await tool("fastmemo_help", { topic: "help.what_ai_assistant" })).isError);
+}
+
+/* ------------------------------------------------------------------------------------------------------------------ */
+/* The settings page: what it copies for each client, and its list of tools against Rust's                             */
+/* ------------------------------------------------------------------------------------------------------------------ */
+
+{
+  const { connectionSnippets, MCP_TOOLS } = M;
+  const s = connectionSnippets("/Applications/Fast Memo.app/Contents/MacOS/Fast Memo");
+  ok(
+    "claude code quotes the path",
+    s.claudeCode === 'claude mcp add fastmemo -- "/Applications/Fast Memo.app/Contents/MacOS/Fast Memo" --mcp',
+    s.claudeCode
+  );
+  ok(
+    "codex quotes the path",
+    s.codex.startsWith('codex mcp add fastmemo -- "/Applications/') && s.codex.endsWith('" --mcp'),
+    s.codex
+  );
+  const w = connectionSnippets("C:\\Program Files\\Fast Memo\\Fast Memo.exe");
+  ok(
+    "json escapes backslashes",
+    JSON.parse(w.json).mcpServers.fastmemo.command === "C:\\Program Files\\Fast Memo\\Fast Memo.exe",
+    w.json
+  );
+  ok("json passes --mcp", JSON.parse(w.json).mcpServers.fastmemo.args[0] === "--mcp", w.json);
+  ok("the JSON has no other arguments", JSON.parse(w.json).mcpServers.fastmemo.args.length === 1, w.json);
+
+  // The page's list can't drift from Rust's: same tools, same order, same starting switches.
+  const rust = readFileSync(join(__dirname, "..", "src-tauri", "src", "mcp", "tools.rs"), "utf8");
+  const names = new Map([...rust.matchAll(/Tool::(\w+) => "(fastmemo_\w+)"/g)].map((m) => [m[1], m[2]]));
+  const all = rust
+    .match(/pub const ALL: \[Tool; \d+\] = \[([^\]]*)\]/)[1]
+    .match(/Tool::(\w+)/g)
+    .map((v) => names.get(v.slice(6)));
+  const off = new Set(
+    rust
+      .match(/fn default_on\(self\)[^{]*\{\s*!matches!\(self, ([^)]*)\)/)[1]
+      .split("|")
+      .map((v) => names.get(v.trim().slice(6)))
+  );
+  ok("rust has nine tools", all.length === 9 && all.every(Boolean), all);
+  ok(
+    "the page lists Rust's tools, in order",
+    JSON.stringify(MCP_TOOLS.map((tool) => tool.name)) === JSON.stringify(all),
+    MCP_TOOLS
+  );
+  ok("...with Rust's defaults", MCP_TOOLS.every((tool) => tool.defaultOn === !off.has(tool.name)) && off.size === 2, {
+    off: [...off],
+    page: MCP_TOOLS,
+  });
+  ok(
+    "...and a label for each in the app's strings",
+    MCP_TOOLS.every((tool) => typeof M.en.mcp.tools[tool.name] === "string"),
+    MCP_TOOLS.filter((tool) => typeof M.en.mcp.tools?.[tool.name] !== "string")
+  );
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

@@ -564,7 +564,10 @@ pub fn run() {
             net::net_request,
             net::net_cancel,
             net::net_webhook,
-            mcp::mcp_reply
+            mcp::mcp_reply,
+            mcp::mcp_get_settings,
+            mcp::mcp_set_settings,
+            mcp::mcp_connection_info
         ])
         .setup(|app| {
             // The config's frame: window-state's restore lands just after (on the main queue), recorded through its

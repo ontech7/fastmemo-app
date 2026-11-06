@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Instant;
 
+use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -103,6 +104,83 @@ pub fn mcp_reply(app: AppHandle, id: u64, reply: PageReply) {
 fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = app.path().app_config_dir().map_err(|err| err.to_string())?;
     Ok(dir.join("mcp.json"))
+}
+
+/// The settings the page shows: what's in force now.
+#[tauri::command]
+pub fn mcp_get_settings(app: AppHandle) -> McpSettings {
+    app.state::<McpState>().settings.lock().unwrap().clone()
+}
+
+/// Saves the page's switches and applies them: the server starts when MCP went on and stops when it went off, and is left
+/// alone when `enabled` didn't change. A start that fails comes back as the error; the switch stays saved on, and the next
+/// launch tries again. Off the main thread, since a start or a stop can wait a moment.
+#[tauri::command]
+pub async fn mcp_set_settings(app: AppHandle, settings: McpSettings) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || apply_settings(&app, settings))
+        .await
+        .map_err(|err| err.to_string())?
+}
+
+fn apply_settings(app: &AppHandle, settings: McpSettings) -> Result<(), String> {
+    let path = settings_path(app)?;
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|err| err.to_string())?;
+    }
+    settings.save(&path).map_err(|err| err.to_string())?;
+    let enabled = settings.enabled;
+    let was_enabled = std::mem::replace(
+        &mut *app.state::<McpState>().settings.lock().unwrap(),
+        settings,
+    )
+    .enabled;
+    if enabled && !was_enabled {
+        start(app)?;
+    } else if !enabled && was_enabled {
+        stop(app);
+    }
+    Ok(())
+}
+
+/// What an AI client needs to launch this app, and whether that's likely to keep working.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectionInfo {
+    /// The executable the client runs with `--mcp`.
+    pub path: String,
+    /// macOS: the app runs from outside the Applications folders, so the path may not last.
+    pub moved: bool,
+    pub platform: String,
+}
+
+#[tauri::command]
+pub fn mcp_connection_info() -> ConnectionInfo {
+    // An AppImage runs from a temporary mount: the file the user keeps is $APPIMAGE.
+    let appimage = if cfg!(target_os = "linux") {
+        std::env::var("APPIMAGE").ok().filter(|path| !path.is_empty())
+    } else {
+        None
+    };
+    let path = appimage.unwrap_or_else(|| {
+        std::env::current_exe()
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    });
+    let moved = cfg!(target_os = "macos")
+        && !in_applications(&path, std::env::var("HOME").ok().as_deref());
+    ConnectionInfo {
+        path,
+        moved,
+        platform: std::env::consts::OS.to_string(),
+    }
+}
+
+/// Whether the path is under `/Applications/` or the user's `~/Applications/`.
+fn in_applications(path: &str, home: Option<&str>) -> bool {
+    path.starts_with("/Applications/")
+        || home
+            .filter(|home| !home.is_empty())
+            .is_some_and(|home| path.starts_with(&format!("{}/Applications/", home.trim_end_matches('/'))))
 }
 
 /// At launch: reads the switches and, with MCP on, starts the server. Off the main thread, since a start can wait a moment.
@@ -221,6 +299,21 @@ mod tests {
                 json!({}),
             )
         }
+    }
+
+    #[test]
+    fn only_the_applications_folders_keep_the_app_in_place() {
+        let app = "Fast Memo.app/Contents/MacOS/Fast Memo";
+        assert!(in_applications(&format!("/Applications/{app}"), Some("/Users/a")));
+        assert!(in_applications(&format!("/Users/a/Applications/{app}"), Some("/Users/a")));
+        assert!(in_applications(&format!("/Users/a/Applications/{app}"), Some("/Users/a/")));
+        assert!(!in_applications(&format!("/Users/a/Downloads/{app}"), Some("/Users/a")));
+        assert!(!in_applications(&format!("/Volumes/Fast Memo/{app}"), Some("/Users/a")));
+        assert!(!in_applications(&format!("/Users/b/Applications/{app}"), Some("/Users/a")));
+        // No home: only the system folder counts, and an empty home matches nothing.
+        assert!(!in_applications(&format!("/Users/a/Applications/{app}"), None));
+        assert!(!in_applications("/Applications", Some("")));
+        assert!(!in_applications("/ApplicationsX/app", Some("")));
     }
 
     #[test]
