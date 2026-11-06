@@ -1,5 +1,6 @@
 //! The nine tools: names, switches, and the definitions an agent reads.
 
+use super::settings::McpSettings;
 use serde_json::{json, Value};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -291,6 +292,18 @@ It doesn't delete anything permanently."
     }
 }
 
+/// The tools an agent sees. `edit_note` stays listed while `create_note` is on, since an agent may still edit the
+/// notes it created in its own session.
+pub fn listed_tools(settings: &McpSettings) -> Vec<Tool> {
+    Tool::ALL
+        .into_iter()
+        .filter(|&tool| match tool {
+            Tool::EditNote => settings.is_on(Tool::EditNote) || settings.is_on(Tool::CreateNote),
+            _ => settings.is_on(tool),
+        })
+        .collect()
+}
+
 fn note_id() -> Value {
     json!({"type": "string", "description": "The note's id."})
 }
@@ -334,6 +347,7 @@ fn kanban_column_schema() -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mcp::settings::McpSettings;
 
     #[test]
     fn every_tool_is_prefixed_and_has_an_object_schema() {
@@ -399,5 +413,34 @@ mod tests {
             Tool::CreateNote.definition()["annotations"]["destructiveHint"],
             false
         );
+    }
+
+    fn settings_with(entries: &[(Tool, bool)]) -> McpSettings {
+        let mut settings = McpSettings::default();
+        for (tool, on) in entries {
+            settings.tools.insert(tool.name().to_string(), *on);
+        }
+        settings
+    }
+
+    #[test]
+    fn edit_note_is_listed_when_create_note_is_on_even_if_itself_off() {
+        let listed = listed_tools(&settings_with(&[(Tool::EditNote, false)]));
+        assert!(listed.contains(&Tool::CreateNote));
+        assert!(listed.contains(&Tool::EditNote));
+        assert!(!listed.contains(&Tool::TrashNote));
+    }
+
+    #[test]
+    fn edit_note_is_not_listed_with_both_off() {
+        let listed = listed_tools(&settings_with(&[(Tool::EditNote, false), (Tool::CreateNote, false)]));
+        assert!(!listed.contains(&Tool::EditNote));
+        assert!(!listed.contains(&Tool::CreateNote));
+    }
+
+    #[test]
+    fn edit_note_is_listed_on_its_own_switch() {
+        let listed = listed_tools(&settings_with(&[(Tool::EditNote, true), (Tool::CreateNote, false)]));
+        assert!(listed.contains(&Tool::EditNote));
     }
 }
