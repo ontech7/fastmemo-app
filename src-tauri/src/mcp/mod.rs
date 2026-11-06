@@ -21,15 +21,25 @@ use tauri::{AppHandle, Emitter, Manager};
 use page::{PageCalls, PageReply, PAGE_TIMEOUT};
 use protocol::{ToolOutcome, ToolRunner};
 use server::ServerHandle;
-use session::Session;
+use session::{Session, WriteLimit};
 use settings::McpSettings;
 use tools::{listed_tools, Tool};
 
 /// The event the page answers requests on (`src/libs/mcp/bridge.web.ts`).
 pub const REQUEST_EVENT: &str = "fastmemo://mcp-request";
 
-const TOO_MANY_WRITES: &str =
+const TOO_MANY_WRITES_IN_A_MINUTE: &str =
     "There have been too many changes in a minute: wait a moment before making another.";
+const TOO_MANY_WRITES_IN_AN_HOUR: &str =
+    "There have been too many changes in an hour: stop making changes, and try again later.";
+
+/// What an agent is told when a write goes over a limit: true of that limit, and of what to do.
+fn too_many_writes(limit: WriteLimit) -> &'static str {
+    match limit {
+        WriteLimit::Minute => TOO_MANY_WRITES_IN_A_MINUTE,
+        WriteLimit::Hour => TOO_MANY_WRITES_IN_AN_HOUR,
+    }
+}
 
 /// What the MCP server keeps while the app runs.
 #[derive(Default)]
@@ -82,11 +92,13 @@ fn run_on_page(
     tool: Tool,
     args: Value,
 ) -> ToolOutcome {
-    if tool.writes() && !session.allow_write(Instant::now()) {
-        return ToolOutcome {
-            text: TOO_MANY_WRITES.to_string(),
-            is_error: true,
-        };
+    if tool.writes() {
+        if let Err(limit) = session.allow_write(Instant::now()) {
+            return ToolOutcome {
+                text: too_many_writes(limit).to_string(),
+                is_error: true,
+            };
+        }
     }
     let reply = calls.call(emit, tool, args, session.scope(settings), PAGE_TIMEOUT);
     if let Some(id) = reply.created_id {
@@ -361,6 +373,15 @@ mod tests {
         // Reading goes on.
         assert!(!page.run(&mut session, &settings, Tool::ReadNote).is_error);
         assert_eq!(page.sent.borrow().len(), WRITES_PER_MINUTE + 1);
+    }
+
+    #[test]
+    fn each_limit_tells_the_agent_its_own_wait() {
+        let minute = too_many_writes(WriteLimit::Minute);
+        let hour = too_many_writes(WriteLimit::Hour);
+        assert!(minute.contains("in a minute") && minute.contains("wait a moment"));
+        assert!(hour.contains("in an hour") && hour.contains("later"));
+        assert!(!hour.contains("a moment"));
     }
 
     #[test]

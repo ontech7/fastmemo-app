@@ -7,7 +7,17 @@ use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
 pub const WRITES_PER_MINUTE: usize = 30;
-const WINDOW: Duration = Duration::from_secs(60);
+/// Coarser than the minute's, per connection: 30 a minute kept up is 43,200 writes a day against Firestore's 20,000 free ones.
+pub const WRITES_PER_HOUR: usize = 300;
+const MINUTE: Duration = Duration::from_secs(60);
+const HOUR: Duration = Duration::from_secs(3600);
+
+/// Which of the two limits a refused write went over.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum WriteLimit {
+    Minute,
+    Hour,
+}
 
 /// One connection. Sessions never share owned notes.
 #[derive(Default)]
@@ -39,20 +49,30 @@ impl Session {
         }
     }
 
-    /// Counts a write against the last minute. A refused write is not counted.
-    pub fn allow_write(&mut self, now: Instant) -> bool {
+    /// Counts a write against the last minute and the last hour, or says which limit it went over (the hour's first: it is
+    /// the longer wait). A refused write is not counted.
+    pub fn allow_write(&mut self, now: Instant) -> Result<(), WriteLimit> {
         while let Some(&oldest) = self.recent_writes.front() {
-            if now.saturating_duration_since(oldest) >= WINDOW {
+            if now.saturating_duration_since(oldest) >= HOUR {
                 self.recent_writes.pop_front();
             } else {
                 break;
             }
         }
-        if self.recent_writes.len() >= WRITES_PER_MINUTE {
-            return false;
+        if self.recent_writes.len() >= WRITES_PER_HOUR {
+            return Err(WriteLimit::Hour);
+        }
+        let last_minute = self
+            .recent_writes
+            .iter()
+            .rev()
+            .take_while(|&&at| now.saturating_duration_since(at) < MINUTE)
+            .count();
+        if last_minute >= WRITES_PER_MINUTE {
+            return Err(WriteLimit::Minute);
         }
         self.recent_writes.push_back(now);
-        true
+        Ok(())
     }
 }
 
@@ -103,11 +123,47 @@ mod tests {
         let mut session = Session::default();
         let start = Instant::now();
         for _ in 0..WRITES_PER_MINUTE {
-            assert!(session.allow_write(start));
+            assert_eq!(session.allow_write(start), Ok(()));
         }
-        assert!(!session.allow_write(start + Duration::from_secs(30)));
+        assert_eq!(
+            session.allow_write(start + Duration::from_secs(30)),
+            Err(WriteLimit::Minute)
+        );
         // A refused write doesn't count against the window.
-        assert!(!session.allow_write(start + Duration::from_secs(59)));
-        assert!(session.allow_write(start + Duration::from_secs(61)));
+        assert_eq!(
+            session.allow_write(start + Duration::from_secs(59)),
+            Err(WriteLimit::Minute)
+        );
+        assert_eq!(session.allow_write(start + Duration::from_secs(61)), Ok(()));
+    }
+
+    /// 29 writes a minute, a minute apart: the minute's limit is never reached, the hour's is.
+    #[test]
+    fn the_write_cap_refuses_the_301st_within_an_hour_while_the_minute_is_fine() {
+        let mut session = Session::default();
+        let start = Instant::now();
+        let mut at = start;
+        let mut done = 0;
+        // 30 writes at the start of each of the first ten minutes: 300 in under ten minutes.
+        for minute in 0..10 {
+            at = start + Duration::from_secs(minute * 60);
+            for _ in 0..WRITES_PER_MINUTE {
+                assert_eq!(session.allow_write(at), Ok(()));
+                done += 1;
+            }
+        }
+        assert_eq!(done, WRITES_PER_HOUR);
+        // The minute before holds no write, yet the hour is full.
+        let later = at + Duration::from_secs(11 * 60);
+        assert_eq!(session.allow_write(later), Err(WriteLimit::Hour));
+        // A refused write doesn't count: it recovers once the first writes are an hour old.
+        assert_eq!(
+            session.allow_write(start + Duration::from_secs(3599)),
+            Err(WriteLimit::Hour)
+        );
+        assert_eq!(
+            session.allow_write(start + Duration::from_secs(3601)),
+            Ok(())
+        );
     }
 }
