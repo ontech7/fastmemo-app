@@ -6,6 +6,7 @@ import { isTauri } from "@/utils/platform";
  * The macOS menu bar (Windows and Linux have none: a light menu bar inside the dark window would clash; the keyboard
  * shortcuts cover New Note, Find and Settings there). The Rust shell builds it (`src-tauri/src/lib.rs`), in English until
  * the labels arrive in the app's language, again on every language change. Its items send their id back here.
+ * The tray icon's labels (`src-tauri/src/tray.rs`) go the same way, on every desktop.
  */
 
 const MENU_EVENT = "fastmemo://menu";
@@ -22,6 +23,11 @@ const MENU_COMMANDS: Record<string, DesktopCommand> = {
   "export-import": "settings",
   help: "help",
 };
+
+/** The tray icon's menu (Windows and Linux, while the local MCP server keeps the app running with the window closed). */
+function trayLabels() {
+  return { open: i18n.t("menu.tray_open"), quit: i18n.t("menu.tray_quit") };
+}
 
 /** The menu's labels in the app's language; `{name}` stands for the app's name (the Rust side fills it in). */
 function menuLabels() {
@@ -61,11 +67,16 @@ function menuLabels() {
 }
 
 export function installDesktopMenu(): void {
-  if (!isTauri() || !IS_MAC) return;
+  if (!isTauri()) return;
 
   Promise.all([import("@tauri-apps/api/core"), import("@tauri-apps/api/event")])
     .then(([{ invoke }, { listen }]) => {
       const sendLabels = () => {
+        // The Rust shell stores the tray's labels everywhere and uses them where there is a tray; the menu bar is macOS's.
+        invoke("set_tray_labels", { labels: trayLabels() }).catch((e) => {
+          if (__DEV__) console.warn("set_tray_labels", e);
+        });
+        if (!IS_MAC) return;
         invoke("set_menu_labels", { labels: menuLabels() }).catch((e) => {
           if (__DEV__) console.warn("set_menu_labels", e);
         });
@@ -73,6 +84,7 @@ export function installDesktopMenu(): void {
       sendLabels();
       i18n.on("languageChanged", sendLabels);
 
+      if (!IS_MAC) return;
       return listen<string>(MENU_EVENT, ({ payload }) => {
         const command = MENU_COMMANDS[payload];
         if (command) void runCommand(command);

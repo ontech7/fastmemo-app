@@ -915,6 +915,7 @@ Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file tha
 | 43  | Never leave an element selected after a page-script edit                                  | A key replaces it: put back the selection saved (as a `Range`) before the `execCommand`, as `__fm.image` does (LL-065)           |
 | 44  | Never judge or measure performance on a debuggable build                                  | Its Java/Kotlin runs interpreted: a startup measured 10x slower (LL-066). Measure a release APK not marked debuggable            |
 | 45  | Never hardcode a note size limit                                                          | The cloud in use decides (`cloud.maxNoteBytes`, `noteTextLimit`); a note over it goes offline (ADR-026)                          |
+| 46  | Never reach a note in an MCP tool except through `libs/mcp/policy.ts`                     | Locked and hidden are UI flags: for an agent this filter is the only barrier, an id out of reach reads as unknown (ADR-032)      |
 
 ### ALWAYS
 

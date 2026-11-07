@@ -155,7 +155,18 @@ src/
     appIcon.ts         # Alternate app icon (expo-alternate-app-icons, ADR-020); .android.ts confirms and closes the app, .web.ts: none
     net.ts             # Calls to the user's servers (FastMemo server, webhooks); .web.ts: through Rust on desktop (src-tauri/src/net.rs, ADR-017)
     desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only
-    desktopMenu.ts     # macOS menu labels (i18n menu.*) and its items' commands; .ts no-op, .web.ts on Tauri macOS
+    desktopMenu.ts     # macOS menu labels (i18n menu.*) and its items' commands, the tray's labels; .ts no-op, .web.ts on Tauri
+    mcp/               # The local MCP server's page side (ADR-032, see "Local MCP Server" below), tested by scripts/mcp.test.mjs
+      bridge.web.ts    # Listens for Rust's requests, fills McpDeps with the real app, answers through `mcp_reply`; bridge.ts no-op
+      handlers.ts      # The tools. Pure over McpDeps, so the tests give it a store of their own
+      policy.ts        # What an agent may reach (never locked or hidden): every tool gets at the notes through this
+      noteInput.ts     # A note as an agent describes it -> one the app stores; title, category and flag rules
+      noteEdit.ts      # edit_note's changes, applied to a copy
+      noteView.ts      # A note as an agent reads it: images out, pages, search text, snippets
+      help.ts          # A help topic's text from its i18n strings
+      settingsApi.ts   # The settings page's way to Rust (switches, connection info), MCP_TOOLS
+      snippets.ts      # What to paste into each AI client
+      types.ts         # What Rust and the page exchange: McpRequest, McpReply; and UpdateCheck
     windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
     richTextEditor.ts  # The text editor's page script (line types, code exit, bullets, images, the image menu's messages) and style
                        # (ADR-023, ADR-024, scripts/richtext.test.mjs)
@@ -187,6 +198,7 @@ src/
     code-languages.ts  # Supported code editor languages
     note-types.ts      # Note type metadata
     app-icons.ts       # Alternate app icons: AppIconName (= the plugin names in app.config.ts), labels, previews (ADR-020)
+    help-topics.ts     # The help topics fastmemo_help lists, in the order of the help screen (scripts/mcp.test.mjs checks the two)
 
   configs/             # App configuration
     index.ts           # Main config (env vars, app metadata, business rules, cloud, sentry, firebase)
@@ -321,6 +333,39 @@ server:   items (kind, key, state live|deleted|detached, rev, seq, author, data)
           + vault + stats (per day) + events; dashboard at / (admin key)
 ```
 
+### Local MCP Server (ADR-032)
+
+Desktop only, off until the user enables it (`app/settings/mcp.web.tsx`, entry gated by `isTauri()`).
+
+```
+AI client starts <the app's binary> --mcp          main.rs, before Tauri: no window, no Dock icon
+  bridge.rs: stdin line -> socket -> reply -> stdout (JSON-RPC only; logs on stderr)
+    app away: initialize, server/discover, tools/list answered from what's compiled in; each call -> "isn't reachable";
+    connects again on the next line; one connection for the session (its rights are tied to it)
+  endpoint.rs: <home>/<id>/mcp/sock in a 0700 directory (macOS Application Support, Linux .local/share)
+    Windows: owner-only named pipe, a new name for each start, published in %APPDATA%\<id>\mcp\pipe-name
+  server.rs: one thread per connection, each with its own AppRunner (mod.rs) and Session (session.rs: owned ids, 30 writes/min)
+  protocol.rs: both eras (2026-07-28 server/discover + _meta; 2025-11-25, 2025-06-18 initialize); tools/list -> listed_tools(settings);
+    a tool switched off -> tool error (tools.rs holds the definitions and the defaults)
+  page.rs: request { id, tool, args, scope: { editAll, ownedIds } } -> event fastmemo://mcp-request to the main window; waits 10 s
+page: libs/mcp/bridge.web.ts -> handlers.ts
+  refused until rehydrated and the notes were read (LL-029, LL-039)
+  flushPending (ADR-013) -> policy.ts (locked, hidden: "No note with this id.", as for an id that doesn't exist)
+  write: dispatch (touchNote + outbox, like any change) -> an existing note: notifyNoteChanged (an open editor reloads, no toast)
+         -> flushNow (on disk before it's answered) -> the user's webhook
+  -> invoke("mcp_reply", { id, reply: { text, isError, createdId? } }); createdId -> Session.own
+```
+
+**Settings:** `mcp.json` in the app's config directory (macOS `~/Library/Application Support/<id>/`, Windows `%APPDATA%\<id>\`,
+Linux `~/.config/<id>/`): `{ enabled, tools: { <tool name>: bool }, keepRunning }`, a tool not listed having its default. Owned
+by Rust (`settings.rs`, written by temp file and rename), read at launch and through `mcp_get_settings` / `mcp_set_settings`:
+per device, never in Redux, never synced. `apply_settings` (`mod.rs`) saves them and starts or stops the server, one change at a
+time, and syncs the tray.
+
+**Window closed:** `tray.rs`. macOS never has a tray (ADR-022). Windows and Linux: with `enabled` and `keepRunning`, closing
+hides the window and an icon stays, with Open and Quit; otherwise closing quits. See "Sync while hidden" in ADR-032 for what the
+engine does.
+
 ### Persistence Architecture
 
 ```
@@ -357,7 +402,7 @@ Edits reach the store in batches (`useNoteEditor`: debounce 500ms / max 2s nativ
 or a desktop quit: the Rust shell (`src-tauri/src/lib.rs`) holds a quit from the window (close button on Windows/Linux) or the
 app menu (Cmd+Q), emits `fastmemo://flush-before-exit`, and exits on the frontend's `exit_after_flush` or after 2s (Dock Quit,
 logout and OS session end aren't held: ADR-015). On macOS closing the window hides it (`fastmemo://hidden`: a flush, no exit;
-ADR-022).
+ADR-022); on Windows and Linux too, while the local MCP server keeps the app running (ADR-032).
 
 ### Screen Navigation Flow
 
@@ -404,7 +449,7 @@ I18nextProvider
               StatusBar
               WebToaster (web only, conditional require)
               Stack (expo-router, single flat navigator)
-                32 screens (all headerShown: false, transparentModal)
+                33 screens (all headerShown: false, transparentModal)
 ```
 
 ## Platform Abstraction Strategy
@@ -501,13 +546,17 @@ libs/cloud/syncEngine, merge, revision --> no app imports (pure; tested by scrip
 libs/cloud/firebaseBackend --> firebase/* (the only place; tested by scripts/sync-firestore.test.mjs)
 libs/cloud/serverBackend --> fetch + libs/secureStore (token) (tested by scripts/sync-server.test.mjs, real server)
 libs/cloud/router, scope --> settings only (which backend, which scope)
+
+libs/mcp/handlers, noteInput, noteEdit, noteView --> McpDeps + libs/mcp/policy (no store import; tested by scripts/mcp.test.mjs)
+libs/mcp/bridge.web --> slicers/store, libs/registry (flushPending), libs/flushOnExit, libs/cloud/sync (notifyNoteChanged)
+src-tauri/src/mcp/ --> the page only through an event and `mcp_reply`; the notes never reach Rust except as text on their way out
 ```
 
 ## Approximate Scale
 
 | Metric                      | Count            |
 | --------------------------- | ---------------- |
-| Screens (routes)            | 32               |
+| Screens (routes)            | 33               |
 | Components (.tsx)           | ~98              |
 | Redux reducers              | 52 (29 + 9 + 14) |
 | Custom hooks                | 8                |

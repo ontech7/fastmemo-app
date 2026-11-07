@@ -2,10 +2,12 @@ import React from "react";
 import { Platform } from "react-native";
 
 import { isBiometricSupported } from "@/libs/biometric";
+import { isTauri } from "@/utils/platform";
 
 import SectionItem_ExportImportData from "./items/advanced/SectionItem_ExportImportData";
 import SectionItem_ShowHidden from "./items/advanced/SectionItem_ShowHidden";
 import SectionItem_VoiceRecognition from "./items/advanced/SectionItem_VoiceRecognition";
+import SectionItem_Mcp from "./items/advanced/SectionItem_Mcp";
 import SectionItem_Webhooks from "./items/advanced/SectionItem_Webhooks";
 import SectionItem_AIAssistant from "./items/advanced/SectionItem_AIAssistant";
 import SectionItem_WipeData from "./items/advanced/SectionItem_WipeData";
@@ -41,6 +43,7 @@ export const SECTION_ADVANCED: SectionItemComponent[] = [
   SectionItem_ShowHidden,
   SectionItem_ExportImportData,
   SectionItem_Webhooks,
+  isTauri() && SectionItem_Mcp,
   !isWeb && SectionItem_VoiceRecognition,
   !isWeb && SectionItem_AIAssistant,
   SectionItem_WipeData,
