@@ -2,7 +2,9 @@ import { store } from "@/slicers/store";
 import type { Category } from "@/types";
 
 import { REWRITE_LENGTH_RATIO } from "./constants";
-import type { EditorAction } from "./types";
+import type { EditorAction, TokenCandidates } from "./types";
+
+export type { TokenCandidates } from "./types";
 
 /** The category the AI named: the exact name first ("Casa" is not "Casa al mare"), then one containing it. */
 export function findCategoryByName(name: string): Category | undefined {
@@ -245,12 +247,6 @@ export function categoryGrammar(names: string[]): string {
 
 /** How close another category must come to the one picked, in probability, for the user to choose between the two. */
 export const CATEGORY_ALTERNATIVE_RATIO = 0.3;
-
-/** One token of the model's answer, with the candidates the sampler kept for it (the completion's `n_probs`). */
-export interface TokenCandidates {
-  content: string;
-  probs: { tok_str: string; prob: number }[];
-}
 
 /**
  * The category the model nearly picked instead of `chosen`, when one came close. At each token of the answer, a candidate

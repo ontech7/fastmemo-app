@@ -1,7 +1,9 @@
 import * as Localization from "expo-localization";
 import { AppState } from "react-native";
 
+import { selectorAIAssistant } from "@/slicers/settingsSlice";
 import { store } from "@/slicers/store";
+import type { RootState } from "@/types";
 import {
   ACTION_MAX_TOKENS,
   ACTION_SAMPLING,
@@ -56,9 +58,9 @@ export function isNativeModuleAvailable(): boolean {
 
 export { addAIStatusListener, getAIStatus } from "./status";
 
-/** The model the settings name now (an id stored by an earlier version maps to its replacement). */
+/** The model the settings name now: the one the AI settings show (an id stored by an earlier version maps to its replacement). */
 export function selectedModelId(): AIModelId {
-  return normalizeModelId(store.getState().settings.aiAssistant?.selectedModel);
+  return normalizeModelId(selectorAIAssistant(store.getState() as RootState).selectedModel);
 }
 
 export async function deleteModel(modelId?: AIModelId): Promise<void> {

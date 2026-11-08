@@ -1,5 +1,3 @@
-import type { TokenCandidates } from "./helpers";
-
 export type AIModelStatus = "idle" | "downloading" | "loading" | "ready" | "error";
 
 export type AIModelId = "qwen3.5-0.8b" | "qwen3.5-2b" | "qwen3.5-4b";
@@ -11,6 +9,8 @@ export interface AIModelInfo {
   url: string;
   /** The file's exact size: a download of any other size is incomplete or wrong, and is deleted. */
   sizeBytes: number;
+  /** The file's SHA-256 (lowercase hex): a download that doesn't match is a different file. */
+  sha256: string;
   sizeLabel: string;
   description: string;
   minRamBytes: number;
@@ -116,6 +116,12 @@ export interface EngineCompletionParams {
   grammar?: string;
   n_probs?: number;
   seed?: number;
+}
+
+/** One token of the model's answer, with the candidates the sampler kept for it (the completion's `n_probs`). */
+export interface TokenCandidates {
+  content: string;
+  probs: { tok_str: string; prob: number }[];
 }
 
 /** What a completion returns. */

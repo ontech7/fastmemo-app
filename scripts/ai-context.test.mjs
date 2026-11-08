@@ -34,6 +34,7 @@ globalThis.__fakeDisk = {
     this.files.set(path, { text, mtime: 1 });
   },
   remove(path) {
+    globalThis.__llama?.events.push("delete " + path.slice(path.lastIndexOf("/") + 1));
     this.files.delete(path);
   },
   rename(from, to) {
@@ -167,7 +168,9 @@ const STUBS = {
   "~/modules/fastmemo-downloads": `export default null;`,
   "@/slicers/store": `
     export const store = {
-      getState: () => globalThis.__storeState,
+      // A new object per read, as Redux gives after a change: the tests mutate the state in place, and a memoized selector
+      // keyed on the state object would keep answering with the first read.
+      getState: () => ({ ...globalThis.__storeState }),
       dispatch: (action) => { globalThis.__dispatched.push(action); return action; },
     };
   `,
@@ -852,6 +855,21 @@ console.log("switching model");
   );
   await X.generateEditorContent("generate_title", "Una nota", undefined, { modelId: "qwen3.5-0.8b" });
   eq("the same model again: no new load", llama.inits.length, 2);
+}
+
+console.log("deleting files");
+{
+  await fresh();
+  selectModel("qwen3.5-2b");
+  await X.generateEditorContent("generate_title", "Una nota");
+  globalThis.__fakeDisk.write("/data/files/models/qwen-1.5b-old.gguf", "x".repeat(50));
+  llama.events.length = 0;
+  const freed = await X.deleteOrphanedModelFiles();
+  eq("an orphan file is deleted", freed, 50);
+  eq("deleting files releases the loaded model first", llama.events, [
+    "release Qwen3.5-2B-Q4_K_M.gguf",
+    "delete qwen-1.5b-old.gguf",
+  ]);
 }
 
 await fresh();

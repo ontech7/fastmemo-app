@@ -1,4 +1,15 @@
+import {
+  CONTEXT_SIZE,
+  DEFAULT_MODEL_ID,
+  MODEL_SPEED,
+  REWRITE_PIECE_TOKENS,
+  SUMMARY_PART_TOKENS,
+  USE_MLOCK,
+} from "./platformConstants";
 import type { AIModelId, AIModelInfo, EditorAction } from "./types";
+
+// The values that differ per platform live in platformConstants(.web).ts; these are re-exported so imports stay as they were.
+export { DEFAULT_MODEL_ID, MODEL_SPEED, REWRITE_PIECE_TOKENS, SUMMARY_PART_TOKENS };
 
 const GB = 1024 * 1024 * 1024;
 
@@ -7,7 +18,8 @@ const hf = (repo: string, revision: string, file: string) => `https://huggingfac
 
 /**
  * Qwen3.5 Small, Q4_K_M GGUFs by Unsloth (Qwen publishes none). RAM gates sit under the phone's class: Android reports usable
- * RAM, a little less than the box says. The 4B isn't pinned in RAM: on a 6 GB phone it would leave too little.
+ * RAM, a little less than the box says. The context size and whether the weights are pinned in RAM depend on the platform
+ * (on a phone the 4B isn't pinned: on a 6 GB phone it would leave too little).
  */
 export const AI_MODELS: Record<AIModelId, AIModelInfo> = {
   "qwen3.5-0.8b": {
@@ -16,11 +28,12 @@ export const AI_MODELS: Record<AIModelId, AIModelInfo> = {
     fileName: "Qwen3.5-0.8B-Q4_K_M.gguf",
     url: hf("unsloth/Qwen3.5-0.8B-GGUF", "6ab461498e2023f6e3c1baea90a8f0fe38ab64d0", "Qwen3.5-0.8B-Q4_K_M.gguf"),
     sizeBytes: 532_517_120,
+    sha256: "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
     sizeLabel: "~530 MB",
     description: "ai.model_light",
     minRamBytes: 2.5 * GB,
-    contextSize: 4096,
-    useMlock: true,
+    contextSize: CONTEXT_SIZE["qwen3.5-0.8b"],
+    useMlock: USE_MLOCK["qwen3.5-0.8b"],
   },
   "qwen3.5-2b": {
     id: "qwen3.5-2b",
@@ -28,11 +41,12 @@ export const AI_MODELS: Record<AIModelId, AIModelInfo> = {
     fileName: "Qwen3.5-2B-Q4_K_M.gguf",
     url: hf("unsloth/Qwen3.5-2B-GGUF", "f6d5376be1edb4d416d56da11e5397a961aca8ae", "Qwen3.5-2B-Q4_K_M.gguf"),
     sizeBytes: 1_280_835_840,
+    sha256: "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
     sizeLabel: "~1.3 GB",
     description: "ai.model_powerful",
     minRamBytes: 3.2 * GB,
-    contextSize: 8192,
-    useMlock: true,
+    contextSize: CONTEXT_SIZE["qwen3.5-2b"],
+    useMlock: USE_MLOCK["qwen3.5-2b"],
   },
   "qwen3.5-4b": {
     id: "qwen3.5-4b",
@@ -40,15 +54,14 @@ export const AI_MODELS: Record<AIModelId, AIModelInfo> = {
     fileName: "Qwen3.5-4B-Q4_K_M.gguf",
     url: hf("unsloth/Qwen3.5-4B-GGUF", "e87f176479d0855a907a41277aca2f8ee7a09523", "Qwen3.5-4B-Q4_K_M.gguf"),
     sizeBytes: 2_740_937_888,
+    sha256: "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
     sizeLabel: "~2.7 GB",
     description: "ai.model_advanced",
     minRamBytes: 5 * GB,
-    contextSize: 8192,
-    useMlock: false,
+    contextSize: CONTEXT_SIZE["qwen3.5-4b"],
+    useMlock: USE_MLOCK["qwen3.5-4b"],
   },
 };
-
-export const DEFAULT_MODEL_ID: AIModelId = "qwen3.5-0.8b";
 
 /**
  * The file (in the app's private files) where the system download under way is written down (ADR-028): the app checks for it
@@ -296,30 +309,10 @@ export function truncateForAction(action: EditorAction, content: string): string
 }
 
 /**
- * How fast each model reads (prefill) and writes, in tokens per second, as measured on a Pixel 10 Pro, CPU only (AI
- * evaluation, 2026-10). A device's own completions replace them as they run (`getModelSpeed`).
- */
-export const MODEL_SPEED: Record<AIModelId, { prefill: number; generate: number }> = {
-  "qwen3.5-0.8b": { prefill: 210, generate: 38 },
-  "qwen3.5-2b": { prefill: 92, generate: 18 },
-  "qwen3.5-4b": { prefill: 28, generate: 7 },
-};
-
-/**
  * The longest a long-note action may take, estimated before it starts: past it the action is off for that note (minutes
  * of waiting with the phone busy is no use). The progress shows meanwhile.
  */
 export const LONG_NOTE_MAX_SECONDS = 300;
-
-/**
- * A summary reads the note in parts of about this many tokens (one call each, then one that merges them). A summary of the
- * whole note at once is better than one merged from parts (AI evaluation, 2026-10), but a part is read before anything
- * shows: about 15 s on the 2B and 55 s on the 4B on the reference phone.
- */
-export const SUMMARY_PART_TOKENS = 1500;
-
-/** A rewrite takes a paragraph longer than this many tokens a few sentences at a time (room to write in, and progress). */
-export const REWRITE_PIECE_TOKENS = 600;
 
 /** Shortening runs on paragraphs of at least this many tokens (about 20 words): a short line stays as it is. */
 export const SHORTEN_MIN_TOKENS = 30;

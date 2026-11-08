@@ -80,6 +80,46 @@ await build({
 
 const { C, H, V, B, L, M } = await import(pathToFileURL(out).href);
 
+// The platform constants and the AI settings' selector, once per platform: the native bundle resolves `x.ts`, the desktop
+// one `x.web.ts` first (what Metro does for the web build the desktop shell shows).
+const settingsEntry = join(os.tmpdir(), "ai.settings.entry.ts");
+writeFileSync(
+  settingsEntry,
+  `
+  export * as C from "@/libs/ai/constants";
+  export * as P from "@/libs/ai/platformConstants";
+  export * as S from "@/slicers/settingsSlice";
+`
+);
+async function platformBundle(name, web) {
+  const file = join(os.tmpdir(), `ai.${name}.bundle.mjs`);
+  await build({
+    entryPoints: [settingsEntry],
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    outfile: file,
+    logLevel: "error",
+    alias: { "@": src },
+    resolveExtensions: web ? [".web.ts", ".web.tsx", ".ts", ".tsx", ".js", ".json"] : [".ts", ".tsx", ".js", ".json"],
+    plugins: [
+      {
+        name: "react-native-stub",
+        setup(b) {
+          b.onResolve({ filter: /^react-native$/ }, () => ({ path: "react-native", namespace: "rn-stub" }));
+          b.onLoad({ filter: /.*/, namespace: "rn-stub" }, () => ({
+            contents: `export const Platform = { OS: ${web ? '"web"' : '"android"'} };`,
+            loader: "js",
+          }));
+        },
+      },
+    ],
+  });
+  return import(pathToFileURL(file).href);
+}
+const NATIVE = await platformBundle("native", false);
+const DESKTOP = await platformBundle("desktop", true);
+
 let passed = 0;
 let failed = 0;
 function ok(name, cond, detail) {
@@ -119,6 +159,84 @@ eq(
   new Set(C.TRANSLATE_LANGUAGES.map((l) => l.code)).size,
   C.TRANSLATE_LANGUAGES.length
 );
+
+// --- platform constants ---
+const modelIds = ["qwen3.5-0.8b", "qwen3.5-2b", "qwen3.5-4b"];
+const pickBy = (models, key) => modelIds.map((id) => models[id][key]);
+eq("native constants unchanged: n_ctx", pickBy(NATIVE.C.AI_MODELS, "contextSize"), [4096, 8192, 8192]);
+eq("native constants unchanged: mlock", pickBy(NATIVE.C.AI_MODELS, "useMlock"), [true, true, false]);
+eq(
+  "native constants unchanged: default and parts",
+  [NATIVE.C.DEFAULT_MODEL_ID, NATIVE.C.SUMMARY_PART_TOKENS, NATIVE.C.REWRITE_PIECE_TOKENS],
+  ["qwen3.5-0.8b", 1500, 600]
+);
+eq("native constants unchanged: speeds", NATIVE.C.MODEL_SPEED, {
+  "qwen3.5-0.8b": { prefill: 210, generate: 38 },
+  "qwen3.5-2b": { prefill: 92, generate: 18 },
+  "qwen3.5-4b": { prefill: 28, generate: 7 },
+});
+eq("native: AI is supported", NATIVE.P.supportsAI(), true);
+eq("desktop constants: n_ctx", pickBy(DESKTOP.C.AI_MODELS, "contextSize"), [8192, 16384, 16384]);
+eq("desktop constants: no mlock", pickBy(DESKTOP.C.AI_MODELS, "useMlock"), [false, false, false]);
+eq("desktop constants: default is the 2B", DESKTOP.C.DEFAULT_MODEL_ID, "qwen3.5-2b");
+eq("desktop constants: long-note parts", [DESKTOP.C.SUMMARY_PART_TOKENS, DESKTOP.C.REWRITE_PIECE_TOKENS], [6000, 1200]);
+eq("desktop constants: speeds start as the reference ones", DESKTOP.C.MODEL_SPEED, NATIVE.C.MODEL_SPEED);
+eq("desktop: the catalog's files, urls and sizes are the native ones", DESKTOP.C.AI_MODELS, {
+  ...Object.fromEntries(
+    modelIds.map((id) => [
+      id,
+      {
+        ...NATIVE.C.AI_MODELS[id],
+        contextSize: DESKTOP.C.AI_MODELS[id].contextSize,
+        useMlock: DESKTOP.C.AI_MODELS[id].useMlock,
+      },
+    ])
+  ),
+});
+eq("desktop: no AI in a plain browser", DESKTOP.P.supportsAI(), false);
+{
+  globalThis.window = { __TAURI_INTERNALS__: {} };
+  eq("desktop: AI in the Tauri shell", DESKTOP.P.supportsAI(), true);
+  delete globalThis.window;
+}
+eq("every model has its sha256", pickBy(NATIVE.C.AI_MODELS, "sha256"), [
+  "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
+  "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+  "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
+]);
+{
+  const never = { enabled: false, modelDownloaded: false, selectedModel: "qwen3.5-0.8b", voiceOnly: false };
+  const stateOf = (aiAssistant) => ({ settings: { aiAssistant } });
+  eq("desktop: an AI never set up reads as the 2B", DESKTOP.S.selectorAIAssistant(stateOf(never)).selectedModel, "qwen3.5-2b");
+  eq(
+    "desktop: a downloaded 0.8B stays",
+    DESKTOP.S.selectorAIAssistant(stateOf({ ...never, modelDownloaded: true })).selectedModel,
+    "qwen3.5-0.8b"
+  );
+  eq(
+    "desktop: an AI turned on with the 0.8B stays",
+    DESKTOP.S.selectorAIAssistant(stateOf({ ...never, enabled: true })).selectedModel,
+    "qwen3.5-0.8b"
+  );
+  eq(
+    "desktop: a never-set-up 4B stays",
+    DESKTOP.S.selectorAIAssistant(stateOf({ ...never, selectedModel: "qwen3.5-4b" })).selectedModel,
+    "qwen3.5-4b"
+  );
+  eq("desktop: no stored settings read as the 2B", DESKTOP.S.selectorAIAssistant({ settings: {} }).selectedModel, "qwen3.5-2b");
+  eq(
+    "desktop: a legacy id maps to its tier, not downloaded",
+    DESKTOP.S.selectorAIAssistant(stateOf({ ...never, enabled: true, modelDownloaded: true, selectedModel: "qwen-0.5b" })),
+    { ...never, enabled: true, modelDownloaded: false, selectedModel: "qwen3.5-0.8b" }
+  );
+  const state = stateOf(never);
+  ok(
+    "desktop: the same state gives the same object",
+    DESKTOP.S.selectorAIAssistant(state) === DESKTOP.S.selectorAIAssistant(state)
+  );
+  ok("native: the selector returns the stored object", NATIVE.S.selectorAIAssistant(stateOf(never)) === never);
+  eq("native: an AI never set up stays the 0.8B", NATIVE.S.selectorAIAssistant(stateOf(never)).selectedModel, "qwen3.5-0.8b");
+}
 
 // --- reasoning blocks ---
 eq("no block: unchanged", H.stripThinking("Hello"), "Hello");
