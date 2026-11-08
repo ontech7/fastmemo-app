@@ -291,14 +291,51 @@ fn stop_word_ends_the_answer() {
     load(8192);
     let request = completion(
         "You follow the instructions exactly.",
-        "Write two lines: the first line is the word apple, the second line is the word banana.",
-        40,
+        "List three fruits, one per line, no numbering.",
+        60,
         vec![("stop", Json::Arr(vec!["\n".into()]))],
     );
-    let result = ok(call(&request));
+    let streamed = Streamed::default();
+    let result = ok(call_with(&request, Some(&streamed), None));
     eprintln!("first line: {result}");
-    assert!(!text_of(&result).contains('\n'));
+    let text = text_of(&result);
+    assert!(!text.trim().is_empty(), "{result}");
+    assert!(!text.contains('\n'), "{text:?}");
+    assert_eq!(streamed.text(), text);
     assert!(!flag(&result, "stopped_limit"));
+}
+
+#[test]
+#[ignore]
+fn context_fills_up() {
+    let _turn = serial();
+    load(256);
+    let request = completion(
+        "You are a writer.",
+        "Write a very long story about a dragon, at least two thousand words.",
+        0,
+        vec![("n_predict", (-1).into())],
+    );
+    let result = ok(call(&request));
+    eprintln!("context fills up: {result}");
+    assert!(flag(&result, "context_full"), "{result}");
+    assert!(!text_of(&result).is_empty());
+    // still alive: a short one fits
+    a_short_completion_works();
+}
+
+#[test]
+#[ignore]
+fn a_bad_path_keeps_the_loaded_model() {
+    let _turn = serial();
+    load(2048);
+    let response = call(&Json::object([
+        ("op", "load".into()),
+        ("path", "/no/such/model.gguf".into()),
+        ("n_ctx", 2048.into()),
+    ]));
+    assert!(response.get("error").is_some(), "{response}");
+    a_short_completion_works();
 }
 
 #[test]

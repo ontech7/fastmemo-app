@@ -199,12 +199,13 @@ fn load(request: &Json, io: &mut Io) -> Result<Json, String> {
     let n_threads = integer(request, "n_threads", 0..=1024, Some(0))? as i32;
     let backend = backend()?;
 
-    let mut guard = engine()?;
-    // the old model goes first: its memory is free before the new one loads
-    *guard = None;
+    // a bad path is refused while the current model is still loaded
     if !Path::new(path).is_file() {
         return Err("load_failed: no such file".to_string());
     }
+    let mut guard = engine()?;
+    // the old model goes first: its memory is free before the new one loads
+    *guard = None;
 
     // The callback runs only inside `load_from_file`, while the caller's flag is alive.
     let stop = io.stop.map(|flag| flag as *const AtomicBool as usize);
