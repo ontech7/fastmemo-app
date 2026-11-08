@@ -4,6 +4,9 @@ import { NativeModules } from "react-native";
 
 import type { EngineContext, EngineLoadParams, EngineSupport } from "./types";
 
+/** What the context logs when it can't load a model for want of the engine. */
+export const ENGINE_UNAVAILABLE_WARNING = "[AI] Native module not available. Rebuild the app with: npx expo run:android";
+
 /**
  * Check if the llama.rn native module is available.
  * Returns false when running in Expo Go or when the native build

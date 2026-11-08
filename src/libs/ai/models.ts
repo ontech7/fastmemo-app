@@ -2,11 +2,10 @@ import * as FileSystem from "expo-file-system/legacy";
 import { t } from "i18next";
 import { AppState } from "react-native";
 
-import { selectorAIAssistant, setAIAssistant } from "@/slicers/settingsSlice";
-import { store } from "@/slicers/store";
-import type { RootState } from "@/types";
 import FastmemoDownloads from "~/modules/fastmemo-downloads";
 import { AI_MODELS, MODEL_DOWNLOAD_RECORD, getModel, normalizeModelId } from "./constants";
+import { catalogSizes, downloaded, getAllModelFiles } from "./modelFiles";
+import type { ModelFile } from "./modelFiles";
 import { notifyListeners, releaseLoadedModel } from "./status";
 import type { AIModelId, DownloadFailure, ModelDownloadProgress } from "./types";
 
@@ -27,20 +26,6 @@ const modelDirs = (): string[] => [...new Set([DOWNLOAD_DIR(), APP_MODELS_DIR()]
 async function deleteModelFile(dir: string, fileName: string): Promise<void> {
   if (FastmemoDownloads && dir !== APP_MODELS_DIR()) await FastmemoDownloads.deleteAsync(fileName);
   else await FileSystem.deleteAsync(`${dir}${fileName}`, { idempotent: true });
-}
-
-type ModelFile = { fileName: string; url: string; sizeBytes: number };
-
-function getAllModelFiles(modelId?: AIModelId): ModelFile[] {
-  const model = getModel(modelId);
-  return [{ fileName: model.fileName, url: model.url, sizeBytes: model.sizeBytes }, ...(model.parts ?? [])];
-}
-
-/** Every file the catalog downloads, with its size: anything else in a models folder is a leftover. */
-function catalogSizes(): Map<string, number> {
-  return new Map(
-    (Object.keys(AI_MODELS) as AIModelId[]).flatMap((id) => getAllModelFiles(id).map((f) => [f.fileName, f.sizeBytes]))
-  );
 }
 
 /** Where `file` is, whole: a file of another size is cut off or not the one pinned, and never loaded. */
@@ -225,14 +210,6 @@ async function downloadInApp(file: ModelFile, report: (fraction: number, waiting
   console.error("[AI] Download incomplete:", file.fileName);
   await FileSystem.deleteAsync(filePath, { idempotent: true });
   return "failed";
-}
-
-/** A finished download asks for the AI: switching models turned it off, the download turns it back on. */
-function downloaded(modelId: AIModelId) {
-  const ai = selectorAIAssistant(store.getState() as RootState);
-  if (normalizeModelId(ai.selectedModel) === modelId) {
-    store.dispatch(setAIAssistant({ ...ai, modelDownloaded: true, enabled: true }));
-  }
 }
 
 async function runDownload(modelId: AIModelId, resume: DownloadRecord | null, generation: number): Promise<boolean> {

@@ -19,7 +19,7 @@ import {
 } from "./constants";
 import { completeSentences } from "./blocks";
 import { notifyListeners, setModelRelease } from "./status";
-import { isEngineAvailable, loadEngine } from "./engine";
+import { ENGINE_UNAVAILABLE_WARNING, isEngineAvailable, loadEngine } from "./engine";
 import { deleteModelFiles, getModelPath, isModelDownloaded } from "./models";
 import {
   categoryAlternative,
@@ -190,7 +190,7 @@ export async function initContext(modelId?: AIModelId): Promise<boolean> {
   if (_initPromise) return initContext(targetId);
 
   if (!isNativeModuleAvailable()) {
-    console.warn("[AI] Native module not available. Rebuild the app with: npx expo run:android");
+    console.warn(ENGINE_UNAVAILABLE_WARNING);
     notifyListeners("error");
     return false;
   }
