@@ -1687,6 +1687,8 @@ page (libs/ai/context.ts, shared with the phone)
   (0.8B), 19.9 s against 451 s (2B), 40.9 s against 1078 s (4B); the app's peak memory 876 MB, 1638 MB and 3394 MB. The desktop
   is deterministic (the 2B twice: 27 of 27 identical). Against Android 13, 14 and 16 of 27 outputs are byte-identical and the
   rest differ in both directions (Metal against ARM CPU arithmetic, another llama.cpp build): judged no worse.
+- **The phone is unchanged:** after the split of `src/libs/ai/`, the Android test build gives the same evaluation, 27 of 27
+  outputs identical to the reference taken before it, on all three models; the OTA fingerprint is the branch base's.
 - **A made-up note of 21,000 tokens on the 2B:** the summary finishes in under a minute with every part read; grammar and
   translation say "too long for this model"; the app's memory 1.6 GB, no crash.
 - **CI** (the engine test on the 0.8B, run 42504755203 of a test workflow): Windows x64 (NSIS), the Intel Mac and Linux (deb and
