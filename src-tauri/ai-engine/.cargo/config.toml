@@ -1,0 +1,10 @@
+# Read from the working directory: run every cargo command for this crate from `src-tauri/ai-engine`.
+
+[target.'cfg(target_arch = "x86_64")']
+rustflags = ["-C", "target-feature=+avx2,+fma,+f16c"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+avx2,+fma,+f16c,+crt-static"]
+
+[env]
+LLAMA_STATIC_CRT = "1"

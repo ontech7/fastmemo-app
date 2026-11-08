@@ -1,0 +1,29 @@
+[package]
+name = "fastmemo-ai"
+version = "0.1.0"
+edition = "2021"
+description = "On-device AI engine for Fast Memo Desktop (llama.cpp), loaded at run time by the app"
+publish = false
+
+[lib]
+name = "fastmemo_ai"
+crate-type = ["cdylib", "rlib"]
+
+# Its own workspace root: the app never links this crate, it loads the library at run time.
+[workspace]
+
+[features]
+default = ["llama"]
+# Without `llama` the crate is the stub library (no llama.cpp).
+llama = ["dep:llama-cpp-2"]
+
+[dependencies]
+llama-cpp-2 = { version = "=0.1.161", optional = true, default-features = false }
+
+[target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
+llama-cpp-2 = { version = "=0.1.161", optional = true, default-features = false, features = ["metal"] }
+
+[profile.release]
+panic = "unwind"
+lto = true
+opt-level = 3
