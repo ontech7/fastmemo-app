@@ -214,10 +214,12 @@ export const TRANSLATE_LANGUAGES: { code: string; name: string }[] = [
 ];
 
 /**
- * GBNF grammar for JSON array of strings output (used by suggest_items).
+ * GBNF grammar for JSON array of strings output (suggest_items, transcript_to_items). White space is allowed around the
+ * commas and before the "]": a model that writes one item per line wants "\n]" to close the array, and without it the 0.8B
+ * went on listing until its token limit.
  */
 export const JSON_ARRAY_GRAMMAR = `
-root   ::= "[" ws string ("," ws string)* "]" ws
+root   ::= "[" ws string (ws "," ws string)* ws "]" ws
 string ::= "\\"" ([^"\\\\] | "\\\\" .)* "\\""
 ws     ::= [ \\t\\n]*
 `.trim();

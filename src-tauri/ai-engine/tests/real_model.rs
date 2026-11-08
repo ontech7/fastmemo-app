@@ -108,7 +108,7 @@ const STOP_WORDS: [&str; 9] = [
     "<|endoftext|>",
 ];
 
-const JSON_ARRAY_GRAMMAR: &str = r#"root   ::= "[" ws string ("," ws string)* "]" ws
+const JSON_ARRAY_GRAMMAR: &str = r#"root   ::= "[" ws string (ws "," ws string)* ws "]" ws
 string ::= "\"" ([^"\\] | "\\" .)* "\""
 ws     ::= [ \t\n]*"#;
 
@@ -209,9 +209,7 @@ fn json_grammar_gives_an_array() {
     let _turn = serial();
     load(8192);
     // Without the grammar the 0.8B answers this in prose (a numbered list): the array is the
-    // grammar's doing. (The app's item prompts depend on the 0.8B's list skill, weak on the phone
-    // too: the grammar allows no space before "," or "]", so a model that wants "\n]" may go on
-    // listing until n_predict.)
+    // grammar's doing.
     let request = completion(
         "You are a helpful assistant.",
         "List three fruits.",
@@ -230,6 +228,33 @@ fn json_grammar_gives_an_array() {
     let items = parsed.as_array().expect("an array");
     assert!(!items.is_empty());
     assert!(items.iter().all(|item| item.as_str().is_some()), "{text}");
+}
+
+/// The app's dictation-to-items action on the 0.8B (the evaluation's `voice-items-en`): it writes the
+/// array one item per line and wants "\n]" to close it. The grammar must let it, or it goes on listing.
+#[test]
+#[ignore]
+fn a_list_written_one_item_per_line_closes() {
+    let _turn = serial();
+    load(8192);
+    let system = "You turn a dictated to-do list into checklist items. Output ONLY a JSON array of strings: one short item per task or thing to buy, in the order spoken, in the same language as the input. Keep the speaker's words without fillers, start each item with a capital letter, and never add an item that was not said.";
+    let user = "um I need to pick up the dry cleaning buy dog food and uh call the plumber about the kitchen sink";
+    let request = completion(
+        system,
+        user,
+        300,
+        vec![("grammar", JSON_ARRAY_GRAMMAR.into())],
+    );
+    let result = ok(call(&request));
+    let text = text_of(&result);
+    eprintln!("items: {text:?}");
+    assert!(
+        !flag(&result, "stopped_limit"),
+        "still listing at n_predict: {text:?}"
+    );
+    let parsed = Json::parse(text.trim()).unwrap_or_else(|e| panic!("{e}: {text:?}"));
+    let items = parsed.as_array().expect("an array");
+    assert!((2..=4).contains(&items.len()), "{text}");
 }
 
 #[test]

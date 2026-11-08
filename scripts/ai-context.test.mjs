@@ -10,7 +10,7 @@ import { build } from "esbuild";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -505,6 +505,10 @@ console.log("items");
   const result = await X.generateEditorContent("suggest_items", "Spesa");
   const p = lastCompletion();
   eq("the grammar is JSON_ARRAY_GRAMMAR", p.grammar, C.JSON_ARRAY_GRAMMAR);
+  // the engine's real-model tests run the same grammar (a copy: Rust can't import it)
+  const engineTests = readFileSync(join(__dirname, "../src-tauri/ai-engine/tests/real_model.rs"), "utf8");
+  const engineCopy = engineTests.match(/const JSON_ARRAY_GRAMMAR: &str = r#"([\s\S]*?)"#;/)?.[1];
+  eq("the engine tests' copy of the grammar is the same", engineCopy, C.JSON_ARRAY_GRAMMAR);
   eq(
     "n_predict is 100 and the sampling the GENERATIVE one",
     { n_predict: p.n_predict, ...pick(p, GENERATIVE) },
