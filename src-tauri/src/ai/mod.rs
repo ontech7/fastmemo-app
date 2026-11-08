@@ -215,6 +215,11 @@ fn is_bare_file_name(name: &str) -> bool {
         && matches!(Path::new(name).components().collect::<Vec<_>>()[..], [Component::Normal(_)])
 }
 
+/// Whether `name` can be loaded as a model: a bare file name, never a download's unfinished `.part`.
+fn is_model_name(name: &str) -> bool {
+    is_bare_file_name(name) && !name.ends_with(".part")
+}
+
 /// Where the model files are: the app's local data folder, `models/`.
 pub(crate) fn models_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app.path().app_local_data_dir().map_err(|err| err.to_string())?.join("models"))
@@ -263,7 +268,7 @@ pub async fn ai_info(app: AppHandle) -> AiInfo {
     info.unwrap_or(AiInfo { available: false, reason: Some("error".to_string()), total_memory: None })
 }
 
-/// Loads a model of the models folder (a bare file name), replacing the one loaded. A model loaded by a page that has
+/// Loads a model of the models folder (a bare file name, never a `.part`), replacing the one loaded. A model loaded by a page that has
 /// since reloaded (development) is released first: the new page never knew about it. A load that fails, whatever the
 /// reason (a bad name or path included, where the engine would keep the previous model), leaves no model: the page
 /// takes it as not loaded.
@@ -280,6 +285,9 @@ pub async fn ai_load(
         let engine = ai.engine(app)?;
         let (mut loaded_by, stop) = ai.begin(entry)?;
         let loaded = (|| {
+            if !is_model_name(&file_name) {
+                return Err("bad_request: file name".to_string());
+            }
             let path = model_path(app, &file_name)?;
             let path = path.to_str().ok_or("load_failed: the models folder's path is not UTF-8")?;
             if loaded_by.as_ref().is_some_and(|id| *id != page_id) {
@@ -516,6 +524,14 @@ mod tests {
         }
         for name in ["..", "/a.gguf", "C:a.gguf", "a\0.gguf"] {
             assert!(!is_bare_file_name(name), "{name:?} was accepted");
+        }
+    }
+
+    #[test]
+    fn a_partial_download_is_never_a_model() {
+        assert!(is_model_name("a.gguf"));
+        for name in ["a.gguf.part", ".part", "../a.gguf"] {
+            assert!(!is_model_name(name), "{name:?} was accepted");
         }
     }
 
