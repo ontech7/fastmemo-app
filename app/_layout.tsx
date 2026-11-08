@@ -16,6 +16,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { installDesktopMenu } from "@/libs/desktopMenu";
 import { installFlushOnExit } from "@/libs/flushOnExit";
 import i18n from "@/libs/i18n";
+import { installMcpBridge } from "@/libs/mcp/bridge";
 import { installMessageGuard } from "@/libs/messageGuard";
 import AppUpdateProvider from "@/providers/AppUpdateProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
@@ -38,6 +39,7 @@ enableFreeze(true);
 
 installMessageGuard();
 installFlushOnExit();
+installMcpBridge();
 installDesktopMenu();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -198,6 +200,7 @@ export default Sentry.wrap(function RootLayout() {
                         options={{ headerShown: false, animation: "fade_from_bottom" }}
                       />
                       <Stack.Screen name="settings/webhooks" options={{ headerShown: false, animation: "ios_from_left" }} />
+                      <Stack.Screen name="settings/mcp" options={{ headerShown: false, animation: "ios_from_left" }} />
                       <Stack.Screen
                         name="settings/voice-recognition"
                         options={{ headerShown: false, animation: "ios_from_left" }}

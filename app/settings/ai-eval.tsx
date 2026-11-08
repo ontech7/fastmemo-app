@@ -1,4 +1,3 @@
-import * as Sharing from "expo-sharing";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -7,10 +6,13 @@ import { useSelector } from "react-redux";
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import useEngineSupport from "@/hooks/useEngineSupport";
 import type { EvalReport, EvalResult } from "@/libs/ai";
-import { AI_MODELS, DEFAULT_MODEL_ID, isModelDownloaded, isNativeModuleAvailable, runAIEval } from "@/libs/ai";
+import { AI_MODELS, DEFAULT_MODEL_ID, isModelDownloaded, isNativeModuleAvailable, runAIEval, shareEvalReport } from "@/libs/ai";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
+import { isTauri } from "@/utils/platform";
 
 /**
  * Developer options -> AI evaluation: the fixed inputs of `evalFixtures` run on the selected model, with the load time,
@@ -21,7 +23,11 @@ export default function AIEvalScreen() {
 
   const aiSettings = useSelector(selectorAIAssistant);
   const modelId = aiSettings.selectedModel || DEFAULT_MODEL_ID;
-  const available = Platform.OS !== "web" && isNativeModuleAvailable();
+  // The phone asks its native module; the desktop asks the engine (a missing or unloadable library is "not available").
+  const desktop = isTauri();
+  const engineSupport = useEngineSupport();
+  const checking = desktop && engineSupport === null;
+  const available = desktop ? engineSupport?.available === true : Platform.OS !== "web" && isNativeModuleAvailable();
 
   const [downloaded, setDownloaded] = useState<boolean | null>(null);
   const [running, setRunning] = useState(false);
@@ -64,7 +70,7 @@ export default function AIEvalScreen() {
   };
 
   const share = () => {
-    if (report?.file) Sharing.shareAsync(report.file, { mimeType: "application/json" });
+    if (report?.file) void shareEvalReport(report.file);
   };
 
   return (
@@ -78,7 +84,7 @@ export default function AIEvalScreen() {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {!available ? (
+        {checking ? null : !available ? (
           <Text style={styles.message}>{t("aieval.unavailable")}</Text>
         ) : (
           <>
@@ -163,6 +169,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.lg,
   },
   scrollContent: {
+    ...CONTENT_COLUMN,
     paddingBottom: PADDING_MARGIN.xl * 2,
     gap: PADDING_MARGIN.md,
   },

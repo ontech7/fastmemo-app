@@ -814,6 +814,71 @@ await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 check("A long press on an image is the browser's (selection), not the menu", !(await posted("FASTMEMO_IMAGE")).length, "asked");
 await send("Emulation.setTouchEmulationEnabled", { enabled: false });
 
+// A read-only note is the same page with contenteditable="false" (RichEditor's `disabled`), which drops the wrapping the
+// browser gives an editable element: a long word (a link, a key) has to wrap there too, never scroll sideways.
+const LONG_WORD = "sk-" + "A1b2C3d4".repeat(40);
+await open(`<div>Short line</div><div>${LONG_WORD}</div><div>https://example.com/${"segment_".repeat(40)}</div>`);
+const sideways = () =>
+  evaluate(`(() => { const c = document.querySelector(".pell-content"); return c.scrollWidth - c.clientWidth; })()`);
+check("A long word wraps in an editable note", (await sideways()) <= 0, `${await sideways()} px sideways`);
+await post({ type: "content", name: "setDisable", data: true });
+check("A long word wraps in a read-only note too", (await sideways()) <= 0, `${await sideways()} px sideways`);
+await post({ type: "content", name: "setDisable", data: false });
+
+// The page is a document of its own (an iframe on desktop): the app's scrollbar (global.css) has to be in it, or it shows
+// the system's, light on Windows.
+const appCss = readFileSync(join(root, "src/styles/global.css"), "utf8");
+const missingScrollbarRules = await evaluate(`(() => {
+  const app = new CSSStyleSheet();
+  app.replaceSync(${JSON.stringify(appCss)});
+  const mine = [...document.styleSheets].flatMap((s) => [...s.cssRules].map((r) => r.cssText));
+  return [...app.cssRules].map((r) => r.cssText).filter((r) => r.includes("scrollbar") && !mine.includes(r));
+})()`);
+check("The text editor has the app's scrollbar", !missingScrollbarRules.length, missingScrollbarRules.join("\n"));
+
+// Cmd+B/I/U on a Mac, Ctrl elsewhere. WebKit on macOS leaves them to an app's Format menu, which the desktop app doesn't
+// have, so the page does them itself. A synthetic key (no browser default) proves it's the page; Ctrl on a Mac moves the
+// caret (Ctrl+B is one character back), it doesn't style.
+const mac = await evaluate("/Mac/.test(navigator.platform)");
+const styleKey = (key, mods) =>
+  evaluate(`(() => {
+    const e = new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, code: "Key" + ${JSON.stringify(key.toUpperCase())},
+      metaKey: ${!!mods.meta}, ctrlKey: ${!!mods.ctrl}, shiftKey: ${!!mods.shift}, bubbles: true, cancelable: true });
+    document.querySelector(".pell-content").dispatchEvent(e);
+    return e.defaultPrevented;
+  })()`).then((prevented) => sleep(90).then(() => prevented));
+const mod = mac ? { meta: true } : { ctrl: true };
+for (const [key, tag] of [
+  ["b", "b"],
+  ["i", "i"],
+  ["u", "u"],
+]) {
+  await open("<div>one two</div>");
+  await select({ text: "two" });
+  await styleKey(key, mod);
+  const html = (await state()).html;
+  check(`${mac ? "Cmd" : "Ctrl"}+${key.toUpperCase()} styles the selection`, html.includes(`<${tag}>two</${tag}>`), html);
+}
+// A real key: Chromium's own bold must not run too, or the two would cancel out.
+await open("<div>one two</div>");
+await select({ text: "two" });
+const realB = { key: "b", code: "KeyB", windowsVirtualKeyCode: 66, modifiers: mac ? 4 : 2 };
+await send("Input.dispatchKeyEvent", { type: "keyDown", ...realB });
+await send("Input.dispatchKeyEvent", { type: "keyUp", ...realB });
+await sleep(90);
+check("A real Cmd/Ctrl+B makes the selection bold once", (await state()).html.includes("<b>two</b>"), (await state()).html);
+await open("<div>one two</div>");
+await select({ text: "two" });
+await styleKey("b", mac ? { ctrl: true } : { meta: true });
+check("The other modifier's B doesn't style", !/<b>/.test((await state()).html), (await state()).html);
+await styleKey("b", { ...mod, shift: true });
+check("Shift with the shortcut doesn't style", !/<b>/.test((await state()).html), (await state()).html);
+await post({ type: "content", name: "setDisable", data: true });
+await select({ text: "two" });
+await styleKey("b", mod);
+check("A read-only note isn't styled by the shortcut", !/<b>/.test((await state()).html), (await state()).html);
+await post({ type: "content", name: "setDisable", data: false });
+
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");
 check("no page errors", !pageErrors.length, pageErrors.join("\n"));
 

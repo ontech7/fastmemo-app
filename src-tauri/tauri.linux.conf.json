@@ -1,4 +1,9 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "mainBinaryName": "fast-memo"
+  "mainBinaryName": "fast-memo",
+  "bundle": {
+    "resources": {
+      "ai-engine/dist/libfastmemo_ai.so": "ai/libfastmemo_ai.so"
+    }
+  }
 }

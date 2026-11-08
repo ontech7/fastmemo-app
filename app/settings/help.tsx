@@ -41,12 +41,15 @@ import SearchInput from "@/components/inputs/SearchInput";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 
+import useEngineSupport from "@/hooks/useEngineSupport";
 import type { HelpCatalogEntry } from "@/libs/ai";
+import { supportsAI } from "@/libs/ai/platformConstants";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
 import { configs } from "@/configs";
 import { openUrl } from "@/utils/openUrl";
 import { isTauri } from "@/utils/platform";
 
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 /** Locales for which a translated online guide exists; anything else uses "en". */
@@ -67,7 +70,8 @@ interface HelpSectionData {
   catKey: string;
   icon: ReactNode;
   items: HelpItem[];
-  nativeOnly?: boolean;
+  /** Shown only where the AI runs (the phone, the desktop app). */
+  aiOnly?: boolean;
 }
 
 /** All searchable text of an entry (title + every body string), lowercased. Falls
@@ -90,9 +94,12 @@ export default function HelpScreen() {
   // Online guides, in the active language when available.
   const guideLocale = GUIDE_LOCALES.includes(i18n.language) ? i18n.language : "en";
 
-  // AI intent search is offered only when the on-device model is set up and
-  // we're on a native build (the web bundle has no llama.rn).
-  const aiAvailable = aiSettings.enabled && aiSettings.modelDownloaded && Platform.OS !== "web";
+  // AI intent search is offered only when the on-device model is set up and the AI runs here: the phone's build, or the
+  // desktop app once its engine answered that it loads (a browser has none).
+  // asked only when it matters: `aiAvailable` can be true only with the AI on and a model downloaded
+  const engineSupport = useEngineSupport(aiSettings.enabled && aiSettings.modelDownloaded);
+  const engineReady = isTauri() ? engineSupport?.available === true : supportsAI();
+  const aiAvailable = aiSettings.enabled && aiSettings.modelDownloaded && engineReady;
 
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
@@ -546,7 +553,7 @@ export default function HelpScreen() {
       {
         catKey: "help.cat_ai",
         icon: <SparklesIcon size={18} color={COLOR.accentSoft} />,
-        nativeOnly: true,
+        aiOnly: true,
         items: [
           {
             base: "help.what_ai_assistant",
@@ -567,9 +574,7 @@ export default function HelpScreen() {
   const catalog: HelpCatalogEntry[] = useMemo(
     () =>
       sections.flatMap((s) =>
-        s.nativeOnly && Platform.OS === "web"
-          ? []
-          : s.items.map((it) => ({ base: it.base, title: String(t(`${it.base}.title`)) }))
+        s.aiOnly && !supportsAI() ? [] : s.items.map((it) => ({ base: it.base, title: String(t(`${it.base}.title`)) }))
       ),
     [sections, t]
   );
@@ -607,7 +612,7 @@ export default function HelpScreen() {
   const aiRank = useMemo(() => new Map((aiKeys ?? []).map((k, i) => [k, i] as const)), [aiKeys]);
 
   const visibleSections = sections
-    .filter((s) => !(s.nativeOnly && Platform.OS === "web"))
+    .filter((s) => !(s.aiOnly && !supportsAI()))
     .map((s) => {
       if (useAi) {
         const items = s.items
@@ -784,6 +789,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.lg,
   },
   scrollContent: {
+    ...CONTENT_COLUMN,
     paddingBottom: PADDING_MARGIN.xl,
   },
   aiInvite: {

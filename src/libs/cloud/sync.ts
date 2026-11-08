@@ -37,6 +37,13 @@ export const onSyncEvent = (listener: (event: SyncEvent) => void): (() => void) 
 
 const emit = (event: SyncEvent) => listeners.forEach((listener) => listener(event));
 
+/**
+ * A change made here that an open editor doesn't know of (the local MCP server's): told as an incoming one, so the editor
+ * reloads the note and its next commit doesn't write the old copy over it. `full` keeps the "data synced" toast away.
+ */
+export const notifyNoteChanged = (id: string): void =>
+  emit({ type: "applied", changed: [id], conflicts: [], categories: false, full: true, openNote: null });
+
 /** How long the cloud fails, with no answer between, before the home says it can't be reached (ADR-029). */
 const UNREACHABLE_AFTER_MS = 30_000;
 

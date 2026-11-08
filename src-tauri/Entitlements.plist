@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The app's entitlements (macOS, tauri.macos.conf.json). The app is signed ad hoc and runs with the hardened runtime,
+  whose library validation loads only libraries of the app's own Team ID: an ad hoc signature has none, so it refused the
+  AI engine library in Contents/Frameworks ("mapping process and mapped file (non-platform) have different Team IDs").
+  The rest of the hardened runtime stays on. With a Developer ID certificate the library would carry the app's Team ID,
+  and this key could go.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

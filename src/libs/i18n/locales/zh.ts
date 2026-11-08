@@ -15,6 +15,11 @@ const zh = {
     title: "什么是新的？",
 
     web: {
+      description_2_1_0: `• AI 助手也来到电脑上：纠正、缩短、翻译和总结，全部在你的设备上完成。
+• 通过 MCP 将 Claude 或 Cursor 等 AI 智能体连接到你的笔记：默认关闭，已锁定和已隐藏的笔记始终无法访问。
+• 更像应用的窗口：深色标题栏，没有浏览器菜单和快捷键。
+• 多项修复与改进。`,
+
       description_2_0_0: `• 与你自己的 FastMemo Server 同步，替代 Firebase。
 • 设备之间实时同步。
 • 键盘快捷键，Mac 上还有菜单栏。
@@ -311,7 +316,7 @@ const zh = {
     unreachable_check_firebase: "请检查网络连接，然后重试。",
     conflict_copies: "同步前已在两台设备上编辑：两个版本都已保留（其中一个为副本）",
     open_on: "已在 {{devices}} 上打开",
-    note_deleted_elsewhere: "此笔记已在另一台设备上移至回收站。编辑它即可恢复。",
+    note_deleted_elsewhere: "此笔记已移至回收站。编辑它即可恢复。",
     title: "云同步",
     syncing_1: "同步进行中...",
     syncing_2: "等到完成",
@@ -463,6 +468,52 @@ const zh = {
     importData: "导入数据",
     wipeData: "擦除数据",
   },
+  mcp: {
+    title: "MCP 服务器",
+    enable_label: "允许 AI 代理使用 Fast Memo",
+    enable_line: "这台电脑上的 AI 代理（如 Claude Code）可以搜索、读取和添加笔记。",
+    provider_warning: "代理读取的内容会发送给它所使用的模型的提供商。",
+    tools_section: "工具",
+    tools: {
+      fastmemo_create_note: "创建笔记",
+      fastmemo_list_categories: "列出分类",
+      fastmemo_search_notes: "搜索笔记",
+      fastmemo_read_note: "读取笔记",
+      fastmemo_set_note_flags: "设置笔记标记",
+      fastmemo_help: "阅读帮助",
+      fastmemo_check_update: "检查更新",
+      fastmemo_edit_note: "编辑笔记",
+      fastmemo_trash_note: "将笔记移到回收站",
+    },
+    tool_lines: {
+      fastmemo_create_note: "添加文本、待办、看板或代码笔记。",
+      fastmemo_list_categories: "显示你的分类名称。",
+      fastmemo_search_notes: "按标题或内容查找笔记。已锁定和已隐藏的笔记永远不会被找到。",
+      fastmemo_read_note: "读取笔记内容。已锁定和已隐藏的笔记无法读取。",
+      fastmemo_set_note_flags: "将笔记标记为重要、只读或锁定。",
+      fastmemo_help: "阅读 Fast Memo 的帮助主题。",
+      fastmemo_check_update: "告诉你是否有更新的版本。不会安装任何东西。",
+      fastmemo_trash_note: "将笔记移到临时回收站，你可以从中恢复。",
+    },
+    edit_note_line: "关闭时，代理只能编辑它在同一会话中创建的笔记。",
+    background_label: "在后台继续运行",
+    background_line:
+      "开启：关闭窗口后，Fast Memo 继续运行，并在托盘中显示图标。关闭：关闭窗口即退出应用，代理只有在窗口打开时才能访问它。",
+    connect_section: "连接代理",
+    connect_intro: "用下面的文本把 Fast Memo 添加到你的代理。MCP 开启时才能使用。",
+    client_claude_code: "Claude Code",
+    client_codex: "Codex",
+    client_json: "Claude Desktop 和 Cursor",
+    json_files:
+      "对于 Claude Desktop，把这段 JSON 保存到 claude_desktop_config.json（设置、开发者、编辑配置）;对于 Cursor，保存到 ~/.cursor/mcp.json。如果文件里已有其他服务器，只需把 fastmemo 条目添加到 mcpServers 中。",
+    copy: "复制",
+    copied: "已复制",
+    copy_failed: "无法复制。请选中文本后手动复制。",
+    copy_label: "复制用于 {{client}} 的文本",
+    moved_warning: "Fast Memo 不在“应用程序”文件夹中。如果你移动它，连接将失效：请先把它放进“应用程序”，然后重新复制文本。",
+    save_failed: "无法应用更改：{{error}}",
+    load_failed: "无法读取设置：{{error}}",
+  },
   generalsettings: {
     title: "设置",
     basic: "基本",
@@ -480,6 +531,7 @@ const zh = {
     export_popup_description: "在这里写下您的秘密密码。请记住保存它，否则您将无法恢复您的笔记。",
     import_popup_description: "在这里写下您的秘密密码以导入您的笔记。",
     webhooks: "网络钩子",
+    mcp: "MCP",
     voice_recognition: "语音识别",
     ai_assistant: "AI助手",
     note_creation: "创建笔记",
@@ -555,6 +607,7 @@ const zh = {
     download_failed: "下载失败，请重试。",
     download_no_space: "空间不足，无法保存模型：请释放一些空间后重试。",
     download_background: "你可以离开此页面或关闭屏幕：下载会继续进行，进度显示在通知中。",
+    download_background_desktop: "你可以离开此页面：下载会继续进行。如果关闭应用，请再次点击“下载模型”：下载会从中断处继续。",
     cancel: "取消",
     delete_model: "删除模型",
     info: "AI助手完全在您的设备上运行。不会向外部服务器发送任何数据。模型只需下载一次（约530 MB起）并保存在本地。",
@@ -582,6 +635,7 @@ const zh = {
     },
     unavailable_web: "AI助手仅在移动设备上可用。",
     native_rebuild_needed: "AI助手需要原生重建。\n运行: npx expo run:android",
+    unavailable_computer: "此电脑上无法使用AI。",
     voice_only: "仅语音",
     voice_only_hint: "仅使用语音与助手交互",
     listening: "正在聆听...",
@@ -1094,6 +1148,8 @@ const zh = {
     zoom: "缩放",
     help: "帮助",
     help_item: "{{name}} 帮助",
+    tray_open: "打开 Fast Memo",
+    tray_quit: "退出",
   },
 
   a11y: {

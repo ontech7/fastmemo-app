@@ -5,7 +5,7 @@
 **A powerful, cross-platform note-taking application with rich text editing, to-do lists, kanban boards, and end-to-end
 encrypted cloud sync.**
 
-![Android](https://badgen.net/badge/Android/v4.0.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v2.0.0/blue)
+![Android](https://badgen.net/badge/Android/v4.0.0/blue) ![Desktop](https://badgen.net/badge/Desktop/v2.1.0/blue)
 ![iOS](https://badgen.net/badge/iOS/dismissed/grey)
 
 [Download](https://github.com/ontech7/fastmemo-app/releases) | [Documentation](docs/) |
@@ -32,7 +32,8 @@ If you find this project useful, consider [buying me a coffee](https://www.buyme
 
 | Feature                  | Description                                                            |
 | ------------------------ | ---------------------------------------------------------------------- |
-| **AI Assistant (BETA)**  | On-device AI with Qwen3.5 (0.8B-4B). No data leaves your phone         |
+| **AI Assistant (BETA)**  | On-device AI with Qwen3.5 (0.8B-4B). No data leaves your device        |
+| **AI Agents (MCP)**      | Connect AI agents to your notes on desktop; locked/hidden stay private |
 | **Rich Text Editor**     | Create beautifully formatted notes with full rich text support         |
 | **To-Do List**           | Organize your checklist                                                |
 | **Kanban Boards**        | Visualize tasks with drag-and-drop kanban notes                        |
@@ -160,6 +161,7 @@ chmod +x Fast_Memo_*.AppImage
 | [React Native](https://reactnative.dev/)                                                       | Core framework for iOS and Android                    |
 | [Tauri](https://tauri.app/)                                                                    | Desktop application framework                         |
 | [llama.rn](https://github.com/mybigday/llama.rn)                                               | On-device LLM inference (Qwen3.5 GGUF)                |
+| [llama.cpp](https://github.com/ggml-org/llama.cpp)                                             | On-device LLM inference on desktop                    |
 | [CodeMirror 6](https://codemirror.net/)                                                        | Code editor engine (bundled via esbuild)              |
 | [Google Firebase](https://firebase.google.com/)                                                | Cloud sync on your own Firebase project               |
 | [FastMemo Server](https://github.com/ontech7/fastmemo-server)                                  | Self-hosted cloud sync (Node.js, SQLite/PostgreSQL)   |

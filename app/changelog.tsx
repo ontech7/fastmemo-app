@@ -5,6 +5,7 @@ import ChangelogItem from "@/components/changelog/ChangelogItem";
 import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,6 +14,7 @@ import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 function getVersionChangelogs(t: (key: string) => string) {
   return Platform.OS === "web"
     ? [
+        { version: "v2.1.0", text: t("changelog.web.description_2_1_0") },
         { version: "v2.0.0", text: t("changelog.web.description_2_0_0") },
         { version: "v1.2.0", text: t("changelog.web.description_1_2_0") },
         { version: "v1.1.1", text: t("changelog.web.description_1_1_1") },
@@ -65,7 +67,7 @@ export default function ChangelogScreen() {
         <CloseButton chip />
       </View>
 
-      <ScrollView>
+      <ScrollView contentContainerStyle={CONTENT_COLUMN}>
         <View style={styles.iconWrapper}>
           <LottieView ref={logoAnimRef} style={styles.icon} source={lottieJson} loop={false} />
           {Platform.OS !== "web" && (

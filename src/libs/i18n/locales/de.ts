@@ -15,6 +15,11 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_2_1_0: `• Der KI-Assistent jetzt auch am Computer: korrigieren, kürzen, übersetzen und zusammenfassen, alles auf Ihrem Gerät.
+• Verbinden Sie KI-Agenten wie Claude oder Cursor über MCP mit Ihren Notizen: standardmäßig aus, gesperrte und versteckte Notizen bleiben unerreichbar.
+• Ein Fenster wie eine App: dunkle Titelleiste, keine Browser-Menüs oder -Tastenkürzel.
+• Verschiedene Fehlerbehebungen und Verbesserungen.`,
+
       description_2_0_0: `• Synchronisieren Sie mit Ihrem eigenen FastMemo Server statt mit Firebase.
 • Echtzeit-Synchronisierung zwischen Ihren Geräten.
 • Tastenkürzel und auf dem Mac eine Menüleiste.
@@ -313,8 +318,7 @@ const de = {
     unreachable_check_firebase: "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     conflict_copies: "Vor dem Synchronisieren auf zwei Geräten bearbeitet: Beide Versionen wurden behalten (eine als Kopie)",
     open_on: "Geöffnet auf {{devices}}",
-    note_deleted_elsewhere:
-      "Diese Notiz wurde auf einem anderen Gerät in den Papierkorb verschoben. Bearbeiten stellt sie wieder her.",
+    note_deleted_elsewhere: "Diese Notiz wurde in den Papierkorb verschoben. Bearbeiten stellt sie wieder her.",
     title: "Cloud Sync",
     syncing_1: "Synchronisierung läuft…",
     syncing_2: "Warten Sie, bis der Vorgang abgeschlossen ist",
@@ -482,6 +486,53 @@ const de = {
     importData: "Daten importieren",
     wipeData: "Daten löschen",
   },
+  mcp: {
+    title: "MCP-Server",
+    enable_label: "KI-Agenten die Nutzung von Fast Memo erlauben",
+    enable_line: "KI-Agenten auf diesem Computer, wie Claude Code, können Notizen suchen, lesen und hinzufügen.",
+    provider_warning: "Was ein Agent liest, wird an den Anbieter des Modells gesendet, das er verwendet.",
+    tools_section: "Werkzeuge",
+    tools: {
+      fastmemo_create_note: "Notizen erstellen",
+      fastmemo_list_categories: "Kategorien auflisten",
+      fastmemo_search_notes: "Notizen suchen",
+      fastmemo_read_note: "Notizen lesen",
+      fastmemo_set_note_flags: "Markierungen einer Notiz setzen",
+      fastmemo_help: "Die Hilfe lesen",
+      fastmemo_check_update: "Nach Updates suchen",
+      fastmemo_edit_note: "Notizen bearbeiten",
+      fastmemo_trash_note: "Notizen in den Papierkorb verschieben",
+    },
+    tool_lines: {
+      fastmemo_create_note: "Fügt eine Text-, Todo-, Kanban- oder Code-Notiz hinzu.",
+      fastmemo_list_categories: "Zeigt die Namen deiner Kategorien.",
+      fastmemo_search_notes: "Findet Notizen nach Titel oder Inhalt. Gesperrte und versteckte Notizen werden nie gefunden.",
+      fastmemo_read_note: "Liest den Inhalt einer Notiz. Gesperrte und versteckte Notizen lassen sich nicht lesen.",
+      fastmemo_set_note_flags: "Markiert eine Notiz als wichtig, schreibgeschützt oder gesperrt.",
+      fastmemo_help: "Liest die Hilfethemen von Fast Memo.",
+      fastmemo_check_update: "Sagt, ob es eine neuere Version gibt. Installiert nichts.",
+      fastmemo_trash_note: "Verschiebt eine Notiz in den temporären Papierkorb, aus dem du sie wiederherstellen kannst.",
+    },
+    edit_note_line: "Wenn aus, kann ein Agent nur Notizen bearbeiten, die er in derselben Sitzung erstellt hat.",
+    background_label: "Im Hintergrund weiterlaufen",
+    background_line:
+      "An: Beim Schließen des Fensters läuft Fast Memo mit einem Symbol im Infobereich weiter. Aus: Das Schließen beendet die App, und Agenten erreichen sie nur bei geöffnetem Fenster.",
+    connect_section: "Einen Agenten verbinden",
+    connect_intro: "Füge Fast Memo mit dem Text unten zu deinem Agenten hinzu. Das funktioniert, solange MCP an ist.",
+    client_claude_code: "Claude Code",
+    client_codex: "Codex",
+    client_json: "Claude Desktop und Cursor",
+    json_files:
+      "Speichere dieses JSON in claude_desktop_config.json für Claude Desktop (Einstellungen, Entwickler, Konfiguration bearbeiten) oder in ~/.cursor/mcp.json für Cursor. Enthält die Datei schon andere Server, füge nur den Eintrag fastmemo in mcpServers hinzu.",
+    copy: "Kopieren",
+    copied: "Kopiert",
+    copy_failed: "Kopieren nicht möglich. Markiere den Text und kopiere ihn von Hand.",
+    copy_label: "Text für {{client}} kopieren",
+    moved_warning:
+      "Fast Memo liegt nicht im Ordner Programme. Wenn du es verschiebst, funktioniert die Verbindung nicht mehr: lege es in Programme und kopiere den Text erneut.",
+    save_failed: "Die Änderung konnte nicht angewendet werden: {{error}}",
+    load_failed: "Die Einstellungen konnten nicht gelesen werden: {{error}}",
+  },
   generalsettings: {
     title: "Einstellungen",
     basic: "Grundeinstellungen",
@@ -500,6 +551,7 @@ const de = {
       "Geben Sie hier Ihre geheime Passphrase ein. Denken Sie daran, es zu speichern, da Sie Ihre Notizen sonst nicht wiederherstellen können.",
     import_popup_description: "Geben Sie hier Ihre geheime Passphrase ein, um Ihre Notizen zu importieren.",
     webhooks: "Webhooks",
+    mcp: "MCP",
     voice_recognition: "Spracherkennung",
     ai_assistant: "KI-Assistent",
     note_creation: "Notiz erstellen",
@@ -578,6 +630,8 @@ const de = {
     download_no_space: "Nicht genug Speicherplatz für das Modell: Geben Sie etwas frei und versuchen Sie es erneut.",
     download_background:
       "Sie können diesen Bildschirm verlassen oder ausschalten: Der Download läuft weiter, mit dem Fortschritt in den Benachrichtigungen.",
+    download_background_desktop:
+      "Sie können diese Seite verlassen: Der Download läuft weiter. Wenn Sie die App schließen, klicken Sie erneut auf Modell herunterladen: Er wird dort fortgesetzt, wo er aufgehört hat.",
     cancel: "Abbrechen",
     delete_model: "Modell löschen",
     info: "Der KI-Assistent läuft vollständig auf Ihrem Gerät. Es werden keine Daten an externe Server gesendet. Das Modell wird einmal heruntergeladen (ab ~530 MB) und lokal gespeichert.",
@@ -605,6 +659,7 @@ const de = {
     },
     unavailable_web: "KI-Assistent ist nur auf Mobilgeräten verfügbar.",
     native_rebuild_needed: "KI-Assistent erfordert einen nativen Rebuild.\nFühren Sie aus: npx expo run:android",
+    unavailable_computer: "KI ist auf diesem Computer nicht verfügbar.",
     voice_only: "Nur Sprache",
     voice_only_hint: "Mit dem Assistenten nur per Sprache interagieren",
     listening: "Höre zu...",
@@ -1157,6 +1212,8 @@ const de = {
     zoom: "Zoomen",
     help: "Hilfe",
     help_item: "{{name}}-Hilfe",
+    tray_open: "Fast Memo öffnen",
+    tray_quit: "Beenden",
   },
 
   a11y: {

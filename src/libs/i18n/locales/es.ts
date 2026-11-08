@@ -15,6 +15,11 @@ const es = {
     title: "¿Qué hay de nuevo?",
 
     web: {
+      description_2_1_0: `• El asistente de IA también en el ordenador: corrige, acorta, traduce y resume, todo en tu dispositivo.
+• Conecta agentes de IA como Claude o Cursor a tus notas mediante MCP: desactivado por defecto, y las notas bloqueadas u ocultas quedan fuera de su alcance.
+• Una ventana que se siente como una app: barra de título oscura, sin menús ni atajos del navegador.
+• Varias correcciones y mejoras.`,
+
       description_2_0_0: `• Sincroniza con tu propio FastMemo Server, en lugar de Firebase.
 • Sincronización en tiempo real entre tus dispositivos.
 • Atajos de teclado y, en Mac, una barra de menús.
@@ -313,7 +318,7 @@ const es = {
     unreachable_check_firebase: "Comprueba tu conexión y vuelve a intentarlo.",
     conflict_copies: "Editada en dos dispositivos antes de sincronizar: se guardaron ambas versiones (una como copia)",
     open_on: "Abierta en {{devices}}",
-    note_deleted_elsewhere: "Esta nota se movió a la papelera en otro dispositivo. Editarla la recupera.",
+    note_deleted_elsewhere: "Esta nota se movió a la papelera. Editarla la recupera.",
     title: "Cloud Sync",
     syncing_1: "Sincronización en curso...",
     syncing_2: "Espera hasta que termine",
@@ -478,6 +483,53 @@ const es = {
     importData: "Importar datos",
     wipeData: "Borrar datos",
   },
+  mcp: {
+    title: "Servidor MCP",
+    enable_label: "Permitir que los agentes de IA usen Fast Memo",
+    enable_line: "Los agentes de IA de este equipo, como Claude Code, pueden buscar, leer y añadir notas.",
+    provider_warning: "Lo que lee un agente se envía al proveedor del modelo que utiliza.",
+    tools_section: "Herramientas",
+    tools: {
+      fastmemo_create_note: "Crear notas",
+      fastmemo_list_categories: "Listar categorías",
+      fastmemo_search_notes: "Buscar notas",
+      fastmemo_read_note: "Leer notas",
+      fastmemo_set_note_flags: "Cambiar los indicadores de una nota",
+      fastmemo_help: "Leer la ayuda",
+      fastmemo_check_update: "Buscar actualizaciones",
+      fastmemo_edit_note: "Editar notas",
+      fastmemo_trash_note: "Mover notas a la papelera",
+    },
+    tool_lines: {
+      fastmemo_create_note: "Añade una nota de texto, de tareas, kanban o de código.",
+      fastmemo_list_categories: "Muestra los nombres de tus categorías.",
+      fastmemo_search_notes: "Encuentra notas por título o contenido. Las notas bloqueadas y ocultas nunca aparecen.",
+      fastmemo_read_note: "Lee el contenido de una nota. Las notas bloqueadas y ocultas no se pueden leer.",
+      fastmemo_set_note_flags: "Marca una nota como importante, de solo lectura o bloqueada.",
+      fastmemo_help: "Lee los temas de la ayuda de Fast Memo.",
+      fastmemo_check_update: "Indica si existe una versión más reciente. No instala nada.",
+      fastmemo_trash_note: "Mueve una nota a la papelera temporal, de donde puedes restaurarla.",
+    },
+    edit_note_line: "Si está desactivado, un agente solo puede editar las notas que creó en la misma sesión.",
+    background_label: "Seguir en segundo plano",
+    background_line:
+      "Activado: al cerrar la ventana, Fast Memo sigue en ejecución con un icono en la bandeja. Desactivado: al cerrar se sale de la app, y los agentes solo la alcanzan con la ventana abierta.",
+    connect_section: "Conectar un agente",
+    connect_intro: "Añade Fast Memo a tu agente con el texto de abajo. Funciona con MCP activado.",
+    client_claude_code: "Claude Code",
+    client_codex: "Codex",
+    client_json: "Claude Desktop y Cursor",
+    json_files:
+      "Guarda este JSON en claude_desktop_config.json para Claude Desktop (Ajustes, Desarrollador, Editar configuración), o en ~/.cursor/mcp.json para Cursor. Si el archivo ya tiene otros servidores, añade solo la entrada fastmemo dentro de mcpServers.",
+    copy: "Copiar",
+    copied: "Copiado",
+    copy_failed: "No se pudo copiar. Selecciona el texto y cópialo a mano.",
+    copy_label: "Copiar el texto para {{client}}",
+    moved_warning:
+      "Fast Memo no está en la carpeta Aplicaciones. Si lo mueves, la conexión deja de funcionar: ponlo en Aplicaciones y vuelve a copiar el texto.",
+    save_failed: "No se pudo aplicar el cambio: {{error}}",
+    load_failed: "No se pudieron leer los ajustes: {{error}}",
+  },
   generalsettings: {
     title: "Ajustes",
     basic: "Básico",
@@ -496,6 +548,7 @@ const es = {
       "Escribe tu contraseña secreta aquí. Recuerda guardarlo, de lo contrario no podrás recuperar tus notas.",
     import_popup_description: "Escribe aquí tu contraseña secreta para importar tus notas.",
     webhooks: "Webhooks",
+    mcp: "MCP",
     voice_recognition: "Reconocimiento de voz",
     ai_assistant: "Asistente IA",
     note_creation: "Creación de nota",
@@ -574,6 +627,8 @@ const es = {
     download_no_space: "No hay espacio suficiente para el modelo: libera un poco e inténtalo de nuevo.",
     download_background:
       "Puedes salir de esta pantalla o apagarla: la descarga continúa, con el progreso en las notificaciones.",
+    download_background_desktop:
+      "Puedes salir de esta página: la descarga continúa. Si cierras la aplicación, pulsa de nuevo Descargar modelo: se reanuda donde se quedó.",
     cancel: "Cancelar",
     delete_model: "Eliminar modelo",
     info: "El asistente de IA funciona completamente en tu dispositivo. No se envían datos a servidores externos. El modelo se descarga una vez (desde ~530 MB) y se guarda en el dispositivo.",
@@ -601,6 +656,7 @@ const es = {
     },
     unavailable_web: "El Asistente IA solo está disponible en dispositivos móviles.",
     native_rebuild_needed: "El Asistente IA requiere una reconstrucción nativa.\nEjecuta: npx expo run:android",
+    unavailable_computer: "La IA no está disponible en este equipo.",
     voice_only: "Solo voz",
     voice_only_hint: "Interactúa con el asistente usando solo tu voz",
     listening: "Escuchando...",
@@ -1146,6 +1202,8 @@ const es = {
     zoom: "Zoom",
     help: "Ayuda",
     help_item: "Ayuda de {{name}}",
+    tray_open: "Abrir Fast Memo",
+    tray_quit: "Salir",
   },
 
   a11y: {

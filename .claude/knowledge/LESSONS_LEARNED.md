@@ -1958,6 +1958,86 @@ to `modules-apk/.gitignore` (not hashed). The fingerprint is back to the store b
 
 ---
 
+### LL-072: A read-only text note scrolled sideways on a long link, and the editors showed the system's scrollbar
+
+**Date:** 2026-11-08  
+**Severity:** Low (a long link or key in a read-only note ran off on one line; desktop and mobile)  
+**Category:** Bug / Editor CSS  
+**What happened:** A word with no spaces (a link, an API key) wrapped while the note was editable and ran on one line, scrolling
+sideways, once it was read-only. On desktop the text and code editors also showed the system's scrollbar (light, wide on Windows
+or with a mouse on a Mac) while the rest of the app had its own.  
+**Root cause:** `contenteditable="true"` comes with the browser's own `overflow-wrap: break-word` (Chromium and WebKit alike);
+RichEditor's `disabled` sets `contenteditable="false"`, which drops it, and the page set no wrapping of its own. The editors are
+documents of their own (an iframe on web/desktop, a WebView on native), so `global.css` never reached them.  
+**Fix:** `overflow-wrap: break-word` in the text editor's `contentCSSText`; the app's scrollbar rules as `SCROLLBAR_CSS`
+(`src/styles/scrollbar.ts`) in both editors' pages. `scripts/richtext.test.mjs` checks a long word wraps in a read-only note and
+that the editor has every scrollbar rule of `global.css`.  
+**Rule:** style an embedded page as a separate document: nothing from the app's CSS reaches it. Don't lean on what
+`contenteditable` gives for free: a read-only state takes it away. Code notes scroll sideways on purpose, as code editors do.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-11-08 **Resolved in:** branch
+`fix/readonly-wrap-scrollbar`
+
+---
+
+### LL-073: llama.cpp linked the MSVC runtime twice: `LLAMA_STATIC_CRT` alone didn't make it static
+
+**Date:** 2026-11-08  
+**Severity:** Medium (the Windows engine library didn't link; nothing shipped)  
+**Category:** Build / Windows  
+**What happened:** The Windows build of the desktop AI engine (`src-tauri/ai-engine`) failed at the link with LNK1120 on
+`__imp_getenv`, though Rust was set to `+crt-static` and `LLAMA_STATIC_CRT=1` was passed to llama.cpp's CMake.  
+**Root cause:** llama.cpp's CMake picks the MSVC runtime through `CMAKE_MSVC_RUNTIME_LIBRARY` (policy CMP0091), and with it
+unset it adds `/MD` after the `/MT` that `LLAMA_STATIC_CRT` passes: one static and one dynamic runtime in the same library.  
+**Fix:** `CMAKE_MSVC_RUNTIME_LIBRARY = "MultiThreaded"` next to `LLAMA_STATIC_CRT = "1"` in
+`src-tauri/ai-engine/.cargo/config.toml` (`llama-cpp-sys-2` hands `CMAKE_*` variables to CMake; only MSVC reads it). The library
+needs no Visual C++ runtime on the PC.  
+**Rule:** a C++ dependency built by CMake for MSVC gets its runtime from `CMAKE_MSVC_RUNTIME_LIBRARY`, not only from the
+library's own CRT switch, and has to agree with Rust's `crt-static`. A Windows build's runtime dependencies show with
+`dumpbin /dependents`.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-11-08 **Resolved in:** 5f37f75
+
+---
+
+### LL-074: bindgen's C enums are `i32` under MSVC and `u32` under clang
+
+**Date:** 2026-11-08  
+**Severity:** Low (a compile error on Windows only)  
+**Category:** Build / Platform  
+**What happened:** The engine's check of a GGUF's chat template compared a `gguf_type` to a constant of the other signedness. It
+built on macOS and Linux and failed on the Windows CI.  
+**Root cause:** bindgen types a C enum as `u32` for clang's targets and `i32` for MSVC's, so the generated binding differs by
+toolchain.  
+**Fix:** the comparison widens both sides first: `i64::from(gguf.kv_type(key)) != GGUF_TYPE_STRING` (`engine.rs`).  
+**Rule:** don't compare or assign a bindgen enum to a constant of a fixed integer type; go through a widening conversion
+(`i64::from`). Code that touches llama.cpp's C enums has to be built on Windows CI, not only on the Mac.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-11-08 **Resolved in:** 74b84c0
+
+---
+
+### LL-075: The JSON list grammar forbade the newline the 0.8B writes before "]", so it kept listing
+
+**Date:** 2026-11-08  
+**Severity:** Medium (a failed or wrong AI action on the smallest model, phone and desktop)  
+**Category:** Bug  
+**What happened:** on the desktop's evaluation the 0.8B's `voice-items-en` failed as too long: 300 tokens of the same four
+items. On the phone the same fixture split "call the plumber about the kitchen sink" into two items. Without a grammar the
+model answered the right three items in 25 tokens.  
+**Root cause:** `JSON_ARRAY_GRAMMAR` was `"[" ws string ("," ws string)* "]" ws`: no white space before "," or "]". The 0.8B
+writes an array one item per line and wants `"…"\n]`; the grammar refused the newline, so the sampler took the next token
+it allowed, a ",", and the model went on listing.  
+**Fix:** `"[" ws string (ws "," ws string)* ws "]" ws` (`constants.ts`), the shape `JSON_INT_ARRAY_GRAMMAR` already had. The
+2B and 4B, which write the array on one line, gave byte-identical answers before and after; a real-model engine test
+(`a_list_written_one_item_per_line_closes`) reproduces the loop with the old grammar.  
+**Rule:** a grammar constrains content, not layout: allow white space wherever JSON does, or a model is pushed onto a token
+it didn't want and can loop. Check a new grammar against the model's own unconstrained answer.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-11-08 **Resolved in:** 31dd093
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

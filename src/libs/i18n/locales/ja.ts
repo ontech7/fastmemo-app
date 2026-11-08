@@ -15,6 +15,11 @@ const ja = {
     title: "新着情報",
 
     web: {
+      description_2_1_0: `• AI アシスタントがパソコンでも：校正、短縮、翻訳、要約をすべてデバイス上で。
+• MCP で Claude や Cursor などの AI エージェントをノートに接続：初期設定はオフ、ロックされたノートと非表示のノートには届きません。
+• アプリらしいウィンドウ：ダークなタイトルバー、ブラウザのメニューやショートカットはなし。
+• その他の修正と改善。`,
+
       description_2_0_0: `• 自分の FastMemo Server と同期（Firebase の代わりに）。
 • デバイス間でリアルタイムに同期。
 • キーボードショートカットと、Mac ではメニューバー。
@@ -312,7 +317,7 @@ const ja = {
     unreachable_check_firebase: "接続を確認して、もう一度お試しください。",
     conflict_copies: "同期前に2台のデバイスで編集されました：両方のバージョンを保持しました（一方はコピー）",
     open_on: "{{devices}} で開いています",
-    note_deleted_elsewhere: "このメモは別のデバイスでゴミ箱に移動されました。編集すると元に戻ります。",
+    note_deleted_elsewhere: "このメモはゴミ箱に移動されました。編集すると元に戻ります。",
     title: "クラウド同期",
     syncing_1: "同期中...",
     syncing_2: "完了までお待ちください",
@@ -474,6 +479,53 @@ const ja = {
     importData: "データをインポート",
     wipeData: "データを削除",
   },
+  mcp: {
+    title: "MCPサーバー",
+    enable_label: "AIエージェントによる Fast Memo の利用を許可",
+    enable_line: "このコンピューター上の AI エージェント（Claude Code など）がメモを検索、読み取り、追加できます。",
+    provider_warning: "エージェントが読み取った内容は、そのエージェントが使うモデルの提供元に送信されます。",
+    tools_section: "ツール",
+    tools: {
+      fastmemo_create_note: "メモを作成",
+      fastmemo_list_categories: "カテゴリを一覧表示",
+      fastmemo_search_notes: "メモを検索",
+      fastmemo_read_note: "メモを読み取り",
+      fastmemo_set_note_flags: "メモのフラグを設定",
+      fastmemo_help: "ヘルプを読む",
+      fastmemo_check_update: "アップデートを確認",
+      fastmemo_edit_note: "メモを編集",
+      fastmemo_trash_note: "メモをゴミ箱に移動",
+    },
+    tool_lines: {
+      fastmemo_create_note: "テキスト、ToDo、かんばん、コードのメモを追加します。",
+      fastmemo_list_categories: "カテゴリの名前を表示します。",
+      fastmemo_search_notes: "タイトルや内容でメモを検索します。ロックされたメモと非表示のメモは見つかりません。",
+      fastmemo_read_note: "メモの内容を読み取ります。ロックされたメモと非表示のメモは読み取れません。",
+      fastmemo_set_note_flags: "メモを重要、読み取り専用、ロック済みにします。",
+      fastmemo_help: "Fast Memo のヘルプトピックを読み取ります。",
+      fastmemo_check_update: "新しいバージョンがあるかを伝えます。何もインストールしません。",
+      fastmemo_trash_note: "メモを一時ゴミ箱に移動します。そこから復元できます。",
+    },
+    edit_note_line: "オフのときは、エージェントは同じセッションで作成したメモだけを編集できます。",
+    background_label: "バックグラウンドで実行を続ける",
+    background_line:
+      "オン：ウィンドウを閉じても、Fast Memo はトレイのアイコンとともに実行され続けます。オフ：閉じるとアプリが終了し、エージェントはウィンドウを開いている間だけ利用できます。",
+    connect_section: "エージェントを接続",
+    connect_intro: "下のテキストで Fast Memo をエージェントに追加します。MCP がオンのときに使えます。",
+    client_claude_code: "Claude Code",
+    client_codex: "Codex",
+    client_json: "Claude Desktop と Cursor",
+    json_files:
+      "Claude Desktop では claude_desktop_config.json（設定、開発者、設定を編集）に、Cursor では ~/.cursor/mcp.json にこの JSON を保存します。ファイルにすでに他のサーバーがある場合は、mcpServers に fastmemo の項目だけを追加してください。",
+    copy: "コピー",
+    copied: "コピーしました",
+    copy_failed: "コピーできませんでした。テキストを選択して手動でコピーしてください。",
+    copy_label: "{{client}} 用のテキストをコピー",
+    moved_warning:
+      "Fast Memo が「アプリケーション」フォルダにありません。移動すると接続が機能しなくなります。「アプリケーション」に置いてから、もう一度テキストをコピーしてください。",
+    save_failed: "変更を適用できませんでした：{{error}}",
+    load_failed: "設定を読み込めませんでした：{{error}}",
+  },
   generalsettings: {
     title: "設定",
     basic: "基本",
@@ -491,6 +543,7 @@ const ja = {
     export_popup_description: "ここに秘密のパスフレーズを入力してください。保存しないと、ノートを回復できなくなります。",
     import_popup_description: "ここに秘密のパスフレーズを入力してください。ノートをインポートするには保存してください。",
     webhooks: "Webhooks",
+    mcp: "MCP",
     voice_recognition: "音声認識",
     ai_assistant: "AIアシスタント",
     note_creation: "ノート作成",
@@ -568,6 +621,8 @@ const ja = {
     download_failed: "ダウンロードに失敗しました。もう一度お試しください。",
     download_no_space: "モデルを保存する空き容量が足りません。容量を空けてもう一度お試しください。",
     download_background: "この画面を離れても、画面を消しても、ダウンロードは続きます。進行状況は通知に表示されます。",
+    download_background_desktop:
+      "このページを離れてもダウンロードは続きます。アプリを閉じた場合は、もう一度「モデルをダウンロード」をクリックすると、中断した位置から再開されます。",
     cancel: "キャンセル",
     delete_model: "モデルを削除",
     info: "AIアシスタントはデバイス上で完全に動作します。外部サーバーにデータは送信されません。モデルは一度だけダウンロードし（約530 MBから）、ローカルに保存されます。",
@@ -595,6 +650,7 @@ const ja = {
     },
     unavailable_web: "AIアシスタントはモバイルデバイスでのみ利用可能です。",
     native_rebuild_needed: "AIアシスタントにはネイティブリビルドが必要です。\n実行: npx expo run:android",
+    unavailable_computer: "このコンピューターではAIを利用できません。",
     voice_only: "音声のみ",
     voice_only_hint: "音声のみでアシスタントと対話",
     listening: "聞いています...",
@@ -1123,6 +1179,8 @@ const ja = {
     zoom: "拡大／縮小",
     help: "ヘルプ",
     help_item: "{{name}} ヘルプ",
+    tray_open: "Fast Memo を開く",
+    tray_quit: "終了",
   },
 
   a11y: {

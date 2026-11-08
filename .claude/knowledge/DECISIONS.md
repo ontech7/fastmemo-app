@@ -91,7 +91,8 @@ single value, and the note store migrates from it.
 
 ## ADR-004: On-Device AI (llama.rn) over Cloud AI APIs
 
-**Status:** Accepted (models revised 2026-10: Qwen 2.5 -> Qwen3.5, see "Revision")  
+**Status:** Accepted (models revised 2026-10: Qwen 2.5 -> Qwen3.5, see "Revision"; the desktop runs it through llama.cpp, see
+ADR-034)  
 **Context:** Need AI features (title generation, summarization, item suggestions) without requiring internet or external API
 costs.  
 **Decision:** llama.rn 0.12 with Qwen3.5 Small GGUF models (0.8B, 2B, 4B), Unsloth Q4_K_M files pinned to a Hugging Face commit
@@ -108,7 +109,7 @@ and checked by exact size.
 
 - Models are large downloads (hundreds of MB to several GB)
 - Generation quality varies significantly with model size
-- Not available on web (no-op stubs provided)
+- Not available in a plain browser (the web build); the desktop app has the AI through llama.cpp, see ADR-034
 - Only one model loaded at a time (singleton context pattern)
 - RAM-intensive: minimum 3GB for smallest model, 6GB for the 4B
 
@@ -928,14 +929,17 @@ ends it).
   menu's commands (New Note, Settings…) show it, on the Space the user is on (2026-10-22, user request: on every Space while
   shown, then back on the current one; size and place kept). Cmd+Q keeps the held quit (ADR-015). A full screen window leaves full screen
   first and is kept hidden from the end of that animation (LL-061); asking for it back meanwhile cancels that.
-- Windows and Linux: unchanged, closing the window quits after the flush.
+- Windows and Linux: closing the window quits after the flush. While the local MCP server is on, with its "keep running" switch
+  (ADR-032, 2026-11-06), it hides the window instead, with the same `fastmemo://hidden` flush, and a tray icon stays, with Open and
+  Quit; switching either off restores the quit at once.
 - `tauri-plugin-window-state` (approved): size, position and zoom remembered; not the visibility (it would show the window
   before it's drawn) nor full screen. A quit in full screen (even while leaving it to be hidden) keeps the window as it was
   before: its last ordinary frame, zoomed or not (window-state alone would save a zoomed window filling the screen:
   `save_windowed_frame` rewrites its entry on `RunEvent::Exit`, after the plugin's save).
 - A hidden window's page keeps running, throttled (WebKit's default policy): the sync engine stays on (listeners, the 5-minute
   poll), so the notes are current when the window comes back, as for a window left open behind others. The first showing at
-  launch isn't a return to the foreground (`SyncOnProvider` resumes only after a hide).
+  launch isn't a return to the foreground (`SyncOnProvider` resumes only after a hide). Measured on macOS for 36 minutes, and what
+  Windows and Linux with MCP on rest on (the results per OS: ADR-032).
 - The desktop update check runs at launch and again every 6 h while the app runs (an hourly tick, and the window coming back): a
   Mac app now runs for days. A version already offered isn't offered again in that run (Settings still shows it).
 - Later (after 2.0.0, user decision): a real JS-only OTA for desktop (a signed web bundle served in place of the bundled one,
@@ -952,12 +956,13 @@ while hidden, full screen close (and reopen during it), menu Quit (flushed, ~0.2
 Windows (WebView2) and Linux (WebKitGTK) not tried yet: the first show must come from `window_ready`, not the 5 s fallback.
 
 **Alternatives rejected:** a splash window (another window to keep in sync, and the old one felt heavy); `visible: true` with a
-CSS splash in `index.html` (still a flash, then a second screen); a menu bar (tray) app (not what the user asked).
+CSS splash in `index.html` (still a flash, then a second screen); a menu bar (tray) app (not what the user asked; reversed for
+Windows and Linux only, and only while MCP keeps the app running: ADR-032).
 
 **Trade-offs:** for ~0.6 s (~2.5 s cold) there's no window (on macOS the Dock icon, briefly; on Windows/Linux not even a taskbar
-button). A hidden FastMemo keeps its memory (~a browser tab) and keeps syncing (Firestore reads as for an open window). A
-protected note left open is still open when the window comes back (as when minimized). Dock Quit / logout with the window open
-still skip the flush (ADR-015); with it closed the flush already happened.
+button). A hidden FastMemo (on Windows and Linux, only with MCP on) keeps its memory (~a browser tab) and keeps syncing (Firestore
+reads as for an open window). A protected note left open is still open when the window comes back (as when minimized). Dock Quit /
+logout with the window open still skip the flush (ADR-015); with it closed the flush already happened.
 
 ---
 
@@ -1361,3 +1366,362 @@ packages: it can't be in the Play build.
   in the cloud);
 - the APK gets a new version as soon as the GitHub release is out, Play users after the review;
 - a cancelled install downloads the APK again next time.
+
+---
+
+## ADR-032: A Local MCP Server on Desktop: a Bridge, a Private Socket, the Tools in the Page
+
+**Status:** Accepted (2026-11-06, user decisions: desktop only; the nine tools and their defaults; locked and hidden notes out
+of reach with no switch; flags only tightened; the session rule for `edit_note`; the server reachable with the window closed,
+through a tray on Windows and Linux. Calls made on the user's behalf, which can be overturned: off by default, no one-click
+connection, no start at login, HTML with no Markdown converter, notes synced as any other, webhooks fired, tool texts in
+English)  
+**Context:** While talking to an AI agent (Claude Code, Claude Desktop, Cursor, Codex) the user wants to say "save a note about
+what we discussed" and find a summary in Fast Memo, with a short title and the right type and category; or "read my note X"; or
+to ask how a feature works. It won't be used constantly, so the tool set stays small and safe by default, and not read-only,
+which would make it useless. The notes live in the page: Redux and IndexedDB inside the webview (ADR-018). Rust can't read them,
+so every call has to go through the running app.
+
+**Decision:**
+
+```
+AI client --stdio JSON-RPC--> bridge (--mcp) --local socket--> Fast Memo (Rust) --event/command--> page (Redux + note store)
+```
+
+- **A bridge and a socket, no network port.** The client starts the app's own binary with `--mcp`, handled in `main.rs` before
+  Tauri and its single-instance plugin: no window, no Dock icon, no `externalBin` on four build targets. It relays
+  newline-delimited JSON-RPC; stdout carries JSON-RPC only. No TCP means web pages can't reach it (no DNS rebinding to think
+  about), there's no port to clash, and who may connect is the operating system's business. It listens only while MCP is on, and
+  each identifier has its own, so a test build can't reach the real app.
+  - **macOS and Linux:** a Unix socket in a 0700 directory, a stale one removed at bind. Always under `$HOME` (macOS
+    `~/Library/Application Support/<id>/mcp/sock`, Linux `~/.local/share/<id>/mcp/sock`), not `XDG_RUNTIME_DIR`: the official
+    SDK's stdio client passes its child HOME but not that.
+  - **Windows:** a named pipe only its owner can open (`D:P(A;;GA;;;OW)`), remote clients rejected,
+    `FILE_FLAG_FIRST_PIPE_INSTANCE`. A new name for each start (identifier + pid + time), published in
+    `%APPDATA%\<id>\mcp\pipe-name`, which the bridge reads on connect: a pipe's name stays alive while an idle client holds a
+    handle, so a fixed name couldn't be created again after a restart with a bridge connected, and a name that can't be
+    predicted is pointless to squat.
+- **The app away is an answer, not a failure.** The bridge answers `initialize`, `server/discover` and `tools/list` from the
+  definitions compiled in, so the client doesn't mark the server as failed, and every call gets "isn't reachable, check it's
+  open and that MCP is on". It connects again on the next line: opening the app needs no client restart. A call lost after it
+  was sent isn't sent again ("may have run: check before retrying").
+- **Two protocol eras, written by hand, no SDK** (`mcp/protocol.rs`): 2026-07-28 (`server/discover`, `_meta` on every request),
+  and 2025-11-25 and 2025-06-18 (`initialize`), which clients of older revisions still need. No `tools.listChanged`: a client
+  can hold an old list, so a tool switched off is refused at call time.
+- **The tools run in the page.** Rust owns the listener, the protocol, the switches, the session rights and the write cap; a
+  call goes out as `fastmemo://mcp-request` and comes back through `mcp_reply` (`libs/mcp/bridge.web.ts`, installed in `_layout`
+  like `installFlushOnExit`; the `.web` split keeps it out of the Android bundle). Rust gives up after 10 s ("isn't
+  responding... may still run"). The page refuses until the store has rehydrated and the notes were read (LL-029, LL-039), and
+  commits the editors' pending edits before acting (ADR-013).
+- **Answered only once it's on disk.** After a write `flushNow()` runs before the success, so a quit right after can't lose the
+  note. A write that couldn't be saved says what's true: the note exists, so "don't create it again", not "try again". Webhooks
+  fire after the save, not before: a failed write isn't announced. They do fire, as for the app's own changes.
+- **One filter: `libs/mcp/policy.ts`.** Locked and hidden are flags the UI enforces with the secret code, not encryption, so
+  this is the only barrier, whatever "show hidden" says. Every tool gets at the notes through it. An id out of reach gets the
+  answer of an id that doesn't exist, and a word found only in such a note matches nothing. A note created as locked answers
+  "Created." with no id. Read-only notes can be read, not changed or trashed. Never exposed, with no switch: removing a lock or
+  read-only, unhiding, permanent deletion, emptying the trash, import/export, settings, cloud, installing an update.
+- **The switches stay out of Redux.** `mcp.json` in the app's config directory, owned by Rust, read and written through
+  `mcp_get_settings` and `mcp_set_settings`: they're per device, must not sync, Rust needs them before the page loads, and the
+  store's structure is left alone (NEVER #2). Missing or corrupt means off. A change applies from the next call, with no client
+  restart.
+- **A session is a connection.** With `edit_note` off, an agent may still edit the notes it created on this connection; with it
+  on, any note the rules allow. So the tool stays listed while `create_note` or its own switch is on. The right lives in Rust's
+  memory per connection and dies with it, or with an app restart, which errs on the safe side. It doesn't cover `trash_note`,
+  and it's suspended rather than erased while the note is locked or read-only: checks run per call, and only the user can lift
+  those flags. **Known limit:** MCP over stdio doesn't say which conversation a call belongs to. Claude Code starts one process
+  per session, so this works as described there; Claude Desktop and Cursor, as far as we know, keep one process while they run,
+  so the right lasts until the client closes, not the chat.
+- **What an open editor sees.** `edit_note`, `set_note_flags` and `trash_note` tell it as another device's change would
+  (`notifyNoteChanged` in `libs/cloud/sync.ts`, `full: true` so no toast; `useLiveNote` reloads), or its next commit would write
+  the old copy, and the old flags, back. Pending typing is committed first, so it moves the revision and the agent gets the
+  conflict: an edit needs the `rev` it read, and a stale one is refused with the typing kept.
+  The desktop hook renders the incoming note with `flushSync` (`useNoteEditor.web.ts`), so the editors' refs (`noteRef`) hold it
+  before any later message: a keystroke right after a lock would otherwise build its note from the copy before the lock and
+  write `locked: false` back. Nothing in `scripts/` exercises it (no DOM in the dependencies): a hand check.
+- **Tool shapes.** `false` for `readOnly` or `locked` on `create_note` just means not set (a new note has nothing to loosen);
+  only `set_note_flags` refuses it. Search and read page with `offset`/`nextOffset`, one vocabulary. Kanban columns are
+  `{ name, color?, cards: string[] }`: plain text is what an agent writes, the ids are the server's. `edit_note`'s title and
+  category follow `create_note`'s rules (`MAX_TITLE`, newlines to spaces; a category only by exact or case-insensitive name,
+  never created). Text is HTML, cleaned on arrival with `AGENT_HTML_CONFIG`: the app's `NOTE_HTML_CONFIG` (ADR-021) plus no media
+  and nothing that fetches when the note opens (images, video, audio, frames, SVG, `src`/`srcset`/`poster`/`background`, inline
+  `style`), so an agent can't make a note phone home; links stay. A read replaces images with a placeholder
+  and returns 100,000 characters at a time; a search compares the text with images removed, not the placeholder, which the user
+  never wrote; `replaceHtml` is refused for a note holding images. The writes per connection are capped at 30 a minute and 300 an
+  hour (`session.rs`), so at worst 7,200 a day per connection against Firestore's 20,000 free writes (NEVER #11). That slows a
+  looping agent, it doesn't bound a day by itself: the device document's fan-out isn't counted, and each new connection starts its
+  count again. A refused write says which limit it hit and when to retry. The server's `instructions` say note content is data, not
+  instructions, and tools carry MCP annotations.
+- **The window closed** (`src-tauri/src/tray.rs`). macOS: unchanged (ADR-022). Windows and Linux, only while MCP is on and its
+  "keep running" switch with it: closing hides the window and a tray icon stays, with Open and Quit (`flush_then_exit`). This
+  reverses the "no tray" decision of desktop 2.0.0. With MCP off there's no tray and closing quits as before, at once when it's
+  switched off; if the icon couldn't be built, closing quits too, since nothing would bring the window back.
+
+**The hidden page, per OS.** A suspended page never answers, so this decided whether the design holds; Tauri's schema says a
+hidden view may be suspended after about 5 minutes.
+
+- **macOS: pass, with default throttling and no keep-alive.** Before the feature, a throwaway build: window hidden for 36
+  minutes on an awake Mac, one round trip a minute through an event, IndexedDB and a command: no timeouts, slowest 454 ms,
+  `hidden` throughout. With the feature, on the test build: window closed for 15 minutes with no calls at all, then a call on a
+  bridge connected all along answered in 39 ms, one on a new bridge in 9 ms, and a write, on disk before its answer, in 52 ms.
+  Not measured: a Mac that went to sleep meanwhile.
+- **Windows (WebView2): pass, with no keep-alive.** The user's hand run on their desktop PC (2026-11-08, the test build of all
+  of desktop 2.1.0, run 42520557700) passed the whole Windows checklist: `scripts/mcp-e2e.test.mjs` on a clean install, the tray,
+  and a call after 35 minutes with the window closed answering within the 5 s bound (`--wait-minutes 35`); the exact times
+  weren't recorded. So neither fallback was needed (a held Web Lock, then `SetIsVisible(true)` while hidden): they stay the
+  answer if a later WebView2 suspends the page. CI on `windows-latest` also builds the pipe code and runs the `mcp::` tests,
+  named pipes included (60 passed, run 42272924109).
+- **Linux (WebKitGTK): untested by hand** (user decision: no Linux desktop is available, as for every desktop release so far).
+  Linux is built, ships the same feature and isn't a gate for anything. The tray is unverified too: Tauri sends no click events
+  there, so the icon has only its menu, and some GNOME setups, as far as we know, don't show tray icons at all. The "keep
+  running" switch is the way out of that. The deb's tray dependency is `libayatana-appindicator3-1`, which Debian 12 and later
+  still carry (`libappindicator3-1` is gone from Debian): CI installs `libayatana-appindicator3-dev` (`publish.yml`) so that
+  tauri-cli names the ayatana package in `Depends`. It applies to every user of the deb, MCP on or off.
+
+**With a real client** (Claude Code 2.1.319, Haiku, headless, 2026-11-06, on the test build). It negotiated 2026-07-28, so
+`initialize` has been exercised only by the fake client. "Save a note about this" gave a text note with a short title and no
+category; a shopping list, with no type asked for, a todo; "read my note" a search and a read; a question on the trash an answer
+from `help`; an update check, on a build with no updater endpoints, the tool error saying the check failed. Asked from a folder
+whose path named this project, with Bash allowed by the user's settings, the same question on the trash went to the source code
+instead of `help`.
+
+**Sync while hidden** (read in the code, not run against a cloud: connecting a test build needs typed credentials). A note
+written by a tool goes into the outbox in its reducer like any other, and the engine's store subscription `kick()`s a push from
+that same page (200 ms, at least 2 s after the last one): nothing waits for the window, and the page is awake, having just
+answered the call. If the transport wedged, as it can while hidden (`SyncOnProvider`), the push waits: the 5-minute poll
+re-opens the transport once a task has stalled for 60 s, and the window coming back resumes the engine. So at worst the note
+reaches the cloud when the window returns, with no message to the user (NEVER #16); the outbox is on disk, so nothing is lost
+meanwhile. **`engine.resume()` after a write isn't called:** the kick already pushes, and it isn't free: `reconnect` drops the
+connection and re-attaches the listeners, and `pull` reads the vault and every device doc from the server, 1 + N reads per write
+(N devices) against none. A Windows or Linux app kept in the tray costs what a hidden macOS one costs today: no new listeners or
+periodic writes (NEVER #23).
+
+**Nothing reaches mobile.** No change in `package.json`, `yarn.lock`, `app.config.ts`, `.gitignore` or `android/`, so the
+fingerprint can't have moved; the tests run with `node scripts/...`, never as `package.json` scripts (LL-071).
+`scripts/mcp.test.mjs` covers the filter and the tool logic, `cargo test --lib mcp::` the protocol and the socket, and
+`scripts/mcp-e2e.test.mjs` is a fake client over stdio against a real test build. Any test showing or returning notes runs on a
+throwaway identifier with an empty store, because the test build's store may hold real notes; that script refuses a store
+holding notes it didn't make.
+
+**Alternatives rejected:**
+
+- HTTP on localhost: a port to clash, reachable by web pages, a token to manage;
+- a sidecar binary: `externalBin` on four build targets, for what the app's own binary does before Tauri starts;
+- Rust reading the notes itself, as Colloqua's `colloqua-mcp` opens its database: they're in the webview's IndexedDB;
+- the switches in Redux: above;
+- an owner check by FFI on a fixed Windows pipe name (`GetSecurityInfo`): more unsafe code for what a name nobody can predict
+  gives;
+- `backgroundThrottling: "disabled"`: fixed when the window is created and applied to everyone, including users with MCP off;
+- a read-only server: it couldn't save the note this is for.
+
+**Trade-offs:**
+
+- it needs the app running: after a real quit or a reboot the tools say it isn't reachable, and the user opens it (no start at
+  login);
+- what an agent reads goes to the provider of its model: the warning sits next to the main switch;
+- on Windows and Linux with MCP on, a closed window keeps the app's memory (~a browser tab), as on macOS;
+- a text note's content is HTML, so an agent that writes Markdown gets it as plain text;
+- the protocol is ours to keep up with, with no SDK: a new MCP revision means a change in `protocol.rs`.
+
+## ADR-033: The Desktop Window Is an App, Not a Browser
+
+**Status:** Accepted (2026-11-06, user decisions: the dark theme forced and the app's colour on Windows 11's title bar, Windows
+10 and Linux without it; the right-click menu trimmed, the page paused while minimised on Windows and the browser's keys
+blocked, as in drezimo-soundboard; `webview2-com` and `windows-core` approved on 2026-11-08. Cmd+B/I/U on macOS reported by the
+user on 2026-11-08)  
+**Context:** macOS already drew the title bar in the app's colour (`titleBarStyle: Transparent` over `backgroundColor`). Windows
+showed a light system bar, a right click anywhere opened the browser's menu (back, reload, print, and in a text field Edge's own
+items: emoji, writing assistance), Ctrl+P printed the page, Ctrl+F opened WebView2's find bar where the app had nothing to find,
+and a minimised window's page went on as if on screen, WebView2 not being told. On macOS, Cmd+B did nothing in a text note:
+WebKit leaves bold, italic and underline to an app's Format menu.
+
+**Decision:**
+
+- **Dark theme** in the window's config (`theme: "Dark"`, Windows and macOS; Linux follows the system theme).
+- **Title bar colour** (`window_chrome.rs`, Windows): `DwmSetWindowAttribute(DWMWA_CAPTION_COLOR)` with `#05091A`. Windows 10
+  refuses the attribute and keeps the dark theme's bar.
+- **Right-click menu:** the page prevents it except over a text field or over the text the user selected
+  (`useKeyboardShortcuts.web.ts`, in the window and the editors' iframes), so a read-only note can still be copied from.
+  Elsewhere WebKit's menu would offer Reload, which drops the edits not yet saved. WebKit on macOS selects the word under the
+  pointer before `contextmenu`, so the selection is read when the button goes down (right button, or Ctrl+click on a Mac), and
+  the word it selected is dropped with the menu. On Windows, WebView2's menu keeps only cut, copy and paste
+  (`ContextMenuRequested`, `window_chrome.rs`).
+- **Browser keys** blocked with Cmd (Mac) or Ctrl: print, find next (also F3), save, open, zoom (+, -, =, 0), view source (U,
+  outside a text field: in the editor it underlines), caret browsing (F7), and Cmd/Ctrl+F where the app has nothing to find.
+  Ctrl+letters on a Mac move the caret in text fields: untouched.
+- **Minimised (Windows):** `SetIsVisible(false)` on the WebView2 controller, `true` again when restored
+  (`WindowEvent::Resized`). The page gets `visibilitychange`: it flushes the edits not yet written and, back on screen after a
+  minute or more, the sync reconnects (`RESUME_AFTER_HIDDEN_MS`, `SyncOnProvider`: a reconnect reads the vault and the devices,
+  1 + N reads, too many for every minimise; macOS's hidden window gains the same limit).
+- **Cmd/Ctrl+B/I/U** done by the text editor's page (`RICH_TEXT_SCRIPT`), only while it's editable, preventing the browser's own
+  so Chromium doesn't apply them a second time.
+
+**Trade-offs:**
+
+- `webview2-com` and `windows-core` must stay at the versions `wry` uses (Cargo.lock) when Tauri is updated, or the WebView2
+  types won't match;
+- a minimised page is throttled like a background tab: the local MCP server still has to answer it within its timeout (a check
+  of the Windows run, ADR-032);
+- the menu over selected text is still the browser's on macOS and Linux (copy, look up, share…): only Windows' is trimmed;
+- on Windows, Ctrl+F used to open WebView2's find bar on screens with no find of their own (code, to-do and kanban notes, help):
+  blocked as the user asked, those screens have no find now (CodeMirror's search could give code notes one);
+- a restored window gets the keyboard focus back without help (the user's Windows run, 2026-11-08); if a later WebView2 loses
+  it: `MoveFocus` on the controller after `SetIsVisible(true)`.
+
+## ADR-034: On-Device AI on Desktop: llama.cpp in a Library of Its Own
+
+**Status:** Accepted (2026-11-08, user decisions: llama.cpp inside the app through `llama-cpp-2` 0.1.161, `llama-server` as a
+separate process rejected; Metal on Apple Silicon, CPU on Windows and Linux; the same three models at the same pinned files, no
+bigger ones; the phone's AI menu and flow on desktop, with three adjustments; a platform where the engine can't run ships
+without AI rather than with a slower build; the macOS entitlement `disable-library-validation`, in production too. Calls made on
+the user's behalf, which can be overturned: the engine as a library of its own, half the cores, the desktop context sizes and
+long-note parts, the 2B as the default, no GPU on Windows and Linux, Intel Macs on the CPU, a download that doesn't restart by
+itself)  
+**Context:** The phone has had the AI since 4.0 (ADR-004). On desktop the editors had no AI button and the settings and Help
+left it out. The user wanted the same features on the computer, not bigger models: fast, with the fewest mistakes, "without
+straining the PC". At most a wider context, and what a computer allows that a phone doesn't. llama.rn is a React Native module
+and doesn't run in the Tauri shell, so the desktop needs an engine of its own.
+
+**Decision:**
+
+```
+page (libs/ai/context.ts, shared with the phone)
+  --> engine.web.ts / models.web.ts --Tauri commands (ai_*)--> src-tauri/src/ai/ --libloading, JSON C ABI--> fastmemo_ai (ai-engine/)
+```
+
+- **The engine is a library the app opens, never links.** `src-tauri/ai-engine/` is a crate of its own (its own workspace,
+  `cdylib` named `fastmemo_ai`, `llama-cpp-2` pinned with `=0.1.161`, default features off, `metal` only on macOS aarch64, no
+  OpenMP). `src-tauri/src/ai/library.rs` opens it with `libloading` at the first command that needs it (`ai_info`, `ai_load`),
+  so the app and the `--mcp` bridge, which is the same executable (ADR-032), start whatever the library's state. A missing file,
+  an empty one, the stub, another ABI version, a symbol absent, a system that won't load it, or an x86_64 CPU without AVX2/FMA/
+  F16C all mean the same: no AI, and the app works. The page shows "AI isn't available on this computer"
+  (`ai.unavailable_computer`) and no AI button. This was the user's plan B for the case that a platform can't meet the start-up
+  guarantees; the cost of having it is one library file to bundle per platform.
+- **A JSON C ABI.** Three functions (`fm_ai_abi_version`, `fm_ai_call`, `fm_ai_free`) in `ai-engine/src/ffi.rs`: a request
+  `{"op": …}` in, `{"ok": …}` or `{"error": "…"}` out, streamed text through a callback, a stop flag the caller owns. A panic is
+  caught at the boundary (`{"error":"panic"}`, the engine is built with `panic = "unwind"` where the app is `abort`), and each
+  request is checked before llama.cpp sees it so that no input reaches one of its asserts. `ABI_VERSION` is 1; a stub build of
+  the crate (no `llama` feature) answers 0, and `STUB_TARGETS` in `scripts/build-ai-engine.mjs` is where a platform that can't
+  build the engine would go (empty today: all four builds run the real one).
+- **Where the library sits.** macOS: `Contents/Frameworks` (`bundle.macOS.frameworks` in `tauri.macos.conf.json`), install name
+  `@rpath/libfastmemo_ai.dylib`, ad-hoc signed by the build script. The app is ad-hoc signed with the hardened runtime, whose
+  library validation refuses a library of another Team ID (an ad-hoc one has none), so `Entitlements.plist` carries
+  `com.apple.security.cs.disable-library-validation`. The rest of the hardened runtime stays on; with a Developer ID certificate
+  the key could go. Windows and Linux: the resources folder `ai/` (`tauri.windows.conf.json`, `tauri.linux.conf.json`).
+- **The build.** `scripts/build-ai-engine.mjs` runs as the first step of `beforeBuildCommand` and `beforeDevCommand`, builds for
+  `TAURI_ENV_TARGET_TRIPLE` (the host's if unset; `universal-apple-darwin` builds both and joins them with `lipo`) and puts the
+  library in `src-tauri/ai-engine/dist/`. Cargo always runs from `src-tauri/ai-engine`, with `--target`: its
+  `.cargo/config.toml` is read from the working directory, and `--target` keeps the rustflags off the build scripts. `build.rs`
+  leaves an empty file where the library would be, so a plain `cargo build` or `cargo test` works and the app runs without AI.
+  - **x86_64 needs AVX2, FMA and F16C** (rustflags): `llama-cpp-sys-2` builds ggml from the Rust target features and the default
+    target has none. The app's own code stays at the baseline. `system::cpu_supported()` checks the three at run time and the
+    library isn't opened otherwise.
+  - **Windows needs no Visual C++ runtime:** `+crt-static`, `LLAMA_STATIC_CRT=1` and `CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded`.
+    The first alone isn't enough (LL-073).
+  - **GPU:** Metal on Apple Silicon, every layer. Intel Macs build with `GGML_METAL=OFF` and run on the CPU: on the CI's Intel
+    runner Metal made the engine's test take 101 s against 4.73 s. Windows and Linux run on the CPU (user decision; Vulkan or
+    CUDA depend on each card's driver, can't be tried on enough PCs, and a driver crash would close the app).
+  - bindgen makes C enums `i32` under MSVC and `u32` under clang (LL-074).
+- **The commands** (`src-tauri/src/ai/mod.rs`): `ai_info`, `ai_load`, `ai_tokenize`, `ai_complete` (tokens over a `Channel`),
+  `ai_stop`, `ai_release`, `ai_model_files`, `ai_download`, `ai_download_cancel`, `ai_delete_files`, `ai_save_eval_report`. One
+  engine call at a time: a second answers `busy` and never waits; `ai_release` and the quit stop the running call and wait
+  for it (30 s and 2 s: on a CPU the stop lands between prompt batches of 512 tokens, about 5 s on the 4B). A stop sent
+  right after a start is kept (counted, not a flag that the start resets), and nothing starts once the app is quitting.
+  The page names a model by its bare file name; Rust knows the folder, and `ai_load` refuses a `.part`.
+- **The same logic on both platforms.** `libs/ai/context.ts` keeps the prompts, sampling, grammars, guards and long-note
+  handling, and reaches the engine through `engine.ts` (llama.rn) or `engine.web.ts` (the commands), and the files through
+  `models.ts` (DownloadManager, ADR-028) or `models.web.ts`. What differs is `platformConstants.ts` /
+  `platformConstants.web.ts`. Qwen3.5's prompt is built in Rust (`prompt.rs`; `llama-cpp-2` applies only llama.cpp's built-in
+  templates, not the model's jinja), with thinking off, and a test compares it with the GGUF's own `tokenizer.chat_template`.
+  Sampling is llama.cpp's common order (penalties over the last 64 tokens, top-k, top-p, min-p, temperature, pick) with the
+  grammar enforced on each pick. Text is streamed in whole UTF-8 characters, and a possible start of a stop word is held back. A
+  long note's rewrite runs one completion per line under the same system prompt: Qwen3.5's recurrent layers can't be trimmed
+  back to a prefix, so the engine keeps a snapshot of the sequence's state after the system turn and restores it
+  (`state_seq_get` / `state_seq_set`).
+- **The model files** are in `app_local_data_dir()/models/` (local, not roaming: 2.7 GB must not travel with a domain profile;
+  Fast Memo Test has its own folder). One model at a time, as on the phone. `ai_download` takes only Hugging Face URLs and a
+  bare file name, writes `<file>.part`, resumes it with a `Range` request (or starts again if the server ignores it), and
+  renames the file only after its size and its SHA-256 match. The three hashes are in `AI_MODELS`; the phone still checks only
+  the size. A cancel deletes the `.part`; an interruption (network, app closed) keeps it. A download doesn't restart by itself
+  at launch (call): 2.7 GB starting unasked on a metered connection would be unwelcome. A full disk reports `no_space`.
+- **Threads: half the logical cores** (at least 1), for reading the prompt and for writing (`system::inference_threads`). Memory
+  bandwidth limits writing more than the cores do, so it loses nothing and the PC stays usable. Measured below.
+- **The desktop's constants** (`platformConstants.web.ts`): context 8192 for the 0.8B and 16384 for the 2B and 4B (the phone:
+  4096 / 8192 / 8192); no `mlock`; default model the 2B (the phone: the 0.8B); `SUMMARY_PART_TOKENS` 6000 (phone 1500),
+  `REWRITE_PIECE_TOKENS` 1200 (phone 600). A desktop install stored the 0.8B as its default from before the AI existed there:
+  `desktopDefaultModelToStore` changes it to the 2B once (AsyncStorage key `@aiDefaultModelChecked`), only if the AI is off and
+  no model file is on the computer, so an explicit choice is never overwritten (NEVER #10). `MODEL_SPEED` holds the M5's CPU
+  numbers, until a computer's own completions replace them.
+- **The UI.** The phone's AI menu runs on desktop with three user-chosen adjustments: the language picker and the preview are
+  centered cards at most `MAX_WIDTH.dialog` (560) wide, Esc closes them (cancel), and there's no new shortcut and Enter doesn't
+  apply. `supportsAI()` is true only in the Tauri shell; a plain browser keeps `ai.unavailable_web`. `useEngineSupport` asks
+  `ai_info` once and the screens decide on its answer. The evaluation's report is saved by Rust (`ai_save_eval_report`, folder
+  `ai-eval/` of the local data) and shared through the save dialog. The AI evaluation takes an optional fixed seed, which the
+  app's actions never pass. `engine.web.ts` flushes the open note (`flushNow`, ADR-013) before each completion, since a fatal
+  error in llama.cpp closes the app.
+- **Resources.** The model loads when an action needs it (or `prewarmContext`), with mmap; the page's idle release (3 minutes)
+  and the release when the page is hidden are the phone's code. A model loaded by a page that has since reloaded is released by
+  the next `ai_load`, which carries a page id.
+- **Dictation stays on the phone**, so `clean_transcript` and `transcript_to_items` never run on desktop. No AI tool in the
+  local MCP server (ADR-032).
+
+**Measured** (Apple M5, 10 cores 4P+6E, 16 GB, `ai-engine/examples/bench.rs`, 2026-11-08):
+
+| config                | prefill tok/s | generate tok/s | max RSS  | 30-line rewrite, with / without the reuse |
+| --------------------- | ------------- | -------------- | -------- | ----------------------------------------- |
+| Metal 0.8B, ctx 8192  | 4945          | 163            | 0.82 GiB | 2.9 / 3.1 s                               |
+| Metal 2B, ctx 16384   | 2561          | 82             | 1.54 GiB | 5.9 / 6.0 s                               |
+| Metal 4B, ctx 16384   | 1045          | 39             | 2.91 GiB | 12.3 / 12.7 s                             |
+| CPU, 5 threads, 0.8B  | 463           | 114            | 1.33 GiB | 5.0 / 7.6 s                               |
+| CPU, 5 threads, 2B    | 225           | 59             | 2.84 GiB | 10.1 / 15.5 s                             |
+| CPU, 5 threads, 4B    | 96            | 27             | 5.70 GiB | 23.1 / 37.1 s                             |
+| CPU, 10 threads, 0.8B | 575           | 96             |          | about the same                            |
+| CPU, 10 threads, 2B   | 311           | 53             |          | about the same                            |
+| CPU, 10 threads, 4B   | 122           | 23.5           |          | about the same                            |
+
+- **Half the threads kept.** Writing was 10-14% faster than on all the cores, reading the prompt 24-36% slower, and a rewrite
+  took the same. The rule for the wider 4B context was to drop it to 8192 only if it cost over 1 GiB more: it cost 0.24 GiB on
+  the CPU, so the 4B keeps 16384.
+- **On the CPU the resident set is about twice the model file:** llama.cpp repacks the Q4 weights for it. That's why the 4B
+  takes 5.7 GiB there, against 2.9 on Metal.
+- **The AI evaluation** (27 fixtures, seed 42; desktop on Metal against the Android emulator's CPU): total 12.8 s against 191 s
+  (0.8B), 19.9 s against 451 s (2B), 40.9 s against 1078 s (4B); the app's peak memory 876 MB, 1638 MB and 3394 MB. The desktop
+  is deterministic (the 2B twice: 27 of 27 identical). Against Android 13, 14 and 16 of 27 outputs are byte-identical and the
+  rest differ in both directions (Metal against ARM CPU arithmetic, another llama.cpp build): judged no worse.
+- **The phone is unchanged:** after the split of `src/libs/ai/`, the Android test build gives the same evaluation, 27 of 27
+  outputs identical to the reference taken before it, on all three models; the OTA fingerprint is the branch base's.
+- **A made-up note of 21,000 tokens on the 2B:** the summary finishes in under a minute with every part read; grammar and
+  translation say "too long for this model"; the app's memory 1.6 GB, no crash.
+- **CI** (the engine test on the 0.8B, run 42504755203 of a test workflow): Windows x64 (NSIS), the Intel Mac and Linux (deb and
+  AppImage) build, ship the library, open it from the installed app and pass. Apple Silicon was checked by hand.
+- **Windows by hand** (the user's desktop PC, 2026-11-08, the test build of all of desktop 2.1.0, run 42520557700): the whole
+  checklist passed (download and its resume, every action, a long note, the app with no engine library). The speeds weren't
+  recorded, so `MODEL_SPEED` there is still the M5's CPU: only a long note's first time estimate, before the PC's own
+  completions replace it (`getModelSpeed`). Linux is never tried by hand (as for every desktop release).
+
+**Alternatives rejected:**
+
+- `llama-server` as a separate process: a local HTTP port, one more executable to sign per platform, and orphans holding
+  gigabytes when the app dies. Its one advantage, a crash that doesn't close the app, is the first trade-off below;
+- the engine linked into the app: the app would need AVX2 to start (or per-CPU builds), and the `--mcp` bridge too;
+- per-CPU libraries chosen at run time (`dynamic-backends`): replaced by one build per platform once the engine was apart;
+- a build without AVX2 for older CPUs: it runs anywhere, several times slower, and the 4B would be unusable. Those PCs get "not
+  available";
+- a CMake build of llama.cpp of our own, or another binding: `llama-cpp-2` was approved with its dependencies;
+- bigger models (7B, 9B): not what the user asked for.
+
+**Trade-offs:**
+
+- the engine runs in the app's process: an abort inside llama.cpp, or a driver fault on Metal, closes the app, and the release
+  profile is `panic = "abort"`. Hence the flush before each completion, the checks before llama.cpp sees a request, and a
+  library that catches Rust panics at its boundary. What an edit loses in such a crash is at most what the editor hadn't yet
+  committed, and the flush takes that to nothing;
+- no GPU on Windows and Linux, and on Intel Macs: a long note on the 4B takes minutes there;
+- a CPU without AVX2, FMA and F16C (before about 2013-2015) has no AI;
+- macOS loads the library only because of an entitlement that turns library validation off for the whole app; a Developer ID
+  certificate would remove the need;
+- a second Rust workspace with its own `Cargo.lock` and a CMake build of llama.cpp: a longer, heavier CI for every desktop
+  build;
+- `llama-cpp-2` is pinned exactly: updating it means checking the prompt fixture, the sampling order and the evaluation again;
+- the RAM the CPU path needs is twice the model's file: on a 8 GB PC the 4B is a stretch, and the settings' RAM gate counts the
+  installed memory (`ai_info`), not what is free.

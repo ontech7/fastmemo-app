@@ -1,4 +1,5 @@
 import { CODEMIRROR_HTML } from "@/generated/codemirror-html";
+import { SCROLLBAR_CSS } from "@/styles/scrollbar";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { Platform, StyleSheet, TextInput, type TextInputInstance } from "react-native";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
@@ -134,7 +135,10 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
 
     const html = useMemo(() => {
       const configScript = `window.__EDITOR_CONFIG__=${JSON.stringify({ code: initialCode, language, readOnly })};`;
-      return CODEMIRROR_HTML.replace("window.__EDITOR_CONFIG__=window.__EDITOR_CONFIG__||{};", configScript);
+      return CODEMIRROR_HTML.replace("window.__EDITOR_CONFIG__=window.__EDITOR_CONFIG__||{};", configScript).replace(
+        "</head>",
+        `<style>${SCROLLBAR_CSS}</style></head>`
+      );
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

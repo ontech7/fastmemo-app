@@ -501,6 +501,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
             onClose={() => setShowFindReplace(false)}
             editorRef={richTextEditor}
             plainText={plainNoteText}
+            readOnly={note.readOnly}
             style={{ marginTop: PADDING_MARGIN.md }}
           />
 

@@ -63,7 +63,8 @@ src/
     inputs/            # BaseInput, CodeInput, SearchNotesInput
     lists/             # FavoriteCategoryList, OrderedCategoryList, OrganizeCategoryList
     todo/              # TodoItem.native.tsx, TodoItem.web.tsx
-    ai/                # AIEditorActions.tsx (before/after preview: title, category -- ADR-027 --, rewrites), .web.tsx
+    ai/                # AIEditorActions.tsx (before/after preview: title, category -- ADR-027 --, rewrites), one file for the
+                       #   phone and the desktop (centered cards and Esc on desktop, ADR-034)
     icons/             # Custom icon components
     lottie/            # LottieAnimation.tsx, LottieAnimation.web.tsx
     webhook/           # WebhookItem
@@ -101,10 +102,12 @@ src/
     useVaultUnlocked.ts # useSyncExternalStore over vaultSession (is the DEK loaded?)
     useVaultPrompt.ts  # useSyncExternalStore over vaultPrompt (does encryption need attention?)
     useVaultProgress.ts # useSyncExternalStore over vaultProgress (re-upload progress bar)
+    useEngineSupport.ts # Desktop: whether the AI engine library loads here (ai_info), once; null elsewhere (ADR-034)
     useAppFonts.ts     # The Geist fonts: built into the apps (expo-font plugin, ADR-025), loaded on the web (.web.ts)
 
   libs/                # Third-party service wrappers
-    ai/                # On-device LLM (llama.rn, Qwen3.5 0.8B/2B/4B -- ADR-004)
+    ai/                # On-device LLM (Qwen3.5 0.8B/2B/4B): llama.rn on the phone (ADR-004), llama.cpp in the Tauri shell on
+                       #   desktop (ADR-034, see "Desktop AI Engine" below)
       types.ts         # AIModelId, AIModelStatus, EditorAction, EditorActionResult, AITimings
       constants.ts     # Model catalog (pinned GGUFs), legacy id map, per-action sampling/token budget, prompts, GBNF
       helpers.ts       # Category matching, HTML stripping, think stripping, stream throttle, rewrite guard, answer cleanup
@@ -113,12 +116,23 @@ src/
                        # estimate, chunking (pure, tested by scripts/ai.test.mjs)
       longNote.ts      # Long notes: a rewrite line by line, a summary in parts then merged, step cache, time estimate
                        # (tested with a stub model)
-      context.ts       # LLM context lifecycle (pre-warm, idle/background release), generation (native only); the model
-                       # download through modules/fastmemo-downloads (Android DownloadManager, picked up after a restart --
-                       # ADR-028), models in the app's shared-storage folder (older downloads still read from files/models/)
+      context.ts       # LLM context lifecycle (pre-warm, idle/background release), generation, one for both platforms: it
+                       # reaches the engine through engine.ts and the files through models.ts (below)
+      engine.ts        # The phone's engine: llama.rn (initLlama), isEngineAvailable, getEngineSupport (RAM from expo-device)
+      engine.web.ts    # The desktop's: the Tauri commands ai_info / ai_load / ai_tokenize / ai_complete / ai_stop / ai_release;
+                       # a plain browser has none (supportsAI() is false). Flushes the open note before each completion
+      models.ts        # The phone's model files: modules/fastmemo-downloads (Android DownloadManager, picked up after a
+                       # restart -- ADR-028), models in the app's shared-storage folder (older downloads still read from
+                       # files/models/)
+      models.web.ts    # The desktop's: ai_model_files / ai_download / ai_download_cancel / ai_delete_files over a Channel
+      modelFiles.ts    # What both share: which files make up a model (getAllModelFiles), the catalog's sizes, the settings'
+                       # change on a finished download
+      platformConstants.ts      # The phone's CONTEXT_SIZE, USE_MLOCK, DEFAULT_MODEL_ID, MODEL_SPEED; supportsAI()
+      platformConstants.web.ts  # The desktop's (bigger contexts, 2B default, bigger long-note parts); supportsAI() = Tauri only
+      desktopDefaultModel.ts    # One-time move of a desktop's stored 0.8B default to the 2B (@aiDefaultModelChecked)
+      evalReport.ts / evalReport.web.ts  # Saving the evaluation's report: expo-sharing / ai_save_eval_report + the save dialog
       eval.ts          # Developer-only evaluation run over evalFixtures.ts (Developer options -> AI evaluation)
-      index.ts         # Barrel export (native)
-      index.web.ts     # No-op stubs for web
+      index.ts         # Barrel export: the same on both platforms (Metro picks the .web variants of what it re-exports)
     haptics/           # Platform-split: native (expo-haptics) / web (no-op stubs)
     apkUpdater.ts      # GitHub APK only (ADR-031): isApkBuild() (its installer module is linked), download + hand-off to
                        # the system installer; .web.ts stubs. The module: modules-apk/fastmemo-installer, linked by
@@ -155,7 +169,18 @@ src/
     appIcon.ts         # Alternate app icon (expo-alternate-app-icons, ADR-020); .android.ts confirms and closes the app, .web.ts: none
     net.ts             # Calls to the user's servers (FastMemo server, webhooks); .web.ts: through Rust on desktop (src-tauri/src/net.rs, ADR-017)
     desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only
-    desktopMenu.ts     # macOS menu labels (i18n menu.*) and its items' commands; .ts no-op, .web.ts on Tauri macOS
+    desktopMenu.ts     # macOS menu labels (i18n menu.*) and its items' commands, the tray's labels; .ts no-op, .web.ts on Tauri
+    mcp/               # The local MCP server's page side (ADR-032, see "Local MCP Server" below), tested by scripts/mcp.test.mjs
+      bridge.web.ts    # Listens for Rust's requests, fills McpDeps with the real app, answers through `mcp_reply`; bridge.ts no-op
+      handlers.ts      # The tools. Pure over McpDeps, so the tests give it a store of their own
+      policy.ts        # What an agent may reach (never locked or hidden): every tool gets at the notes through this
+      noteInput.ts     # A note as an agent describes it -> one the app stores; title, category and flag rules
+      noteEdit.ts      # edit_note's changes, applied to a copy
+      noteView.ts      # A note as an agent reads it: images out, pages, search text, snippets
+      help.ts          # A help topic's text from its i18n strings
+      settingsApi.ts   # The settings page's way to Rust (switches, connection info), MCP_TOOLS
+      snippets.ts      # What to paste into each AI client
+      types.ts         # What Rust and the page exchange: McpRequest, McpReply; and UpdateCheck
     windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
     richTextEditor.ts  # The text editor's page script (line types, code exit, bullets, images, the image menu's messages) and style
                        # (ADR-023, ADR-024, scripts/richtext.test.mjs)
@@ -187,6 +212,7 @@ src/
     code-languages.ts  # Supported code editor languages
     note-types.ts      # Note type metadata
     app-icons.ts       # Alternate app icons: AppIconName (= the plugin names in app.config.ts), labels, previews (ADR-020)
+    help-topics.ts     # The help topics fastmemo_help lists, in the order of the help screen (scripts/mcp.test.mjs checks the two)
 
   configs/             # App configuration
     index.ts           # Main config (env vars, app metadata, business rules, cloud, sentry, firebase)
@@ -321,6 +347,79 @@ server:   items (kind, key, state live|deleted|detached, rev, seq, author, data)
           + vault + stats (per day) + events; dashboard at / (admin key)
 ```
 
+### Local MCP Server (ADR-032)
+
+Desktop only, off until the user enables it (`app/settings/mcp.web.tsx`, entry gated by `isTauri()`).
+
+```
+AI client starts <the app's binary> --mcp          main.rs, before Tauri: no window, no Dock icon
+  bridge.rs: stdin line -> socket -> reply -> stdout (JSON-RPC only; logs on stderr)
+    app away: initialize, server/discover, tools/list answered from what's compiled in; each call -> "isn't reachable";
+    connects again on the next line; one connection for the session (its rights are tied to it)
+  endpoint.rs: <home>/<id>/mcp/sock in a 0700 directory (macOS Application Support, Linux .local/share)
+    Windows: owner-only named pipe, a new name for each start, published in %APPDATA%\<id>\mcp\pipe-name
+  server.rs: one thread per connection, each with its own AppRunner (mod.rs) and Session (session.rs: owned ids, 30 writes/min)
+  protocol.rs: both eras (2026-07-28 server/discover + _meta; 2025-11-25, 2025-06-18 initialize); tools/list -> listed_tools(settings);
+    a tool switched off -> tool error (tools.rs holds the definitions and the defaults)
+  page.rs: request { id, tool, args, scope: { editAll, ownedIds } } -> event fastmemo://mcp-request to the main window; waits 10 s
+page: libs/mcp/bridge.web.ts -> handlers.ts
+  refused until rehydrated and the notes were read (LL-029, LL-039)
+  flushPending (ADR-013) -> policy.ts (locked, hidden: "No note with this id.", as for an id that doesn't exist)
+  write: dispatch (touchNote + outbox, like any change) -> an existing note: notifyNoteChanged (an open editor reloads, no toast)
+         -> flushNow (on disk before it's answered) -> the user's webhook
+  -> invoke("mcp_reply", { id, reply: { text, isError, createdId? } }); createdId -> Session.own
+```
+
+**Settings:** `mcp.json` in the app's config directory (macOS `~/Library/Application Support/<id>/`, Windows `%APPDATA%\<id>\`,
+Linux `~/.config/<id>/`): `{ enabled, tools: { <tool name>: bool }, keepRunning }`, a tool not listed having its default. Owned
+by Rust (`settings.rs`, written by temp file and rename), read at launch and through `mcp_get_settings` / `mcp_set_settings`:
+per device, never in Redux, never synced. `apply_settings` (`mod.rs`) saves them and starts or stops the server, one change at a
+time, and syncs the tray.
+
+**Window closed:** `tray.rs`. macOS never has a tray (ADR-022). Windows and Linux: with `enabled` and `keepRunning`, closing
+hides the window and an icon stays, with Open and Quit; otherwise closing quits. See "Sync while hidden" in ADR-032 for what the
+engine does.
+
+**An app window, not a browser (ADR-033):** the dark theme is the window's config (`theme`, Windows and macOS);
+`window_chrome.rs` paints Windows 11's title bar `#05091A`, trims WebView2's text-field menu to cut/copy/paste and tells a
+minimised page it is hidden. `useKeyboardShortcuts.web.ts` blocks the browser's keys and its right-click menu outside text
+fields and selections; `RICH_TEXT_SCRIPT` does Cmd/Ctrl+B/I/U itself (WebKit on macOS leaves them to a Format menu the app
+doesn't have).
+
+### Desktop AI Engine (ADR-034)
+
+Desktop only (macOS, Windows x64, Linux x64). The phone's AI is llama.rn (ADR-004); the shell's is llama.cpp in a library the
+app opens when the AI is first used.
+
+```
+page: context.ts --> engine.web.ts / models.web.ts --invoke("ai_*")--> src-tauri/src/ai/mod.rs
+  mod.rs      the commands; one engine call at a time ("busy"; release and quit stop it and wait); stop and cancel counted, so one sent early is kept; nothing starts on quit
+  library.rs  libloading: opens LIBRARY_FILE once (macOS Frameworks, Windows/Linux resources "ai/"); checks fm_ai_abi_version == 1
+              -> Unavailable { Cpu | Missing | Abi | Error } = no AI; the app is unaffected
+  system.rs   total memory (sysctl / GlobalMemoryStatusEx / /proc/meminfo), inference_threads() = half the cores, cpu_supported() (AVX2+FMA+F16C)
+  download.rs Hugging Face only -> <file>.part -> Range resume -> size + SHA-256 -> rename; progress ~4/s over a Channel
+    --> fm_ai_call(JSON request, on_token callback, stop flag) --> fm_ai_free(answer)
+src-tauri/ai-engine/ (crate fastmemo-ai, cdylib fastmemo_ai; its own workspace and Cargo.lock; llama-cpp-2 =0.1.161)
+  ffi.rs      the three C functions; catches panics -> {"error":"panic"}
+  json.rs     a small JSON parser and writer (the crate takes no serde)
+  engine.rs   ops load / tokenize / complete / release; every request checked before llama.cpp sees it; mmap, Metal on aarch64 macOS;
+              the system turn's state kept and restored for the next prompt; a prompt over n_ctx refused (truncated), context_full
+  prompt.rs   Qwen3.5's chat prompt, thinking off      sampling.rs  the sampler chain's order      stream.rs  whole UTF-8 chars, stop-word holdback
+  stub.rs     built without the `llama` feature: ABI version 0, every op "no_engine"
+  tests/real_model.rs, examples/bench.rs: need FASTMEMO_AI_MODEL (a GGUF), run from src-tauri/ai-engine
+```
+
+**Build and bundle:** `scripts/build-ai-engine.mjs` is the first step of Tauri's `beforeBuildCommand` / `beforeDevCommand`: it
+builds for `TAURI_ENV_TARGET_TRIPLE` (the host's if unset) into `src-tauri/ai-engine/dist/` (gitignored), always `--target`,
+always with cargo running from `src-tauri/ai-engine` so its `.cargo/config.toml` applies (AVX2/FMA/F16C on x86_64, static CRT on
+MSVC). The macOS dylib gets the install name `@rpath/libfastmemo_ai.dylib` and an ad-hoc signature; Intel Macs build with
+`GGML_METAL=OFF`. The bundle places it per OS in `tauri.macos.conf.json` (`frameworks`, with `Entitlements.plist`),
+`tauri.windows.conf.json` and `tauri.linux.conf.json` (`resources` to `ai/`). `src-tauri/build.rs` leaves an empty file when the
+library wasn't built, which `library.rs` reads as missing.
+
+**Files and settings:** models in `app_local_data_dir()/models/`, evaluation reports in `ai-eval/` beside it. The AI settings
+stay in Redux, per device (`settings.aiAssistant`, not synced). The page's RAM gate reads `totalMemory` from `ai_info`.
+
 ### Persistence Architecture
 
 ```
@@ -357,7 +456,7 @@ Edits reach the store in batches (`useNoteEditor`: debounce 500ms / max 2s nativ
 or a desktop quit: the Rust shell (`src-tauri/src/lib.rs`) holds a quit from the window (close button on Windows/Linux) or the
 app menu (Cmd+Q), emits `fastmemo://flush-before-exit`, and exits on the frontend's `exit_after_flush` or after 2s (Dock Quit,
 logout and OS session end aren't held: ADR-015). On macOS closing the window hides it (`fastmemo://hidden`: a flush, no exit;
-ADR-022).
+ADR-022); on Windows and Linux too, while the local MCP server keeps the app running (ADR-032).
 
 ### Screen Navigation Flow
 
@@ -404,7 +503,7 @@ I18nextProvider
               StatusBar
               WebToaster (web only, conditional require)
               Stack (expo-router, single flat navigator)
-                32 screens (all headerShown: false, transparentModal)
+                33 screens (all headerShown: false, transparentModal)
 ```
 
 ## Platform Abstraction Strategy
@@ -435,10 +534,11 @@ Example: `libs/haptics/index.ts`
 
 ### 3. No-Op Stub Pattern
 
-When a native module (llama.rn, expo-haptics) has no web equivalent, the web variant provides API-compatible stubs that return
-safe defaults (`false`, `""`, `Promise.resolve()`, `{ success: false }`).
+When a native module (expo-haptics) has no web equivalent, the web variant provides API-compatible stubs that return safe
+defaults (`false`, `""`, `Promise.resolve()`, `{ success: false }`).
 
-Example: `libs/ai/index.web.ts`, `libs/haptics/haptics.web.ts`
+Example: `libs/haptics/haptics.web.ts`. The AI is no longer one: its engine and model files are platform splits
+(`libs/ai/engine.ts` / `engine.web.ts`, `models.ts` / `models.web.ts`), and the web variants talk to the Tauri shell (ADR-034).
 
 ## Component Hierarchy (Key Relationships)
 
@@ -489,7 +589,7 @@ utils/crypt --> libs/vaultSession (reads the in-memory DEK; encrypt fails closed
 libs/vaultManager --> utils/vault (envelope primitives) + libs/cloud (vault doc) + libs/vaultSession (cache)
 providers/SyncOnProvider --> libs/vaultSession + hooks/useVaultUnlocked (engine runs only while unlocked)
 
-libs/ai/context.ts --> llama.rn (native LLM)
+libs/ai/context.ts --> libs/ai/engine, models, platformConstants (llama.rn on the phone, Tauri commands on desktop)
                    --> slicers/store (direct getState() for categories, cloud key)
                    --> libs/i18n (language-aware prompts)
 
@@ -501,13 +601,19 @@ libs/cloud/syncEngine, merge, revision --> no app imports (pure; tested by scrip
 libs/cloud/firebaseBackend --> firebase/* (the only place; tested by scripts/sync-firestore.test.mjs)
 libs/cloud/serverBackend --> fetch + libs/secureStore (token) (tested by scripts/sync-server.test.mjs, real server)
 libs/cloud/router, scope --> settings only (which backend, which scope)
+
+libs/mcp/handlers, noteInput, noteEdit, noteView --> McpDeps + libs/mcp/policy (no store import; tested by scripts/mcp.test.mjs)
+libs/mcp/bridge.web --> slicers/store, libs/registry (flushPending), libs/flushOnExit, libs/cloud/sync (notifyNoteChanged)
+src-tauri/src/mcp/ --> the page only through an event and `mcp_reply`; the notes never reach Rust except as text on their way out
+src-tauri/src/ai/ --> the engine library only through libloading, at the first AI command; the page through `ai_*` commands
+src-tauri/ai-engine/ --> llama-cpp-2 (llama.cpp); nothing of the app (its own workspace, not linked into it)
 ```
 
 ## Approximate Scale
 
 | Metric                      | Count            |
 | --------------------------- | ---------------- |
-| Screens (routes)            | 32               |
+| Screens (routes)            | 33               |
 | Components (.tsx)           | ~98              |
 | Redux reducers              | 52 (29 + 9 + 14) |
 | Custom hooks                | 8                |

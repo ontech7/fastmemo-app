@@ -7,7 +7,7 @@ export interface DesktopUpdate {
   close(): Promise<void>;
 }
 
-export async function checkDesktopUpdate(): Promise<DesktopUpdate | null> {
+export async function checkDesktopUpdate(_options?: { timeout?: number }): Promise<DesktopUpdate | null> {
   return null;
 }
 

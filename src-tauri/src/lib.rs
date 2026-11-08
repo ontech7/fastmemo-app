@@ -8,7 +8,23 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_window_state::StateFlags;
 
+mod ai;
+pub mod mcp;
 mod net;
+mod tray;
+mod window_chrome;
+
+/// The app's config, in one place: the MCP bridge reads the identifier from it without starting Tauri.
+fn context() -> tauri::Context<tauri::Wry> {
+    tauri::generate_context!()
+}
+
+/// `--ai-selftest [model.gguf]` (`main.rs`): whether the AI engine library opens in this executable, and with a model
+/// whether it writes. Prints one JSON line, returns the exit code.
+pub fn ai_selftest() -> i32 {
+    let model = std::env::args_os().skip_while(|arg| arg != "--ai-selftest").nth(1).map(std::path::PathBuf::from);
+    ai::selftest(model.as_deref())
+}
 
 /// Prompt the OS biometric dialog (Touch ID on macOS, Windows Hello on Windows)
 /// and report whether it succeeded. Used by the frontend's web/Tauri unlock path
@@ -78,7 +94,7 @@ struct ExitState {
     requested: AtomicBool,
 }
 
-fn flush_then_exit(app: &AppHandle) {
+pub(crate) fn flush_then_exit(app: &AppHandle) {
     if app.state::<ExitState>().requested.swap(true, Ordering::SeqCst) {
         return;
     }
@@ -113,7 +129,7 @@ struct WindowShown(AtomicBool);
 /// Shows the window as the user left it. `focus`: bring the app to the front, for what the user just asked (the Dock, a
 /// second launch, a menu command); not for the launch's first show, which could come after the user moved on to another
 /// app (a slow start).
-fn show_main(app: &AppHandle, focus: bool) {
+pub(crate) fn show_main(app: &AppHandle, focus: bool) {
     // A closing full screen window asked back during its animation stays (`left_fullscreen`).
     #[cfg(target_os = "macos")]
     {
@@ -151,8 +167,8 @@ fn window_ready(app: AppHandle) {
     }
 }
 
-/// The event the frontend flushes on without quitting: the window was closed, the app goes on in the background.
-#[cfg(target_os = "macos")]
+/// The event the frontend flushes on without quitting: the window was closed, the app goes on in the background (macOS, and
+/// Windows and Linux with the tray: `tray.rs`).
 const HIDDEN_EVENT: &str = "fastmemo://hidden";
 
 /// macOS: closing the window leaves the app running, as Notes does (the Dock keeps its dot, a click on it brings the
@@ -549,14 +565,33 @@ pub fn run() {
         .manage(ExitState::default())
         .manage(WindowShown::default())
         .manage(net::Net::default())
+        .manage(mcp::McpState::default())
+        .manage(tray::TrayState::default())
+        .manage(ai::Ai::default())
         .invoke_handler(tauri::generate_handler![
             biometric_authenticate,
             exit_after_flush,
             window_ready,
             set_menu_labels,
+            tray::set_tray_labels,
             net::net_request,
             net::net_cancel,
-            net::net_webhook
+            net::net_webhook,
+            mcp::mcp_reply,
+            mcp::mcp_get_settings,
+            mcp::mcp_set_settings,
+            mcp::mcp_connection_info,
+            ai::ai_info,
+            ai::ai_load,
+            ai::ai_tokenize,
+            ai::ai_complete,
+            ai::ai_stop,
+            ai::ai_release,
+            ai::ai_model_files,
+            ai::ai_download,
+            ai::ai_download_cancel,
+            ai::ai_delete_files,
+            ai::ai_save_eval_report
         ])
         .setup(|app| {
             // The config's frame: window-state's restore lands just after (on the main queue), recorded through its
@@ -565,6 +600,11 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 remember_windowed_frame(&window.as_ref().window());
             }
+            if let Some(window) = app.get_webview_window("main") {
+                window_chrome::paint_title_bar(&window);
+                window_chrome::keep_only_editing_items(&window);
+            }
+            mcp::launch(app.handle());
             let app = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(SHOW_FALLBACK);
@@ -581,15 +621,24 @@ pub fn run() {
             if matches!(event, WindowEvent::Resized(_) | WindowEvent::Moved(_)) {
                 remember_windowed_frame(window);
             }
+            // Minimising resizes the window to nothing (Windows).
+            if matches!(event, WindowEvent::Resized(_)) {
+                window_chrome::follow_minimised(window);
+            }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 #[cfg(target_os = "macos")]
                 hide_main(window);
                 #[cfg(not(target_os = "macos"))]
-                flush_then_exit(window.app_handle());
+                if tray::hides_on_close(window.app_handle()) {
+                    let _ = window.app_handle().emit_to("main", HIDDEN_EVENT, ());
+                    let _ = window.hide();
+                } else {
+                    flush_then_exit(window.app_handle());
+                }
             }
         })
-        .build(tauri::generate_context!())
+        .build(context())
         .expect("error while building tauri application")
         .run(|app, event| match event {
             // `code` is None when the last window is gone; `app.exit()` comes back here with Some and goes through.
@@ -601,8 +650,12 @@ pub fn run() {
             // leaving full screen to be hidden).
             #[cfg(target_os = "macos")]
             RunEvent::Reopen { .. } => show_main(app, true),
-            #[cfg(target_os = "macos")]
-            RunEvent::Exit => save_windowed_frame(app),
+            // Every quit through the event loop (`app.exit`) ends here.
+            RunEvent::Exit => {
+                #[cfg(target_os = "macos")]
+                save_windowed_frame(app);
+                app.state::<ai::Ai>().release_at_quit();
+            }
             _ => {}
         });
 }

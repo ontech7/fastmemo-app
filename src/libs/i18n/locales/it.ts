@@ -15,6 +15,11 @@ const it = {
     title: "Cosa c'è di nuovo?",
 
     web: {
+      description_2_1_0: `• L'assistente AI anche sul computer: correggi, accorcia, traduci e riassumi, tutto sul tuo dispositivo.
+• Collega alle tue note agenti AI come Claude o Cursor tramite MCP: disattivato di default, e le note bloccate o nascoste restano fuori portata.
+• Una finestra da app: barra del titolo scura, niente menu o scorciatoie del browser.
+• Varie correzioni e miglioramenti.`,
+
       description_2_0_0: `• Sincronizza con il tuo FastMemo Server, in alternativa a Firebase.
 • Sincronizzazione in tempo reale tra i tuoi dispositivi.
 • Scorciatoie da tastiera e, su Mac, la barra dei menu.
@@ -314,7 +319,7 @@ const it = {
     conflict_copies:
       "Modificata su due dispositivi prima della sincronizzazione: sono state tenute entrambe le versioni (una come copia)",
     open_on: "Aperta su {{devices}}",
-    note_deleted_elsewhere: "Questa nota è stata spostata nel cestino su un altro dispositivo. Modificarla la ripristina.",
+    note_deleted_elsewhere: "Questa nota è stata spostata nel cestino. Modificarla la ripristina.",
     title: "Sincronizzazione Cloud",
     syncing_1: "Sincronizzazione in corso…",
     syncing_2: "Aspetta fino al termine",
@@ -478,6 +483,53 @@ const it = {
     importData: "Importa dati",
     wipeData: "Cancella dati",
   },
+  mcp: {
+    title: "Server MCP",
+    enable_label: "Permetti agli agenti AI di usare Fast Memo",
+    enable_line: "Gli agenti AI su questo computer, come Claude Code, possono cercare, leggere e aggiungere note.",
+    provider_warning: "Quello che un agente legge viene inviato al provider del modello che usa.",
+    tools_section: "Strumenti",
+    tools: {
+      fastmemo_create_note: "Crea note",
+      fastmemo_list_categories: "Elenca le categorie",
+      fastmemo_search_notes: "Cerca note",
+      fastmemo_read_note: "Leggi note",
+      fastmemo_set_note_flags: "Imposta i flag di una nota",
+      fastmemo_help: "Leggi la guida",
+      fastmemo_check_update: "Controlla gli aggiornamenti",
+      fastmemo_edit_note: "Modifica note",
+      fastmemo_trash_note: "Sposta note nel cestino",
+    },
+    tool_lines: {
+      fastmemo_create_note: "Aggiunge una nota di testo, todo, kanban o codice.",
+      fastmemo_list_categories: "Mostra i nomi delle tue categorie.",
+      fastmemo_search_notes: "Trova note per titolo o contenuto. Le note bloccate e nascoste non vengono mai trovate.",
+      fastmemo_read_note: "Legge il contenuto di una nota. Le note bloccate e nascoste non si possono leggere.",
+      fastmemo_set_note_flags: "Segna una nota come importante, di sola lettura o bloccata.",
+      fastmemo_help: "Legge gli argomenti della guida di Fast Memo.",
+      fastmemo_check_update: "Dice se esiste una versione più recente. Non installa nulla.",
+      fastmemo_trash_note: "Sposta una nota nel cestino temporaneo, da cui puoi ripristinarla.",
+    },
+    edit_note_line: "Da spento, un agente può modificare solo le note create nella stessa sessione.",
+    background_label: "Resta attivo in background",
+    background_line:
+      "Attivo: chiudendo la finestra Fast Memo resta in esecuzione, con un'icona nell'area di notifica. Spento: la chiusura esce dall'app e gli agenti la raggiungono solo con la finestra aperta.",
+    connect_section: "Collega un agente",
+    connect_intro: "Aggiungi Fast Memo al tuo agente con il testo qui sotto. Funziona con MCP attivo.",
+    client_claude_code: "Claude Code",
+    client_codex: "Codex",
+    client_json: "Claude Desktop e Cursor",
+    json_files:
+      "Salva questo JSON in claude_desktop_config.json per Claude Desktop (Impostazioni, Sviluppatore, Modifica configurazione), oppure in ~/.cursor/mcp.json per Cursor. Se il file ha già altri server, aggiungi solo la voce fastmemo dentro mcpServers.",
+    copy: "Copia",
+    copied: "Copiato",
+    copy_failed: "Impossibile copiare. Seleziona il testo e copialo a mano.",
+    copy_label: "Copia il testo per {{client}}",
+    moved_warning:
+      "Fast Memo non è nella cartella Applicazioni. Se lo sposti, il collegamento smette di funzionare: mettilo in Applicazioni e copia di nuovo il testo.",
+    save_failed: "Impossibile applicare la modifica: {{error}}",
+    load_failed: "Impossibile leggere le impostazioni: {{error}}",
+  },
   generalsettings: {
     title: "Impostazioni",
     basic: "Base",
@@ -496,6 +548,7 @@ const it = {
       "Scrivi qui la tua frase segreta. Ricordati di salvarlo altrimenti non sarai in grado di recuperare le tue note.",
     import_popup_description: "Scrivi qui la tua frase segreta per importare le tue note.",
     webhooks: "Webhooks",
+    mcp: "MCP",
     voice_recognition: "Riconoscimento vocale",
     ai_assistant: "Assistente AI",
     note_creation: "Creazione nota",
@@ -574,6 +627,8 @@ const it = {
     download_no_space: "Spazio insufficiente per il modello: liberane un po' e riprova.",
     download_background:
       "Puoi uscire da questa pagina o spegnere lo schermo: il download continua, con il progresso nelle notifiche.",
+    download_background_desktop:
+      "Puoi uscire da questa pagina: il download continua. Se chiudi l'app, premi di nuovo Scarica modello: riprende da dove era rimasto.",
     cancel: "Annulla",
     delete_model: "Elimina modello",
     info: "L'assistente AI funziona interamente sul tuo dispositivo. Nessun dato viene inviato a server esterni. Il modello si scarica una volta (da ~530 MB) e resta salvato sul dispositivo.",
@@ -601,6 +656,7 @@ const it = {
     },
     unavailable_web: "L'Assistente AI è disponibile solo su dispositivi mobili.",
     native_rebuild_needed: "L'Assistente AI richiede una rebuild nativa.\nEsegui: npx expo run:android",
+    unavailable_computer: "L'AI non è disponibile su questo computer.",
     voice_only: "Solo voce",
     voice_only_hint: "Interagisci con l'assistente usando solo la voce",
     listening: "Sto ascoltando...",
@@ -1141,6 +1197,8 @@ const it = {
     zoom: "Ridimensiona",
     help: "Aiuto",
     help_item: "Aiuto di {{name}}",
+    tray_open: "Apri Fast Memo",
+    tray_quit: "Esci",
   },
 
   a11y: {

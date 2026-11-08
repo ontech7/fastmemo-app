@@ -6,6 +6,7 @@ import CheckCircleIcon from "react-native-heroicons/outline/CheckCircleIcon";
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 /**
@@ -47,7 +48,11 @@ export function VaultScreen({
         {children}
       </KeyboardAwareScrollView>
 
-      {footer && <View style={styles.footer}>{footer}</View>}
+      {footer && (
+        <View style={styles.footer}>
+          <View style={CONTENT_COLUMN}>{footer}</View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -150,7 +155,7 @@ const styles = StyleSheet.create({
   },
   headerSpacer: { width: 40 },
   scroll: { paddingHorizontal: PADDING_MARGIN.lg },
-  scrollContent: { paddingBottom: PADDING_MARGIN.lg },
+  scrollContent: { ...CONTENT_COLUMN, paddingBottom: PADDING_MARGIN.lg },
   footer: { paddingHorizontal: PADDING_MARGIN.lg, paddingBottom: PADDING_MARGIN.md },
   description: {
     color: COLOR.textSecondary,

@@ -9,6 +9,7 @@ import { useRouter } from "@/hooks/useRouter";
 import Haptics from "@/libs/haptics";
 import { retrieveSecretCodeCallback } from "@/libs/registry";
 
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 import BackButton from "@/components/buttons/BackButton";
@@ -171,6 +172,7 @@ const styles = StyleSheet.create({
     width: 42,
   },
   codeInputWrapper: {
+    ...CONTENT_COLUMN,
     flex: 1,
     justifyContent: "flex-end",
   },

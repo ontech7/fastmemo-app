@@ -8,6 +8,7 @@ import SelectableCardList, { type SelectableCardItem } from "@/components/lists/
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { APP_ICONS, type AppIconId } from "@/constants/app-icons";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { appIconClosesApp, getAppIcon, setAppIcon } from "@/libs/appIcon";
 import { toast } from "@/utils/toast";
@@ -79,7 +80,7 @@ export default function AppIconScreen() {
           <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView style={styles.scroll}>
+        <ScrollView style={styles.scroll} contentContainerStyle={CONTENT_COLUMN}>
           <SelectableCardList<AppIconId> items={items} selectedId={current} onSelect={selectIcon} />
         </ScrollView>
       </SafeAreaView>

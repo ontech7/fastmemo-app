@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "build": {
-    "beforeBuildCommand": "npx expo export --platform web",
-    "beforeDevCommand": "npx expo start --web --port 19006",
+    "beforeBuildCommand": "node scripts/build-ai-engine.mjs && npx expo export --platform web",
+    "beforeDevCommand": "node scripts/build-ai-engine.mjs && npx expo start --web --port 19006",
     "frontendDist": "../dist",
     "devUrl": "http://localhost:19006"
   },
@@ -27,11 +27,9 @@
     "longDescription": "Fast Memo - Your personal notes app with cloud sync, rich text editing, and more.",
     "macOS": {
       "entitlements": null,
-      "frameworks": [],
       "providerShortName": null,
       "signingIdentity": "-"
     },
-    "resources": [],
     "shortDescription": "Notes in one click",
     "linux": {
       "deb": {
@@ -42,7 +40,7 @@
   },
   "productName": "Fast Memo",
   "mainBinaryName": "Fast Memo",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "identifier": "com.ontech7.fastmemo",
   "plugins": {
     "updater": {
@@ -65,6 +63,7 @@
         "minHeight": 700,
         "visible": false,
         "backgroundColor": "#05091A",
+        "theme": "Dark",
         "titleBarStyle": "Transparent",
         "useHttpsScheme": true
       }

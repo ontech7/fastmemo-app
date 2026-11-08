@@ -982,9 +982,12 @@ dependencies = [
 
 [[package]]
 name = "fastmemo"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
+ "libc",
+ "libloading",
  "reqwest",
+ "ring",
  "robius-authentication",
  "rustls",
  "serde",
@@ -999,6 +1002,9 @@ dependencies = [
  "tauri-plugin-updater",
  "tauri-plugin-window-state",
  "tokio",
+ "webview2-com",
+ "windows-core 0.62.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

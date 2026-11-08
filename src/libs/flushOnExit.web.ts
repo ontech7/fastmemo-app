@@ -15,7 +15,8 @@ export function flushNow(): Promise<void> {
  * A hidden or closing page may never get to redux-persist's next write tick: flush right away.
  * Quitting the desktop app doesn't reliably fire page events, so on Tauri every quit (close button,
  * Cmd+Q) waits for the writes: the Rust shell asks for a flush and exits once told so
- * (`src-tauri/src/lib.rs`). On macOS the close button only hides the window: a flush, no exit.
+ * (`src-tauri/src/lib.rs`). On macOS the close button only hides the window: a flush, no exit. So it does on Windows and
+ * Linux while the local MCP server keeps the app running (tray icon).
  */
 export function installFlushOnExit(): void {
   document.addEventListener("visibilitychange", () => {
@@ -28,7 +29,7 @@ export function installFlushOnExit(): void {
   if (isTauri()) {
     Promise.all([import("@tauri-apps/api/event"), import("@tauri-apps/api/core")])
       .then(([{ listen }, { invoke }]) => {
-        // macOS: the window was closed, the app goes on hidden.
+        // The window was closed, the app goes on hidden (macOS; Windows and Linux with the tray icon).
         listen("fastmemo://hidden", () => {
           flushNow();
         });

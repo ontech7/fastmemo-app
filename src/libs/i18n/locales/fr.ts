@@ -15,6 +15,11 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
+      description_2_1_0: `• L'assistant IA aussi sur l'ordinateur : corrigez, raccourcissez, traduisez et résumez, le tout sur votre appareil.
+• Connectez des agents IA comme Claude ou Cursor à vos notes via MCP : désactivé par défaut, et les notes verrouillées ou masquées restent hors de portée.
+• Une fenêtre digne d'une app : barre de titre sombre, sans menus ni raccourcis du navigateur.
+• Diverses corrections et améliorations.`,
+
       description_2_0_0: `• Synchronisez avec votre propre FastMemo Server, à la place de Firebase.
 • Synchronisation en temps réel entre vos appareils.
 • Raccourcis clavier et, sur Mac, une barre de menus.
@@ -315,7 +320,7 @@ const fr = {
     conflict_copies:
       "Modifiée sur deux appareils avant la synchronisation : les deux versions ont été gardées (l'une en copie)",
     open_on: "Ouverte sur {{devices}}",
-    note_deleted_elsewhere: "Cette note a été mise à la corbeille sur un autre appareil. La modifier la restaure.",
+    note_deleted_elsewhere: "Cette note a été mise à la corbeille. La modifier la restaure.",
     title: "Cloud Sync",
     syncing_1: "Synchronisation en cours...",
     syncing_2: "Attendre la fin",
@@ -482,6 +487,54 @@ const fr = {
     importData: "Importer des données",
     wipeData: "Effacer les données",
   },
+  mcp: {
+    title: "Serveur MCP",
+    enable_label: "Autoriser les agents IA à utiliser Fast Memo",
+    enable_line: "Les agents IA de cet ordinateur, comme Claude Code, peuvent chercher, lire et ajouter des notes.",
+    provider_warning: "Ce qu'un agent lit est envoyé au fournisseur du modèle qu'il utilise.",
+    tools_section: "Outils",
+    tools: {
+      fastmemo_create_note: "Créer des notes",
+      fastmemo_list_categories: "Lister les catégories",
+      fastmemo_search_notes: "Rechercher des notes",
+      fastmemo_read_note: "Lire des notes",
+      fastmemo_set_note_flags: "Modifier les indicateurs d'une note",
+      fastmemo_help: "Lire l'aide",
+      fastmemo_check_update: "Rechercher des mises à jour",
+      fastmemo_edit_note: "Modifier des notes",
+      fastmemo_trash_note: "Mettre des notes à la corbeille",
+    },
+    tool_lines: {
+      fastmemo_create_note: "Ajoute une note de texte, de tâches, kanban ou de code.",
+      fastmemo_list_categories: "Affiche les noms de vos catégories.",
+      fastmemo_search_notes:
+        "Trouve des notes par titre ou contenu. Les notes verrouillées et masquées ne sont jamais trouvées.",
+      fastmemo_read_note: "Lit le contenu d'une note. Les notes verrouillées et masquées ne peuvent pas être lues.",
+      fastmemo_set_note_flags: "Marque une note comme importante, en lecture seule ou verrouillée.",
+      fastmemo_help: "Lit les sujets de l'aide de Fast Memo.",
+      fastmemo_check_update: "Indique si une version plus récente existe. N'installe rien.",
+      fastmemo_trash_note: "Met une note dans la corbeille temporaire, d'où vous pouvez la restaurer.",
+    },
+    edit_note_line: "Si désactivé, un agent ne peut modifier que les notes créées dans la même session.",
+    background_label: "Rester actif en arrière-plan",
+    background_line:
+      "Activé : en fermant la fenêtre, Fast Memo reste en cours d'exécution avec une icône dans la zone de notification. Désactivé : la fermeture quitte l'application, et les agents ne l'atteignent que fenêtre ouverte.",
+    connect_section: "Connecter un agent",
+    connect_intro: "Ajoutez Fast Memo à votre agent avec le texte ci-dessous. Cela fonctionne quand MCP est activé.",
+    client_claude_code: "Claude Code",
+    client_codex: "Codex",
+    client_json: "Claude Desktop et Cursor",
+    json_files:
+      "Enregistrez ce JSON dans claude_desktop_config.json pour Claude Desktop (Paramètres, Développeur, Modifier la configuration), ou dans ~/.cursor/mcp.json pour Cursor. Si le fichier contient déjà d'autres serveurs, ajoutez seulement l'entrée fastmemo dans mcpServers.",
+    copy: "Copier",
+    copied: "Copié",
+    copy_failed: "Copie impossible. Sélectionnez le texte et copiez-le à la main.",
+    copy_label: "Copier le texte pour {{client}}",
+    moved_warning:
+      "Fast Memo n'est pas dans le dossier Applications. Si vous le déplacez, la connexion cesse de fonctionner : placez-le dans Applications, puis copiez à nouveau le texte.",
+    save_failed: "Impossible d'appliquer la modification : {{error}}",
+    load_failed: "Impossible de lire les réglages : {{error}}",
+  },
   generalsettings: {
     title: "Paramètres",
     basic: "Basique",
@@ -500,6 +553,7 @@ const fr = {
       "Écrivez votre mot de passe secret ici. Pensez à le sauvegarder sinon vous ne pourrez pas récupérer vos notes.",
     import_popup_description: "Écrivez votre mot de passe secret ici pour importer vos notes.",
     webhooks: "Webhooks",
+    mcp: "MCP",
     voice_recognition: "Reconnaissance vocale",
     ai_assistant: "Assistant IA",
     note_creation: "Création de note",
@@ -578,6 +632,8 @@ const fr = {
     download_no_space: "Pas assez d'espace pour le modèle : libérez-en un peu et réessayez.",
     download_background:
       "Vous pouvez quitter cet écran ou l'éteindre : le téléchargement continue, avec sa progression dans les notifications.",
+    download_background_desktop:
+      "Vous pouvez quitter cette page : le téléchargement continue. Si vous fermez l'application, cliquez à nouveau sur Télécharger le modèle : il reprend là où il s'était arrêté.",
     cancel: "Annuler",
     delete_model: "Supprimer le modèle",
     info: "L'assistant IA fonctionne entièrement sur votre appareil. Aucune donnée n'est envoyée à des serveurs externes. Le modèle se télécharge une fois (à partir de ~530 Mo) et reste stocké sur l'appareil.",
@@ -605,6 +661,7 @@ const fr = {
     },
     unavailable_web: "L'Assistant IA n'est disponible que sur les appareils mobiles.",
     native_rebuild_needed: "L'Assistant IA nécessite une reconstruction native.\nExécutez : npx expo run:android",
+    unavailable_computer: "L'IA n'est pas disponible sur cet ordinateur.",
     voice_only: "Voix uniquement",
     voice_only_hint: "Interagir avec l'assistant en utilisant uniquement votre voix",
     listening: "J'écoute...",
@@ -1154,6 +1211,8 @@ const fr = {
     zoom: "Réduire/agrandir",
     help: "Aide",
     help_item: "Aide {{name}}",
+    tray_open: "Ouvrir Fast Memo",
+    tray_quit: "Quitter",
   },
 
   a11y: {
