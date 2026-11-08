@@ -17,6 +17,10 @@ import { isTauri } from "@/utils/platform";
  * - F5 and Cmd/Ctrl+R would reload the page, dropping the edits not yet saved: blocked outside development.
  * - Alt+arrows (Windows, Linux) and the keyboard's back/forward keys would leave the screen through the history, without
  *   its back button: blocked.
+ * - The browser's own keys, which make no sense in an app window: print, find (F3, Cmd/Ctrl+G, and Cmd/Ctrl+F where the
+ *   app has nothing to find), save, open, view source, zoom and caret browsing (F7). WebView2 acts on most of them.
+ * - A right click opens the browser's menu (back, reload, print…) only where it edits or copies text: in a text field,
+ *   or over selected text. On Windows that menu keeps only cut, copy and paste (`src-tauri/src/window_chrome.rs`).
  *
  * A shortcut presses its control (`SHORTCUT_TARGET`) only when a click would reach it: an open dialog, menu or popup
  * lying over it means the key does nothing. It never acts on a held key's repeats, while an input method is composing
@@ -45,6 +49,24 @@ function isHistoryKey(e: KeyboardEvent): boolean {
   return !IS_MAC && e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight");
 }
 
+/** Find next and caret browsing. */
+const BROWSER_KEYS = new Set(["F3", "F7"]);
+/** With Cmd/Ctrl: print, find next, save, open. */
+const BROWSER_LETTERS = new Set(["p", "g", "s", "o"]);
+const ZOOM_KEYS = new Set(["+", "-", "=", "0"]);
+
+/**
+ * A browser's key. Cmd on a Mac, where Ctrl+letters move the caret in text fields. Cmd/Ctrl+U is view source only outside
+ * a text field: in the text editor it underlines.
+ */
+function isBrowserKey(e: KeyboardEvent, mod: boolean): boolean {
+  if (BROWSER_KEYS.has(e.key)) return true;
+  if (!mod || e.altKey) return false;
+  if (ZOOM_KEYS.has(e.key) || e.code === "NumpadAdd" || e.code === "NumpadSubtract") return true;
+  const letter = letterOf(e);
+  return BROWSER_LETTERS.has(letter) || (letter === "u" && !isEditable(e.target));
+}
+
 function onDesktopKeyDown(e: KeyboardEvent) {
   // keyCode 229: WebKit reports the key that ends a composition that way, with isComposing already false.
   if (e.defaultPrevented || e.isComposing || e.keyCode === 229) return;
@@ -52,7 +74,7 @@ function onDesktopKeyDown(e: KeyboardEvent) {
   const mod = IS_MAC ? e.metaKey : e.ctrlKey;
   const otherMod = IS_MAC ? e.ctrlKey : e.metaKey;
 
-  if ((!__DEV__ && isReload(e, mod)) || isHistoryKey(e)) {
+  if ((!__DEV__ && isReload(e, mod)) || isHistoryKey(e) || isBrowserKey(e, mod)) {
     e.preventDefault();
     return;
   }
@@ -80,7 +102,39 @@ function onDesktopKeyDown(e: KeyboardEvent) {
   if (command && canRun(command)) {
     e.preventDefault();
     void runCommand(command);
+  } else if (command === "find") {
+    // Nothing to find on this screen: not the browser's find bar either.
+    e.preventDefault();
   }
+}
+
+function hasSelectedText(target: EventTarget | null): boolean {
+  const selection = (target as Node | null)?.ownerDocument?.getSelection();
+  return !!selection && !selection.isCollapsed && !!selection.toString().trim();
+}
+
+/**
+ * Whether text was selected when the right button went down. WebKit on macOS selects the word under the pointer before the
+ * menu opens, so at `contextmenu` every word would look selected. null: a menu from the keyboard, with no press before it.
+ */
+let selectedOnPress: boolean | null = null;
+
+function onMouseDown(e: MouseEvent) {
+  if (e.button !== 2 || isEditable(e.target)) return;
+  selectedOnPress = hasSelectedText(e.target);
+  // No menu will open: not WebKit's word selection either.
+  if (!selectedOnPress) e.preventDefault();
+}
+
+/** A right click: the browser's menu only over a text field or text the user selected, to edit or copy. */
+function onContextMenu(e: MouseEvent) {
+  const pressed = selectedOnPress;
+  selectedOnPress = null;
+  if (isEditable(e.target) || (pressed ?? hasSelectedText(e.target))) return;
+  e.preventDefault();
+  // Nothing was selected before the click: what WebKit selected for its menu (a word, a space) goes with the menu.
+  const selection = (e.target as Node | null)?.ownerDocument?.getSelection();
+  if (pressed === false && selection && !selection.isCollapsed) selection.removeAllRanges();
 }
 
 /** The note editors' iframe documents already listened to. */
@@ -95,6 +149,8 @@ function listenToFrame(frame: Element | null) {
   // Esc can leave the focus on the editor's page itself, where Backspace isn't editing anything.
   doc.addEventListener("keydown", onBackspace);
   doc.addEventListener("keydown", onDesktopKeyDown);
+  doc.addEventListener("mousedown", onMouseDown, true);
+  doc.addEventListener("contextmenu", onContextMenu);
 }
 
 // `load` doesn't bubble, but a capturing listener on the document sees every iframe (re)load.
@@ -114,12 +170,16 @@ export function useKeyboardShortcuts(): void {
     if (!isTauri()) return () => window.removeEventListener("keydown", onBackspace);
 
     window.addEventListener("keydown", onDesktopKeyDown, true);
+    window.addEventListener("mousedown", onMouseDown, true);
+    window.addEventListener("contextmenu", onContextMenu);
     document.addEventListener("load", onLoadCapture, true);
     document.querySelectorAll("iframe").forEach(listenToFrame);
 
     return () => {
       window.removeEventListener("keydown", onBackspace);
       window.removeEventListener("keydown", onDesktopKeyDown, true);
+      window.removeEventListener("mousedown", onMouseDown, true);
+      window.removeEventListener("contextmenu", onContextMenu);
       document.removeEventListener("load", onLoadCapture, true);
     };
   }, []);

@@ -65,6 +65,7 @@
         "minHeight": 700,
         "visible": false,
         "backgroundColor": "#05091A",
+        "theme": "Dark",
         "titleBarStyle": "Transparent",
         "useHttpsScheme": true
       }

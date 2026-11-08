@@ -1521,3 +1521,40 @@ holding notes it didn't make.
 - on Windows and Linux with MCP on, a closed window keeps the app's memory (~a browser tab), as on macOS;
 - a text note's content is HTML, so an agent that writes Markdown gets it as plain text;
 - the protocol is ours to keep up with, with no SDK: a new MCP revision means a change in `protocol.rs`.
+
+## ADR-033: The Desktop Window Is an App, Not a Browser
+
+**Status:** Accepted (2026-11-06, user decisions: the dark theme forced and the app's colour on Windows 11's title bar, Windows
+10 and Linux without it; the right-click menu trimmed, the page paused while minimised on Windows and the browser's keys
+blocked, as in drezimo-soundboard; `webview2-com` and `windows-core` approved on 2026-11-08. Cmd+B/I/U on macOS reported by the
+user on 2026-11-08)  
+**Context:** macOS already drew the title bar in the app's colour (`titleBarStyle: Transparent` over `backgroundColor`). Windows
+showed a light system bar, a right click anywhere opened the browser's menu (back, reload, print, and in a text field Edge's own
+items: emoji, writing assistance), Ctrl+P printed the page, Ctrl+F opened WebView2's find bar where the app had nothing to find,
+and a minimised window's page went on as if on screen, WebView2 not being told. On macOS, Cmd+B did nothing in a text note:
+WebKit leaves bold, italic and underline to an app's Format menu.
+
+**Decision:**
+
+- **Dark theme** in the window's config (`theme: "Dark"`, Windows and macOS; Linux follows the system theme).
+- **Title bar colour** (`window_chrome.rs`, Windows): `DwmSetWindowAttribute(DWMWA_CAPTION_COLOR)` with `#05091A`. Windows 10
+  refuses the attribute and keeps the dark theme's bar.
+- **Right-click menu:** the page prevents it except over a text field or selected text (`useKeyboardShortcuts.web.ts`, in the
+  window and the editors' iframes), so a read-only note can still be copied from. On Windows, WebView2's menu keeps only cut,
+  copy and paste (`ContextMenuRequested`, `window_chrome.rs`).
+- **Browser keys** blocked with Cmd (Mac) or Ctrl: print, find next (also F3), save, open, zoom (+, -, =, 0), view source (U,
+  outside a text field: in the editor it underlines), caret browsing (F7), and Cmd/Ctrl+F where the app has nothing to find.
+  Ctrl+letters on a Mac move the caret in text fields: untouched.
+- **Minimised (Windows):** `SetIsVisible(false)` on the WebView2 controller, `true` again when restored
+  (`WindowEvent::Resized`). The page gets `visibilitychange`: it flushes the edits not yet written and, back on screen, the sync
+  reconnects.
+- **Cmd/Ctrl+B/I/U** done by the text editor's page (`RICH_TEXT_SCRIPT`), only while it's editable, preventing the browser's own
+  so Chromium doesn't apply them a second time.
+
+**Trade-offs:**
+
+- `webview2-com` and `windows-core` must stay at the versions `wry` uses (Cargo.lock) when Tauri is updated, or the WebView2
+  types won't match;
+- a minimised page is throttled like a background tab: the local MCP server still has to answer it within its timeout (a check
+  of the Windows run, ADR-032);
+- the menu over selected text is still the browser's on macOS and Linux (copy, look up, share…): only Windows' is trimmed.

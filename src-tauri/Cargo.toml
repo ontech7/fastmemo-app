@@ -41,16 +41,22 @@ tokio = { version = "1", default-features = false, features = ["sync"] }
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 robius-authentication = "0.1.1"
 
-# The named pipe of the local MCP server (src/mcp/endpoint.rs). Win32_System_IO is what ConnectNamedPipe is gated on.
+# The named pipe of the local MCP server (src/mcp/endpoint.rs; Win32_System_IO is what ConnectNamedPipe is gated on) and
+# the title bar's colour (src/window_chrome.rs, Win32_Graphics_Dwm). WebView2's own interfaces (the text fields' menu, a
+# minimised page) come from the same webview2-com and windows-core wry uses: keep their versions in step with wry's when
+# Tauri is updated (Cargo.lock).
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
+    "Win32_Graphics_Dwm",
     "Win32_Security",
     "Win32_Security_Authorization",
     "Win32_Storage_FileSystem",
     "Win32_System_IO",
     "Win32_System_Pipes",
 ] }
+webview2-com = "0.39"
+windows-core = "0.62"
 
 [profile.dev]
 incremental = true
