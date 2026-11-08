@@ -89,8 +89,13 @@ impl Ai {
         if self.exiting.load(Ordering::SeqCst) {
             return Err(EXITING.to_string());
         }
-        // a quit just after the check above stops this call through `request_stop`, which moves the count
-        self.stop.store(self.stops_now() != entry, Ordering::SeqCst);
+        // cleared, then set again if a stop was sent since `entry`: a `request_stop` landing between the two steps is
+        // never wiped (it moves the count, or sets the flag after the clear). A quit just after the check above stops
+        // this call the same way.
+        self.stop.store(false, Ordering::SeqCst);
+        if self.stops_now() != entry {
+            self.stop.store(true, Ordering::SeqCst);
+        }
         Ok((guard, Arc::clone(&self.stop)))
     }
 
