@@ -1,6 +1,7 @@
 import React from "react";
 import { Platform } from "react-native";
 
+import { supportsAI } from "@/libs/ai/platformConstants";
 import { isBiometricSupported } from "@/libs/biometric";
 import { isTauri } from "@/utils/platform";
 
@@ -45,7 +46,7 @@ export const SECTION_ADVANCED: SectionItemComponent[] = [
   SectionItem_Webhooks,
   isTauri() && SectionItem_Mcp,
   !isWeb && SectionItem_VoiceRecognition,
-  !isWeb && SectionItem_AIAssistant,
+  supportsAI() && SectionItem_AIAssistant,
   SectionItem_WipeData,
 ].filter(Boolean) as SectionItemComponent[];
 

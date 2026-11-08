@@ -984,7 +984,10 @@ dependencies = [
 name = "fastmemo"
 version = "2.0.0"
 dependencies = [
+ "libc",
+ "libloading",
  "reqwest",
+ "ring",
  "robius-authentication",
  "rustls",
  "serde",

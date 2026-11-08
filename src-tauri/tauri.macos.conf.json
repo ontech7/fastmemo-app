@@ -1,0 +1,9 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "bundle": {
+    "macOS": {
+      "frameworks": ["ai-engine/dist/libfastmemo_ai.dylib"],
+      "entitlements": "Entitlements.plist"
+    }
+  }
+}

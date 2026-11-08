@@ -616,6 +616,8 @@ const ja = {
     download_failed: "ダウンロードに失敗しました。もう一度お試しください。",
     download_no_space: "モデルを保存する空き容量が足りません。容量を空けてもう一度お試しください。",
     download_background: "この画面を離れても、画面を消しても、ダウンロードは続きます。進行状況は通知に表示されます。",
+    download_background_desktop:
+      "このページを離れてもダウンロードは続きます。アプリを閉じた場合は、もう一度「モデルをダウンロード」をクリックすると、中断した位置から再開されます。",
     cancel: "キャンセル",
     delete_model: "モデルを削除",
     info: "AIアシスタントはデバイス上で完全に動作します。外部サーバーにデータは送信されません。モデルは一度だけダウンロードし（約530 MBから）、ローカルに保存されます。",
@@ -643,6 +645,7 @@ const ja = {
     },
     unavailable_web: "AIアシスタントはモバイルデバイスでのみ利用可能です。",
     native_rebuild_needed: "AIアシスタントにはネイティブリビルドが必要です。\n実行: npx expo run:android",
+    unavailable_computer: "このコンピューターではAIを利用できません。",
     voice_only: "音声のみ",
     voice_only_hint: "音声のみでアシスタントと対話",
     listening: "聞いています...",

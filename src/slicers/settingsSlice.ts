@@ -9,7 +9,7 @@ import type {
   VoiceRecognitionSettings,
   Webhooks,
 } from "@/types";
-import { isLegacyModelId, normalizeModelId } from "@/libs/ai/constants";
+import { DEFAULT_MODEL_ID, isLegacyModelId, normalizeModelId } from "@/libs/ai/constants";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSlice } from "@reduxjs/toolkit";
 import { Platform } from "react-native";
@@ -56,7 +56,7 @@ const initialState: SettingsState = {
   aiAssistant: {
     enabled: false,
     modelDownloaded: false,
-    selectedModel: "qwen3.5-0.8b",
+    selectedModel: DEFAULT_MODEL_ID,
     voiceOnly: false,
   },
   reportDate: null,
@@ -179,13 +179,14 @@ export const selectorWebhook_wipeData = (state: RootState) => state.settings.web
 const DEFAULT_AI_ASSISTANT: AIAssistantSettings = {
   enabled: false,
   modelDownloaded: false,
-  selectedModel: "qwen3.5-0.8b",
+  selectedModel: DEFAULT_MODEL_ID,
   voiceOnly: false,
 };
 const selectorStoredAIAssistant = (state: RootState): AIAssistantSettings => state.settings.aiAssistant || DEFAULT_AI_ASSISTANT;
 /**
  * The AI settings with one of today's models. A Qwen 2.5 id stored by an earlier version reads as the tier replacing it,
- * not downloaded (the file on the device is the old model's); the AI settings screen then stores it so.
+ * not downloaded (the file on the device is the old model's); the AI settings screen then stores it so. Anything else comes
+ * back as stored: a model the user picked sticks, downloaded or not.
  */
 export const selectorAIAssistant = createSelector([selectorStoredAIAssistant], (ai): AIAssistantSettings => {
   const selectedModel = normalizeModelId(ai.selectedModel);

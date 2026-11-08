@@ -622,6 +622,8 @@ const es = {
     download_no_space: "No hay espacio suficiente para el modelo: libera un poco e inténtalo de nuevo.",
     download_background:
       "Puedes salir de esta pantalla o apagarla: la descarga continúa, con el progreso en las notificaciones.",
+    download_background_desktop:
+      "Puedes salir de esta página: la descarga continúa. Si cierras la aplicación, pulsa de nuevo Descargar modelo: se reanuda donde se quedó.",
     cancel: "Cancelar",
     delete_model: "Eliminar modelo",
     info: "El asistente de IA funciona completamente en tu dispositivo. No se envían datos a servidores externos. El modelo se descarga una vez (desde ~530 MB) y se guarda en el dispositivo.",
@@ -649,6 +651,7 @@ const es = {
     },
     unavailable_web: "El Asistente IA solo está disponible en dispositivos móviles.",
     native_rebuild_needed: "El Asistente IA requiere una reconstrucción nativa.\nEjecuta: npx expo run:android",
+    unavailable_computer: "La IA no está disponible en este equipo.",
     voice_only: "Solo voz",
     voice_only_hint: "Interactúa con el asistente usando solo tu voz",
     listening: "Escuchando...",

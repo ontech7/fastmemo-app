@@ -1,0 +1,13 @@
+# Read from the working directory: run every cargo command for this crate from `src-tauri/ai-engine`.
+
+[target.'cfg(target_arch = "x86_64")']
+rustflags = ["-C", "target-feature=+avx2,+fma,+f16c"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+avx2,+fma,+f16c,+crt-static"]
+
+[env]
+LLAMA_STATIC_CRT = "1"
+# llama.cpp's CMake picks the MSVC runtime from CMAKE_MSVC_RUNTIME_LIBRARY (policy CMP0091), which adds /MD after the /MT
+# LLAMA_STATIC_CRT passes; llama-cpp-sys hands CMAKE_* variables to CMake. Only MSVC reads it.
+CMAKE_MSVC_RUNTIME_LIBRARY = "MultiThreaded"

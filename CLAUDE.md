@@ -7,7 +7,8 @@
 FastMemo is a cross-platform note-taking app (Android, Web, Desktop via Tauri) built with Expo SDK 58, React Native 0.88, React
 19, and TypeScript 6.0. It supports four note types (text, todo, kanban, code), on-device AI (llama.rn with Qwen3.5 GGUF
 models), encrypted cloud sync (Firebase), biometric protection, webhooks, voice recognition, and 7-language localization.
-Desktop builds use Tauri 2.x (Rust) and can run a local MCP server for AI clients, off by default (ADR-032).
+Desktop builds use Tauri 2.x (Rust), run the same on-device AI through llama.cpp (Metal on Apple Silicon, CPU elsewhere; a
+library the app opens at first use, ADR-034), and can run a local MCP server for AI clients, off by default (ADR-032).
 
 ## Knowledge Base
 
@@ -138,7 +139,7 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 | State      | Redux Toolkit 2.8 + Redux Persist (notes one value per note: ADR-018; AsyncStorage for the rest)   |
 | Desktop    | Tauri 2.x (Rust, capabilities in `src-tauri/capabilities/`)                                        |
 | Cloud      | Firestore or a self-hosted FastMemo server behind `CloudBackend` (ADR-016, ADR-017), E2E (ADR-012) |
-| AI         | llama.rn 0.12 (Qwen3.5 0.8B/2B/4B GGUF, on-device, thinking off -- ADR-004)                        |
+| AI         | llama.rn 0.12 (phone), llama.cpp (desktop): Qwen3.5 0.8B/2B/4B GGUF, thinking off -- ADR-004, 034  |
 | Editor     | CodeMirror 6 (via WebView)                                                                         |
 | i18n       | i18next + react-i18next (7 languages, single namespace)                                            |
 | Animations | react-native-reanimated 4.7 (+ react-native-worklets)                                              |
@@ -162,5 +163,7 @@ src/
   providers/    -> React context providers (KanbanDragProvider, SyncOnProvider)
   constants/    -> Static constants (styles, icons, code-languages, note-types)
   configs/      -> App configuration (environment, defaults, business rules)
-src-tauri/      -> Desktop shell (Rust): window, menu, tray.rs, net.rs; src/mcp/: local MCP server (bridge, socket, protocol, tools, switches; ADR-032)
+src-tauri/      -> Desktop shell (Rust): window, menu, tray.rs, net.rs; src/mcp/: local MCP server (bridge, socket, protocol, tools, switches; ADR-032);
+                   src/ai/: the AI commands, engine loading, model download (ADR-034)
+src-tauri/ai-engine/ -> The desktop AI engine: its own crate (cdylib `fastmemo_ai`, llama.cpp), built by scripts/build-ai-engine.mjs and opened at run time, never linked (ADR-034)
 ```

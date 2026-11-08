@@ -5,26 +5,32 @@ export {
   initContext,
   prewarmContext,
   releaseContext,
-  downloadModel,
   deleteModel,
+  getContextInfo,
+  isNativeModuleAvailable,
+  getAIStatus,
+  addAIStatusListener,
+  resolveLanguage,
+} from "./context";
+export { getEngineSupport } from "./engine";
+export {
+  downloadModel,
   cancelDownload,
   getModelDownload,
   getDownloadFailure,
   isModelDownloaded,
   getOrphanedModelFiles,
   deleteOrphanedModelFiles,
-  getContextInfo,
-  isNativeModuleAvailable,
-  getAIStatus,
-  addAIStatusListener,
   getModelPath,
-  resolveLanguage,
-} from "./context";
-export type { DownloadFailure, ModelDownloadProgress } from "./context";
+} from "./models";
+export type { DownloadFailure, EngineSupport, ModelDownloadProgress } from "./types";
 export { clearLongNoteCache, estimateSeconds, LONG_NOTE_ACTIONS, rewriteNote, summarizeNote, tooLongForAI } from "./longNote";
 export type { LongNoteAction, LongNoteResult } from "./longNote";
 export { hasSummary, withSummary } from "./blocks";
 export { runAIEval } from "./eval";
+export { shareEvalReport } from "./evalReport";
+export { desktopDefaultModelToStore } from "./desktopDefaultModel";
+export { supportsAI } from "./platformConstants";
 export type { EvalReport, EvalResult } from "./eval";
 export { completedJsonStrings, createTextStream, createThrottle, findCategoryByName, stripHtml } from "./helpers";
 export {

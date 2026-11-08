@@ -41,6 +41,8 @@ export interface LongNoteHandlers {
 export interface LongNoteOptions {
   lang?: string;
   modelId?: AIModelId;
+  /** The sampler's seed of every step (the evaluation's; the app leaves it out). */
+  seed?: number;
 }
 
 export interface LongNoteResult {
@@ -133,7 +135,7 @@ export async function rewriteNote(
           streamed += token;
           show(sofar + visibleStreamText(streamed));
         },
-        { lang, modelId, generation }
+        { lang, modelId, generation, seed: options.seed }
       );
       if (result.success && result.text) {
         next = result.text.trim();
@@ -195,7 +197,7 @@ export async function summarizeNote(
         streamed += token;
         handlers.onText?.([...shownBefore, visibleStreamText(streamed)].join("\n"));
       },
-      { lang, modelId, generation }
+      { lang, modelId, generation, seed: options.seed }
     );
   };
 

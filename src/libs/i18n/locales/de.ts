@@ -625,6 +625,8 @@ const de = {
     download_no_space: "Nicht genug Speicherplatz für das Modell: Geben Sie etwas frei und versuchen Sie es erneut.",
     download_background:
       "Sie können diesen Bildschirm verlassen oder ausschalten: Der Download läuft weiter, mit dem Fortschritt in den Benachrichtigungen.",
+    download_background_desktop:
+      "Sie können diese Seite verlassen: Der Download läuft weiter. Wenn Sie die App schließen, klicken Sie erneut auf Modell herunterladen: Er wird dort fortgesetzt, wo er aufgehört hat.",
     cancel: "Abbrechen",
     delete_model: "Modell löschen",
     info: "Der KI-Assistent läuft vollständig auf Ihrem Gerät. Es werden keine Daten an externe Server gesendet. Das Modell wird einmal heruntergeladen (ab ~530 MB) und lokal gespeichert.",
@@ -652,6 +654,7 @@ const de = {
     },
     unavailable_web: "KI-Assistent ist nur auf Mobilgeräten verfügbar.",
     native_rebuild_needed: "KI-Assistent erfordert einen nativen Rebuild.\nFühren Sie aus: npx expo run:android",
+    unavailable_computer: "KI ist auf diesem Computer nicht verfügbar.",
     voice_only: "Nur Sprache",
     voice_only_hint: "Mit dem Assistenten nur per Sprache interagieren",
     listening: "Höre zu...",

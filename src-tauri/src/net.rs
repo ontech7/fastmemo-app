@@ -24,7 +24,7 @@ use tauri::async_runtime::JoinHandle;
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::State;
 
-const USER_AGENT: &str = concat!("FastMemo-desktop/", env!("CARGO_PKG_VERSION"));
+pub(crate) const USER_AGENT: &str = concat!("FastMemo-desktop/", env!("CARGO_PKG_VERSION"));
 /// The longest any request may take; the page's own timeouts cancel sooner.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
@@ -165,7 +165,7 @@ fn is_local_ip(ip: IpAddr) -> bool {
 }
 
 /// This machine, a private or link-local address, Tailscale (100.64.0.0/10, `*.ts.net`) or a local name.
-fn is_local(url: &Url) -> bool {
+pub(crate) fn is_local(url: &Url) -> bool {
     let Some(host) = url.host_str() else { return false };
     // IPv6 hosts come in brackets; IPv4 ones already written out in full (`127.1` is `127.0.0.1`).
     if let Ok(ip) = host.trim_start_matches('[').trim_end_matches(']').parse::<IpAddr>() {

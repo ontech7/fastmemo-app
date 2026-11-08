@@ -197,8 +197,8 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
         run: |
           sudo apt-get update
-          # Tauri 2 builds against WebKitGTK 4.1 (4.0 was Tauri 1's).
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          # Tauri 2 builds against WebKitGTK 4.1 (4.0 was Tauri 1's); libclang for llama.cpp's bindings (bindgen).
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libclang-dev
 
       - name: install frontend dependencies
         run: yarn install

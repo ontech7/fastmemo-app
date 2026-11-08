@@ -617,6 +617,8 @@ const en = {
     download_no_space: "Not enough space for the model: free some up and try again.",
     download_background:
       "You can leave this screen or turn the screen off: the download goes on, with its progress in the notifications.",
+    download_background_desktop:
+      "You can leave this page: the download goes on. If you close the app, click Download model again: it picks up where it left off.",
     cancel: "Cancel",
     delete_model: "Delete model",
     info: "The AI assistant runs entirely on your device. No data is sent to external servers. The model is downloaded once (from ~530 MB) and stored locally.",
@@ -644,6 +646,7 @@ const en = {
     },
     unavailable_web: "AI Assistant is only available on mobile devices.",
     native_rebuild_needed: "AI Assistant requires a native rebuild.\nRun: npx expo run:android",
+    unavailable_computer: "AI isn't available on this computer.",
     voice_only: "Voice only",
     voice_only_hint: "Interact with the assistant using only your voice",
     listening: "Listening...",
