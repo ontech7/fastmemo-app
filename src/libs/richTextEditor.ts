@@ -258,6 +258,22 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (leaveCode(pre)) e.preventDefault();
   }, true);
 
+  // Cmd+B, Cmd+I and Cmd+U on a Mac, Ctrl elsewhere: bold, italic and underline, as the toolbar's buttons. WebKit on macOS
+  // leaves them to an app's Format menu, which the desktop app doesn't have; Chromium does them itself. So the page does
+  // them everywhere, once. Ctrl on a Mac moves the caret (Ctrl+B: one character back). The letter, or the physical key on
+  // a non-Latin layout.
+  var MAC = /Mac/.test(navigator.platform);
+  var STYLE_KEYS = { KeyB: "bold", KeyI: "italic", KeyU: "underline" };
+  $.addEventListener("keydown", function (e) {
+    var mod = MAC ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey;
+    if (!mod || e.altKey || e.shiftKey || e.isComposing) return;
+    var command = STYLE_KEYS[/^[a-z]$/i.test(e.key) ? "Key" + e.key.toUpperCase() : e.code];
+    if (!command || content().contentEditable !== "true") return;
+    e.preventDefault();
+    exec(command);
+    refreshToolbar();
+  }, true);
+
   content().addEventListener("beforeinput", function (e) {
     var s = selection();
     if (!s.rangeCount || !s.isCollapsed) return;
