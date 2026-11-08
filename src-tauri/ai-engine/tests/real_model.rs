@@ -232,6 +232,8 @@ fn json_grammar_gives_an_array() {
 
 /// The app's dictation-to-items action on the 0.8B (the evaluation's `voice-items-en`): it writes the
 /// array one item per line and wants "\n]" to close it. The grammar must let it, or it goes on listing.
+/// The prompt and the dictation are copies of `transcript_to_items` in `src/libs/ai/constants.ts`
+/// and of that fixture in `src/libs/ai/evalFixtures.ts`: change them together.
 #[test]
 #[ignore]
 fn a_list_written_one_item_per_line_closes() {
@@ -255,6 +257,7 @@ fn a_list_written_one_item_per_line_closes() {
     let parsed = Json::parse(text.trim()).unwrap_or_else(|e| panic!("{e}: {text:?}"));
     let items = parsed.as_array().expect("an array");
     assert!((2..=4).contains(&items.len()), "{text}");
+    assert!(items.iter().all(|item| item.as_str().is_some()), "{text}");
 }
 
 #[test]
