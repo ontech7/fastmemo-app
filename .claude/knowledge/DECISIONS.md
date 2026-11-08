@@ -1465,12 +1465,12 @@ hidden view may be suspended after about 5 minutes.
   `hidden` throughout. With the feature, on the test build: window closed for 15 minutes with no calls at all, then a call on a
   bridge connected all along answered in 39 ms, one on a new bridge in 9 ms, and a write, on disk before its answer, in 52 ms.
   Not measured: a Mac that went to sleep meanwhile.
-- **Windows (WebView2): pending,** measured at the end on the user's desktop PC, with a test build: a call after 35 minutes with
-  the window closed must answer in under 5 s (`scripts/mcp-e2e.test.mjs --wait-minutes 35`). Result: _not measured yet_. If it
-  fails: first a held Web Lock, then `SetIsVisible(true)` while hidden, both switched only while MCP is on, so a user with MCP
-  off keeps today's behavior. CI on `windows-latest` has built the pipe code and run the `mcp::` tests, named pipes included (60
-  passed, run 42272924109). Stdio under `windows_subsystem = "windows"`, the tray and the hidden page have never run: the hidden
-  page stays a blank until that run.
+- **Windows (WebView2): pass, with no keep-alive.** The user's hand run on their desktop PC (2026-11-08, the test build of all
+  of desktop 2.1.0, run 42520557700) passed the whole Windows checklist: `scripts/mcp-e2e.test.mjs` on a clean install, the tray,
+  and a call after 35 minutes with the window closed answering within the 5 s bound (`--wait-minutes 35`); the exact times
+  weren't recorded. So neither fallback was needed (a held Web Lock, then `SetIsVisible(true)` while hidden): they stay the
+  answer if a later WebView2 suspends the page. CI on `windows-latest` also builds the pipe code and runs the `mcp::` tests,
+  named pipes included (60 passed, run 42272924109).
 - **Linux (WebKitGTK): untested by hand** (user decision: no Linux desktop is available, as for every desktop release so far).
   Linux is built, ships the same feature and isn't a gate for anything. The tray is unverified too: Tauri sends no click events
   there, so the icon has only its menu, and some GNOME setups, as far as we know, don't show tray icons at all. The "keep
@@ -1565,8 +1565,8 @@ WebKit leaves bold, italic and underline to an app's Format menu.
 - the menu over selected text is still the browser's on macOS and Linux (copy, look up, share…): only Windows' is trimmed;
 - on Windows, Ctrl+F used to open WebView2's find bar on screens with no find of their own (code, to-do and kanban notes, help):
   blocked as the user asked, those screens have no find now (CodeMirror's search could give code notes one);
-- not verified yet: whether a restored window gets the keyboard focus back while WebView2 is turned visible again (if not:
-  `MoveFocus` on the controller after `SetIsVisible(true)`).
+- a restored window gets the keyboard focus back without help (the user's Windows run, 2026-11-08); if a later WebView2 loses
+  it: `MoveFocus` on the controller after `SetIsVisible(true)`.
 
 ## ADR-034: On-Device AI on Desktop: llama.cpp in a Library of Its Own
 
@@ -1694,8 +1694,10 @@ page (libs/ai/context.ts, shared with the phone)
   translation say "too long for this model"; the app's memory 1.6 GB, no crash.
 - **CI** (the engine test on the 0.8B, run 42504755203 of a test workflow): Windows x64 (NSIS), the Intel Mac and Linux (deb and
   AppImage) build, ship the library, open it from the installed app and pass. Apple Silicon was checked by hand.
-- **Not measured:** the Windows PC's speeds (`MODEL_SPEED` there is the M5's CPU) and its CPU while writing; Linux is never
-  tried by hand (as for every desktop release). Both are in the Windows checklist.
+- **Windows by hand** (the user's desktop PC, 2026-11-08, the test build of all of desktop 2.1.0, run 42520557700): the whole
+  checklist passed (download and its resume, every action, a long note, the app with no engine library). The speeds weren't
+  recorded, so `MODEL_SPEED` there is still the M5's CPU: only a long note's first time estimate, before the PC's own
+  completions replace it (`getModelSpeed`). Linux is never tried by hand (as for every desktop release).
 
 **Alternatives rejected:**
 
