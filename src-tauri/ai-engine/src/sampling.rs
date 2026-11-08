@@ -95,4 +95,23 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn no_seed_is_a_new_random_one_each_time() {
+        let random = SamplingParams {
+            seed: None,
+            ..FAITHFUL
+        };
+        let seeds: Vec<u32> = (0..3)
+            .map(|_| match steps(&random).last() {
+                Some(Step::Dist(seed)) => *seed,
+                other => panic!("the chain ends with {other:?}"),
+            })
+            .collect();
+        assert!(
+            seeds.windows(2).any(|w| w[0] != w[1]),
+            "the same seed three times: {seeds:?}"
+        );
+        assert!(seeds.iter().any(|&s| s != 0));
+    }
 }

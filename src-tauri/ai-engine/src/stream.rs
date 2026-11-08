@@ -185,4 +185,69 @@ mod tests {
         let mut h = Holdback::new(vec![]);
         assert_eq!(h.push(&[b'a', 0xff, b'b']).emit, "a\u{FFFD}b");
     }
+
+    #[test]
+    fn a_repeated_stop_prefix_releases_the_first_one() {
+        let mut h = Holdback::new(vec!["<|im_end|>".to_string()]);
+        let a = h.push(b"<|im");
+        assert_eq!((a.emit.as_str(), a.stopped), ("", false));
+        let b = h.push(b"<|im_end|>");
+        assert_eq!((b.emit.as_str(), b.stopped), ("<|im", true));
+
+        let mut one = Holdback::new(vec!["<|im_end|>".to_string()]);
+        let c = one.push(b"<|im<|im_end|>x");
+        assert_eq!((c.emit.as_str(), c.stopped), ("<|im", true));
+    }
+
+    #[test]
+    fn a_stop_word_over_three_pieces() {
+        let mut h = Holdback::new(vec!["<|im_end|>".to_string()]);
+        let mut out = String::new();
+        let mut stopped = false;
+        for piece in ["a<|i", "m_e", "nd|>z"] {
+            let p = h.push(piece.as_bytes());
+            out.push_str(&p.emit);
+            stopped = p.stopped;
+        }
+        assert_eq!((out.as_str(), stopped), ("a", true));
+    }
+
+    #[test]
+    fn multibyte_text_around_a_held_prefix() {
+        let mut h = Holdback::new(vec!["<|im_end|>".to_string()]);
+        assert_eq!(h.push("日<|".as_bytes()).emit, "日");
+        // the held prefix grows while a character's first byte waits
+        assert_eq!(h.push(&[b'i', 0xe6]).emit, "");
+        let end = h.push(&[0x9c, 0xac]);
+        assert_eq!((end.emit.as_str(), end.stopped), ("<|i本", false));
+    }
+
+    #[test]
+    fn several_stop_words_at_once() {
+        let stops = || {
+            vec![
+                "END".to_string(),
+                "<|im_end|>".to_string(),
+                "\n\n".to_string(),
+            ]
+        };
+        // the earliest one wins
+        let mut h = Holdback::new(stops());
+        let a = h.push(b"abc\n\nEND<|im_end|>");
+        assert_eq!((a.emit.as_str(), a.stopped), ("abc", true));
+
+        // a prefix of any of them waits ("E" may start "END", not "<|im_end|>")
+        let mut h = Holdback::new(stops());
+        assert_eq!(h.push(b"x<|im_E").emit, "x<|im_");
+        assert_eq!(h.push(b"N").emit, "");
+        let b = h.push(b"D!");
+        assert_eq!((b.emit.as_str(), b.stopped), ("", true));
+
+        // one stop's prefix is released when another one's starts after it
+        let mut h = Holdback::new(stops());
+        assert_eq!(h.push(b"a\n").emit, "a");
+        assert_eq!(h.push(b"<|im").emit, "\n");
+        let c = h.push(b"_end|>");
+        assert_eq!((c.emit.as_str(), c.stopped), ("", true));
+    }
 }
