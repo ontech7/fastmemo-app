@@ -80,6 +80,7 @@ jobs:
           node scripts/sanitize.test.mjs
 
       - name: Guard against native changes
+        id: guard
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           BUILDS: ${{ inputs.builds || 'both' }}
@@ -126,22 +127,27 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           # Inlined into the bundle (not into app.config.ts: that would change the fingerprint and orphan the update).
           EXPO_PUBLIC_OTA_REVISION: ${{ steps.meta.outputs.revision }}
+          # The build's runtime, found by the guard: the update gets it as a string, with a lowercase scheme (LL-076).
+          FASTMEMO_OTA_RUNTIME: ${{ steps.guard.outputs.play_fingerprint }}
           TAG: ${{ steps.meta.outputs.tag }}
           MESSAGE: ${{ steps.meta.outputs.message }}
         run: |
+          [ -n "$FASTMEMO_OTA_RUNTIME" ] || { echo "::error::The guard gave no fingerprint for the Play build."; exit 1; }
           eas update --channel production --environment production --platform android \
             --message "$TAG · $MESSAGE" --non-interactive
 
-      # The same code for the GitHub APK: FASTMEMO_DISTRIBUTION gives the update the APK's runtime (ADR-031).
+      # The same code for the GitHub APK (ADR-031): its own fingerprint, the one FASTMEMO_DISTRIBUTION gives the guard.
       - name: Publish OTA (GitHub APK)
         if: inputs.builds != 'play'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           FASTMEMO_DISTRIBUTION: github
           EXPO_PUBLIC_OTA_REVISION: ${{ steps.meta.outputs.revision }}
+          FASTMEMO_OTA_RUNTIME: ${{ steps.guard.outputs.github_fingerprint }}
           TAG: ${{ steps.meta.outputs.tag }}
           MESSAGE: ${{ steps.meta.outputs.message }}
         run: |
+          [ -n "$FASTMEMO_OTA_RUNTIME" ] || { echo "::error::The guard gave no fingerprint for the GitHub APK."; exit 1; }
           eas update --channel production --environment production --platform android \
             --message "$TAG · $MESSAGE · APK" --non-interactive
 

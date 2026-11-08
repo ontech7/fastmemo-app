@@ -147,6 +147,12 @@ const alternateAppIcons = ["Halloween", "Christmas", "Easter", "Summer"].map((na
 // The production EAS project (the old DEV project is no longer used).
 const EAS_PROJECT_ID = "44c5f162-d9f8-40db-ae28-269fe48982ca";
 
+// Set only by the Publish OTA workflow: the fingerprint of the build the update is for, which its guard just found. EAS
+// Update refuses a manifest whose scheme isn't lowercase ("FastMemoApp"), but the installed builds were made with it and
+// the scheme is part of the fingerprint: lowered here, every OTA would get a runtime no build has. So the update alone gets
+// the build's runtime as a plain string and a lowercase scheme; builds and the guard see this config unchanged (LL-076).
+const otaRuntime = process.env.FASTMEMO_OTA_RUNTIME || null;
+
 export default ({ config }: ConfigContext): ExpoConfig =>
   withAlternateIconIntentFilters(
     withKotlinReflectWarmup(
@@ -157,11 +163,11 @@ export default ({ config }: ConfigContext): ExpoConfig =>
           name: appName,
           slug: appSlug,
           version: "4.0.0",
-          runtimeVersion: { policy: "fingerprint" },
+          runtimeVersion: otaRuntime ?? { policy: "fingerprint" },
           updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
           orientation: "portrait",
           icon: appIcon,
-          scheme: appSlug,
+          scheme: otaRuntime ? appSlug.toLowerCase() : appSlug,
           userInterfaceStyle: "automatic",
           backgroundColor,
           ios: {

@@ -2038,6 +2038,32 @@ it didn't want and can loop. Check a new grammar against the model's own unconst
 
 ---
 
+### LL-076: The first OTA was refused: EAS Update wants a lowercase scheme, and the builds have "FastMemoApp"
+
+**Date:** 2026-11-08  
+**Severity:** High (no OTA could ever reach the 4.0.0 builds)  
+**Category:** Platform  
+**What happened:** the first run of Publish OTA (run 42527623809) passed its checks and the fingerprint guard, uploaded the
+bundle, then `eas update` failed: "Manifest Validation Error: scheme: 'scheme' must match pattern ^[a-z][a-z0-9+.-]*$".
+Nothing was published.  
+**Root cause:** `app.config.ts` used the slug as the scheme, and the production slug is `FastMemoApp`. Builds never validate
+it (Android takes the intent filter as written); only EAS Update's server checks the manifest. Lowering it isn't an option for
+the installed builds: the scheme is part of the native fingerprint, so a lowercase one gives every update a runtime no build
+has.  
+**Fix:** a workaround until the next store build. The Publish OTA workflow sets `FASTMEMO_OTA_RUNTIME` to the fingerprint its
+guard just found for each build (`ota-guard.sh` writes `play_fingerprint` / `github_fingerprint` to the step's outputs); with
+it, `app.config.ts` gives the update that runtime as a plain string and the lowercase scheme. Without it the config is
+unchanged: the guard computed the same two fingerprints (689318…, b7a91…) before and after the change. In the update the JS
+sees `fastmemoapp` while the installed app registers `FastMemoApp`: it matters only for a link that opens the app through the
+scheme, and the app has none.  
+**Rule:** a scheme is lowercase. At the next store build: set `scheme` to a lowercase value for good and remove
+`FASTMEMO_OTA_RUNTIME` (`app.config.ts`, `publish-ota.yml`, `ota-guard.sh`'s outputs), then mark this resolved. A release
+pipeline that has never run end to end isn't verified: its first real run is the test.
+
+**Tracking issue:** (not filed; captured here) **Status:** Open (workaround in place)
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

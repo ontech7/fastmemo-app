@@ -67,4 +67,6 @@ for variant in $variants; do
     exit 2
   fi
   echo "OK: a $variant build of v$version has this fingerprint, the OTA will reach it."
+  # In the Publish OTA workflow: the runtime its update for this build is published with (FASTMEMO_OTA_RUNTIME, LL-076).
+  [ -z "${GITHUB_OUTPUT:-}" ] || echo "${variant}_fingerprint=$hash" >>"$GITHUB_OUTPUT"
 done
