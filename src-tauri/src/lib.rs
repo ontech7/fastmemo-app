@@ -586,7 +586,11 @@ pub fn run() {
             ai::ai_tokenize,
             ai::ai_complete,
             ai::ai_stop,
-            ai::ai_release
+            ai::ai_release,
+            ai::ai_model_files,
+            ai::ai_download,
+            ai::ai_download_cancel,
+            ai::ai_delete_files
         ])
         .setup(|app| {
             // The config's frame: window-state's restore lands just after (on the main queue), recorded through its

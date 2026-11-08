@@ -987,6 +987,7 @@ dependencies = [
  "libc",
  "libloading",
  "reqwest",
+ "ring",
  "robius-authentication",
  "rustls",
  "serde",

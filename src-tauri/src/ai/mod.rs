@@ -10,7 +10,12 @@
 //! in: a stop sent right after a start (while the call waits for a worker, or for the library to open) still ends it,
 //! and one meant for an earlier call can't end the next one (the engine reads the flag during a load too). Only
 //! `ai_stop` sets it, and the app's quit. While the app quits, no call starts.
+//!
+//! The model download (`download.rs`) is apart from the engine's calls: one at a time too (`busy`), on the blocking
+//! pool, its own cancel flag counted the same way (`Downloads`). The page's file commands (`ai_model_files`,
+//! `ai_delete_files`) take bare names only, as every command that reaches the models folder.
 
+mod download;
 mod library;
 mod system;
 
@@ -25,6 +30,7 @@ use serde_json::{json, Value};
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager};
 
+use download::{DownloadFile, Progress};
 use library::{Engine, Unavailable};
 
 /// The engine's answer while another call runs; the same here.
@@ -47,6 +53,66 @@ pub struct Ai {
     stops: AtomicU64,
     /// Set as the app quits: nothing starts from then on.
     exiting: AtomicBool,
+    downloads: Downloads,
+}
+
+/// The model download that runs, if any, and its cancel flag. As the engine's stop flag: `ai_download_cancel` counts
+/// its cancels, and a download is cancelled if one came since the command came in (`begin`), so a cancel sent right
+/// after a start isn't lost to the flag's reset as the download begins, and one meant for an earlier download can't end
+/// the next.
+#[derive(Default)]
+struct Downloads {
+    /// The file being downloaded.
+    running: Mutex<Option<String>>,
+    cancel: AtomicBool,
+    cancels: AtomicU64,
+}
+
+/// A download's place, freed when it ends.
+struct Running<'a>(&'a Downloads);
+
+impl Drop for Running<'_> {
+    fn drop(&mut self) {
+        *self.0.lock() = None;
+    }
+}
+
+impl Downloads {
+    fn lock(&self) -> MutexGuard<'_, Option<String>> {
+        self.running.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    /// The cancels sent so far: what `ai_download` reads as it comes in.
+    fn cancels_now(&self) -> u64 {
+        self.cancels.load(Ordering::SeqCst)
+    }
+
+    /// Ends the download running, or the one on its way (`ai_download_cancel`). Counted first, flag second.
+    fn request_cancel(&self) {
+        self.cancels.fetch_add(1, Ordering::SeqCst);
+        self.cancel.store(true, Ordering::SeqCst);
+    }
+
+    /// The place for downloading `file_name`, for a command that came in when `cancels_now` was `entry`: `busy` while
+    /// another download runs (the flag untouched). The flag is cleared, then set again if a cancel was sent since
+    /// `entry`: one landing between the two steps is never wiped.
+    fn begin(&self, entry: u64, file_name: &str) -> Result<Running<'_>, String> {
+        let mut running = self.lock();
+        if running.is_some() {
+            return Err(BUSY.to_string());
+        }
+        *running = Some(file_name.to_string());
+        self.cancel.store(false, Ordering::SeqCst);
+        if self.cancels_now() != entry {
+            self.cancel.store(true, Ordering::SeqCst);
+        }
+        Ok(Running(self))
+    }
+
+    /// Whether `file_name`, or its `.part`, is being written.
+    fn is_writing(&self, file_name: &str) -> bool {
+        self.lock().as_deref().is_some_and(|running| file_name == running || file_name == format!("{running}.part"))
+    }
 }
 
 impl Ai {
@@ -297,6 +363,89 @@ pub async fn ai_release(app: AppHandle) -> Result<(), String> {
     .await
 }
 
+/// A file of the models folder.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelFileInfo {
+    file_name: String,
+    /// In bytes.
+    size: u64,
+}
+
+/// The files of the models folder, the downloads under way or cut (`.part`) included. None if there is no folder yet.
+#[tauri::command]
+pub async fn ai_model_files(app: AppHandle) -> Result<Vec<ModelFileInfo>, String> {
+    off_main(app, |app, _ai| {
+        let entries = match std::fs::read_dir(models_dir(app)?) {
+            Ok(entries) => entries,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(err) => return Err(format!("failed: {err}")),
+        };
+        let mut files = Vec::new();
+        for entry in entries.flatten() {
+            let (Ok(meta), Ok(file_name)) = (entry.metadata(), entry.file_name().into_string()) else {
+                continue;
+            };
+            if meta.is_file() {
+                files.push(ModelFileInfo { file_name, size: meta.len() });
+            }
+        }
+        files.sort_by(|a, b| a.file_name.cmp(&b.file_name));
+        Ok(files)
+    })
+    .await
+}
+
+/// Downloads a model file into the models folder (see `download.rs`), its progress on `on_progress`. Answers `busy`
+/// while another download runs, and `cancelled`, `no_space` or `failed`.
+#[tauri::command]
+pub async fn ai_download(app: AppHandle, file: DownloadFile, on_progress: Channel<Progress>) -> Result<(), String> {
+    let entry = app.state::<Ai>().downloads.cancels_now();
+    off_main(app, move |app, ai| {
+        if !is_bare_file_name(&file.file_name) {
+            return Err("bad_request: file name".to_string());
+        }
+        if ai.exiting.load(Ordering::SeqCst) {
+            return Err(EXITING.to_string());
+        }
+        let dir = models_dir(app)?;
+        let _running = ai.downloads.begin(entry, &file.file_name)?;
+        // never blocks: the channel hands the event to the webview's event loop
+        download::download(&file, &dir, &ai.downloads.cancel, |received, total| {
+            let _ = on_progress.send(Progress { received, total });
+        })
+        .map_err(|err| err.code().to_string())
+    })
+    .await
+}
+
+/// Ends the download running (its `.part` is deleted), or the one just sent that hasn't begun.
+#[tauri::command]
+pub async fn ai_download_cancel(app: AppHandle) {
+    app.state::<Ai>().downloads.request_cancel();
+}
+
+/// Deletes files of the models folder (bare names; one that is already gone is no error). Nothing is deleted if a name
+/// is bad, or is the file a download is writing.
+#[tauri::command]
+pub async fn ai_delete_files(app: AppHandle, file_names: Vec<String>) -> Result<(), String> {
+    off_main(app, move |app, ai| {
+        let paths = file_names.iter().map(|name| model_path(app, name)).collect::<Result<Vec<_>, _>>()?;
+        if file_names.iter().any(|name| ai.downloads.is_writing(name)) {
+            return Err(BUSY.to_string());
+        }
+        for path in paths {
+            match std::fs::remove_file(&path) {
+                Ok(()) => {}
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+                Err(err) => return Err(format!("failed: {err}")),
+            }
+        }
+        Ok(())
+    })
+    .await
+}
+
 /// `--ai-selftest [model.gguf]`: whether this executable opens its engine library, found as the app finds it (from the
 /// executable's place: no Tauri app runs in this mode). Prints one JSON line, `{"available": …, "reason": …}` (with
 /// `detail` when the system refused the library), and returns the exit code, 0. With a model, it also loads it and
@@ -403,6 +552,30 @@ mod tests {
         ai.request_stop();
         assert_eq!(ai.begin(ai.stops_now()).err().as_deref(), Some(BUSY));
         assert!(stop.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn a_cancel_counts_from_the_download_s_entry() {
+        let downloads = Downloads::default();
+        // sent between the command's entry and the download's start: the download is cancelled
+        let entry = downloads.cancels_now();
+        downloads.request_cancel();
+        let running = downloads.begin(entry, "a.gguf").unwrap();
+        assert!(downloads.cancel.load(Ordering::SeqCst));
+        // a second download is busy, and leaves the flag alone
+        assert_eq!(downloads.begin(downloads.cancels_now(), "b.gguf").err().as_deref(), Some(BUSY));
+        assert!(downloads.cancel.load(Ordering::SeqCst));
+        assert!(downloads.is_writing("a.gguf") && downloads.is_writing("a.gguf.part") && !downloads.is_writing("b.gguf"));
+        drop(running);
+        assert!(!downloads.is_writing("a.gguf"));
+        // sent before a later command came in: that one runs
+        downloads.request_cancel();
+        let running = downloads.begin(downloads.cancels_now(), "b.gguf").unwrap();
+        assert!(!downloads.cancel.load(Ordering::SeqCst));
+        // sent while it runs: it is cancelled
+        downloads.request_cancel();
+        assert!(downloads.cancel.load(Ordering::SeqCst));
+        drop(running);
     }
 
     #[test]
