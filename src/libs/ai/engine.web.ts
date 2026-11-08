@@ -53,8 +53,19 @@ export async function getEngineSupport(): Promise<EngineSupport> {
   }
 }
 
+/**
+ * `text` with each lone UTF-16 surrogate (a cut through an emoji) replaced by U+FFFD: JSON writes it as a `\ud83d`
+ * escape, which the shell's JSON parser refuses, and the IPC call fails. The phone's bridge takes it, so this is only here.
+ */
+function wellFormed(text: string): string {
+  if (typeof text.toWellFormed === "function") return text.toWellFormed();
+  return text.replace(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g, "\ufffd");
+}
+
 /** Loads a model (the bare file name of the models folder) in the shell. */
 export async function loadEngine(params: EngineLoadParams): Promise<EngineContext> {
+  // The load is the step most exposed to a fatal error (GPU setup, memory): the note being edited is committed first.
+  await flushNow();
   const { invoke, Channel } = await tauriCore();
   const info = await invoke<LoadInfo>("ai_load", {
     fileName: params.model,
@@ -66,13 +77,17 @@ export async function loadEngine(params: EngineLoadParams): Promise<EngineContex
     gpu: info.gpu,
     reasonNoGPU: info.reasonNoGpu,
     devices: info.devices,
-    tokenize: async (text) => ({ tokens: await invoke<number[]>("ai_tokenize", { text }) }),
+    tokenize: async (text) => ({ tokens: await invoke<number[]>("ai_tokenize", { text: wellFormed(text) }) }),
     completion: async (completionParams: EngineCompletionParams, onToken) => {
       // The note being edited is committed to the store before the model reads it.
       await flushNow();
       const channel = new Channel<string>();
       channel.onmessage = (token) => onToken?.({ token });
-      return invoke<EngineCompletionResult>("ai_complete", { params: completionParams, onToken: channel });
+      const request = {
+        ...completionParams,
+        messages: completionParams.messages.map((message) => ({ ...message, content: wellFormed(message.content) })),
+      };
+      return invoke<EngineCompletionResult>("ai_complete", { params: request, onToken: channel });
     },
     stopCompletion: () => invoke<void>("ai_stop"),
     release: () => invoke<void>("ai_release"),

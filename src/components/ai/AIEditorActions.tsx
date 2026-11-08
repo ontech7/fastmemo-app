@@ -186,9 +186,10 @@ export default function AIEditorActions({
   const aiSettings = useSelector(selectorAIAssistant);
 
   // The phone has its engine; the desktop shows the AI only once its engine answered that it runs here (a missing or
-  // unloadable library is an answer too); a plain browser has none.
+  // unloadable library is an answer too); a plain browser has none. The engine is asked only when the AI is on with a
+  // model (the menu is hidden otherwise), so the library isn't opened by a note's editor alone.
   const desktop = isTauri();
-  const engineSupport = useEngineSupport();
+  const engineSupport = useEngineSupport(aiSettings.enabled && aiSettings.modelDownloaded);
   const engineReady = desktop ? engineSupport?.available === true : supportsAI();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);

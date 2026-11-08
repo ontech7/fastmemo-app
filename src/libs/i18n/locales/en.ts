@@ -618,7 +618,7 @@ const en = {
     download_background:
       "You can leave this screen or turn the screen off: the download goes on, with its progress in the notifications.",
     download_background_desktop:
-      "You can leave this page: the download goes on. If you close the app, it picks up where it left off.",
+      "You can leave this page: the download goes on. If you close the app, click Download model again: it picks up where it left off.",
     cancel: "Cancel",
     delete_model: "Delete model",
     info: "The AI assistant runs entirely on your device. No data is sent to external servers. The model is downloaded once (from ~530 MB) and stored locally.",

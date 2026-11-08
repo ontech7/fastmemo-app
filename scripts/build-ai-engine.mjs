@@ -28,10 +28,12 @@ function fail(message) {
 }
 
 /** `quiet`: its output is shown only if it fails (install_name_tool warns on every run that it voids the signature). */
-function run(command, args, { capture = false, quiet = false, env } = {}) {
+function run(command, args, { capture = false, quiet = false, env, unset = [] } = {}) {
+  const childEnv = { ...process.env, ...env };
+  for (const name of unset) delete childEnv[name];
   const result = spawnSync(command, args, {
     cwd: ENGINE_DIR,
-    env: env ? { ...process.env, ...env } : process.env,
+    env: childEnv,
     encoding: "utf8",
     stdio: capture ? ["ignore", "pipe", "inherit"] : quiet ? ["ignore", "pipe", "pipe"] : "inherit",
   });
@@ -69,13 +71,16 @@ function ensureTarget(triple) {
 function build(triple) {
   ensureTarget(triple);
   const stub = STUB_TARGETS.includes(triple);
-  const args = ["build", "--release", "--target", triple];
   // the stub has its own target dir: it never replaces (or reuses) the real build's artifacts
-  if (stub) args.push("--no-default-features", "--target-dir", "target/stub");
+  const args = ["build", "--release", "--target", triple, "--target-dir", stub ? "target/stub" : "target"];
+  if (stub) args.push("--no-default-features");
   console.log(`build-ai-engine: ${stub ? "stub" : "real"} library for ${triple}`);
   // Metal on Apple Silicon only: llama.cpp turns it on for every Mac, and an Intel Mac's GPU is its least tried path, so
   // Intel Macs run on the CPU, as Windows and Linux do (llama-cpp-sys passes GGML_* variables to CMake).
-  run("cargo", args, { env: triple === "x86_64-apple-darwin" ? { GGML_METAL: "OFF" } : undefined });
+  // The environment's RUSTFLAGS / target dir would replace .cargo/config.toml's rustflags (AVX2, static CRT) or move the
+  // output: the build is always the checked-in one.
+  const env = triple === "x86_64-apple-darwin" ? { GGML_METAL: "OFF" } : undefined;
+  run("cargo", args, { env, unset: ["RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "CARGO_TARGET_DIR", "CARGO_BUILD_TARGET_DIR"] });
   const built = join(ENGINE_DIR, stub ? "target/stub" : "target", triple, "release", libraryName(triple));
   if (!existsSync(built)) fail(`cargo did not produce ${built}`);
   return built;

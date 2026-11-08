@@ -301,7 +301,56 @@ console.log("edits flushed before each completion");
   await fresh();
   await X.generateEditorContent("generate_title", "Una nota");
   await X.generateEditorContent("generate_title", "Un'altra nota");
-  eq("flushNow ran twice, each right before its ai_complete", tauri.events, ["flush", "complete", "flush", "complete"]);
+  // the first action also loads the model: one more flush, before ai_load
+  eq("flushNow ran before the load, then right before each ai_complete", tauri.events, [
+    "flush",
+    "flush",
+    "complete",
+    "flush",
+    "complete",
+  ]);
+}
+
+console.log("edits flushed before the model loads");
+{
+  await fresh();
+  tauri.handlers.ai_load = () => {
+    tauri.events.push("load");
+    return { gpu: false, reasonNoGpu: "fake", devices: ["CPU"] };
+  };
+  await E.loadEngine({ model: fileOf("qwen3.5-2b"), n_ctx: 16384, n_gpu_layers: 99, use_mlock: false });
+  eq("flushNow ran right before ai_load", tauri.events, ["flush", "load"]);
+}
+
+console.log("a lone surrogate never reaches the shell");
+{
+  await fresh();
+  tauri.handlers.ai_complete = () => RESULT;
+  tauri.handlers.ai_tokenize = () => [0];
+  const context = await E.loadEngine({ model: fileOf("qwen3.5-2b"), n_ctx: 16384, n_gpu_layers: 99, use_mlock: false });
+  const cut = "日本" + "\ud83d";
+  const lowAlone = "\ude00" + "a";
+  const pair = "日本😀";
+  await context.completion({
+    messages: [
+      { role: "system", content: pair },
+      { role: "user", content: cut },
+      { role: "user", content: lowAlone },
+    ],
+  });
+  const [{ params }] = tauri.argsOf("ai_complete");
+  eq("a cut emoji becomes U+FFFD", params.messages[1].content, "日本\ufffd");
+  eq("a lone low surrogate becomes U+FFFD", params.messages[2].content, "\ufffda");
+  eq("a whole emoji passes unchanged", params.messages[0].content, pair);
+  eq(
+    "the messages keep their roles",
+    params.messages.map((m) => m.role),
+    ["system", "user", "user"]
+  );
+  eq("what Rust receives is valid JSON text", JSON.stringify(params.messages).includes("\\ud83d"), false);
+  await context.tokenize(cut);
+  await context.tokenize(pair);
+  eq("tokenize gets the same", tauri.argsOf("ai_tokenize"), [{ text: "日本\ufffd" }, { text: pair }]);
 }
 
 console.log("cancel stops in Rust");
@@ -321,7 +370,7 @@ console.log("cancel stops in Rust");
   while (tauri.count("ai_complete") === 0) await turn();
   await X.cancelCommand();
   await run;
-  eq("ai_stop was sent while the completion ran", tauri.events, ["flush", "complete", "stop"]);
+  eq("ai_stop was sent while the completion ran", tauri.events, ["flush", "flush", "complete", "stop"]);
 }
 
 console.log("the engine's support");

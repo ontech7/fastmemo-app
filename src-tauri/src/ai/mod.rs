@@ -173,12 +173,22 @@ impl Ai {
         let Some(Ok(engine)) = self.engine.get() else {
             return;
         };
-        let deadline = Instant::now() + QUIT_WAIT;
+        let Some(mut loaded_by) = self.stop_and_wait(QUIT_WAIT) else {
+            return;
+        };
+        *loaded_by = None;
+        let _ = engine.call(&json!({ "op": "release" }), None, &self.stop);
+    }
+
+    /// The right to call the engine once the call running (if any) has ended: it is sent one stop, then waited for up
+    /// to `wait`. `None` if it hasn't ended by then. What the quit and `ai_release` do before they free the model.
+    fn stop_and_wait(&self, wait: Duration) -> Option<MutexGuard<'_, Option<String>>> {
+        let deadline = Instant::now() + wait;
         let mut stopped = false;
-        let mut loaded_by = loop {
+        loop {
             match self.calls.try_lock() {
-                Ok(guard) => break guard,
-                Err(TryLockError::Poisoned(poisoned)) => break poisoned.into_inner(),
+                Ok(guard) => return Some(guard),
+                Err(TryLockError::Poisoned(poisoned)) => return Some(poisoned.into_inner()),
                 Err(TryLockError::WouldBlock) if Instant::now() < deadline => {
                     if !stopped {
                         self.request_stop();
@@ -186,11 +196,9 @@ impl Ai {
                     }
                     std::thread::sleep(Duration::from_millis(5));
                 }
-                Err(TryLockError::WouldBlock) => return,
+                Err(TryLockError::WouldBlock) => return None,
             }
-        };
-        *loaded_by = None;
-        let _ = engine.call(&json!({ "op": "release" }), None, &self.stop);
+        }
     }
 }
 
@@ -354,17 +362,22 @@ pub async fn ai_stop(app: AppHandle) {
     app.state::<Ai>().request_stop();
 }
 
-/// Frees the model.
+/// Frees the model. A call still running (one the page just stopped, finishing its batch) is stopped and waited for, up
+/// to QUIT_WAIT; `busy` if it hasn't ended by then.
 #[tauri::command]
 pub async fn ai_release(app: AppHandle) -> Result<(), String> {
-    let entry = app.state::<Ai>().stops_now();
     off_main(app, move |_app, ai| {
         // never opened: nothing loaded
         let Some(Ok(engine)) = ai.engine.get() else {
             return Ok(());
         };
-        let (mut loaded_by, stop) = ai.begin(entry)?;
-        engine.call(&json!({ "op": "release" }), None, &stop)?;
+        let mut loaded_by = ai.stop_and_wait(QUIT_WAIT).ok_or_else(|| BUSY.to_string())?;
+        if ai.exiting.load(Ordering::SeqCst) {
+            return Err(EXITING.to_string());
+        }
+        // the stop above (or an earlier one) is spent: the release itself isn't to be cut short
+        ai.stop.store(false, Ordering::SeqCst);
+        engine.call(&json!({ "op": "release" }), None, &ai.stop)?;
         *loaded_by = None;
         Ok(())
     })
@@ -622,6 +635,40 @@ mod tests {
         downloads.request_cancel();
         assert!(downloads.cancel.load(Ordering::SeqCst));
         drop(running);
+    }
+
+    #[test]
+    fn a_release_waits_for_the_call_it_stops() {
+        let ai = Ai::default();
+        let ended = AtomicBool::new(false);
+        let (started, running) = std::sync::mpsc::channel();
+        std::thread::scope(|scope| {
+            scope.spawn(|| {
+                let (calls, stop) = ai.begin(ai.stops_now()).unwrap();
+                started.send(()).unwrap();
+                let deadline = Instant::now() + Duration::from_secs(5);
+                while !stop.load(Ordering::SeqCst) && Instant::now() < deadline {
+                    std::thread::sleep(Duration::from_millis(1));
+                }
+                // finishing its batch after the stop
+                std::thread::sleep(Duration::from_millis(50));
+                ended.store(true, Ordering::SeqCst);
+                drop(calls);
+            });
+            running.recv().unwrap();
+            let guard = ai.stop_and_wait(Duration::from_secs(2));
+            assert!(guard.is_some());
+            assert!(ended.load(Ordering::SeqCst), "the release went ahead of the running call");
+        });
+    }
+
+    #[test]
+    fn a_release_that_waits_in_vain_is_busy() {
+        let ai = Ai::default();
+        // a call that ignores the stop
+        let (_calls, stop) = ai.begin(ai.stops_now()).unwrap();
+        assert!(ai.stop_and_wait(Duration::from_millis(30)).is_none());
+        assert!(stop.load(Ordering::SeqCst), "the running call wasn't asked to stop");
     }
 
     #[test]
