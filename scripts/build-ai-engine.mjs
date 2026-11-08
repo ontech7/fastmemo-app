@@ -11,7 +11,7 @@
 // the library and never the build scripts.
 
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,14 +27,16 @@ function fail(message) {
   process.exit(1);
 }
 
+/** `quiet`: its output is shown only if it fails (install_name_tool warns on every run that it voids the signature). */
 function run(command, args, { capture = false, quiet = false } = {}) {
   const result = spawnSync(command, args, {
     cwd: ENGINE_DIR,
     encoding: "utf8",
-    stdio: capture ? ["ignore", "pipe", "inherit"] : quiet ? "ignore" : "inherit",
+    stdio: capture ? ["ignore", "pipe", "inherit"] : quiet ? ["ignore", "pipe", "pipe"] : "inherit",
   });
   if (result.error) fail(`could not run ${command}: ${result.error.message}`);
   if (result.status !== 0) {
+    if (quiet) process.stderr.write(`${result.stdout ?? ""}${result.stderr ?? ""}`);
     fail(`\`${command} ${args.join(" ")}\` failed${result.status === null ? ` (${result.signal})` : ` with ${result.status}`}`);
   }
   return result.stdout;
@@ -86,17 +88,23 @@ function setInstallName(dylib) {
 const triple = process.env.TAURI_ENV_TARGET_TRIPLE || hostTriple();
 mkdirSync(DIST_DIR, { recursive: true });
 
+// The library is made whole in a temporary file, then renamed into place: a dev app may have the one in dist mapped, and
+// writing over it would change the code under it (macOS kills a process whose signed pages change). The rename leaves
+// it the old file. Same file name, in a folder of its own: codesign names the signature after the file.
+const out = join(DIST_DIR, libraryName(triple));
+const tempDir = join(DIST_DIR, ".tmp");
+const temp = join(tempDir, libraryName(triple));
+rmSync(tempDir, { recursive: true, force: true });
+mkdirSync(tempDir);
 if (triple === "universal-apple-darwin") {
   if (process.platform !== "darwin") fail(`${triple} can only be built on macOS`);
   const parts = MAC_TRIPLES.map(build);
-  const out = join(DIST_DIR, libraryName(triple));
-  rmSync(out, { force: true });
-  run("lipo", ["-create", ...parts, "-output", out]);
-  setInstallName(out);
+  run("lipo", ["-create", ...parts, "-output", temp]);
+  setInstallName(temp);
 } else {
-  const built = build(triple);
-  const out = join(DIST_DIR, libraryName(triple));
-  copyFileSync(built, out);
-  if (triple.includes("apple")) setInstallName(out);
+  copyFileSync(build(triple), temp);
+  if (triple.includes("apple")) setInstallName(temp);
 }
-console.log(`build-ai-engine: ${join(DIST_DIR, libraryName(triple))}`);
+renameSync(temp, out);
+rmSync(tempDir, { recursive: true, force: true });
+console.log(`build-ai-engine: ${out}`);

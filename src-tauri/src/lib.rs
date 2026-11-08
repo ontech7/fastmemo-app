@@ -8,6 +8,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_window_state::StateFlags;
 
+mod ai;
 pub mod mcp;
 mod net;
 mod tray;
@@ -16,6 +17,13 @@ mod window_chrome;
 /// The app's config, in one place: the MCP bridge reads the identifier from it without starting Tauri.
 fn context() -> tauri::Context<tauri::Wry> {
     tauri::generate_context!()
+}
+
+/// `--ai-selftest [model.gguf]` (`main.rs`): whether the AI engine library opens in this executable, and with a model
+/// whether it writes. Prints one JSON line, returns the exit code.
+pub fn ai_selftest() -> i32 {
+    let model = std::env::args_os().skip_while(|arg| arg != "--ai-selftest").nth(1).map(std::path::PathBuf::from);
+    ai::selftest(model.as_deref())
 }
 
 /// Prompt the OS biometric dialog (Touch ID on macOS, Windows Hello on Windows)
@@ -559,6 +567,7 @@ pub fn run() {
         .manage(net::Net::default())
         .manage(mcp::McpState::default())
         .manage(tray::TrayState::default())
+        .manage(ai::Ai::default())
         .invoke_handler(tauri::generate_handler![
             biometric_authenticate,
             exit_after_flush,
@@ -571,7 +580,13 @@ pub fn run() {
             mcp::mcp_reply,
             mcp::mcp_get_settings,
             mcp::mcp_set_settings,
-            mcp::mcp_connection_info
+            mcp::mcp_connection_info,
+            ai::ai_info,
+            ai::ai_load,
+            ai::ai_tokenize,
+            ai::ai_complete,
+            ai::ai_stop,
+            ai::ai_release
         ])
         .setup(|app| {
             // The config's frame: window-state's restore lands just after (on the main queue), recorded through its
@@ -630,8 +645,12 @@ pub fn run() {
             // leaving full screen to be hidden).
             #[cfg(target_os = "macos")]
             RunEvent::Reopen { .. } => show_main(app, true),
-            #[cfg(target_os = "macos")]
-            RunEvent::Exit => save_windowed_frame(app),
+            // Every quit through the event loop (`app.exit`) ends here.
+            RunEvent::Exit => {
+                #[cfg(target_os = "macos")]
+                save_windowed_frame(app);
+                app.state::<ai::Ai>().release_at_quit();
+            }
             _ => {}
         });
 }

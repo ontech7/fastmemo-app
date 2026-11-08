@@ -32,6 +32,13 @@ serde_json = "1.0"
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "gzip", "system-proxy"] }
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 tokio = { version = "1", default-features = false, features = ["sync"] }
+# The AI engine library (src-tauri/ai-engine), opened on first use, never linked (src/ai/library.rs). The version already in
+# the app through Tauri's own dependencies.
+libloading = "0.7"
+
+# The installed memory on macOS (src/ai/system.rs: sysctlbyname).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 # Desktop biometric unlock is scoped to macOS (Touch ID) and Windows (Hello), so
 # `robius-authentication` is a target-specific dependency. On Linux it would pull
@@ -41,10 +48,10 @@ tokio = { version = "1", default-features = false, features = ["sync"] }
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 robius-authentication = "0.1.1"
 
-# The named pipe of the local MCP server (src/mcp/endpoint.rs; Win32_System_IO is what ConnectNamedPipe is gated on) and
-# the title bar's colour (src/window_chrome.rs, Win32_Graphics_Dwm). WebView2's own interfaces (the text fields' menu, a
-# minimised page) come from the same webview2-com and windows-core wry uses: keep their versions in step with wry's when
-# Tauri is updated (Cargo.lock).
+# The named pipe of the local MCP server (src/mcp/endpoint.rs; Win32_System_IO is what ConnectNamedPipe is gated on),
+# the title bar's colour (src/window_chrome.rs, Win32_Graphics_Dwm) and the installed memory for the AI (src/ai/system.rs,
+# Win32_System_SystemInformation). WebView2's own interfaces (the text fields' menu, a minimised page) come from the same
+# webview2-com and windows-core wry uses: keep their versions in step with wry's when Tauri is updated (Cargo.lock).
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
@@ -54,6 +61,7 @@ windows-sys = { version = "0.61", features = [
     "Win32_Storage_FileSystem",
     "Win32_System_IO",
     "Win32_System_Pipes",
+    "Win32_System_SystemInformation",
 ] }
 webview2-com = "0.39"
 windows-core = "0.62"
