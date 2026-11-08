@@ -187,7 +187,9 @@ const resolver = {
 writeFileSync(
   entry,
   `
-  export * as X from "@/libs/ai/context";
+  import * as Context from "@/libs/ai/context";
+  import * as Models from "@/libs/ai/models";
+  export const X = { ...Context, ...Models };
   export * as C from "@/libs/ai/constants";
   export * as H from "@/libs/ai/helpers";
 `

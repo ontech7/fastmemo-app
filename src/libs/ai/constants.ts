@@ -94,6 +94,11 @@ export function normalizeModelId(id: string | undefined): AIModelId {
   return (id && LEGACY_MODEL_MAP[id]) || DEFAULT_MODEL_ID;
 }
 
+/** The catalog entry of `modelId` (a stored or legacy id maps to its replacement). */
+export function getModel(modelId?: AIModelId): AIModelInfo {
+  return AI_MODELS[normalizeModelId(modelId)];
+}
+
 /** llama.rn sampling for one kind of task (the names are its own). */
 export interface Sampling {
   temperature: number;
