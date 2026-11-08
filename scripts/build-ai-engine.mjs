@@ -78,7 +78,7 @@ function build(triple) {
   // Metal on Apple Silicon only: llama.cpp turns it on for every Mac, and an Intel Mac's GPU is its least tried path, so
   // Intel Macs run on the CPU, as Windows and Linux do (llama-cpp-sys passes GGML_* variables to CMake).
   // The environment's RUSTFLAGS / target dir would replace .cargo/config.toml's rustflags (AVX2, static CRT) or move the
-  // output: the build is always the checked-in one.
+  // output: those four are never taken from it.
   const env = triple === "x86_64-apple-darwin" ? { GGML_METAL: "OFF" } : undefined;
   run("cargo", args, { env, unset: ["RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "CARGO_TARGET_DIR", "CARGO_BUILD_TARGET_DIR"] });
   const built = join(ENGINE_DIR, stub ? "target/stub" : "target", triple, "release", libraryName(triple));

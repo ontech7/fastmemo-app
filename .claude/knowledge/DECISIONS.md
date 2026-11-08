@@ -1624,8 +1624,9 @@ page (libs/ai/context.ts, shared with the phone)
   - bindgen makes C enums `i32` under MSVC and `u32` under clang (LL-074).
 - **The commands** (`src-tauri/src/ai/mod.rs`): `ai_info`, `ai_load`, `ai_tokenize`, `ai_complete` (tokens over a `Channel`),
   `ai_stop`, `ai_release`, `ai_model_files`, `ai_download`, `ai_download_cancel`, `ai_delete_files`, `ai_save_eval_report`. One
-  engine call at a time: a second answers `busy` and never waits. A stop sent right after a start is kept (counted, not a flag
-  that the start resets), and nothing starts once the app is quitting. The page names a model by its bare file name; Rust knows
+  engine call at a time: a second answers `busy` and never waits; `ai_release` and the quit stop the running call and wait
+  for it (30 s and 2 s: on a CPU the stop lands between prompt batches of 512 tokens, about 5 s on the 4B). A stop sent
+  right after a start is kept (counted, not a flag that the start resets), and nothing starts once the app is quitting. The page names a model by its bare file name; Rust knows
   the folder, and `ai_load` refuses a `.part`.
 - **The same logic on both platforms.** `libs/ai/context.ts` keeps the prompts, sampling, grammars, guards and long-note
   handling, and reaches the engine through `engine.ts` (llama.rn) or `engine.web.ts` (the commands), and the files through

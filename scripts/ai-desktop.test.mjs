@@ -351,6 +351,19 @@ console.log("a lone surrogate never reaches the shell");
   await context.tokenize(cut);
   await context.tokenize(pair);
   eq("tokenize gets the same", tauri.argsOf("ai_tokenize"), [{ text: "日本\ufffd" }, { text: pair }]);
+
+  // a WebKit before 16.4 has no toWellFormed: the fallback gives the same text
+  const toWellFormed = String.prototype.toWellFormed;
+  delete String.prototype.toWellFormed;
+  try {
+    const mixed = "\ude00" + "日本😀" + "\ud83d" + "x" + "\ud83d";
+    await context.tokenize(mixed);
+    eq("without toWellFormed: lone surrogates become U+FFFD, a whole emoji stays", tauri.argsOf("ai_tokenize")[2], {
+      text: "\ufffd日本😀\ufffdx\ufffd",
+    });
+  } finally {
+    String.prototype.toWellFormed = toWellFormed;
+  }
 }
 
 console.log("cancel stops in Rust");

@@ -59,7 +59,9 @@ export async function getEngineSupport(): Promise<EngineSupport> {
  */
 function wellFormed(text: string): string {
   if (typeof text.toWellFormed === "function") return text.toWellFormed();
-  return text.replace(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g, "\ufffd");
+  // A pair is matched whole and kept; what's left is a lone surrogate. No lookbehind: a WebKit without toWellFormed
+  // (before 16.4) has none either, and a regex literal it can't parse would stop the whole page from loading.
+  return text.replace(/[\ud800-\udbff][\udc00-\udfff]|[\ud800-\udfff]/g, (unit) => (unit.length === 2 ? unit : "\ufffd"));
 }
 
 /** Loads a model (the bare file name of the models folder) in the shell. */

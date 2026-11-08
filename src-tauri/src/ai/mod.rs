@@ -6,10 +6,11 @@
 //! run on the blocking pool.
 //!
 //! One call at a time, as in the engine: a call that comes while another runs (a completion, a load) answers `busy` at
-//! once, and never waits. The stop flag is set as a call reaches the engine from the stops counted since the call came
-//! in: a stop sent right after a start (while the call waits for a worker, or for the library to open) still ends it,
-//! and one meant for an earlier call can't end the next one (the engine reads the flag during a load too). Only
-//! `ai_stop` sets it, and the app's quit. While the app quits, no call starts.
+//! once, and never waits. Two exceptions free the model: `ai_release` and the app's quit stop the running call and wait
+//! for it to end (RELEASE_WAIT, QUIT_WAIT). The stop flag is set as a call reaches the engine from the stops counted
+//! since the call came in: a stop sent right after a start (while the call waits for a worker, or for the library to
+//! open) still ends it, and one meant for an earlier call can't end the next one (the engine reads the flag during a
+//! load too). `ai_stop`, `ai_release` and the app's quit set it. While the app quits, no call starts.
 //!
 //! The model download (`download.rs`) is apart from the engine's calls: one at a time too (`busy`), on the blocking
 //! pool, its own cancel flag counted the same way (`Downloads`). The page's file commands (`ai_model_files`,
@@ -39,6 +40,9 @@ const BUSY: &str = "busy";
 const EXITING: &str = "exiting";
 /// How long the quit waits for a call it stopped (a load ends within its next step, a completion within a batch).
 const QUIT_WAIT: Duration = Duration::from_secs(2);
+/// How long `ai_release` waits for a call it stopped: the engine checks the stop between prompt batches of 512 tokens,
+/// and on a CPU one batch of the 4B takes about 5 s (the M5; a slower computer longer). Past it, `busy`.
+const RELEASE_WAIT: Duration = Duration::from_secs(30);
 
 /// What the AI keeps while the app runs.
 #[derive(Default)]
@@ -363,7 +367,7 @@ pub async fn ai_stop(app: AppHandle) {
 }
 
 /// Frees the model. A call still running (one the page just stopped, finishing its batch) is stopped and waited for, up
-/// to QUIT_WAIT; `busy` if it hasn't ended by then.
+/// to RELEASE_WAIT; `busy` if it hasn't ended by then.
 #[tauri::command]
 pub async fn ai_release(app: AppHandle) -> Result<(), String> {
     off_main(app, move |_app, ai| {
@@ -371,7 +375,7 @@ pub async fn ai_release(app: AppHandle) -> Result<(), String> {
         let Some(Ok(engine)) = ai.engine.get() else {
             return Ok(());
         };
-        let mut loaded_by = ai.stop_and_wait(QUIT_WAIT).ok_or_else(|| BUSY.to_string())?;
+        let mut loaded_by = ai.stop_and_wait(RELEASE_WAIT).ok_or_else(|| BUSY.to_string())?;
         if ai.exiting.load(Ordering::SeqCst) {
             return Err(EXITING.to_string());
         }

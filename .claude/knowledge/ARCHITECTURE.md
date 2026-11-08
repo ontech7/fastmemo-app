@@ -393,7 +393,7 @@ app opens when the AI is first used.
 
 ```
 page: context.ts --> engine.web.ts / models.web.ts --invoke("ai_*")--> src-tauri/src/ai/mod.rs
-  mod.rs      the commands; one engine call at a time ("busy"); stop and cancel counted, so one sent early is kept; nothing starts on quit
+  mod.rs      the commands; one engine call at a time ("busy"; release and quit stop it and wait); stop and cancel counted, so one sent early is kept; nothing starts on quit
   library.rs  libloading: opens LIBRARY_FILE once (macOS Frameworks, Windows/Linux resources "ai/"); checks fm_ai_abi_version == 1
               -> Unavailable { Cpu | Missing | Abi | Error } = no AI; the app is unaffected
   system.rs   total memory (sysctl / GlobalMemoryStatusEx / /proc/meminfo), inference_threads() = half the cores, cpu_supported() (AVX2+FMA+F16C)
