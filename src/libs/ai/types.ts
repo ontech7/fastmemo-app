@@ -60,6 +60,8 @@ export interface EditorActionOptions {
    * the steps after it too. Each action takes the current one otherwise.
    */
   generation?: number;
+  /** The sampler's seed. Only the evaluation sets it, so that two runs of a model compare; the app's actions leave it out. */
+  seed?: number;
 }
 
 /** A long note's action under way: the step it's on (paragraphs, or parts of a summary). */

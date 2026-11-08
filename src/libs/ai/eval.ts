@@ -7,6 +7,9 @@ import { EVAL_FIXTURES, LONG_NOTE_FIXTURES } from "./evalFixtures";
 import { clearLongNoteCache, estimateSeconds, rewriteNote, summarizeNote } from "./longNote";
 import type { AIModelId, AITimings, EditorAction } from "./types";
 
+/** The sampler's seed of every action the evaluation runs: the same model gives the same answers run after run. */
+export const EVAL_SEED = 42;
+
 export interface EvalResult {
   id: string;
   action: EditorAction;
@@ -63,6 +66,7 @@ export async function runAIEval(
       lang: fixture.lang,
       categories: fixture.categories,
       modelId,
+      seed: EVAL_SEED,
     });
     const result: EvalResult = {
       id: fixture.id,
@@ -85,7 +89,7 @@ export async function runAIEval(
     const estimateMs = Math.round(estimateSeconds(fixture.action, fixture.html, modelId) * 1000);
     let steps = 0;
     const handlers = { onProgress: ({ total: count }: { total: number }) => (steps = count) };
-    const options = { lang: fixture.lang, modelId };
+    const options = { lang: fixture.lang, modelId, seed: EVAL_SEED };
     const start = Date.now();
     const answer =
       fixture.action === "summarize"

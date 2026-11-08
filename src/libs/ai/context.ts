@@ -759,6 +759,7 @@ async function runEditorAction(
         n_predict: nPredict,
         stop: STOP_WORDS,
         ...ACTION_SAMPLING[action],
+        ...(options.seed !== undefined ? { seed: options.seed } : {}),
         ...(isJsonOutput ? { grammar: JSON_ARRAY_GRAMMAR } : {}),
         // the candidates of each token tell how close another category came
         ...(action === "suggest_category" ? { grammar: categoryGrammar(categoryNames), n_probs: 10 } : {}),

@@ -421,6 +421,16 @@ console.log("title");
     C.getEditorSystemPrompt("generate_title", "en", "qwen3.5-2b")
   );
   eq("the language of the settings", X.resolveLanguage(), "it");
+
+  // the seed: only the evaluation passes one; the app's own actions send none
+  await X.generateEditorContent("generate_title", "Latte, pane e uova");
+  const unseeded = lastCompletion();
+  ok("no seed by default: the params have no seed key", !("seed" in unseeded), unseeded);
+  await X.generateEditorContent("generate_title", "Latte, pane e uova", undefined, { seed: 42 });
+  const seeded = lastCompletion();
+  eq("the eval's seed reaches the model", seeded.seed, 42);
+  const { seed, ...rest } = seeded;
+  eq("... and is the only change to the params", rest, unseeded);
 }
 
 console.log("grammar fix budget");
@@ -520,6 +530,35 @@ console.log("items");
   const dictated = await X.generateEditorContent("transcript_to_items", "latte e pane");
   eq("transcript_to_items: the same grammar", lastCompletion().grammar, C.JSON_ARRAY_GRAMMAR);
   eq("transcript_to_items: the items", dictated.items, ["Latte", "Pane"]);
+
+  // the whole params of each: a pin of what the model is sent (the template, the stop words, the sampling, the grammar)
+  await fresh();
+  answer({ text: '["a","b","c"]' });
+  await X.generateEditorContent("suggest_items", "Spesa");
+  eq("suggest_items: the whole params", lastCompletion(), {
+    messages: [
+      { role: "system", content: C.getEditorSystemPrompt("suggest_items", "it", "qwen3.5-2b") },
+      { role: "user", content: "Spesa" },
+    ],
+    ...TEMPLATE,
+    n_predict: 100,
+    stop: STOP_WORDS,
+    ...GENERATIVE,
+    grammar: C.JSON_ARRAY_GRAMMAR,
+  });
+  answer({ text: '["Latte","Pane"]' });
+  await X.generateEditorContent("transcript_to_items", "latte e pane");
+  eq("transcript_to_items: the whole params", lastCompletion(), {
+    messages: [
+      { role: "system", content: C.getEditorSystemPrompt("transcript_to_items", "it", "qwen3.5-2b") },
+      { role: "user", content: "latte e pane" },
+    ],
+    ...TEMPLATE,
+    n_predict: 300,
+    stop: STOP_WORDS,
+    ...FAITHFUL,
+    grammar: C.JSON_ARRAY_GRAMMAR,
+  });
 }
 
 console.log("category");
@@ -545,6 +584,18 @@ console.log("category");
   eq("the grammar is the category names and none", p.grammar, H.categoryGrammar(names));
   eq("... as the helper builds it", p.grammar, 'root ::= "Spesa" | "Lavoro" | "Svago" | "none"');
   eq("n_probs is 10", p.n_probs, 10);
+  eq("suggest_category: the whole params", p, {
+    messages: [
+      { role: "system", content: C.getEditorSystemPrompt("suggest_category", "it", "qwen3.5-2b") },
+      { role: "user", content: `Categories: ${names.join(", ")}\n\nNote:\n${note}` },
+    ],
+    ...TEMPLATE,
+    n_predict: 30,
+    stop: STOP_WORDS,
+    ...FAITHFUL,
+    grammar: H.categoryGrammar(names),
+    n_probs: 10,
+  });
   eq("n_predict is 30, the FAITHFUL sampling", [p.n_predict, p.temperature, p.penalty_present], [30, 0.2, 0]);
   eq("the user message lists the categories", p.messages[1].content, `Categories: Spesa, Lavoro, Svago\n\nNote:\n${note}`);
   eq(

@@ -579,6 +579,19 @@ const run = async (fn) => {
   eq("long: run again, every step from the cache", [again.calls.length, again.result.html], [0, r.result.html]);
   const english = await run((h) => L.rewriteNote("fix_grammar", note, h, { lang: "en" }));
   eq("long: another language is not a cache hit", english.calls.length, 3);
+  ok(
+    "long: no seed unless asked for",
+    r.options.every((o) => o.seed === undefined),
+    r.options
+  );
+  L.clearLongNoteCache();
+  const seeded = await run((h) => L.rewriteNote("fix_grammar", note, h, { seed: 42 }));
+  ok(
+    "long: a rewrite's seed reaches every step",
+    seeded.options.length === 3 && seeded.options.every((o) => o.seed === 42),
+    seeded.options
+  );
+  L.clearLongNoteCache();
 }
 {
   M.setAnswer((_a, c) =>
@@ -661,6 +674,12 @@ const run = async (fn) => {
     "summary: a short note in one call, the title first",
     [r.result, r.calls, r.progress],
     [{ success: true, text: "SPESA\nUNO.\nDUE." }, [["summarize", "Spesa\nUno.\nDue."]], ["0/1", "1/1"]]
+  );
+  const seededSummary = await run((h) => L.summarizeNote("<div>Seme.</div>", "", h, { seed: 42 }));
+  ok(
+    "summary: the seed reaches the call",
+    seededSummary.options.length === 1 && seededSummary.options[0].seed === 42,
+    seededSummary.options
   );
   const old = B.withSummary("<div>Corpo.</div>", "Riassunto", "Vecchio.");
   const again = await run((h) => L.summarizeNote(old, "", h));
