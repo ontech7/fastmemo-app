@@ -207,23 +207,33 @@ eq("every model has its sha256", pickBy(NATIVE.C.AI_MODELS, "sha256"), [
 {
   const never = { enabled: false, modelDownloaded: false, selectedModel: "qwen3.5-0.8b", voiceOnly: false };
   const stateOf = (aiAssistant) => ({ settings: { aiAssistant } });
-  eq("desktop: an AI never set up reads as the 2B", DESKTOP.S.selectorAIAssistant(stateOf(never)).selectedModel, "qwen3.5-2b");
-  eq(
-    "desktop: a downloaded 0.8B stays",
-    DESKTOP.S.selectorAIAssistant(stateOf({ ...never, modelDownloaded: true })).selectedModel,
-    "qwen3.5-0.8b"
+  ok(
+    "desktop: an explicit 0.8B pick, not yet downloaded, sticks (the stored object)",
+    DESKTOP.S.selectorAIAssistant(stateOf(never)) === never
   );
-  eq(
-    "desktop: an AI turned on with the 0.8B stays",
-    DESKTOP.S.selectorAIAssistant(stateOf({ ...never, enabled: true })).selectedModel,
-    "qwen3.5-0.8b"
-  );
-  eq(
-    "desktop: a never-set-up 4B stays",
-    DESKTOP.S.selectorAIAssistant(stateOf({ ...never, selectedModel: "qwen3.5-4b" })).selectedModel,
-    "qwen3.5-4b"
+  ok(
+    "desktop: a downloaded 0.8B is the stored object",
+    (() => {
+      const stored = { ...never, modelDownloaded: true };
+      return DESKTOP.S.selectorAIAssistant(stateOf(stored)) === stored;
+    })()
   );
   eq("desktop: no stored settings read as the 2B", DESKTOP.S.selectorAIAssistant({ settings: {} }).selectedModel, "qwen3.5-2b");
+  eq(
+    "native: no stored settings read as the 0.8B",
+    NATIVE.S.selectorAIAssistant({ settings: {} }).selectedModel,
+    "qwen3.5-0.8b"
+  );
+  eq(
+    "native: the initial state starts on the 0.8B",
+    NATIVE.S.default(undefined, { type: "init" }).aiAssistant.selectedModel,
+    "qwen3.5-0.8b"
+  );
+  eq(
+    "desktop: the initial state starts on the 2B",
+    DESKTOP.S.default(undefined, { type: "init" }).aiAssistant.selectedModel,
+    "qwen3.5-2b"
+  );
   eq(
     "desktop: a legacy id maps to its tier, not downloaded",
     DESKTOP.S.selectorAIAssistant(stateOf({ ...never, enabled: true, modelDownloaded: true, selectedModel: "qwen-0.5b" })),

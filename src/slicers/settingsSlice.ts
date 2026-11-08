@@ -56,7 +56,7 @@ const initialState: SettingsState = {
   aiAssistant: {
     enabled: false,
     modelDownloaded: false,
-    selectedModel: "qwen3.5-0.8b",
+    selectedModel: DEFAULT_MODEL_ID,
     voiceOnly: false,
   },
   reportDate: null,
@@ -183,26 +183,14 @@ const DEFAULT_AI_ASSISTANT: AIAssistantSettings = {
   voiceOnly: false,
 };
 const selectorStoredAIAssistant = (state: RootState): AIAssistantSettings => state.settings.aiAssistant || DEFAULT_AI_ASSISTANT;
-/** The model every new setting starts with, before the platform's default replaces it (the store's initial value, kept). */
-const INITIAL_MODEL_ID = "qwen3.5-0.8b";
 /**
  * The AI settings with one of today's models. A Qwen 2.5 id stored by an earlier version reads as the tier replacing it,
- * not downloaded (the file on the device is the old model's); the AI settings screen then stores it so. An AI never set up
- * (off, nothing downloaded) that still holds the initial model reads as the platform's default model: on the desktop the 2B,
- * on a phone the same 0.8B, and then the stored object itself comes back.
+ * not downloaded (the file on the device is the old model's); the AI settings screen then stores it so. Anything else comes
+ * back as stored: a model the user picked sticks, downloaded or not.
  */
 export const selectorAIAssistant = createSelector([selectorStoredAIAssistant], (ai): AIAssistantSettings => {
   const selectedModel = normalizeModelId(ai.selectedModel);
-  const current = selectedModel === ai.selectedModel ? ai : { ...ai, selectedModel, modelDownloaded: false };
-  if (
-    !current.enabled &&
-    !current.modelDownloaded &&
-    current.selectedModel === INITIAL_MODEL_ID &&
-    DEFAULT_MODEL_ID !== INITIAL_MODEL_ID
-  ) {
-    return { ...current, selectedModel: DEFAULT_MODEL_ID };
-  }
-  return current;
+  return selectedModel === ai.selectedModel ? ai : { ...ai, selectedModel, modelDownloaded: false };
 });
 /** Whether the stored model is a Qwen 2.5 one of an earlier version. */
 export const selectorAIModelIsLegacy = (state: RootState): boolean =>
