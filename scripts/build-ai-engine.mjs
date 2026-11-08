@@ -105,6 +105,11 @@ if (triple === "universal-apple-darwin") {
   copyFileSync(build(triple), temp);
   if (triple.includes("apple")) setInstallName(temp);
 }
-renameSync(temp, out);
+try {
+  renameSync(temp, out);
+} catch (error) {
+  // Windows won't replace a DLL a process has loaded
+  fail(`can't put the library in place at ${out} (${error.message}): quit a running dev app that uses it, then build again`);
+}
 rmSync(tempDir, { recursive: true, force: true });
 console.log(`build-ai-engine: ${out}`);

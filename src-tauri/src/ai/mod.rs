@@ -6,16 +6,19 @@
 //! run on the blocking pool.
 //!
 //! One call at a time, as in the engine: a call that comes while another runs (a completion, a load) answers `busy` at
-//! once, and never waits. The stop flag is cleared as a call starts, so that a stop meant for the last one can't end the
-//! next one (the engine reads it during a load too); only `ai_stop` sets it, and the app's quit.
+//! once, and never waits. The stop flag is set as a call reaches the engine from the stops counted since the call came
+//! in: a stop sent right after a start (while the call waits for a worker, or for the library to open) still ends it,
+//! and one meant for an earlier call can't end the next one (the engine reads the flag during a load too). Only
+//! `ai_stop` sets it, and the app's quit. While the app quits, no call starts.
 
 mod library;
 mod system;
 
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, TryLockError};
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -26,6 +29,10 @@ use library::{Engine, Unavailable};
 
 /// The engine's answer while another call runs; the same here.
 const BUSY: &str = "busy";
+/// The answer to a call that comes while the app quits.
+const EXITING: &str = "exiting";
+/// How long the quit waits for a call it stopped (a load ends within its next step, a completion within a batch).
+const QUIT_WAIT: Duration = Duration::from_secs(2);
 
 /// What the AI keeps while the app runs.
 #[derive(Default)]
@@ -36,6 +43,10 @@ pub struct Ai {
     calls: Mutex<Option<String>>,
     /// The engine reads it through a pointer for the whole of a call: each call holds its own reference.
     stop: Arc<AtomicBool>,
+    /// The stops sent so far (`request_stop`): a call reads it as it comes in (`stops_now`), and is stopped if it moved.
+    stops: AtomicU64,
+    /// Set as the app quits: nothing starts from then on.
+    exiting: AtomicBool,
 }
 
 impl Ai {
@@ -54,31 +65,61 @@ impl Ai {
         self.opened(app).as_ref().map_err(|unavailable| format!("no_engine: {}", unavailable.reason()))
     }
 
-    /// The right to call the engine, or `busy` at once; clears the stop flag.
-    fn begin(&self) -> Result<(MutexGuard<'_, Option<String>>, Arc<AtomicBool>), String> {
+    /// The stops sent so far: what a command reads as it comes in, before anything else, for `begin`.
+    fn stops_now(&self) -> u64 {
+        self.stops.load(Ordering::SeqCst)
+    }
+
+    /// Ends the call running, or the one on its way to the engine (`ai_stop`). Counted first, flag second: a `begin`
+    /// in between sets the flag itself.
+    fn request_stop(&self) {
+        self.stops.fetch_add(1, Ordering::SeqCst);
+        self.stop.store(true, Ordering::SeqCst);
+    }
+
+    /// The right to call the engine, for a call that came in when `stops_now` was `entry`: `busy` at once while another
+    /// runs, leaving the flag alone; `exiting` once the app quits. The flag is then set if a stop was sent since `entry`,
+    /// cleared otherwise.
+    fn begin(&self, entry: u64) -> Result<(MutexGuard<'_, Option<String>>, Arc<AtomicBool>), String> {
         let guard = match self.calls.try_lock() {
             Ok(guard) => guard,
             Err(TryLockError::Poisoned(poisoned)) => poisoned.into_inner(),
             Err(TryLockError::WouldBlock) => return Err(BUSY.to_string()),
         };
-        self.stop.store(false, Ordering::SeqCst);
+        if self.exiting.load(Ordering::SeqCst) {
+            return Err(EXITING.to_string());
+        }
+        // a quit just after the check above stops this call through `request_stop`, which moves the count
+        self.stop.store(self.stops_now() != entry, Ordering::SeqCst);
         Ok((guard, Arc::clone(&self.stop)))
     }
 
-    /// The app is quitting (`RunEvent::Exit`): the model is freed now, before the GPU backend's own teardown, so the
-    /// engine's exit handler finds nothing left. A call still running is asked to stop instead: the engine's handler
-    /// frees the model once it has.
+    /// The app is quitting (`RunEvent::Exit`, on the main thread): nothing starts from now on, and the model is freed
+    /// before the GPU backend's own teardown. A call still running (a load, the session's first included, or a
+    /// completion) is stopped, and waited for up to QUIT_WAIT; past that, the engine's exit handler is what's left.
     pub fn release_at_quit(&self) {
+        self.exiting.store(true, Ordering::SeqCst);
         let Some(Ok(engine)) = self.engine.get() else {
             return;
         };
-        match self.calls.try_lock() {
-            Ok(mut loaded_by) => {
-                *loaded_by = None;
-                let _ = engine.call(&json!({ "op": "release" }), None, &self.stop);
+        let deadline = Instant::now() + QUIT_WAIT;
+        let mut stopped = false;
+        let mut loaded_by = loop {
+            match self.calls.try_lock() {
+                Ok(guard) => break guard,
+                Err(TryLockError::Poisoned(poisoned)) => break poisoned.into_inner(),
+                Err(TryLockError::WouldBlock) if Instant::now() < deadline => {
+                    if !stopped {
+                        self.request_stop();
+                        stopped = true;
+                    }
+                    std::thread::sleep(Duration::from_millis(5));
+                }
+                Err(TryLockError::WouldBlock) => return,
             }
-            Err(_) => self.stop.store(true, Ordering::SeqCst),
-        }
+        };
+        *loaded_by = None;
+        let _ = engine.call(&json!({ "op": "release" }), None, &self.stop);
     }
 }
 
@@ -152,7 +193,9 @@ pub async fn ai_info(app: AppHandle) -> AiInfo {
 }
 
 /// Loads a model of the models folder (a bare file name), replacing the one loaded. A model loaded by a page that has
-/// since reloaded (development) is released first: the new page never knew about it.
+/// since reloaded (development) is released first: the new page never knew about it. A load that fails, whatever the
+/// reason (a bad name or path included, where the engine would keep the previous model), leaves no model: the page
+/// takes it as not loaded.
 #[tauri::command]
 pub async fn ai_load(
     app: AppHandle,
@@ -161,34 +204,42 @@ pub async fn ai_load(
     n_gpu_layers: i32,
     page_id: String,
 ) -> Result<LoadInfo, String> {
-    let path = model_path(&app, &file_name)?;
-    let path = path.to_str().ok_or("load_failed: the models folder's path is not UTF-8")?.to_string();
+    let entry = app.state::<Ai>().stops_now();
     off_main(app, move |app, ai| {
         let engine = ai.engine(app)?;
-        let (mut loaded_by, stop) = ai.begin()?;
-        if loaded_by.as_ref().is_some_and(|id| *id != page_id) {
-            engine.call(&json!({ "op": "release" }), None, &stop)?;
+        let (mut loaded_by, stop) = ai.begin(entry)?;
+        let loaded = (|| {
+            let path = model_path(app, &file_name)?;
+            let path = path.to_str().ok_or("load_failed: the models folder's path is not UTF-8")?;
+            if loaded_by.as_ref().is_some_and(|id| *id != page_id) {
+                engine.call(&json!({ "op": "release" }), None, &stop)?;
+            }
+            *loaded_by = Some(page_id);
+            let request = json!({
+                "op": "load",
+                "path": path,
+                "n_ctx": n_ctx,
+                "n_gpu_layers": n_gpu_layers,
+                "n_threads": system::inference_threads(),
+            });
+            let answer = engine.call(&request, None, &stop)?;
+            serde_json::from_value::<LoadInfo>(answer).map_err(|err| format!("engine: {err}"))
+        })();
+        if loaded.is_err() {
+            *loaded_by = None;
+            let _ = engine.call(&json!({ "op": "release" }), None, &stop);
         }
-        // this page's, whatever the outcome: a failed load may have left the previous model or none
-        *loaded_by = Some(page_id);
-        let request = json!({
-            "op": "load",
-            "path": path,
-            "n_ctx": n_ctx,
-            "n_gpu_layers": n_gpu_layers,
-            "n_threads": system::inference_threads(),
-        });
-        let answer = engine.call(&request, None, &stop)?;
-        serde_json::from_value(answer).map_err(|err| format!("engine: {err}"))
+        loaded
     })
     .await
 }
 
 #[tauri::command]
 pub async fn ai_tokenize(app: AppHandle, text: String) -> Result<Vec<i32>, String> {
+    let entry = app.state::<Ai>().stops_now();
     off_main(app, move |app, ai| {
         let engine = ai.engine(app)?;
-        let (_calls, stop) = ai.begin()?;
+        let (_calls, stop) = ai.begin(entry)?;
         let answer = engine.call(&json!({ "op": "tokenize", "text": text }), None, &stop)?;
         serde_json::from_value(answer).map_err(|err| format!("engine: {err}"))
     })
@@ -204,9 +255,10 @@ pub async fn ai_complete(app: AppHandle, params: Value, on_token: Channel<String
     };
     request.insert("op".to_string(), "complete".into());
     let request = Value::Object(request);
+    let entry = app.state::<Ai>().stops_now();
     off_main(app, move |app, ai| {
         let engine = ai.engine(app)?;
-        let (_calls, stop) = ai.begin()?;
+        let (_calls, stop) = ai.begin(entry)?;
         // never blocks: the channel hands the text to the webview's event loop
         let mut send = |piece: &str| {
             let _ = on_token.send(piece.to_string());
@@ -216,21 +268,23 @@ pub async fn ai_complete(app: AppHandle, params: Value, on_token: Channel<String
     .await
 }
 
-/// Ends the running load or completion: a completion returns what it has, `interrupted`.
+/// Ends the running load or completion (a completion returns what it has, `interrupted`), or the one sent just before
+/// that hasn't reached the engine yet.
 #[tauri::command]
 pub async fn ai_stop(app: AppHandle) {
-    app.state::<Ai>().stop.store(true, Ordering::SeqCst);
+    app.state::<Ai>().request_stop();
 }
 
 /// Frees the model.
 #[tauri::command]
 pub async fn ai_release(app: AppHandle) -> Result<(), String> {
-    off_main(app, |_app, ai| {
+    let entry = app.state::<Ai>().stops_now();
+    off_main(app, move |_app, ai| {
         // never opened: nothing loaded
         let Some(Ok(engine)) = ai.engine.get() else {
             return Ok(());
         };
-        let (mut loaded_by, stop) = ai.begin()?;
+        let (mut loaded_by, stop) = ai.begin(entry)?;
         engine.call(&json!({ "op": "release" }), None, &stop)?;
         *loaded_by = None;
         Ok(())
@@ -309,5 +363,79 @@ mod tests {
         for name in ["..", "/a.gguf", "C:a.gguf", "a\0.gguf"] {
             assert!(!is_bare_file_name(name), "{name:?} was accepted");
         }
+    }
+
+    #[test]
+    fn a_stop_counts_from_the_call_s_entry() {
+        let ai = Ai::default();
+        // sent between the call's entry and its turn at the engine: the call is stopped
+        let entry = ai.stops_now();
+        ai.request_stop();
+        let (calls, stop) = ai.begin(entry).unwrap();
+        assert!(stop.load(Ordering::SeqCst));
+        drop(calls);
+        // sent before a later call came in: that call runs
+        ai.request_stop();
+        let (calls, stop) = ai.begin(ai.stops_now()).unwrap();
+        assert!(!stop.load(Ordering::SeqCst));
+        // sent while it runs: it stops
+        ai.request_stop();
+        assert!(stop.load(Ordering::SeqCst));
+        drop(calls);
+    }
+
+    #[test]
+    fn busy_leaves_the_stop_flag_alone() {
+        let ai = Ai::default();
+        let (_running, stop) = ai.begin(ai.stops_now()).unwrap();
+        // a busy call that saw a stop since its entry (it would set the flag if it went on) doesn't stop the running one
+        let entry = ai.stops_now();
+        ai.request_stop();
+        ai.stop.store(false, Ordering::SeqCst);
+        assert_eq!(ai.begin(entry).err().as_deref(), Some(BUSY));
+        assert!(!stop.load(Ordering::SeqCst));
+        // the running call stopped: a busy call doesn't clear it
+        ai.request_stop();
+        assert_eq!(ai.begin(ai.stops_now()).err().as_deref(), Some(BUSY));
+        assert!(stop.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn nothing_starts_while_quitting() {
+        let ai = Ai::default();
+        ai.release_at_quit();
+        assert_eq!(ai.begin(ai.stops_now()).err().as_deref(), Some(EXITING));
+    }
+
+    #[test]
+    fn the_quit_stops_the_running_call_and_waits_for_it() {
+        let Ok(engine) = library::open_first(&library::library_dirs(None)) else {
+            eprintln!("skipped: no engine library in ai-engine/dist (node scripts/build-ai-engine.mjs)");
+            return;
+        };
+        let ai = Ai::default();
+        let _ = ai.engine.set(Ok(engine));
+        let ended = AtomicBool::new(false);
+        let (started, running) = std::sync::mpsc::channel();
+        std::thread::scope(|scope| {
+            scope.spawn(|| {
+                // a call that runs until stopped, as a load or a completion would
+                let (mut loaded_by, stop) = ai.begin(ai.stops_now()).unwrap();
+                *loaded_by = Some("page".to_string());
+                started.send(()).unwrap();
+                let deadline = Instant::now() + Duration::from_secs(5);
+                while !stop.load(Ordering::SeqCst) && Instant::now() < deadline {
+                    std::thread::sleep(Duration::from_millis(1));
+                }
+                std::thread::sleep(Duration::from_millis(50));
+                ended.store(true, Ordering::SeqCst);
+            });
+            running.recv().unwrap();
+            ai.release_at_quit();
+            // it returned once the call had ended, and released after it
+            assert!(ended.load(Ordering::SeqCst));
+            assert!(ai.calls.lock().unwrap().is_none());
+        });
+        assert_eq!(ai.begin(ai.stops_now()).err().as_deref(), Some(EXITING));
     }
 }

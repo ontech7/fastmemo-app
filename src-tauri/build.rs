@@ -21,9 +21,12 @@ fn ai_engine_placeholder() {
     println!("cargo:rerun-if-changed={}", library.display());
     let built = std::fs::metadata(&library).is_ok_and(|meta| meta.len() > 0);
     if !built {
-        if !library.exists() {
-            std::fs::create_dir_all(dist).expect("can't create src-tauri/ai-engine/dist");
-            std::fs::write(&library, []).expect("can't write the AI engine library's placeholder");
+        std::fs::create_dir_all(dist).expect("can't create src-tauri/ai-engine/dist");
+        // only if there is no file: a library the script is putting there meanwhile is never truncated
+        match std::fs::OpenOptions::new().write(true).create_new(true).open(&library) {
+            Ok(_) => {}
+            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(err) => panic!("can't write the AI engine library's placeholder: {err}"),
         }
         println!(
             "cargo:warning=AI engine library not built: the AI is unavailable in this build (run node scripts/build-ai-engine.mjs)"

@@ -316,6 +316,20 @@ mod tests {
     }
 
     #[test]
+    fn library_dirs_in_order() {
+        let resources = Path::new("/app/resources");
+        #[cfg(target_os = "macos")]
+        let bundled = resources.join("../Frameworks");
+        #[cfg(not(target_os = "macos"))]
+        let bundled = resources.join("ai");
+        let dist = Path::new(env!("CARGO_MANIFEST_DIR")).join("ai-engine/dist");
+        let dev: Vec<PathBuf> = if cfg!(debug_assertions) { vec![dist] } else { Vec::new() };
+        // the bundle's first, then (debug builds) the build script's output
+        assert_eq!(library_dirs(Some(resources)), [vec![bundled], dev.clone()].concat());
+        assert_eq!(library_dirs(None), dev);
+    }
+
+    #[test]
     fn answers_are_unwrapped() {
         assert_eq!(parse_answer(r#"{"ok":[1,2]}"#), Ok(serde_json::json!([1, 2])));
         assert_eq!(parse_answer(r#"{"error":"busy"}"#), Err("busy".to_string()));
