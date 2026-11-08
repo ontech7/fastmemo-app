@@ -602,6 +602,7 @@ const zh = {
     download_failed: "下载失败，请重试。",
     download_no_space: "空间不足，无法保存模型：请释放一些空间后重试。",
     download_background: "你可以离开此页面或关闭屏幕：下载会继续进行，进度显示在通知中。",
+    download_background_desktop: "你可以离开此页面：下载会继续进行。如果关闭应用，下次会从中断处继续。",
     cancel: "取消",
     delete_model: "删除模型",
     info: "AI助手完全在您的设备上运行。不会向外部服务器发送任何数据。模型只需下载一次（约530 MB起）并保存在本地。",

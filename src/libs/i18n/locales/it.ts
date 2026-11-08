@@ -622,6 +622,8 @@ const it = {
     download_no_space: "Spazio insufficiente per il modello: liberane un po' e riprova.",
     download_background:
       "Puoi uscire da questa pagina o spegnere lo schermo: il download continua, con il progresso nelle notifiche.",
+    download_background_desktop:
+      "Puoi uscire da questa pagina: il download continua. Se chiudi l'app, riprende da dove era rimasto.",
     cancel: "Annulla",
     delete_model: "Elimina modello",
     info: "L'assistente AI funziona interamente sul tuo dispositivo. Nessun dato viene inviato a server esterni. Il modello si scarica una volta (da ~530 MB) e resta salvato sul dispositivo.",

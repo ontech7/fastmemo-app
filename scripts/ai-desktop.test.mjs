@@ -464,9 +464,25 @@ console.log("whole files only");
   eq("it is an orphan", await X.getOrphanedModelFiles(), [{ dir: "models", fileName: fileOf("qwen3.5-2b"), size: 199 }]);
   tauri.files.set(fileOf("qwen3.5-2b"), FAKE_SIZE["qwen3.5-2b"]);
   tauri.files.set(fileOf("qwen3.5-4b") + ".part", 5);
-  eq("a .part is an orphan", await X.getOrphanedModelFiles(), [
-    { dir: "models", fileName: fileOf("qwen3.5-4b") + ".part", size: 5 },
-  ]);
+  eq("a catalog model's own .part is not an orphan (its download resumes it)", await X.getOrphanedModelFiles(), []);
+  tauri.files.set("Unknown-model.gguf.part", 7);
+  tauri.files.set("qwen-1.5b-old.gguf", 9);
+  eq(
+    "a .part of no catalog model, and an old model's file, are orphans",
+    (await X.getOrphanedModelFiles()).map(({ fileName, size }) => [fileName, size]).sort(),
+    [
+      ["Unknown-model.gguf.part", 7],
+      ["qwen-1.5b-old.gguf", 9],
+    ]
+  );
+  tauri.calls.length = 0;
+  eq("deleting the old ones counts only them", await X.deleteOrphanedModelFiles(), 16);
+  eq(
+    "... and leaves the catalog .part",
+    [...tauri.files.keys()].includes(fileOf("qwen3.5-4b") + ".part") && !tauri.files.has("qwen-1.5b-old.gguf"),
+    true
+  );
+  tauri.files.delete(fileOf("qwen3.5-4b") + ".part");
   eq("the bare name is the path", await X.getModelPath("qwen3.5-2b"), "Qwen3.5-2B-Q4_K_M.gguf");
 }
 

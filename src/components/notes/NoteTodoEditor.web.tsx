@@ -1,3 +1,4 @@
+import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
@@ -7,8 +8,9 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
+import { findCategoryByName } from "@/libs/ai";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
-import { isStringEmpty } from "@/utils/string";
+import { capitalize, isStringEmpty } from "@/utils/string";
 import { voiceTextToLines } from "@/utils/voiceTranscript";
 import {
   closestCenter,
@@ -64,7 +66,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
 
-  const { note, setNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
     initialNote: memoInitialNote,
     defaultType: "todo",
     addWebhookSelector: selectorWebhook_addTodoNote,
@@ -285,6 +287,34 @@ export default function NoteTodoEditor({ initialNote }: Props) {
               currentMode={currentMode}
               onSelectMode={setMode}
               disabled={note.readOnly}
+              style={dockButtonStyle}
+              menuBottomOffset={110}
+            />
+
+            <AIEditorActions
+              noteType="todo"
+              getContent={() =>
+                // one item per line: the suggestions leave out what the list already has, line by line
+                note.list
+                  .map((item) => item.text)
+                  .filter(Boolean)
+                  .join("\n")
+              }
+              noteTitle={note.title}
+              categoryName={note.category.name}
+              onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
+              onItemsSuggested={(items) => {
+                const newItems = items.map((text) => ({
+                  id: uuid(),
+                  text: capitalize(text),
+                  checked: false,
+                }));
+                updateNoteAsync((current) => ({ ...current, list: [...current.list, ...newItems] }));
+              }}
+              onCategorySuggested={(name) => {
+                const cat = findCategoryByName(name);
+                if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
+              }}
               style={dockButtonStyle}
               menuBottomOffset={110}
             />

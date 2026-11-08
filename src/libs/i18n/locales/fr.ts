@@ -627,6 +627,8 @@ const fr = {
     download_no_space: "Pas assez d'espace pour le modèle : libérez-en un peu et réessayez.",
     download_background:
       "Vous pouvez quitter cet écran ou l'éteindre : le téléchargement continue, avec sa progression dans les notifications.",
+    download_background_desktop:
+      "Vous pouvez quitter cette page : le téléchargement continue. Si vous fermez l'application, il reprend là où il s'était arrêté.",
     cancel: "Annuler",
     delete_model: "Supprimer le modèle",
     info: "L'assistant IA fonctionne entièrement sur votre appareil. Aucune donnée n'est envoyée à des serveurs externes. Le modèle se télécharge une fois (à partir de ~530 Mo) et reste stocké sur l'appareil.",

@@ -54,14 +54,16 @@ export async function isModelDownloaded(modelId?: AIModelId): Promise<boolean> {
   }
 }
 
-/** The listed files no model of today's catalog uses at that size: old models, and downloads cut off (`.part` included). */
+/**
+ * The listed files no model of today's catalog uses at that size: old models, and downloads cut off. A catalog file's own
+ * `.part` is not one: that model's download resumes it, and another model's download removes it (one model at a time).
+ */
 function leftovers(listed: ListedFile[]): ListedFile[] {
   const sizes = catalogSizes();
   return listed.filter(
     (file) =>
       sizes.get(file.fileName) !== file.size &&
-      // the download this page is running writes its `.part` now
-      !(_download && file.fileName.endsWith(PART_SUFFIX) && sizes.has(file.fileName.slice(0, -PART_SUFFIX.length)))
+      !(file.fileName.endsWith(PART_SUFFIX) && sizes.has(file.fileName.slice(0, -PART_SUFFIX.length)))
   );
 }
 

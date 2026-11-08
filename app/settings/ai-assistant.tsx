@@ -341,7 +341,9 @@ export default function AIAssistantScreen() {
           {isDownloading && (
             <>
               <ProgressBar progress={downloadProgress} style={styles.progressBar} />
-              <Text style={styles.downloadHint}>{t("ai.download_background")}</Text>
+              <Text style={styles.downloadHint}>
+                {t(desktop ? "ai.download_background_desktop" : "ai.download_background")}
+              </Text>
             </>
           )}
         </View>
