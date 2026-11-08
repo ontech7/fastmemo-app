@@ -353,7 +353,7 @@ console.log("a lone surrogate never reaches the shell");
   eq("tokenize gets the same", tauri.argsOf("ai_tokenize"), [{ text: "日本\ufffd" }, { text: pair }]);
 
   // a WebKit before 16.4 has no toWellFormed: the fallback gives the same text
-  const toWellFormed = String.prototype.toWellFormed;
+  const toWellFormed = Object.getOwnPropertyDescriptor(String.prototype, "toWellFormed");
   delete String.prototype.toWellFormed;
   try {
     const mixed = "\ude00" + "日本😀" + "\ud83d" + "x" + "\ud83d";
@@ -362,7 +362,8 @@ console.log("a lone surrogate never reaches the shell");
       text: "\ufffd日本😀\ufffdx\ufffd",
     });
   } finally {
-    String.prototype.toWellFormed = toWellFormed;
+    // eslint-disable-next-line no-extend-native -- puts back the built-in this case removed
+    if (toWellFormed) Object.defineProperty(String.prototype, "toWellFormed", toWellFormed);
   }
 }
 
