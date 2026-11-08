@@ -814,6 +814,28 @@ await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 check("A long press on an image is the browser's (selection), not the menu", !(await posted("FASTMEMO_IMAGE")).length, "asked");
 await send("Emulation.setTouchEmulationEnabled", { enabled: false });
 
+// A read-only note is the same page with contenteditable="false" (RichEditor's `disabled`), which drops the wrapping the
+// browser gives an editable element: a long word (a link, a key) has to wrap there too, never scroll sideways.
+const LONG_WORD = "sk-" + "A1b2C3d4".repeat(40);
+await open(`<div>Short line</div><div>${LONG_WORD}</div><div>https://example.com/${"segment_".repeat(40)}</div>`);
+const sideways = () =>
+  evaluate(`(() => { const c = document.querySelector(".pell-content"); return c.scrollWidth - c.clientWidth; })()`);
+check("A long word wraps in an editable note", (await sideways()) <= 0, `${await sideways()} px sideways`);
+await post({ type: "content", name: "setDisable", data: true });
+check("A long word wraps in a read-only note too", (await sideways()) <= 0, `${await sideways()} px sideways`);
+await post({ type: "content", name: "setDisable", data: false });
+
+// The page is a document of its own (an iframe on desktop): the app's scrollbar (global.css) has to be in it, or it shows
+// the system's, light on Windows.
+const appCss = readFileSync(join(root, "src/styles/global.css"), "utf8");
+const missingScrollbarRules = await evaluate(`(() => {
+  const app = new CSSStyleSheet();
+  app.replaceSync(${JSON.stringify(appCss)});
+  const mine = [...document.styleSheets].flatMap((s) => [...s.cssRules].map((r) => r.cssText));
+  return [...app.cssRules].map((r) => r.cssText).filter((r) => r.includes("scrollbar") && !mine.includes(r));
+})()`);
+check("The text editor has the app's scrollbar", !missingScrollbarRules.length, missingScrollbarRules.join("\n"));
+
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");
 check("no page errors", !pageErrors.length, pageErrors.join("\n"));
 
