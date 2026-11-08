@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from "react-redux";
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import { supportsAppIcons } from "@/libs/appIcon";
@@ -41,7 +42,7 @@ export default function DeveloperOptionsScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={styles.scroll}>
+      <ScrollView style={styles.scroll} contentContainerStyle={CONTENT_COLUMN}>
         {/* Warning Banner */}
         <View style={styles.warningBanner}>
           <ExclamationTriangleIcon size={20} color={COLOR.yellow} />

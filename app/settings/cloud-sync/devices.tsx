@@ -6,6 +6,7 @@ import NoCloudIcon from "@/components/icons/NoCloudIcon";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import useNetInfo from "@/hooks/useNetInfo";
 import { cloud, getDeviceUuid, type CloudDevice, type CloudFailure } from "@/libs/cloud";
@@ -250,6 +251,7 @@ export default function SyncedDevicesScreen() {
 
         <ScrollView
           style={styles.scroll}
+          contentContainerStyle={CONTENT_COLUMN}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshDevices} tintColor={COLOR.accentSoft} />}
         >
           {shownFailure ? (

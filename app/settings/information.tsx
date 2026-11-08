@@ -2,6 +2,7 @@ import BackButton from "@/components/buttons/BackButton";
 import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { selectorDeveloperMode, setDeveloperMode } from "@/slicers/settingsSlice";
 import { toast } from "@/utils/toast";
@@ -88,7 +89,7 @@ export default function InformationScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={styles.scroll}>
+      <ScrollView style={styles.scroll} contentContainerStyle={CONTENT_COLUMN}>
         <View style={styles.appWrapper}>
           <View style={styles.appIcon}>
             <LottieView ref={logoAnimRef} style={styles.lottieStyle} source={lottieJson} loop={false} />

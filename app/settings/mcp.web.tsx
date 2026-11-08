@@ -5,6 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpaci
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, MONOSPACE_FONT, PADDING_MARGIN } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import { connectionSnippets } from "@/libs/mcp/snippets";
@@ -299,9 +300,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.lg,
   },
   scrollContent: {
-    width: "100%",
-    maxWidth: 760,
-    alignSelf: "center",
+    ...CONTENT_COLUMN,
     paddingBottom: PADDING_MARGIN.xl,
   },
   sectionWrapper: {

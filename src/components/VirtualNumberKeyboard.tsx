@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import BackspaceIcon from "react-native-heroicons/outline/BackspaceIcon";
 
+import { KEYPAD_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, GLASS, SIZE } from "@/constants/styles";
 
 const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, "backspace"] as const;
@@ -84,6 +85,7 @@ function VirtualNumberKeyboard({ onAdd, onRemove, disabled }: Props) {
 
 const styles = StyleSheet.create({
   keyboard_wrapper: {
+    ...KEYPAD_COLUMN,
     borderTopLeftRadius: BORDER.normal,
     borderTopRightRadius: BORDER.normal,
     overflow: "hidden",

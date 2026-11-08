@@ -16,6 +16,7 @@ import { selectorAIAssistant, selectorAIModelIsLegacy, setAIAssistant } from "@/
 import { isTauri } from "@/utils/platform";
 import { toast } from "@/utils/toast";
 
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import type { AIModelId, AIModelInfo, ModelDownloadProgress } from "@/libs/ai";
@@ -264,7 +265,7 @@ export default function AIAssistantScreen() {
         onCancel={() => setConfirmDeleteOld(false)}
       />
 
-      <ScrollView style={styles.scroll}>
+      <ScrollView style={styles.scroll} contentContainerStyle={CONTENT_COLUMN}>
         {/* The Qwen 2.5 files of earlier versions: dead weight now */}
         {oldBytes > 0 && !isDownloading && (
           <View style={[styles.sectionWrapper, styles.oldModelsCard]}>

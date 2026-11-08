@@ -2,6 +2,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
 import { configs } from "@/configs";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import Haptics from "@/libs/haptics";
@@ -160,6 +161,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   codeInputWrapper: {
+    ...CONTENT_COLUMN,
     flex: 1,
     justifyContent: "flex-end",
   },

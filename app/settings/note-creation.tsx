@@ -8,6 +8,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import { NOTE_TYPES } from "@/constants/note-types";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { selectorNoteCreation, setNoteCreation } from "@/slicers/settingsSlice";
 import type { NoteCreationMode, NoteCreationType } from "@/types";
@@ -78,7 +79,7 @@ export default function NoteCreationScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={styles.scroll}>
+      <ScrollView style={styles.scroll} contentContainerStyle={CONTENT_COLUMN}>
         <View style={styles.sectionWrapper}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionHeaderTitle}>{t("note_creation.mode_section")}</Text>
