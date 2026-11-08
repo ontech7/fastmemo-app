@@ -540,6 +540,142 @@ console.log("a failed ai_info is asked again");
   eq("two asks", tauri.count("ai_info"), 2);
 }
 
+console.log("a cancel while the download is being prepared");
+{
+  await fresh();
+  tauri.files.delete(fileOf("qwen3.5-2b"));
+  const gate = deferred();
+  let listings = 0;
+  const list = tauri.handlers.ai_model_files;
+  tauri.handlers.ai_model_files = async () => {
+    // the first listing is the clean-up's; the second is the one before the file's download
+    if (++listings === 2) await gate.promise;
+    return list();
+  };
+  const run = X.downloadModel("qwen3.5-2b");
+  while (listings < 2) await turn();
+  const cancelled = X.cancelDownload();
+  gate.resolve();
+  const outcome = await Promise.race([
+    Promise.all([cancelled, run]).then(([, result]) => result),
+    new Promise((resolve) => setTimeout(() => resolve("hung"), 500)),
+  ]);
+  eq("the download ended false, and the cancel with it", outcome, false);
+  eq("ai_download was never invoked", tauri.count("ai_download"), 0);
+  eq("idle, no failure, no download", [X.getAIStatus(), X.getDownloadFailure(), X.getModelDownload()], ["idle", null, null]);
+}
+
+console.log("a new download while another is being cancelled");
+{
+  await fresh();
+  tauri.files.delete(fileOf("qwen3.5-2b"));
+  tauri.files.delete(fileOf("qwen3.5-0.8b"));
+  const gate = deferred();
+  tauri.handlers.ai_download = async ({ file }) => {
+    if (file.fileName === fileOf("qwen3.5-0.8b")) {
+      await gate.promise;
+      return Promise.reject("cancelled");
+    }
+    tauri.files.set(file.fileName, file.size);
+  };
+  tauri.handlers.ai_download_cancel = () => gate.resolve();
+  const first = X.downloadModel("qwen3.5-0.8b");
+  while (tauri.count("ai_download") === 0) await turn();
+  const [a, b] = await Promise.all([X.downloadModel("qwen3.5-2b"), X.downloadModel("qwen3.5-2b")]);
+  eq("both callers get the same answer: it downloaded", [a, b], [true, true]);
+  eq("the first one ended false", await first, false);
+  eq(
+    "exactly one ai_download for the 2B",
+    tauri.argsOf("ai_download").filter((args) => args.file.fileName === fileOf("qwen3.5-2b")).length,
+    1
+  );
+  eq("no failure, idle", [X.getDownloadFailure(), X.getAIStatus()], [null, "idle"]);
+}
+
+console.log("the same model joins the download under way");
+{
+  await fresh();
+  tauri.files.delete(fileOf("qwen3.5-2b"));
+  const gate = deferred();
+  tauri.handlers.ai_download = async ({ file }) => {
+    await gate.promise;
+    tauri.files.set(file.fileName, file.size);
+  };
+  const first = X.downloadModel("qwen3.5-2b");
+  while (tauri.count("ai_download") === 0) await turn();
+  const second = X.downloadModel("qwen3.5-2b");
+  gate.resolve();
+  eq("both end well", await Promise.all([first, second]), [true, true]);
+  eq("one ai_download", tauri.count("ai_download"), 1);
+}
+
+console.log("a model folder that can't be listed");
+{
+  await fresh();
+  tauri.files.delete(fileOf("qwen3.5-2b"));
+  tauri.handlers.ai_model_files = () => Promise.reject("failed: io");
+  const seen = [];
+  const remove = X.addAIStatusListener((status) => seen.push(status));
+  const quiet = console.error;
+  console.error = () => {};
+  eq("the download ends false", await X.downloadModel("qwen3.5-2b"), false);
+  console.error = quiet;
+  remove();
+  eq("failed, and said so", [X.getDownloadFailure(), X.getAIStatus(), X.getModelDownload()], ["failed", "error", null]);
+  eq("the status went downloading, error", seen, ["downloading", "error"]);
+  eq("nothing deleted, nothing downloaded", [tauri.count("ai_delete_files"), tauri.count("ai_download")], [0, 0]);
+}
+
+console.log("a delete refused because a download runs in Rust");
+{
+  await fresh();
+  tauri.files.set("old.gguf", 50);
+  tauri.handlers.ai_delete_files = () => Promise.reject("busy");
+  const logged = [];
+  const quiet = console.error;
+  console.error = (...args) => logged.push(args);
+  eq("busy: nothing freed", await X.deleteOrphanedModelFiles(), 0);
+  eq("busy is no error", logged, []);
+  tauri.handlers.ai_delete_files = () => Promise.reject("failed: io");
+  eq("another failure: nothing freed", await X.deleteOrphanedModelFiles(), 0);
+  console.error = quiet;
+  eq("another failure is logged", logged.length, 1);
+}
+
+console.log("parallel first calls share one ai_info");
+{
+  const { E: E3 } = await import(pathToFileURL(out).href + "?parallel");
+  await fresh();
+  const gate = deferred();
+  tauri.handlers.ai_info = async () => {
+    await gate.promise;
+    return { available: true, totalMemory: 1 };
+  };
+  const calls = [E3.getEngineSupport(), E3.getEngineSupport()];
+  gate.resolve();
+  const [one, two] = await Promise.all(calls);
+  eq("one invoke", tauri.count("ai_info"), 1);
+  eq("same answer", [one.available, two.available], [true, true]);
+}
+{
+  const { E: E4 } = await import(pathToFileURL(out).href + "?parallel-reject");
+  await fresh();
+  tauri.handlers.ai_info = () => Promise.reject("engine: boom");
+  const quiet = console.error;
+  console.error = () => {};
+  const both = await Promise.all([E4.getEngineSupport(), E4.getEngineSupport()]);
+  console.error = quiet;
+  eq(
+    "a rejection answers both with error",
+    both.map((support) => support.reason),
+    ["error", "error"]
+  );
+  eq("still one invoke", tauri.count("ai_info"), 1);
+  tauri.handlers.ai_info = () => ({ available: true, totalMemory: 2 });
+  eq("a later call asks again", (await E4.getEngineSupport()).available, true);
+  eq("two invokes in all", tauri.count("ai_info"), 2);
+}
+
 await fresh();
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

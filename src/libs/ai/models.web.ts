@@ -83,7 +83,8 @@ export async function deleteOrphanedModelFiles(): Promise<number> {
     await deleteFiles(orphans.map((o) => o.fileName));
     return orphans.reduce((sum, o) => sum + o.size, 0);
   } catch (error) {
-    console.error("[AI] Delete old model file failed:", error);
+    // busy: a download still runs in Rust (one this page started before a reload), and its file is not ours to delete
+    if (error !== "busy") console.error("[AI] Delete old model file failed:", error);
     return 0;
   }
 }
@@ -146,6 +147,8 @@ async function runDownload(modelId: AIModelId, generation: number): Promise<bool
       const file = files[i];
       const whole = new Map((await listFiles()).map((f) => [f.fileName, f.size])).get(file.fileName) === file.sizeBytes;
       if (whole) continue;
+      // Rust honours a cancel only for a download that has begun: one asked for during the awaits above ends here
+      if (generation !== _downloadGeneration) return false;
       const progress = new Channel<{ received: number; total: number }>();
       // a message can arrive after the download ended: it must not bring the progress back
       let running = true;
@@ -192,20 +195,40 @@ async function runDownload(modelId: AIModelId, generation: number): Promise<bool
   }
 }
 
+/** The download being started: it first ends the one under way. A second call for the same model joins it. */
+interface Start {
+  modelId: AIModelId;
+  promise: Promise<boolean>;
+}
+let _start: Start | null = null;
+
 /** Downloads `modelId` (its files not on the device yet), or follows its download under way. */
-export async function downloadModel(modelId?: AIModelId): Promise<boolean> {
-  if (!isTauri()) return false;
+export function downloadModel(modelId?: AIModelId): Promise<boolean> {
+  if (!isTauri()) return Promise.resolve(false);
   const targetId = normalizeModelId(modelId);
   if (_download && _downloadProgress?.modelId === targetId) return _download;
-  if (_download) await cancelDownload();
-  const download = runDownload(targetId, _downloadGeneration).finally(() => {
-    if (_download === download) _download = null;
-  });
-  _download = download;
-  return download;
+  if (_start?.modelId === targetId) return _start.promise;
+
+  // Ending the download under way takes a while: a call meanwhile must not start a second one (Rust answers "busy").
+  const previous = _start?.promise;
+  const mine: Start = { modelId: targetId, promise: Promise.resolve(false) };
+  _start = mine;
+  mine.promise = (async () => {
+    if (previous) await previous;
+    if (_download) await stopDownload();
+    // a call for another model, or a cancel, came meanwhile
+    if (_start !== mine) return false;
+    _start = null;
+    const download = runDownload(targetId, _downloadGeneration).finally(() => {
+      if (_download === download) _download = null;
+    });
+    _download = download;
+    return download;
+  })();
+  return mine.promise;
 }
 
-export async function cancelDownload(): Promise<void> {
+async function stopDownload(): Promise<void> {
   _downloadGeneration++;
   const download = _download;
   _download = null;
@@ -220,4 +243,10 @@ export async function cancelDownload(): Promise<void> {
     console.error("[AI] Cancel download failed:", error);
   }
   notifyListeners("idle");
+}
+
+export async function cancelDownload(): Promise<void> {
+  // a download still being started is cancelled too
+  _start = null;
+  await stopDownload();
 }

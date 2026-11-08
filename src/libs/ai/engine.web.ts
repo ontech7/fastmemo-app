@@ -31,18 +31,23 @@ export function isEngineAvailable(): boolean {
   return isTauri();
 }
 
-let _support: EngineSupport | null = null;
+let _support: Promise<EngineSupport> | null = null;
 
-/** Whether the engine library loads here and the computer's memory: asked once, and only an answer is kept (a failed call is asked again). */
+/**
+ * Whether the engine library loads here and the computer's memory: asked once (parallel first calls share the question),
+ * and only an answer is kept: a failed call is asked again.
+ */
 export async function getEngineSupport(): Promise<EngineSupport> {
   if (!isTauri()) return { available: false, totalMemory: null, reason: "missing" };
-  if (_support) return _support;
-  try {
+  const asked = (_support ??= (async () => {
     const { invoke } = await tauriCore();
     const info = await invoke<EngineInfo>("ai_info");
-    _support = { available: info.available, totalMemory: info.totalMemory ?? null, reason: info.reason };
-    return _support;
+    return { available: info.available, totalMemory: info.totalMemory ?? null, reason: info.reason };
+  })());
+  try {
+    return await asked;
   } catch (error) {
+    if (_support === asked) _support = null;
     console.error("[AI] Engine info failed:", error);
     return { available: false, totalMemory: null, reason: "error" };
   }
