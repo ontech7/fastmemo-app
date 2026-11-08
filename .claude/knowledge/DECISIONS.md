@@ -91,7 +91,8 @@ single value, and the note store migrates from it.
 
 ## ADR-004: On-Device AI (llama.rn) over Cloud AI APIs
 
-**Status:** Accepted (models revised 2026-10: Qwen 2.5 -> Qwen3.5, see "Revision")  
+**Status:** Accepted (models revised 2026-10: Qwen 2.5 -> Qwen3.5, see "Revision"; the desktop runs it through llama.cpp, see
+ADR-034)  
 **Context:** Need AI features (title generation, summarization, item suggestions) without requiring internet or external API
 costs.  
 **Decision:** llama.rn 0.12 with Qwen3.5 Small GGUF models (0.8B, 2B, 4B), Unsloth Q4_K_M files pinned to a Hugging Face commit
@@ -108,7 +109,7 @@ and checked by exact size.
 
 - Models are large downloads (hundreds of MB to several GB)
 - Generation quality varies significantly with model size
-- Not available on web (no-op stubs provided)
+- Not available in a plain browser (the web build); the desktop app has the AI through llama.cpp, see ADR-034
 - Only one model loaded at a time (singleton context pattern)
 - RAM-intensive: minimum 3GB for smallest model, 6GB for the 4B
 
@@ -1566,3 +1567,156 @@ WebKit leaves bold, italic and underline to an app's Format menu.
   blocked as the user asked, those screens have no find now (CodeMirror's search could give code notes one);
 - not verified yet: whether a restored window gets the keyboard focus back while WebView2 is turned visible again (if not:
   `MoveFocus` on the controller after `SetIsVisible(true)`).
+
+## ADR-034: On-Device AI on Desktop: llama.cpp in a Library of Its Own
+
+**Status:** Accepted (2026-11-08, user decisions: llama.cpp inside the app through `llama-cpp-2` 0.1.161, `llama-server` as a
+separate process rejected; Metal on Apple Silicon, CPU on Windows and Linux; the same three models at the same pinned files, no
+bigger ones; the phone's AI menu and flow on desktop, with three adjustments; a platform where the engine can't run ships
+without AI rather than with a slower build; the macOS entitlement `disable-library-validation`, in production too. Calls made on
+the user's behalf, which can be overturned: the engine as a library of its own, half the cores, the desktop context sizes and
+long-note parts, the 2B as the default, no GPU on Windows and Linux, Intel Macs on the CPU, a download that doesn't restart by
+itself)  
+**Context:** The phone has had the AI since 4.0 (ADR-004). On desktop the editors had no AI button and the settings and Help
+left it out. The user wanted the same features on the computer, not bigger models: fast, with the fewest mistakes, "without
+straining the PC". At most a wider context, and what a computer allows that a phone doesn't. llama.rn is a React Native module
+and doesn't run in the Tauri shell, so the desktop needs an engine of its own.
+
+**Decision:**
+
+```
+page (libs/ai/context.ts, shared with the phone)
+  --> engine.web.ts / models.web.ts --Tauri commands (ai_*)--> src-tauri/src/ai/ --libloading, JSON C ABI--> fastmemo_ai (ai-engine/)
+```
+
+- **The engine is a library the app opens, never links.** `src-tauri/ai-engine/` is a crate of its own (its own workspace,
+  `cdylib` named `fastmemo_ai`, `llama-cpp-2` pinned with `=0.1.161`, default features off, `metal` only on macOS aarch64, no
+  OpenMP). `src-tauri/src/ai/library.rs` opens it with `libloading` at the first command that needs it (`ai_info`, `ai_load`),
+  so the app and the `--mcp` bridge, which is the same executable (ADR-032), start whatever the library's state. A missing file,
+  an empty one, the stub, another ABI version, a symbol absent, a system that won't load it, or an x86_64 CPU without AVX2/FMA/
+  F16C all mean the same: no AI, and the app works. The page shows "AI isn't available on this computer"
+  (`ai.unavailable_computer`) and no AI button. This was the user's plan B for the case that a platform can't meet the start-up
+  guarantees; the cost of having it is one library file to bundle per platform.
+- **A JSON C ABI.** Three functions (`fm_ai_abi_version`, `fm_ai_call`, `fm_ai_free`) in `ai-engine/src/ffi.rs`: a request
+  `{"op": …}` in, `{"ok": …}` or `{"error": "…"}` out, streamed text through a callback, a stop flag the caller owns. A panic is
+  caught at the boundary (`{"error":"panic"}`, the engine is built with `panic = "unwind"` where the app is `abort`), and each
+  request is checked before llama.cpp sees it so that no input reaches one of its asserts. `ABI_VERSION` is 1; a stub build of
+  the crate (no `llama` feature) answers 0, and `STUB_TARGETS` in `scripts/build-ai-engine.mjs` is where a platform that can't
+  build the engine would go (empty today: all four builds run the real one).
+- **Where the library sits.** macOS: `Contents/Frameworks` (`bundle.macOS.frameworks` in `tauri.macos.conf.json`), install name
+  `@rpath/libfastmemo_ai.dylib`, ad-hoc signed by the build script. The app is ad-hoc signed with the hardened runtime, whose
+  library validation refuses a library of another Team ID (an ad-hoc one has none), so `Entitlements.plist` carries
+  `com.apple.security.cs.disable-library-validation`. The rest of the hardened runtime stays on; with a Developer ID certificate
+  the key could go. Windows and Linux: the resources folder `ai/` (`tauri.windows.conf.json`, `tauri.linux.conf.json`).
+- **The build.** `scripts/build-ai-engine.mjs` runs as the first step of `beforeBuildCommand` and `beforeDevCommand`, builds for
+  `TAURI_ENV_TARGET_TRIPLE` (the host's if unset; `universal-apple-darwin` builds both and joins them with `lipo`) and puts the
+  library in `src-tauri/ai-engine/dist/`. Cargo always runs from `src-tauri/ai-engine`, with `--target`: its
+  `.cargo/config.toml` is read from the working directory, and `--target` keeps the rustflags off the build scripts. `build.rs`
+  leaves an empty file where the library would be, so a plain `cargo build` or `cargo test` works and the app runs without AI.
+  - **x86_64 needs AVX2, FMA and F16C** (rustflags): `llama-cpp-sys-2` builds ggml from the Rust target features and the default
+    target has none. The app's own code stays at the baseline. `system::cpu_supported()` checks the three at run time and the
+    library isn't opened otherwise.
+  - **Windows needs no Visual C++ runtime:** `+crt-static`, `LLAMA_STATIC_CRT=1` and `CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded`.
+    The first alone isn't enough (LL-073).
+  - **GPU:** Metal on Apple Silicon, every layer. Intel Macs build with `GGML_METAL=OFF` and run on the CPU: on the CI's Intel
+    runner Metal made the engine's test take 101 s against 4.73 s. Windows and Linux run on the CPU (user decision; Vulkan or
+    CUDA depend on each card's driver, can't be tried on enough PCs, and a driver crash would close the app).
+  - bindgen makes C enums `i32` under MSVC and `u32` under clang (LL-074).
+- **The commands** (`src-tauri/src/ai/mod.rs`): `ai_info`, `ai_load`, `ai_tokenize`, `ai_complete` (tokens over a `Channel`),
+  `ai_stop`, `ai_release`, `ai_model_files`, `ai_download`, `ai_download_cancel`, `ai_delete_files`, `ai_save_eval_report`. One
+  engine call at a time: a second answers `busy` and never waits. A stop sent right after a start is kept (counted, not a flag
+  that the start resets), and nothing starts once the app is quitting. The page names a model by its bare file name; Rust knows
+  the folder, and `ai_load` refuses a `.part`.
+- **The same logic on both platforms.** `libs/ai/context.ts` keeps the prompts, sampling, grammars, guards and long-note
+  handling, and reaches the engine through `engine.ts` (llama.rn) or `engine.web.ts` (the commands), and the files through
+  `models.ts` (DownloadManager, ADR-028) or `models.web.ts`. What differs is `platformConstants.ts` /
+  `platformConstants.web.ts`. Qwen3.5's prompt is built in Rust (`prompt.rs`; `llama-cpp-2` applies only llama.cpp's built-in
+  templates, not the model's jinja), with thinking off, and a test compares it with the GGUF's own `tokenizer.chat_template`.
+  Sampling is llama.cpp's common order (penalties over the last 64 tokens, top-k, top-p, min-p, temperature, pick) with the
+  grammar enforced on each pick. Text is streamed in whole UTF-8 characters, and a possible start of a stop word is held back. A
+  long note's rewrite runs one completion per line under the same system prompt: Qwen3.5's recurrent layers can't be trimmed
+  back to a prefix, so the engine keeps a snapshot of the sequence's state after the system turn and restores it
+  (`state_seq_get` / `state_seq_set`).
+- **The model files** are in `app_local_data_dir()/models/` (local, not roaming: 2.7 GB must not travel with a domain profile;
+  Fast Memo Test has its own folder). One model at a time, as on the phone. `ai_download` takes only Hugging Face URLs and a
+  bare file name, writes `<file>.part`, resumes it with a `Range` request (or starts again if the server ignores it), and
+  renames the file only after its size and its SHA-256 match. The three hashes are in `AI_MODELS`; the phone still checks only
+  the size. A cancel deletes the `.part`; an interruption (network, app closed) keeps it. A download doesn't restart by itself
+  at launch (call): 2.7 GB starting unasked on a metered connection would be unwelcome. A full disk reports `no_space`.
+- **Threads: half the logical cores** (at least 1), for reading the prompt and for writing (`system::inference_threads`). Memory
+  bandwidth limits writing more than the cores do, so it loses nothing and the PC stays usable. Measured below.
+- **The desktop's constants** (`platformConstants.web.ts`): context 8192 for the 0.8B and 16384 for the 2B and 4B (the phone:
+  4096 / 8192 / 8192); no `mlock`; default model the 2B (the phone: the 0.8B); `SUMMARY_PART_TOKENS` 6000 (phone 1500),
+  `REWRITE_PIECE_TOKENS` 1200 (phone 600). A desktop install stored the 0.8B as its default from before the AI existed there:
+  `desktopDefaultModelToStore` changes it to the 2B once (AsyncStorage key `@aiDefaultModelChecked`), only if the AI is off and
+  no model file is on the computer, so an explicit choice is never overwritten (NEVER #10). `MODEL_SPEED` holds the M5's CPU
+  numbers, until a computer's own completions replace them.
+- **The UI.** The phone's AI menu runs on desktop with three user-chosen adjustments: the language picker and the preview are
+  centered cards at most `MAX_WIDTH.dialog` (560) wide, Esc closes them (cancel), and there's no new shortcut and Enter doesn't
+  apply. `supportsAI()` is true only in the Tauri shell; a plain browser keeps `ai.unavailable_web`. `useEngineSupport` asks
+  `ai_info` once and the screens decide on its answer. The evaluation's report is saved by Rust (`ai_save_eval_report`, folder
+  `ai-eval/` of the local data) and shared through the save dialog. The AI evaluation takes an optional fixed seed, which the
+  app's actions never pass. `engine.web.ts` flushes the open note (`flushNow`, ADR-013) before each completion, since a fatal
+  error in llama.cpp closes the app.
+- **Resources.** The model loads when an action needs it (or `prewarmContext`), with mmap; the page's idle release (3 minutes)
+  and the release when the page is hidden are the phone's code. A model loaded by a page that has since reloaded is released by
+  the next `ai_load`, which carries a page id.
+- **Dictation stays on the phone**, so `clean_transcript` and `transcript_to_items` never run on desktop. No AI tool in the
+  local MCP server (ADR-032).
+
+**Measured** (Apple M5, 10 cores 4P+6E, 16 GB, `ai-engine/examples/bench.rs`, 2026-11-08):
+
+| config                | prefill tok/s | generate tok/s | max RSS  | 30-line rewrite, with / without the reuse |
+| --------------------- | ------------- | -------------- | -------- | ----------------------------------------- |
+| Metal 0.8B, ctx 8192  | 4945          | 163            | 0.82 GiB | 2.9 / 3.1 s                               |
+| Metal 2B, ctx 16384   | 2561          | 82             | 1.54 GiB | 5.9 / 6.0 s                               |
+| Metal 4B, ctx 16384   | 1045          | 39             | 2.91 GiB | 12.3 / 12.7 s                             |
+| CPU, 5 threads, 0.8B  | 463           | 114            | 1.33 GiB | 5.0 / 7.6 s                               |
+| CPU, 5 threads, 2B    | 225           | 59             | 2.84 GiB | 10.1 / 15.5 s                             |
+| CPU, 5 threads, 4B    | 96            | 27             | 5.70 GiB | 23.1 / 37.1 s                             |
+| CPU, 10 threads, 0.8B | 575           | 96             |          | about the same                            |
+| CPU, 10 threads, 2B   | 311           | 53             |          | about the same                            |
+| CPU, 10 threads, 4B   | 122           | 23.5           |          | about the same                            |
+
+- **Half the threads kept.** Writing was 10-14% faster than on all the cores, reading the prompt 24-36% slower, and a rewrite
+  took the same. The rule for the wider 4B context was to drop it to 8192 only if it cost over 1 GiB more: it cost 0.24 GiB on
+  the CPU, so the 4B keeps 16384.
+- **On the CPU the resident set is about twice the model file:** llama.cpp repacks the Q4 weights for it. That's why the 4B
+  takes 5.7 GiB there, against 2.9 on Metal.
+- **The AI evaluation** (27 fixtures, seed 42; desktop on Metal against the Android emulator's CPU): total 12.8 s against 191 s
+  (0.8B), 19.9 s against 451 s (2B), 40.9 s against 1078 s (4B); the app's peak memory 876 MB, 1638 MB and 3394 MB. The desktop
+  is deterministic (the 2B twice: 27 of 27 identical). Against Android 13, 14 and 16 of 27 outputs are byte-identical and the
+  rest differ in both directions (Metal against ARM CPU arithmetic, another llama.cpp build): judged no worse.
+- **A made-up note of 21,000 tokens on the 2B:** the summary finishes in under a minute with every part read; grammar and
+  translation say "too long for this model"; the app's memory 1.6 GB, no crash.
+- **CI** (the engine test on the 0.8B, run 42504755203 of a test workflow): Windows x64 (NSIS), the Intel Mac and Linux (deb and
+  AppImage) build, ship the library, open it from the installed app and pass. Apple Silicon was checked by hand.
+- **Not measured:** the Windows PC's speeds (`MODEL_SPEED` there is the M5's CPU) and its CPU while writing; Linux is never
+  tried by hand (as for every desktop release). Both are in the Windows checklist.
+
+**Alternatives rejected:**
+
+- `llama-server` as a separate process: a local HTTP port, one more executable to sign per platform, and orphans holding
+  gigabytes when the app dies. Its one advantage, a crash that doesn't close the app, is the first trade-off below;
+- the engine linked into the app: the app would need AVX2 to start (or per-CPU builds), and the `--mcp` bridge too;
+- per-CPU libraries chosen at run time (`dynamic-backends`): replaced by one build per platform once the engine was apart;
+- a build without AVX2 for older CPUs: it runs anywhere, several times slower, and the 4B would be unusable. Those PCs get "not
+  available";
+- a CMake build of llama.cpp of our own, or another binding: `llama-cpp-2` was approved with its dependencies;
+- bigger models (7B, 9B): not what the user asked for.
+
+**Trade-offs:**
+
+- the engine runs in the app's process: an abort inside llama.cpp, or a driver fault on Metal, closes the app, and the release
+  profile is `panic = "abort"`. Hence the flush before each completion, the checks before llama.cpp sees a request, and a
+  library that catches Rust panics at its boundary. What an edit loses in such a crash is at most what the editor hadn't yet
+  committed, and the flush takes that to nothing;
+- no GPU on Windows and Linux, and on Intel Macs: a long note on the 4B takes minutes there;
+- a CPU without AVX2, FMA and F16C (before about 2013-2015) has no AI;
+- macOS loads the library only because of an entitlement that turns library validation off for the whole app; a Developer ID
+  certificate would remove the need;
+- a second Rust workspace with its own `Cargo.lock` and a CMake build of llama.cpp: a longer, heavier CI for every desktop
+  build;
+- `llama-cpp-2` is pinned exactly: updating it means checking the prompt fixture, the sampling order and the evaluation again;
+- the RAM the CPU path needs is twice the model's file: on a 8 GB PC the 4B is a stretch, and the settings' RAM gate counts the
+  installed memory (`ai_info`), not what is free.

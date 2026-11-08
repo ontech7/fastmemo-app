@@ -508,16 +508,13 @@ haptics/
 For native-only modules on web, provide API-compatible stubs:
 
 ```ts
-// libs/ai/index.web.ts
-export function isNativeModuleAvailable(): boolean {
-  return false;
-}
-export async function downloadModel(): Promise<boolean> {
-  return false;
-}
-export async function generateEditorContent(): Promise<EditorActionResult> {
-  return { success: false, error: "AI not available on web" };
-}
+// libs/haptics/index.web.ts
+const Haptics = {
+  selectionAsync: (): Promise<void> => Promise.resolve(),
+  impactAsync: (): Promise<void> => Promise.resolve(),
+  notificationAsync: (): Promise<void> => Promise.resolve(),
+};
+export default Haptics;
 ```
 
 ### Dynamic Require for Native Modules (discouraged)
@@ -532,8 +529,7 @@ Legitimate remaining uses of dynamic `require`:
 - **Inside an already-web file, for Tauri-only paths:** e.g. `await import("@tauri-apps/plugin-fs")` inside an `if (isTauri())`
   branch of a `.web.ts` file. Tauri shares the web bundle, so this is runtime detection, not bundle-time resolution.
 
-If a module genuinely has no web equivalent (e.g. `expo-local-authentication`, `@react-native-community/netinfo`, `llama.rn`),
-do NOT write:
+If a module genuinely has no web equivalent (e.g. `expo-local-authentication`, `@react-native-community/netinfo`), do NOT write:
 
 ```ts
 // WRONG -- dynamic require as platform gate
@@ -812,7 +808,10 @@ hard rules (each maps to a lesson learned):
 
 ## On-Device AI
 
-Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file that talks to llama.rn.
+Everything goes through `@/libs/ai` (ADR-004, ADR-034). `context.ts` is the only file that asks a model anything, and it reaches
+the engine only through `engine.ts` (llama.rn, the phone) or `engine.web.ts` (the Tauri commands, the desktop); the model files
+through `models.ts` / `models.web.ts`. What differs per platform lives in `platformConstants.ts` / `platformConstants.web.ts`,
+never in a `Platform.OS` check inside `context.ts` or the logic above it.
 
 1. **Every completion passes `CHAT_TEMPLATE`** (`jinja: true, enable_thinking: false, reasoning_format: "none"`) and its
    action's `ACTION_SAMPLING` + `ACTION_MAX_TOKENS`. A new action adds an entry to both maps, a prompt in
@@ -839,6 +838,12 @@ Everything goes through `@/libs/ai` (ADR-004). `context.ts` is the only file tha
    wrap the whole answer, not the input, and no other quote of the kind is inside (dialogue keeps its quotes); a "Title:" or
    "Summary:" label only from a title or a summary. An AI summary is recognized by its `data-fm="summary"` mark at the very top,
    never by a label's wording, and on doubt (the mark copied onto the next line) nothing is taken for it.
+9. **The desktop engine is a library the app opens, never links** (ADR-034). Nothing of the AI loads at start: `library.rs`
+   opens it on the first AI command, and a missing or unloadable library means "AI isn't available on this computer", never an
+   error at launch. The `--mcp` bridge is the same executable and must start without it. Build it only through
+   `scripts/build-ai-engine.mjs` (cargo from `src-tauri/ai-engine`, always `--target`), and keep a request that could reach a
+   llama.cpp assert out of the engine: a fatal error there closes the app (`panic = "abort"`), so the page flushes the open note
+   first (`engine.web.ts`) and the engine checks each request. The page names a model by its bare file name, never a path.
 
 ---
 

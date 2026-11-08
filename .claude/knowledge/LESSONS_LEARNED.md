@@ -1980,6 +1980,43 @@ that the editor has every scrollbar rule of `global.css`.
 
 ---
 
+### LL-073: llama.cpp linked the MSVC runtime twice: `LLAMA_STATIC_CRT` alone didn't make it static
+
+**Date:** 2026-11-08  
+**Severity:** Medium (the Windows engine library didn't link; nothing shipped)  
+**Category:** Build / Windows  
+**What happened:** The Windows build of the desktop AI engine (`src-tauri/ai-engine`) failed at the link with LNK1120 on
+`__imp_getenv`, though Rust was set to `+crt-static` and `LLAMA_STATIC_CRT=1` was passed to llama.cpp's CMake.  
+**Root cause:** llama.cpp's CMake picks the MSVC runtime through `CMAKE_MSVC_RUNTIME_LIBRARY` (policy CMP0091), and with it
+unset it adds `/MD` after the `/MT` that `LLAMA_STATIC_CRT` passes: one static and one dynamic runtime in the same library.  
+**Fix:** `CMAKE_MSVC_RUNTIME_LIBRARY = "MultiThreaded"` next to `LLAMA_STATIC_CRT = "1"` in
+`src-tauri/ai-engine/.cargo/config.toml` (`llama-cpp-sys-2` hands `CMAKE_*` variables to CMake; only MSVC reads it). The library
+needs no Visual C++ runtime on the PC.  
+**Rule:** a C++ dependency built by CMake for MSVC gets its runtime from `CMAKE_MSVC_RUNTIME_LIBRARY`, not only from the
+library's own CRT switch, and has to agree with Rust's `crt-static`. A Windows build's runtime dependencies show with
+`dumpbin /dependents`.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-11-08 **Resolved in:** 5f37f75
+
+---
+
+### LL-074: bindgen's C enums are `i32` under MSVC and `u32` under clang
+
+**Date:** 2026-11-08  
+**Severity:** Low (a compile error on Windows only)  
+**Category:** Build / Platform  
+**What happened:** The engine's check of a GGUF's chat template compared a `gguf_type` to a constant of the other signedness. It
+built on macOS and Linux and failed on the Windows CI.  
+**Root cause:** bindgen types a C enum as `u32` for clang's targets and `i32` for MSVC's, so the generated binding differs by
+toolchain.  
+**Fix:** the comparison widens both sides first: `i64::from(gguf.kv_type(key)) != GGUF_TYPE_STRING` (`engine.rs`).  
+**Rule:** don't compare or assign a bindgen enum to a constant of a fixed integer type; go through a widening conversion
+(`i64::from`). Code that touches llama.cpp's C enums has to be built on Windows CI, not only on the Mac.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-11-08 **Resolved in:** 74b84c0
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
