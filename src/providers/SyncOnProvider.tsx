@@ -17,6 +17,13 @@ import { toast } from "@/utils/toast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 /**
+ * How long the desktop page must have been hidden for its return to reconnect the cloud. A window minimised and restored at
+ * once doesn't wedge the channel, and a reconnect costs reads (the vault, the devices): on Windows a minimised page is hidden
+ * too (ADR-033).
+ */
+const RESUME_AFTER_HIDDEN_MS = 60_000;
+
+/**
  * Runs the sync engine (`libs/cloud/syncEngine`, ADR-016) while the cloud is connected and the vault unlocked, and turns
  * its events into app state: toasts, disconnect, vault prompt.
  */
@@ -156,9 +163,13 @@ export default function SyncOnProvider(): null {
     if (Platform.OS === "web") {
       // The desktop window starts hidden (ADR-022): its first showing is the launch, not a return.
       let shown = document.visibilityState === "visible";
+      let hiddenAt = 0;
       const handleVisibilityChange = () => {
-        if (document.visibilityState !== "visible") return;
-        if (shown) resume();
+        if (document.visibilityState !== "visible") {
+          hiddenAt = Date.now();
+          return;
+        }
+        if (shown && Date.now() - hiddenAt >= RESUME_AFTER_HIDDEN_MS) resume();
         shown = true;
       };
       document.addEventListener("visibilitychange", handleVisibilityChange);

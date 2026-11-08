@@ -108,33 +108,65 @@ function onDesktopKeyDown(e: KeyboardEvent) {
   }
 }
 
+function selectionOf(target: EventTarget | null): Selection | null {
+  return (target as Node | null)?.ownerDocument?.getSelection() ?? null;
+}
+
 function hasSelectedText(target: EventTarget | null): boolean {
-  const selection = (target as Node | null)?.ownerDocument?.getSelection();
+  const selection = selectionOf(target);
   return !!selection && !selection.isCollapsed && !!selection.toString().trim();
 }
 
+/** Whether the pointer is over the selected text: elsewhere the menu would be the page's (reload, back). */
+function isOverSelection(e: MouseEvent): boolean {
+  if (!hasSelectedText(e.target)) return false;
+  const selection = selectionOf(e.target)!;
+  for (let i = 0; i < selection.rangeCount; i++) {
+    for (const r of selection.getRangeAt(i).getClientRects()) {
+      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return true;
+    }
+  }
+  return false;
+}
+
+/** What opens the menu: the right button, or Ctrl+click on a Mac. */
+function isMenuPress(e: MouseEvent): boolean {
+  return e.button === 2 || (IS_MAC && e.button === 0 && e.ctrlKey);
+}
+
 /**
- * Whether text was selected when the right button went down. WebKit on macOS selects the word under the pointer before the
- * menu opens, so at `contextmenu` every word would look selected. null: a menu from the keyboard, with no press before it.
+ * The last press that opens a menu. WebKit on macOS selects the word under the pointer before `contextmenu`, so the
+ * selection is read when the button goes down. A menu from the keyboard has no press; one whose menu never came (released
+ * outside the window, on Windows where the menu opens on release) is forgotten after a moment.
  */
-let selectedOnPress: boolean | null = null;
+let menuPress: { doc: Document | null; overSelection: boolean; hadSelection: boolean; at: number } | null = null;
+const PRESS_TO_MENU_MS = 1500;
 
 function onMouseDown(e: MouseEvent) {
-  if (e.button !== 2 || isEditable(e.target)) return;
-  selectedOnPress = hasSelectedText(e.target);
+  if (!isMenuPress(e) || isEditable(e.target)) return;
+  const overSelection = isOverSelection(e);
+  const selection = selectionOf(e.target);
+  menuPress = {
+    doc: (e.target as Node).ownerDocument,
+    overSelection,
+    hadSelection: !!selection && !selection.isCollapsed,
+    at: Date.now(),
+  };
   // No menu will open: not WebKit's word selection either.
-  if (!selectedOnPress) e.preventDefault();
+  if (!overSelection) e.preventDefault();
 }
 
 /** A right click: the browser's menu only over a text field or text the user selected, to edit or copy. */
 function onContextMenu(e: MouseEvent) {
-  const pressed = selectedOnPress;
-  selectedOnPress = null;
-  if (isEditable(e.target) || (pressed ?? hasSelectedText(e.target))) return;
+  const press = menuPress;
+  menuPress = null;
+  const fromPress =
+    press && press.doc === (e.target as Node | null)?.ownerDocument && Date.now() - press.at < PRESS_TO_MENU_MS ? press : null;
+  if (isEditable(e.target) || (fromPress ? fromPress.overSelection : hasSelectedText(e.target))) return;
   e.preventDefault();
-  // Nothing was selected before the click: what WebKit selected for its menu (a word, a space) goes with the menu.
-  const selection = (e.target as Node | null)?.ownerDocument?.getSelection();
-  if (pressed === false && selection && !selection.isCollapsed) selection.removeAllRanges();
+  // Nothing was selected before the press: what WebKit selected for its menu (a word, a space) goes with the menu.
+  const selection = selectionOf(e.target);
+  if (fromPress && !fromPress.hadSelection && selection && !selection.isCollapsed) selection.removeAllRanges();
 }
 
 /** The note editors' iframe documents already listened to. */

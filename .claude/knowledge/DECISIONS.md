@@ -1539,15 +1539,19 @@ WebKit leaves bold, italic and underline to an app's Format menu.
 - **Dark theme** in the window's config (`theme: "Dark"`, Windows and macOS; Linux follows the system theme).
 - **Title bar colour** (`window_chrome.rs`, Windows): `DwmSetWindowAttribute(DWMWA_CAPTION_COLOR)` with `#05091A`. Windows 10
   refuses the attribute and keeps the dark theme's bar.
-- **Right-click menu:** the page prevents it except over a text field or selected text (`useKeyboardShortcuts.web.ts`, in the
-  window and the editors' iframes), so a read-only note can still be copied from. On Windows, WebView2's menu keeps only cut,
-  copy and paste (`ContextMenuRequested`, `window_chrome.rs`).
+- **Right-click menu:** the page prevents it except over a text field or over the text the user selected
+  (`useKeyboardShortcuts.web.ts`, in the window and the editors' iframes), so a read-only note can still be copied from.
+  Elsewhere WebKit's menu would offer Reload, which drops the edits not yet saved. WebKit on macOS selects the word under the
+  pointer before `contextmenu`, so the selection is read when the button goes down (right button, or Ctrl+click on a Mac), and
+  the word it selected is dropped with the menu. On Windows, WebView2's menu keeps only cut, copy and paste
+  (`ContextMenuRequested`, `window_chrome.rs`).
 - **Browser keys** blocked with Cmd (Mac) or Ctrl: print, find next (also F3), save, open, zoom (+, -, =, 0), view source (U,
   outside a text field: in the editor it underlines), caret browsing (F7), and Cmd/Ctrl+F where the app has nothing to find.
   Ctrl+letters on a Mac move the caret in text fields: untouched.
 - **Minimised (Windows):** `SetIsVisible(false)` on the WebView2 controller, `true` again when restored
-  (`WindowEvent::Resized`). The page gets `visibilitychange`: it flushes the edits not yet written and, back on screen, the sync
-  reconnects.
+  (`WindowEvent::Resized`). The page gets `visibilitychange`: it flushes the edits not yet written and, back on screen after a
+  minute or more, the sync reconnects (`RESUME_AFTER_HIDDEN_MS`, `SyncOnProvider`: a reconnect reads the vault and the devices,
+  1 + N reads, too many for every minimise; macOS's hidden window gains the same limit).
 - **Cmd/Ctrl+B/I/U** done by the text editor's page (`RICH_TEXT_SCRIPT`), only while it's editable, preventing the browser's own
   so Chromium doesn't apply them a second time.
 
@@ -1557,4 +1561,8 @@ WebKit leaves bold, italic and underline to an app's Format menu.
   types won't match;
 - a minimised page is throttled like a background tab: the local MCP server still has to answer it within its timeout (a check
   of the Windows run, ADR-032);
-- the menu over selected text is still the browser's on macOS and Linux (copy, look up, share…): only Windows' is trimmed.
+- the menu over selected text is still the browser's on macOS and Linux (copy, look up, share…): only Windows' is trimmed;
+- on Windows, Ctrl+F used to open WebView2's find bar on screens with no find of their own (code, to-do and kanban notes, help):
+  blocked as the user asked, those screens have no find now (CodeMirror's search could give code notes one);
+- not verified yet: whether a restored window gets the keyboard focus back while WebView2 is turned visible again (if not:
+  `MoveFocus` on the controller after `SetIsVisible(true)`).
