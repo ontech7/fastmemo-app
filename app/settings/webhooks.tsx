@@ -16,6 +16,7 @@ import IconChip from "@/components/ui/IconChip";
 import WebhookItem from "@/components/webhook/WebhookItem";
 import { selectorWebhooks, setWebhooks } from "@/slicers/settingsSlice";
 
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 /** The list's scroll view: keeps a focused URL field above the keyboard (the window doesn't resize for it). */
@@ -85,6 +86,7 @@ export default function WebhooksScreen() {
         maintainVisibleContentPosition={{
           disabled: true,
         }}
+        style={CONTENT_COLUMN}
         showsVerticalScrollIndicator={false}
         renderScrollComponent={KeyboardAwareList}
         data={webhooks_values}

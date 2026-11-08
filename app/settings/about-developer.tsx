@@ -2,6 +2,7 @@ import authorImage from "~/assets/images/author.png";
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import { openUrl } from "@/utils/openUrl";
 import { useEffect, useState } from "react";
@@ -38,7 +39,7 @@ export default function AboutDeveloperScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={styles.scroll}>
+      <ScrollView style={styles.scroll} contentContainerStyle={CONTENT_COLUMN}>
         <View style={styles.appWrapper}>
           <Image style={styles.appIcon} source={authorImage} />
 

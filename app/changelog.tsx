@@ -5,6 +5,7 @@ import ChangelogItem from "@/components/changelog/ChangelogItem";
 import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -65,7 +66,7 @@ export default function ChangelogScreen() {
         <CloseButton chip />
       </View>
 
-      <ScrollView>
+      <ScrollView contentContainerStyle={CONTENT_COLUMN}>
         <View style={styles.iconWrapper}>
           <LottieView ref={logoAnimRef} style={styles.icon} source={lottieJson} loop={false} />
           {Platform.OS !== "web" && (

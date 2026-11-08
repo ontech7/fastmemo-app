@@ -8,6 +8,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import { selectorVoiceRecognition, setVoiceRecognition } from "@/slicers/settingsSlice";
 
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 export default function VoiceRecognitionScreen() {
@@ -79,7 +80,7 @@ export default function VoiceRecognitionScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={styles.scroll}>
+      <ScrollView style={styles.scroll} contentContainerStyle={CONTENT_COLUMN}>
         <View style={styles.sectionWrapper}>
           <View style={styles.sectionList}>
             <View style={[styles.sectionItemList, styles.sectionItemList_last]}>

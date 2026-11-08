@@ -7,6 +7,7 @@ import { SECTION_ADVANCED, SECTION_BASIC, SECTION_FEEDBACK, SECTION_INFO } from 
 import Section from "@/components/settings/Section";
 import AppBackground from "@/components/ui/AppBackground";
 
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 export default function GeneralSettingsScreen() {
@@ -22,7 +23,7 @@ export default function GeneralSettingsScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={{ paddingHorizontal: PADDING_MARGIN.lg }}>
+      <ScrollView style={{ paddingHorizontal: PADDING_MARGIN.lg }} contentContainerStyle={CONTENT_COLUMN}>
         <Section title={t("generalsettings.basic")} icon="settings" sectionItems={SECTION_BASIC} />
         <Section title={t("generalsettings.advanced")} icon="cmd" sectionItems={SECTION_ADVANCED} />
         <Section title={t("generalsettings.about")} icon="rocket" sectionItems={SECTION_INFO} />

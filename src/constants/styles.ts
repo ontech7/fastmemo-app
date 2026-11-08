@@ -153,6 +153,10 @@ export const SIZE = {
 /** The widest a dialog-like card grows on a wide window (the desktop), in px. */
 export const MAX_WIDTH = {
   dialog: 560,
+  /** The widest a settings page's content grows on a wide window (the desktop), in px. */
+  page: 760,
+  /** The widest the secret-code keypad grows on a wide window (the desktop), in px. */
+  keypad: 400,
 } as const;
 
 export const BORDER = {

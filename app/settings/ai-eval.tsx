@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import BackButton from "@/components/buttons/BackButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import useEngineSupport from "@/hooks/useEngineSupport";
 import type { EvalReport, EvalResult } from "@/libs/ai";
@@ -168,6 +169,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.lg,
   },
   scrollContent: {
+    ...CONTENT_COLUMN,
     paddingBottom: PADDING_MARGIN.xl * 2,
     gap: PADDING_MARGIN.md,
   },

@@ -49,6 +49,7 @@ import { configs } from "@/configs";
 import { openUrl } from "@/utils/openUrl";
 import { isTauri } from "@/utils/platform";
 
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 /** Locales for which a translated online guide exists; anything else uses "en". */
@@ -788,6 +789,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.lg,
   },
   scrollContent: {
+    ...CONTENT_COLUMN,
     paddingBottom: PADDING_MARGIN.xl,
   },
   aiInvite: {

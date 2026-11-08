@@ -23,6 +23,7 @@ import { setReportDate } from "@/slicers/settingsSlice";
 import { formatDateTime } from "@/utils/date";
 import { getDisplayAppVersion } from "@/utils/version";
 
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
 import lottieJson from "~/assets/lottie/Logo.json";
@@ -280,7 +281,12 @@ export default function ReportScreen() {
         </View>
 
         {/* Keeps the focused field above the keyboard (under KeyboardProvider the window doesn't resize for it). */}
-        <KeyboardAwareScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" bottomOffset={PADDING_MARGIN.xl}>
+        <KeyboardAwareScrollView
+          style={styles.scroll}
+          contentContainerStyle={CONTENT_COLUMN}
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={PADDING_MARGIN.xl}
+        >
           <View style={styles.appWrapper}>
             <LottieView ref={logoAnimRef} style={styles.logoStyle} source={lottieJson} loop={false} />
             <Text style={styles.text}>Fast Memo - Notes in one click</Text>

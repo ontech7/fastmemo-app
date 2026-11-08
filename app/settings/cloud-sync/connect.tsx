@@ -8,6 +8,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
 import { configs } from "@/configs";
+import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import { cloudStateKey, useCloudStatus } from "@/hooks/useCloudStatus";
 import { useCloudSync } from "@/hooks/useCloudSync";
@@ -618,6 +619,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.lg,
   },
   scrollContent: {
+    ...CONTENT_COLUMN,
     paddingBottom: PADDING_MARGIN.xxl,
   },
   header: {
