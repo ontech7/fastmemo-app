@@ -15,6 +15,11 @@ const de = {
     title: "Was gibt's Neues?",
 
     web: {
+      description_2_1_0: `• Der KI-Assistent jetzt auch am Computer: korrigieren, kürzen, übersetzen und zusammenfassen, alles auf Ihrem Gerät.
+• Verbinden Sie KI-Agenten wie Claude oder Cursor über MCP mit Ihren Notizen: standardmäßig aus, gesperrte und versteckte Notizen bleiben unerreichbar.
+• Ein Fenster wie eine App: dunkle Titelleiste, keine Browser-Menüs oder -Tastenkürzel.
+• Verschiedene Fehlerbehebungen und Verbesserungen.`,
+
       description_2_0_0: `• Synchronisieren Sie mit Ihrem eigenen FastMemo Server statt mit Firebase.
 • Echtzeit-Synchronisierung zwischen Ihren Geräten.
 • Tastenkürzel und auf dem Mac eine Menüleiste.

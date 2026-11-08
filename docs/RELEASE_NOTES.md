@@ -1,47 +1,31 @@
-## 📱 Mobile 4.0.0
+## 🖥 Desktop 2.1.0
 
-- Sync with your own [FastMemo Server](https://github.com/ontech7/fastmemo-server), instead of Firebase.
-  - Open source and self-hosted: one Docker container with SQLite (or PostgreSQL), on a PC, a NAS, a Raspberry Pi or a VPS.
-  - Notes stay end-to-end encrypted: the server stores them but can't read them.
-  - Plain HTTP works too, and is fine through Tailscale or a VPN like WireGuard, which encrypt the traffic.
-- Real-time sync across your devices.
-  - Changes arrive in about a second: live listeners on Firebase, long polling on the server.
-  - Every note has its own revision and is merged on its own: a note edited on two devices before they synced is kept twice, as
-    a "(conflict)" copy, instead of one edit silently replacing the other.
-  - A note open in the editor reloads live when another device changes it, and the cursor stays where it was.
-  - A dot in Settings shows whether the cloud answers, and a quiet line appears on the home screen when it hasn't for 30 s.
-- AI assistant with the new Qwen3.5 models: fix, shorten, translate and summarize.
-  - Everything runs on the phone ([llama.rn](https://github.com/mybigday/llama.rn) with the 0.8B, 2B or 4B models): no note
-    leaves the device.
-  - Long notes are processed one paragraph at a time, and the summary goes at the top of the note.
-  - Results stream in and are previewed before you apply them.
-  - Models download through Android's DownloadManager, so the download goes on with the screen off or the app closed.
-- Tap an image to resize, rotate or share it.
-  - Small, medium, large or full width, alignment, quarter turns, a full-screen viewer with pinch to zoom; every change can be
-    undone.
-- A faster app and various fixes.
-  - The Geist fonts are built into the app instead of being loaded at every launch, so the first frame doesn't wait for them.
-  - The first call into a native module paid ~120 ms for kotlin-reflect's first use (it builds the call's options object), and
-    every later call queued behind it. A thread started at launch now warms it up while the JS engine starts.
-  - The home screen opens without an animation, and icons are imported one by one instead of from a barrel that loaded ~300 of
-    them at startup.
-  - Notes are stored one per entry and written only when they change, instead of rewriting every note on each save.
-  - Built on Expo SDK 58 and React Native 0.88, with the New Architecture and Hermes V1.
-
-## 🖥 Desktop 2.0.0
-
-- Sync with your own [FastMemo Server](https://github.com/ontech7/fastmemo-server), instead of Firebase.
-  - The app talks to the server and to webhooks from Rust, so plain HTTP servers on your network work, Windows included, with no
-    CORS limits.
-- Real-time sync across your devices.
-  - The same sync engine as the mobile app: per-note revisions, conflicts kept as copies, live reload of the open note.
-- Keyboard shortcuts and, on Mac, a menu bar.
-  - Esc goes back, Cmd/Ctrl+N creates a note, Cmd/Ctrl+F searches; F5 and Cmd/Ctrl+R no longer reload the app and lose unsaved
-    edits.
-  - The macOS menu bar follows the app's language.
-- Click an image to resize, rotate or save it.
-- A faster app and various fixes.
-  - Rebuilt on Tauri 2 with the same app identity: 1.x installs update in place and keep their notes.
-  - The window stays hidden until the home screen is drawn, so there's no empty window at launch.
-  - On macOS, closing the window keeps the app running like other Mac apps; the window remembers its size, position and zoom.
-  - Launching it again brings the open window forward instead of starting a second copy.
+- The AI assistant on the computer too: fix, shorten, translate and summarize, all on your device.
+  - The same Qwen3.5 models as the phone (0.8B, 2B or 4B), run by [llama.cpp](https://github.com/ggml-org/llama.cpp): no note
+    leaves the computer, and the only download is the model itself.
+  - Apple Silicon Macs run it on the GPU; Windows, Linux and Intel Macs on the CPU, with half the cores, so the computer stays
+    usable while it writes.
+  - The engine loads the first time you use the AI: with the AI off, the app starts as before. A computer that can't run it says
+    so, and everything else works as usual.
+  - A model download resumes where it stopped and is checked against the model's checksum.
+  - Long notes are processed one part at a time with their progress, and every result is previewed before you apply it.
+- Connect AI agents like Claude or Cursor to your notes through MCP: off by default, and locked or hidden notes stay out of
+  reach.
+  - A local [MCP](https://modelcontextprotocol.io) server: an agent can search and read your notes and create notes of all four
+    types. Editing and trashing start switched off, and every tool has its own switch in Settings.
+  - An agent edits only the notes it created in the same session, and can lock a note or make it read-only, never the reverse.
+  - The agent connects to the app through a channel only your user account can open: no network port.
+  - What an agent reads goes to its AI provider, so locked and hidden notes are never found or read, with no switch to change
+    that.
+  - On Windows and Linux, while MCP is on, an icon in the tray keeps the app reachable with its window closed.
+- A window that feels like an app: a dark title bar, no browser menus or shortcuts.
+  - The title bar is dark on Windows and macOS, and on Windows 11 it takes the app's own color.
+  - Right-click opens a menu only over text, so the browser's Reload, which lost unsaved edits, is gone; on Windows that menu
+    offers only cut, copy and paste.
+  - Browser keys like print, zoom or find-in-page no longer do anything.
+  - On Windows, a minimized window pauses its page, so it uses no CPU in the background.
+  - Settings and the secret code keep a readable width on a wide window.
+- Various fixes and improvements.
+  - Cmd+B, Cmd+I and Cmd+U style a text note on macOS.
+  - A read-only note wraps long links and keys as it does while editing, and its find bar only finds, with no replace.
+  - The text and code editors use the app's scrollbar.

@@ -15,6 +15,11 @@ const fr = {
     title: "Quoi de neuf?",
 
     web: {
+      description_2_1_0: `• L'assistant IA aussi sur l'ordinateur : corrigez, raccourcissez, traduisez et résumez, le tout sur votre appareil.
+• Connectez des agents IA comme Claude ou Cursor à vos notes via MCP : désactivé par défaut, et les notes verrouillées ou masquées restent hors de portée.
+• Une fenêtre digne d'une app : barre de titre sombre, sans menus ni raccourcis du navigateur.
+• Diverses corrections et améliorations.`,
+
       description_2_0_0: `• Synchronisez avec votre propre FastMemo Server, à la place de Firebase.
 • Synchronisation en temps réel entre vos appareils.
 • Raccourcis clavier et, sur Mac, une barre de menus.

@@ -15,6 +15,11 @@ const en = {
     title: "What's new?",
 
     web: {
+      description_2_1_0: `• The AI assistant on the computer too: fix, shorten, translate and summarize, all on your device.
+• Connect AI agents like Claude or Cursor to your notes through MCP: off by default, and locked or hidden notes stay out of reach.
+• A window that feels like an app: a dark title bar, no browser menus or shortcuts.
+• Various fixes and improvements.`,
+
       description_2_0_0: `• Sync with your own FastMemo Server, instead of Firebase.
 • Real-time sync across your devices.
 • Keyboard shortcuts and, on Mac, a menu bar.
