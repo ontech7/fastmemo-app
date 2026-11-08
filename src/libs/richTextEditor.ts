@@ -1,4 +1,5 @@
 import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { SCROLLBAR_CSS } from "@/styles/scrollbar";
 
 /** The text editor page's look (RichEditor's `editorStyle`). */
 export const RICH_TEXT_STYLE = {
@@ -21,6 +22,7 @@ export const RICH_TEXT_STYLE = {
     pre pre { margin: 0; padding: 0; background: none; }
     h1:empty, pre:empty { display: none; }
     pre span { font-family: inherit !important; background-color: transparent !important; white-space: inherit !important; }
+    ${SCROLLBAR_CSS}
   `,
   // Horizontal inset lives here (not on containerStyle) so it matches the header
   // and toolbar margins on every platform: on web the webview is a plain <iframe>
@@ -28,7 +30,9 @@ export const RICH_TEXT_STYLE = {
   // The gap from the toolbar is handled by editorWrapper's paddingBottom (a real
   // layout gap outside the iframe) — content padding-bottom can't do it because the
   // iframe's bottom edge is the scroll viewport edge, so the caret always lands on it.
-  contentCSSText: `padding: ${PADDING_MARGIN.sm}px ${PADDING_MARGIN.lg}px ${PADDING_MARGIN.sm}px;`,
+  // The browser wraps a long word (a link, a key) only while the content is editable: a read-only note sets
+  // contenteditable="false" and would scroll sideways, so the wrapping is set here for both.
+  contentCSSText: `padding: ${PADDING_MARGIN.sm}px ${PADDING_MARGIN.lg}px ${PADDING_MARGIN.sm}px; overflow-wrap: break-word;`,
 };
 
 /** The page's message that an image was tapped: its data is an `EditorImage`. */

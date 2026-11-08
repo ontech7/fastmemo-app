@@ -1958,6 +1958,28 @@ to `modules-apk/.gitignore` (not hashed). The fingerprint is back to the store b
 
 ---
 
+### LL-072: A read-only text note scrolled sideways on a long link, and the editors showed the system's scrollbar
+
+**Date:** 2026-11-08  
+**Severity:** Low (a long link or key in a read-only note ran off on one line; desktop and mobile)  
+**Category:** Bug / Editor CSS  
+**What happened:** A word with no spaces (a link, an API key) wrapped while the note was editable and ran on one line, scrolling
+sideways, once it was read-only. On desktop the text and code editors also showed the system's scrollbar (light, wide on Windows
+or with a mouse on a Mac) while the rest of the app had its own.  
+**Root cause:** `contenteditable="true"` comes with the browser's own `overflow-wrap: break-word` (Chromium and WebKit alike);
+RichEditor's `disabled` sets `contenteditable="false"`, which drops it, and the page set no wrapping of its own. The editors are
+documents of their own (an iframe on web/desktop, a WebView on native), so `global.css` never reached them.  
+**Fix:** `overflow-wrap: break-word` in the text editor's `contentCSSText`; the app's scrollbar rules as `SCROLLBAR_CSS`
+(`src/styles/scrollbar.ts`) in both editors' pages. `scripts/richtext.test.mjs` checks a long word wraps in a read-only note and
+that the editor has every scrollbar rule of `global.css`.  
+**Rule:** style an embedded page as a separate document: nothing from the app's CSS reaches it. Don't lean on what
+`contenteditable` gives for free: a read-only state takes it away. Code notes scroll sideways on purpose, as code editors do.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved **Resolved:** 2026-11-08 **Resolved in:** branch
+`fix/readonly-wrap-scrollbar`
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
