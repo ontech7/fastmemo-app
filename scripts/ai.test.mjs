@@ -180,7 +180,11 @@ eq("desktop constants: n_ctx", pickBy(DESKTOP.C.AI_MODELS, "contextSize"), [8192
 eq("desktop constants: no mlock", pickBy(DESKTOP.C.AI_MODELS, "useMlock"), [false, false, false]);
 eq("desktop constants: default is the 2B", DESKTOP.C.DEFAULT_MODEL_ID, "qwen3.5-2b");
 eq("desktop constants: long-note parts", [DESKTOP.C.SUMMARY_PART_TOKENS, DESKTOP.C.REWRITE_PIECE_TOKENS], [6000, 1200]);
-eq("desktop constants: speeds start as the reference ones", DESKTOP.C.MODEL_SPEED, NATIVE.C.MODEL_SPEED);
+eq("desktop constants: speeds measured on the reference computer's CPU", DESKTOP.C.MODEL_SPEED, {
+  "qwen3.5-0.8b": { prefill: 463, generate: 113 },
+  "qwen3.5-2b": { prefill: 224, generate: 59 },
+  "qwen3.5-4b": { prefill: 95, generate: 27 },
+});
 eq("desktop: the catalog's files, urls and sizes are the native ones", DESKTOP.C.AI_MODELS, {
   ...Object.fromEntries(
     modelIds.map((id) => [

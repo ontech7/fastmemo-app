@@ -22,11 +22,14 @@ export const USE_MLOCK: Record<AIModelId, boolean> = {
 /** The model an AI never set up starts with. */
 export const DEFAULT_MODEL_ID: AIModelId = "qwen3.5-2b";
 
-/** Tokens per second, as on the reference phone until the desktop's own are measured. */
+/**
+ * Tokens per second on the reference computer's CPU (Apple M5, half its cores, 2026-11-08): Windows and Linux run there.
+ * Metal on Apple Silicon reads 5-10 times faster, so its estimates err long.
+ */
 export const MODEL_SPEED: Record<AIModelId, { prefill: number; generate: number }> = {
-  "qwen3.5-0.8b": { prefill: 210, generate: 38 },
-  "qwen3.5-2b": { prefill: 92, generate: 18 },
-  "qwen3.5-4b": { prefill: 28, generate: 7 },
+  "qwen3.5-0.8b": { prefill: 463, generate: 113 },
+  "qwen3.5-2b": { prefill: 224, generate: 59 },
+  "qwen3.5-4b": { prefill: 95, generate: 27 },
 };
 
 /** A summary reads the note in parts of about this many tokens (one call each, then one that merges them). */
