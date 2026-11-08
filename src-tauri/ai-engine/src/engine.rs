@@ -47,8 +47,9 @@ const ANSWER_ROOM: usize = 4;
 /// The most candidates a step of `completion_probabilities` lists.
 const MAX_N_PROBS: usize = 100;
 
-/// GGUF's type id of a string value (`GGUF_TYPE_STRING`).
-const GGUF_TYPE_STRING: u32 = 8;
+/// GGUF's type id of a string value (`GGUF_TYPE_STRING`). Compared through `i64`: bindgen makes the C enum `gguf_type` a
+/// `u32` with clang on macOS and Linux but an `i32` with MSVC.
+const GGUF_TYPE_STRING: i64 = 8;
 
 /// Set `FASTMEMO_AI_LOG=1` to see llama.cpp's own log on stderr; it is silent otherwise.
 const LOG_ENV: &str = "FASTMEMO_AI_LOG";
@@ -102,7 +103,7 @@ pub fn gguf_chat_template(path: &str) -> Result<String, String> {
     let gguf = GgufContext::from_file(Path::new(path)).ok_or("not a GGUF file")?;
     let key = gguf.find_key("tokenizer.chat_template");
     // the value getter asserts its type: checked first
-    if key < 0 || gguf.kv_type(key) != GGUF_TYPE_STRING {
+    if key < 0 || i64::from(gguf.kv_type(key)) != GGUF_TYPE_STRING {
         return Err("no chat template".to_string());
     }
     gguf.val_str(key)
