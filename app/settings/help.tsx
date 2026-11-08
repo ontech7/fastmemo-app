@@ -95,7 +95,8 @@ export default function HelpScreen() {
 
   // AI intent search is offered only when the on-device model is set up and the AI runs here: the phone's build, or the
   // desktop app once its engine answered that it loads (a browser has none).
-  const engineSupport = useEngineSupport();
+  // asked only when it matters: `aiAvailable` can be true only with the AI on and a model downloaded
+  const engineSupport = useEngineSupport(aiSettings.enabled && aiSettings.modelDownloaded);
   const engineReady = isTauri() ? engineSupport?.available === true : supportsAI();
   const aiAvailable = aiSettings.enabled && aiSettings.modelDownloaded && engineReady;
 

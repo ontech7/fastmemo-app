@@ -134,6 +134,8 @@ const STUBS = {
             llama.running--;
             llama.events.push("end " + n);
           }
+          // tokens that reach the callback after the answer (the desktop's channel messages can)
+          if (script.late) setTimeout(() => script.late.forEach((token) => onToken?.({ token })), 0);
           return {
             text: interrupted ? tokens.join("") : text,
             timings: { prompt_n: 10, prompt_ms: 20, predicted_n: 5, predicted_ms: 50 },
@@ -870,6 +872,19 @@ console.log("deleting files");
     "release Qwen3.5-2B-Q4_K_M.gguf",
     "delete qwen-1.5b-old.gguf",
   ]);
+}
+
+console.log("tokens that arrive after the answer are not delivered");
+{
+  await fresh();
+  selectModel("qwen3.5-2b");
+  const streamed = [];
+  answer({ text: "Spesa", tokens: ["Sp", "es", "a"], late: ["LATE1", "LATE2"] });
+  const result = await X.generateEditorContent("generate_title", "Una nota sulla spesa", (token) => streamed.push(token));
+  await settle();
+  eq("the tokens before the answer were delivered", streamed.slice(0, 3), ["Sp", "es", "a"]);
+  eq("the tokens after it were dropped", streamed, ["Sp", "es", "a"]);
+  eq("the result text is unchanged", [result.success, result.text], [true, "Spesa"]);
 }
 
 await fresh();

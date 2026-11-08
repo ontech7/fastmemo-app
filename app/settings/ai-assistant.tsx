@@ -11,6 +11,7 @@ import AppBackground from "@/components/ui/AppBackground";
 import ProgressBar from "@/components/ui/ProgressBar";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
 import useEngineSupport from "@/hooks/useEngineSupport";
+import type { AIAssistantSettings } from "@/types";
 import { selectorAIAssistant, selectorAIModelIsLegacy, setAIAssistant } from "@/slicers/settingsSlice";
 import { isTauri } from "@/utils/platform";
 import { toast } from "@/utils/toast";
@@ -72,13 +73,15 @@ export default function AIAssistantScreen() {
   const engineAvailable = desktop ? engineSupport?.available === true : nativeAvailable;
 
   const deviceRam = (desktop ? engineSupport?.totalMemory : Device.totalMemory) ?? 0;
+  const unknownRam = desktop && engineSupport?.totalMemory == null;
   // The computer: the default model. The phone: the 2B where it runs comfortably (a 6 GB class phone and up), the 0.8B below.
   const recommendedId: AIModelId = desktop ? DEFAULT_MODEL_ID : deviceRam >= 5 * GB ? "qwen3.5-2b" : "qwen3.5-0.8b";
 
   const modelCardItems = useMemo<SelectableCardItem<AIModelId>[]>(() => {
     const models = Object.values(AI_MODELS) as AIModelInfo[];
     return models.map((model) => {
-      const canRun = deviceRam >= model.minRamBytes;
+      // a computer that doesn't tell its memory is not held back: the engine said it runs
+      const canRun = unknownRam || deviceRam >= model.minRamBytes;
       return {
         id: model.id,
         label: model.name,
@@ -93,13 +96,23 @@ export default function AIAssistantScreen() {
         disabledLabel: t("ai.model_unavailable"),
       };
     });
-  }, [deviceRam, recommendedId, t]);
+  }, [deviceRam, unknownRam, recommendedId, t]);
 
-  // The settings of the moment, for what is decided after an await.
+  // The settings of the moment, for what is decided after an await (a check of the files, the default model's write): a
+  // change made from a render's copy would put back what another one just wrote. `updateAI` changes the ref at once, so
+  // two writes in the same tick (before a render) still build on each other.
   const aiSettingsRef = useRef(aiSettings);
   useEffect(() => {
     aiSettingsRef.current = aiSettings;
   });
+  const updateAI = useCallback(
+    (patch: Partial<AIAssistantSettings>) => {
+      const next = { ...aiSettingsRef.current, ...patch };
+      aiSettingsRef.current = next;
+      dispatch(setAIAssistant(next));
+    },
+    [dispatch]
+  );
 
   // A computer that never set the AI up starts on the new default model, once: its stored model is the old default
   // (the phone's 0.8B) only because nothing else was ever chosen. A later pick sticks.
@@ -113,10 +126,10 @@ export default function AIAssistantScreen() {
     };
     desktopDefaultModelToStore(aiSettingsRef.current, hasAnyModelFile)
       .then((modelId) => {
-        if (modelId) dispatch(setAIAssistant({ ...aiSettingsRef.current, selectedModel: modelId }));
+        if (modelId) updateAI({ selectedModel: modelId });
       })
       .catch((error) => console.error("[AI] Default model check failed:", error));
-  }, [desktop, engineSupport?.available, dispatch]);
+  }, [desktop, engineSupport?.available, updateAI]);
 
   useEffect(() => {
     if (!supportsAI()) return;
@@ -133,8 +146,8 @@ export default function AIAssistantScreen() {
       const downloaded = await isModelDownloaded(selectedModelId);
       setModelDownloaded(downloaded);
       // A Qwen 2.5 id stored by an earlier version is stored as the tier replacing it (read so already).
-      if (downloaded !== aiSettings.modelDownloaded || storedModelIsLegacy) {
-        dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: downloaded }));
+      if (downloaded !== aiSettingsRef.current.modelDownloaded || storedModelIsLegacy) {
+        updateAI({ modelDownloaded: downloaded });
       }
     };
 
@@ -152,24 +165,21 @@ export default function AIAssistantScreen() {
 
       const downloaded = await isModelDownloaded(modelId);
       setModelDownloaded(downloaded);
-      dispatch(
-        setAIAssistant({
-          ...aiSettings,
-          selectedModel: modelId,
-          modelDownloaded: downloaded,
-          enabled: downloaded ? aiSettings.enabled : false,
-        })
-      );
+      updateAI({
+        selectedModel: modelId,
+        modelDownloaded: downloaded,
+        ...(downloaded ? {} : { enabled: false }),
+      });
     },
-    [aiSettings, selectedModelId, dispatch]
+    [selectedModelId, updateAI]
   );
 
   const toggleEnabled = useCallback(
     (value: boolean) => {
-      dispatch(setAIAssistant({ ...aiSettings, enabled: value }));
+      updateAI({ enabled: value });
       if (!value && supportsAI()) releaseContext();
     },
-    [aiSettings, dispatch]
+    [updateAI]
   );
 
   // A download's end, even one before the screen opened: done (the module turned the AI on), cancelled or failed.
@@ -211,8 +221,8 @@ export default function AIAssistantScreen() {
 
     await deleteModel(selectedModelId);
     setModelDownloaded(false);
-    dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: false, enabled: false }));
-  }, [aiSettings, selectedModelId, dispatch]);
+    updateAI({ modelDownloaded: false, enabled: false });
+  }, [selectedModelId, updateAI]);
 
   if (!supportsAI() || checking || !engineAvailable) {
     return (

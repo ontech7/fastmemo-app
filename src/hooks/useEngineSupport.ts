@@ -7,13 +7,14 @@ import { isTauri } from "@/utils/platform";
  * What the desktop's AI engine answers (whether its library loads here, the computer's memory), once per mount: null
  * until it answers, and always null outside the desktop shell (the phone asks `isNativeModuleAvailable`, a browser has
  * no AI). The answer is cached by the engine module, so asking again is free. The AI stack is imported when asked, so a
- * screen that only offers the AI doesn't evaluate it first.
+ * screen that only offers the AI doesn't evaluate it first. `enabled` false asks nothing (a screen that needs the answer
+ * only in some states passes the flag; the hook is called either way).
  */
-export default function useEngineSupport(): EngineSupport | null {
+export default function useEngineSupport(enabled = true): EngineSupport | null {
   const [support, setSupport] = useState<EngineSupport | null>(null);
 
   useEffect(() => {
-    if (!isTauri()) return;
+    if (!enabled || !isTauri()) return;
     let live = true;
     import("@/libs/ai")
       .then(({ getEngineSupport }) => getEngineSupport())
@@ -22,7 +23,7 @@ export default function useEngineSupport(): EngineSupport | null {
     return () => {
       live = false;
     };
-  }, []);
+  }, [enabled]);
 
   return support;
 }

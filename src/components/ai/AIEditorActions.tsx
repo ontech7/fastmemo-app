@@ -1,4 +1,4 @@
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, MAX_WIDTH, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, MAX_WIDTH, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 import useEngineSupport from "@/hooks/useEngineSupport";
 import type { AIModelId, EditorAction, LongNoteAction, LongNoteProgress } from "@/libs/ai";
 import {
@@ -855,7 +855,7 @@ const styles = StyleSheet.create({
   },
   // A wide window: the card keeps a dialog's width, in the middle.
   previewCardDesktop: {
-    width: "100%",
+    width: SIZE.full,
     maxWidth: MAX_WIDTH.dialog,
     alignSelf: "center",
   },
