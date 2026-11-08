@@ -28,9 +28,10 @@ function fail(message) {
 }
 
 /** `quiet`: its output is shown only if it fails (install_name_tool warns on every run that it voids the signature). */
-function run(command, args, { capture = false, quiet = false } = {}) {
+function run(command, args, { capture = false, quiet = false, env } = {}) {
   const result = spawnSync(command, args, {
     cwd: ENGINE_DIR,
+    env: env ? { ...process.env, ...env } : process.env,
     encoding: "utf8",
     stdio: capture ? ["ignore", "pipe", "inherit"] : quiet ? ["ignore", "pipe", "pipe"] : "inherit",
   });
@@ -72,7 +73,9 @@ function build(triple) {
   // the stub has its own target dir: it never replaces (or reuses) the real build's artifacts
   if (stub) args.push("--no-default-features", "--target-dir", "target/stub");
   console.log(`build-ai-engine: ${stub ? "stub" : "real"} library for ${triple}`);
-  run("cargo", args);
+  // Metal on Apple Silicon only: llama.cpp turns it on for every Mac, and an Intel Mac's GPU is its least tried path, so
+  // Intel Macs run on the CPU, as Windows and Linux do (llama-cpp-sys passes GGML_* variables to CMake).
+  run("cargo", args, { env: triple === "x86_64-apple-darwin" ? { GGML_METAL: "OFF" } : undefined });
   const built = join(ENGINE_DIR, stub ? "target/stub" : "target", triple, "release", libraryName(triple));
   if (!existsSync(built)) fail(`cargo did not produce ${built}`);
   return built;
