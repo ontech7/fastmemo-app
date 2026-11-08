@@ -366,6 +366,12 @@ time, and syncs the tray.
 hides the window and an icon stays, with Open and Quit; otherwise closing quits. See "Sync while hidden" in ADR-032 for what the
 engine does.
 
+**An app window, not a browser (ADR-033):** the dark theme is the window's config (`theme`, Windows and macOS);
+`window_chrome.rs` paints Windows 11's title bar `#05091A`, trims WebView2's text-field menu to cut/copy/paste and tells a
+minimised page it is hidden. `useKeyboardShortcuts.web.ts` blocks the browser's keys and its right-click menu outside text
+fields and selections; `RICH_TEXT_SCRIPT` does Cmd/Ctrl+B/I/U itself (WebKit on macOS leaves them to a Format menu the app
+doesn't have).
+
 ### Persistence Architecture
 
 ```

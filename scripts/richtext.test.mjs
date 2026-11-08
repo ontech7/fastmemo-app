@@ -836,6 +836,49 @@ const missingScrollbarRules = await evaluate(`(() => {
 })()`);
 check("The text editor has the app's scrollbar", !missingScrollbarRules.length, missingScrollbarRules.join("\n"));
 
+// Cmd+B/I/U on a Mac, Ctrl elsewhere. WebKit on macOS leaves them to an app's Format menu, which the desktop app doesn't
+// have, so the page does them itself. A synthetic key (no browser default) proves it's the page; Ctrl on a Mac moves the
+// caret (Ctrl+B is one character back), it doesn't style.
+const mac = await evaluate("/Mac/.test(navigator.platform)");
+const styleKey = (key, mods) =>
+  evaluate(`(() => {
+    const e = new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, code: "Key" + ${JSON.stringify(key.toUpperCase())},
+      metaKey: ${!!mods.meta}, ctrlKey: ${!!mods.ctrl}, shiftKey: ${!!mods.shift}, bubbles: true, cancelable: true });
+    document.querySelector(".pell-content").dispatchEvent(e);
+    return e.defaultPrevented;
+  })()`).then((prevented) => sleep(90).then(() => prevented));
+const mod = mac ? { meta: true } : { ctrl: true };
+for (const [key, tag] of [
+  ["b", "b"],
+  ["i", "i"],
+  ["u", "u"],
+]) {
+  await open("<div>one two</div>");
+  await select({ text: "two" });
+  await styleKey(key, mod);
+  const html = (await state()).html;
+  check(`${mac ? "Cmd" : "Ctrl"}+${key.toUpperCase()} styles the selection`, html.includes(`<${tag}>two</${tag}>`), html);
+}
+// A real key: Chromium's own bold must not run too, or the two would cancel out.
+await open("<div>one two</div>");
+await select({ text: "two" });
+const realB = { key: "b", code: "KeyB", windowsVirtualKeyCode: 66, modifiers: mac ? 4 : 2 };
+await send("Input.dispatchKeyEvent", { type: "keyDown", ...realB });
+await send("Input.dispatchKeyEvent", { type: "keyUp", ...realB });
+await sleep(90);
+check("A real Cmd/Ctrl+B makes the selection bold once", (await state()).html.includes("<b>two</b>"), (await state()).html);
+await open("<div>one two</div>");
+await select({ text: "two" });
+await styleKey("b", mac ? { ctrl: true } : { meta: true });
+check("The other modifier's B doesn't style", !/<b>/.test((await state()).html), (await state()).html);
+await styleKey("b", { ...mod, shift: true });
+check("Shift with the shortcut doesn't style", !/<b>/.test((await state()).html), (await state()).html);
+await post({ type: "content", name: "setDisable", data: true });
+await select({ text: "two" });
+await styleKey("b", mod);
+check("A read-only note isn't styled by the shortcut", !/<b>/.test((await state()).html), (await state()).html);
+await post({ type: "content", name: "setDisable", data: false });
+
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");
 check("no page errors", !pageErrors.length, pageErrors.join("\n"));
 

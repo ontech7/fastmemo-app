@@ -11,6 +11,7 @@ use tauri_plugin_window_state::StateFlags;
 pub mod mcp;
 mod net;
 mod tray;
+mod window_chrome;
 
 /// The app's config, in one place: the MCP bridge reads the identifier from it without starting Tauri.
 fn context() -> tauri::Context<tauri::Wry> {
@@ -579,6 +580,10 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 remember_windowed_frame(&window.as_ref().window());
             }
+            if let Some(window) = app.get_webview_window("main") {
+                window_chrome::paint_title_bar(&window);
+                window_chrome::keep_only_editing_items(&window);
+            }
             mcp::launch(app.handle());
             let app = app.handle().clone();
             std::thread::spawn(move || {
@@ -595,6 +600,10 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             if matches!(event, WindowEvent::Resized(_) | WindowEvent::Moved(_)) {
                 remember_windowed_frame(window);
+            }
+            // Minimising resizes the window to nothing (Windows).
+            if matches!(event, WindowEvent::Resized(_)) {
+                window_chrome::follow_minimised(window);
             }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();

@@ -27,10 +27,12 @@ interface Props {
   onClose: () => void;
   editorRef: React.RefObject<any>;
   plainText: string;
+  /** A read-only note: find only. Its text can't change, so replace would only make the count go down. */
+  readOnly?: boolean;
   style?: ViewStyle;
 }
 
-export default function FindReplaceBar({ visible, onClose, editorRef, plainText, style }: Props) {
+export default function FindReplaceBar({ visible, onClose, editorRef, plainText, readOnly, style }: Props) {
   const { t } = useTranslation();
 
   const [searchText, setSearchText] = useState("");
@@ -244,16 +246,18 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
         >
           <ChevronDownIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.textMuted} />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => setShowReplace(!showReplace)}
-          accessibilityRole="button"
-          aria-expanded={showReplace}
-        >
-          <Text style={[styles.toggleText, showReplace && { color: COLOR.accentSoft }]}>
-            {t("note.find_replace.replace_short")}
-          </Text>
-        </TouchableOpacity>
+        {!readOnly && (
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => setShowReplace(!showReplace)}
+            accessibilityRole="button"
+            aria-expanded={showReplace}
+          >
+            <Text style={[styles.toggleText, showReplace && { color: COLOR.accentSoft }]}>
+              {t("note.find_replace.replace_short")}
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.iconButton}
           onPress={onClose}
@@ -263,7 +267,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
           <XMarkIcon size={18} color={COLOR.softWhite} />
         </TouchableOpacity>
       </View>
-      {showReplace && (
+      {showReplace && !readOnly && (
         <View style={styles.row}>
           <TextInput
             style={styles.input}
