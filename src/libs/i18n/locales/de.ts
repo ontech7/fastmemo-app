@@ -652,6 +652,7 @@ const de = {
     },
     unavailable_web: "KI-Assistent ist nur auf Mobilgeräten verfügbar.",
     native_rebuild_needed: "KI-Assistent erfordert einen nativen Rebuild.\nFühren Sie aus: npx expo run:android",
+    unavailable_computer: "KI ist auf diesem Computer nicht verfügbar.",
     voice_only: "Nur Sprache",
     voice_only_hint: "Mit dem Assistenten nur per Sprache interagieren",
     listening: "Höre zu...",

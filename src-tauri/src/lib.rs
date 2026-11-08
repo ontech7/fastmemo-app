@@ -590,7 +590,8 @@ pub fn run() {
             ai::ai_model_files,
             ai::ai_download,
             ai::ai_download_cancel,
-            ai::ai_delete_files
+            ai::ai_delete_files,
+            ai::ai_save_eval_report
         ])
         .setup(|app| {
             // The config's frame: window-state's restore lands just after (on the main queue), recorded through its

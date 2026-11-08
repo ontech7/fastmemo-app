@@ -643,6 +643,7 @@ const ja = {
     },
     unavailable_web: "AIアシスタントはモバイルデバイスでのみ利用可能です。",
     native_rebuild_needed: "AIアシスタントにはネイティブリビルドが必要です。\n実行: npx expo run:android",
+    unavailable_computer: "このコンピューターではAIを利用できません。",
     voice_only: "音声のみ",
     voice_only_hint: "音声のみでアシスタントと対話",
     listening: "聞いています...",

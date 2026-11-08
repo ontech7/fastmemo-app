@@ -1,4 +1,5 @@
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, MAX_WIDTH, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import useEngineSupport from "@/hooks/useEngineSupport";
 import type { AIModelId, EditorAction, LongNoteAction, LongNoteProgress } from "@/libs/ai";
 import {
   cancelCommand,
@@ -15,12 +16,14 @@ import {
   resolveLanguage,
   rewriteNote,
   summarizeNote,
+  supportsAI,
   tooLongForAI,
   TRANSLATE_LANGUAGES,
   withSummary,
 } from "@/libs/ai";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
 import type { NoteType } from "@/types/note";
+import { isTauri } from "@/utils/platform";
 import { toast } from "@/utils/toast";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -181,6 +184,12 @@ export default function AIEditorActions({
   const { height: windowHeight } = useWindowDimensions();
 
   const aiSettings = useSelector(selectorAIAssistant);
+
+  // The phone has its engine; the desktop shows the AI only once its engine answered that it runs here (a missing or
+  // unloadable library is an answer too); a plain browser has none.
+  const desktop = isTauri();
+  const engineSupport = useEngineSupport();
+  const engineReady = desktop ? engineSupport?.available === true : supportsAI();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>("idle");
@@ -530,7 +539,7 @@ export default function AIEditorActions({
     opacity: menuProgress.value,
   }));
 
-  if (!aiSettings.enabled || !aiSettings.modelDownloaded || actionItems.length === 0) return null;
+  if (!engineReady || !aiSettings.enabled || !aiSettings.modelDownloaded || actionItems.length === 0) return null;
 
   return (
     <>
@@ -595,7 +604,7 @@ export default function AIEditorActions({
         onRequestClose={() => setLanguages(null)}
       >
         <View style={styles.previewBackdrop}>
-          <View style={styles.previewCard}>
+          <View style={[styles.previewCard, desktop && styles.previewCardDesktop]}>
             <View style={styles.previewHeader}>
               <LanguageIcon size={18} color={AI_COLOR} />
               <Text style={styles.previewTitle}>{t("ai.editor.translate_to")}</Text>
@@ -633,7 +642,7 @@ export default function AIEditorActions({
 
       <Modal visible={preview !== null} transparent animationType="fade" statusBarTranslucent onRequestClose={closePreview}>
         <View style={styles.previewBackdrop}>
-          <View style={styles.previewCard}>
+          <View style={[styles.previewCard, desktop && styles.previewCardDesktop]}>
             <View style={styles.previewHeader}>
               <SparklesIcon size={18} color={AI_COLOR} />
               <Text style={styles.previewTitle}>{preview?.title}</Text>
@@ -843,6 +852,12 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLOR.blue,
     padding: PADDING_MARGIN.lg,
+  },
+  // A wide window: the card keeps a dialog's width, in the middle.
+  previewCardDesktop: {
+    width: "100%",
+    maxWidth: MAX_WIDTH.dialog,
+    alignSelf: "center",
   },
   previewHeader: {
     flexDirection: "row",

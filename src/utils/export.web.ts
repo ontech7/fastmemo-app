@@ -130,7 +130,7 @@ export async function shareFile(_uri: string, _filename: string): Promise<void> 
 
 export async function exportAsTextFile(content: string, filename: string): Promise<void> {
   const ext = filename.split(".").pop() || "txt";
-  const filters = [{ name: ext === "md" ? "Markdown" : "Text", extensions: [ext] }];
+  const filters = [{ name: ext === "md" ? "Markdown" : ext === "json" ? "JSON" : "Text", extensions: [ext] }];
   await saveFileWeb(content, filename, filters);
 }
 

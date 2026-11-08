@@ -654,6 +654,7 @@ const fr = {
     },
     unavailable_web: "L'Assistant IA n'est disponible que sur les appareils mobiles.",
     native_rebuild_needed: "L'Assistant IA nécessite une reconstruction native.\nExécutez : npx expo run:android",
+    unavailable_computer: "L'IA n'est pas disponible sur cet ordinateur.",
     voice_only: "Voix uniquement",
     voice_only_hint: "Interagir avec l'assistant en utilisant uniquement votre voix",
     listening: "J'écoute...",

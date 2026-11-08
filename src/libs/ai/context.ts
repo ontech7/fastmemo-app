@@ -379,6 +379,8 @@ async function runEditorAction(
     if (cancelled()) return { success: false, error: "cancelled" };
 
     let stopping = false;
+    // Tokens can still arrive after the completion's answer (the desktop's channel messages do): they are not the UI's.
+    let finished = false;
     const result = await context.completion(
       {
         messages: [
@@ -395,6 +397,7 @@ async function runEditorAction(
         ...(action === "suggest_category" ? { grammar: categoryGrammar(categoryNames), n_probs: 10 } : {}),
       },
       (data) => {
+        if (finished) return;
         // a cancel that landed before the native completion began was dropped by it: stop at the first token
         if (cancelled()) {
           if (!stopping) {
@@ -408,6 +411,7 @@ async function runEditorAction(
         }
       }
     );
+    finished = true;
 
     const timings = timingsOf(result.timings);
     recordSpeed(model.id, timings);

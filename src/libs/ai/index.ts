@@ -28,6 +28,9 @@ export { clearLongNoteCache, estimateSeconds, LONG_NOTE_ACTIONS, rewriteNote, su
 export type { LongNoteAction, LongNoteResult } from "./longNote";
 export { hasSummary, withSummary } from "./blocks";
 export { runAIEval } from "./eval";
+export { shareEvalReport } from "./evalReport";
+export { desktopDefaultModelToStore } from "./desktopDefaultModel";
+export { supportsAI } from "./platformConstants";
 export type { EvalReport, EvalResult } from "./eval";
 export { completedJsonStrings, createTextStream, createThrottle, findCategoryByName, stripHtml } from "./helpers";
 export {

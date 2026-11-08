@@ -1,7 +1,7 @@
 import * as Device from "expo-device";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
@@ -10,7 +10,9 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import ProgressBar from "@/components/ui/ProgressBar";
 import SelectableCardList, { type SelectableCardItem } from "@/components/lists/SelectableCardList";
+import useEngineSupport from "@/hooks/useEngineSupport";
 import { selectorAIAssistant, selectorAIModelIsLegacy, setAIAssistant } from "@/slicers/settingsSlice";
+import { isTauri } from "@/utils/platform";
 import { toast } from "@/utils/toast";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
@@ -23,6 +25,7 @@ import {
   DEFAULT_MODEL_ID,
   deleteModel,
   deleteOrphanedModelFiles,
+  desktopDefaultModelToStore,
   downloadModel,
   getDownloadFailure,
   getModelDownload,
@@ -30,6 +33,7 @@ import {
   isModelDownloaded,
   isNativeModuleAvailable,
   releaseContext,
+  supportsAI,
 } from "@/libs/ai";
 
 const MB = 1024 * 1024;
@@ -60,12 +64,19 @@ export default function AIAssistantScreen() {
   const downloadProgress = download?.progress ?? 0;
   const [nativeAvailable, setNativeAvailable] = useState(true);
 
-  const deviceRam = Device.totalMemory ?? 0;
-  // The 2B where it runs comfortably (a 6 GB class phone and up), the 0.8B below.
-  const recommendedId: AIModelId = deviceRam >= 5 * GB ? "qwen3.5-2b" : "qwen3.5-0.8b";
+  // The phone asks its native module; the computer asks the engine (null until it answers), which says too whether its
+  // library loads at all and how much memory the computer has.
+  const desktop = isTauri();
+  const engineSupport = useEngineSupport();
+  const checking = desktop && engineSupport === null;
+  const engineAvailable = desktop ? engineSupport?.available === true : nativeAvailable;
+
+  const deviceRam = (desktop ? engineSupport?.totalMemory : Device.totalMemory) ?? 0;
+  // The computer: the default model. The phone: the 2B where it runs comfortably (a 6 GB class phone and up), the 0.8B below.
+  const recommendedId: AIModelId = desktop ? DEFAULT_MODEL_ID : deviceRam >= 5 * GB ? "qwen3.5-2b" : "qwen3.5-0.8b";
 
   const modelCardItems = useMemo<SelectableCardItem<AIModelId>[]>(() => {
-    const models = Platform.OS === "web" ? [] : (Object.values(AI_MODELS) as AIModelInfo[]);
+    const models = Object.values(AI_MODELS) as AIModelInfo[];
     return models.map((model) => {
       const canRun = deviceRam >= model.minRamBytes;
       return {
@@ -84,10 +95,36 @@ export default function AIAssistantScreen() {
     });
   }, [deviceRam, recommendedId, t]);
 
+  // The settings of the moment, for what is decided after an await.
+  const aiSettingsRef = useRef(aiSettings);
   useEffect(() => {
-    if (Platform.OS === "web") return;
+    aiSettingsRef.current = aiSettings;
+  });
 
-    if (!isNativeModuleAvailable()) {
+  // A computer that never set the AI up starts on the new default model, once: its stored model is the old default
+  // (the phone's 0.8B) only because nothing else was ever chosen. A later pick sticks.
+  useEffect(() => {
+    if (!desktop || !engineSupport?.available) return;
+    const hasAnyModelFile = async () => {
+      for (const id of Object.keys(AI_MODELS) as AIModelId[]) {
+        if (await isModelDownloaded(id)) return true;
+      }
+      return false;
+    };
+    desktopDefaultModelToStore(aiSettingsRef.current, hasAnyModelFile)
+      .then((modelId) => {
+        if (modelId) dispatch(setAIAssistant({ ...aiSettingsRef.current, selectedModel: modelId }));
+      })
+      .catch((error) => console.error("[AI] Default model check failed:", error));
+  }, [desktop, engineSupport?.available, dispatch]);
+
+  useEffect(() => {
+    if (!supportsAI()) return;
+
+    if (desktop) {
+      // the engine has not answered, or says no: the page says so
+      if (!engineSupport?.available) return;
+    } else if (!isNativeModuleAvailable()) {
       setNativeAvailable(false);
       return;
     }
@@ -104,11 +141,11 @@ export default function AIAssistantScreen() {
     checkModel();
     oldModelsBytes().then(setOldBytes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedModelId]);
+  }, [selectedModelId, engineSupport?.available]);
 
   const selectModel = useCallback(
     async (modelId: AIModelId) => {
-      if (Platform.OS === "web" || modelId === selectedModelId) return;
+      if (!supportsAI() || modelId === selectedModelId) return;
 
       // Release current context when switching models
       releaseContext();
@@ -130,14 +167,14 @@ export default function AIAssistantScreen() {
   const toggleEnabled = useCallback(
     (value: boolean) => {
       dispatch(setAIAssistant({ ...aiSettings, enabled: value }));
-      if (!value && Platform.OS !== "web") releaseContext();
+      if (!value && supportsAI()) releaseContext();
     },
     [aiSettings, dispatch]
   );
 
   // A download's end, even one before the screen opened: done (the module turned the AI on), cancelled or failed.
   useEffect(() => {
-    if (isDownloading || Platform.OS === "web") return;
+    if (isDownloading || !supportsAI()) return;
     isModelDownloaded(selectedModelId).then(setModelDownloaded);
     // a download clears the old models' files
     oldModelsBytes().then(setOldBytes);
@@ -145,7 +182,7 @@ export default function AIAssistantScreen() {
 
   // A failure while the screen is open is said.
   useEffect(() => {
-    if (Platform.OS === "web") return;
+    if (!supportsAI()) return;
     return addAIStatusListener((status) => {
       const failure = status === "error" ? getDownloadFailure() : null;
       if (failure) toast(t(failure === "no_space" ? "ai.download_no_space" : "ai.download_failed"));
@@ -153,12 +190,12 @@ export default function AIAssistantScreen() {
   }, [t]);
 
   const handleDownload = useCallback(() => {
-    if (Platform.OS === "web") return;
+    if (!supportsAI()) return;
     void downloadModel(selectedModelId);
   }, [selectedModelId]);
 
   const handleCancelDownload = useCallback(async () => {
-    if (Platform.OS === "web") return;
+    if (!supportsAI()) return;
     await cancelDownload();
   }, []);
 
@@ -170,14 +207,14 @@ export default function AIAssistantScreen() {
   }, [t]);
 
   const handleDelete = useCallback(async () => {
-    if (Platform.OS === "web") return;
+    if (!supportsAI()) return;
 
     await deleteModel(selectedModelId);
     setModelDownloaded(false);
     dispatch(setAIAssistant({ ...aiSettings, modelDownloaded: false, enabled: false }));
   }, [aiSettings, selectedModelId, dispatch]);
 
-  if (Platform.OS === "web" || !nativeAvailable) {
+  if (!supportsAI() || checking || !engineAvailable) {
     return (
       <SafeAreaView style={styles.container}>
         <AppBackground style={StyleSheet.absoluteFill} />
@@ -187,9 +224,13 @@ export default function AIAssistantScreen() {
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.unavailableContainer}>
-          <Text style={styles.unavailableText}>
-            {Platform.OS === "web" ? t("ai.unavailable_web") : t("ai.native_rebuild_needed")}
-          </Text>
+          {checking ? (
+            <ActivityIndicator size="large" color={COLOR.accentSoft} />
+          ) : (
+            <Text style={styles.unavailableText}>
+              {!supportsAI() ? t("ai.unavailable_web") : desktop ? t("ai.unavailable_computer") : t("ai.native_rebuild_needed")}
+            </Text>
+          )}
         </View>
       </SafeAreaView>
     );

@@ -454,6 +454,28 @@ pub async fn ai_delete_files(app: AppHandle, file_names: Vec<String>) -> Result<
     .await
 }
 
+/// Whether `name` can be an evaluation report's file: a bare name that ends in `.json`, with something before it.
+fn is_eval_report_name(name: &str) -> bool {
+    is_bare_file_name(name) && name.len() > ".json".len() && name.ends_with(".json")
+}
+
+/// Saves an evaluation report (the page's JSON) as `ai-eval/<file_name>` in the app's local data folder, and answers the
+/// file's full path. The folder is the app's own: the page needs no file-system scope for it.
+#[tauri::command]
+pub async fn ai_save_eval_report(app: AppHandle, file_name: String, json: String) -> Result<String, String> {
+    off_main(app, move |app, _ai| {
+        if !is_eval_report_name(&file_name) {
+            return Err("bad_request: file name".to_string());
+        }
+        let dir = app.path().app_local_data_dir().map_err(|err| err.to_string())?.join("ai-eval");
+        std::fs::create_dir_all(&dir).map_err(|err| format!("failed: {err}"))?;
+        let path = dir.join(&file_name);
+        std::fs::write(&path, json).map_err(|err| format!("failed: {err}"))?;
+        Ok(path.to_string_lossy().into_owned())
+    })
+    .await
+}
+
 /// `--ai-selftest [model.gguf]`: whether this executable opens its engine library, found as the app finds it (from the
 /// executable's place: no Tauri app runs in this mode). Prints one JSON line, `{"available": …, "reason": …}` (with
 /// `detail` when the system refused the library), and returns the exit code, 0. With a model, it also loads it and
@@ -532,6 +554,14 @@ mod tests {
         assert!(is_model_name("a.gguf"));
         for name in ["a.gguf.part", ".part", "../a.gguf"] {
             assert!(!is_model_name(name), "{name:?} was accepted");
+        }
+    }
+
+    #[test]
+    fn an_evaluation_report_is_a_bare_json_name() {
+        assert!(is_eval_report_name("qwen3.5-2b-2026-11-08T10-00-00-000Z.json"));
+        for name in [".json", "report", "report.json.part", "report.JSON", "../a.json", "a/b.json", "a\\b.json", "C:a.json", ""] {
+            assert!(!is_eval_report_name(name), "{name:?} was accepted");
         }
     }
 

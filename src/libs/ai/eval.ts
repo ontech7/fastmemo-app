@@ -1,9 +1,10 @@
 import * as Device from "expo-device";
-import * as FileSystem from "expo-file-system/legacy";
 
 import { AI_MODELS } from "./constants";
 import { generateEditorContent, getContextInfo, initContext, releaseContext } from "./context";
+import { getEngineSupport } from "./engine";
 import { EVAL_FIXTURES, LONG_NOTE_FIXTURES } from "./evalFixtures";
+import { saveEvalReport } from "./evalReport";
 import { clearLongNoteCache, estimateSeconds, rewriteNote, summarizeNote } from "./longNote";
 import type { AIModelId, AITimings, EditorAction } from "./types";
 
@@ -37,13 +38,13 @@ export interface EvalReport {
   runtime: ReturnType<typeof getContextInfo>;
   startedAt: string;
   results: EvalResult[];
-  /** Where the report was saved (documents/ai-eval/). */
+  /** Where the report was saved (the `ai-eval/` folder of the documents, or of the app's data on the desktop). */
   file?: string;
 }
 
 /**
  * Runs every fixture on `modelId`, one after the other, from a cold start (the load is timed too). `onResult` gets each
- * result as it lands; `shouldStop` ends the run between two fixtures. The report is saved as JSON under documents/ai-eval/.
+ * result as it lands; `shouldStop` ends the run between two fixtures. The report is saved as JSON (`saveEvalReport`).
  * Null if the model doesn't load.
  */
 export async function runAIEval(
@@ -115,20 +116,13 @@ export async function runAIEval(
   const report: EvalReport = {
     modelId,
     modelName: AI_MODELS[modelId].name,
-    device: { model: Device.modelName, os: Device.osVersion, totalMemory: Device.totalMemory },
+    device: { model: Device.modelName, os: Device.osVersion, totalMemory: (await getEngineSupport()).totalMemory },
     loadMs,
     runtime: getContextInfo(),
     startedAt,
     results,
   };
-  try {
-    const dir = `${FileSystem.documentDirectory}ai-eval/`;
-    if (!(await FileSystem.getInfoAsync(dir)).exists) await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-    const file = `${dir}${modelId}-${startedAt.replace(/[:.]/g, "-")}.json`;
-    await FileSystem.writeAsStringAsync(file, JSON.stringify(report, null, 2));
-    report.file = file;
-  } catch (e) {
-    console.log("[AI] eval report not saved:", e);
-  }
+  const file = await saveEvalReport(report);
+  if (file) report.file = file;
   return report;
 }

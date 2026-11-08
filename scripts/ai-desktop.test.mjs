@@ -62,6 +62,7 @@ const storeState = {
 };
 globalThis.__storeState = storeState;
 globalThis.__dispatched = [];
+globalThis.__asyncStorage = new Map();
 
 const STUBS = {
   "@tauri-apps/api/core": `
@@ -76,6 +77,13 @@ const STUBS = {
       if (!handler) throw new Error("no handler for " + command);
       return handler(args);
     }
+  `,
+  "@react-native-async-storage/async-storage": `
+    const data = globalThis.__asyncStorage;
+    export default {
+      getItem: async (key) => (data.has(key) ? data.get(key) : null),
+      setItem: async (key, value) => { data.set(key, value); },
+    };
   `,
   "@/utils/platform": `export const isTauri = () => globalThis.__tauri.isTauri;`,
   "@/libs/flushOnExit": `
@@ -116,6 +124,7 @@ writeFileSync(
   export const X = { ...Context, ...Models };
   export const E = Engine;
   export * as C from "@/libs/ai/constants";
+  export * as D from "@/libs/ai/desktopDefaultModel";
 `
 );
 
@@ -131,7 +140,7 @@ await build({
   plugins: [resolver],
 });
 
-const { X, E, C } = await import(pathToFileURL(out).href);
+const { X, E, C, D } = await import(pathToFileURL(out).href);
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 /* The harness                                                                                                         */
@@ -674,6 +683,60 @@ console.log("parallel first calls share one ai_info");
   tauri.handlers.ai_info = () => ({ available: true, totalMemory: 2 });
   eq("a later call asks again", (await E4.getEngineSupport()).available, true);
   eq("two invokes in all", tauri.count("ai_info"), 2);
+}
+
+console.log("the desktop's default model, written once");
+{
+  const storage = globalThis.__asyncStorage;
+  const KEY = "@aiDefaultModelChecked";
+  const OLD = { enabled: false, selectedModel: "qwen3.5-0.8b" };
+  let asked = 0;
+  const noFile = async () => (asked++, false);
+  const aFile = async () => (asked++, true);
+
+  storage.clear();
+  eq("key absent, no file, AI off, the old default: the 2B", await D.desktopDefaultModelToStore(OLD, noFile), "qwen3.5-2b");
+  eq("the key is set", storage.has(KEY), true);
+  eq("the model files were asked", asked, 1);
+
+  eq("key present: nothing, and no file asked", await D.desktopDefaultModelToStore(OLD, noFile), null);
+  eq("the files were not asked again", asked, 1);
+
+  storage.clear();
+  eq("a model file there: nothing", await D.desktopDefaultModelToStore(OLD, aFile), null);
+  eq("the key is set anyway", storage.has(KEY), true);
+
+  storage.clear();
+  eq("the AI on: nothing", await D.desktopDefaultModelToStore({ ...OLD, enabled: true }, noFile), null);
+  eq("the key is set anyway (AI on)", storage.has(KEY), true);
+
+  storage.clear();
+  eq(
+    "another model stored: nothing",
+    await D.desktopDefaultModelToStore({ ...OLD, selectedModel: "qwen3.5-4b" }, noFile),
+    null
+  );
+  eq("the key is set anyway (another model)", storage.has(KEY), true);
+
+  storage.clear();
+  eq(
+    "the 2B already stored: nothing",
+    await D.desktopDefaultModelToStore({ ...OLD, selectedModel: "qwen3.5-2b" }, noFile),
+    null
+  );
+
+  storage.clear();
+  const failing = async () => {
+    throw new Error("boom");
+  };
+  let thrown = false;
+  try {
+    await D.desktopDefaultModelToStore(OLD, failing);
+  } catch {
+    thrown = true;
+  }
+  eq("a failed file check is not an answer: it throws and the key stays unset", [thrown, storage.has(KEY)], [true, false]);
+  storage.clear();
 }
 
 await fresh();

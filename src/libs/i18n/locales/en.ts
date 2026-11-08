@@ -644,6 +644,7 @@ const en = {
     },
     unavailable_web: "AI Assistant is only available on mobile devices.",
     native_rebuild_needed: "AI Assistant requires a native rebuild.\nRun: npx expo run:android",
+    unavailable_computer: "AI isn't available on this computer.",
     voice_only: "Voice only",
     voice_only_hint: "Interact with the assistant using only your voice",
     listening: "Listening...",

@@ -629,6 +629,7 @@ const zh = {
     },
     unavailable_web: "AI助手仅在移动设备上可用。",
     native_rebuild_needed: "AI助手需要原生重建。\n运行: npx expo run:android",
+    unavailable_computer: "此电脑上无法使用AI。",
     voice_only: "仅语音",
     voice_only_hint: "仅使用语音与助手交互",
     listening: "正在聆听...",
