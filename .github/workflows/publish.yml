@@ -223,6 +223,24 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
+      # Sentry reads the desktop bundle's files and lines from source maps (ADR-035). The app ships the export of the build
+      # command above, without maps; this second export of the same commit, with the same variables, has the same bundle
+      # and the same debug id (Sentry's Metro plugin derives it from the code), plus its maps, which never enter the app.
+      # The release is already published: a failed upload only warns.
+      - name: upload source maps to Sentry
+        continue-on-error: true
+        shell: bash
+        env:
+          EXPO_PUBLIC_ENV: ${{ vars.EXPO_PUBLIC_ENV || 'PROD' }}
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: andrea-losavio
+          SENTRY_PROJECT: fastmemo-app
+          SENTRY_URL: https://sentry.io/
+        run: |
+          npx expo export --platform web --source-maps --output-dir dist-sourcemaps
+          npx sentry-expo-upload-sourcemaps dist-sourcemaps
+
   reconstruct-latest-json:
     needs: [prepare, publish-tauri]
     runs-on: ubuntu-latest

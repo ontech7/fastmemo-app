@@ -136,6 +136,18 @@ jobs:
           eas update --channel production --environment production --platform android \
             --message "$TAG · $MESSAGE" --non-interactive
 
+      # Sentry reads the update's files and lines from these maps (ADR-035). `eas update` leaves its export in dist/, maps
+      # included. The update is already live: a failed upload only warns, and never stops the next publish.
+      - name: Upload source maps to Sentry (Play build)
+        if: inputs.builds != 'github'
+        continue-on-error: true
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: andrea-losavio
+          SENTRY_PROJECT: fastmemo-app
+          SENTRY_URL: https://sentry.io/
+        run: npx sentry-expo-upload-sourcemaps dist
+
       # The same code for the GitHub APK (ADR-031): its own fingerprint, the one FASTMEMO_DISTRIBUTION gives the guard.
       - name: Publish OTA (GitHub APK)
         if: inputs.builds != 'play'
@@ -150,6 +162,18 @@ jobs:
           [ -n "$FASTMEMO_OTA_RUNTIME" ] || { echo "::error::The guard gave no fingerprint for the GitHub APK."; exit 1; }
           eas update --channel production --environment production --platform android \
             --message "$TAG · $MESSAGE · APK" --non-interactive
+
+      # Sentry reads the update's files and lines from these maps (ADR-035). `eas update` leaves its export in dist/, maps
+      # included. The update is already live: a failed upload only warns, and never stops the next publish.
+      - name: Upload source maps to Sentry (GitHub APK)
+        if: inputs.builds != 'play'
+        continue-on-error: true
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: andrea-losavio
+          SENTRY_PROJECT: fastmemo-app
+          SENTRY_URL: https://sentry.io/
+        run: npx sentry-expo-upload-sourcemaps dist
 
       # The OTA is already live here: a failure below must not hide that, so it only warns.
       - name: Tag and GitHub Release
