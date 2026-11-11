@@ -49,8 +49,6 @@ interface UseNoteEditorOptions<T extends Note> {
    * `previous` is the version it was showing.
    */
   onRemoteChange?: (note: T, previous: T) => void;
-  /** What of the editor's current state survives a reload from another device's change. */
-  keepOnRemote?: (remote: T, current: T) => T;
 }
 
 interface UseNoteEditorResult<T extends Note> {
@@ -84,7 +82,6 @@ export function useNoteEditor<T extends Note>({
   buildPayloadExtras,
   getTitleSource,
   onRemoteChange,
-  keepOnRemote,
 }: UseNoteEditorOptions<T>): UseNoteEditorResult<T> {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -256,7 +253,7 @@ export function useNoteEditor<T extends Note>({
       pendingNoteRef.current = null;
 
       const previous = currentRef.current;
-      let next = keepOnRemote ? keepOnRemote(stored as T, previous) : (stored as T);
+      let next = stored as T;
       // Still untitled here: the stored title is the one derived from the content (see auto-title), not a name.
       const deriveFrom = getTitleSourceRef.current;
       if (wasNewRef.current && !previous.title.trim() && deriveFrom && next.title === deriveNoteTitle(deriveFrom(next))) {

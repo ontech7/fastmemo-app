@@ -50,6 +50,9 @@ const isCodeNoteEmpty = (n: CodeNote) => {
   return noTitle && noCode;
 };
 
+/** The id of the tab on screen in `n`: the one shown, or the first if it no longer exists. */
+const shownTabIn = (n: CodeNote, shownId: string) => (n.tabs.some((tab) => tab.id === shownId) ? shownId : n.tabs[0]?.id || "");
+
 export default function NoteCodeEditor({ initialNote }: Props) {
   const { t } = useTranslation();
 
@@ -97,19 +100,27 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   );
   const buildPayloadExtras = useCallback((n: CodeNote) => ({ tabs: n.tabs, activeTabId: n.activeTabId }), []);
 
-  // Changed on another device while open here: this device stays on its tab (if it still exists), and the WebView
-  // editor, which holds its own copy of the code, loads the new one.
-  const keepOnRemote = useCallback(
-    (remote: CodeNote, current: CodeNote) =>
-      remote.tabs.some((tab) => tab.id === current.activeTabId) ? { ...remote, activeTabId: current.activeTabId } : remote,
-    []
-  );
-  const onRemoteChange = useCallback((remote: CodeNote, previous: CodeNote) => {
-    const tab = remote.tabs.find((candidate) => candidate.id === remote.activeTabId) ?? remote.tabs[0];
-    // Same tab: an edit of the document on screen (the cursor stays). Another tab: a new document.
-    editorRef.current?.setCode(tab?.code || "", { remote: tab?.id === previous.activeTabId });
-    editorRef.current?.setLanguage(tab?.language || "plaintext");
+  // The tab on screen is this device's view, not part of the note: looking at another tab changes nothing stored. A
+  // real change writes it as `activeTabId` together with the change (the note reopens there, the webhook sends it).
+  const [shownTabId, setShownTabIdState] = useState(memoInitialNote.activeTabId);
+  const shownTabIdRef = useRef(shownTabId);
+  const setShownTabId = useCallback((tabId: string) => {
+    shownTabIdRef.current = tabId;
+    setShownTabIdState(tabId);
   }, []);
+
+  // Changed on another device while open here: this device stays on its tab if it still exists, and the WebView editor,
+  // which holds its own copy of the code, loads the new one (the same tab keeps the cursor; another is a new document).
+  const onRemoteChange = useCallback(
+    (remote: CodeNote) => {
+      const shown = remote.tabs.find((tab) => tab.id === shownTabIdRef.current);
+      const tab = shown ?? remote.tabs[0];
+      if (!shown && tab) setShownTabId(tab.id);
+      editorRef.current?.setCode(tab?.code || "", { remote: !!shown });
+      editorRef.current?.setLanguage(tab?.language || "plaintext");
+    },
+    [setShownTabId]
+  );
 
   const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
     initialNote: memoInitialNote,
@@ -123,7 +134,6 @@ export default function NoteCodeEditor({ initialNote }: Props) {
         .map((tab) => tab.code)
         .filter(Boolean)
         .join(" "),
-    keepOnRemote,
     onRemoteChange,
   });
 
@@ -134,93 +144,119 @@ export default function NoteCodeEditor({ initialNote }: Props) {
   // the editor's reserved bottom space follow whether it's actually shown.
   const showAiActions = aiSettings.enabled && aiSettings.modelDownloaded && !note.readOnly;
 
-  const activeTab = useMemo(
-    () => note.tabs.find((tab) => tab.id === note.activeTabId) || note.tabs[0],
-    [note.tabs, note.activeTabId]
-  );
-  const activeTabIndex = useMemo(
-    () => note.tabs.findIndex((tab) => tab.id === note.activeTabId),
-    [note.tabs, note.activeTabId]
-  );
+  const activeTab = useMemo(() => note.tabs.find((tab) => tab.id === shownTabId) || note.tabs[0], [note.tabs, shownTabId]);
+  const activeTabIndex = useMemo(() => note.tabs.indexOf(activeTab), [note.tabs, activeTab]);
 
-  const setTitle = useCallback((v: string) => setNoteAsync({ ...note, title: v }), [note, setNoteAsync]);
+  const setTitle = useCallback(
+    (v: string) =>
+      updateNoteAsync((current) => ({ ...current, title: v, activeTabId: shownTabIn(current, shownTabIdRef.current) })),
+    [updateNoteAsync]
+  );
 
   const addTab = useCallback(() => {
-    if (note.tabs.length >= MAX_TABS) return;
     const newTab: CodeTab = { id: uuid(), title: "", code: "", language: "javascript" };
-    setNoteAsync({ ...note, tabs: [...note.tabs, newTab], activeTabId: newTab.id });
+    let added = false;
+    updateNoteAsync((current) => {
+      if (current.tabs.length >= MAX_TABS) return current;
+      added = true;
+      return { ...current, tabs: [...current.tabs, newTab], activeTabId: newTab.id };
+    });
+    if (!added) return;
+    setShownTabId(newTab.id);
     editorRef.current?.setCode("");
     editorRef.current?.setLanguage("javascript");
     setTimeout(() => tabScrollRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [note, setNoteAsync]);
+  }, [updateNoteAsync, setShownTabId]);
 
   const removeTab = useCallback(
     (tabId: string) => {
-      if (note.tabs.length <= 1) return;
-      const filtered = note.tabs.filter((tab) => tab.id !== tabId);
-      const newActiveId = note.activeTabId === tabId ? filtered[0].id : note.activeTabId;
-      const newActive = filtered.find((tab) => tab.id === newActiveId);
-      setNoteAsync({ ...note, tabs: filtered, activeTabId: newActiveId });
-      if (note.activeTabId === tabId) {
-        editorRef.current?.setCode(newActive?.code || "");
-        editorRef.current?.setLanguage(newActive?.language || "plaintext");
-      }
+      let nextShown: CodeTab | null = null;
+      updateNoteAsync((current) => {
+        if (current.tabs.length <= 1) return current;
+        const filtered = current.tabs.filter((tab) => tab.id !== tabId);
+        const wasShown = shownTabIn(current, shownTabIdRef.current) === tabId;
+        if (wasShown) nextShown = filtered[0];
+        return {
+          ...current,
+          tabs: filtered,
+          activeTabId: wasShown ? filtered[0].id : shownTabIn(current, shownTabIdRef.current),
+        };
+      });
+      const shown = nextShown as CodeTab | null;
+      if (!shown) return;
+      setShownTabId(shown.id);
+      editorRef.current?.setCode(shown.code || "");
+      editorRef.current?.setLanguage(shown.language || "plaintext");
     },
-    [note, setNoteAsync]
+    [updateNoteAsync, setShownTabId]
   );
 
+  // Only what is on screen changes: nothing is stored, dated or uploaded.
   const setActiveTab = useCallback(
     (tabId: string) => {
-      if (note.activeTabId === tabId) return;
+      if (shownTabIdRef.current === tabId) return;
       const target = note.tabs.find((tab) => tab.id === tabId);
-      setNoteAsync({ ...note, activeTabId: tabId });
-      editorRef.current?.setCode(target?.code || "");
-      editorRef.current?.setLanguage(target?.language || "plaintext");
+      if (!target) return;
+      setShownTabId(tabId);
+      editorRef.current?.setCode(target.code || "");
+      editorRef.current?.setLanguage(target.language || "plaintext");
     },
-    [note, setNoteAsync]
+    [note.tabs, setShownTabId]
   );
 
   const updateTabCode = useCallback(
-    (code: string) => {
-      const updatedTabs = note.tabs.map((tab) => (tab.id === note.activeTabId ? { ...tab, code } : tab));
-      setNoteAsync({ ...note, tabs: updatedTabs });
-    },
-    [note, setNoteAsync]
+    (code: string) =>
+      updateNoteAsync((current) => {
+        const shown = shownTabIn(current, shownTabIdRef.current);
+        return { ...current, tabs: current.tabs.map((tab) => (tab.id === shown ? { ...tab, code } : tab)), activeTabId: shown };
+      }),
+    [updateNoteAsync]
   );
 
   const updateTabTitle = useCallback(
     (tabId: string, title: string) => {
       const inferred = inferLanguageFromTitle(title);
-      const updatedTabs = note.tabs.map((tab) => {
-        if (tab.id !== tabId) return tab;
-        return inferred ? { ...tab, title, language: inferred } : { ...tab, title };
-      });
-      setNoteAsync({ ...note, tabs: updatedTabs });
+      updateNoteAsync((current) => ({
+        ...current,
+        tabs: current.tabs.map((tab) => {
+          if (tab.id !== tabId) return tab;
+          return inferred ? { ...tab, title, language: inferred } : { ...tab, title };
+        }),
+        activeTabId: shownTabIn(current, shownTabIdRef.current),
+      }));
     },
-    [note, setNoteAsync]
+    [updateNoteAsync]
   );
 
   const updateTabLanguage = useCallback(
     (language: string) => {
-      const updatedTabs = note.tabs.map((tab) => (tab.id === note.activeTabId ? { ...tab, language } : tab));
-      setNoteAsync({ ...note, tabs: updatedTabs });
+      updateNoteAsync((current) => {
+        const shown = shownTabIn(current, shownTabIdRef.current);
+        return {
+          ...current,
+          tabs: current.tabs.map((tab) => (tab.id === shown ? { ...tab, language } : tab)),
+          activeTabId: shown,
+        };
+      });
       setShowLanguagePicker(false);
     },
-    [note, setNoteAsync]
+    [updateNoteAsync]
   );
 
   const handleReorder = useCallback(
     (fromIndex: number, translationX: number) => {
       const positions = Math.round(translationX / TAB_WIDTH_ESTIMATE);
       if (positions === 0) return;
-      const toIndex = Math.max(0, Math.min(note.tabs.length - 1, fromIndex + positions));
-      if (fromIndex === toIndex) return;
-      const newTabs = [...note.tabs];
-      const [moved] = newTabs.splice(fromIndex, 1);
-      newTabs.splice(toIndex, 0, moved);
-      setNoteAsync({ ...note, tabs: newTabs });
+      updateNoteAsync((current) => {
+        const toIndex = Math.max(0, Math.min(current.tabs.length - 1, fromIndex + positions));
+        if (fromIndex === toIndex) return current;
+        const newTabs = [...current.tabs];
+        const [moved] = newTabs.splice(fromIndex, 1);
+        newTabs.splice(toIndex, 0, moved);
+        return { ...current, tabs: newTabs, activeTabId: shownTabIn(current, shownTabIdRef.current) };
+      });
     },
-    [note, setNoteAsync]
+    [updateNoteAsync]
   );
 
   return (
@@ -265,7 +301,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                     key={tab.id}
                     tab={tab}
                     index={index}
-                    isActive={tab.id === note.activeTabId}
+                    isActive={tab.id === activeTab?.id}
                     isEditing={editingTabTitle === tab.id}
                     readOnly={note.readOnly}
                     tabCount={note.tabs.length}

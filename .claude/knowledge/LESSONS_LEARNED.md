@@ -2125,6 +2125,28 @@ known.
 
 ---
 
+### LL-079: Looking at another tab of a code note counted as an edit
+
+**Date:** 2026-11-11  
+**Severity:** Medium (no data lost, but every look at a tab re-dated the note, moved it up a date-sorted list and uploaded it)  
+**Category:** Bug  
+**What happened:** `NoteCodeEditor.setActiveTab` stored the tab on screen as the note's `activeTabId` through `setNoteAsync`.
+Switching tab and going back home gave the note a new `updatedAt` and `rev`: it rose in a list sorted by date, and with
+cloud sync on it was pushed to every device. A read-only note changed the same way, though nothing in it could be edited.  
+**Root cause:** what a device shows (the tab on screen) was kept in the note, which is shared, versioned and synced. Any field
+of the note that changes is an edit to the commit path.  
+**Fix:** the shown tab is component state (`shownTabId` + a ref). Switching tab only changes it and loads the tab into the
+editor. A real change (code, title, tab title, language, add, close, reorder) goes through `updateNoteAsync` on the note as it
+is at that moment and writes `activeTabId` with it, so the note still reopens on the tab last worked on. A change from another
+device keeps the shown tab if it still exists (as an edit of the same document, cursor kept) and shows the first tab if it
+was closed there. `keepOnRemote` left `useNoteEditor` (its only user was this).  
+**Rule:** what one device is looking at is not part of the note. Store it only together with a real change, never on its own.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 10)
+
+---
+
 ### LL-088: A report with screenshots couldn't be sent, and the error said nothing
 
 **Date:** 2026-11-11  
