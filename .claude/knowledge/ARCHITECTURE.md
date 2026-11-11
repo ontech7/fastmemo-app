@@ -73,6 +73,7 @@ src/
                        # ImageViewer (full screen, pinch/pan/double tap), TourSpotlight, TourTip, BlinkingDot,
                        # ProgressBar (a download: AI model, APK update)
     # Standalone: CategoryIcon, LoadingSpinner, SafeAreaView, Sidebar, VirtualNumberKeyboard
+    CrashScreen.tsx    # The error boundary's fallback (ADR-035): reopen, a report sent in place; no store, router or useTranslation
 
   slicers/             # Redux state management
     store.ts           # Store configuration (nested persist, notes through the note store, legacy fold, typed hooks)
@@ -97,7 +98,8 @@ src/
     useLiveNote.ts     # Open editor: reloads changes merged from other devices, publishes presence
     useRouter.ts       # Expo Router wrapper with push-debounce (1000ms guard)
     useSecret.ts       # Secret code / biometric authentication
-    useNetInfo.ts      # Network connectivity state
+    useNetInfo.ts      # Network connectivity state: NetInfo on native; .web.ts reads libs/netStatus (one probe, only with a
+                       #   cloud connected and the window visible, LL-082)
     useCloudStatus.ts  # The cloud's state (ok / offline / unreachable) for the home's line and the status dot (ADR-029)
     useVaultUnlocked.ts # useSyncExternalStore over vaultSession (is the DEK loaded?)
     useVaultPrompt.ts  # useSyncExternalStore over vaultPrompt (does encryption need attention?)
@@ -182,6 +184,21 @@ src/
       snippets.ts      # What to paste into each AI client
       types.ts         # What Rust and the page exchange: McpRequest, McpReply; and UpdateCheck
     windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
+    diagnostics/       # What an error and a report carry (ADR-035)
+      index.ts         # initDiagnostics (Sentry init, tags, user id), setDiagnosticsContext, reportHandled, reportPageError,
+                       #   addTrail, collectAlwaysFacts
+      installId.ts     # The installation code FM-XXXX-XXXX (random, @installId, kept by "wipe data"), getInstallId / peek
+      facts.ts         # The system, the platform kind, the version with its update; .web.ts: the system's name only
+      report.ts        # The report payload (pure, shared with the crash screen), the three-a-day log, sendReport (never throws)
+      scrub.ts         # The trail's allow-list (beforeBreadcrumb), routePattern, hostKind, scrubEvent, isTransientNetworkError
+                       #   (scripts/diagnostics.test.mjs)
+    reloadApp.ts       # Reopens the app (expo-updates reload, DevSettings fallback); .web.ts: a page reload
+    reducePhoto.ts     # A picture as it goes into a note or a report: 1600 px long side, JPEG 0.6, base64 (LL-083, LL-088)
+    kanbanOps.ts       # Board operations (moveCard, reorderCards) that return the board unchanged when they can't complete
+                       #   (LL-078, scripts/kanban.test.mjs)
+    netStatus.ts       # createNetStatus: the web/desktop connection status, one probe timer for the app (LL-082,
+                       #   scripts/net-status.test.mjs)
+    quickNoteDraft.ts  # The quick note bar's unsent text, kept on the device (@quickNoteDraft, LL-084)
     codeEditorPage.ts  # The code note's page: buildCodeEditorHtml, serializeForScript (data that can't break the page, LL-077,
                        # scripts/code-page.test.mjs)
     pageErrors.ts      # The script an editor page runs to forward its errors (FASTMEMO_PAGE_ERROR, ADR-035)
@@ -189,7 +206,9 @@ src/
                        # (ADR-023, ADR-024, scripts/richtext.test.mjs)
 
   utils/               # Pure utility functions
-    sort.ts            # Sort comparators for Timestamped/Ordered items
+    sort.ts            # Sort comparators for Timestamped/Ordered items; importantFirst (LL-080)
+    noteSearch.ts      # matchesDeepSearch: title, text, list items, board columns and cards, code tabs (LL-081)
+    imageSize.ts       # resizeFor, PHOTO_LONG_SIDE, PHOTO_QUALITY: the size a picture is reduced to (pure)
     string.ts          # String validation, formatting, size computation
     date.ts            # Date formatting with locale awareness
     dateParse.ts       # Stored date string -> timestamp (pure, no i18n: imported by libs/cloud/revision)
@@ -208,11 +227,12 @@ src/
     AppUpdateProvider.tsx   # Update check (/api/version): the icon, the desktop installer prompt, the APK's prompt + download
     KanbanDragProvider.tsx  # Kanban drag-and-drop state (reanimated shared values)
     SyncOnProvider.tsx      # Headless: runs the sync engine while connected + unlocked, turns its events into UI
+    DiagnosticsProvider.tsx # Headless: Sentry's language and cloud tags, the route trail (as patterns, ADR-035)
 
   constants/           # Static constants
     styles.ts          # COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, BORDER, SIZE, MONOSPACE_FONT
     icons.ts           # Available category icon names
-    code-languages.ts  # Supported code editor languages
+    code-languages.ts  # Supported code editor languages; PLAIN_TEXT_LANGUAGES (no highlighter in the page, LL-086)
     note-types.ts      # Note type metadata
     app-icons.ts       # Alternate app icons: AppIconName (= the plugin names in app.config.ts), labels, previews (ADR-020)
     help-topics.ts     # The help topics fastmemo_help lists, in the order of the help screen (scripts/mcp.test.mjs checks the two)
@@ -494,20 +514,24 @@ Animation conventions:
 > random number" on the phone (web/Tauri already have the global). See LL-025.
 
 ```
-I18nextProvider
-  KeyboardProvider
-    DialogProvider
-      MenuProvider
+Sentry.ErrorBoundary (fallback: CrashScreen, ADR-035 -- outside everything, it needs none of it)
+  I18nextProvider
+    KeyboardProvider
+      DialogProvider
         Redux Provider
           PersistGate
             SyncOnProvider (headless, returns null)
+            DiagnosticsProvider (headless: Sentry tags for language + cloud, the route trail)
+            AppUpdateProvider
             (WebViewWarmup is rendered by home, 1s after mount + idle -- not here: it competed with first paint)
-            RootSiblingParent (toast overlays)
-              StatusBar
-              WebToaster (web only, conditional require)
-              Stack (expo-router, single flat navigator)
-                33 screens (all headerShown: false, transparentModal)
+              RootSiblingParent (toast overlays)
+                StatusBar
+                WebToaster (web only, conditional require)
+                Stack (expo-router, single flat navigator)
+                  33 screens (all headerShown: false, transparentModal)
 ```
+
+`initDiagnostics()` (Sentry's init) runs at module scope in `_layout.tsx`, before any of this renders.
 
 ## Platform Abstraction Strategy
 

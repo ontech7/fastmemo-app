@@ -927,19 +927,19 @@ ends it).
 - macOS: the close button / Cmd+W hide the window and the frontend flushes pending edits (`fastmemo://hidden`, no exit, nothing
   waits for it: the app goes on running); the Dock icon, opening the app again (`RunEvent::Reopen`), a second launch and the
   menu's commands (New Note, Settings…) show it, on the Space the user is on (2026-10-22, user request: on every Space while
-  shown, then back on the current one; size and place kept). Cmd+Q keeps the held quit (ADR-015). A full screen window leaves full screen
-  first and is kept hidden from the end of that animation (LL-061); asking for it back meanwhile cancels that.
+  shown, then back on the current one; size and place kept). Cmd+Q keeps the held quit (ADR-015). A full screen window leaves
+  full screen first and is kept hidden from the end of that animation (LL-061); asking for it back meanwhile cancels that.
 - Windows and Linux: closing the window quits after the flush. While the local MCP server is on, with its "keep running" switch
-  (ADR-032, 2026-11-06), it hides the window instead, with the same `fastmemo://hidden` flush, and a tray icon stays, with Open and
-  Quit; switching either off restores the quit at once.
+  (ADR-032, 2026-11-06), it hides the window instead, with the same `fastmemo://hidden` flush, and a tray icon stays, with Open
+  and Quit; switching either off restores the quit at once.
 - `tauri-plugin-window-state` (approved): size, position and zoom remembered; not the visibility (it would show the window
   before it's drawn) nor full screen. A quit in full screen (even while leaving it to be hidden) keeps the window as it was
   before: its last ordinary frame, zoomed or not (window-state alone would save a zoomed window filling the screen:
   `save_windowed_frame` rewrites its entry on `RunEvent::Exit`, after the plugin's save).
 - A hidden window's page keeps running, throttled (WebKit's default policy): the sync engine stays on (listeners, the 5-minute
   poll), so the notes are current when the window comes back, as for a window left open behind others. The first showing at
-  launch isn't a return to the foreground (`SyncOnProvider` resumes only after a hide). Measured on macOS for 36 minutes, and what
-  Windows and Linux with MCP on rest on (the results per OS: ADR-032).
+  launch isn't a return to the foreground (`SyncOnProvider` resumes only after a hide). Measured on macOS for 36 minutes, and
+  what Windows and Linux with MCP on rest on (the results per OS: ADR-032).
 - The desktop update check runs at launch and again every 6 h while the app runs (an hourly tick, and the window coming back): a
   Mac app now runs for days. A version already offered isn't offered again in that run (Settings still shows it).
 - Later (after 2.0.0, user decision): a real JS-only OTA for desktop (a signed web bundle served in place of the bundled one,
@@ -960,9 +960,9 @@ CSS splash in `index.html` (still a flash, then a second screen); a menu bar (tr
 Windows and Linux only, and only while MCP keeps the app running: ADR-032).
 
 **Trade-offs:** for ~0.6 s (~2.5 s cold) there's no window (on macOS the Dock icon, briefly; on Windows/Linux not even a taskbar
-button). A hidden FastMemo (on Windows and Linux, only with MCP on) keeps its memory (~a browser tab) and keeps syncing (Firestore
-reads as for an open window). A protected note left open is still open when the window comes back (as when minimized). Dock Quit /
-logout with the window open still skip the flush (ADR-015); with it closed the flush already happened.
+button). A hidden FastMemo (on Windows and Linux, only with MCP on) keeps its memory (~a browser tab) and keeps syncing
+(Firestore reads as for an open window). A protected note left open is still open when the window comes back (as when
+minimized). Dock Quit / logout with the window open still skip the flush (ADR-015); with it closed the flush already happened.
 
 ---
 
@@ -1215,8 +1215,8 @@ background app's network work. The user had to stay on the screen with the scree
 
 **Trade-offs:**
 
-- new models sit in the app's folder on the shared storage (`Android/data/<package>/files/models`): deleted with the app,
-  like the private files, and not readable by other apps;
+- new models sit in the app's folder on the shared storage (`Android/data/<package>/files/models`): deleted with the app, like
+  the private files, and not readable by other apps;
 - the progress shows in a system notification with the download manager's look, title the model's name;
 - a download that ends while the app is closed is moved into place at the next start: until then the AI stays off.
 
@@ -1231,17 +1231,17 @@ left the device.
 
 **Decision:**
 
-- **The engine tells whether the cloud answers** (`SyncEvents.onReachability`): a read that answers (a snapshot from the
-  server, a pull, the vault) or fails (a listener error, a failed pull or vault read). Only on a change: `failingSince` set when
-  the reads start failing with no answer since, null when one answers again or the engine stops; `lastContact` its last
-  answer. Pushes don't count: a refused push is not an unreachable cloud.
+- **The engine tells whether the cloud answers** (`SyncEvents.onReachability`): a read that answers (a snapshot from the server,
+  a pull, the vault) or fails (a listener error, a failed pull or vault read). Only on a change: `failingSince` set when the
+  reads start failing with no answer since, null when one answers again or the engine stops; `lastContact` its last answer.
+  Pushes don't count: a refused push is not an unreachable cloud.
 - **`sync.ts` turns it into what the home shows** (`getCloudStatus`, the `reachability` sync event): unreachable once the cloud
   has failed for 30 s (`UNREACHABLE_AFTER_MS`), a timer from the first failure. `useCloudStatus` adds the network: offline,
   nothing (the user knows).
-- **The line** (`CloudUnreachableLine`) takes the place of the category and count under the home's title: "Server
-  unreachable · 3 waiting" (or Firebase), in yellow on the category's pill. A tap opens a dialog: the changes stay on the device
-  and go out by themselves, the notes waiting, the last sync, for a server a hint to check the VPN; Close or Retry
-  (`reconnectNow`: reopen the connection, pull, push).
+- **The line** (`CloudUnreachableLine`) takes the place of the category and count under the home's title: "Server unreachable ·
+  3 waiting" (or Firebase), in yellow on the category's pill. A tap opens a dialog: the changes stay on the device and go out by
+  themselves, the notes waiting, the last sync, for a server a hint to check the VPN; Close or Retry (`reconnectNow`: reopen the
+  connection, pull, push).
 - Nothing else: no toast when it goes or comes back, nothing in Redux, nothing per note.
 
 **Alternatives rejected:**
@@ -1264,9 +1264,9 @@ left the device.
   home's line, it doesn't replace it (the "status in Settings only" rejected above was about it being the only signal).
 - **The Cloud Sync page** shows the state in words under the switch ("Server reachable", "Server unreachable" with Retry and
   what to check, "No internet connection"), naming the cloud in use, not the one being picked in the form.
-- **The devices screen** says why it has no list: offline, the cloud doesn't answer (no answer in 5 s, or
-  `listDevices` → `"unreachable"`), or an error; with Retry, which also asks the engine (`reconnectNow`). A list that comes later
-  replaces the message.
+- **The devices screen** says why it has no list: offline, the cloud doesn't answer (no answer in 5 s, or `listDevices` →
+  `"unreachable"`), or an error; with Retry, which also asks the engine (`reconnectNow`). A list that comes later replaces the
+  message.
 - **No answer vs an error:** `listDevices` returns `CloudDevice[] | CloudFailure`. On a server, no answer is a fetch that
   failed, a timeout, or a proxy saying the server behind it didn't answer (502-504, Cloudflare's 52x and 530); on Firestore,
   `unavailable` / `deadline-exceeded`.
@@ -1279,21 +1279,20 @@ left the device.
   NetInfo, in the same tick as `useNetInfo`), and the server's poll starts its backoff over when woken on purpose. A stopped
   engine, and a task from before a stop, report nothing (sync turned off while a read was timing out showed the line).
 
-**Note (2026-11-11, LL-082): where "online" comes from on the web and the desktop.** The native hook reads NetInfo. On the
-web and the desktop, `useNetInfo.web.ts` reads one app-wide status (`src/libs/netStatus.ts`): the browser's `offline` event at
-once; `online` from the browser alone while no cloud is connected; while one is, from a HEAD request to
-`https://www.gstatic.com/generate_204` (a success is online, a failure offline), so a network that reaches nothing reads as
-"no internet connection", not as "server unreachable". The request runs only while a cloud is connected and the window is
-visible: at connect, on coming back to the window, and every 30 s, one timer for every screen. Before, every screen using
-the hook ran its own request every 30 s, with or without a cloud, hidden or not.
-
+**Note (2026-11-11, LL-082): where "online" comes from on the web and the desktop.** The native hook reads NetInfo. On the web
+and the desktop, `useNetInfo.web.ts` reads one app-wide status (`src/libs/netStatus.ts`): the browser's `offline` event at once;
+`online` from the browser alone while no cloud is connected; while one is, from a HEAD request to
+`https://www.gstatic.com/generate_204` (a success is online, a failure offline), so a network that reaches nothing reads as "no
+internet connection", not as "server unreachable". The request runs only while a cloud is connected and the window is visible:
+at connect, on coming back to the window, and every 30 s, one timer for every screen. Before, every screen using the hook ran
+its own request every 30 s, with or without a cloud, hidden or not.
 
 ---
 
 ## ADR-030: Release Texts Written for People: a Short Changelog and Release Notes with Details
 
-**Status:** Accepted (2026-10-22, user decisions after the v4.0.0 release: the GitHub release was "un papiro" with ADR numbers and
-a line on the developer's role in About, "overkill, over-engineered"; then: the release page may go further on the technical
+**Status:** Accepted (2026-10-22, user decisions after the v4.0.0 release: the GitHub release was "un papiro" with ADR numbers
+and a line on the developer's role in About, "overkill, over-engineered"; then: the release page may go further on the technical
 side, in nested bullets, for curious readers, while `/api/version` stays short)  
 **Context:** Each release had two changelogs: `docs/CHANGELOG_MOBILE.md` / `CHANGELOG_DESKTOP.md`, a complete developer log
 (every fix, refactor, SDK bump, ADR/LL references) that the `publish` workflow put in the GitHub release; and the user changelog
@@ -1303,11 +1302,11 @@ in the 7 locales (≤5 bullets), shown in the app, on Play and by the desktop up
 
 - **The changelog** stays the user changelog in the locales (`changelog.mobile` / `changelog.web`, `description_X_Y_Z`): the
   app, Play, `latest.json`. `scripts/changelog-notes.mjs` reads the English one; `publish` fails early if it's missing.
-- **The release notes** are `docs/RELEASE_NOTES.md`, rewritten for each release: the same bullets in English, each explained
-  in nested bullets (how it works, what made it faster), then a "Full changes" comparison link added by `publish`. Its
-  headings must name the versions going out, or `publish` stops (a stale file is last release's text).
-- **`/api/version`** (website) serves the short version: the release's top-level mobile bullets as plain text, the desktop
-  ones from `latest.json`.
+- **The release notes** are `docs/RELEASE_NOTES.md`, rewritten for each release: the same bullets in English, each explained in
+  nested bullets (how it works, what made it faster), then a "Full changes" comparison link added by `publish`. Its headings
+  must name the versions going out, or `publish` stops (a stale file is last release's text).
+- **`/api/version`** (website) serves the short version: the release's top-level mobile bullets as plain text, the desktop ones
+  from `latest.json`.
 - Both texts are for people: no ADR/LL numbers, refactors, CI or trivia. `docs/CHANGELOG_*.md` are removed: the history is in
   the GitHub releases and git.
 
@@ -1323,10 +1322,10 @@ in the 7 locales (≤5 bullets), shown in the app, on Play and by the desktop up
 **Status:** Accepted (2026-10-28, user decisions: an APK on GitHub for anyone without Google Play, the same app and modules as
 the Play build; in-app install over a browser download; OTAs for both builds, published twice, over an APK without OTAs; the
 first APK ships as 4.0.0)  
-**Context:** FastMemo was only on Google Play. Users without Google services, or who don't want to depend on a store, had no
-way to install it on Android. An APK published on GitHub can't update through Play: it needs its own updater. Installing an
-APK from inside an app needs `REQUEST_INSTALL_PACKAGES`, which Google allows only to apps whose core function is installing
-packages: it can't be in the Play build.
+**Context:** FastMemo was only on Google Play. Users without Google services, or who don't want to depend on a store, had no way
+to install it on Android. An APK published on GitHub can't update through Play: it needs its own updater. Installing an APK from
+inside an app needs `REQUEST_INSTALL_PACKAGES`, which Google allows only to apps whose core function is installing packages: it
+can't be in the Play build.
 
 **Decision:**
 
@@ -1335,25 +1334,25 @@ packages: it can't be in the Play build.
 - **The updater exists only in the APK.** `modules-apk/fastmemo-installer` (a plain React Native module, Kotlin) declares
   `REQUEST_INSTALL_PACKAGES` and opens the system installer on a downloaded APK. `react-native.config.js` links it only when
   `FASTMEMO_DISTRIBUTION=github`: Expo modules can't be linked conditionally (`expo.autolinking` is read from `package.json`
-  only), React Native ones can. Outside `modules/`, which Expo scans and would link everywhere. The Play build's native code
-  and fingerprint don't change (4.0.0's `689318…` stayed the same).
+  only), React Native ones can. Outside `modules/`, which Expo scans and would link everywhere. The Play build's native code and
+  fingerprint don't change (4.0.0's `689318…` stayed the same).
 - **The JS knows the build by the module** (`isApkBuild()`: `NativeModules.FastmemoInstaller` present). Not by an app config
-  field (an OTA's manifest replaces it, and it would move the Play build's fingerprint), not by the installer package (wrong for a
-  Play APK from a mirror).
+  field (an OTA's manifest replaces it, and it would move the Play build's fingerprint), not by the installer package (wrong for
+  a Play APK from a mirror).
 - **The update.** `/api/version` gives `mobile.apkUrl` (the latest release's first `.apk` asset). On a newer version the APK's
-  icon opens a dialog with the release's short notes; Install downloads the APK into the cache (`createDownloadResumable`,
-  a progress bar in the dialog, cancel; tapping outside hides it and the download goes on), flushes the editors, and hands it to the
-  installer (a content URI from expo-file-system's provider). The first time, Android asks to let FastMemo install apps.
+  icon opens a dialog with the release's short notes; Install downloads the APK into the cache (`createDownloadResumable`, a
+  progress bar in the dialog, cancel; tapping outside hides it and the download goes on), flushes the editors, and hands it to
+  the installer (a content URI from expo-file-system's provider). The first time, Android asks to let FastMemo install apps.
   Settings → Check updates asks the API again. A release without an APK: the icon opens its GitHub page.
 - **Only FastMemo, signed by its key.** The app downloads only from `https://github.com/ontech7/fastmemo-app/releases/download/`
-  (`isTrustedApkUrl`: the site relays the URL, it isn't trusted to choose it), and the native module checks the file before
-  the installer opens: the same package name and the same signing certificates as the installed app (`getPackageArchiveInfo`),
-  else `E_NOT_VERIFIED` and a toast. Android would refuse a wrong signature anyway, but only after the user confirmed. The
-  dialog shows the APK's size (`mobile.apkSize`) before the download; a newer release seen during a download doesn't replace
-  the one being downloaded. Download errors reach Sentry, the user gets a translated message.
-- **OTAs for both.** The APK's fingerprint differs, so each OTA is published twice from the same code: once as before, once
-  with `FASTMEMO_DISTRIBUTION=github` (Publish OTA workflow, `builds` input to finish a half-done run). `ota-guard.sh` checks
-  both fingerprints: an OTA that would reach no APK is refused instead of published unseen.
+  (`isTrustedApkUrl`: the site relays the URL, it isn't trusted to choose it), and the native module checks the file before the
+  installer opens: the same package name and the same signing certificates as the installed app (`getPackageArchiveInfo`), else
+  `E_NOT_VERIFIED` and a toast. Android would refuse a wrong signature anyway, but only after the user confirmed. The dialog
+  shows the APK's size (`mobile.apkSize`) before the download; a newer release seen during a download doesn't replace the one
+  being downloaded. Download errors reach Sentry, the user gets a translated message.
+- **OTAs for both.** The APK's fingerprint differs, so each OTA is published twice from the same code: once as before, once with
+  `FASTMEMO_DISTRIBUTION=github` (Publish OTA workflow, `builds` input to finish a half-done run). `ota-guard.sh` checks both
+  fingerprints: an OTA that would reach no APK is refused instead of published unseen.
 - **Releases:** after the Play build, `npx eas-cli build -p android --profile production-apk` (no `package.json` script: the
   scripts are in the fingerprint, LL-071), and the APK uploaded to the GitHub release (`FastMemo-X.Y.Z.apk`).
 
@@ -1368,8 +1367,8 @@ packages: it can't be in the Play build.
 
 **Trade-offs:**
 
-- each OTA is published twice (twice the upload and the workflow's time); an APK build is needed for every version, or the
-  OTA guard stops;
+- each OTA is published twice (twice the upload and the workflow's time); an APK build is needed for every version, or the OTA
+  guard stops;
 - the Play and APK builds are signed with different keys: switching between them means uninstalling (and losing local data not
   in the cloud);
 - the APK gets a new version as soon as the GitHub release is out, Play users after the review;
@@ -1443,23 +1442,23 @@ AI client --stdio JSON-RPC--> bridge (--mcp) --local socket--> Fast Memo (Rust) 
 - **What an open editor sees.** `edit_note`, `set_note_flags` and `trash_note` tell it as another device's change would
   (`notifyNoteChanged` in `libs/cloud/sync.ts`, `full: true` so no toast; `useLiveNote` reloads), or its next commit would write
   the old copy, and the old flags, back. Pending typing is committed first, so it moves the revision and the agent gets the
-  conflict: an edit needs the `rev` it read, and a stale one is refused with the typing kept.
-  The desktop hook renders the incoming note with `flushSync` (`useNoteEditor.web.ts`), so the editors' refs (`noteRef`) hold it
-  before any later message: a keystroke right after a lock would otherwise build its note from the copy before the lock and
-  write `locked: false` back. Nothing in `scripts/` exercises it (no DOM in the dependencies): a hand check.
+  conflict: an edit needs the `rev` it read, and a stale one is refused with the typing kept. The desktop hook renders the
+  incoming note with `flushSync` (`useNoteEditor.web.ts`), so the editors' refs (`noteRef`) hold it before any later message: a
+  keystroke right after a lock would otherwise build its note from the copy before the lock and write `locked: false` back.
+  Nothing in `scripts/` exercises it (no DOM in the dependencies): a hand check.
 - **Tool shapes.** `false` for `readOnly` or `locked` on `create_note` just means not set (a new note has nothing to loosen);
   only `set_note_flags` refuses it. Search and read page with `offset`/`nextOffset`, one vocabulary. Kanban columns are
   `{ name, color?, cards: string[] }`: plain text is what an agent writes, the ids are the server's. `edit_note`'s title and
   category follow `create_note`'s rules (`MAX_TITLE`, newlines to spaces; a category only by exact or case-insensitive name,
-  never created). Text is HTML, cleaned on arrival with `AGENT_HTML_CONFIG`: the app's `NOTE_HTML_CONFIG` (ADR-021) plus no media
-  and nothing that fetches when the note opens (images, video, audio, frames, SVG, `src`/`srcset`/`poster`/`background`, inline
-  `style`), so an agent can't make a note phone home; links stay. A read replaces images with a placeholder
-  and returns 100,000 characters at a time; a search compares the text with images removed, not the placeholder, which the user
-  never wrote; `replaceHtml` is refused for a note holding images. The writes per connection are capped at 30 a minute and 300 an
-  hour (`session.rs`), so at worst 7,200 a day per connection against Firestore's 20,000 free writes (NEVER #11). That slows a
-  looping agent, it doesn't bound a day by itself: the device document's fan-out isn't counted, and each new connection starts its
-  count again. A refused write says which limit it hit and when to retry. The server's `instructions` say note content is data, not
-  instructions, and tools carry MCP annotations.
+  never created). Text is HTML, cleaned on arrival with `AGENT_HTML_CONFIG`: the app's `NOTE_HTML_CONFIG` (ADR-021) plus no
+  media and nothing that fetches when the note opens (images, video, audio, frames, SVG, `src`/`srcset`/`poster`/`background`,
+  inline `style`), so an agent can't make a note phone home; links stay. A read replaces images with a placeholder and returns
+  100,000 characters at a time; a search compares the text with images removed, not the placeholder, which the user never wrote;
+  `replaceHtml` is refused for a note holding images. The writes per connection are capped at 30 a minute and 300 an hour
+  (`session.rs`), so at worst 7,200 a day per connection against Firestore's 20,000 free writes (NEVER #11). That slows a
+  looping agent, it doesn't bound a day by itself: the device document's fan-out isn't counted, and each new connection starts
+  its count again. A refused write says which limit it hit and when to retry. The server's `instructions` say note content is
+  data, not instructions, and tools carry MCP annotations.
 - **The window closed** (`src-tauri/src/tray.rs`). macOS: unchanged (ADR-022). Windows and Linux, only while MCP is on and its
   "keep running" switch with it: closing hides the window and a tray icon stays, with Open and Quit (`flush_then_exit`). This
   reverses the "no tray" decision of desktop 2.0.0. With MCP off there's no tray and closing quits as before, at once when it's
@@ -1474,8 +1473,8 @@ hidden view may be suspended after about 5 minutes.
   bridge connected all along answered in 39 ms, one on a new bridge in 9 ms, and a write, on disk before its answer, in 52 ms.
   Not measured: a Mac that went to sleep meanwhile.
 - **Windows (WebView2): pass, with no keep-alive.** The user's hand run on their desktop PC (2026-11-08, the test build of all
-  of desktop 2.1.0, run 42520557700) passed the whole Windows checklist: `scripts/mcp-e2e.test.mjs` on a clean install, the tray,
-  and a call after 35 minutes with the window closed answering within the 5 s bound (`--wait-minutes 35`); the exact times
+  of desktop 2.1.0, run 42520557700) passed the whole Windows checklist: `scripts/mcp-e2e.test.mjs` on a clean install, the
+  tray, and a call after 35 minutes with the window closed answering within the 5 s bound (`--wait-minutes 35`); the exact times
   weren't recorded. So neither fallback was needed (a held Web Lock, then `SetIsVisible(true)` while hidden): they stay the
   answer if a later WebView2 suspends the page. CI on `windows-latest` also builds the pipe code and runs the `mcp::` tests,
   named pipes included (60 passed, run 42272924109).
@@ -1632,10 +1631,10 @@ page (libs/ai/context.ts, shared with the phone)
   - bindgen makes C enums `i32` under MSVC and `u32` under clang (LL-074).
 - **The commands** (`src-tauri/src/ai/mod.rs`): `ai_info`, `ai_load`, `ai_tokenize`, `ai_complete` (tokens over a `Channel`),
   `ai_stop`, `ai_release`, `ai_model_files`, `ai_download`, `ai_download_cancel`, `ai_delete_files`, `ai_save_eval_report`. One
-  engine call at a time: a second answers `busy` and never waits; `ai_release` and the quit stop the running call and wait
-  for it (30 s and 2 s: on a CPU the stop lands between prompt batches of 512 tokens, about 5 s on the 4B). A stop sent
-  right after a start is kept (counted, not a flag that the start resets), and nothing starts once the app is quitting.
-  The page names a model by its bare file name; Rust knows the folder, and `ai_load` refuses a `.part`.
+  engine call at a time: a second answers `busy` and never waits; `ai_release` and the quit stop the running call and wait for
+  it (30 s and 2 s: on a CPU the stop lands between prompt batches of 512 tokens, about 5 s on the 4B). A stop sent right after
+  a start is kept (counted, not a flag that the start resets), and nothing starts once the app is quitting. The page names a
+  model by its bare file name; Rust knows the folder, and `ai_load` refuses a `.part`.
 - **The same logic on both platforms.** `libs/ai/context.ts` keeps the prompts, sampling, grammars, guards and long-note
   handling, and reaches the engine through `engine.ts` (llama.rn) or `engine.web.ts` (the commands), and the files through
   `models.ts` (DownloadManager, ADR-028) or `models.web.ts`. What differs is `platformConstants.ts` /
@@ -1733,3 +1732,68 @@ page (libs/ai/context.ts, shared with the phone)
 - `llama-cpp-2` is pinned exactly: updating it means checking the prompt fixture, the sampling order and the evaluation again;
 - the RAM the CPU path needs is twice the model's file: on a 8 GB PC the 4B is a stretch, and the settings' RAM gate counts the
   installed memory (`ai_info`), not what is free.
+
+## ADR-035: What an Error and a Report Carry
+
+**Status:** Accepted (2026-11-11, user decisions: the installation code, accepted with the report screen; the crash screen and
+the report screen as drawn in the 4.1.0 mockups; the report always carries the version, the system and the language. Calls made
+on the user's behalf, which can be overturned: three reports a day, the crash screen sends in place instead of opening the
+report screen, the desktop names its system without a version, source maps proven at the 4.1.0 release)  
+**Context:** On 2026-11-09 a user wrote "アプリが消えた" ("the app vanished") with nothing else, and nothing in Sentry could be
+tied to it: no update number, no system, no trail, one report a day at most, and a fatal error reported twice (a handler of ours
+set before Sentry's, which chained to it). Errors inside the editors' pages, the sync engine and the AI never reached Sentry. A
+render error left a blank screen.
+
+**Decision:**
+
+- **One init, one handler** (`src/libs/diagnostics/index.ts`, `initDiagnostics()` from `app/_layout.tsx`). Sentry 8.28's own
+  `reactNativeErrorHandlersIntegration` reports a fatal JS error at level `fatal`, `handled: false`, and chains to the handler
+  set before it: the manual `ErrorUtils` handler went. `sendDefaultPii: false`.
+- **Tags on every event:** `ota` (the update number), `platform_kind` (`android`, `web`, `desktop-macos|windows|linux`), set at
+  init; `app_language` and `cloud` (`none` / `firebase` / `server`), set by `DiagnosticsProvider` when they change.
+- **The installation code** (`libs/diagnostics/installId.ts`): `FM-XXXX-XXXX`, letters and digits without `0 O 1 I`, random,
+  made once and kept in AsyncStorage (`@installId`), derived from nothing on the device. It is the Sentry user id, shown on the
+  report and crash screens and sent with a report, so a report and its errors can be matched. "Wipe data" keeps it. A failed
+  read gives a code for the session and writes nothing.
+- **The trail is an allow-list** (`scrub.ts`, `beforeBreadcrumb`): our own `app` crumbs (the route as its pattern,
+  `notes/[noteId]`, never the id; `note.open` with the type; `sync.push` with a count; `sync.fullSync`; `ai.action` with its
+  name), app lifecycle and device events. Touch crumbs are dropped (they carry accessibility labels, which can be a note's
+  title), and console crumbs. A request crumb keeps only the method, the status and the kind of host (`firebase`, `server`,
+  `website`, `other`): never the address. `beforeSend` (`scrubEvent`) turns the event's URL into its route pattern and keeps
+  only the user's id.
+- **Handled failures worth knowing** go through `reportHandled(area, error, extra?)`, once per area and message per session,
+  with ids, counts and codes in `extra`, never content: `sync.task`, `sync.persist`, `sync.push.rejected`, `vault.check`,
+  `ai.load`, `ai.generate` (`storage` was already reported). Being offline and a timeout the engine retries are not
+  (`isTransientNetworkError`); nothing is shown to the user (rule 16).
+- **The editors' pages forward their errors** (`libs/pageErrors.ts`, `PAGE_ERROR_SCRIPT` → `FASTMEMO_PAGE_ERROR`): message (300
+  characters at most), file name, line; never the document. `reportPageError` tags them `page: richtext|codemirror`, once per
+  message per session.
+- **The crash screen** (`components/CrashScreen.tsx`) is the fallback of a `Sentry.ErrorBoundary` around everything. It uses no
+  store, no router, no safe-area or dialog context and no `useTranslation` (any of them may be what broke): `i18n.t` with an
+  English fallback. "Reopen Fast Memo" reloads (`expo-updates`, a page reload on the web and desktop); "Send a report" opens a
+  field in place and sends topic `crash`, the text, the always-sent facts and the Sentry event id.
+- **A report** (`app/settings/report.tsx`, `libs/diagnostics/report.ts`) always carries `always`: the app version with its
+  update, the system and its version (on the desktop and the web the name only: no JavaScript source gives the real version),
+  the app's language, the installation code. Device information (brand, model, type, the kind of cloud, the app icon) is ticked
+  by default and can be unticked. `Device.deviceName` is never sent: it is the name the person gave the phone. "What is sent"
+  lists every value as it will go. Three reports per 24 hours (`settings.reportLog`); pictures reduced to 1600 px (LL-088). The
+  payload is additive: 4.0.0's still works on the website.
+- **Source maps** are uploaded by CI after each update (`publish-ota.yml`) and after the desktop bundle (`publish.yml`), with
+  the `sentry-expo-upload-sourcemaps` that `@sentry/react-native` brings. Proving it ("an error from an update, the store build
+  and the desktop shows readable files and lines") is a step of the 4.1.0 release: no token here can upload, and updates go out
+  from `main` only.
+
+**Alternatives rejected:**
+
+- **A device identifier** (Android ID, the vendor id) as the user id: it identifies the person's device beyond the app, and
+  survives a reinstall; a random code identifies only this installation.
+- **Sending the report through Sentry's user feedback:** it would tie every report to Sentry's retention and dashboards, and the
+  reports already go to the website's endpoint the user reads by email; the code ties the two instead.
+- Opening the report screen from the crash screen: it needs the store and the router, and resetting the boundary would render
+  the crashed screen again.
+
+**Trade-offs:**
+
+- the desktop and the web report "macOS", not "macOS 15.2", until plan 2 reads it from Rust;
+- a failure reported once per session hides how often it happens within one; Sentry counts sessions instead;
+- the installation code is a pseudonymous id: wiping data keeps it, uninstalling loses it.

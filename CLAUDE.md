@@ -157,13 +157,13 @@ app/            -> Screens (expo-router file-based routing, at project root)
 assets/         -> Static assets (images, lottie animations, at project root)
 modules/        -> Local Expo native modules, autolinked (fastmemo-crypto: native PBKDF2, see ADR-012)
 src/
-  components/   -> UI components (domain-grouped: buttons/, cards/, notes/, kanban/, settings/, etc.)
+  components/   -> UI components (domain-grouped: buttons/, cards/, notes/, kanban/, settings/, etc.; CrashScreen: the error boundary's fallback)
   slicers/      -> Redux slices (notesSlice, categoriesSlice, settingsSlice) + thunks/
   types/        -> TypeScript type definitions (barrel export via index.ts)
-  hooks/        -> Custom hooks (useCloudSync, useLiveNote, useRouter, useSecret, useNetInfo, useCloudStatus, useVaultUnlocked, useVaultPrompt, useVaultProgress)
-  libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), haptics/, i18n/, mcp/ (local MCP server, page side), storage/, registry, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, desktopCommands, desktopMenu)
-  utils/        -> Pure utility functions (sort, string, date, crypt, vault, secureRandom, ui, toast, webhook, export, platform, openUrl)
-  providers/    -> React context providers (KanbanDragProvider, SyncOnProvider)
+  hooks/        -> Custom hooks (useCloudSync, useLiveNote, useRouter, useSecret, useNetInfo (.web: libs/netStatus), useCloudStatus, useVaultUnlocked, useVaultPrompt, useVaultProgress)
+  libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), diagnostics/ (Sentry, the installation code, the report payload: ADR-035), haptics/, i18n/, mcp/ (local MCP server, page side), storage/, registry, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, netStatus, desktopCommands, desktopMenu, codeEditorPage, pageErrors, kanbanOps, quickNoteDraft, reducePhoto, reloadApp)
+  utils/        -> Pure utility functions (sort, noteSearch, imageSize, string, date, crypt, vault, secureRandom, ui, toast, webhook, export, platform, openUrl)
+  providers/    -> React context providers (KanbanDragProvider, SyncOnProvider, DiagnosticsProvider, AppUpdateProvider)
   constants/    -> Static constants (styles, icons, code-languages, note-types)
   configs/      -> App configuration (environment, defaults, business rules)
 src-tauri/      -> Desktop shell (Rust): window, menu, tray.rs, net.rs; src/mcp/: local MCP server (bridge, socket, protocol, tools, switches; ADR-032);

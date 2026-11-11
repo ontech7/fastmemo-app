@@ -15,8 +15,9 @@
 8. [Backward Compatibility & Data Migration](#backward-compatibility--data-migration)
 9. [Cloud Sync & Firestore Budget](#cloud-sync--firestore-budget)
 10. [On-Device AI](#on-device-ai)
-11. [Naming Conventions](#naming-conventions)
-12. [DO / DON'T Quick Reference](#do--dont-quick-reference)
+11. [Diagnostics & Reports](#diagnostics--reports)
+12. [Naming Conventions](#naming-conventions)
+13. [DO / DON'T Quick Reference](#do--dont-quick-reference)
 
 ---
 
@@ -315,13 +316,13 @@ offline-first flow is:
 - On transient failures, items stay in the outbox and are retried automatically; nothing leaves the outbox until committed.
 - Only handshake-level failures (invalid credentials, device evicted) and the user-visible outcomes of a merge (data synced, a
   conflict copy made, the open note trashed elsewhere) are surfaced, from `SyncOnProvider` / `useLiveNote`.
-- One exception (ADR-029): a cloud whose reads have failed for 30 s with no answer between, while the device is online (a
-  server behind a VPN left off), shows a quiet line in the home in place of the category (`CloudUnreachableLine`, through
-  `useCloudStatus`), gone once it answers. Never a toast or a banner, never for an offline device, nothing in Redux: the
-  engine reports `onReachability` on a change, `sync.ts` keeps the state and the 30 s timer. The same state is the status dot
-  of Settings → Cloud Sync and the line under its switch (`CloudStatusDot`, `useCloudStatus().state`). A backend's listener
-  that stops getting answers calls `onLost` instead of retrying silently; a read that fails says whether the cloud gave no
-  answer or an error (`CloudFailure`) when the user is told which.
+- One exception (ADR-029): a cloud whose reads have failed for 30 s with no answer between, while the device is online (a server
+  behind a VPN left off), shows a quiet line in the home in place of the category (`CloudUnreachableLine`, through
+  `useCloudStatus`), gone once it answers. Never a toast or a banner, never for an offline device, nothing in Redux: the engine
+  reports `onReachability` on a change, `sync.ts` keeps the state and the 30 s timer. The same state is the status dot of
+  Settings → Cloud Sync and the line under its switch (`CloudStatusDot`, `useCloudStatus().state`). A backend's listener that
+  stops getting answers calls `onLost` instead of retrying silently; a read that fails says whether the cloud gave no answer or
+  an error (`CloudFailure`) when the user is told which.
 
 If observability is needed for a new cloud-sync feature, use Sentry breadcrumbs inside the engine, not Redux state. See LL-004.
 
@@ -847,6 +848,30 @@ never in a `Platform.OS` check inside `context.ts` or the logic above it.
 
 ---
 
+## Diagnostics & Reports
+
+What an error and a report carry is decided in ADR-035; the code is `src/libs/diagnostics/`.
+
+- **Nothing of the user's content reaches Sentry or a report**: no note text, title, category, column or tab name, server
+  address, Firebase project id, email, or `Device.deviceName`. Ids, counts, types and error codes are fine.
+- **A handled failure worth knowing** goes through `reportHandled(area, error, extra?)` from `@/libs/diagnostics`, with a short
+  dotted `area` (`sync.push.rejected`, `vault.check`, `ai.load`) and `extra` holding only ids, counts and codes. It is reported
+  once per area and message per session, and being offline or a retried timeout is skipped for you. Never call
+  `Sentry.captureException` directly for a new case, and never show the user a cloud-sync failure (rule 16).
+- **A step worth seeing before an error** is `addTrail(name, data?)` (`note.open`, `sync.push`, `ai.action`): a type, a count or
+  an action name, never which note. Routes are added by `DiagnosticsProvider` as their pattern.
+- **A WebView page forwards its errors** with `PAGE_ERROR_SCRIPT` (`libs/pageErrors.ts`) injected before its own script; the
+  app's message handler passes `PAGE_ERROR_MESSAGE` to `reportPageError(page, data)`. A new page gets both.
+- **The report payload** is built only by `buildReportPayload` (`libs/diagnostics/report.ts`, pure, shared with the crash
+  screen) and sent by `sendReport`, which never throws:
+  `{ topics, description, attachments?, email?, always: { appVersion, os, osVersion?, appLanguage, installId }, deviceInfo?, sentryEventId? }`.
+  A field is added there, whitelisted, and shown in the "what is sent" dialog; the website accepts the payload of every released
+  version (it is additive).
+- **The crash screen uses nothing that can be what crashed**: no store, router, safe-area or dialog context, no `useTranslation`
+  (`i18n.t` with an English `defaultValue`).
+
+---
+
 ## Naming Conventions
 
 | Entity             | Convention                     | Example                                              |
@@ -873,74 +898,82 @@ never in a `Platform.OS` check inside `context.ts` or the logic above it.
 
 ### NEVER
 
-| #   | Rule                                                                                      | Why                                                                                                                              |
-| --- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Never install dependencies without approval                                               | Dependency management affects bundle size, security, and compatibility across 3 platforms                                        |
-| 2   | Never modify Redux store structure without migration plan                                 | Double-persist architecture means stored data schema changes require careful migration                                           |
-| 3   | Never use `style={{}}` in list items                                                      | Creates new object every render, breaks `memo()` memoization, causes list jank                                                   |
-| 4   | Never add side effects in reducers                                                        | Reducers must be pure. Put async work, storage writes, i18n calls, and cloud operations in thunks under `src/slicers/thunks/`    |
-| 5   | Never import native modules unconditionally on web                                        | Crashes the web build (use platform-split files or dynamic require)                                                              |
-| 6   | Never use relative imports across module boundaries                                       | Always use `@/` alias for consistency and refactor safety                                                                        |
-| 7   | Never create a component for what props can solve                                         | Extend existing components with optional props before creating new ones                                                          |
-| 8   | Never hardcode UI strings                                                                 | All user-visible text must go through `t("section.key")` with all 7 locales                                                      |
-| 9   | Never push to main directly                                                               | Use `dev` branch, follow github-issue-workflow skill                                                                             |
-| 10  | Never use `type` for object shapes                                                        | Use `interface` for structures, `type` only for unions                                                                           |
-| 11  | Never export the `Props` interface                                                        | It is always file-scoped                                                                                                         |
-| 12  | Never use `React.memo()`                                                                  | Use `memo()` imported directly from `"react"`                                                                                    |
-| 13  | Never use loose equality (`==`) for non-null checks                                       | Use `===` (the `== null` idiom is tolerated but `===` preferred for strings/numbers)                                             |
-| 14  | Never use `useStore()`                                                                    | Use `useSelector` for reading state, `useDispatch`/`useAppDispatch` for actions                                                  |
-| 15  | Never ship breaking changes to persisted data without migration                           | Users have existing local data and Firestore documents -- breaking changes cause data loss or crashes on update                  |
-| 16  | Never waste Firestore operations                                                          | Free tier: 50K reads, 20K writes, 20K deletes per day. Always debounce, batch, and skip unchanged data                           |
-| 17  | Never use `\|\|` for defaulting in a boolean/equality context                             | `x \|\| "desc"` evaluates to a truthy string and makes conditions always true. Use `x ?? "desc"` plus `===` instead (see LL-001) |
-| 18  | Never import a module with an explicit `.web` / `.native` suffix                          | Always import the base path; Metro picks the variant automatically (see LL-013)                                                  |
-| 19  | Never use dynamic `require(...)` as a platform gate when a file split is viable           | Use `.web.ts` / `.native.ts` / `.tsx` file-based resolution instead (see LL-014)                                                 |
-| 20  | Never put `Platform.OS` checks inside reducers, selectors, or thunks                      | Keep them pure. Platform defaults belong in platform-split constants (see LL-015)                                                |
-| 21  | Never declare memoized selectors as factories that return a new `createSelector` per call | Module-scope `createSelector`, or keyed cache via Reselect 5 `weakMapMemoize` (see LL-016)                                       |
-| 22  | Never perform encryption or expensive deterministic transforms inside reducers            | Use middleware/thunks. Reducers must stay pure and fast (see LL-017)                                                             |
-| 23  | Never pass object literals as `FlashList` / `FlatList` `extraData`                        | Use primitives or stable memoized objects; inline literals defeat row memoization (see LL-019)                                   |
-| 24  | Never subscribe imperative event listeners with unstable callback deps                    | Use a ref for the callback and subscribe once with `[]` deps (see LL-020)                                                        |
-| 25  | Never let an errored/empty cloud read drive a destructive write                           | Reads are tri-state (present/absent/error); skip-and-keep-local on doubt, a missed sync self-heals (see LL-023)                  |
-| 26  | Never trust a decrypt that didn't throw                                                   | AES-CBC yields valid-looking garbage on the wrong key; verify the `CONTENT_MAGIC` marker before using output (see LL-024)        |
-| 27  | Never read authoritative cross-device state with cache-eligible `getDoc`/`getDocs`        | Use `getDocFromServer`/`getDocsFromServer`; the Firestore cache serves stale data and survives restarts (see LL-027)             |
-| 28  | Never import icons from the `react-native-heroicons` barrels                              | Each barrel evaluates ~300 icons at startup; use deep imports (see LL-034)                                                       |
-| 29  | Never dispatch a persisted-slice update per keystroke                                     | Every commit re-serializes the whole slice; editors batch through `setNoteAsync` (see LL-031)                                    |
-| 30  | Never rely on a JS timer for work that must finish before the app may be killed           | Android pauses timers in background; flush synchronously (see LL-032)                                                            |
-| 31  | Never concatenate translated fragments into a sentence                                    | Word order differs per language; one interpolated key, `<Trans>` for styled parts (see LL-035)                                   |
-| 32  | Never write a cloud document other devices listen to when nothing changed                 | Each write costs a read per listener and can wake the loop that writes again (see LL-044)                                        |
-| 33  | Never size what accumulates in one Firestore document by bytes alone                      | The 40,000 index-entry limit comes first (~50 per queued note); budget both (see LL-043)                                         |
-| 34  | Never read a per-cloud value from config, or name a provider, above `CloudBackend`        | Two clouds: ask `cloud` (`deviceLimit`, `pacing`), key by `cloudScope`, keep texts neutral (see LL-048)                          |
-| 35  | Never put a `%` in a file name given to expo-file-system                                  | `File` segments are encoded (`%` -> `%25`), legacy URIs decoded: either way it names another file (see LL-052)                   |
-| 36  | Never trust a cache of what's stored where another writer can write (browser tabs)        | Check what's there first, under a lock; a write skipped for a newer one settles with it (see LL-053)                             |
-| 37  | Never keep a copy of user data without a wipe path and an end date                        | "Wipe data" must reach it; record migrations instead of inferring them from absent data (see LL-054)                             |
-| 38  | Never apply an AI answer that stopped early, or cancel only the native completion         | Queue completions, check the cancel generation at every step, drop `interrupted`/token-limited answers (see LL-055)              |
-| 39  | Never give persisted data a new meaning without bumping its persist `version`             | Migrate once, by version, never guess at read time; test older versions' data as they store it, newer fields included (LL-056)   |
-| 40  | Never interpret a server answer that came through a redirect                              | Fetch drops the token across hosts: the refusal reads as "removed"; absent/removed only with the server's error code (LL-059)    |
-| 41  | Never turn a note's HTML or text into DOM unsanitized                                     | Notes come from imports, other devices: DOMPurify (`NOTE_HTML_CONFIG`, `addNoteHooks`), `escapeHtml`/`textContent` (LL-060)      |
-| 42  | Never send a block format or list command to pell directly                                | They nest and never turn off: go through `window.__fm.toggle` (RICH_TEXT_SCRIPT), test in `scripts/richtext.test.mjs` (LL-062)   |
-| 43  | Never leave an element selected after a page-script edit                                  | A key replaces it: put back the selection saved (as a `Range`) before the `execCommand`, as `__fm.image` does (LL-065)           |
-| 44  | Never judge or measure performance on a debuggable build                                  | Its Java/Kotlin runs interpreted: a startup measured 10x slower (LL-066). Measure a release APK not marked debuggable            |
-| 45  | Never hardcode a note size limit                                                          | The cloud in use decides (`cloud.maxNoteBytes`, `noteTextLimit`); a note over it goes offline (ADR-026)                          |
-| 46  | Never reach a note in an MCP tool except through `libs/mcp/policy.ts`                     | Locked and hidden are UI flags: for an agent this filter is the only barrier, an id out of reach reads as unknown (ADR-032)      |
+| #   | Rule                                                                                      | Why                                                                                                                                   |
+| --- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Never install dependencies without approval                                               | Dependency management affects bundle size, security, and compatibility across 3 platforms                                             |
+| 2   | Never modify Redux store structure without migration plan                                 | Double-persist architecture means stored data schema changes require careful migration                                                |
+| 3   | Never use `style={{}}` in list items                                                      | Creates new object every render, breaks `memo()` memoization, causes list jank                                                        |
+| 4   | Never add side effects in reducers                                                        | Reducers must be pure. Put async work, storage writes, i18n calls, and cloud operations in thunks under `src/slicers/thunks/`         |
+| 5   | Never import native modules unconditionally on web                                        | Crashes the web build (use platform-split files or dynamic require)                                                                   |
+| 6   | Never use relative imports across module boundaries                                       | Always use `@/` alias for consistency and refactor safety                                                                             |
+| 7   | Never create a component for what props can solve                                         | Extend existing components with optional props before creating new ones                                                               |
+| 8   | Never hardcode UI strings                                                                 | All user-visible text must go through `t("section.key")` with all 7 locales                                                           |
+| 9   | Never push to main directly                                                               | Use `dev` branch, follow github-issue-workflow skill                                                                                  |
+| 10  | Never use `type` for object shapes                                                        | Use `interface` for structures, `type` only for unions                                                                                |
+| 11  | Never export the `Props` interface                                                        | It is always file-scoped                                                                                                              |
+| 12  | Never use `React.memo()`                                                                  | Use `memo()` imported directly from `"react"`                                                                                         |
+| 13  | Never use loose equality (`==`) for non-null checks                                       | Use `===` (the `== null` idiom is tolerated but `===` preferred for strings/numbers)                                                  |
+| 14  | Never use `useStore()`                                                                    | Use `useSelector` for reading state, `useDispatch`/`useAppDispatch` for actions                                                       |
+| 15  | Never ship breaking changes to persisted data without migration                           | Users have existing local data and Firestore documents -- breaking changes cause data loss or crashes on update                       |
+| 16  | Never waste Firestore operations                                                          | Free tier: 50K reads, 20K writes, 20K deletes per day. Always debounce, batch, and skip unchanged data                                |
+| 17  | Never use `\|\|` for defaulting in a boolean/equality context                             | `x \|\| "desc"` evaluates to a truthy string and makes conditions always true. Use `x ?? "desc"` plus `===` instead (see LL-001)      |
+| 18  | Never import a module with an explicit `.web` / `.native` suffix                          | Always import the base path; Metro picks the variant automatically (see LL-013)                                                       |
+| 19  | Never use dynamic `require(...)` as a platform gate when a file split is viable           | Use `.web.ts` / `.native.ts` / `.tsx` file-based resolution instead (see LL-014)                                                      |
+| 20  | Never put `Platform.OS` checks inside reducers, selectors, or thunks                      | Keep them pure. Platform defaults belong in platform-split constants (see LL-015)                                                     |
+| 21  | Never declare memoized selectors as factories that return a new `createSelector` per call | Module-scope `createSelector`, or keyed cache via Reselect 5 `weakMapMemoize` (see LL-016)                                            |
+| 22  | Never perform encryption or expensive deterministic transforms inside reducers            | Use middleware/thunks. Reducers must stay pure and fast (see LL-017)                                                                  |
+| 23  | Never pass object literals as `FlashList` / `FlatList` `extraData`                        | Use primitives or stable memoized objects; inline literals defeat row memoization (see LL-019)                                        |
+| 24  | Never subscribe imperative event listeners with unstable callback deps                    | Use a ref for the callback and subscribe once with `[]` deps (see LL-020)                                                             |
+| 25  | Never let an errored/empty cloud read drive a destructive write                           | Reads are tri-state (present/absent/error); skip-and-keep-local on doubt, a missed sync self-heals (see LL-023)                       |
+| 26  | Never trust a decrypt that didn't throw                                                   | AES-CBC yields valid-looking garbage on the wrong key; verify the `CONTENT_MAGIC` marker before using output (see LL-024)             |
+| 27  | Never read authoritative cross-device state with cache-eligible `getDoc`/`getDocs`        | Use `getDocFromServer`/`getDocsFromServer`; the Firestore cache serves stale data and survives restarts (see LL-027)                  |
+| 28  | Never import icons from the `react-native-heroicons` barrels                              | Each barrel evaluates ~300 icons at startup; use deep imports (see LL-034)                                                            |
+| 29  | Never dispatch a persisted-slice update per keystroke                                     | Every commit re-serializes the whole slice; editors batch through `setNoteAsync` (see LL-031)                                         |
+| 30  | Never rely on a JS timer for work that must finish before the app may be killed           | Android pauses timers in background; flush synchronously (see LL-032)                                                                 |
+| 31  | Never concatenate translated fragments into a sentence                                    | Word order differs per language; one interpolated key, `<Trans>` for styled parts (see LL-035)                                        |
+| 32  | Never write a cloud document other devices listen to when nothing changed                 | Each write costs a read per listener and can wake the loop that writes again (see LL-044)                                             |
+| 33  | Never size what accumulates in one Firestore document by bytes alone                      | The 40,000 index-entry limit comes first (~50 per queued note); budget both (see LL-043)                                              |
+| 34  | Never read a per-cloud value from config, or name a provider, above `CloudBackend`        | Two clouds: ask `cloud` (`deviceLimit`, `pacing`), key by `cloudScope`, keep texts neutral (see LL-048)                               |
+| 35  | Never put a `%` in a file name given to expo-file-system                                  | `File` segments are encoded (`%` -> `%25`), legacy URIs decoded: either way it names another file (see LL-052)                        |
+| 36  | Never trust a cache of what's stored where another writer can write (browser tabs)        | Check what's there first, under a lock; a write skipped for a newer one settles with it (see LL-053)                                  |
+| 37  | Never keep a copy of user data without a wipe path and an end date                        | "Wipe data" must reach it; record migrations instead of inferring them from absent data (see LL-054)                                  |
+| 38  | Never apply an AI answer that stopped early, or cancel only the native completion         | Queue completions, check the cancel generation at every step, drop `interrupted`/token-limited answers (see LL-055)                   |
+| 39  | Never give persisted data a new meaning without bumping its persist `version`             | Migrate once, by version, never guess at read time; test older versions' data as they store it, newer fields included (LL-056)        |
+| 40  | Never interpret a server answer that came through a redirect                              | Fetch drops the token across hosts: the refusal reads as "removed"; absent/removed only with the server's error code (LL-059)         |
+| 41  | Never turn a note's HTML or text into DOM unsanitized                                     | Notes come from imports, other devices: DOMPurify (`NOTE_HTML_CONFIG`, `addNoteHooks`), `escapeHtml`/`textContent` (LL-060)           |
+| 42  | Never send a block format or list command to pell directly                                | They nest and never turn off: go through `window.__fm.toggle` (RICH_TEXT_SCRIPT), test in `scripts/richtext.test.mjs` (LL-062)        |
+| 43  | Never leave an element selected after a page-script edit                                  | A key replaces it: put back the selection saved (as a `Range`) before the `execCommand`, as `__fm.image` does (LL-065)                |
+| 44  | Never judge or measure performance on a debuggable build                                  | Its Java/Kotlin runs interpreted: a startup measured 10x slower (LL-066). Measure a release APK not marked debuggable                 |
+| 45  | Never hardcode a note size limit                                                          | The cloud in use decides (`cloud.maxNoteBytes`, `noteTextLimit`); a note over it goes offline (ADR-026)                               |
+| 46  | Never reach a note in an MCP tool except through `libs/mcp/policy.ts`                     | Locked and hidden are UI flags: for an agent this filter is the only barrier, an id out of reach reads as unknown (ADR-032)           |
 | 47  | Never build an HTML or script string with a replacement string or unescaped data          | `replace(x, string)` expands `$&`/`$'`; JSON leaves `</script>`: a replacer function, `serializeForScript` inside `<script>` (LL-077) |
+| 48  | Never send content, names, addresses or the device name to Sentry or in a report          | Areas, ids, counts and codes only: `reportHandled(area, error, extra)`, `addTrail` with a type (ADR-035)                              |
+| 49  | Never keep what a device is looking at inside the note                                    | The shown tab is view state: storing it alone re-dates, re-sorts and uploads the note (LL-079)                                        |
+| 50  | Never give a polling or global-listening hook one timer or listener per component         | One module store read with `useSyncExternalStore`; poll only while used and visible (LL-082)                                          |
+| 51  | Never reload the page in the desktop app                                                  | A reload while a Tauri command answers can abort the process: `reloadApp()` relaunches after `flushNow()` (LL-089)                    |
 
 ### ALWAYS
 
-| #   | Rule                                                     | Why                                                           |
-| --- | -------------------------------------------------------- | ------------------------------------------------------------- |
-| 1   | Always use `interface Props` for component props         | Consistent pattern across all ~96 components                  |
-| 2   | Always use `export default function` for components      | Or `export default memo(Fn)` for memoized list items          |
-| 3   | Always use `@/` path alias                               | Cross-module imports must use the alias                       |
-| 4   | Always use `import type` for types                       | Ensures type erasure at compile time                          |
-| 5   | Always use `StyleSheet.create()` for styles              | At the bottom of the file, after the component                |
-| 6   | Always use style constants from `@/constants/styles`     | Never hardcode colors, font sizes, spacing, or border radii   |
-| 7   | Always wrap list-rendered components with `memo()`       | NoteCard, TodoItem, OrderedCategoryCard, etc.                 |
-| 8   | Always add all 7 locale translations                     | en, it, es, fr, de, zh, ja                                    |
-| 9   | Always test web + native for platform-split files        | Behavior can diverge silently                                 |
-| 10  | Always use `useTranslation()` for UI text                | Via `react-i18next`                                           |
-| 11  | Always use `TouchableOpacity activeOpacity={0.7}`        | Standard pressable pattern                                    |
-| 12  | Always place `/* STYLES */` comment above StyleSheet     | Visual separator convention                                   |
-| 13  | Always make new fields optional with defaults            | Backward compat: old persisted data must load without crashes |
-| 14  | Always estimate Firestore ops for cloud-related features | Document reads/writes/deletes per user action in the PR       |
-| 15  | Always call `flushNote()` before acting on a stored note | Delete/detach/sync/category change must see the latest edits  |
-| 16  | Always set `timeout: 0` on a `PersistConfig`             | A timed-out read rehydrates empty state and wipes storage     |
-| 17  | Always keep sync queue entries exclusive per id          | Latest operation replaces the others (see LL-033)             |
+| #   | Rule                                                                   | Why                                                              |
+| --- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 1   | Always use `interface Props` for component props                       | Consistent pattern across all ~96 components                     |
+| 2   | Always use `export default function` for components                    | Or `export default memo(Fn)` for memoized list items             |
+| 3   | Always use `@/` path alias                                             | Cross-module imports must use the alias                          |
+| 4   | Always use `import type` for types                                     | Ensures type erasure at compile time                             |
+| 5   | Always use `StyleSheet.create()` for styles                            | At the bottom of the file, after the component                   |
+| 6   | Always use style constants from `@/constants/styles`                   | Never hardcode colors, font sizes, spacing, or border radii      |
+| 7   | Always wrap list-rendered components with `memo()`                     | NoteCard, TodoItem, OrderedCategoryCard, etc.                    |
+| 8   | Always add all 7 locale translations                                   | en, it, es, fr, de, zh, ja                                       |
+| 9   | Always test web + native for platform-split files                      | Behavior can diverge silently                                    |
+| 10  | Always use `useTranslation()` for UI text                              | Via `react-i18next`                                              |
+| 11  | Always use `TouchableOpacity activeOpacity={0.7}`                      | Standard pressable pattern                                       |
+| 12  | Always place `/* STYLES */` comment above StyleSheet                   | Visual separator convention                                      |
+| 13  | Always make new fields optional with defaults                          | Backward compat: old persisted data must load without crashes    |
+| 14  | Always estimate Firestore ops for cloud-related features               | Document reads/writes/deletes per user action in the PR          |
+| 15  | Always call `flushNote()` before acting on a stored note               | Delete/detach/sync/category change must see the latest edits     |
+| 16  | Always set `timeout: 0` on a `PersistConfig`                           | A timed-out read rehydrates empty state and wipes storage        |
+| 17  | Always keep sync queue entries exclusive per id                        | Latest operation replaces the others (see LL-033)                |
+| 18  | Always forward a WebView page's errors with `PAGE_ERROR_SCRIPT`        | And report `PAGE_ERROR_MESSAGE` with `reportPageError` (ADR-035) |
+| 19  | Always enforce a protection in the screen that shows the thing         | Not in the buttons that lead there: links skip them (LL-085)     |
+| 20  | Always register unsaved typed text with `registerPendingFlush`         | The app can be killed in the background (LL-084)                 |
+| 21  | Always resize a picture to its shown size before storing or sending it | `reducePhoto`: 1600 px, JPEG 0.6 (LL-083, LL-088)                |
