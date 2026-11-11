@@ -2064,6 +2064,42 @@ pipeline that has never run end to end isn't verified: its first real run is the
 
 ---
 
+### LL-077: A code note opened blank or altered, and its text could run as part of the page
+
+**Date:** 2026-11-11  
+**Severity:** High (a code note's text changed on its own; on web and desktop a tab could run markup with the app's rights)  
+**Category:** Bug  
+**What happened:** `CodeEditorWebView` built the CodeMirror page with
+`CODEMIRROR_HTML.replace("window.__EDITOR_CONFIG__=…||{};", configScript)`, `configScript` holding
+`JSON.stringify({ code, language, readOnly })`. Reproduced on the real generated page with a Node script during the 2026-11-11
+audit: `re.sub(r'^\d+$', '', s)` doubled the page and broke the config, `echo $$` came back as `echo $`, and a tab holding
+`</script>` ended the script so the rest of the tab was parsed as HTML. The editor then showed other text or nothing, and the
+first keystroke saved what it showed. On the web and the desktop the page is a same-origin frame (the class of LL-060), and a
+code note can come from another device, an import or an MCP agent.  
+**Root cause:** two mistakes on one line. A replacement *string* expands `$$`, `$&`, `` $` `` and `$'`; and `JSON.stringify`
+leaves `</script>`, `<!--` and U+2028/U+2029 as they are, which is fine in JavaScript and wrong inside an HTML `<script>`.  
+**Fix:** `src/libs/codeEditorPage.ts`: `buildCodeEditorHtml` passes functions to both `replace` calls and writes the config
+with `serializeForScript` (JSON with `<`, `>`, `&`, U+2028, U+2029 as `\uXXXX` escapes); a page that lost its placeholder
+throws. `scripts/code-page.test.mjs` builds the page for codes holding each `$` pattern, `</script>`, `<!--`, `]]>`, the two
+separators, 500 KB and nothing, checks its exact length, evaluates the config back, and opens one in headless Chrome (no markup
+of the tab in the DOM, the editor shows exactly the code). Against the old builder it fails 27 of 43 checks.  
+**The sweep** (every `.replace(` whose replacement isn't a literal or a function, and every place note content enters HTML or a
+script): `utils/voiceTranscript.ts` (literal `$1` patterns, intended; list items through `escapeHtml`), `utils/html.ts`
+(`wrapHtmlForPdf`: the title through `escapeHtml`; the note's HTML goes to expo-print's own WebView on the phone, which has no
+bridge to the app, and through DOMPurify on the web in `export.web.ts`), `libs/ai/constants.ts` (`{{LANG}}` gets a language name
+from a fixed table), `libs/mcp/noteView.ts` (a constant placeholder), `libs/mcp/agentHtml.ts` (an agent's HTML through DOMPurify
+with `AGENT_HTML_CONFIG`), `NoteTextEditor.tsx` (`command(...)` builds JavaScript with `JSON.stringify`, fine there),
+`CodeEditorWebView.tsx` (`injectJavaScript` with `JSON.stringify`, JavaScript). **Fixed:** `FindReplaceBar.tsx` quoted the find
+and replace text by hand (only `\` and `'` escaped) into the scripts it injects; a line break or U+2028 in it broke the script.
+It now uses `JSON.stringify` (JavaScript context).  
+**Rule:** an HTML or script string is never built with a replacement string or unescaped data: a replacer function, and
+`serializeForScript` for data inside a `<script>` (`JSON.stringify` only where the string is JavaScript, never HTML).
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 8)
+
+---
+
 ### LL-088: A report with screenshots couldn't be sent, and the error said nothing
 
 **Date:** 2026-11-11  

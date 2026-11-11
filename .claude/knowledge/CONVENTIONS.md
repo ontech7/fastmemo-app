@@ -921,6 +921,7 @@ never in a `Platform.OS` check inside `context.ts` or the logic above it.
 | 44  | Never judge or measure performance on a debuggable build                                  | Its Java/Kotlin runs interpreted: a startup measured 10x slower (LL-066). Measure a release APK not marked debuggable            |
 | 45  | Never hardcode a note size limit                                                          | The cloud in use decides (`cloud.maxNoteBytes`, `noteTextLimit`); a note over it goes offline (ADR-026)                          |
 | 46  | Never reach a note in an MCP tool except through `libs/mcp/policy.ts`                     | Locked and hidden are UI flags: for an agent this filter is the only barrier, an id out of reach reads as unknown (ADR-032)      |
+| 47  | Never build an HTML or script string with a replacement string or unescaped data          | `replace(x, string)` expands `$&`/`$'`; JSON leaves `</script>`: a replacer function, `serializeForScript` inside `<script>` (LL-077) |
 
 ### ALWAYS
 

@@ -106,6 +106,9 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 24. **Never reach a note in the local MCP server's tools except through `src/libs/mcp/policy.ts`** -- locked and hidden are
     flags the UI enforces with the secret code, so for an agent this filter is the only barrier. An id out of reach gets the
     answer of an unknown id, its words match nothing, and no switch or "show hidden" changes that (ADR-032)
+25. **Never build an HTML or script string with a replacement string or unescaped data** -- `str.replace(x, text)` expands `$&`,
+    `$'`, `$$` found in `text`, and `JSON.stringify` leaves `</script>` and `<!--` as they are: pass a replacer function
+    (`() => text`) and put data inside a `<script>` through `serializeForScript` (`libs/codeEditorPage.ts`). See LL-077
 
 ### ALWAYS Do
 

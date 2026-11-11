@@ -1,5 +1,6 @@
-import { CODEMIRROR_HTML } from "@/generated/codemirror-html";
-import { SCROLLBAR_CSS } from "@/styles/scrollbar";
+import { buildCodeEditorHtml } from "@/libs/codeEditorPage";
+import { reportPageError } from "@/libs/diagnostics";
+import { PAGE_ERROR_MESSAGE } from "@/libs/pageErrors";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { Platform, StyleSheet, TextInput, type TextInputInstance } from "react-native";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
@@ -113,6 +114,8 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
             }
             pendingMessages.current = [];
             onReadyRef.current?.();
+          } else if (data.type === PAGE_ERROR_MESSAGE) {
+            reportPageError("codemirror", data.data);
           } else if (data.type === "change" && (data.doc ?? 0) === docRef.current) {
             onChangeRef.current(data.code);
           }
@@ -133,14 +136,12 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
 
     // Compute HTML ONCE on mount — never changes, never causes WebView reload
 
-    const html = useMemo(() => {
-      const configScript = `window.__EDITOR_CONFIG__=${JSON.stringify({ code: initialCode, language, readOnly })};`;
-      return CODEMIRROR_HTML.replace("window.__EDITOR_CONFIG__=window.__EDITOR_CONFIG__||{};", configScript).replace(
-        "</head>",
-        `<style>${SCROLLBAR_CSS}</style></head>`
-      );
+    // The note's code can hold anything ("$'", "</script>"...): the page is built so none of it changes the page (LL-077).
+    const html = useMemo(
+      () => buildCodeEditorHtml({ code: initialCode, language, readOnly }),
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+      []
+    );
 
     return (
       <>

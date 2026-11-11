@@ -78,10 +78,10 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
   const findInEditor = useCallback(
     (text: string, backwards = false) => {
       if (!editorRef.current || !text) return;
-      const escaped = text.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      const quoted = JSON.stringify(text);
       const script = `
         (function(){
-          var found = window.find('${escaped}', false, ${backwards}, true, false, false, false);
+          var found = window.find(${quoted}, false, ${backwards}, true, false, false, false);
           if (!found) {
             var editor = document.querySelector('[contenteditable]');
             if (editor) {
@@ -91,7 +91,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
               range.collapse(${backwards});
               sel.removeAllRanges();
               sel.addRange(range);
-              window.find('${escaped}', false, ${backwards}, true, false, false, false);
+              window.find(${quoted}, false, ${backwards}, true, false, false, false);
             }
           }
         })();
@@ -112,7 +112,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
         return;
       }
       setCurrentMatch(1);
-      const escaped = text.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      const quoted = JSON.stringify(text);
       const script = `
         (function(){
           var editor = document.querySelector('[contenteditable]');
@@ -123,7 +123,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
             range.collapse(true);
             sel.removeAllRanges();
             sel.addRange(range);
-            window.find('${escaped}', false, false, true, false, false, false);
+            window.find(${quoted}, false, false, true, false, false, false);
           }
         })();
         true;
@@ -147,12 +147,12 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
 
   const replaceCurrentMatch = useCallback(() => {
     if (matchCount === 0 || !editorRef.current || !searchText) return;
-    const escaped = replaceText.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    const quoted = JSON.stringify(replaceText);
     const script = `
       (function(){
         var sel = window.getSelection();
         if (sel && sel.rangeCount > 0 && sel.toString().length > 0) {
-          document.execCommand('insertText', false, '${escaped}');
+          document.execCommand('insertText', false, ${quoted});
         }
       })();
       true;
@@ -167,8 +167,8 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
 
   const replaceAll = useCallback(() => {
     if (matchCount === 0 || !editorRef.current || !searchText) return;
-    const escapedS = searchText.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-    const escapedR = replaceText.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    const quotedS = JSON.stringify(searchText);
+    const quotedR = JSON.stringify(replaceText);
     const script = `
       (function(){
         var editor = document.querySelector('[contenteditable]');
@@ -180,8 +180,8 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
         sel.removeAllRanges();
         sel.addRange(range);
         var n = 0;
-        while (window.find('${escapedS}', false, false, false, false, false, false)) {
-          document.execCommand('insertText', false, '${escapedR}');
+        while (window.find(${quotedS}, false, false, false, false, false, false)) {
+          document.execCommand('insertText', false, ${quotedR});
           n++;
           if (n > 1000) break;
         }

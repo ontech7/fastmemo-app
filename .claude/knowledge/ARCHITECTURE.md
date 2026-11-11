@@ -182,6 +182,9 @@ src/
       snippets.ts      # What to paste into each AI client
       types.ts         # What Rust and the page exchange: McpRequest, McpReply; and UpdateCheck
     windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
+    codeEditorPage.ts  # The code note's page: buildCodeEditorHtml, serializeForScript (data that can't break the page, LL-077,
+                       # scripts/code-page.test.mjs)
+    pageErrors.ts      # The script an editor page runs to forward its errors (FASTMEMO_PAGE_ERROR, ADR-035)
     richTextEditor.ts  # The text editor's page script (line types, code exit, bullets, images, the image menu's messages) and style
                        # (ADR-023, ADR-024, scripts/richtext.test.mjs)
 
