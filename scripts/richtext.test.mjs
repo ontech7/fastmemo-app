@@ -28,7 +28,8 @@ const tmp = mkdtempSync(join(os.tmpdir(), "richtext-"));
 const entry = join(tmp, "entry.mjs");
 writeFileSync(
   entry,
-  `export { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE, imageCommand } from ${JSON.stringify(join(root, "src/libs/richTextEditor.ts"))};
+  `export { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE, COUNT_MESSAGE, imageCommand } from ${JSON.stringify(join(root, "src/libs/richTextEditor.ts"))};
+   export { getTextLength } from ${JSON.stringify(join(root, "src/utils/string.ts"))};
    export { PAGE_ERROR_SCRIPT, PAGE_ERROR_MESSAGE } from ${JSON.stringify(join(root, "src/libs/pageErrors.ts"))};
    export { EDITOR_SANITIZE_JS } from ${JSON.stringify(join(root, "src/generated/editor-sanitize.ts"))};
    export { createHTML } from ${JSON.stringify(join(root, "node_modules/react-native-pell-rich-editor/src/editor.js"))};`
@@ -58,12 +59,14 @@ await build({
   banner: { js: "globalThis.window ??= {};" },
 });
 const {
+  COUNT_MESSAGE,
   EDITOR_SANITIZE_JS,
   PAGE_ERROR_SCRIPT,
   PAGE_ERROR_MESSAGE,
   RICH_TEXT_SCRIPT,
   RICH_TEXT_STYLE,
   createHTML,
+  getTextLength,
   imageCommand,
 } = await import(pathToFileURL(join(tmp, "page.bundle.mjs")));
 const page = join(tmp, "page.html");
@@ -928,6 +931,75 @@ await post({ type: "content", name: "setDisable", data: false });
   // The errors thrown on purpose are not the page's own.
   for (let i = pageErrors.length - 1; i >= 0; i--)
     if (/boom from the page|rejected in the page|once/.test(pageErrors[i] ?? "")) pageErrors.splice(i, 1);
+}
+
+// 7. The character count: the page counts what it shows (COUNT_MESSAGE) after every change, whoever made it, so the app
+// doesn't parse the note at each pause (spec 3.3).
+{
+  const listenToCounts = () =>
+    evaluate(`(() => {
+      window.__counts = [];
+      window.addEventListener("message", (e) => {
+        try { const m = JSON.parse(e.data); if (m.type === ${JSON.stringify(COUNT_MESSAGE)}) window.__counts.push(m.data); } catch (error) {}
+      });
+    })()`);
+  const countsAfter = async (action) => {
+    await evaluate("window.__counts.length = 0");
+    await action();
+    await sleep(400);
+    return evaluate("window.__counts.slice()");
+  };
+  const last = (list) => list[list.length - 1];
+  const setContent = (html) => post({ type: "content", name: "setHtml", data: html });
+
+  // As NoteTextEditor loads the page: the note, then the script, which counts once when it installs.
+  const loaded = new Promise((resolve) => waiters.push({ method: "Page.loadEventFired", resolve }));
+  await send("Page.navigate", { url });
+  await loaded;
+  await evaluate(`${PAGE_ERROR_SCRIPT}\n${EDITOR_SANITIZE_JS}`);
+  await listenToCounts();
+  let counts = await countsAfter(async () => {
+    await setContent("<div>abc</div>");
+    await post({ type: "content", name: "command", data: RICH_TEXT_SCRIPT });
+  });
+  check("the page counts once when the script installs", counts.length === 1 && counts[0] === 3, JSON.stringify(counts));
+
+  counts = await countsAfter(async () => {
+    await setContent("");
+    await post({ type: "content", name: "focus" });
+    await type("ciao");
+  });
+  check("after typing", last(counts) === 4, JSON.stringify(counts));
+  counts = await countsAfter(() => setContent("<div>uno</div><div>due</div>"));
+  check("after the app sets the content", last(counts) === 6, JSON.stringify(counts));
+  for (const html of [
+    "<div>ciao mondo</div>",
+    "<h1>Titolo</h1><div>te<b>st</b>o</div>",
+    "<div>riga<br>riga</div>",
+    "<div>caffè 😀</div>",
+  ]) {
+    counts = await countsAfter(() => setContent(html));
+    check(
+      `same number as the app's own count: ${html}`,
+      last(counts) === getTextLength(html),
+      `${JSON.stringify(counts)} vs ${getTextLength(html)}`
+    );
+  }
+  counts = await countsAfter(() =>
+    setContent('<ul><li>uno</li><li>due</li></ul><div><img src="data:image/png;base64,iVBORw0KGgo="></div>')
+  );
+  check("list items count their text, an image counts nothing", last(counts) === 6, JSON.stringify(counts));
+
+  counts = await countsAfter(async () => {
+    await setContent("<div>x</div>");
+    await select(end("x"));
+    for (const ch of "abcdefghij") await type(ch);
+  });
+  check(
+    "a burst of typing posts far fewer counts than keystrokes",
+    counts.length >= 1 && counts.length <= 3 && last(counts) === 11,
+    JSON.stringify(counts)
+  );
 }
 
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");

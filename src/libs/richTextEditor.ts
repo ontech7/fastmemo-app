@@ -39,6 +39,11 @@ export const RICH_TEXT_STYLE = {
 export const IMAGE_MESSAGE = "FASTMEMO_IMAGE";
 /** The page's message that a change couldn't be made to an image. */
 export const IMAGE_FAILED_MESSAGE = "FASTMEMO_IMAGE_FAILED";
+/**
+ * The page's count of the characters it shows (its `data`, a number: the text without line breaks), posted once when the
+ * script installs and after every change of the content, whoever made it: the app doesn't parse the note at each pause.
+ */
+export const COUNT_MESSAGE = "FASTMEMO_COUNT";
 
 /** A tapped image, as the page describes it. */
 export interface EditorImage {
@@ -451,6 +456,19 @@ export const RICH_TEXT_SCRIPT = String.raw`
     }
     refreshToolbar();
   };
+
+  // The character count (COUNT_MESSAGE): the text on screen without line breaks, once now and after every change of the
+  // content, whoever made it (typing, the app setting it, an undo): one count per 150 ms pause, not one per keystroke.
+  var countTimer = null;
+  var postCount = function () {
+    countTimer = null;
+    post("${COUNT_MESSAGE}", content().innerText.replace(/[\n\r\u200B]/g, "").length);
+  };
+  new MutationObserver(function () {
+    if (countTimer) clearTimeout(countTimer);
+    countTimer = setTimeout(postCount, 150);
+  }).observe(content(), { childList: true, characterData: true, subtree: true });
+  postCount();
 
   window.__fm = { toggle: toggle, insertImage: insertImage, image: image };
 })();

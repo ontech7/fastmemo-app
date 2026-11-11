@@ -24,7 +24,14 @@ import type { EditorImage, ImageChange } from "@/libs/richTextEditor";
 import { reportPageError } from "@/libs/diagnostics";
 import { PAGE_ERROR_MESSAGE, PAGE_ERROR_SCRIPT } from "@/libs/pageErrors";
 import { reducePhoto } from "@/libs/reducePhoto";
-import { IMAGE_FAILED_MESSAGE, IMAGE_MESSAGE, imageCommand, RICH_TEXT_SCRIPT, RICH_TEXT_STYLE } from "@/libs/richTextEditor";
+import {
+  COUNT_MESSAGE,
+  IMAGE_FAILED_MESSAGE,
+  IMAGE_MESSAGE,
+  imageCommand,
+  RICH_TEXT_SCRIPT,
+  RICH_TEXT_STYLE,
+} from "@/libs/richTextEditor";
 import {
   selectorAIAssistant,
   selectorDeveloperMode,
@@ -235,7 +242,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
     onRemoteChange: (remote, previous) => {
       if (remote.text === previous.text) return;
       if (editorReadyRef.current) showRemote(remote.text);
-      setNoteTextLength(getTextLength(remote.text));
+      // The character count follows from the page (COUNT_MESSAGE) once it shows the new text.
       setNoteTextSize(getTextSize(remote.text));
     },
   });
@@ -339,7 +346,6 @@ export default function NoteTextEditor({ initialNote }: Props) {
         return;
       }
 
-      setNoteTextLength(getTextLength(textVal));
       setNoteTextSize(textSize);
 
       setNoteAsync({ ...noteRef.current, text: textVal });
@@ -358,6 +364,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   const onEditorMessage = useCallback((message: { type?: string; data?: unknown }) => {
     if (message?.type === RELOAD_SHOWN) reloadsShownRef.current = message.data as number;
+    // The page counts what it shows after every change (typing, a reload, an undo): the app doesn't parse the note.
+    if (message?.type === COUNT_MESSAGE && typeof message.data === "number") setNoteTextLength(message.data);
     if (message?.type === IMAGE_MESSAGE) {
       const image = message.data as EditorImage;
       // The page gives the point in itself: the editor's box is where the page is on screen.
@@ -426,7 +434,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
     []
   );
 
-  const plainNoteText = useMemo(() => stripHtml(note.text), [note.text]);
+  // Built only while the find bar is open: stripping a long note at every pause costs for nothing otherwise.
+  const plainNoteText = useMemo(() => (showFindReplace ? stripHtml(note.text) : ""), [showFindReplace, note.text]);
 
   return (
     <View style={styles.root}>
