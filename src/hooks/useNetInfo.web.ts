@@ -1,51 +1,50 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { useSelector } from "react-redux";
 
-const CHECK_INTERVAL = 30000; // 30 seconds
+import { createNetStatus, type NetStatus, type NetStatusEnv } from "@/libs/netStatus";
+import { getCloudConnected } from "@/slicers/settingsSlice";
 
-interface NetInfoState {
-  isConnected: boolean;
-  type: string;
-}
+const PROBE_URL = "https://www.gstatic.com/generate_204";
+const PROBE_TIMEOUT_MS = 10_000;
 
-const useNetInfo = (): NetInfoState => {
-  const [netInfo, setNetInfo] = useState<NetInfoState>({
-    isConnected: true,
-    type: "unknown",
-  });
+const listen = (target: EventTarget, name: string) => (listener: () => void) => {
+  target.addEventListener(name, listener);
+  return () => target.removeEventListener(name, listener);
+};
 
-  const checkConnectivity = useCallback(async () => {
+const browser: NetStatusEnv = {
+  isOnline: () => navigator.onLine,
+  isVisible: () => document.visibilityState === "visible",
+  probe: async () => {
+    // Not AbortSignal.timeout: WebKit before Safari 16 lacks it, and this module may load before its polyfill (libs/net).
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
     try {
-      await fetch("https://www.gstatic.com/generate_204", {
-        method: "HEAD",
-        mode: "no-cors",
-        cache: "no-store",
-      });
-
-      setNetInfo((prev) => (prev.isConnected && prev.type === "wifi" ? prev : { isConnected: true, type: "wifi" }));
+      await fetch(PROBE_URL, { method: "HEAD", mode: "no-cors", cache: "no-store", signal: controller.signal });
+      return true;
     } catch {
-      setNetInfo((prev) => (!prev.isConnected && prev.type === "none" ? prev : { isConnected: false, type: "none" }));
+      return false;
+    } finally {
+      clearTimeout(timer);
     }
-  }, []);
+  },
+  onOnline: listen(window, "online"),
+  onOffline: listen(window, "offline"),
+  onVisibility: listen(document, "visibilitychange"),
+  setInterval: (fn, ms) => window.setInterval(fn, ms),
+  clearInterval: (handle) => window.clearInterval(handle as number),
+};
 
-  useEffect(() => {
-    checkConnectivity();
+/** One status for the whole app: every screen reading it shares the same events and the same timer (LL-082). */
+const netStatus = createNetStatus(browser);
 
-    const interval = setInterval(checkConnectivity, CHECK_INTERVAL);
+/** The connection status. The probe request runs only while a cloud is connected (to tell offline from unreachable). */
+const useNetInfo = (): NetStatus => {
+  const cloudConnected = useSelector(getCloudConnected);
 
-    const handleOnline = () => checkConnectivity();
-    const handleOffline = () => setNetInfo({ isConnected: false, type: "none" });
+  useEffect(() => (cloudConnected ? netStatus.retainProbe() : undefined), [cloudConnected]);
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, [checkConnectivity]);
-
-  return netInfo;
+  return useSyncExternalStore(netStatus.subscribe, netStatus.getSnapshot, netStatus.getSnapshot);
 };
 
 export default useNetInfo;

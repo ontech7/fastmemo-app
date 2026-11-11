@@ -1279,6 +1279,14 @@ left the device.
   NetInfo, in the same tick as `useNetInfo`), and the server's poll starts its backoff over when woken on purpose. A stopped
   engine, and a task from before a stop, report nothing (sync turned off while a read was timing out showed the line).
 
+**Note (2026-11-11, LL-082): where "online" comes from on the web and the desktop.** The native hook reads NetInfo. On the
+web and the desktop, `useNetInfo.web.ts` reads one app-wide status (`src/libs/netStatus.ts`): the browser's `offline` event at
+once; `online` from the browser alone while no cloud is connected; while one is, from a HEAD request to
+`https://www.gstatic.com/generate_204` (a success is online, a failure offline), so a network that reaches nothing reads as
+"no internet connection", not as "server unreachable". The request runs only while a cloud is connected and the window is
+visible: at connect, on coming back to the window, and every 30 s, one timer for every screen. Before, every screen using
+the hook ran its own request every 30 s, with or without a cloud, hidden or not.
+
 
 ---
 

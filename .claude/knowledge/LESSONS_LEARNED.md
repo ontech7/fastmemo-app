@@ -2190,6 +2190,31 @@ there.
 
 ---
 
+### LL-082: The desktop and the web checked the connection every 30 s per screen, with no cloud and in the background
+
+**Date:** 2026-11-11  
+**Severity:** Low (requests and wake-ups nobody needed; a desktop window in the background kept polling)  
+**Category:** Performance  
+**What happened:** `useNetInfo.web.ts` ran its own HEAD to `gstatic.com/generate_204` at mount and every 30 s in every
+component that used it (the sync provider, the update provider, the cloud status, the connect and devices screens, wipe
+data): five or six timers at once, each with its own request. It ran whether or not a cloud was connected, the only case
+where telling "offline" from "the cloud doesn't answer" matters, and while the window was hidden.  
+**Root cause:** a hook that owns a polling side effect multiplies it by the number of its users. The check was written for
+one consumer and never shared.  
+**Fix:** `src/libs/netStatus.ts` (`createNetStatus`): one status for the app, read with `useSyncExternalStore`. The browser's
+`offline` event is told at once. The probe runs only while retained (`retainProbe`, done by the hook while
+`getCloudConnected` is true) and the page is visible: once at the first retain, once when the page shows again, every 30 s
+in between, with one timer. Without a cloud, `online` is the browser's word. When the last retainer leaves, the timer stops
+and the status goes back to `navigator.onLine`. `scripts/net-status.test.mjs` covers it with a fake browser and clock. Note
+under ADR-029.  
+**Rule:** a hook that polls or listens to something global shares one source for the whole app (a module store and
+`useSyncExternalStore`); never a timer per component. Poll only while the answer is used and the window is visible.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 12)
+
+---
+
 ### LL-088: A report with screenshots couldn't be sent, and the error said nothing
 
 **Date:** 2026-11-11  
