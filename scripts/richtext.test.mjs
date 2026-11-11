@@ -29,6 +29,7 @@ const entry = join(tmp, "entry.mjs");
 writeFileSync(
   entry,
   `export { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE, imageCommand } from ${JSON.stringify(join(root, "src/libs/richTextEditor.ts"))};
+   export { PAGE_ERROR_SCRIPT, PAGE_ERROR_MESSAGE } from ${JSON.stringify(join(root, "src/libs/pageErrors.ts"))};
    export { EDITOR_SANITIZE_JS } from ${JSON.stringify(join(root, "src/generated/editor-sanitize.ts"))};
    export { createHTML } from ${JSON.stringify(join(root, "node_modules/react-native-pell-rich-editor/src/editor.js"))};`
 );
@@ -56,9 +57,15 @@ await build({
   // editor.js reads window.__DEV__ while building the page
   banner: { js: "globalThis.window ??= {};" },
 });
-const { EDITOR_SANITIZE_JS, RICH_TEXT_SCRIPT, RICH_TEXT_STYLE, createHTML, imageCommand } = await import(
-  pathToFileURL(join(tmp, "page.bundle.mjs"))
-);
+const {
+  EDITOR_SANITIZE_JS,
+  PAGE_ERROR_SCRIPT,
+  PAGE_ERROR_MESSAGE,
+  RICH_TEXT_SCRIPT,
+  RICH_TEXT_STYLE,
+  createHTML,
+  imageCommand,
+} = await import(pathToFileURL(join(tmp, "page.bundle.mjs")));
 const page = join(tmp, "page.html");
 // RichEditor's props in NoteTextEditor
 writeFileSync(page, createHTML({ ...RICH_TEXT_STYLE, useContainer: false, pasteAsPlainText: true }));
@@ -122,8 +129,8 @@ const open = async (html) => {
   const loaded = new Promise((resolve) => waiters.push({ method: "Page.loadEventFired", resolve }));
   await send("Page.navigate", { url });
   await loaded;
-  // NoteTextEditor's injectedJavaScript: the sanitizer is in the page before the note (LL-060)
-  await evaluate(EDITOR_SANITIZE_JS);
+  // NoteTextEditor's injectedJavaScript: the page's error forwarder, then the sanitizer, before the note (LL-060)
+  await evaluate(`${PAGE_ERROR_SCRIPT}\n${EDITOR_SANITIZE_JS}`);
   await post({ type: "content", name: "setHtml", data: html });
   await post({ type: "content", name: "command", data: RICH_TEXT_SCRIPT });
 };
@@ -878,6 +885,50 @@ await select({ text: "two" });
 await styleKey("b", mod);
 check("A read-only note isn't styled by the shortcut", !/<b>/.test((await state()).html), (await state()).html);
 await post({ type: "content", name: "setDisable", data: false });
+
+// An error in the page reaches the app, without the document (ADR-035). The page has no parent here: the app's side is
+// the WebView bridge.
+{
+  await open("<div>segreto 12345</div>");
+  await evaluate(`window.__pageMsgs = []; window.ReactNativeWebView = { postMessage: (m) => window.__pageMsgs.push(m) }`);
+  await evaluate(`setTimeout(() => { throw new Error("boom from the page"); }, 0)`);
+  await sleep(100);
+  const forwardedAll = (await evaluate("window.__pageMsgs"))
+    .map((m) => JSON.parse(m))
+    .filter((m) => m.type === PAGE_ERROR_MESSAGE);
+  const forwarded = forwardedAll[0];
+  check(
+    "an error in the page is forwarded",
+    forwarded?.data?.message?.includes("boom from the page"),
+    JSON.stringify(forwardedAll)
+  );
+  check(
+    "only message, file, line",
+    forwarded && Object.keys(forwarded.data).sort().join() === "file,line,message",
+    JSON.stringify(forwarded)
+  );
+  check("nothing of the note", forwarded && !JSON.stringify(forwarded).includes("segreto"), JSON.stringify(forwarded));
+  // From a timer: an evaluated promise would be awaited by DevTools, so handled.
+  await evaluate(`setTimeout(() => { Promise.reject(new Error("rejected in the page")); }, 0)`);
+  await sleep(100);
+  const rejected = (await evaluate("window.__pageMsgs")).map((m) => JSON.parse(m)).filter((m) => m.type === PAGE_ERROR_MESSAGE);
+  check(
+    "an unhandled rejection is forwarded",
+    rejected.some((m) => m.data.message === "rejected in the page"),
+    JSON.stringify(rejected)
+  );
+  await evaluate(PAGE_ERROR_SCRIPT);
+  await evaluate(`setTimeout(() => { throw new Error("once") }, 0)`);
+  await sleep(100);
+  const once = (await evaluate("window.__pageMsgs"))
+    .map((m) => JSON.parse(m))
+    .filter((m) => /\bonce$/.test(m.data?.message ?? ""));
+  check("installed twice, forwarded once", once.length === 1, JSON.stringify(once));
+  await evaluate("delete window.ReactNativeWebView");
+  // The errors thrown on purpose are not the page's own.
+  for (let i = pageErrors.length - 1; i >= 0; i--)
+    if (/boom from the page|rejected in the page|once/.test(pageErrors[i] ?? "")) pageErrors.splice(i, 1);
+}
 
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");
 check("no page errors", !pageErrors.length, pageErrors.join("\n"));

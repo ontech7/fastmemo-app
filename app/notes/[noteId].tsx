@@ -3,6 +3,7 @@ import NoteKanbanEditor from "@/components/notes/NoteKanbanEditor";
 import NoteTextEditor from "@/components/notes/NoteTextEditor";
 import NoteTodoEditor from "@/components/notes/NoteTodoEditor";
 import { useRouter } from "@/hooks/useRouter";
+import { addTrail } from "@/libs/diagnostics";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { getNote } from "@/slicers/notesSlice";
 import type { CodeNote, KanbanNote, TextNote, TodoNote } from "@/types";
@@ -87,6 +88,12 @@ export default function NoteScreen() {
       }
     }
   }, [noteId, note, router]);
+
+  // The trail of an error (ADR-035): which kind of note was opened, never which one.
+  const openedType = note ? note.type || "text" : null;
+  useEffect(() => {
+    if (openedType) addTrail("note.open", { type: openedType });
+  }, [noteId, openedType]);
 
   if (!note) {
     return null;

@@ -495,7 +495,7 @@ export class ServerBackend implements CloudBackend {
       return toVault(await this.request<ServerSnapshot["vault"]>("GET", "/v1/vault", { auth: "member" }));
     } catch (e) {
       console.log("readVault:", e);
-      return { status: "error", vault: null };
+      return { status: "error", vault: null, error: e };
     }
   }
 

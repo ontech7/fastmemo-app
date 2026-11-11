@@ -1,6 +1,7 @@
 import * as Localization from "expo-localization";
 import { AppState } from "react-native";
 
+import { addTrail, reportHandled } from "@/libs/diagnostics";
 import { selectorAIAssistant } from "@/slicers/settingsSlice";
 import { store } from "@/slicers/store";
 import type { RootState } from "@/types";
@@ -222,6 +223,7 @@ export async function initContext(modelId?: AIModelId): Promise<boolean> {
       return true;
     } catch (error) {
       console.error("[AI] Init context failed:", error);
+      reportHandled("ai.load", error, { model: targetId });
       _context = null;
       _activeModelId = null;
       notifyListeners("error");
@@ -318,6 +320,7 @@ export function generateEditorContent(
   options: EditorActionOptions = {}
 ): Promise<EditorActionResult> {
   const generation = options.generation ?? _cancelGeneration;
+  addTrail("ai.action", { action });
   return whileBusy(() => runEditorAction(action, content, onToken, options, generation));
 }
 
@@ -464,6 +467,7 @@ async function runEditorAction(
     return { success: true, text: cleaned, timings };
   } catch (error) {
     console.error("[AI] Editor content generation failed:", error);
+    reportHandled("ai.generate", error, { model: _activeModelId ?? "none", action });
     return { success: false, error: String(error) };
   }
 }

@@ -585,7 +585,7 @@ export class FirebaseBackend implements CloudBackend {
       return toVaultRead(snap.exists() ? snap.data() : undefined);
     } catch (e) {
       console.log("readVault:", e);
-      return { status: "error", vault: null };
+      return { status: "error", vault: null, error: e };
     }
   }
 

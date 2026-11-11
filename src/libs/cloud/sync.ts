@@ -4,6 +4,7 @@ import { t } from "i18next";
 
 import type { Note } from "@/types";
 
+import { addTrail, reportHandled } from "@/libs/diagnostics";
 import { flushPending } from "@/libs/registry";
 import { getDEK } from "@/libs/vaultSession";
 import { addLocalCategories, applyCategoriesPlan, categoriesPushed, deleteLocalCategories } from "@/slicers/categoriesSlice";
@@ -147,6 +148,9 @@ export const getSyncEngine = async (): Promise<SyncEngine | null> => {
       onVaultStale: () => emit({ type: "vaultStale" }),
       onTooLarge: (notes) => emit({ type: "tooLarge", notes }),
       onReachability,
+      onProblem: (area, { error, count }) =>
+        reportHandled(`sync.${area}`, error ?? new Error("push rejected"), count !== undefined ? { count } : undefined),
+      onPush: (notes) => addTrail("sync.push", { notes }),
     },
   });
   return engine;
@@ -162,6 +166,7 @@ const FULL_SYNC_DUE = "@cloudFullSyncDue";
 export const syncNow = async (onProgress?: (done: number, total: number) => void): Promise<boolean> => {
   // Locked: nothing can be read or sealed (the vault screens unlock first).
   if (!getDEK()) return false;
+  addTrail("sync.fullSync");
   const sync = await getSyncEngine();
   if (!sync) return false;
   await AsyncStorage.setItem(FULL_SYNC_DUE, "1").catch(() => {});

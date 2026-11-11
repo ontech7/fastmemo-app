@@ -21,6 +21,8 @@ import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
 import i18n from "@/libs/i18n";
 import type { EditorImage, ImageChange } from "@/libs/richTextEditor";
+import { reportPageError } from "@/libs/diagnostics";
+import { PAGE_ERROR_MESSAGE, PAGE_ERROR_SCRIPT } from "@/libs/pageErrors";
 import { IMAGE_FAILED_MESSAGE, IMAGE_MESSAGE, imageCommand, RICH_TEXT_SCRIPT, RICH_TEXT_STYLE } from "@/libs/richTextEditor";
 import {
   selectorAIAssistant,
@@ -60,7 +62,8 @@ const BAR_HEIGHT_ESTIMATE = 100;
 // script ends the web iframe's page, and Android evaluates it when the page finished, ahead of the onLoad that sets the
 // note. `injectedJavaScriptBeforeContentLoaded` is only an earlier try (Android may run it before the page exists).
 // `true;` ends what the phone's WebView evaluates.
-const EDITOR_SANITIZE_SCRIPT = `${EDITOR_SANITIZE_JS}\ntrue;`;
+// The page's own errors are forwarded first, so a failure of the sanitizer or of the page reaches Sentry (ADR-035).
+const EDITOR_SANITIZE_SCRIPT = `${PAGE_ERROR_SCRIPT}\n${EDITOR_SANITIZE_JS}\ntrue;`;
 
 const TOOLBAR_LABEL_KEYS: Record<string, string> = {
   [actions.undo]: "a11y.format.undo",
@@ -369,6 +372,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
       editorBoxRef.current?.measureInWindow((x, y) => setTappedImage({ image, at: { x: x + image.x, y: y + image.y } }));
     }
     if (message?.type === IMAGE_FAILED_MESSAGE) toast(i18n.t("note.image.failed"));
+    if (message?.type === PAGE_ERROR_MESSAGE) reportPageError("richtext", message.data);
   }, []);
 
   const changeImage = useCallback((image: EditorImage, change: ImageChange, value?: string) => {

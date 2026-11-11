@@ -183,7 +183,11 @@ export interface Tombstone {
 /** A read that failed: the cloud gave no answer (no network, VPN or server down, no answer in time), or answered an error. */
 export type CloudFailure = "unreachable" | "error";
 
-export type VaultRead = { status: "present"; vault: VaultDoc } | { status: "absent" | "error"; vault: null };
+export type VaultRead =
+  | { status: "present"; vault: VaultDoc }
+  | { status: "absent"; vault: null }
+  /** `error`: what the read threw, for diagnostics (ADR-035). */
+  | { status: "error"; vault: null; error?: unknown };
 
 /** Outbox content: encrypted notes to upload, deletion/detach stubs, categories. */
 export interface PushOps {

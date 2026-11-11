@@ -8,17 +8,18 @@ import "@/styles/global.css";
 
 import WebToaster from "@/components/WebToaster";
 import AppBackground from "@/components/ui/AppBackground";
-import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useAppFonts } from "@/hooks/useAppFonts";
 import { useModelDownloadResume } from "@/hooks/useModelDownloadResume";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { installDesktopMenu } from "@/libs/desktopMenu";
+import { initDiagnostics } from "@/libs/diagnostics";
 import { installFlushOnExit } from "@/libs/flushOnExit";
 import i18n from "@/libs/i18n";
 import { installMcpBridge } from "@/libs/mcp/bridge";
 import { installMessageGuard } from "@/libs/messageGuard";
 import AppUpdateProvider from "@/providers/AppUpdateProvider";
+import DiagnosticsProvider from "@/providers/DiagnosticsProvider";
 import SyncOnProvider from "@/providers/SyncOnProvider";
 import { persistor, store } from "@/slicers/store";
 import { DialogProvider } from "@ontech7/react-native-dialog";
@@ -48,15 +49,8 @@ export const unstable_settings = {
   anchor: "index",
 };
 
-ErrorUtils.setGlobalHandler((error: Error, isFatal: boolean) => {
-  Sentry.captureException(error, { data: { isFatal } });
-});
-
-Sentry.init({
-  dsn: "https://1b0f816610bb05a5257bfa7ae165f49e@o4509804550750208.ingest.de.sentry.io/4509804582207568",
-  environment: configs.environment,
-  sendDefaultPii: false,
-});
+// Sentry, its scrubbing and its tags. Its own handler reports a fatal JS error once, marked fatal (ADR-035).
+initDiagnostics();
 
 export default Sentry.wrap(function RootLayout() {
   const { colors } = useTheme();
@@ -125,6 +119,7 @@ export default Sentry.wrap(function RootLayout() {
           <Provider store={store}>
             <PersistGate loading={null} persistor={persistor}>
               <SyncOnProvider />
+              <DiagnosticsProvider />
               <AppUpdateProvider>
                 <RootSiblingParent>
                   <StatusBar style="light" />

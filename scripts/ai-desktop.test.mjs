@@ -65,6 +65,8 @@ globalThis.__dispatched = [];
 globalThis.__asyncStorage = new Map();
 
 const STUBS = {
+  // Sentry (ADR-035): nothing is reported from a test.
+  "@/libs/diagnostics": `export const reportHandled = () => {}; export const addTrail = () => {}; export const reportPageError = () => {};`,
   "@tauri-apps/api/core": `
     const tauri = globalThis.__tauri;
     export class Channel {

@@ -104,6 +104,13 @@ export interface SyncEvents {
    * (`lastContact` null) (ADR-029). `lastContact` is its last answer. Only on a change.
    */
   onReachability(state: CloudReachability): void;
+  /**
+   * A failure worth knowing (ADR-035): a task that threw, merged changes that couldn't be written, pushes the cloud refused
+   * for good. Never a transient one the engine retries; the app decides what reaches Sentry.
+   */
+  onProblem?(area: "task" | "persist" | "push.rejected", detail: { error?: unknown; count?: number }): void;
+  /** Right before the backend is asked to push, when there is something to send: how many notes go. */
+  onPush?(notes: number): void;
 }
 
 export interface CloudReachability {
@@ -359,7 +366,10 @@ export class SyncEngine {
         this.busySince = null;
       }
     });
-    this.tail = run.catch((e) => console.log("sync:", e));
+    this.tail = run.catch((e) => {
+      console.log("sync:", e);
+      this.o.events.onProblem?.("task", { error: e });
+    });
     return run;
   }
 
@@ -650,6 +660,7 @@ export class SyncEngine {
       return true;
     } catch (e) {
       console.log("sync: persisting:", e);
+      this.o.events.onProblem?.("persist", { error: e });
       return false;
     }
   }
@@ -830,6 +841,7 @@ export class SyncEngine {
     if (this.outlived) return "retry";
     const recipients = this.devices.filter((device) => device.uuid !== me).map((device) => device.uuid);
     this.lastPushAt = Date.now();
+    this.o.events.onPush?.(ops.notes.add.length + ops.notes.delete.length + ops.notes.detach.length);
     const result = await backend.push(me, ops, recipients, (done, all) => {
       this.busySince = Date.now(); // progressing (see TASK_STALL_MS)
       onProgress?.(done, all);
@@ -852,6 +864,7 @@ export class SyncEngine {
       })
     );
     result.rejected.forEach((key) => this.rejected.add(key));
+    if (result.rejected.length > 0) this.o.events.onProblem?.("push.rejected", { count: result.rejected.length });
     this.detachTooLarge(result.tooLarge ?? [], live);
 
     if (result.superseded.length > 0) {

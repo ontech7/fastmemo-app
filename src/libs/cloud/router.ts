@@ -11,9 +11,16 @@ export class CloudRouter implements CloudBackend {
   private readonly backends: Record<"firebase" | "server", CloudBackend>;
   private current: CloudBackend;
 
-  constructor(backends: Record<"firebase" | "server", CloudBackend>) {
+  private readonly onProblem?: (area: string, error: unknown) => void;
+
+  /** `onProblem`: told when a vault read comes back "error" (diagnostics, ADR-035). */
+  constructor(
+    backends: Record<"firebase" | "server", CloudBackend>,
+    options: { onProblem?: (area: string, error: unknown) => void } = {}
+  ) {
     this.backends = backends;
     this.current = backends.firebase;
+    this.onProblem = options.onProblem;
   }
 
   get deviceLimit() {
@@ -55,7 +62,11 @@ export class CloudRouter implements CloudBackend {
   pullDevices: CloudBackend["pullDevices"] = (me) => this.current.pullDevices(me);
   ackChanges: CloudBackend["ackChanges"] = (me, change) => this.current.ackChanges(me, change);
 
-  readVault: CloudBackend["readVault"] = () => this.current.readVault();
+  readVault: CloudBackend["readVault"] = async () => {
+    const read = await this.current.readVault();
+    if (read.status === "error") this.onProblem?.("vault.check", read.error ?? new Error("vault read failed"));
+    return read;
+  };
   createVaultExclusive: CloudBackend["createVaultExclusive"] = (vault) => this.current.createVaultExclusive(vault);
   writeVault: CloudBackend["writeVault"] = (vault) => this.current.writeVault(vault);
   subscribeVault: CloudBackend["subscribeVault"] = (onRead) => this.current.subscribeVault(onRead);

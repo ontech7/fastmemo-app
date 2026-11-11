@@ -86,6 +86,8 @@ globalThis.__storeState = storeState;
 globalThis.__dispatched = [];
 
 const STUBS = {
+  // Sentry (ADR-035): nothing is reported from a test.
+  "@/libs/diagnostics": `export const reportHandled = () => {}; export const addTrail = () => {}; export const reportPageError = () => {};`,
   "llama.rn": `
     const llama = globalThis.__llama;
     const fileOf = (model) => model.slice(model.lastIndexOf("/") + 1);

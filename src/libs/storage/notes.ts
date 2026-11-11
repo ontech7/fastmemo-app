@@ -15,7 +15,7 @@ export const noteStore = FSStorage()
   ? createNoteStore(createNoteStoreBackend(), {
       report: (message, detail) => {
         console.warn(message, detail ?? "");
-        Sentry.captureMessage(message, { level: "warning", extra: { detail } });
+        Sentry.captureMessage(message, { level: "warning", tags: { area: "storage" }, extra: { detail } });
       },
       onSortNeeded: () => {
         sortNeeded = true;
