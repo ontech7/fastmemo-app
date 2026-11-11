@@ -23,6 +23,7 @@ import i18n from "@/libs/i18n";
 import type { EditorImage, ImageChange } from "@/libs/richTextEditor";
 import { reportPageError } from "@/libs/diagnostics";
 import { PAGE_ERROR_MESSAGE, PAGE_ERROR_SCRIPT } from "@/libs/pageErrors";
+import { reducePhoto } from "@/libs/reducePhoto";
 import { IMAGE_FAILED_MESSAGE, IMAGE_MESSAGE, imageCommand, RICH_TEXT_SCRIPT, RICH_TEXT_STYLE } from "@/libs/richTextEditor";
 import {
   selectorAIAssistant,
@@ -34,7 +35,6 @@ import type { TextNote } from "@/types";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
 import { toast } from "@/utils/toast";
 import { voiceTextToHtml } from "@/utils/voiceTranscript";
-import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
 import type { ReactElement } from "react";
@@ -303,23 +303,15 @@ export default function NoteTextEditor({ initialNote }: Props) {
   }, [devMode]);
 
   const pickImage = useCallback(async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      quality: 0.3,
-      base64: true,
-    });
+    const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true });
 
     if (result.canceled || !result.assets?.length) return;
 
     const image = result.assets[0];
+    // Brought to 1600 px on its long side as JPEG: a phone photo would otherwise weigh megabytes in the note (LL-083).
+    const base64 = await reducePhoto(image.uri, image.width, image.height);
 
-    const manipResult = await ImageManipulator.manipulateAsync(image.uri, [], {
-      compress: 0.3,
-      format: ImageManipulator.SaveFormat.JPEG,
-      base64: true,
-    });
-
-    const src = `data:image/jpeg;base64,${manipResult.base64}`;
+    const src = `data:image/jpeg;base64,${base64}`;
     richTextEditor.current?.focusContentEditor();
     richTextEditor.current?.command(`window.__fm && window.__fm.insertImage(${JSON.stringify(src)})`);
   }, []);

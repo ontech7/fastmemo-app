@@ -2215,6 +2215,29 @@ under ADR-029.
 
 ---
 
+### LL-083: A photo went into a note at full resolution
+
+**Date:** 2026-11-11  
+**Severity:** Medium (one phone photo could take most of a note's 1 MB, and every copy and sync of the note carried it)  
+**Category:** Performance  
+**What happened:** `NoteTextEditor.pickImage` asked the picker for base64 at quality 0.3, then re-encoded the picture at
+the same size with `manipulateAsync` (compress 0.3) and inserted that. The resolution was never touched: a 12 MP photo
+stayed 4000 x 3000, hundreds of KB to megabytes of base64 in the note's HTML, decoded in the editor's WebView at every
+open. The picker's own base64 was read and thrown away.  
+**Root cause:** compression was taken for reduction; quality lowers the bytes per pixel, not the pixels, and a note's photo
+never needs more than a screen's width.  
+**Fix:** the picker returns the file only (`allowsEditing: true`, no `quality`, no `base64`); `reducePhoto` (Task 5's,
+`src/libs/reducePhoto.ts`, the SDK 58 `ImageManipulator.manipulate` API, `manipulateAsync` being deprecated) brings the long
+side to 1600 px when larger and saves JPEG at 0.6. A generated 4000 x 3000 photo of 7 MB goes in at 1600 x 1200, 0.14 MB;
+a portrait one gets a 1600 height; an 800 x 600 one keeps its size. The report screen uses the same function (LL-088).  
+**Rule:** a picture stored in a note or sent anywhere is resized to what it is shown at, then compressed; one function for
+every place that takes a picture.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 13)
+
+---
+
 ### LL-088: A report with screenshots couldn't be sent, and the error said nothing
 
 **Date:** 2026-11-11  
