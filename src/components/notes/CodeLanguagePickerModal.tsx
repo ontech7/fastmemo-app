@@ -1,4 +1,4 @@
-import { CODE_LANGUAGES, LANGUAGE_LABELS } from "@/constants/code-languages";
+import { CODE_LANGUAGES, LANGUAGE_LABELS, PLAIN_TEXT_LANGUAGES } from "@/constants/code-languages";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, MONOSPACE_FONT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -39,6 +39,7 @@ export default function CodeLanguagePickerModal({ visible, selectedLanguage, onS
                 >
                   <Text style={[styles.languageItemText, isSelected && styles.languageItemTextSelected]}>
                     {LANGUAGE_LABELS[lang]}
+                    {PLAIN_TEXT_LANGUAGES.has(lang) && <Text style={styles.plainText}>{`  ${t("code.plain_text")}`}</Text>}
                   </Text>
                 </TouchableOpacity>
               );
@@ -100,5 +101,10 @@ const styles = StyleSheet.create({
   },
   languageItemTextSelected: {
     color: COLOR.accentSoft,
+  },
+  plainText: {
+    fontSize: FONTSIZE.small,
+    fontFamily: FONT.regular,
+    color: COLOR.textMuted,
   },
 });

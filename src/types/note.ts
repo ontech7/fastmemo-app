@@ -9,6 +9,8 @@ export interface TodoItem {
 export interface KanbanItem {
   id: string;
   text: string;
+  /** When the card was added (cards made before 4.1.0 may lack it). */
+  createdAt?: number;
 }
 
 export interface KanbanColumn {

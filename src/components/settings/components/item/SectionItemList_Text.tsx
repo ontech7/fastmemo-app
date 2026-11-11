@@ -27,10 +27,14 @@ export default function SectionItemList_Text({ title, text = null, extra = null,
 /* STYLES */
 
 const styles = StyleSheet.create({
+  // The row (SectionItemList) pads its content by PADDING_MARGIN.lg: the pressable takes that padding back, so the whole
+  // row answers a tap, edges included, and looks the same (LL-087).
   sectionItemList_button: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    margin: -PADDING_MARGIN.lg,
+    padding: PADDING_MARGIN.lg,
   },
   sectionItemList_title: {
     color: COLOR.textPrimary,

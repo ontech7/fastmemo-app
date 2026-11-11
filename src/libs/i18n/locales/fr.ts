@@ -298,6 +298,7 @@ const fr = {
     delete_tab: "Supprimer l'onglet",
     delete_tab_confirm: "Voulez-vous vraiment supprimer cet onglet ? Cette action est irréversible.",
     language: "Langage",
+    plain_text: "texte brut",
   },
   changecategory: {
     title: "Changer de Catégorie",
@@ -686,12 +687,9 @@ const fr = {
       category_not_found: "Catégorie non trouvée",
       not_todo_note: "Cette note n'est pas une liste",
       category_exists: "La catégorie existe déjà",
-      note_converted: 'Note "{{title}}" convertie',
-      notes_merged: 'Notes fusionnées dans "{{title}}"',
       setting_changed: "Paramètre mis à jour",
       help_message:
         'Je peux créer des notes, listes et tableaux, supprimer, renommer, convertir et fusionner des notes.\nEssayez : "Fais une liste de courses avec lait et pain"\nVoir tout dans Paramètres > Assistant IA.',
-      same_type: "La note est déjà de ce type",
       not_understood: "Je ne peux aider qu'avec les notes",
       error: "Un problème est survenu, réessayez",
       voice_unavailable: "Voix non disponible",

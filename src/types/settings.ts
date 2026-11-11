@@ -50,7 +50,6 @@ export interface AIAssistantSettings {
   modelDownloaded: boolean;
   /** Earlier versions stored a Qwen 2.5 id (`qwen-0.5b` ...): `selectorAIAssistant` reads it as the tier replacing it. */
   selectedModel: "qwen3.5-0.8b" | "qwen3.5-2b" | "qwen3.5-4b";
-  voiceOnly: boolean;
 }
 
 export type NoteCreationMode = "simple" | "smart" | "adaptive";

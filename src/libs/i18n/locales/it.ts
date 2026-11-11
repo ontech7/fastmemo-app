@@ -299,6 +299,7 @@ const it = {
     delete_tab: "Elimina tab",
     delete_tab_confirm: "Sei sicuro di voler eliminare questa tab? L'azione è irreversibile.",
     language: "Linguaggio",
+    plain_text: "testo semplice",
   },
   changecategory: {
     title: "Cambia Categoria",
@@ -681,12 +682,9 @@ const it = {
       category_not_found: "Categoria non trovata",
       not_todo_note: "Quella nota non è una lista",
       category_exists: "La categoria esiste già",
-      note_converted: 'Nota "{{title}}" convertita',
-      notes_merged: 'Note unite in "{{title}}"',
       setting_changed: "Impostazione aggiornata",
       help_message:
         'Posso creare note, liste e board, eliminare, rinominare, convertire e unire note, e altro.\nProva: "Fammi una lista della spesa con latte e pane"\nVedi tutto in Impostazioni > Assistente AI.',
-      same_type: "La nota è già di quel tipo",
       not_understood: "Posso solo aiutarti con le note",
       error: "Qualcosa è andato storto, riprova",
       voice_unavailable: "Voce non disponibile",

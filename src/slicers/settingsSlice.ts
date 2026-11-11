@@ -60,7 +60,6 @@ const initialState: SettingsState = {
     enabled: false,
     modelDownloaded: false,
     selectedModel: DEFAULT_MODEL_ID,
-    voiceOnly: false,
   },
   reportDate: null,
   reportLog: [],
@@ -192,7 +191,6 @@ const DEFAULT_AI_ASSISTANT: AIAssistantSettings = {
   enabled: false,
   modelDownloaded: false,
   selectedModel: DEFAULT_MODEL_ID,
-  voiceOnly: false,
 };
 const selectorStoredAIAssistant = (state: RootState): AIAssistantSettings => state.settings.aiAssistant || DEFAULT_AI_ASSISTANT;
 /**

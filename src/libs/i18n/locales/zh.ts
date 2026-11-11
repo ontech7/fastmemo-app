@@ -297,6 +297,7 @@ const zh = {
     delete_tab: "删除标签",
     delete_tab_confirm: "确定要删除此标签吗？此操作无法撤销。",
     language: "语言",
+    plain_text: "纯文本",
   },
   changecategory: {
     title: "更改类别",
@@ -660,12 +661,9 @@ const zh = {
       category_not_found: "未找到分类",
       not_todo_note: "该笔记不是清单",
       category_exists: "分类已存在",
-      note_converted: '笔记"{{title}}"已转换',
-      notes_merged: '笔记已合并为"{{title}}"',
       setting_changed: "设置已更新",
       help_message:
         '我可以创建笔记、清单和看板，删除、重命名、转换和合并笔记等。\n试试："创建一个包含牛奶和面包的购物清单"\n所有功能请查看设置 > AI助手。',
-      same_type: "笔记已经是该类型",
       not_understood: "我只能帮助处理笔记",
       error: "出现问题，请重试",
       voice_unavailable: "语音不可用",

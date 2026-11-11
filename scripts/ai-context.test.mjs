@@ -78,7 +78,7 @@ globalThis.__appState = appState;
 const storeState = {
   settings: {
     language: "it",
-    aiAssistant: { enabled: true, modelDownloaded: true, selectedModel: "qwen3.5-2b", voiceOnly: false },
+    aiAssistant: { enabled: true, modelDownloaded: true, selectedModel: "qwen3.5-2b" },
   },
   categories: { items: [] },
 };
@@ -277,7 +277,7 @@ async function fresh() {
   globalThis.__dispatched.length = 0;
   storeState.settings = {
     language: "it",
-    aiAssistant: { enabled: true, modelDownloaded: true, selectedModel: "qwen3.5-2b", voiceOnly: false },
+    aiAssistant: { enabled: true, modelDownloaded: true, selectedModel: "qwen3.5-2b" },
   };
   storeState.categories.items = [];
 }

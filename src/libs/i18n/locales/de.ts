@@ -298,6 +298,7 @@ const de = {
     delete_tab: "Tab löschen",
     delete_tab_confirm: "Möchten Sie diesen Tab wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
     language: "Sprache",
+    plain_text: "reiner Text",
   },
   changecategory: {
     title: "Kategorie ändern",
@@ -684,12 +685,9 @@ const de = {
       category_not_found: "Kategorie nicht gefunden",
       not_todo_note: "Diese Notiz ist keine Checkliste",
       category_exists: "Kategorie existiert bereits",
-      note_converted: 'Notiz "{{title}}" konvertiert',
-      notes_merged: 'Notizen zu "{{title}}" zusammengeführt',
       setting_changed: "Einstellung aktualisiert",
       help_message:
         'Ich kann Notizen, Listen und Boards erstellen, löschen, umbenennen, konvertieren und zusammenführen.\nVersuchen Sie: "Erstelle eine Einkaufsliste mit Milch und Brot"\nAlle Funktionen unter Einstellungen > KI-Assistent.',
-      same_type: "Die Notiz ist bereits von diesem Typ",
       not_understood: "Ich kann nur bei Notizen helfen",
       error: "Etwas ist schiefgelaufen, bitte versuchen Sie es erneut",
       voice_unavailable: "Sprache nicht verfügbar",

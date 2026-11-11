@@ -2259,6 +2259,46 @@ never becomes a note by itself and is never synced. `scripts/utils.test.mjs` cov
 
 ---
 
+### LL-086: Nine languages were offered with no highlighting behind them
+
+**Date:** 2026-11-11  
+**Severity:** Low (a code note in Ruby, Bash, GraphQL, Lua, Perl, Haskell, Elixir, R or Dockerfile showed as plain text,
+and nothing said so: it looked broken)  
+**Category:** Bug  
+**What happened:** the language picker lists `CODE_LANGUAGES` (`src/constants/code-languages.ts`), while the editor page
+loads a highlighter from its own `LANG_LOADERS` (`src/editor/codemirror-entry.js`). Nine languages were in the first list
+and not in the second: picking one gave no colours, with no hint why.  
+**Root cause:** two lists of the same thing in two places (the app and the page bundle), with nothing tying them together.  
+**Fix:** `PLAIN_TEXT_LANGUAGES` names the nine; the picker writes "plain text" (`code.plain_text`) after them, in muted
+grey, and they stay selectable. `scripts/code-page.test.mjs` reads the page's loaders and checks that every offered
+language either has one or is in `PLAIN_TEXT_LANGUAGES`, never both: adding a language to one list without the other fails
+the test.  
+**Rule:** two lists that must agree across the app and a page bundle get a test that reads both.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 15)
+
+---
+
+### LL-087: A settings row answered only in its middle
+
+**Date:** 2026-11-11  
+**Severity:** Low (a tap near a row's edge, where a thumb often lands, did nothing)  
+**Category:** Bug  
+**What happened:** a settings row (`SectionItemList`) pads its content by `PADDING_MARGIN.lg`, and the pressable inside it
+(`SectionItemList_Navigation`, `SectionItemList_Text`) covered only the content: a band of 16 px around it, on every side,
+looked like the row and ignored taps.  
+**Root cause:** the padding belonged to the container, outside the pressable it was meant to give room to.  
+**Fix:** in both item components the pressable takes the row's padding back: `margin: -PADDING_MARGIN.lg` and
+`padding: PADDING_MARGIN.lg`. The whole row answers, and it looks the same. Seen on the web: a click 3 px from the right
+end and from the top edge opens the row.  
+**Rule:** the pressable of a row covers the row; spacing goes inside it, not around it.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 15)
+
+---
+
 ### LL-088: A report with screenshots couldn't be sent, and the error said nothing
 
 **Date:** 2026-11-11  

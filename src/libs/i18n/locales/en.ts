@@ -298,6 +298,7 @@ const en = {
     delete_tab: "Delete tab",
     delete_tab_confirm: "Are you sure you want to delete this tab? This can't be undone.",
     language: "Language",
+    plain_text: "plain text",
   },
   changecategory: {
     title: "Change Category",
@@ -676,12 +677,9 @@ const en = {
       category_not_found: "Category not found",
       not_todo_note: "That note is not a checklist",
       category_exists: "Category already exists",
-      note_converted: 'Note "{{title}}" converted',
-      notes_merged: 'Notes merged into "{{title}}"',
       setting_changed: "Setting updated",
       help_message:
         'I can create notes, lists and boards, delete, rename, convert and merge notes, and more.\nTry: "Create a shopping list with milk and bread"\nSee all features in Settings > AI Assistant.',
-      same_type: "The note is already that type",
       not_understood: "I can only help with notes",
       error: "Something went wrong, try again",
       voice_unavailable: "Voice not available",

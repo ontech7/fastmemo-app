@@ -56,7 +56,7 @@ globalThis.__tauri = tauri;
 const storeState = {
   settings: {
     language: "it",
-    aiAssistant: { enabled: false, modelDownloaded: false, selectedModel: "qwen3.5-2b", voiceOnly: false },
+    aiAssistant: { enabled: false, modelDownloaded: false, selectedModel: "qwen3.5-2b" },
   },
   categories: { items: [] },
 };
@@ -223,7 +223,7 @@ async function fresh() {
   tauri.handlers = defaultHandlers();
   for (const id of Object.keys(C.AI_MODELS)) putModel(id);
   globalThis.__dispatched.length = 0;
-  storeState.settings.aiAssistant = { enabled: false, modelDownloaded: false, selectedModel: "qwen3.5-2b", voiceOnly: false };
+  storeState.settings.aiAssistant = { enabled: false, modelDownloaded: false, selectedModel: "qwen3.5-2b" };
 }
 
 /** A promise settled by hand. */

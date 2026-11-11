@@ -36,6 +36,22 @@ export const CODE_LANGUAGES = [
   "dockerfile",
 ] as const;
 
+/**
+ * Languages offered without a highlighter in the editor page (`src/editor/codemirror-entry.js` has no loader for them): the
+ * picker says they show as plain text. `scripts/code-page.test.mjs` keeps this list and the page's loaders in step (LL-086).
+ */
+export const PLAIN_TEXT_LANGUAGES: ReadonlySet<string> = new Set([
+  "ruby",
+  "bash",
+  "graphql",
+  "lua",
+  "perl",
+  "haskell",
+  "elixir",
+  "r",
+  "dockerfile",
+]);
+
 export const LANGUAGE_LABELS: Record<string, string> = {
   plaintext: "Plain Text",
   javascript: "JavaScript",

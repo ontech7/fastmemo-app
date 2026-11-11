@@ -1,6 +1,7 @@
 // Code note page test: the page `buildCodeEditorHtml` builds must hold the note's code exactly, whatever it contains
 // ("$'", "$&", "</script>", "<!--", U+2028, half a megabyte...), and nothing of the code may become part of the page (LL-077).
-// Node cases on the built string, then the real page in headless Chrome.
+// Node cases on the built string, the languages offered against the page's highlighters (LL-086), then the real page in
+// headless Chrome.
 // Run: node scripts/code-page.test.mjs   (needs Google Chrome; CHROME=/path/to/chrome to use another one)
 
 import { build } from "esbuild";
@@ -29,6 +30,7 @@ await build({
       export { CODEMIRROR_HTML } from "@/generated/codemirror-html";
       export { SCROLLBAR_CSS } from "@/styles/scrollbar";
       export { PAGE_ERROR_SCRIPT } from "@/libs/pageErrors";
+      export { CODE_LANGUAGES, PLAIN_TEXT_LANGUAGES } from "@/constants/code-languages";
     `,
     resolveDir: src,
     loader: "ts",
@@ -53,8 +55,16 @@ await build({
     },
   ],
 });
-const { buildCodeEditorHtml, buildPageFrom, serializeForScript, CODEMIRROR_HTML, SCROLLBAR_CSS, PAGE_ERROR_SCRIPT } =
-  await import(pathToFileURL(out).href);
+const {
+  buildCodeEditorHtml,
+  buildPageFrom,
+  serializeForScript,
+  CODEMIRROR_HTML,
+  SCROLLBAR_CSS,
+  PAGE_ERROR_SCRIPT,
+  CODE_LANGUAGES,
+  PLAIN_TEXT_LANGUAGES,
+} = await import(pathToFileURL(out).href);
 
 let passed = 0;
 const failures = [];
@@ -130,6 +140,21 @@ ok(
     return win.__EDITOR_CONFIG__.language === "python" && win.__EDITOR_CONFIG__.readOnly === true;
   })()
 );
+
+/* ------------------------------------------------------------------------------------------------------------------ */
+/* The languages offered and the page's highlighters (LL-086)                                                          */
+/* ------------------------------------------------------------------------------------------------------------------ */
+
+// A language the picker offers either has a loader in the page or is marked as plain text there, never both.
+{
+  const entry = readFileSync(join(src, "editor", "codemirror-entry.js"), "utf8");
+  const loaders = new Set([...entry.matchAll(/^\s{2}(\w+): \(\) => import/gm)].map((m) => m[1]));
+  ok("the page's loaders are found", loaders.size > 10, loaders.size);
+  for (const lang of CODE_LANGUAGES) {
+    if (lang === "plaintext") continue;
+    ok(`${lang}: highlighted, or said to be plain text`, loaders.has(lang) !== !!PLAIN_TEXT_LANGUAGES?.has(lang));
+  }
+}
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 /* The real page in headless Chrome                                                                                   */

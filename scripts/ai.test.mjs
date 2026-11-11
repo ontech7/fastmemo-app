@@ -209,7 +209,7 @@ eq("every model has its sha256", pickBy(NATIVE.C.AI_MODELS, "sha256"), [
   "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
 ]);
 {
-  const never = { enabled: false, modelDownloaded: false, selectedModel: "qwen3.5-0.8b", voiceOnly: false };
+  const never = { enabled: false, modelDownloaded: false, selectedModel: "qwen3.5-0.8b" };
   const stateOf = (aiAssistant) => ({ settings: { aiAssistant } });
   ok(
     "desktop: an explicit 0.8B pick, not yet downloaded, sticks (the stored object)",

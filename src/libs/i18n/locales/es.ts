@@ -298,6 +298,7 @@ const es = {
     delete_tab: "Eliminar pestaña",
     delete_tab_confirm: "¿Seguro que quieres eliminar esta pestaña? No se puede deshacer.",
     language: "Lenguaje",
+    plain_text: "texto sin formato",
   },
   changecategory: {
     title: "Cambiar Categoría",
@@ -681,12 +682,9 @@ const es = {
       category_not_found: "Categoría no encontrada",
       not_todo_note: "Esa nota no es una lista",
       category_exists: "La categoría ya existe",
-      note_converted: 'Nota "{{title}}" convertida',
-      notes_merged: 'Notas fusionadas en "{{title}}"',
       setting_changed: "Configuración actualizada",
       help_message:
         'Puedo crear notas, listas y tableros, eliminar, renombrar, convertir y fusionar notas, y más.\nPrueba: "Haz una lista de compras con leche y pan"\nVe todas las funciones en Ajustes > Asistente IA.',
-      same_type: "La nota ya es de ese tipo",
       not_understood: "Solo puedo ayudar con las notas",
       error: "Algo salió mal, intenta de nuevo",
       voice_unavailable: "Voz no disponible",

@@ -298,6 +298,7 @@ const ja = {
     delete_tab: "タブを削除",
     delete_tab_confirm: "このタブを削除してもよろしいですか？この操作は取り消せません。",
     language: "言語",
+    plain_text: "プレーンテキスト",
   },
   changecategory: {
     title: "カテゴリーの変更",
@@ -675,12 +676,9 @@ const ja = {
       category_not_found: "カテゴリが見つかりません",
       not_todo_note: "そのノートはチェックリストではありません",
       category_exists: "カテゴリは既に存在します",
-      note_converted: "ノート「{{title}}」を変換しました",
-      notes_merged: "ノートを「{{title}}」に統合しました",
       setting_changed: "設定を更新しました",
       help_message:
         "ノート、リスト、ボードの作成、削除、名前変更、変換、統合などができます。\n試してみて：「牛乳とパンの買い物リストを作成」\n全機能は設定 > AIアシスタントをご覧ください。",
-      same_type: "ノートは既にそのタイプです",
       not_understood: "ノートに関するお手伝いのみ可能です",
       error: "問題が発生しました。もう一度お試しください",
       voice_unavailable: "音声が利用できません",
