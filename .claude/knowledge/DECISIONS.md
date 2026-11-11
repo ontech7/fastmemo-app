@@ -585,6 +585,8 @@ behind an interface.
   ~23k reads + ~600 writes, plus a full upload of every note on each connect/unlock). A full sync reads every note, category and
   tombstone.
 
+**Note (2026-11-11):** the upload queue (`cloud.items.add`) holds markers, not encrypted copies: see ADR-036.
+
 ## ADR-017: A Self-Hosted FastMemo Server as a Second `CloudBackend`
 
 **Status:** Accepted (2026-10-20), implemented on `feat/self-hosted-server` (app) and in the `fastmemo-server` repo  
@@ -1797,3 +1799,38 @@ render error left a blank screen.
 - the desktop and the web report "macOS", not "macOS 15.2", until plan 2 reads it from Rust;
 - a failure reported once per session hides how often it happens within one; Sentry counts sessions instead;
 - the installation code is a pseudonymous id: wiping data keeps it, uninstalling loses it.
+
+## ADR-036: The Upload Queue Holds a Marker
+
+**Status:** Accepted (2026-11-11), plan 1 of 4.1.0 (Task 18)  
+**Context:** Every commit of a synced note ran `CryptNote.encrypt(forUpload(note))` inside the `addNote` reducer, to put a
+sealed copy in `cloud.items.add` (LL-017): AES over the whole note on the JS thread, at each pause in typing, plus the copy's
+file in the note store (`o:<id>`, as big as the note). The engine never uploaded that copy: since ADR-016 it encrypts the
+**stored** note at push (its latest content, under the current key), and uses the queue entry only to know the note is waiting
+and to recognise the entry it pushed.  
+**Decision:**
+
+- **An entry is a marker**, `{ id, rev }` (`UploadMarker`, `types/store.ts`), with the revision of the commit that queued it.
+  `queueCloudAdd` keeps its rules (a device-only note isn't queued; a pending deletion is cancelled even with the vault locked;
+  with the vault locked nothing is queued, the resync on unlock uploads the note) and writes
+  `{ id: note.id, rev: noteRev(note) }`. Nothing is encrypted in a reducer.
+- **A new object at each commit:** `notesPushed` dequeues an entry only if it is still the object the push took (LL-033), so an
+  edit made while a push is on its way stays queued and goes out with the next push.
+- **Entries written by 4.0.0 or earlier** (encrypted copies) are still accepted: the queue's type is `UploadMarker | Note`,
+  every reader uses only the key or the object's identity (`merge.ts` `id in`, the engine's push and `adoptLegacyOutbox`, the
+  home's pending count, the note store, which stores entries as opaque values), and the engine pushes the stored note for them
+  too.
+- **A rollback stays safe:** 4.0.0 is the oldest version that reads the note store's entries (ADR-018: earlier versions read the
+  legacy single value, which this version doesn't write), and 4.0.0 also pushes the stored note, encrypted at push, so a marker
+  it finds means "waiting" there too.
+
+**Alternatives rejected:**
+
+- **Encryption in a middleware with a cache of the last ciphertext** (LL-017's proposed fix): it moves the work out of the
+  reducer but still encrypts at every commit a copy nobody uploads.
+- **A set of ids** instead of objects: the engine's "still the same entry" check (LL-033) needs a new object per commit.
+
+**Trade-offs:**
+
+- The marker's `rev` is informative only (nothing reads it today); the stored note decides what goes out.
+- An outbox read by a version older than 4.0.0 would see markers, but no such version reads these entries.

@@ -321,7 +321,9 @@ SyncOnProvider               -> the engine runs only while useVaultUnlocked(); i
 — a cached old vault doc would mask a reset done on another device and survive restarts (see LL-027). Listeners act only on
 server-confirmed snapshots (not `fromCache`, no pending local writes). Offline -> "error" -> callers skip (no false
 lock/create). A note is never lost to slow encryption/upload: it is written to local state (plaintext, persisted) before
-`queueCloudAdd`, and the outbox keeps every entry until a push commits it (the engine retries with backoff, 2s -> 5 min).
+`queueCloudAdd`, and the outbox keeps every entry until a push commits it (the engine retries with backoff, 2s -> 5 min). An
+upload entry is a marker `{ id, rev }`, a new object per commit: nothing is encrypted in a reducer, the engine encrypts the
+stored note at push (ADR-036; an encrypted copy queued by 4.0.0 is accepted the same way).
 
 ### Cloud Sync Engine (ADR-016)
 

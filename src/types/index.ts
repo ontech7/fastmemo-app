@@ -27,6 +27,6 @@ export type {
   TourStep,
   SettingsState,
 } from "./settings";
-export type { NoteFilters, NotesState, CategoriesState, RootState } from "./store";
+export type { NoteFilters, NotesState, CategoriesState, RootState, UploadMarker } from "./store";
 export type { AppConfigs, AppVersionResponse, AppVersionPlatformInfo } from "./config";
 export type { Timestamped, Ordered } from "./common";

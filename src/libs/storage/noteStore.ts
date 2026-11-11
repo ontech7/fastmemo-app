@@ -1,6 +1,6 @@
 import { noteRev } from "@/libs/cloud/revision";
 
-import type { Note, NotesState } from "@/types";
+import type { Note, NotesState, UploadMarker } from "@/types";
 
 /*
  * The notes slice, stored one value per note (ADR-018). redux-persist hands over the whole slice on every change
@@ -405,7 +405,7 @@ export function createNoteStore(backend: NoteStoreBackend, options: NoteStoreOpt
       const cloud = (state.cloud ?? { items: { delete: {}, detach: {} } }) as NotesState["cloud"];
       const add = { ...cloud.items.add };
       ids.forEach((id, i) => {
-        if (values[i]) add[id] = values[i] as Note;
+        if (values[i]) add[id] = values[i] as UploadMarker | Note;
       });
       state.cloud = { ...cloud, items: { ...cloud.items, add } };
     };

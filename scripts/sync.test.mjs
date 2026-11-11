@@ -17,8 +17,10 @@ const STUBS = {
   "@/libs/cloud": `export const only_if_cloudConnected = (cb) => cb(); export const isCloudConnected = () => true; export const cloud = null;`,
   // The app's note store, which the wipe thunk uses (ADR-018).
   "@/libs/storage/notes": `export const noteStore = null; export const notesNeedSorting = () => false;`,
-  "@/libs/vaultSession": `export const isVaultUnlocked = () => true; export const getDEK = () => "k1";`,
-  "@/utils/crypt": `export const CryptNote = { encrypt: (note) => ({ ...note, sealed: "outbox" }) };`,
+  // A test locks the vault with globalThis.__vaultLocked.
+  "@/libs/vaultSession": `export const isVaultUnlocked = () => globalThis.__vaultLocked !== true; export const getDEK = () => "k1";`,
+  // Counts what the slice encrypts (the upload queue holds markers: nothing, ADR-036).
+  "@/utils/crypt": `export const CryptNote = { encrypt: (note) => { globalThis.__sliceEncrypts = (globalThis.__sliceEncrypts ?? 0) + 1; return { ...note, sealed: "outbox" }; } };`,
   "@/configs/default": `export const defaultCategory = { order: 0, name: "All", icon: "none", index: true, selected: true };`,
   "@/constants/icons": `export const CATEGORY_MAP = {};`,
 };
@@ -1726,6 +1728,92 @@ await scenario(
     ok("(not stopped meanwhile, the same reads are a removal and a stale key)", a.removed && b.stale);
   }
 );
+
+/* ------------------------------------------------------------------------------------------------------------------ */
+/* The upload queue holds markers (ADR-036, LL-017)                                                                    */
+/* ------------------------------------------------------------------------------------------------------------------ */
+
+await scenario("the upload queue holds markers", async ({ cloud, add, settle }) => {
+  const a = await add("A");
+  a.engine.start();
+  await settle();
+
+  globalThis.__sliceEncrypts = 0;
+  a.dispatch(N.addNote(newNote("m1", "uno")));
+  const first = a.store.getState().notes.cloud.items.add.m1;
+  ok(
+    "a commit queues a marker",
+    first !== undefined &&
+      JSON.stringify(Object.keys(first).sort()) === '["id","rev"]' &&
+      first.id === "m1" &&
+      first.rev === M.noteRev(a.get("m1")),
+    first
+  );
+  ok("a commit encrypts nothing", globalThis.__sliceEncrypts === 0, globalThis.__sliceEncrypts);
+  edit(a, "m1", "due");
+  ok("each commit makes a new entry", a.store.getState().notes.cloud.items.add.m1 !== first);
+  await settle();
+  ok(
+    "the push uploads the stored note, encrypted by the engine",
+    cloud.notes.get("m1")?.sealed === "k1" && cloud.notes.get("m1")?.text === "due",
+    cloud.notes.get("m1")
+  );
+  ok("...and empties the queue", !("m1" in a.store.getState().notes.cloud.items.add));
+
+  // An edit made while a push is on its way: the push's answer doesn't dequeue the newer marker.
+  const realPush = a.backend.push.bind(a.backend);
+  const releases = [];
+  let calls = 0;
+  a.backend.push = async (...args) => {
+    calls++;
+    await new Promise((resolve) => releases.push(resolve));
+    return realPush(...args);
+  };
+  edit(a, "m1", "tre");
+  await until(() => calls === 1);
+  edit(a, "m1", "quattro");
+  const newer = a.store.getState().notes.cloud.items.add.m1;
+  releases[0]();
+  await until(() => calls === 2);
+  ok("an edit made while a push is on its way stays queued", a.store.getState().notes.cloud.items.add.m1 === newer);
+  a.backend.push = realPush;
+  releases[1]();
+  await settle();
+  ok("...and goes out with the next push", cloud.notes.get("m1")?.text === "quattro" && outboxEmpty(a), cloud.notes.get("m1"));
+});
+
+await scenario("entries written by 4.0.0 (encrypted copies) are pushed as the stored note", async ({ cloud, add, settle }) => {
+  const t = Date.now() - 100000;
+  const stored = note("old1", t, { text: "vecchia", syncedRev: t - 10 });
+  // 4.0.0 queued an encrypted copy; the stored note is what goes out (the copy only says "waiting").
+  const b = await add("B", {
+    preloadedState: preloaded([stored], { add: { old1: { ...stored, text: "copy", sealed: "outbox" } } }),
+  });
+  b.engine.start();
+  await settle();
+  ok(
+    "a 4.0.0 entry is pushed as the stored note",
+    cloud.notes.get("old1")?.sealed === "k1" && cloud.notes.get("old1")?.text === "vecchia",
+    cloud.notes.get("old1")
+  );
+  ok("...and leaves the queue", !("old1" in b.store.getState().notes.cloud.items.add));
+});
+
+await scenario("a locked vault queues nothing and still cancels a pending deletion", async ({ add }) => {
+  const n2 = note("n2", 2000, { text: "x", syncedRev: 2000 });
+  const d = await add("D", { preloadedState: preloaded([n2], { delete: { n2: { id: "n2", rev: 2000 } } }) });
+  globalThis.__vaultLocked = true;
+  try {
+    d.dispatch(N.addNote({ ...d.get("n2"), text: "y" }));
+    const { add: up, delete: down } = d.store.getState().notes.cloud.items;
+    ok("a locked vault queues nothing", !("n2" in up));
+    ok("...and the pending deletion is cancelled", !("n2" in down));
+  } finally {
+    globalThis.__vaultLocked = false;
+  }
+  d.dispatch(N.addNote({ ...d.get("n2"), text: "z" }));
+  ok("unlocked again, a commit queues its marker", d.store.getState().notes.cloud.items.add.n2?.id === "n2");
+});
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed === 0 ? 0 : 1);

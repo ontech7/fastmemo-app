@@ -7,13 +7,24 @@ export interface NoteFilters {
   order: "asc" | "desc";
 }
 
+/** A note waiting to be uploaded. The engine uploads the stored note, encrypted at that moment: this only marks it. */
+export interface UploadMarker {
+  id: string;
+  rev: number;
+}
+
 export interface NotesState {
   items: Note[];
   temporaryItems: Note[];
   temporaryTrashTimespan: number;
   cloud: {
     items: {
-      add: Record<string, Note>;
+      /**
+       * Notes waiting to be uploaded, by id: a marker, a new object at each commit (the engine dequeues an entry only if it
+       * is still the one it pushed). A `Note` here is an entry written by 4.0.0 or earlier, an encrypted copy, used only as
+       * "this id is waiting" (ADR-036).
+       */
+      add: Record<string, UploadMarker | Note>;
       delete: Record<string, Note>;
       /** Notes detached from the cloud: removed remotely + signalled to other devices. */
       detach: Record<string, Note>;

@@ -469,7 +469,11 @@ memoization.
 encryption it triggers -- runs once per pause in typing (at most every 2s) instead of per keystroke. Encryption still lives in
 reducers.
 
-**Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/47 **Status:** Open
+**Resolution (2026-11-11):** the reducer no longer encrypts: `queueCloudAdd` queues a marker `{ id, rev }`, and the sync engine
+encrypts the stored note at push, as it already did (ADR-036). The random IV no longer matters: nothing is encrypted per commit.
+
+**Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/47 (closed at the 4.1.0 release) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 18)
 
 ---
 

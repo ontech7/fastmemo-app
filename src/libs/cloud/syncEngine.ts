@@ -1,6 +1,6 @@
 import type { UnknownAction } from "@reduxjs/toolkit";
 
-import type { Category, Note, RootState } from "@/types";
+import type { Category, Note, RootState, UploadMarker } from "@/types";
 import type { VaultDoc } from "@/utils/vault";
 
 import { createPlanner, isEmptyPlan, reconcileCategories, type LocalNotes, type SyncPlan } from "./merge";
@@ -69,7 +69,8 @@ export interface PushedEntry<T> {
 }
 
 export interface NotesPushed {
-  add: PushedEntry<Note>[];
+  /** A marker, or an encrypted copy 4.0.0 queued (ADR-036): only its identity is used. */
+  add: PushedEntry<UploadMarker | Note>[];
   delete: PushedEntry<Note>[];
   detach: PushedEntry<Note>[];
 }
@@ -781,7 +782,7 @@ export class SyncEngine {
     };
     const sent = {
       notes: {
-        add: new Map<string, PushedEntry<Note>>(),
+        add: new Map<string, PushedEntry<UploadMarker | Note>>(),
         delete: new Map<string, PushedEntry<Note>>(),
         detach: new Map<string, PushedEntry<Note>>(),
       },

@@ -12,9 +12,8 @@ import type { NotesPushed } from "@/libs/cloud/syncEngine";
 import { configs } from "@/configs";
 import { defaultCategory } from "@/configs/default";
 import { only_if_cloudConnected } from "@/libs/cloud";
-import { baseOf, deletionStub, forUpload, nextRev, noteRev, pruneTombstones, touchNote } from "@/libs/cloud/revision";
+import { baseOf, deletionStub, nextRev, noteRev, pruneTombstones, touchNote } from "@/libs/cloud/revision";
 import { isVaultUnlocked } from "@/libs/vaultSession";
-import { CryptNote } from "@/utils/crypt";
 import { importantFirst } from "@/utils/sort";
 import { wipeNotes } from "./thunks/notes";
 
@@ -37,9 +36,9 @@ const initialState: NotesState = {
 
 /**
  * Queue a note for cloud upload — unless it is an offline (device-only) note.
- * Gated on an unlocked vault: with the vault locked we cannot encrypt, so we
- * skip queueing rather than leak plaintext. Such notes are picked up by the
- * full resync that runs right after the vault is unlocked on connect.
+ * Gated on an unlocked vault: with the vault locked the engine can't encrypt it,
+ * so nothing is queued. Such notes are picked up by the full resync that runs
+ * right after the vault is unlocked on connect.
  */
 const queueCloudAdd = (state: NotesState, note: Note): void => {
   if (note.local) return;
@@ -49,9 +48,10 @@ const queueCloudAdd = (state: NotesState, note: Note): void => {
     // needs no DEK, so it also happens while the vault is locked (the resync on unlock uploads the note).
     delete state.cloud.items.delete[note.id];
     if (!isVaultUnlocked()) return;
-    // The sync engine encrypts the stored note again when it pushes (its latest content, under the current key): this
-    // copy marks the note as waiting, and keeps the outbox readable by an older app version after a rollback.
-    state.cloud.items.add[note.id] = CryptNote.encrypt(forUpload(note));
+    // A marker: the engine encrypts the stored note when it pushes (its latest content, under the current key), so
+    // nothing is encrypted here (LL-017). A new object at each commit: the engine dequeues an entry only if it is still
+    // the one it pushed. 4.0.0, the oldest version that reads these entries, also pushes the stored note (ADR-036).
+    state.cloud.items.add[note.id] = { id: note.id, rev: noteRev(note) };
   });
 };
 
@@ -92,7 +92,7 @@ const markPurged = (state: NotesState, notes: Note[]): void => {
 };
 
 /** Dequeues what was pushed, unless a newer entry replaced it meanwhile (that one still has to go out). */
-const dequeuePushed = (queue: Record<string, Note>, pushed: NotesPushed["add"]): void => {
+const dequeuePushed = <T>(queue: Record<string, T>, pushed: { id: string; entry: T }[]): void => {
   const base = original(queue);
   pushed.forEach(({ id, entry }) => {
     if (base?.[id] === entry) delete queue[id];
@@ -573,7 +573,7 @@ const notesSlice = createSlice({
     builder.addCase(wipeNotes, (state) => {
       state.items = [];
       state.temporaryItems = [];
-      // Their uploads (sealed copies) go too; deletions waiting to go out stay (stubs, no content).
+      // Their uploads go too (markers, or 4.0.0's sealed copies); deletions waiting to go out stay (stubs, no content).
       state.cloud.items.add = {};
     });
   },

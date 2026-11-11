@@ -323,6 +323,17 @@ const ids = (notes) => ({ items: notes.items.map((n) => n.id), trash: notes.temp
 
 console.log("\nbasics");
 {
+  // The upload queue holds a marker (ADR-036): its file is small, whatever the note's size.
+  const disk = new Disk();
+  const app = await launch(disk);
+  await app.dispatch(N.addNote(note("mk", 500, { text: "<div>contenuto</div>".repeat(50) })));
+  const marker = app.notes().cloud.items.add.mk;
+  const file = disk.files.get(`${FOLDER}/o_3Amk.json`);
+  ok("an upload marker's file is under 100 bytes", file !== undefined && file.text.length < 100, file?.text.length);
+  const back = await launch(disk.copy());
+  ok("...and is read back with the same value", same(back.notes().cloud.items.add.mk, marker), back.notes().cloud.items.add.mk);
+}
+{
   const disk = new Disk();
   const app = await launch(disk);
   ok("a fresh install starts empty, and reads fine", app.notes().items.length === 0 && !app.readFailed);
