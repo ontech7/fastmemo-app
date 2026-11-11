@@ -2345,6 +2345,31 @@ in the endpoint, and a test that sends the largest body the app can build.
 
 ---
 
+### LL-089: Reloading the page on the desktop could abort the app
+
+**Date:** 2026-11-11  
+**Severity:** Medium (the crash screen's "Reopen" closed the app instead, about one time in three)  
+**Category:** Bug (desktop)  
+**What happened:** the crash screen's "Reopen" (ADR-035) reloaded the page with `window.location.replace("/")`. On the macOS
+test app the process then died with a Rust panic, "panic in a function that cannot unwind" on a `tokio-runtime-worker`
+(SIGABRT): 4 times in 6 from the crash screen, and 11 times in 28 for a plain reload from Settings — on the 4.0.0 page too
+(6 in 14 against 5 in 14 for the new one), so the cause is in the shell, not in this release's page. The release binary is
+stripped: no symbols in the backtrace.  
+**Root cause:** not proven (no symbols). Most likely a Tauri command answering while its page is being replaced, inside a
+callback that may not unwind. Until 4.1.0 nothing reloaded the page on the desktop (`useSecret`'s `"reload"` has no
+caller), so it never showed.  
+**Fix:** `src/libs/reloadApp.web.ts`: in the desktop app "Reopen" restarts the process with `relaunch()`
+(`@tauri-apps/plugin-process`, already used by the updater, `process:default` allowed), after starting the pending writes
+(`flushNow`, 1.8 s at most), as before an update's restart; the browser still reloads the page. Measured: 8 restarts in 8,
+no crash report; a quick-note draft typed before the crash was there after the restart. The shell's panic itself is left for
+the desktop work of plan 2 (it touches `src-tauri`, which this plan doesn't).  
+**Rule:** never reload the page in the desktop app; restart it with `relaunch()` after a flush.
+
+**Tracking issue:** (not filed; captured here) **Status:** Mitigated (the app no longer reloads the page; the shell's panic is open)  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Stop A)
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
