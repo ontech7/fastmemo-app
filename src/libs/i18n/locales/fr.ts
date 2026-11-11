@@ -287,6 +287,8 @@ const fr = {
     no_cards: "Aucune carte",
     columns_count: "colonnes",
     cards_count: "cartes",
+    delete_column_confirm: "Supprimer la colonne « {{name}} » avec toutes ses cartes ({{count}}) ?",
+    unnamed_column: "Sans nom",
   },
   code: {
     add_tab: "Ajouter un onglet",

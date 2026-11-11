@@ -287,6 +287,8 @@ const de = {
     no_cards: "Keine Karten",
     columns_count: "Spalten",
     cards_count: "Karten",
+    delete_column_confirm: "Die Spalte „{{name}}“ mit allen ihren Karten ({{count}}) löschen?",
+    unnamed_column: "Ohne Namen",
   },
   code: {
     add_tab: "Tab hinzufügen",

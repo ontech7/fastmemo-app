@@ -288,6 +288,8 @@ const it = {
     no_cards: "Nessuna card",
     columns_count: "colonne",
     cards_count: "card",
+    delete_column_confirm: "Eliminare la colonna «{{name}}» con tutte le sue card ({{count}})?",
+    unnamed_column: "Senza nome",
   },
   code: {
     add_tab: "Aggiungi tab",

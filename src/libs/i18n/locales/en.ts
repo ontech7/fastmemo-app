@@ -287,6 +287,8 @@ const en = {
     no_cards: "No cards",
     columns_count: "columns",
     cards_count: "cards",
+    delete_column_confirm: "Delete the column “{{name}}” with all its cards ({{count}})?",
+    unnamed_column: "Untitled",
   },
   code: {
     add_tab: "Add tab",

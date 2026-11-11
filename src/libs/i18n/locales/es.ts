@@ -287,6 +287,8 @@ const es = {
     no_cards: "Sin tarjetas",
     columns_count: "columnas",
     cards_count: "tarjetas",
+    delete_column_confirm: "¿Eliminar la columna «{{name}}» con todas sus tarjetas ({{count}})?",
+    unnamed_column: "Sin nombre",
   },
   code: {
     add_tab: "Agregar pestaña",

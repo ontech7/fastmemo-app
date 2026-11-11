@@ -2100,6 +2100,31 @@ It now uses `JSON.stringify` (JavaScript context).
 
 ---
 
+### LL-078: A card could disappear after a column was deleted or moved
+
+**Date:** 2026-11-11  
+**Severity:** High (a card the user wrote vanished on a drop)  
+**Category:** Bug  
+**What happened:** columns registered their position with the drag provider once (`KanbanColumn.tsx`, `registerColumnPosition`)
+and never unregistered. After a column was deleted, a drop could resolve to the deleted column's stale entry, and the editor's
+`moveCard` removed the card from its column first and then inserted it into "the target" — which no longer existed. The card
+was gone from the board, and the commit saved that.  
+**Root cause:** two faults that only hurt together: positions kept beyond the life of what they measured, and a board operation
+that removed before it knew where to insert.  
+**Fix:** `src/libs/kanbanOps.ts`: `moveCard` and `reorderCards` return the board they got when they can't complete (the card
+isn't in its column, the target column doesn't exist, the card is already there, a reorder that isn't the same cards). The
+editor runs them through `updateNoteAsync` on the board as it is at that moment, and a board that comes back unchanged commits
+nothing. `scripts/kanban.test.mjs` covers the cases and 5,000 random moves, valid and not, after each of which the board holds
+the same cards. The drag itself is rebuilt on positions measured at lift (ADR-037, plan 1 Task 24). Deleting a column with
+cards now asks first.  
+**Rule:** a board operation returns the board it received when it can't complete; never take a card out before its place is
+known.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 9; drag rebuilt in Task 24)
+
+---
+
 ### LL-088: A report with screenshots couldn't be sent, and the error said nothing
 
 **Date:** 2026-11-11  

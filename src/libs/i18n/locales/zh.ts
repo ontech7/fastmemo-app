@@ -286,6 +286,8 @@ const zh = {
     no_cards: "没有卡片",
     columns_count: "列",
     cards_count: "卡片",
+    delete_column_confirm: "删除列“{{name}}”及其所有卡片（{{count}}）？",
+    unnamed_column: "未命名",
   },
   code: {
     add_tab: "添加标签",

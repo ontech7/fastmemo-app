@@ -287,6 +287,8 @@ const ja = {
     no_cards: "カードがありません",
     columns_count: "列",
     cards_count: "カード",
+    delete_column_confirm: "列「{{name}}」とそのすべてのカード（{{count}}）を削除しますか？",
+    unnamed_column: "名前なし",
   },
   code: {
     add_tab: "タブを追加",

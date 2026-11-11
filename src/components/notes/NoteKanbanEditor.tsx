@@ -11,6 +11,7 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MAR
 import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
+import { moveCard as moveCardOn, reorderCards as reorderCardsOn } from "@/libs/kanbanOps";
 import KanbanDragProvider from "@/providers/KanbanDragProvider";
 import { selectorAIAssistant, selectorWebhook_addKanbanNote } from "@/slicers/settingsSlice";
 import type { KanbanItem, KanbanNote } from "@/types";
@@ -106,44 +107,28 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
 
   /* Card movement for drag provider */
 
+  // On the board as it is now (it may have been reloaded with another device's change): a move that can't complete, or that
+  // changes nothing, commits nothing (LL-078).
   const moveCard = useCallback(
     (cardId: string, fromColumnId: string, toColumnId: string, toIndex: number) => {
-      if (note.readOnly) return;
-
-      let cardToMove;
-      const columns = note.columns.map((col) => {
-        if (col.id === fromColumnId) {
-          cardToMove = col.items.find((item) => item.id === cardId);
-          return { ...col, items: col.items.filter((item) => item.id !== cardId) };
-        }
-        return col;
+      updateNoteAsync((current) => {
+        if (current.readOnly) return current;
+        const columns = moveCardOn(current.columns, cardId, fromColumnId, toColumnId, toIndex);
+        return columns === current.columns ? current : { ...current, columns };
       });
-
-      if (!cardToMove) return;
-
-      const finalColumns = columns.map((col) => {
-        if (col.id === toColumnId) {
-          const newItems = [...col.items];
-          newItems.splice(toIndex, 0, cardToMove);
-          return { ...col, items: newItems };
-        }
-        return col;
-      });
-
-      setNoteAsync({ ...note, columns: finalColumns });
     },
-    [note, setNoteAsync]
+    [updateNoteAsync]
   );
 
   const reorderCards = useCallback(
     (columnId: string, newItems: KanbanItem[]) => {
-      const columns = note.columns.map((col) => {
-        if (col.id !== columnId) return col;
-        return { ...col, items: newItems };
+      updateNoteAsync((current) => {
+        if (current.readOnly) return current;
+        const columns = reorderCardsOn(current.columns, columnId, newItems);
+        return columns === current.columns ? current : { ...current, columns };
       });
-      setNoteAsync({ ...note, columns });
     },
-    [note, setNoteAsync]
+    [updateNoteAsync]
   );
 
   return (

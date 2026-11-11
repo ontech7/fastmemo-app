@@ -1,3 +1,4 @@
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import KanbanColumn from "@/components/kanban/KanbanColumn";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
@@ -219,15 +220,32 @@ export default function KanbanBoard({
     [note, setNoteAsync]
   );
 
-  const deleteColumn = useCallback(
+  // A column with cards asks first; an empty one goes at once (one dialog for the board).
+  const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
+
+  const removeColumn = useCallback(
     (columnId: string) => {
       if (note.readOnly) return;
 
       const columns = note.columns.filter((col) => col.id !== columnId);
+      if (columns.length === note.columns.length) return;
       setNoteAsync({ ...note, columns });
     },
     [note, setNoteAsync]
   );
+
+  const deleteColumn = useCallback(
+    (columnId: string) => {
+      if (note.readOnly) return;
+      const column = note.columns.find((col) => col.id === columnId);
+      if (!column) return;
+      if ((column.items ?? []).length === 0) removeColumn(columnId);
+      else setColumnToDelete(columnId);
+    },
+    [note, removeColumn]
+  );
+
+  const pendingColumn = columnToDelete ? note.columns.find((col) => col.id === columnToDelete) : undefined;
 
   /* Card operations */
 
@@ -354,6 +372,23 @@ export default function KanbanBoard({
       )}
 
       <KanbanDragOverlay columnWidth={columnWidth} />
+
+      <ConfirmOrCancelDialog
+        open={!!pendingColumn}
+        description={
+          pendingColumn
+            ? t("kanban.delete_column_confirm", {
+                name: pendingColumn.name.trim() || t("kanban.unnamed_column"),
+                count: (pendingColumn.items ?? []).length,
+              })
+            : ""
+        }
+        onCancel={() => setColumnToDelete(null)}
+        onConfirm={() => {
+          if (columnToDelete) removeColumn(columnToDelete);
+          setColumnToDelete(null);
+        }}
+      />
     </View>
   );
 }
