@@ -2238,6 +2238,27 @@ every place that takes a picture.
 
 ---
 
+### LL-084: What was typed in the quick note bar was lost when the app was closed
+
+**Date:** 2026-11-11  
+**Severity:** Medium (the bar is for jotting something down fast, often while doing something else; the words were gone)  
+**Category:** Bug  
+**What happened:** the home's quick note bar kept its text only in component state. Leaving the app with something typed and
+not sent, then having it killed in the background (or reloading the page, or quitting the desktop app), lost the text.  
+**Root cause:** the bar was built as a capture field that is sent at once, and the case of being interrupted before sending
+was never handled; unlike the editors it registered nothing with `registerPendingFlush`.  
+**Fix:** `src/libs/quickNoteDraft.ts` (`loadQuickNoteDraft` / `saveQuickNoteDraft`, key `@quickNoteDraft`, never reject; a
+blank text removes the key). The bar loads the draft once on mount, into the field only if it is still empty. It saves the
+draft from a function registered with `registerPendingFlush` (the app going to the background, the page hiding or closing)
+and when it unmounts, not at every keystroke. Sending, opening it in the editor, or emptying the field removes it. The draft
+never becomes a note by itself and is never synced. `scripts/utils.test.mjs` covers the module.  
+**Rule:** any field holding text the user typed and has not saved yet registers with `registerPendingFlush`, like the editors.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 14)
+
+---
+
 ### LL-088: A report with screenshots couldn't be sent, and the error said nothing
 
 **Date:** 2026-11-11  

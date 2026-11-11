@@ -1,6 +1,8 @@
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import Haptics from "@/libs/haptics";
+import { loadQuickNoteDraft, saveQuickNoteDraft } from "@/libs/quickNoteDraft";
+import { registerPendingFlush } from "@/libs/registry";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { addNote } from "@/slicers/notesSlice";
 import { selectorWebhook_addTextNote } from "@/slicers/settingsSlice";
@@ -10,7 +12,7 @@ import { deriveNoteTitle } from "@/utils/string";
 import { voiceTextToHtml } from "@/utils/voiceTranscript";
 import { webhook } from "@/utils/webhook";
 import type { Href } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, TextInput, type TextInputInstance, type TextInputKeyPressEvent, View } from "react-native";
 import ArrowsPointingOutIcon from "react-native-heroicons/outline/ArrowsPointingOutIcon";
@@ -51,7 +53,8 @@ interface Props {
  * On send it persists a real {@link TextNote} (the plain text is converted to the
  * exact `<br>`-based HTML pell uses, via {@link voiceTextToHtml}, so the note
  * reopens unchanged in the full editor) with a content-derived title. An empty
- * field saves nothing.
+ * field saves nothing. Text typed and not sent is kept as a draft on the device
+ * (`quickNoteDraft`) and put back in the bar after the app was closed.
  */
 export default function QuickNoteBar({ onHeightChange }: Props) {
   const { t } = useTranslation();
@@ -78,8 +81,36 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
   const hasText = text.trim().length > 0;
 
   const onChangeText = useCallback((value: string) => {
+    const hadText = textRef.current.trim().length > 0;
     textRef.current = value;
     setText(value);
+    // Emptied by hand: nothing to bring back.
+    if (hadText && !value.trim()) saveQuickNoteDraft("");
+  }, []);
+
+  // What was typed and not sent comes back after the app was closed (LL-084), unless something was typed meanwhile.
+  useEffect(() => {
+    let active = true;
+    loadQuickNoteDraft().then((draft) => {
+      if (!active || !draft || textRef.current) return;
+      textRef.current = draft;
+      setText(draft);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Kept when the app goes to the background or the page hides, and when the bar goes away; not at every keystroke.
+  useEffect(() => {
+    const save = () => {
+      saveQuickNoteDraft(textRef.current);
+    };
+    const unregister = registerPendingFlush(save);
+    return () => {
+      unregister();
+      save();
+    };
   }, []);
 
   // Persist whatever is pending as a real TextNote and clear the field. Returns
@@ -89,6 +120,7 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
     const body = textRef.current.trim();
     textRef.current = "";
     setText("");
+    saveQuickNoteDraft("");
     if (!body) return null;
 
     const now = Date.now();

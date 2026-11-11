@@ -1,4 +1,5 @@
-// Small pure helpers of src/utils and src/libs: how a picture is reduced, important notes first, deep search, and the\n// others added below as tasks need them.
+// Small pure helpers of src/utils and src/libs: how a picture is reduced, important notes first, deep search, the quick
+// note bar's draft, and the others added below as tasks need them.
 // Run: node scripts/utils.test.mjs
 // It bundles the modules with esbuild; AsyncStorage is the in-memory stub.
 
@@ -17,6 +18,7 @@ await build({
       export * from "@/utils/imageSize";
       export * from "@/utils/sort";
       export * from "@/utils/noteSearch";
+      export * from "@/libs/quickNoteDraft";
     `,
     resolveDir: src,
     loader: "ts",
@@ -133,6 +135,23 @@ console.log("\ndeep search");
     "missing parts don't throw",
     !matchesDeepSearch({ ...base, type: "kanban" }, "zzz") && !matchesDeepSearch({ id: "y", type: "code" }, "zzz")
   );
+}
+
+console.log("\nthe quick note bar's draft");
+{
+  const { loadQuickNoteDraft, saveQuickNoteDraft, QUICK_NOTE_DRAFT_KEY } = M;
+  storage.__reset();
+  ok("the key", QUICK_NOTE_DRAFT_KEY === "@quickNoteDraft");
+  ok("nothing saved: empty", (await loadQuickNoteDraft()) === "");
+  await saveQuickNoteDraft("comprare il latte");
+  ok("saved and read back", (await loadQuickNoteDraft()) === "comprare il latte");
+  await saveQuickNoteDraft("   ");
+  ok("a blank text removes it", storage.get("@quickNoteDraft") === undefined && (await loadQuickNoteDraft()) === "");
+  await saveQuickNoteDraft("riga uno\n  riga due  ");
+  ok("kept as typed, spaces and lines included", (await loadQuickNoteDraft()) === "riga uno\n  riga due  ");
+  storage.__failReads(true);
+  ok("a failed read is an empty draft, not an error", (await loadQuickNoteDraft()) === "");
+  storage.__reset();
 }
 
 void storage;
