@@ -33,7 +33,8 @@ export default function TemporaryTrashScreen() {
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
 
   const showHidden = useSelector(selectorShowHidden);
-  const trashedNotes = useSelector(getTrashedNotesFilteredPerCategory(showHidden));
+  const selectTrashedNotes = useMemo(() => getTrashedNotesFilteredPerCategory(showHidden), [showHidden]);
+  const trashedNotes = useSelector(selectTrashedNotes);
 
   const webhook_deleteNote = useSelector(selectorWebhook_deleteNote);
 

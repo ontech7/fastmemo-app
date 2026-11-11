@@ -1048,7 +1048,7 @@ const es = {
         "Toca el icono de filtro en la parte superior de la pantalla de inicio para cambiar cómo se muestran tus notas.",
       text_2_0: "• Ordenar por: ordena por fecha de creación o última actualización, de forma ascendente o descendente.",
       text_3_0:
-        "• Búsqueda profunda: busca también dentro del contenido de las notas y las listas, no solo en los títulos (pide tu código secreto primero).",
+        "• Búsqueda profunda: busca en los títulos y también dentro del texto, las listas, los tableros Kanban y el código de las notas (pide tu código secreto primero).",
     },
     what_language: {
       title: "¿Cómo cambio el idioma?",

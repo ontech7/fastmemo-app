@@ -1057,7 +1057,7 @@ const de = {
       text_1_0: "Tippen Sie oben auf der Startseite auf das Filtersymbol, um zu ändern, wie Ihre Notizen angezeigt werden.",
       text_2_0: "• Sortieren nach — nach Erstellungsdatum oder letzter Aktualisierung, aufsteigend oder absteigend.",
       text_3_0:
-        "• Tiefensuche — sucht auch innerhalb der Notizinhalte und Listen, nicht nur in den Titeln (fragt zuerst nach Ihrem Geheimcode).",
+        "• Tiefensuche — sucht in den Titeln und auch in Text, Listen, Kanban-Boards und Code der Notizen (fragt zuerst nach Ihrem Geheimcode).",
     },
     what_language: {
       title: "Wie ändere ich die Sprache?",

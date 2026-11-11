@@ -1044,7 +1044,7 @@ const it = {
       text_1_0: "Tocca l'icona dei filtri in alto nella schermata principale per cambiare come vengono mostrate le note.",
       text_2_0: "• Ordina per — ordina per data di creazione o di ultima modifica, in ordine crescente o decrescente.",
       text_3_0:
-        "• Ricerca approfondita — cerca anche nel contenuto delle note e nelle liste, non solo nei titoli (prima ti chiede il codice segreto).",
+        "• Ricerca approfondita — cerca nei titoli e anche dentro testo, liste, bacheche Kanban e codice delle note (prima ti chiede il codice segreto).",
     },
     what_language: {
       title: "Come cambio la lingua?",

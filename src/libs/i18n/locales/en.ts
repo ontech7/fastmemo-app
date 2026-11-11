@@ -1031,7 +1031,7 @@ const en = {
       text_1_0: "Tap the filter icon at the top of the Home screen to change how your notes are shown.",
       text_2_0: "• Order by — sort by creation date or last update, ascending or descending.",
       text_3_0:
-        "• Deep search — also search inside note contents and lists, not just titles (it asks for your secret code first).",
+        "• Deep search — searches the titles and also inside the notes' text, lists, Kanban boards and code (it asks for your secret code first).",
     },
     what_language: {
       title: "How do I change the language?",

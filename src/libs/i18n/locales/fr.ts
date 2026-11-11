@@ -1056,7 +1056,7 @@ const fr = {
         "Appuyez sur l'icône de filtre en haut de la page d'accueil pour changer la façon dont vos notes sont affichées.",
       text_2_0: "• Trier par — trier par date de création ou dernière mise à jour, par ordre croissant ou décroissant.",
       text_3_0:
-        "• Recherche approfondie — rechercher aussi dans le contenu des notes et des listes, pas seulement dans les titres (votre code secret est d'abord demandé).",
+        "• Recherche approfondie — rechercher dans les titres et aussi dans le texte, les listes, les tableaux Kanban et le code des notes (votre code secret est d'abord demandé).",
     },
     what_language: {
       title: "Comment changer la langue ?",

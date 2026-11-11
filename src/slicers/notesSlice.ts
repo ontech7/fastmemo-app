@@ -15,6 +15,7 @@ import { only_if_cloudConnected } from "@/libs/cloud";
 import { baseOf, deletionStub, forUpload, nextRev, noteRev, pruneTombstones, touchNote } from "@/libs/cloud/revision";
 import { isVaultUnlocked } from "@/libs/vaultSession";
 import { CryptNote } from "@/utils/crypt";
+import { importantFirst } from "@/utils/sort";
 import { wipeNotes } from "./thunks/notes";
 
 const initialState: NotesState = {
@@ -626,13 +627,12 @@ export const getNoteFilters = (state: RootState): NoteFilters =>
   };
 
 export const getNotesFilteredPerCategory = (currentCategory: Category, showHidden: boolean) =>
-  createSelector([getAllNotes], (notes): Note[] => {
-    return notes.reduce<Note[]>((acc, note) => {
-      if (!currentCategory.index && note.category.icon !== currentCategory.icon) return acc;
-      if (!showHidden && note.hidden) return acc;
-      return note.important ? [note, ...acc] : [...acc, note];
-    }, []);
-  });
+  createSelector([getAllNotes], (notes): Note[] =>
+    importantFirst(
+      notes,
+      (note) => (!!currentCategory.index || note.category.icon === currentCategory.icon) && (showHidden || !note.hidden)
+    )
+  );
 
 export const getNotesSizePerCategory = (category: Category) =>
   createSelector([getAllNotes], (notes): number => {
@@ -640,11 +640,6 @@ export const getNotesSizePerCategory = (category: Category) =>
   });
 
 export const getTrashedNotesFilteredPerCategory = (showHidden: boolean) =>
-  createSelector([getAllTrashedNotes], (notes): Note[] => {
-    return notes.reduce<Note[]>((acc, note) => {
-      if (!showHidden && note.hidden) return acc;
-      return note.important ? [note, ...acc] : [...acc, note];
-    }, []);
-  });
+  createSelector([getAllTrashedNotes], (notes): Note[] => importantFirst(notes, (note) => showHidden || !note.hidden));
 
 export default notesSlice.reducer;

@@ -45,8 +45,8 @@ import {
   selectorWebhook_updateNote,
   setTourStep,
 } from "@/slicers/settingsSlice";
-import type { CodeNote, Note, RootState, TextNote, TodoItem, TodoNote } from "@/types";
-import { formatToPlainText } from "@/utils/string";
+import type { Note, RootState } from "@/types";
+import { matchesDeepSearch } from "@/utils/noteSearch";
 import { webhook } from "@/utils/webhook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FlashList } from "@shopify/flash-list";
@@ -208,26 +208,11 @@ export default function HomeScreen() {
   }, []);
 
   const filteredNotes = useMemo(() => {
-    const text = !showDeepSearch ? filterText.trim().toLowerCase() : deepFilterText.trim().toLowerCase();
-
-    if (!showDeepSearch) {
-      return !text ? notes : notes.filter((note: Note) => note.title?.toLowerCase().includes(filterText.toLowerCase()));
-    } else {
-      return !text
-        ? notes
-        : notes.filter((note: Note) => {
-            const noteType = note.type || "text";
-            if (noteType === "text") {
-              return formatToPlainText((note as TextNote).text?.toLowerCase()).includes(text);
-            } else if (noteType === "code") {
-              return (note as CodeNote).tabs?.some((tab) => tab.code?.toLowerCase().includes(text));
-            } else if (noteType === "todo") {
-              return (note as TodoNote).list?.find((item: TodoItem) => item.text?.toLowerCase().includes(text));
-            } else {
-              return false;
-            }
-          });
-    }
+    const text = (showDeepSearch ? deepFilterText : filterText).trim().toLowerCase();
+    if (!text) return notes;
+    return showDeepSearch
+      ? notes.filter((note: Note) => matchesDeepSearch(note, text))
+      : notes.filter((note: Note) => note.title?.toLowerCase().includes(filterText.toLowerCase()));
   }, [filterText, deepFilterText, showDeepSearch, notes]);
 
   // Stable across unrelated re-renders (focus changes, quick-note bar height, ...), so FlashList
@@ -298,7 +283,6 @@ export default function HomeScreen() {
       Keyboard.dismiss();
       setSelectedNotes([]);
       setIsDeleteMode(false);
-      setFilterText("");
     });
     return resetStates;
   }, [navigation]);

@@ -2147,6 +2147,49 @@ was closed there. `keepOnRemote` left `useNoteEditor` (its only user was this).
 
 ---
 
+### LL-080: Important notes were listed in the opposite of the chosen order
+
+**Date:** 2026-11-11  
+**Severity:** Low (nothing lost, but "newest first" showed the important notes oldest first, and the other way round)  
+**Category:** Bug  
+**What happened:** the home and trash selectors built their list with a `reduce` that put each important note in front of
+the list built so far (`[note, ...acc]`). Each important note went before the ones already placed, so the important group
+came out reversed against the order the notes were stored in, while the others kept it. A copy of the whole list per note
+also made it quadratic.  
+**Root cause:** prepending to an accumulator reverses whatever it prepends; the group's order was never tested.  
+**Fix:** `importantFirst(notes, keep)` in `src/utils/sort.ts`: one pass into two arrays, joined, so both groups keep the
+stored order. Both selectors use it (`scripts/utils.test.mjs`). The trash screen also keeps its selector in a `useMemo`, as
+home does: it made a new one at every render.  
+**Rule:** to move a group to the front, collect it apart and join; never prepend one by one.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 11)
+
+---
+
+### LL-081: Deep search missed titles, boards and tab names, and the search text was lost on opening a note
+
+**Date:** 2026-11-11  
+**Severity:** Medium (a note could not be found by the words the user remembered from it)  
+**Category:** Bug  
+**What happened:** home's deep search looked only inside a text note's words, a list's items and a code note's code. A board
+was never matched, nor a title (which the normal search does, so turning deep search on lost matches), nor a tab's name.
+Separately, home's focus listener cleared the search text, so opening a note found by a search and coming back showed the
+whole list again.  
+**Root cause:** the matching was written inline in the screen per type, with no case for the types added later, and the
+focus reset swept the search text along with the selection.  
+**Fix:** `matchesDeepSearch(note, text)` in `src/utils/noteSearch.ts`: the title, then a text's plain words, a list's items, a
+board's column names and cards, a code note's tab names and code; a type it doesn't know matches by title
+(`scripts/utils.test.mjs`). Home's focus listener no longer clears the search text; turning deep search on or off still
+clears both fields. The help sentence names what deep search looks at.  
+**Rule:** a search over notes covers every note type, through one function with a test per type; a new type adds its case
+there.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 11)
+
+---
+
 ### LL-088: A report with screenshots couldn't be sent, and the error said nothing
 
 **Date:** 2026-11-11  
