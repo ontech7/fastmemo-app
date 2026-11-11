@@ -3,14 +3,16 @@ import NoteKanbanEditor from "@/components/notes/NoteKanbanEditor";
 import NoteTextEditor from "@/components/notes/NoteTextEditor";
 import NoteTodoEditor from "@/components/notes/NoteTodoEditor";
 import { useRouter } from "@/hooks/useRouter";
+import { useSecret } from "@/hooks/useSecret";
 import { addTrail } from "@/libs/diagnostics";
+import { consumeUnlockedNote } from "@/libs/registry";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { getNote } from "@/slicers/notesSlice";
 import type { CodeNote, KanbanNote, TextNote, TodoNote } from "@/types";
 import type { NoteType } from "@/types/note";
 import { formatDateTime } from "@/utils/date";
-import { useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useRef } from "react";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import uuid from "react-uuid";
 
@@ -89,13 +91,52 @@ export default function NoteScreen() {
     }
   }, [noteId, note, router]);
 
+  /*
+   * A protected note asks for the secret code however its screen was reached (LL-085): a card that just asked for it
+   * leaves a pass (`consumeUnlockedNote`), anything else (a link, a shortcut) asks here. Decided when the note is first
+   * shown, per note: one locked while open isn't asked again. While asked it renders nothing; leaving the code screen
+   * without the code, or a refused fingerprint, goes home. The return check reads refs, not state: a screen is frozen while
+   * unfocused, so the state set from the code screen may not have rendered yet when focus comes back.
+   */
+  const { unlockWithSecret } = useSecret();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- once per note, as it was when it was first shown
+  const passed = useMemo(() => !currentNote?.locked || consumeUnlockedNote(noteId), [noteId]);
+  const [unlockedId, setUnlockedId] = useState<string | null>(null);
+  const unlockedIdRef = useRef<string | null>(null);
+  const askedIdRef = useRef<string | null>(null);
+  const unlockWithSecretRef = useRef(unlockWithSecret);
+  const routerRef = useRef(router);
+  useEffect(() => {
+    unlockWithSecretRef.current = unlockWithSecret;
+    routerRef.current = router;
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      if (passed || unlockedIdRef.current === noteId) return;
+      if (askedIdRef.current !== noteId) {
+        askedIdRef.current = noteId;
+        unlockWithSecretRef.current(
+          () => {
+            unlockedIdRef.current = noteId;
+            setUnlockedId(noteId);
+          },
+          "goBack",
+          () => routerRef.current.replace("/home")
+        );
+        return;
+      }
+      routerRef.current.replace("/home");
+    }, [noteId, passed])
+  );
+
   // The trail of an error (ADR-035): which kind of note was opened, never which one.
   const openedType = note ? note.type || "text" : null;
   useEffect(() => {
     if (openedType) addTrail("note.open", { type: openedType });
   }, [noteId, openedType]);
 
-  if (!note) {
+  if (!note || !(passed || unlockedId === noteId)) {
     return null;
   }
 

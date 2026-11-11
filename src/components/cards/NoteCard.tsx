@@ -13,6 +13,7 @@ import { useSelector } from "react-redux";
 import { useRouter } from "@/hooks/useRouter";
 import { useTourTarget } from "@/hooks/useTourTarget";
 import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
+import { storeUnlockedNote } from "@/libs/registry";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
 
@@ -86,6 +87,8 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
     }
 
     unlockWithSecret((router, isFingerprint) => {
+      // Unlocked here: the note's screen opens it without asking again (LL-085).
+      storeUnlockedNote(id);
       if (isFingerprint) {
         router.push(`/notes/${id}`);
       } else {

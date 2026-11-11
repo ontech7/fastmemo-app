@@ -16,7 +16,11 @@ export const useSecret = () => {
   const router = useRouter();
   const isFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
 
-  const unlockWithSecret = (callback: CallbackFn, doNext: DoNextType = "goBack") => {
+  /**
+   * Asks for the secret code (or the fingerprint) and runs `callback` once given. `onRefused` runs when the fingerprint
+   * prompt fails or is cancelled; the code screen has no such moment (leaving it is the refusal, for the caller to see).
+   */
+  const unlockWithSecret = (callback: CallbackFn, doNext: DoNextType = "goBack", onRefused?: () => void) => {
     const isFingerprint = isFingerprintEnabled;
 
     if (!isFingerprint) {
@@ -43,9 +47,13 @@ export const useSecret = () => {
       return;
     }
 
-    authenticateAsync().then((authResult) => {
-      if (authResult?.success) callback(router, isFingerprint);
-    });
+    authenticateAsync().then(
+      (authResult) => {
+        if (authResult?.success) callback(router, isFingerprint);
+        else onRefused?.();
+      },
+      () => onRefused?.()
+    );
   };
 
   return { unlockWithSecret, isFingerprintEnabled };

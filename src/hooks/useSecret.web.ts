@@ -48,16 +48,21 @@ export const useSecret = () => {
     });
   };
 
-  const unlockWithSecret = (callback: CallbackFn, doNext: DoNextType = "goBack") => {
+  /** As on native: `onRefused` runs when the biometric prompt fails or is cancelled. */
+  const unlockWithSecret = (callback: CallbackFn, doNext: DoNextType = "goBack", onRefused?: () => void) => {
     if (isFingerprintEnabled && isBiometricSupported()) {
-      authenticateBiometric(t("generalsettings.fingerprint_reason")).then((success) => {
-        // The biometric prompt is an overlay, not a pushed screen, so there is
-        // nothing to navigate back from — mirror the native flow: run the
-        // callback on success and do nothing on cancel/failure. With fingerprint
-        // enabled that's the only unlock path, so there is no secret-code
-        // fallback — cancelling simply aborts.
-        if (success) callback(router, true);
-      });
+      authenticateBiometric(t("generalsettings.fingerprint_reason")).then(
+        (success) => {
+          // The biometric prompt is an overlay, not a pushed screen, so there is
+          // nothing to navigate back from — mirror the native flow: run the
+          // callback on success, `onRefused` on cancel/failure. With fingerprint
+          // enabled that's the only unlock path, so there is no secret-code
+          // fallback — cancelling simply aborts.
+          if (success) callback(router, true);
+          else onRefused?.();
+        },
+        () => onRefused?.()
+      );
       return;
     }
 

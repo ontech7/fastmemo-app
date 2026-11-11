@@ -30,6 +30,23 @@ export function retrieveSecretCodeCallback(): (() => void) | undefined {
   return registry.get("secretCodeCallback") as (() => void) | undefined;
 }
 
+/* UNLOCKED NOTE */
+
+/**
+ * The protected note the user has just unlocked to open it (a card tap, or reopening one already open): its screen opens it
+ * once without asking again. Any other way to the screen (a link, a shortcut) asks for the code (LL-085).
+ */
+export function storeUnlockedNote(id: string): void {
+  registry.set("unlockedNote", id);
+}
+
+/** Whether `id` was just unlocked: true once, then false. */
+export function consumeUnlockedNote(id: string): boolean {
+  if (registry.get("unlockedNote") !== id) return false;
+  registry.delete("unlockedNote");
+  return true;
+}
+
 /* VAULT */
 
 /** Continuation run after a successful unlock/init during the connect flow (finalize connection). */

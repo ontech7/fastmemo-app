@@ -12,6 +12,7 @@ import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
 import { useRouter } from "@/hooks/useRouter";
+import { storeUnlockedNote } from "@/libs/registry";
 import { getCategories } from "@/slicers/categoriesSlice";
 import { changeNoteCategory, getNote } from "@/slicers/notesSlice";
 
@@ -51,6 +52,8 @@ export default function ChangeCategoryScreen() {
     );
 
     router.dismiss();
+    // The note was open, so already unlocked: reopening it doesn't ask again (LL-085).
+    if (currentNote.locked) storeUnlockedNote(currentNote.id);
     router.replace(`/notes/${currentNote.id}`);
   };
 

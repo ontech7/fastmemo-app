@@ -2259,6 +2259,30 @@ never becomes a note by itself and is never synced. `scripts/utils.test.mjs` cov
 
 ---
 
+### LL-085: A protected note opened without the secret code when reached by a link
+
+**Date:** 2026-11-11  
+**Severity:** High (the secret code is the barrier a protected note promises, and one path skipped it)  
+**Category:** Bug  
+**What happened:** the secret code was asked by the note card (`NoteCard`'s tap) before it navigated, not by the note's
+screen. Anything else that reached `/notes/<id>` (a link to the app, a shortcut, a navigation from another screen) opened a
+protected note at once.  
+**Root cause:** a check placed at one entrance instead of at the door: the screen that shows the note trusted that whoever
+sent it there had asked.  
+**Fix:** the note's screen (`app/notes/[noteId].tsx`) decides, the first time it shows a note, whether it may: an unprotected
+note, or a pass left by the one that just asked (`storeUnlockedNote` / `consumeUnlockedNote` in `libs/registry.ts`, true once:
+the card's unlock, and the category screen reopening a note that was already open). Otherwise it renders nothing and asks
+(`unlockWithSecret`); leaving the code screen without the code, or a refused fingerprint (`useSecret`'s new `onRefused`),
+goes home. The check on return reads refs, not state: unfocused screens are frozen, so the state set from the code screen
+may not have rendered when focus comes back. It is decided per note id, as the same screen can be sent to another note. A
+note protected while open isn't asked again.  
+**Rule:** a protection is enforced by the screen that shows the protected thing, not by the buttons that lead there.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 16)
+
+---
+
 ### LL-086: Nine languages were offered with no highlighting behind them
 
 **Date:** 2026-11-11  
