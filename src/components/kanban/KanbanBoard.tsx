@@ -5,7 +5,7 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MAR
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { selectorDeveloperMode } from "@/slicers/settingsSlice";
-import type { KanbanNote } from "@/types";
+import type { KanbanColumn as KanbanColumnType, KanbanNote } from "@/types";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,7 +27,8 @@ const isWeb = Platform.OS === "web";
 
 interface Props {
   note: KanbanNote;
-  setNoteAsync: (note: KanbanNote) => void;
+  /** Applied to the note as it is when it runs: every handler here computes from it, so none depends on the note. */
+  updateNoteAsync: (update: (current: KanbanNote) => KanbanNote) => void;
   columnWidth: number;
   snapInterval: number;
   scrollViewRef: RefObject<ScrollViewInstance | null>;
@@ -37,7 +38,7 @@ interface Props {
 
 export default function KanbanBoard({
   note,
-  setNoteAsync,
+  updateNoteAsync,
   columnWidth,
   snapInterval,
   scrollViewRef,
@@ -183,66 +184,67 @@ export default function KanbanBoard({
     };
   }, [isDragging, fingerX, containerOffsetX, containerWidth, scrollViewRef, updateScrollOffset]);
 
-  /* Column operations */
+  /* Column operations: each computes from the note as it is when it runs (`current`), so a keystroke gives no column or
+     card a new handler, and only what changed renders again. */
 
-  const addColumn = useCallback(() => {
-    if (note.readOnly) return;
-    if (note.columns.length >= maxColumns) return;
+  const addColumn = useCallback(
+    () =>
+      updateNoteAsync((current) => {
+        if (current.readOnly || current.columns.length >= maxColumns) return current;
+        const colorIndex = current.columns.length % KANBAN_COLUMN_COLORS.length;
+        return {
+          ...current,
+          columns: [...current.columns, { id: uuid(), name: "", color: KANBAN_COLUMN_COLORS[colorIndex], items: [] }],
+        };
+      }),
+    [updateNoteAsync, maxColumns]
+  );
 
-    const colorIndex = note.columns.length % KANBAN_COLUMN_COLORS.length;
-    setNoteAsync({
-      ...note,
-      columns: [
-        ...note.columns,
-        {
-          id: uuid(),
-          name: "",
-          color: KANBAN_COLUMN_COLORS[colorIndex],
-          items: [],
-        },
-      ],
-    });
-  }, [note, setNoteAsync, maxColumns]);
+  /** Changes one column, keeping the others' objects; nothing if it's gone or `change` returns it as it is. */
+  const updateColumn = useCallback(
+    (columnId: string, change: (column: KanbanColumnType) => KanbanColumnType) =>
+      updateNoteAsync((current) => {
+        const index = current.columns.findIndex((col) => col.id === columnId);
+        if (index === -1) return current;
+        const changed = change(current.columns[index]);
+        if (changed === current.columns[index]) return current;
+        const columns = [...current.columns];
+        columns[index] = changed;
+        return { ...current, columns };
+      }),
+    [updateNoteAsync]
+  );
 
   const setColumnName = useCallback(
-    (columnId: string, name: string) => {
-      const columns = note.columns.map((col) => (col.id === columnId ? { ...col, name } : col));
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
+    (columnId: string, name: string) => updateColumn(columnId, (col) => (col.name === name ? col : { ...col, name })),
+    [updateColumn]
   );
 
   const setColumnColor = useCallback(
-    (columnId: string, color: string) => {
-      const columns = note.columns.map((col) => (col.id === columnId ? { ...col, color } : col));
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
+    (columnId: string, color: string) => updateColumn(columnId, (col) => (col.color === color ? col : { ...col, color })),
+    [updateColumn]
   );
 
   // A column with cards asks first; an empty one goes at once (one dialog for the board).
   const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
 
   const removeColumn = useCallback(
-    (columnId: string) => {
-      if (note.readOnly) return;
-
-      const columns = note.columns.filter((col) => col.id !== columnId);
-      if (columns.length === note.columns.length) return;
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
+    (columnId: string) =>
+      updateNoteAsync((current) => {
+        if (current.readOnly) return current;
+        const columns = current.columns.filter((col) => col.id !== columnId);
+        return columns.length === current.columns.length ? current : { ...current, columns };
+      }),
+    [updateNoteAsync]
   );
 
+  // The column says how many cards it holds: the board decides "at once or ask" without reading the note (LL-078).
   const deleteColumn = useCallback(
-    (columnId: string) => {
-      if (note.readOnly) return;
-      const column = note.columns.find((col) => col.id === columnId);
-      if (!column) return;
-      if ((column.items ?? []).length === 0) removeColumn(columnId);
+    (columnId: string, cardCount: number) => {
+      if (cardCount === 0) removeColumn(columnId);
       else setColumnToDelete(columnId);
     },
-    [note, removeColumn]
+    [removeColumn]
   );
 
   const pendingColumn = columnToDelete ? note.columns.find((col) => col.id === columnToDelete) : undefined;
@@ -251,64 +253,63 @@ export default function KanbanBoard({
 
   const addCard = useCallback(
     (columnId: string) => {
-      if (note.readOnly) return;
-
       const newCard = { id: uuid(), text: "", createdAt: Date.now() };
-      const columns = note.columns.map((col) => {
-        if (col.id !== columnId) return col;
-        return { ...col, items: [...col.items, newCard] };
+      let added = false;
+      updateNoteAsync((current) => {
+        if (current.readOnly) return current;
+        const index = current.columns.findIndex((col) => col.id === columnId);
+        if (index === -1) return current;
+        added = true;
+        const columns = [...current.columns];
+        columns[index] = { ...columns[index], items: [...columns[index].items, newCard] };
+        return { ...current, columns };
       });
-      setNoteAsync({ ...note, columns });
       // Focus the freshly added card so the user can type without tapping it.
-      setFocusCardId(newCard.id);
+      if (added) setFocusCardId(newCard.id);
     },
-    [note, setNoteAsync]
+    [updateNoteAsync]
   );
 
   const setCardText = useCallback(
-    (columnId: string, cardId: string, text: string) => {
-      const columns = note.columns.map((col) => {
-        if (col.id !== columnId) return col;
-        return {
-          ...col,
-          items: col.items.map((item) => (item.id === cardId ? { ...item, text } : item)),
-        };
-      });
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
+    (columnId: string, cardId: string, text: string) =>
+      updateColumn(columnId, (col) => {
+        const index = col.items.findIndex((item) => item.id === cardId);
+        if (index === -1 || col.items[index].text === text) return col;
+        const items = [...col.items];
+        items[index] = { ...items[index], text };
+        return { ...col, items };
+      }),
+    [updateColumn]
   );
 
   const deleteCard = useCallback(
-    (columnId: string, cardId: string) => {
-      if (note.readOnly) return;
-
-      const columns = note.columns.map((col) => {
-        if (col.id !== columnId) return col;
-        return {
-          ...col,
-          items: col.items.filter((item) => item.id !== cardId),
-        };
-      });
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
+    (columnId: string, cardId: string) =>
+      updateNoteAsync((current) => {
+        if (current.readOnly) return current;
+        const index = current.columns.findIndex((col) => col.id === columnId);
+        if (index === -1) return current;
+        const items = current.columns[index].items.filter((item) => item.id !== cardId);
+        if (items.length === current.columns[index].items.length) return current;
+        const columns = [...current.columns];
+        columns[index] = { ...columns[index], items };
+        return { ...current, columns };
+      }),
+    [updateNoteAsync]
   );
 
   const moveColumn = useCallback(
-    (columnId: string, direction: "left" | "right") => {
-      if (note.readOnly) return;
-
-      const colIndex = note.columns.findIndex((col) => col.id === columnId);
-      const targetIndex = direction === "left" ? colIndex - 1 : colIndex + 1;
-      if (targetIndex < 0 || targetIndex >= note.columns.length) return;
-
-      const columns = [...note.columns];
-      const [moved] = columns.splice(colIndex, 1);
-      columns.splice(targetIndex, 0, moved);
-      setNoteAsync({ ...note, columns });
-    },
-    [note, setNoteAsync]
+    (columnId: string, direction: "left" | "right") =>
+      updateNoteAsync((current) => {
+        if (current.readOnly) return current;
+        const colIndex = current.columns.findIndex((col) => col.id === columnId);
+        const targetIndex = direction === "left" ? colIndex - 1 : colIndex + 1;
+        if (colIndex === -1 || targetIndex < 0 || targetIndex >= current.columns.length) return current;
+        const columns = [...current.columns];
+        const [moved] = columns.splice(colIndex, 1);
+        columns.splice(targetIndex, 0, moved);
+        return { ...current, columns };
+      }),
+    [updateNoteAsync]
   );
 
   return (

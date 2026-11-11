@@ -99,10 +99,8 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
   /* Title */
 
   const setTitle = useCallback(
-    (titleVal: string) => {
-      setNoteAsync({ ...note, title: titleVal });
-    },
-    [note, setNoteAsync]
+    (title: string) => updateNoteAsync((current) => (current.title === title ? current : { ...current, title })),
+    [updateNoteAsync]
   );
 
   /* Card movement for drag provider */
@@ -172,7 +170,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
               >
                 <KanbanBoard
                   note={note}
-                  setNoteAsync={setNoteAsync}
+                  updateNoteAsync={updateNoteAsync}
                   columnWidth={columnWidth}
                   snapInterval={snapInterval}
                   scrollViewRef={scrollViewRef}

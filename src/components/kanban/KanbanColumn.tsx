@@ -1,6 +1,6 @@
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
-import { useCallback, useEffect, useRef, type RefObject } from "react";
+import { memo, useCallback, useEffect, useRef, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
 import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
@@ -18,7 +18,8 @@ interface Props {
   columnWidth: number;
   setColumnName: (columnId: string, name: string) => void;
   setColumnColor: (columnId: string, color: string) => void;
-  deleteColumn: (columnId: string) => void;
+  /** With the number of cards it holds: the board asks first if there are any. */
+  deleteColumn: (columnId: string, cardCount: number) => void;
   setCardText: (columnId: string, cardId: string, text: string) => void;
   deleteCard: (columnId: string, cardId: string) => void;
   addCard: (columnId: string) => void;
@@ -28,7 +29,7 @@ interface Props {
   autoFocusCardInputRef?: RefObject<TextInputInstance | null>;
 }
 
-export default function KanbanColumn({
+function KanbanColumn({
   column,
   columnIndex,
   totalColumns,
@@ -117,7 +118,7 @@ export default function KanbanColumn({
         <TouchableOpacity
           activeOpacity={0.7}
           disabled={disabled}
-          onPress={() => deleteColumn(column.id)}
+          onPress={() => deleteColumn(column.id, column.items.length)}
           accessibilityRole="button"
           accessibilityLabel={t("kanban.delete_column")}
           style={styles.headerButton}
@@ -143,8 +144,8 @@ export default function KanbanColumn({
                 key={item.id}
                 item={item}
                 columnId={column.id}
-                setText={(id, text) => setCardText(column.id, id, text)}
-                deleteItem={(id) => deleteCard(column.id, id)}
+                setText={setCardText}
+                deleteItem={deleteCard}
                 disabled={disabled}
                 autoFocus={item.id === autoFocusCardId}
                 inputRef={item.id === autoFocusCardId ? autoFocusCardInputRef : undefined}
@@ -247,3 +248,5 @@ const styles = StyleSheet.create({
     color: COLOR.softWhite,
   },
 });
+
+export default memo(KanbanColumn);

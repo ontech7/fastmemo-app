@@ -1,7 +1,7 @@
 import DragIcon from "@/components/icons/DragIcon";
 import Haptics from "@/libs/haptics";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
-import { useRef, useState, type RefObject } from "react";
+import { memo, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -15,8 +15,9 @@ import type { KanbanItem } from "@/types";
 interface Props {
   item: KanbanItem;
   columnId: string;
-  setText: (id: string, text: string) => void;
-  deleteItem: (id: string) => void;
+  /** The board's handlers, passed through the column as they are (stable): a closure per card would render every card. */
+  setText: (columnId: string, cardId: string, text: string) => void;
+  deleteItem: (columnId: string, cardId: string) => void;
   disabled: boolean;
   autoFocus?: boolean;
   // Forwarded to the card's text input so the board can focus it imperatively
@@ -25,7 +26,7 @@ interface Props {
   inputRef?: RefObject<TextInputInstance | null>;
 }
 
-export default function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, inputRef }: Props) {
+function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, inputRef }: Props) {
   const { t } = useTranslation();
 
   const [height, setHeight] = useState(40);
@@ -96,7 +97,7 @@ export default function KanbanCard({ item, columnId, setText, deleteItem, disabl
             textAlignVertical="center"
             multiline
             scrollEnabled={false}
-            onChangeText={(value) => setText(item.id, value)}
+            onChangeText={(value) => setText(columnId, item.id, value)}
             value={item.text}
             editable={!disabled && !isBeingDragged}
             placeholderTextColor={COLOR.textMuted}
@@ -121,7 +122,7 @@ export default function KanbanCard({ item, columnId, setText, deleteItem, disabl
           activeOpacity={0.7}
           disabled={disabled}
           style={styles.deleteButton}
-          onPress={() => deleteItem(item.id)}
+          onPress={() => deleteItem(columnId, item.id)}
           accessibilityRole="button"
           accessibilityLabel={t("a11y.delete_item")}
         >
@@ -133,6 +134,8 @@ export default function KanbanCard({ item, columnId, setText, deleteItem, disabl
     </View>
   );
 }
+
+export default memo(KanbanCard);
 
 // static card component for the floating overlay (no gestures)
 interface KanbanCardStaticProps {

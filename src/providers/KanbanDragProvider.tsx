@@ -1,5 +1,5 @@
 import type { KanbanColumn, KanbanItem } from "@/types";
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import type { ScrollViewInstance } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
@@ -77,6 +77,13 @@ export default function KanbanDragProvider({
 
   const startCardX = useSharedValue(0);
   const startCardY = useSharedValue(0);
+
+  // The board as it is now, read when a drag ends: a keystroke in a card changes the columns, and must not change the
+  // context value every card reads.
+  const columnsRef = useRef(columns);
+  useLayoutEffect(() => {
+    columnsRef.current = columns;
+  }, [columns]);
 
   const columnPositionsRef = useRef<ColumnPosition[]>([]);
   const lastTargetColumnRef = useRef<string | null>(null);
@@ -171,21 +178,18 @@ export default function KanbanDragProvider({
     [sourceColumnId]
   );
 
-  const getDropIndex = useCallback(
-    (columnId: string, absoluteY: number, itemHeight: number = 60): number => {
-      const column = columns.find((c) => c.id === columnId);
-      if (!column) return 0;
+  const getDropIndex = useCallback((columnId: string, absoluteY: number, itemHeight: number = 60): number => {
+    const column = columnsRef.current.find((c) => c.id === columnId);
+    if (!column) return 0;
 
-      const headerHeight = 120;
-      const cardSpacing = 8;
-      const relativeY = absoluteY - headerHeight;
-      const effectiveItemHeight = itemHeight + cardSpacing;
-      const index = Math.max(0, Math.floor(relativeY / effectiveItemHeight));
+    const headerHeight = 120;
+    const cardSpacing = 8;
+    const relativeY = absoluteY - headerHeight;
+    const effectiveItemHeight = itemHeight + cardSpacing;
+    const index = Math.max(0, Math.floor(relativeY / effectiveItemHeight));
 
-      return Math.min(index, column.items.length);
-    },
-    [columns]
-  );
+    return Math.min(index, column.items.length);
+  }, []);
 
   const endDrag = useCallback(
     (absoluteX: number, absoluteY: number) => {
@@ -204,7 +208,7 @@ export default function KanbanDragProvider({
         const dropIndex = getDropIndex(targetColId, absoluteY);
 
         if (targetColId === sourceColumnId) {
-          const column = columns.find((c) => c.id === sourceColumnId);
+          const column = columnsRef.current.find((c) => c.id === sourceColumnId);
           if (column) {
             const currentIndex = column.items.findIndex((item) => item.id === draggedItem.id);
             if (currentIndex !== -1 && currentIndex !== dropIndex) {
@@ -226,7 +230,7 @@ export default function KanbanDragProvider({
       setTargetColumnId(null);
       lastTargetColumnRef.current = null;
     },
-    [draggedItem, sourceColumnId, columns, getTargetColumn, getDropIndex, onMoveCard, onReorderCards]
+    [draggedItem, sourceColumnId, getTargetColumn, getDropIndex, onMoveCard, onReorderCards]
   );
 
   const cancelDrag = useCallback(() => {
@@ -243,33 +247,61 @@ export default function KanbanDragProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const value: KanbanDragContextValue = {
-    draggedItem,
-    sourceColumnId,
-    targetColumnId,
-    isDragging,
-    dragX,
-    dragY,
-    startFingerX,
-    startFingerY,
-    containerOffsetX,
-    containerOffsetY,
-    fingerX,
-    fingerY,
+  // One value per real change (a drag starting, moving to another column, ending; a new column width): not per render.
+  const value = useMemo<KanbanDragContextValue>(
+    () => ({
+      draggedItem,
+      sourceColumnId,
+      targetColumnId,
+      isDragging,
+      dragX,
+      dragY,
+      startFingerX,
+      startFingerY,
+      containerOffsetX,
+      containerOffsetY,
+      fingerX,
+      fingerY,
 
-    startDrag,
-    updateDragPosition,
-    endDrag,
-    cancelDrag,
-    registerColumnPosition,
-    getTargetColumn,
-    updateScrollOffset,
-    setOverlayOffset,
+      startDrag,
+      updateDragPosition,
+      endDrag,
+      cancelDrag,
+      registerColumnPosition,
+      getTargetColumn,
+      updateScrollOffset,
+      setOverlayOffset,
 
-    columnWidth,
-    columnGap,
-    scrollViewRef,
-  };
+      columnWidth,
+      columnGap,
+      scrollViewRef,
+    }),
+    [
+      draggedItem,
+      sourceColumnId,
+      targetColumnId,
+      isDragging,
+      dragX,
+      dragY,
+      startFingerX,
+      startFingerY,
+      containerOffsetX,
+      containerOffsetY,
+      fingerX,
+      fingerY,
+      startDrag,
+      updateDragPosition,
+      endDrag,
+      cancelDrag,
+      registerColumnPosition,
+      getTargetColumn,
+      updateScrollOffset,
+      setOverlayOffset,
+      columnWidth,
+      columnGap,
+      scrollViewRef,
+    ]
+  );
 
   return <KanbanDragContext.Provider value={value}>{children}</KanbanDragContext.Provider>;
 }
