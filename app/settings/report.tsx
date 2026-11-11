@@ -1,38 +1,55 @@
 import { configs } from "@/configs";
 import * as Sentry from "@sentry/react-native";
-import * as Device from "expo-device";
-import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
-import { useDispatch, useStore } from "react-redux";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { useDispatch, useSelector } from "react-redux";
 
 import BackButton from "@/components/buttons/BackButton";
+import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
-import { useRouter } from "@/hooks/useRouter";
-import { setReportDate } from "@/slicers/settingsSlice";
+import { CONTENT_COLUMN } from "@/constants/layout";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { getAppIcon } from "@/libs/appIcon";
+import { providerOf } from "@/libs/cloud/scope";
+import { collectAlwaysFacts } from "@/libs/diagnostics";
+import { getDeviceBasics } from "@/libs/diagnostics/facts";
+import {
+  attachmentsFit,
+  buildReportPayload,
+  canSendReport,
+  type AlwaysFacts,
+  type CloudKind,
+  type DeviceFacts,
+  isEmailValid,
+  nextReportAt,
+  payloadRows,
+  pruneReportLog,
+  type ReportAttachment,
+  sendReport,
+  SHORT_DESCRIPTION,
+} from "@/libs/diagnostics/report";
+import { isTransientNetworkError } from "@/libs/diagnostics/scrub";
+import { supportedLanguages } from "@/libs/i18n";
+import { reducePhoto } from "@/libs/reducePhoto";
+import {
+  getCloudConnected,
+  getCloudSettings,
+  reportSent,
+  selectorReportDate,
+  selectorReportLog,
+} from "@/slicers/settingsSlice";
 import { formatDateTime } from "@/utils/date";
 import { getDisplayAppVersion } from "@/utils/version";
-
-import { CONTENT_COLUMN } from "@/constants/layout";
-import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
-
-import lottieJson from "~/assets/lottie/Logo.json";
-
-interface Attachment {
-  filename: string;
-  content: string;
-  encoding: string;
-}
 
 const topicList = [
   "crash",
@@ -46,226 +63,191 @@ const topicList = [
   "other",
 ];
 
-export default function ReportScreen() {
-  const { t } = useTranslation();
+const MAX_DESCRIPTION = 500;
+const MAX_ATTACHMENTS = 3;
 
-  const router = useRouter();
+interface Message {
+  title: string | null;
+  description: string | null;
+}
+
+export default function ReportScreen() {
+  const { t, i18n } = useTranslation();
 
   const dispatch = useDispatch();
 
+  const reportLog = useSelector(selectorReportLog);
+  const reportDate = useSelector(selectorReportDate);
+  const isCloudConnected = useSelector(getCloudConnected);
+  const cloudSettings = useSelector(getCloudSettings);
+
+  // The time the screen opened: a report sent from here is newer, and still counted.
+  const [now] = useState(Date.now);
+  const log = pruneReportLog(reportLog, reportDate, now);
+  const canSend = canSendReport(log, now);
+  const nextAt = canSend ? null : nextReportAt(log, now);
+
   const [isLoading, setLoading] = useState(false);
-
-  const [reportMessage, setReportMessage] = useState<{
-    title: string | null;
-    description: string | null;
-  }>({
-    title: null,
-    description: null,
-  });
-  const [showReportMessageDialog, setShowReportMessageDialog] = useState(false);
-
-  const lockReportForOneDay = () => {
-    const now = new Date();
-    now.setDate(now.getDate() + 1);
-    dispatch(setReportDate(now.toISOString()));
-  };
-
-  const store = useStore();
-  const state = store.getState();
-  // @ts-ignore
-  const isAvailableToReport = state.settings.reportDate ? new Date() >= new Date(state.settings.reportDate) : true;
-
-  const logoAnimRef = useRef<any>(null);
-
-  useEffect(() => {
-    setTimeout(() => {
-      logoAnimRef.current?.play();
-    }, 200);
+  const [message, setMessage] = useState<Message | null>(null);
+  const showMessage = useCallback((title: string | null, description: string | null) => {
+    setMessage({ title, description });
   }, []);
+  const [showSent, setShowSent] = useState(false);
+
+  const [topics, setTopics] = useState<string[]>([]);
+  const toggleTopic = (topic: string) =>
+    setTopics((prev) => (prev.includes(topic) ? prev.filter((item) => item !== topic) : [...prev, topic]));
+
+  const [description, setDescription] = useState("");
+  const [email, setEmail] = useState("");
+  const [sendDeviceInfo, setSendDeviceInfo] = useState(true);
+  const [attachments, setAttachments] = useState<ReportAttachment[]>([]);
 
   /**
-   * Device Info
+   * What every report carries
    */
 
-  const [sendDeviceInfo, setSendDeviceInfo] = useState(false);
-  const toggleSendDeviceInfo = () => setSendDeviceInfo((prev) => !prev);
+  const language = i18n.language;
+  const [always, setAlways] = useState<AlwaysFacts | null>(null);
+  useEffect(() => {
+    let alive = true;
+    collectAlwaysFacts(language).then((facts) => alive && setAlways(facts));
+    return () => {
+      alive = false;
+    };
+  }, [language]);
+
+  const cloud: CloudKind = isCloudConnected ? providerOf(cloudSettings) : "none";
+  const deviceInfo = useMemo<DeviceFacts>(
+    () => ({ ...getDeviceBasics(), cloud, appIcon: getAppIcon() ?? "default", appVersion: getDisplayAppVersion() }),
+    [cloud]
+  );
+
+  const payload = useMemo(
+    () =>
+      always
+        ? buildReportPayload({
+            topics,
+            description,
+            email,
+            attachments,
+            always,
+            deviceInfo: sendDeviceInfo ? deviceInfo : undefined,
+          })
+        : null,
+    [topics, description, email, attachments, always, sendDeviceInfo, deviceInfo]
+  );
+
+  const trimmedLength = description.trim().length;
+  const descriptionIsShort = trimmedLength > 0 && trimmedLength < SHORT_DESCRIPTION;
 
   /**
-   * Description
+   * Attachments: reduced before they are attached (the website takes 4 MB of body, ADR-035)
    */
 
-  const [problemDescription, setProblemDescription] = useState("");
-
-  /**
-   * Topics
-   */
-
-  const [topicsSelected, setTopics] = useState<string[]>([]);
-  const toggleTopic = (topicName: string) => {
-    setTopics((prev: string[]) =>
-      prev.includes(topicName) ? prev.filter((t: string) => t != topicName) : [...prev, topicName]
-    );
-  };
-
-  /**
-   * Attachments
-   */
-
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-
-  const pickImageOrVideo = async () => {
+  const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images",
-      base64: true,
       allowsEditing: false,
-      quality: 0.8,
       selectionLimit: 1,
     });
 
-    if (result.canceled) return;
+    if (result.canceled || !result.assets?.length) return;
 
     const asset = result.assets[0];
-    const fileInfo = await FileSystem.getInfoAsync(asset.uri);
-
-    if (!fileInfo.exists) {
-      setReportMessage({
-        title: null,
-        description: t("report.messages.fileNotFound"),
-      });
-      setShowReportMessageDialog(true);
+    if (asset.type && asset.type !== "image") {
+      showMessage(null, t("report.messages.invalidType"));
       return;
     }
 
-    if (!isLessThan(fileInfo.size ?? 0, 5)) {
-      setReportMessage({
-        title: t("report.messages.size.title"),
-        description: t("report.messages.size.text"),
-      });
-      setShowReportMessageDialog(true);
+    let content: string;
+    try {
+      content = await reducePhoto(asset.uri, asset.width, asset.height);
+    } catch {
+      content = "";
+    }
+    if (!content) {
+      showMessage(null, t("report.messages.fileNotFound"));
       return;
     }
 
-    const mimeType = asset.type ?? "unknown";
-
-    if (mimeType !== "image") {
-      setReportMessage({
-        title: null,
-        description: t("report.messages.invalidType"),
-      });
-      setShowReportMessageDialog(true);
-      return;
-    }
-
-    const fileName = asset.fileName ?? asset.uri.split("/").pop() ?? `file.${mimeType}`;
-
-    setAttachments((prev) => [
-      ...prev,
-      {
-        filename: fileName,
-        content: asset.base64,
-        encoding: "base64",
-      },
-    ]);
+    const name = (asset.fileName ?? asset.uri.split("/").pop() ?? "image").replace(/\.[^.]*$/, "");
+    setAttachments((prev) => [...prev, { filename: `${name || "image"}.jpg`, content, encoding: "base64" }]);
   };
 
-  const removeAttachment = (fileName: string) => {
-    setAttachments((prev: Attachment[]) => prev.filter((attachment: Attachment) => attachment.filename != fileName));
-  };
+  const removeAttachment = (index: number) => setAttachments((prev) => prev.filter((_, i) => i !== index));
 
   /**
-   * Send Report
+   * Send
    */
 
-  const sendReport = async () => {
-    const data: Record<string, any> = {};
+  const send = async () => {
+    if (!payload || isLoading) return;
 
-    if (!topicsSelected.length || !problemDescription) {
-      setReportMessage({
-        title: t("report.messages.missing.title"),
-        description: t("report.messages.missing.text"),
-      });
-      setShowReportMessageDialog(true);
+    if (!topics.length || !trimmedLength) {
+      showMessage(t("report.messages.missing.title"), t("report.messages.missing.text"));
+      return;
+    }
+    if (payload.email && !isEmailValid(payload.email)) {
+      showMessage(t("report.messages.email_invalid.title"), t("report.messages.email_invalid.text"));
+      return;
+    }
+    if (!attachmentsFit(payload.attachments ?? [])) {
+      showMessage(t("report.messages.size.title"), t("report.messages.size.text"));
       return;
     }
 
     setLoading(true);
+    const { ok, error } = await sendReport(payload, configs.apiUrl);
+    setLoading(false);
 
-    data.topics = [...topicsSelected];
-    data.description = problemDescription;
-
-    const currentAppVersion = getDisplayAppVersion();
-
-    if (sendDeviceInfo) {
-      data.deviceInfo = {
-        brand: Device.brand,
-        deviceName: Device.deviceName,
-        deviceType: Device.DeviceType[Device.deviceType],
-        modelName: Device.modelName,
-        osVersion: Device.osVersion,
-        appVersion: currentAppVersion,
-      };
+    if (ok) {
+      dispatch(reportSent(new Date().toISOString()));
+      showMessage(t("report.messages.success.title"), t("report.messages.success.text"));
     } else {
-      data.deviceInfo = {
-        appVersion: currentAppVersion,
-      };
-    }
-
-    if (attachments.length) {
-      data.attachments = [...attachments];
-    }
-
-    try {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 10000);
-
-      const response = await fetch(`${configs.apiUrl}/report/`, {
-        method: "POST",
-        signal: controller.signal,
-        body: JSON.stringify(data),
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      });
-
-      clearTimeout(id);
-
-      const json = await response.json();
-
-      if (json.success) {
-        setReportMessage({
-          title: t("report.messages.success.title"),
-          description: t("report.messages.success.text"),
-        });
-        setShowReportMessageDialog(true);
-        lockReportForOneDay();
-      } else {
-        setReportMessage({
-          title: t("report.messages.error.title"),
-          description: t("report.messages.error.text"),
-        });
-        setShowReportMessageDialog(true);
-      }
-    } catch (error) {
-      Sentry.captureException(error);
-      setReportMessage({
-        title: t("report.messages.error.title"),
-        description: t("report.messages.error.text"),
-      });
-      setShowReportMessageDialog(true);
-    } finally {
-      setLoading(false);
+      if (error && !isTransientNetworkError(error)) Sentry.captureException(error);
+      showMessage(t("report.messages.error.title"), t("report.messages.error.text"));
     }
   };
+
+  const rows = payload ? payloadRows(payload) : null;
+  const languageName = supportedLanguages[always?.appLanguage ?? ""]?.name ?? always?.appLanguage ?? "";
 
   return (
     <>
       <ConfirmOrCancelDialog
-        open={showReportMessageDialog}
-        title={reportMessage.title}
-        description={reportMessage.description}
-        onConfirm={() => setShowReportMessageDialog(false)}
+        open={message !== null}
+        title={message?.title}
+        description={message?.description ?? ""}
+        onConfirm={() => setMessage(null)}
       />
+
+      <ComplexDialog
+        open={showSent}
+        title={t("report.whatIsSent")}
+        confirm={{ label: t("ok"), handler: () => setShowSent(false) }}
+        onDismiss={() => setShowSent(false)}
+      >
+        {rows && (
+          <View style={styles.rows}>
+            {rows.always.map((row) => (
+              <SentRow key={`a-${row.key}`} label={t(`report.sent.${row.key}`)} value={row.value} />
+            ))}
+            {rows.device && (
+              <>
+                <View style={styles.rowDivider} />
+                {rows.device.map((row) => (
+                  <SentRow key={`d-${row.key}`} label={t(`report.sent.${row.key}`)} value={row.value} />
+                ))}
+              </>
+            )}
+            <View style={styles.rowDivider} />
+            {rows.rest.map((row) => (
+              <SentRow key={`r-${row.key}`} label={t(`report.sent.${row.key}`)} value={row.value} />
+            ))}
+          </View>
+        )}
+      </ComplexDialog>
 
       <LoadingSpinner visible={isLoading} text={t("report.loading")} />
 
@@ -287,125 +269,164 @@ export default function ReportScreen() {
           keyboardShouldPersistTaps="handled"
           bottomOffset={PADDING_MARGIN.xl}
         >
-          <View style={styles.appWrapper}>
-            <LottieView ref={logoAnimRef} style={styles.logoStyle} source={lottieJson} loop={false} />
-            <Text style={styles.text}>Fast Memo - Notes in one click</Text>
-          </View>
-
-          {isAvailableToReport && (
-            <View style={styles.sectionWrapper}>
-              <Text style={styles.text}>{t("report.question")}</Text>
+          {canSend ? (
+            <>
+              <Text style={styles.label}>{t("report.question")}</Text>
 
               {/* topics */}
-              <View style={styles.topicWrapper}>
-                {topicList.map((topic) => (
-                  <TouchableOpacity
-                    key={topic}
-                    activeOpacity={0.7}
-                    onPress={() => toggleTopic(topic)}
-                    style={[styles.topicButton, topicsSelected.includes(topic) && styles.topicButtonSelected]}
-                  >
-                    <Text style={[styles.topicText, topicsSelected.includes(topic) && styles.topicTextSelected]}>
-                      {t("report.topic." + topic)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.topics}>
+                {topicList.map((topic) => {
+                  const selected = topics.includes(topic);
+                  return (
+                    <TouchableOpacity
+                      key={topic}
+                      activeOpacity={0.7}
+                      onPress={() => toggleTopic(topic)}
+                      style={[styles.topic, selected && styles.topicSelected]}
+                      accessibilityRole="checkbox"
+                      aria-checked={selected}
+                    >
+                      <Text style={[styles.topicText, selected && styles.topicTextSelected]}>{t("report.topic." + topic)}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {/* description */}
-              <View style={styles.problemDescriptionWrapper}>
+              <View style={styles.field}>
                 <TextInput
-                  style={styles.problemDescriptionInput}
+                  style={styles.description}
                   placeholderTextColor={COLOR.textMuted}
-                  onChangeText={(text: string) => setProblemDescription(text)}
-                  value={problemDescription}
+                  onChangeText={setDescription}
+                  value={description}
                   textAlignVertical="top"
                   multiline
                   numberOfLines={6}
                   placeholder={t("report.descriptionPlaceholder")}
-                  maxLength={500}
+                  maxLength={MAX_DESCRIPTION}
                 />
-                <Text style={styles.charCounter}>{problemDescription.length} / 500</Text>
+                <Text style={styles.counter}>
+                  {description.length} / {MAX_DESCRIPTION}
+                </Text>
+              </View>
+              {descriptionIsShort && (
+                <View style={styles.hint}>
+                  <InformationCircleIcon size={16} color={COLOR.darkYellow} />
+                  <Text style={styles.hintText}>{t("report.shortDescription")}</Text>
+                </View>
+              )}
+
+              {/* always sent */}
+              <View style={styles.box}>
+                <Text style={styles.boxTitle}>{t("report.alwaysSent")}</Text>
+                <View style={styles.facts}>
+                  {always && (
+                    <>
+                      <Text style={styles.fact}>Fast Memo {always.appVersion}</Text>
+                      <Text style={styles.fact}>{[always.os, always.osVersion].filter(Boolean).join(" ")}</Text>
+                      <Text style={styles.fact}>{languageName}</Text>
+                    </>
+                  )}
+                </View>
               </View>
 
-              {/* device info */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={toggleSendDeviceInfo}
-                accessibilityRole="checkbox"
-                aria-checked={sendDeviceInfo}
-              >
-                <View style={[styles.sendDeviceInfoCheckbox, sendDeviceInfo && styles.sendDeviceInfoCheckboxChecked]}>
-                  <CheckIcon size={18} color={COLOR.softWhite} style={{ opacity: sendDeviceInfo ? 1 : 0 }} />
-                </View>
-                <Text style={styles.sendDeviceInfoText}>{t("report.deviceInfoCheckbox")}</Text>
-              </TouchableOpacity>
+              {/* device information */}
+              <View style={styles.box}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setSendDeviceInfo((prev) => !prev)}
+                  style={styles.check}
+                  accessibilityRole="checkbox"
+                  aria-checked={sendDeviceInfo}
+                >
+                  <View style={[styles.checkbox, sendDeviceInfo && styles.checkboxChecked]}>
+                    {sendDeviceInfo && <CheckIcon size={14} color={COLOR.softWhite} strokeWidth={2.4} />}
+                  </View>
+                  <View style={styles.checkTexts}>
+                    <Text style={styles.checkTitle}>{t("report.deviceInfoCheckbox")}</Text>
+                    <Text style={styles.checkText}>{t("report.deviceInfoText")}</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7} onPress={() => setShowSent(true)} accessibilityRole="button">
+                  <Text style={styles.link}>{t("report.seeWhatIsSent")}</Text>
+                </TouchableOpacity>
+              </View>
 
               {/* attachments */}
-              <ScrollView horizontal>
+              <ScrollView horizontal contentContainerStyle={styles.attachments}>
                 {attachments.map((attachment, i) => (
-                  <View key={i} style={[styles.addImageOrVideo, styles.imageOrVideoWrapper]}>
+                  <View key={i} style={[styles.attachment, styles.attachmentFilled]}>
+                    <Image style={styles.attachmentImage} source={{ uri: `data:image/jpeg;base64,${attachment.content}` }} />
                     <TouchableOpacity
                       activeOpacity={0.7}
-                      onPress={() => removeAttachment(attachment.filename)}
+                      onPress={() => removeAttachment(i)}
                       accessibilityRole="button"
                       accessibilityLabel={t("a11y.remove_attachment")}
-                      style={styles.removeImageOrVideo}
+                      style={styles.removeAttachment}
+                      hitSlop={10}
                     >
                       <XMarkIcon size={14} color={COLOR.softWhite} />
                     </TouchableOpacity>
-                    <Image
-                      style={styles.imageOrVideo}
-                      source={{
-                        uri: `data:image/png;${attachment.encoding},${attachment.content}`,
-                      }}
-                    />
                   </View>
                 ))}
 
-                {attachments.length < 3 && (
-                  <TouchableOpacity activeOpacity={0.7} onPress={pickImageOrVideo} style={styles.addImageOrVideo}>
+                {attachments.length < MAX_ATTACHMENTS && (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={pickImage}
+                    style={styles.attachment}
+                    accessibilityRole="button"
+                  >
                     <PlusIcon size={24} color={COLOR.softWhite} />
-
-                    <Text style={[styles.text, { textAlign: "center" }]}>{t("report.attachments")}</Text>
+                    <Text style={styles.attachmentText}>{t("report.attachments")}</Text>
                   </TouchableOpacity>
                 )}
               </ScrollView>
-              <View>
-                <Text style={[styles.text, { fontSize: 12 }]}>
-                  {t("report.attachments_limit")} {attachments.length} / 3
-                </Text>
-                <Text style={[styles.text, { fontSize: 12 }]}>{t("report.size_limit")} 5 MB</Text>
-              </View>
-            </View>
-          )}
+              <Text style={styles.small}>
+                {t("report.attachments_limit")} {attachments.length} / {MAX_ATTACHMENTS}
+              </Text>
 
-          {!isAvailableToReport && (
-            <View style={styles.sectionWrapper}>
-              <Text style={[styles.text, { textAlign: "center", marginVertical: PADDING_MARGIN.xl }]}>
+              {/* email */}
+              <TextInput
+                style={styles.email}
+                placeholderTextColor={COLOR.textMuted}
+                onChangeText={setEmail}
+                value={email}
+                placeholder={t("report.email")}
+                accessibilityLabel={t("report.email")}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                inputMode="email"
+              />
+
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={send}
+                disabled={isLoading || !payload}
+                style={[styles.send, (isLoading || !payload) && styles.sendDisabled]}
+                accessibilityRole="button"
+                aria-disabled={isLoading || !payload}
+              >
+                <Text style={styles.sendText}>{t("report.sendReport")}</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.box}>
+              <Text style={styles.sentText}>
                 {t("report.sent_message_1")}
                 {"\n"}
                 {t("report.sent_message_2")}
-                {"\n"}
-                {"\n"}
-                <Text
-                  style={{
-                    fontSize: FONTSIZE.subtitle,
-                    color: COLOR.lightBlue,
-                  }}
-                >
-                  {/* @ts-ignore */}
-                  {formatDateTime(state.settings.reportDate)}
-                </Text>
               </Text>
+              <Text style={styles.sentDate}>{nextAt !== null ? formatDateTime(nextAt) : ""}</Text>
             </View>
           )}
 
-          {/* send report */}
-          {isAvailableToReport && (
-            <TouchableOpacity activeOpacity={0.7} onPress={sendReport} style={styles.sendReportButton}>
-              <Text style={styles.text}>{t("report.sendReport")}</Text>
-            </TouchableOpacity>
+          {always && (
+            <Text style={styles.code} selectable>
+              {t("report.installCode", { code: always.installId })}
+            </Text>
           )}
         </KeyboardAwareScrollView>
       </SafeAreaView>
@@ -413,9 +434,21 @@ export default function ReportScreen() {
   );
 }
 
-export const isLessThan = (fileSize: number, megabyte: number) => {
-  return fileSize / 1024 / 1024 < megabyte;
-};
+interface SentRowProps {
+  label: string;
+  value: string;
+}
+
+function SentRow({ label, value }: SentRowProps) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowValue} selectable>
+        {value}
+      </Text>
+    </View>
+  );
+}
 
 /* STYLES */
 
@@ -446,49 +479,27 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 42,
   },
-  appWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: PADDING_MARGIN.lg,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: GLASS.border,
-    padding: PADDING_MARGIN.md,
-    marginBottom: PADDING_MARGIN.md,
-  },
-  logoStyle: {
-    width: 50,
-    height: 50,
-  },
-  sectionWrapper: {
-    gap: PADDING_MARGIN.md,
-    borderRadius: BORDER.normal,
-    backgroundColor: COLOR.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: GLASS.border,
-    padding: PADDING_MARGIN.lg,
-    marginBottom: PADDING_MARGIN.md,
-  },
-  text: {
+  label: {
     color: COLOR.textPrimary,
     fontFamily: FONT.regular,
+    fontSize: FONTSIZE.paragraph,
+    marginBottom: PADDING_MARGIN.md,
   },
-  topicWrapper: {
-    rowGap: PADDING_MARGIN.sm,
-    columnGap: PADDING_MARGIN.md,
+  topics: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: PADDING_MARGIN.sm,
+    marginBottom: PADDING_MARGIN.lg,
   },
-  topicButton: {
+  topic: {
     backgroundColor: GLASS.fill,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: GLASS.border,
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.md,
-    borderRadius: BORDER.small,
+    borderRadius: BORDER.rounded,
   },
-  topicButtonSelected: {
+  topicSelected: {
     backgroundColor: COLOR.accentMuted,
     borderColor: COLOR.accentMutedBorder,
   },
@@ -500,96 +511,236 @@ const styles = StyleSheet.create({
   topicTextSelected: {
     color: COLOR.softWhite,
   },
-  problemDescriptionWrapper: {
-    marginTop: PADDING_MARGIN.sm,
+  field: {
     borderRadius: BORDER.normal,
-    backgroundColor: COLOR.bg,
-    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: COLOR.surface,
+    borderWidth: 1,
     borderColor: GLASS.border,
     paddingVertical: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.md,
   },
-  problemDescriptionInput: {
-    minHeight: 120,
+  description: {
+    minHeight: 110,
     color: COLOR.textPrimary,
     fontFamily: FONT.regular,
     fontSize: FONTSIZE.paragraph,
   },
-  charCounter: {
+  counter: {
     textAlign: "right",
     color: COLOR.textMuted,
     fontFamily: FONT.regular,
     fontSize: FONTSIZE.small,
+  },
+  hint: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: PADDING_MARGIN.sm,
     marginTop: PADDING_MARGIN.sm,
   },
-  sendDeviceInfoText: {
+  hintText: {
+    flex: 1,
+    color: COLOR.darkYellow,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    lineHeight: 17,
+  },
+  box: {
+    marginTop: PADDING_MARGIN.lg,
+    borderRadius: BORDER.normal,
+    borderWidth: 1,
+    borderColor: GLASS.border,
+    backgroundColor: GLASS.fill,
+    padding: PADDING_MARGIN.md,
+  },
+  boxTitle: {
+    color: COLOR.textMuted,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.small,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: PADDING_MARGIN.sm,
+  },
+  facts: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: PADDING_MARGIN.sm,
+  },
+  fact: {
     color: COLOR.textPrimary,
     fontFamily: FONT.regular,
-    paddingLeft: PADDING_MARGIN.xl,
+    fontSize: FONTSIZE.small,
+    backgroundColor: GLASS.fillStrong,
+    borderRadius: BORDER.small,
+    paddingVertical: PADDING_MARGIN.xs,
+    paddingHorizontal: PADDING_MARGIN.sm,
+    overflow: "hidden",
   },
-  sendDeviceInfoCheckbox: {
-    position: "absolute",
-    width: 26,
-    height: 26,
+  check: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: PADDING_MARGIN.md,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    marginTop: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: GLASS.fill,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: GLASS.border,
     borderRadius: BORDER.small,
-    alignSelf: "flex-start",
   },
-  sendDeviceInfoCheckboxChecked: {
+  checkboxChecked: {
     backgroundColor: COLOR.accentMuted,
     borderColor: COLOR.accentMutedBorder,
   },
-  addImageOrVideo: {
+  checkTexts: {
+    flex: 1,
+    gap: 2,
+  },
+  checkTitle: {
+    color: COLOR.textPrimary,
+    fontFamily: FONT.medium,
+    fontSize: FONTSIZE.medium,
+  },
+  checkText: {
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+  },
+  link: {
+    color: COLOR.accentSoft,
+    fontFamily: FONT.medium,
+    fontSize: FONTSIZE.medium,
+    marginTop: PADDING_MARGIN.sm,
+    marginLeft: 22 + PADDING_MARGIN.md,
+    paddingVertical: PADDING_MARGIN.xs,
+  },
+  attachments: {
+    paddingTop: PADDING_MARGIN.lg,
+  },
+  attachment: {
     position: "relative",
     height: 100,
     width: 100,
     alignItems: "center",
+    justifyContent: "center",
     gap: PADDING_MARGIN.sm,
-    alignSelf: "flex-start",
     padding: PADDING_MARGIN.md,
     borderColor: GLASS.border,
     borderWidth: 1,
     borderRadius: BORDER.big,
     borderStyle: "dashed",
-    marginTop: PADDING_MARGIN.sm,
     marginRight: PADDING_MARGIN.md,
   },
-  imageOrVideoWrapper: {
+  attachmentFilled: {
     borderWidth: 0,
+    padding: 0,
     backgroundColor: COLOR.surfaceMuted,
   },
-  imageOrVideo: {
+  attachmentImage: {
     position: "absolute",
-    zIndex: -1,
     height: 100,
     width: 100,
     borderRadius: BORDER.big,
     top: 0,
     left: 0,
   },
-  removeImageOrVideo: {
+  attachmentText: {
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    textAlign: "center",
+  },
+  removeAttachment: {
     top: -5,
     right: -5,
     position: "absolute",
     backgroundColor: COLOR.important,
     borderRadius: BORDER.rounded,
-    paddingVertical: 2,
-    paddingHorizontal: 1,
+    padding: 3,
   },
-  sendReportButton: {
-    width: SIZE.full,
-    alignItems: "center",
-    gap: PADDING_MARGIN.sm,
-    alignSelf: "flex-start",
-    paddingVertical: PADDING_MARGIN.lg,
+  small: {
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    marginTop: PADDING_MARGIN.sm,
+  },
+  email: {
+    marginTop: PADDING_MARGIN.lg,
+    borderRadius: BORDER.normal,
+    backgroundColor: COLOR.surface,
+    borderWidth: 1,
+    borderColor: GLASS.border,
+    paddingVertical: PADDING_MARGIN.md,
     paddingHorizontal: PADDING_MARGIN.md,
-    borderRadius: BORDER.big,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.paragraph,
+  },
+  send: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: PADDING_MARGIN.lg,
+    borderRadius: BORDER.normal,
     backgroundColor: COLOR.accentMuted,
-    marginVertical: PADDING_MARGIN.xl,
+    marginTop: PADDING_MARGIN.lg,
     ...SHADOW.fab,
+  },
+  sendDisabled: {
+    opacity: 0.55,
+  },
+  sendText: {
+    color: COLOR.softWhite,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.paragraph,
+  },
+  sentText: {
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.paragraph,
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  sentDate: {
+    marginTop: PADDING_MARGIN.md,
+    color: COLOR.accentSoft,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.subtitle,
+    textAlign: "center",
+  },
+  code: {
+    marginTop: PADDING_MARGIN.lg,
+    marginBottom: PADDING_MARGIN.xl,
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.small,
+    textAlign: "center",
+  },
+  rows: {
+    gap: PADDING_MARGIN.xs + 2,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: PADDING_MARGIN.md,
+  },
+  rowLabel: {
+    color: COLOR.textMuted,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.medium,
+  },
+  rowValue: {
+    flexShrink: 1,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.medium,
+    textAlign: "right",
+  },
+  rowDivider: {
+    height: 1,
+    backgroundColor: GLASS.border,
+    marginVertical: PADDING_MARGIN.xs,
   },
 });

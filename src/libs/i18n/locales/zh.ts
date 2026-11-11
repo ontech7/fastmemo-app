@@ -1069,21 +1069,51 @@ const zh = {
       other: "其他",
     },
     descriptionPlaceholder: "请详细描述问题（必填）",
-    deviceInfoCheckbox: "为了更准确的诊断，请提供设备详细信息。",
+    deviceInfoCheckbox: "添加设备信息",
     attachments: "添加图片",
     sendReport: "发送报告",
 
     sent_message_1: "感谢您提交报告。",
-    sent_message_2: "从那天起可以提交另一份报告：",
+    sent_message_2: "可以再次发送的时间：",
 
     attachments_limit: "附件限制：",
-    size_limit: "每张图片的大小限制：",
     loading: "加载中...",
 
+    alwaysSent: "始终发送",
+    deviceInfoText: "品牌、型号、云类型、应用图标。绝不包含笔记内容。",
+    seeWhatIsSent: "查看发送的内容",
+    whatIsSent: "发送的内容",
+    shortDescription: "请补充你当时在做什么、期望发生什么：只有几个字很难理解。",
+    email: "电子邮件（可选，用于回复你）",
+    installCode: "此安装的代码：{{code}}",
+
+    sent: {
+      appVersion: "应用",
+      os: "系统",
+      osVersion: "系统版本",
+      appLanguage: "应用语言",
+      installId: "安装代码",
+      brand: "品牌",
+      modelName: "型号",
+      deviceType: "类型",
+      cloud: "云",
+      appIcon: "应用图标",
+      topics: "主题",
+      descriptionLength: "描述（字符数）",
+      images: "图片",
+      email: "电子邮件",
+    },
+
     messages: {
+      email_invalid: {
+        title: "请检查电子邮件",
+        text: "电子邮件地址似乎不正确。",
+      },
+      fileNotFound: "无法读取该文件。",
+      invalidType: "只能附加图片。",
       size: {
         title: "文件太大！",
-        text: "选择较小的文件或压缩它。",
+        text: "图片总大小过大。请移除一张。",
       },
       success: {
         title: "成功！",

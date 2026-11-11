@@ -1123,21 +1123,51 @@ const es = {
       other: "Otro",
     },
     descriptionPlaceholder: "Describe el problema en detalle (obligatorio)",
-    deviceInfoCheckbox: "Para un diagnóstico más preciso, compártenos los detalles del dispositivo.",
+    deviceInfoCheckbox: "Añadir la información del dispositivo",
     attachments: "Añadir imágenes",
     sendReport: "Enviar Reporte",
 
     sent_message_1: "Gracias por enviar el informe.",
-    sent_message_2: "Se puede enviar otro informe a partir del día:",
+    sent_message_2: "Podrás enviar otro a partir de:",
 
     attachments_limit: "Límite de adjuntos:",
-    size_limit: "Límite de tamaño por imagen:",
     loading: "Cargando...",
 
+    alwaysSent: "Siempre enviados",
+    deviceInfoText: "Marca, modelo, tipo de nube, icono de la app. Nunca el contenido de tus notas.",
+    seeWhatIsSent: "Ver qué se envía",
+    whatIsSent: "Qué se envía",
+    shortDescription: "Añade qué estabas haciendo y qué esperabas: con pocas palabras es difícil entenderlo.",
+    email: "Email (opcional, para responderte)",
+    installCode: "Código de esta instalación: {{code}}",
+
+    sent: {
+      appVersion: "App",
+      os: "Sistema",
+      osVersion: "Versión del sistema",
+      appLanguage: "Idioma de la app",
+      installId: "Código de instalación",
+      brand: "Marca",
+      modelName: "Modelo",
+      deviceType: "Tipo",
+      cloud: "Nube",
+      appIcon: "Icono de la app",
+      topics: "Tema",
+      descriptionLength: "Descripción (caracteres)",
+      images: "Imágenes",
+      email: "Email",
+    },
+
     messages: {
+      email_invalid: {
+        title: "Revisa el email",
+        text: "La dirección de email no parece correcta.",
+      },
+      fileNotFound: "No se pudo leer el archivo.",
+      invalidType: "Solo se pueden adjuntar imágenes.",
       size: {
         title: "¡Archivo demasiado grande!",
-        text: "Elige un archivo más pequeño o comprímelo.",
+        text: "Las imágenes juntas son demasiado grandes. Quita una.",
       },
       success: {
         title: "¡Éxito!",

@@ -1104,21 +1104,51 @@ const en = {
       other: "Other",
     },
     descriptionPlaceholder: "Please describe the issue in detail (required)",
-    deviceInfoCheckbox: "For more accurate diagnosis, kindly provide us with device details.",
+    deviceInfoCheckbox: "Add information about the device",
     attachments: "Add Images",
     sendReport: "Send Report",
 
     sent_message_1: "Thank you for submitting the report.",
-    sent_message_2: "Another report can be submitted from the day:",
+    sent_message_2: "Another report can be sent from:",
 
     attachments_limit: "Attachments limit:",
-    size_limit: "Size limit per image:",
     loading: "Loading...",
 
+    alwaysSent: "Always sent",
+    deviceInfoText: "Brand, model, kind of cloud, app icon. Never the content of your notes.",
+    seeWhatIsSent: "See what is sent",
+    whatIsSent: "What is sent",
+    shortDescription: "Add what you were doing and what you expected: a few words are hard to understand.",
+    email: "Email (optional, so we can answer)",
+    installCode: "This installation's code: {{code}}",
+
+    sent: {
+      appVersion: "App",
+      os: "System",
+      osVersion: "System version",
+      appLanguage: "App language",
+      installId: "Installation code",
+      brand: "Brand",
+      modelName: "Model",
+      deviceType: "Type",
+      cloud: "Cloud",
+      appIcon: "App icon",
+      topics: "Topic",
+      descriptionLength: "Description (characters)",
+      images: "Images",
+      email: "Email",
+    },
+
     messages: {
+      email_invalid: {
+        title: "Check the email",
+        text: "The email address doesn't look right.",
+      },
+      fileNotFound: "The file could not be read.",
+      invalidType: "Only images can be attached.",
       size: {
         title: "File Too Large!",
-        text: "Choose a smaller file or compress it.",
+        text: "The images are too large together. Remove one.",
       },
       success: {
         title: "Success!",

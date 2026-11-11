@@ -1132,21 +1132,51 @@ const fr = {
       other: "Autre",
     },
     descriptionPlaceholder: "Veuillez décrire le problème en détail (obligatoire)",
-    deviceInfoCheckbox: "Pour un diagnostic plus précis, veuillez nous fournir les détails de l'appareil.",
+    deviceInfoCheckbox: "Ajouter les informations sur l'appareil",
     attachments: "Ajouter des images",
     sendReport: "Envoyer le Rapport",
 
     sent_message_1: "Merci d'avoir soumis le rapport.",
-    sent_message_2: "Un autre rapport peut être soumis à partir du jour :",
+    sent_message_2: "Vous pourrez en envoyer un autre à partir du :",
 
     attachments_limit: "Limite d'attachments :",
-    size_limit: "Limite de taille par image :",
     loading: "Chargement...",
 
+    alwaysSent: "Toujours envoyés",
+    deviceInfoText: "Marque, modèle, type de cloud, icône de l'app. Jamais le contenu de vos notes.",
+    seeWhatIsSent: "Voir ce qui est envoyé",
+    whatIsSent: "Ce qui est envoyé",
+    shortDescription: "Ajoutez ce que vous faisiez et ce que vous attendiez : en quelques mots, c'est difficile à comprendre.",
+    email: "E-mail (facultatif, pour vous répondre)",
+    installCode: "Code de cette installation : {{code}}",
+
+    sent: {
+      appVersion: "App",
+      os: "Système",
+      osVersion: "Version du système",
+      appLanguage: "Langue de l'app",
+      installId: "Code d'installation",
+      brand: "Marque",
+      modelName: "Modèle",
+      deviceType: "Type",
+      cloud: "Cloud",
+      appIcon: "Icône de l'app",
+      topics: "Sujet",
+      descriptionLength: "Description (caractères)",
+      images: "Images",
+      email: "E-mail",
+    },
+
     messages: {
+      email_invalid: {
+        title: "Vérifiez l'e-mail",
+        text: "L'adresse e-mail ne semble pas correcte.",
+      },
+      fileNotFound: "Le fichier n'a pas pu être lu.",
+      invalidType: "Seules des images peuvent être jointes.",
       size: {
         title: "Fichier trop volumineux !",
-        text: "Choisissez un fichier plus petit ou compressez-le.",
+        text: "Les images ensemble sont trop lourdes. Retirez-en une.",
       },
       success: {
         title: "Succès !",

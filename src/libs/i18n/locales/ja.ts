@@ -1100,21 +1100,51 @@ const ja = {
       other: "その他",
     },
     descriptionPlaceholder: "詳細に問題を説明してください（必須）",
-    deviceInfoCheckbox: "より正確な診断のため、デバイスの詳細を提供してください。",
+    deviceInfoCheckbox: "デバイスの情報を追加",
     attachments: "画像を追加",
     sendReport: "レポートを送信",
 
     sent_message_1: "レポートの送信ありがとうございます。",
-    sent_message_2: "また、レポートは以下の日から送信できます:",
+    sent_message_2: "次の報告を送れるのは：",
 
     attachments_limit: "添付ファイルの制限:",
-    size_limit: "画像あたりのサイズ制限:",
     loading: "読み込み中...",
 
+    alwaysSent: "常に送信",
+    deviceInfoText: "メーカー、機種、クラウドの種類、アプリのアイコン。ノートの内容は決して含みません。",
+    seeWhatIsSent: "送信される内容を見る",
+    whatIsSent: "送信される内容",
+    shortDescription: "何をしていて、どうなると思っていたかを書き加えてください。短い文では状況がわかりにくいです。",
+    email: "メールアドレス（任意、返信用）",
+    installCode: "このインストールのコード：{{code}}",
+
+    sent: {
+      appVersion: "アプリ",
+      os: "システム",
+      osVersion: "システムのバージョン",
+      appLanguage: "アプリの言語",
+      installId: "インストールコード",
+      brand: "メーカー",
+      modelName: "機種",
+      deviceType: "種類",
+      cloud: "クラウド",
+      appIcon: "アプリのアイコン",
+      topics: "トピック",
+      descriptionLength: "説明（文字数）",
+      images: "画像",
+      email: "メール",
+    },
+
     messages: {
+      email_invalid: {
+        title: "メールアドレスを確認してください",
+        text: "メールアドレスが正しくないようです。",
+      },
+      fileNotFound: "ファイルを読み込めませんでした。",
+      invalidType: "添付できるのは画像のみです。",
       size: {
         title: "ファイルが大きすぎます！",
-        text: "より小さいファイルを選択するか、圧縮してください。",
+        text: "画像の合計サイズが大きすぎます。1枚削除してください。",
       },
       success: {
         title: "成功！",

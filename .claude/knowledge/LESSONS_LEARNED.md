@@ -2064,6 +2064,28 @@ pipeline that has never run end to end isn't verified: its first real run is the
 
 ---
 
+### LL-088: A report with screenshots couldn't be sent, and the error said nothing
+
+**Date:** 2026-11-11  
+**Severity:** Medium (the reports that need a picture most were the ones that failed)  
+**Category:** Bug  
+**What happened:** the report screen attached pictures of up to 5 MB each (three of them) as base64, re-encoded at quality
+0.8 with no resize. The website's endpoint (`/api/report`, Next.js) parses at most 1 MB of body by default, so a report with
+one phone photo was refused before it reached the handler, and the app showed its generic "the report could not be sent".  
+**Root cause:** what the app can attach was never checked against what the endpoint takes. The two limits lived in two
+repositories and nobody compared them.  
+**Fix:** 4.1.0 reduces each picture before it is attached (long side 1600 px, JPEG 0.6, `libs/reducePhoto.ts` with
+`utils/imageSize.ts`), checks the pictures together against `ATTACHMENTS_MAX_BYTES` (3,000,000 base64 characters) before
+sending, and the website's endpoint takes 4 MB (`fastmemo-website`, `feat/report-4-1`). A failed send keeps every field and
+doesn't count against the three reports a day (ADR-035).  
+**Rule:** what the app can send is checked against what the endpoint accepts, on both sides: a cap in the app, a matching limit
+in the endpoint, and a test that sends the largest body the app can build.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-11 **Resolved in:** plan-1/fixes-performance-polish (Task 5, website Task 7)
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

@@ -88,6 +88,8 @@ export interface SettingsState {
   voiceRecognition: VoiceRecognitionSettings;
   aiAssistant: AIAssistantSettings;
   reportDate: string | null;
+  /** The ISO dates of the reports sent in the last 24 hours (three a day, ADR-035). */
+  reportLog: string[];
   developerMode: DeveloperModeSettings;
   noteCreation: NoteCreationSettings;
   /**

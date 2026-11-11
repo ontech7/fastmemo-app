@@ -10,10 +10,13 @@ import type {
   Webhooks,
 } from "@/types";
 import { DEFAULT_MODEL_ID, isLegacyModelId, normalizeModelId } from "@/libs/ai/constants";
+import { pruneReportLog } from "@/libs/diagnostics/report";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSlice } from "@reduxjs/toolkit";
 import { Platform } from "react-native";
 import { createSelector } from "reselect";
+
+const EMPTY_LOG: string[] = [];
 
 const initialState: SettingsState = {
   language: "system",
@@ -60,6 +63,7 @@ const initialState: SettingsState = {
     voiceOnly: false,
   },
   reportDate: null,
+  reportLog: [],
   developerMode: {
     enabled: false,
     unlimitedTextSpace: false,
@@ -96,6 +100,11 @@ const settingsSlice = createSlice({
     },
     setReportDate: (state, action: PayloadAction<string | null>) => {
       state.reportDate = action.payload;
+    },
+    /** A report was sent: its date (ISO, made by the caller) joins the last 24 hours' log; 4.0.0's lock is folded in. */
+    reportSent: (state, action: PayloadAction<string>) => {
+      state.reportLog = [...pruneReportLog(state.reportLog, state.reportDate, Date.parse(action.payload)), action.payload];
+      state.reportDate = null;
     },
     setIsCloudSyncEnabled: (state, action: PayloadAction<boolean>) => {
       state.isCloudSyncEnabled = action.payload;
@@ -135,6 +144,7 @@ export const {
   setIsFingerprintEnabled,
   setShowHidden,
   setReportDate,
+  reportSent,
   setIsCloudSyncEnabled,
   setCloudSettings,
   setCloudConnected,
@@ -154,6 +164,8 @@ export const selectorIsFingerprintEnabled = (state: RootState): boolean => state
 export const selectorShowHidden = (state: RootState): boolean => state.settings.showHidden;
 export const selectorTourStep = (state: RootState): TourStep | undefined => state.settings.tour;
 export const selectorReportDate = (state: RootState): string | null => state.settings.reportDate;
+/** The reports sent in the last 24 hours (a state saved before the key existed has none). */
+export const selectorReportLog = (state: RootState): string[] => state.settings.reportLog ?? EMPTY_LOG;
 export const selectorIsCloudSyncEnabled = (state: RootState): boolean => state.settings.isCloudSyncEnabled;
 export const getCloudSettings = (state: RootState): CloudSettings => state.settings.cloud;
 export const getCloudConnected = (state: RootState): boolean => state.settings.cloudConnected;

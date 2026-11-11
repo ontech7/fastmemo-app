@@ -1132,21 +1132,52 @@ const de = {
       other: "Andere",
     },
     descriptionPlaceholder: "Bitte beschreiben Sie das Problem ausführlich (erforderlich)",
-    deviceInfoCheckbox: "Für eine genauere Diagnose bitten wir Sie, uns Gerätedetails bereitzustellen.",
+    deviceInfoCheckbox: "Geräteinformationen hinzufügen",
     attachments: "Bilder hinzufügen",
     sendReport: "Bericht senden",
 
     sent_message_1: "Vielen Dank für das Einreichen des Berichts.",
-    sent_message_2: "Ein weiterer Bericht kann ab dem Tag eingereicht werden:",
+    sent_message_2: "Eine weitere Meldung ist möglich ab:",
 
     attachments_limit: "Anhangslimit:",
-    size_limit: "Größenlimit pro Bild:",
     loading: "Laden...",
 
+    alwaysSent: "Immer gesendet",
+    deviceInfoText: "Marke, Modell, Art der Cloud, App-Symbol. Niemals der Inhalt Ihrer Notizen.",
+    seeWhatIsSent: "Ansehen, was gesendet wird",
+    whatIsSent: "Was gesendet wird",
+    shortDescription:
+      "Ergänzen Sie, was Sie gerade gemacht und was Sie erwartet haben: Mit wenigen Worten ist es schwer zu verstehen.",
+    email: "E-Mail (optional, damit wir antworten können)",
+    installCode: "Code dieser Installation: {{code}}",
+
+    sent: {
+      appVersion: "App",
+      os: "System",
+      osVersion: "Systemversion",
+      appLanguage: "App-Sprache",
+      installId: "Installationscode",
+      brand: "Marke",
+      modelName: "Modell",
+      deviceType: "Typ",
+      cloud: "Cloud",
+      appIcon: "App-Symbol",
+      topics: "Thema",
+      descriptionLength: "Beschreibung (Zeichen)",
+      images: "Bilder",
+      email: "E-Mail",
+    },
+
     messages: {
+      email_invalid: {
+        title: "E-Mail prüfen",
+        text: "Die E-Mail-Adresse scheint nicht korrekt zu sein.",
+      },
+      fileNotFound: "Die Datei konnte nicht gelesen werden.",
+      invalidType: "Es können nur Bilder angehängt werden.",
       size: {
         title: "Datei zu groß!",
-        text: "Wählen Sie eine kleinere Datei oder komprimieren Sie sie.",
+        text: "Die Bilder sind zusammen zu groß. Entfernen Sie eines.",
       },
       success: {
         title: "Erfolg!",
