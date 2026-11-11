@@ -96,6 +96,8 @@ src/
   hooks/               # Custom React hooks
     useCloudSync.ts    # Cloud sync lifecycle management (connect, disconnect, full sync, handshake)
     useLiveNote.ts     # Open editor: reloads changes merged from other devices, publishes presence
+    useTodoList.ts     # A list note's state and actions, shared by both list editors: every action computes from the
+                       #   current note (stable handlers), so typing in an item renders that row only (LL-018)
     useRouter.ts       # Expo Router wrapper with push-debounce (1000ms guard)
     useSecret.ts       # Secret code / biometric authentication
     useNetInfo.ts      # Network connectivity state: NetInfo on native; .web.ts reads libs/netStatus (one probe, only with a

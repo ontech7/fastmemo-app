@@ -339,6 +339,10 @@ the merge is persisted** (`persistor.flush()`), through `ackChanges` (it refuses
   (debounce 500ms / max wait 2s on native, 300ms / 1s on web). Never dispatch `addNote` per keystroke (LL-031).
 - Before acting on the **stored** note (delete, detach, make offline, sync, change category, fire a webhook, navigate away
   programmatically), call `flushNote()` so the action sees the latest edits.
+- An editor's handlers compute from the note as it is when they run: `updateNoteAsync((current) => next)`, returning `current`
+  itself when there's nothing to do. Never from the rendered note (`setNoteAsync({ ...note, … })` in a callback that depends on
+  `note`): such a handler is a new function at every keystroke, so every row it's passed to renders again, and it can write over
+  a change that arrived meanwhile. Keep the objects of the items that didn't change (`useTodoList`, LL-018).
 - `flushOnExit` (installed once in `_layout`) flushes pending batches and `persistor.flush()` when the app leaves the
   foreground, the page is hidden, or a desktop window closes; edits that arrive while the app is in the background are written
   at once (JS timers don't run there, LL-032). New editors must register through `useNoteEditor`, not their own timers.
@@ -954,26 +958,27 @@ What an error and a report carry is decided in ADR-035; the code is `src/libs/di
 
 ### ALWAYS
 
-| #   | Rule                                                                   | Why                                                              |
-| --- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| 1   | Always use `interface Props` for component props                       | Consistent pattern across all ~96 components                     |
-| 2   | Always use `export default function` for components                    | Or `export default memo(Fn)` for memoized list items             |
-| 3   | Always use `@/` path alias                                             | Cross-module imports must use the alias                          |
-| 4   | Always use `import type` for types                                     | Ensures type erasure at compile time                             |
-| 5   | Always use `StyleSheet.create()` for styles                            | At the bottom of the file, after the component                   |
-| 6   | Always use style constants from `@/constants/styles`                   | Never hardcode colors, font sizes, spacing, or border radii      |
-| 7   | Always wrap list-rendered components with `memo()`                     | NoteCard, TodoItem, OrderedCategoryCard, etc.                    |
-| 8   | Always add all 7 locale translations                                   | en, it, es, fr, de, zh, ja                                       |
-| 9   | Always test web + native for platform-split files                      | Behavior can diverge silently                                    |
-| 10  | Always use `useTranslation()` for UI text                              | Via `react-i18next`                                              |
-| 11  | Always use `TouchableOpacity activeOpacity={0.7}`                      | Standard pressable pattern                                       |
-| 12  | Always place `/* STYLES */` comment above StyleSheet                   | Visual separator convention                                      |
-| 13  | Always make new fields optional with defaults                          | Backward compat: old persisted data must load without crashes    |
-| 14  | Always estimate Firestore ops for cloud-related features               | Document reads/writes/deletes per user action in the PR          |
-| 15  | Always call `flushNote()` before acting on a stored note               | Delete/detach/sync/category change must see the latest edits     |
-| 16  | Always set `timeout: 0` on a `PersistConfig`                           | A timed-out read rehydrates empty state and wipes storage        |
-| 17  | Always keep sync queue entries exclusive per id                        | Latest operation replaces the others (see LL-033)                |
-| 18  | Always forward a WebView page's errors with `PAGE_ERROR_SCRIPT`        | And report `PAGE_ERROR_MESSAGE` with `reportPageError` (ADR-035) |
-| 19  | Always enforce a protection in the screen that shows the thing         | Not in the buttons that lead there: links skip them (LL-085)     |
-| 20  | Always register unsaved typed text with `registerPendingFlush`         | The app can be killed in the background (LL-084)                 |
-| 21  | Always resize a picture to its shown size before storing or sending it | `reducePhoto`: 1600 px, JPEG 0.6 (LL-083, LL-088)                |
+| #   | Rule                                                                       | Why                                                                |
+| --- | -------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 1   | Always use `interface Props` for component props                           | Consistent pattern across all ~96 components                       |
+| 2   | Always use `export default function` for components                        | Or `export default memo(Fn)` for memoized list items               |
+| 3   | Always use `@/` path alias                                                 | Cross-module imports must use the alias                            |
+| 4   | Always use `import type` for types                                         | Ensures type erasure at compile time                               |
+| 5   | Always use `StyleSheet.create()` for styles                                | At the bottom of the file, after the component                     |
+| 6   | Always use style constants from `@/constants/styles`                       | Never hardcode colors, font sizes, spacing, or border radii        |
+| 7   | Always wrap list-rendered components with `memo()`                         | NoteCard, TodoItem, OrderedCategoryCard, etc.                      |
+| 8   | Always add all 7 locale translations                                       | en, it, es, fr, de, zh, ja                                         |
+| 9   | Always test web + native for platform-split files                          | Behavior can diverge silently                                      |
+| 10  | Always use `useTranslation()` for UI text                                  | Via `react-i18next`                                                |
+| 11  | Always use `TouchableOpacity activeOpacity={0.7}`                          | Standard pressable pattern                                         |
+| 12  | Always place `/* STYLES */` comment above StyleSheet                       | Visual separator convention                                        |
+| 13  | Always make new fields optional with defaults                              | Backward compat: old persisted data must load without crashes      |
+| 14  | Always estimate Firestore ops for cloud-related features                   | Document reads/writes/deletes per user action in the PR            |
+| 15  | Always call `flushNote()` before acting on a stored note                   | Delete/detach/sync/category change must see the latest edits       |
+| 16  | Always set `timeout: 0` on a `PersistConfig`                               | A timed-out read rehydrates empty state and wipes storage          |
+| 17  | Always keep sync queue entries exclusive per id                            | Latest operation replaces the others (see LL-033)                  |
+| 18  | Always forward a WebView page's errors with `PAGE_ERROR_SCRIPT`            | And report `PAGE_ERROR_MESSAGE` with `reportPageError` (ADR-035)   |
+| 19  | Always enforce a protection in the screen that shows the thing             | Not in the buttons that lead there: links skip them (LL-085)       |
+| 20  | Always register unsaved typed text with `registerPendingFlush`             | The app can be killed in the background (LL-084)                   |
+| 21  | Always resize a picture to its shown size before storing or sending it     | `reducePhoto`: 1600 px, JPEG 0.6 (LL-083, LL-088)                  |
+| 22  | Always compute an editor's handlers with `updateNoteAsync((current) => …)` | Stable handlers: only the row that changed renders (`useTodoList`) |

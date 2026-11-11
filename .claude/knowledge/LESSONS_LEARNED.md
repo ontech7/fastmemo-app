@@ -493,7 +493,14 @@ item to re-render on any parent state change. Also affects `style={{ fontWeight:
 **Rule:** Already documented (NEVER rule #3 in AGENTS.md). This LL entry reiterates the rule after finding the exact violation
 the rule warned against.
 
-**Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/39 **Status:** Open
+**Update (2026-11-12):** `NoteCard` and `TrashedNoteCard` no longer have inline style objects (the 2026 redesign). The list
+rows had the same problem, and a second one: their editors rebuilt every handler and `renderItem` at each keystroke, and the
+web list's dnd-kit sensor options were a new object per render, which changes dnd-kit's context. `TodoItem` (both platforms) is
+now `memo`, with its styles and animations made once, and both editors use `useTodoList`: one character typed in a 30-item list
+renders 1 row (it was 30 on the web, 30 twice on Android); checking a step renders only the steps whose state changed.
+
+**Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/39 (closed at the 4.1.0 release) **Status:** Resolved  
+**Resolved:** 2026-11-12 **Resolved in:** plan-1/fixes-performance-polish (Task 19)
 
 ---
 
@@ -549,6 +556,10 @@ deps, reading from the ref. The same pattern is already correctly used for `onCh
 **Rule:** When subscribing an imperative event listener (BackHandler, Keyboard, AppState, WebView messages, etc.), the
 subscription effect must have stable deps (usually `[]`). Use a ref to read the latest version of the handler callback inside
 the listener body. Never include an unstable callback as an effect dependency for subscriptions.
+
+**Update (2026-11-12):** the editors' own effects are gone; one remains, in `useNoteEditor`: the back handler is subscribed with
+`[updateNoteWebhook]`, which depends on the note, so it is subscribed again after every change. The list editors' handlers are
+stable now (`useTodoList`, Task 19), but this effect is shared by all four editors and stays as it was: still open.
 
 **Tracking issue:** https://github.com/ontech7/fastmemo-app/issues/51 **Status:** Open
 

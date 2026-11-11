@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
@@ -35,10 +35,14 @@ interface Props {
   animationsReady?: boolean;
 }
 
+// The drag handle is a DOM element (dnd-kit's listeners): its style objects are made once.
+const HANDLE_STYLE: React.CSSProperties = { cursor: "grab", padding: 8, display: "flex", alignItems: "center" };
+const HANDLE_STYLE_DISABLED: React.CSSProperties = { ...HANDLE_STYLE, cursor: "default" };
+
 const STEP_COLUMN_WIDTH = 50;
 const STEP_CIRCLE_SIZE = 34;
 
-export default function TodoItem({
+function TodoItem({
   item,
   setText,
   checkItem,
@@ -79,17 +83,8 @@ export default function TodoItem({
   if (!stepMode) {
     return (
       <div ref={setNodeRef} style={style}>
-        <View style={[styles.todoItemContainer, { opacity: item.checked ? 0.55 : 1 }]}>
-          <div
-            {...attributes}
-            {...listeners}
-            style={{
-              cursor: disabled ? "default" : "grab",
-              padding: 8,
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
+        <View style={[styles.todoItemContainer, item.checked && styles.todoItemChecked]}>
+          <div {...attributes} {...listeners} style={disabled ? HANDLE_STYLE_DISABLED : HANDLE_STYLE}>
             <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
           </div>
 
@@ -102,17 +97,13 @@ export default function TodoItem({
             onPressIn={() => setPressing(true)}
             onPressOut={() => setPressing(false)}
             disabled={disabled}
-            style={[
-              styles.checkboxFree,
-              item.checked && styles.checkboxFreeChecked,
-              pressing && { transform: [{ scale: 0.9 }] as any },
-            ]}
+            style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked, pressing && styles.pressed]}
           >
             {item.checked && <CheckIcon size={24} color={COLOR.softWhite} />}
           </TouchableOpacity>
 
           <TextInput
-            style={[styles.listItemInputFree, { height }, item.checked && { textDecorationLine: "line-through", opacity: 0.5 }]}
+            style={[styles.listItemInputFree, { height }, item.checked && styles.listItemInputChecked]}
             textAlignVertical="top"
             multiline
             scrollEnabled={false}
@@ -151,7 +142,7 @@ export default function TodoItem({
   return (
     <div ref={setNodeRef} style={style}>
       <View style={styles.stepRow}>
-        <View style={[styles.stepColumn, { pointerEvents: "box-none" }]}>
+        <View style={styles.stepColumn}>
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => checkItem(item.id)}
@@ -164,7 +155,7 @@ export default function TodoItem({
             style={[
               styles.stepCircle,
               { borderColor: circleBorderColor, backgroundColor: circleFillBg },
-              pressing && { transform: [{ scale: 0.9 }] as any },
+              pressing && styles.pressed,
             ]}
           >
             {isStepDone ? (
@@ -177,7 +168,7 @@ export default function TodoItem({
           <View style={[styles.stepLine, isLast && styles.stepLineHidden]} />
 
           {isOngoing && (
-            <View style={[styles.stepOngoingLabelWrap, { pointerEvents: "none" }]}>
+            <View style={styles.stepOngoingLabelWrap}>
               <Text style={styles.stepOngoingLabel}>{t("note.ongoing")}</Text>
             </View>
           )}
@@ -223,6 +214,16 @@ export default function TodoItem({
 
 const styles = StyleSheet.create({
   /* free mode */
+  todoItemChecked: {
+    opacity: 0.55,
+  },
+  pressed: {
+    transform: [{ scale: 0.9 }],
+  },
+  listItemInputChecked: {
+    textDecorationLine: "line-through",
+    opacity: 0.5,
+  },
   todoItemContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -279,6 +280,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   stepColumn: {
+    pointerEvents: "box-none",
     width: STEP_COLUMN_WIDTH,
     alignItems: "center",
     justifyContent: "flex-start",
@@ -308,6 +310,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT.semiBold,
   },
   stepOngoingLabelWrap: {
+    pointerEvents: "none",
     position: "absolute",
     top: STEP_CIRCLE_SIZE + 6 + 4,
     left: -8,
@@ -353,3 +356,5 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
 });
+
+export default memo(TodoItem);

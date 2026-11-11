@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   Keyboard,
@@ -11,11 +11,10 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import DraggableFlatList from "react-native-draggable-flatlist";
+import DraggableFlatList, { type RenderItemParams } from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import uuid from "react-uuid";
 
 import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
@@ -28,13 +27,8 @@ import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem.native";
 import AppBackground from "@/components/ui/AppBackground";
-import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
-import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
-import { findCategoryByName } from "@/libs/ai";
-import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
-import { capitalize, isStringEmpty } from "@/utils/string";
-import { voiceTextToLines } from "@/utils/voiceTranscript";
+import { useTodoList } from "@/hooks/useTodoList";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
@@ -44,106 +38,35 @@ interface Props {
   initialNote: TodoNote;
 }
 
-const isTodoNoteEmpty = (n: TodoNote) => {
-  const no_title = isStringEmpty(n.title);
-  const no_list_items = !n.list?.length || (n.list?.length == 1 && isStringEmpty(n.list?.[0].text));
-  return no_title && no_list_items;
-};
-
 export default function NoteTodoEditor({ initialNote }: Props) {
   const { t } = useTranslation();
 
   const draggableListRef = useRef(null);
 
-  const memoInitialNote = useMemo<TodoNote>(
-    () => ({
-      ...initialNote,
-      type: initialNote.type || "todo",
-      list: initialNote.list?.length > 0 ? initialNote.list : [{ id: uuid(), text: "", checked: false }],
-    }),
-    [initialNote]
-  );
-  const buildPayloadExtras = useCallback((n: TodoNote) => ({ list: n.list, mode: n.mode }), []);
-
-  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
-    initialNote: memoInitialNote,
-    defaultType: "todo",
-    addWebhookSelector: selectorWebhook_addTodoNote,
-    addAction: "note/addTodoNote",
-    isEmpty: isTodoNoteEmpty,
-    buildPayloadExtras,
-    getTitleSource: (n) =>
-      n.list
-        .map((item) => item.text)
-        .filter(Boolean)
-        .join(" "),
-  });
-
-  /* local */
-
-  const setTitle = useCallback(
-    (titleVal: string) => {
-      setNoteAsync({ ...note, title: titleVal });
-    },
-    [note, setNoteAsync]
-  );
-
-  const setTextListItem = useCallback(
-    (id: string, text: string) => {
-      const mutableList = Object.assign([], note.list);
-      const index = mutableList.findIndex((todoItem) => todoItem.id === id);
-      mutableList[index] = { ...mutableList[index], text: text };
-
-      setNoteAsync({ ...note, list: mutableList });
-    },
-    [note, setNoteAsync]
-  );
-
-  const stepMode = note.mode === "steps";
-
-  const firstUncheckedIndex = useMemo(() => note.list.findIndex((todoItem) => !todoItem.checked), [note.list]);
-
-  const checkListItem = useCallback(
-    (id: string) => {
-      if (note.readOnly) {
-        return;
-      }
-
-      const index = note.list.findIndex((todoItem: TodoItemType) => todoItem.id === id);
-      if (index === -1) return;
-
-      if (stepMode) {
-        // Stepper toggle: clicking an unchecked step completes it and every
-        // previous one; clicking an already-done step rolls back — it and every
-        // step after become "not done" (so it turns ongoing). Re-tapping the
-        // first step therefore returns to "nothing done / first ongoing".
-        const wasChecked = note.list[index].checked;
-        const mutableList = note.list.map((todoItem, i) => ({
-          ...todoItem,
-          checked: wasChecked ? i < index : i <= index,
-        }));
-        setNoteAsync({ ...note, list: mutableList });
-        return;
-      }
-
-      const mutableList = Object.assign([], note.list);
-      mutableList[index] = {
-        ...mutableList[index],
-        checked: !mutableList[index].checked,
-      };
-
-      setNoteAsync({ ...note, list: mutableList });
-    },
-    [note, setNoteAsync, stepMode]
-  );
-
-  // Autofocus is per-row: only the row whose id matches `focusId` grabs focus.
-  // A brand-new note focuses its first row; opening an existing note focuses
-  // nothing so the user can just read. `focusId` is seeded synchronously so the
-  // target row mounts with autoFocus already set — setting it after mount is a
-  // no-op because RN reads `autoFocus` only once.
-  const autofocus = useAutofocusNewNote(initialNote);
-  const [focusId, setFocusId] = useState<string | null>(autofocus ? (memoInitialNote.list[0]?.id ?? null) : null);
+  const {
+    note,
+    setNoteAsync,
+    flushNote,
+    updateNoteWebhook,
+    autoTitle,
+    autofocus,
+    focusId,
+    stepMode,
+    firstUncheckedIndex,
+    total,
+    done,
+    setTitle,
+    setItemText,
+    checkItem,
+    deleteItem,
+    addItem,
+    setMode,
+    reorder,
+    addSuggestedItems,
+    insertVoiceLines,
+    setTitleFromAI,
+    setCategoryFromAI,
+  } = useTodoList(initialNote);
 
   // Mount-time autoFocus is frequently dropped while the screen transition is
   // still running, so re-focus the seeded row imperatively once it settles.
@@ -160,47 +83,6 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
   const currentMode = stepMode ? "steps" : "free";
 
-  const setMode = useCallback(
-    (mode: TodoNote["mode"]) => {
-      if (note.readOnly) {
-        return;
-      }
-      // Switching mode remounts the rows; don't let their inputs grab focus.
-      setFocusId(null);
-      setNoteAsync({ ...note, mode });
-    },
-    [note, setNoteAsync]
-  );
-
-  const deleteListItem = useCallback(
-    (id: string) => {
-      if (note.readOnly) {
-        return;
-      }
-
-      const mutableList = note.list.filter((todoItem) => todoItem.id !== id);
-
-      setNoteAsync({ ...note, list: mutableList });
-    },
-    [note, setNoteAsync]
-  );
-
-  const numberOfAllItems = useMemo(() => note.list.length, [note.list]);
-  const numberOfCheckedItems = useMemo(() => note.list.filter((todoItem) => todoItem.checked).length, [note.list]);
-
-  /* global */
-
-  const addListItem = useCallback(() => {
-    if (note.readOnly) {
-      return;
-    }
-
-    const newItem = { id: uuid(), text: "", checked: false };
-    setNoteAsync({ ...note, list: [...note.list, newItem] });
-    // Focus the freshly added row so the user can type without tapping it.
-    setFocusId(newItem.id);
-  }, [note, setNoteAsync]);
-
   // Enable row layout/entering/exiting animations only after the navigation
   // transition into this screen has finished, otherwise Reanimated crashes with
   // "Unable to find viewState for tag" when the list mounts mid-transition.
@@ -211,33 +93,43 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     return () => clearTimeout(id);
   }, []);
 
-  const renderTodoItem = ({ item, drag, isActive }: { item: TodoItemType; drag: () => void; isActive: boolean }) => {
-    const index = note.list.findIndex((todoItem) => todoItem.id === item.id);
-    const stepStatus: "done" | "ongoing" | "future" = item.checked
-      ? "done"
-      : index === firstUncheckedIndex
-        ? "ongoing"
-        : "future";
+  const readOnly = !!note.readOnly;
 
-    return (
-      <TodoItem
-        item={item}
-        setText={setTextListItem}
-        checkItem={checkListItem}
-        deleteItem={deleteListItem}
-        drag={drag}
-        disabled={isActive || note.readOnly}
-        autoFocus={item.id === focusId}
-        inputRef={item.id === focusId ? focusInputRef : undefined}
-        stepMode={stepMode}
-        stepStatus={stepStatus}
-        stepNumber={stepMode ? index + 1 : undefined}
-        isFirst={index === 0}
-        isLast={index === note.list.length - 1}
-        animationsReady={animationsReady}
-      />
-    );
-  };
+  // Not a function of the list: a keystroke changes one item, and only that row renders again (the list hands each
+  // row a stable `drag` and `getIndex`). What every row shows (the mode, the focus, the ongoing step, the last row)
+  // is a dependency, so a change there reaches every row, and `memo` keeps the rows whose props stayed the same.
+  const renderTodoItem = useCallback(
+    ({ item, drag, isActive, getIndex }: RenderItemParams<TodoItemType>) => {
+      const index = getIndex() ?? 0;
+      const stepStatus: "done" | "ongoing" | "future" = item.checked
+        ? "done"
+        : index === firstUncheckedIndex
+          ? "ongoing"
+          : "future";
+
+      return (
+        <TodoItem
+          item={item}
+          setText={setItemText}
+          checkItem={checkItem}
+          deleteItem={deleteItem}
+          drag={drag}
+          disabled={isActive || readOnly}
+          autoFocus={item.id === focusId}
+          inputRef={item.id === focusId ? focusInputRef : undefined}
+          stepMode={stepMode}
+          stepStatus={stepStatus}
+          stepNumber={stepMode ? index + 1 : undefined}
+          isFirst={index === 0}
+          isLast={index === total - 1}
+          animationsReady={animationsReady}
+        />
+      );
+    },
+    [focusId, stepMode, firstUncheckedIndex, total, readOnly, animationsReady, setItemText, checkItem, deleteItem]
+  );
+
+  const onDragEnd = useCallback(({ data }: { data: TodoItemType[] }) => reorder(data), [reorder]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -272,11 +164,9 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                 <Trans
                   t={t}
                   i18nKey="note.progress"
-                  values={{ done: numberOfCheckedItems, total: numberOfAllItems }}
+                  values={{ done, total }}
                   components={{
-                    hl: (
-                      <Text style={{ color: numberOfAllItems != numberOfCheckedItems ? COLOR.yellow : COLOR.importantIcon }} />
-                    ),
+                    hl: <Text style={{ color: total !== done ? COLOR.yellow : COLOR.importantIcon }} />,
                   }}
                 />
               </Text>
@@ -294,7 +184,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                       contentContainerStyle={{ paddingTop: PADDING_MARGIN.xl, paddingBottom: PADDING_MARGIN.md }}
                       ref={draggableListRef}
                       data={note.list}
-                      onDragEnd={({ data }) => setNoteAsync({ ...note, list: data })}
+                      onDragEnd={onDragEnd}
                       keyExtractor={(item) => item.id}
                       renderItem={renderTodoItem}
                     />
@@ -328,54 +218,20 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                   }
                   noteTitle={note.title}
                   categoryName={note.category.name}
-                  onTitleGenerated={(title) => updateNoteAsync((current) => ({ ...current, title }))}
-                  onItemsSuggested={(items) => {
-                    const newItems = items.map((text) => ({
-                      id: uuid(),
-                      text: capitalize(text),
-                      checked: false,
-                    }));
-                    updateNoteAsync((current) => ({ ...current, list: [...current.list, ...newItems] }));
-                  }}
-                  onCategorySuggested={(name) => {
-                    const cat = findCategoryByName(name);
-                    if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
-                  }}
+                  onTitleGenerated={setTitleFromAI}
+                  onItemsSuggested={addSuggestedItems}
+                  onCategorySuggested={setCategoryFromAI}
                   style={dockButtonStyle}
                   menuBottomOffset={110}
                 />
 
-                <VoiceRecognitionButton
-                  onInsert={(text) => {
-                    const lines = voiceTextToLines(text);
-                    if (lines.length === 0) return;
-
-                    const mutableList = [...note.list];
-                    const last = mutableList[mutableList.length - 1];
-                    let startIndex = 0;
-
-                    // reuse a trailing empty item for the first dictated line
-                    if (last && !last.text.trim()) {
-                      mutableList[mutableList.length - 1] = { ...last, text: lines[0] };
-                      startIndex = 1;
-                    }
-
-                    for (let i = startIndex; i < lines.length; i++) {
-                      mutableList.push({ id: uuid(), text: lines[i], checked: false });
-                    }
-
-                    setNoteAsync({ ...note, list: mutableList });
-                  }}
-                  aiCleanup
-                  asItems
-                  style={dockButtonStyle}
-                />
+                <VoiceRecognitionButton onInsert={insertVoiceLines} aiCleanup asItems style={dockButtonStyle} />
               </View>
 
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.addButton}
-                onPress={addListItem}
+                onPress={addItem}
                 accessibilityRole="button"
                 accessibilityLabel={t("a11y.add_item")}
               >

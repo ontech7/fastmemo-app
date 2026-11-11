@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from "react";
+import { memo, useEffect, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
@@ -49,7 +49,16 @@ interface Props {
 const STEP_COLUMN_WIDTH = 50;
 const STEP_CIRCLE_SIZE = 34;
 
-export default function TodoItem({
+// One instance of each animation for every row (a builder made per render is a new prop each time).
+const ROW_LAYOUT = LinearTransition.springify().damping(18).stiffness(180);
+const ROW_ENTERING = FadeIn.duration(220);
+const ROW_EXITING = FadeOut.duration(180);
+const CHECK_ENTERING = FadeIn.duration(180);
+const CHECK_EXITING = FadeOut.duration(120);
+const ONGOING_ENTERING = FadeIn.duration(220);
+const ONGOING_EXITING = FadeOut.duration(150);
+
+function TodoItem({
   item,
   setText,
   checkItem,
@@ -96,20 +105,20 @@ export default function TodoItem({
   // Root-level layout/entering/exiting animations are only enabled once the
   // screen navigation transition has settled. Running them while the screen is
   // still mounting crashes Reanimated with "Unable to find viewState for tag".
-  const rowLayout = animationsReady ? LinearTransition.springify().damping(18).stiffness(180) : undefined;
-  const rowEntering = animationsReady ? FadeIn.duration(220) : undefined;
-  const rowExiting = animationsReady ? FadeOut.duration(180) : undefined;
+  const rowLayout = animationsReady ? ROW_LAYOUT : undefined;
+  const rowEntering = animationsReady ? ROW_ENTERING : undefined;
+  const rowExiting = animationsReady ? ROW_EXITING : undefined;
 
   /* FREE MODE -- checkbox + text + drag handle */
 
   if (!stepMode) {
     return (
       <Animated.View layout={rowLayout} entering={rowEntering} exiting={rowExiting} style={styles.row}>
-        <View style={[styles.inner, { opacity: item.checked ? 0.55 : 1 }]}>
+        <View style={[styles.inner, item.checked && styles.innerChecked]}>
           <TouchableOpacity
             activeOpacity={0.7}
             disabled={disabled}
-            style={{ marginRight: PADDING_MARGIN.sm }}
+            style={styles.checkTouch}
             onPress={handleCheck}
             accessibilityRole="checkbox"
             accessibilityLabel={item.text || t("a11y.item")}
@@ -117,7 +126,7 @@ export default function TodoItem({
           >
             <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked]}>
               {item.checked && (
-                <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)}>
+                <Animated.View entering={CHECK_ENTERING} exiting={CHECK_EXITING}>
                   <CheckIcon size={24} color={COLOR.softWhite} />
                 </Animated.View>
               )}
@@ -126,7 +135,7 @@ export default function TodoItem({
 
           <TextInput
             ref={inputRef}
-            style={[styles.listItemInputFree, item.checked && { textDecorationLine: "line-through", opacity: 0.5 }]}
+            style={[styles.listItemInputFree, item.checked && styles.listItemInputChecked]}
             textAlignVertical="center"
             multiline
             onChangeText={(value) => setText(item.id, value)}
@@ -173,7 +182,7 @@ export default function TodoItem({
     <Animated.View layout={rowLayout} entering={rowEntering} exiting={rowExiting} style={styles.stepRow}>
       {/* left rail: connector line + tappable numbered circle (checkbox) + Ongoing label */}
 
-      <View style={[styles.stepColumn, { pointerEvents: "box-none" }]}>
+      <View style={styles.stepColumn}>
         <TouchableOpacity
           activeOpacity={0.7}
           disabled={disabled}
@@ -183,9 +192,7 @@ export default function TodoItem({
           aria-checked={isStepDone}
         >
           <View style={[styles.stepCircle, { borderColor: circleBorderColor }, isStepDone && styles.stepCircleDone]}>
-            <Animated.View
-              style={[StyleSheet.absoluteFill, styles.stepCircleFill, circleFillStyle, { pointerEvents: "none" }]}
-            />
+            <Animated.View style={[StyleSheet.absoluteFill, styles.stepCircleFill, circleFillStyle]} />
 
             {isStepDone ? (
               <CheckIcon size={18} color={COLOR.softWhite} />
@@ -198,11 +205,7 @@ export default function TodoItem({
         <View style={[styles.stepLine, isLast && styles.stepLineHidden]} />
 
         {isOngoing && (
-          <Animated.View
-            entering={FadeIn.duration(220)}
-            exiting={FadeOut.duration(150)}
-            style={[styles.stepOngoingLabelWrap, { pointerEvents: "none" }]}
-          >
+          <Animated.View entering={ONGOING_ENTERING} exiting={ONGOING_EXITING} style={styles.stepOngoingLabelWrap}>
             <Text style={styles.stepOngoingLabel}>{t("note.ongoing")}</Text>
           </Animated.View>
         )}
@@ -255,6 +258,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexDirection: "row",
   },
+  innerChecked: {
+    opacity: 0.55,
+  },
+  checkTouch: {
+    marginRight: PADDING_MARGIN.sm,
+  },
+  listItemInputChecked: {
+    textDecorationLine: "line-through",
+    opacity: 0.5,
+  },
   listItemInputFree: {
     minHeight: 48,
     flex: 1,
@@ -303,6 +316,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   stepColumn: {
+    pointerEvents: "box-none",
     width: STEP_COLUMN_WIDTH,
     alignItems: "center",
     justifyContent: "flex-start",
@@ -333,6 +347,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLOR.accentMuted,
   },
   stepCircleFill: {
+    pointerEvents: "none",
     backgroundColor: COLOR.accent,
     borderRadius: STEP_CIRCLE_SIZE / 2,
   },
@@ -341,6 +356,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT.semiBold,
   },
   stepOngoingLabelWrap: {
+    pointerEvents: "none",
     position: "absolute",
     top: STEP_CIRCLE_SIZE + 6 + 4,
     left: -8,
@@ -400,3 +416,5 @@ const styles = StyleSheet.create({
     borderColor: GLASS.border,
   },
 });
+
+export default memo(TodoItem);
