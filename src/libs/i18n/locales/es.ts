@@ -1344,6 +1344,19 @@ const es = {
   developerModeAlready: "El modo desarrollador ya está activo",
   developerModeTaps: "{{remaining}} toque(s) para activar el modo desarrollador",
 
+  crash: {
+    title: "Algo salió mal",
+    text: "Tus notas guardadas siguen en el dispositivo. Vuelve a abrir la app; si vuelve a ocurrir, envíanos un informe.",
+    reopen: "Volver a abrir Fast Memo",
+    report: "Enviar un informe",
+    what: "¿Qué estabas haciendo?",
+    send: "Enviar",
+    sending: "Enviando…",
+    sent: "Informe enviado",
+    failed: "No se pudo enviar. Comprueba la conexión e inténtalo de nuevo.",
+    code: "Código: {{code}}",
+  },
+
   empty_title: "(Sin título)",
 };
 

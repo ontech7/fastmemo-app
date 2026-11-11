@@ -1324,6 +1324,19 @@ const en = {
   developerModeAlready: "Developer mode is already active",
   developerModeTaps: "{{remaining}} tap(s) to enable developer mode",
 
+  crash: {
+    title: "Something went wrong",
+    text: "Your saved notes are still on this device. Reopen the app; if it happens again, send us a report.",
+    reopen: "Reopen Fast Memo",
+    report: "Send a report",
+    what: "What were you doing?",
+    send: "Send",
+    sending: "Sending…",
+    sent: "Report sent",
+    failed: "It couldn't be sent. Check the connection and try again.",
+    code: "Code: {{code}}",
+  },
+
   empty_title: "(No title)",
 };
 

@@ -1353,6 +1353,19 @@ const fr = {
   developerModeAlready: "Le mode développeur est déjà actif",
   developerModeTaps: "Encore {{remaining}} appui(s) pour activer le mode développeur",
 
+  crash: {
+    title: "Un problème est survenu",
+    text: "Vos notes enregistrées sont toujours sur l'appareil. Rouvrez l'app ; si cela se reproduit, envoyez-nous un signalement.",
+    reopen: "Rouvrir Fast Memo",
+    report: "Envoyer un signalement",
+    what: "Que faisiez-vous ?",
+    send: "Envoyer",
+    sending: "Envoi en cours…",
+    sent: "Signalement envoyé",
+    failed: "Impossible de l'envoyer. Vérifiez la connexion et réessayez.",
+    code: "Code : {{code}}",
+  },
+
   empty_title: "(Pas de titre)",
 };
 

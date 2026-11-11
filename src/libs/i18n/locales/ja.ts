@@ -1321,6 +1321,19 @@ const ja = {
   developerModeAlready: "開発者モードは既に有効です",
   developerModeTaps: "開発者モードを有効にするにはあと {{remaining}} 回タップしてください",
 
+  crash: {
+    title: "問題が発生しました",
+    text: "保存したノートはデバイスに残っています。アプリを開き直してください。再び起きる場合は、報告を送ってください。",
+    reopen: "Fast Memo を開き直す",
+    report: "報告を送る",
+    what: "何をしていましたか？",
+    send: "送信",
+    sending: "送信中…",
+    sent: "報告を送信しました",
+    failed: "送信できませんでした。接続を確認して、もう一度お試しください。",
+    code: "コード：{{code}}",
+  },
+
   empty_title: "(タイトルなし)",
 };
 

@@ -1355,6 +1355,19 @@ const de = {
   developerModeAlready: "Entwicklermodus ist bereits aktiv",
   developerModeTaps: "Noch {{remaining}} Tippen, um den Entwicklermodus zu aktivieren",
 
+  crash: {
+    title: "Etwas ist schiefgelaufen",
+    text: "Ihre gespeicherten Notizen sind noch auf dem Gerät. Öffnen Sie die App erneut; wenn es wieder passiert, senden Sie uns eine Meldung.",
+    reopen: "Fast Memo neu öffnen",
+    report: "Meldung senden",
+    what: "Was haben Sie gerade gemacht?",
+    send: "Senden",
+    sending: "Wird gesendet…",
+    sent: "Meldung gesendet",
+    failed: "Sie konnte nicht gesendet werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+    code: "Code: {{code}}",
+  },
+
   empty_title: "(Kein Titel)",
 };
 

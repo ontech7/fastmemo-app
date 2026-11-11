@@ -1338,6 +1338,19 @@ const it = {
   developerModeAlready: "La modalità sviluppatore è già attiva",
   developerModeTaps: "{{remaining}} tap per attivare la modalità sviluppatore",
 
+  crash: {
+    title: "Qualcosa è andato storto",
+    text: "Le note salvate sono rimaste sul dispositivo. Riapri l'app; se succede di nuovo, mandaci una segnalazione.",
+    reopen: "Riapri Fast Memo",
+    report: "Invia una segnalazione",
+    what: "Cosa stavi facendo?",
+    send: "Invia",
+    sending: "Invio in corso…",
+    sent: "Segnalazione inviata",
+    failed: "Non è stato possibile inviarla. Controlla la connessione e riprova.",
+    code: "Codice: {{code}}",
+  },
+
   empty_title: "(Senza titolo)",
 };
 

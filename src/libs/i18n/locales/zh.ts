@@ -1289,6 +1289,19 @@ const zh = {
   developerModeAlready: "开发者模式已处于活动状态",
   developerModeTaps: "还需点击 {{remaining}} 次以启用开发者模式",
 
+  crash: {
+    title: "出了点问题",
+    text: "已保存的笔记仍在设备上。请重新打开应用；如果再次发生，请向我们发送报告。",
+    reopen: "重新打开 Fast Memo",
+    report: "发送报告",
+    what: "你当时在做什么？",
+    send: "发送",
+    sending: "正在发送…",
+    sent: "报告已发送",
+    failed: "无法发送。请检查网络连接后重试。",
+    code: "代码：{{code}}",
+  },
+
   empty_title: "（无题）",
 };
 
