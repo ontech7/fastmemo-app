@@ -40,11 +40,13 @@ const ANIMATION_DURATION_CLOSE = DURATION.fast;
 interface Props {
   isDeleteMode: boolean;
   toggleDeleteMode: () => void;
-  /**
-   * Lifts the FAB group so it rides just above a bottom bar (e.g. the quick-note bar). Defaults to `FAB_BOTTOM`. In select
-   * mode the group slides down to `FAB_BOTTOM`, beside the toolbar, by a transform: its `bottom` never changes.
-   */
+  /** Lifts the FAB group so it rides just above a bottom bar (e.g. the quick-note bar). Defaults to `FAB_BOTTOM`. */
   bottomOffset?: number;
+  /**
+   * Where the group stands in select mode (just above the selection bar). It slides there by a transform: its `bottom`
+   * never changes.
+   */
+  selectBottom?: number;
   /** Told when the note-type menu opens or closes. */
   onMenuToggle?: (open: boolean) => void;
 }
@@ -82,7 +84,13 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
   );
 }
 
-export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, bottomOffset, onMenuToggle }: Props) {
+export default function AddNoteOverlayButton({
+  isDeleteMode,
+  toggleDeleteMode,
+  bottomOffset,
+  selectBottom,
+  onMenuToggle,
+}: Props) {
   const { t } = useTranslation();
   const router = useRouter();
   const dispatch = useDispatch();
@@ -195,8 +203,8 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCloseIcon, isDeleteMode]);
 
-  // Select mode: down from above the bar to the toolbar's line, a transform (no relayout).
-  const selectDrop = isDeleteMode && bottomOffset !== undefined ? bottomOffset - FAB_BOTTOM : 0;
+  // Select mode: to just above the selection bar, a transform (no relayout); positive moves down.
+  const selectDrop = isDeleteMode && selectBottom !== undefined ? (bottomOffset ?? FAB_BOTTOM) - selectBottom : 0;
   useEffect(() => {
     modeDrop.value = withTiming(selectDrop, {
       duration: isDeleteMode ? DURATION.base : DURATION.fast,

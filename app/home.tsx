@@ -1,23 +1,20 @@
 import AddNoteOverlayButton from "@/components/buttons/AddNoteOverlayButton";
 import DeleteNotesButton from "@/components/buttons/DeleteNotesButton";
-import FavoriteNotesButton from "@/components/buttons/FavoriteNotesButton";
-import HiddenNotesButton from "@/components/buttons/HiddenNotesButton";
 import NoteFiltersButton from "@/components/buttons/NoteFiltersButton";
-import ProtectNotesButton from "@/components/buttons/ProtectNotesButton";
-import ReadOnlyNotesButton from "@/components/buttons/ReadOnlyNotesButton";
 import NoteCard from "@/components/cards/NoteCard";
 import CloudUnreachableLine from "@/components/cloud/CloudUnreachableLine";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import VaultPromptDialog from "@/components/dialogs/VaultPromptDialog";
 import SearchInput from "@/components/inputs/SearchInput";
 import QuickNoteBar, { QUICK_NOTE_BAR_RESERVED } from "@/components/notes/QuickNoteBar";
+import SelectionBar, { SELECTION_BAR_RESERVED } from "@/components/notes/SelectionBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
 import EmptyState from "@/components/ui/EmptyState";
 import TourSpotlight from "@/components/ui/TourSpotlight";
 import WebViewWarmup from "@/components/WebViewWarmup";
 import { configs } from "@/configs";
-import { DURATION, EASING } from "@/constants/motion";
+import { DURATION } from "@/constants/motion";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useCloudStatus } from "@/hooks/useCloudStatus";
 import { useRouter } from "@/hooks/useRouter";
@@ -194,6 +191,8 @@ export default function HomeScreen() {
 
   const toggleDeleteMode = useCallback(() => {
     if (isDeleteMode) setSelectedNotes([]);
+    // The selection bar sits at the bottom: no keyboard (the search's) over it.
+    else Keyboard.dismiss();
     setIsDeleteMode((p: boolean) => !p);
   }, [isDeleteMode]);
 
@@ -283,25 +282,15 @@ export default function HomeScreen() {
     return resetStates;
   }, [navigation]);
 
-  // Select mode moves things by transforms and fades only: the list keeps its height (no relayout). The toolbar rises
-  // from below the screen, the trash chip fades in the header, the quick note bar fades out (QuickNoteBar `hidden`) and
-  // the add button slides down beside the toolbar (AddNoteOverlayButton).
-  const selectShown = useSharedValue(0);
+  // Select mode moves things by transforms and fades only: the list keeps its height (no relayout). The selection bar
+  // fades in at the bottom of the column as the quick note bar fades out (both `hidden`), the trash chip fades in the
+  // header and the add button slides to just above the selection bar (AddNoteOverlayButton).
   const chipShown = useSharedValue(0);
 
   useEffect(() => {
-    selectShown.value = withTiming(isDeleteMode ? 1 : 0, {
-      duration: isDeleteMode ? DURATION.base : DURATION.fast,
-      easing: isDeleteMode ? EASING.enter : EASING.exit,
-    });
     chipShown.value = withTiming(isDeleteMode ? 1 : 0, { duration: DURATION.fast });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDeleteMode]);
-
-  const toolbarStyle = useAnimatedStyle(() => ({
-    opacity: selectShown.value,
-    transform: [{ translateY: -TOOLBAR_RISE * selectShown.value }],
-  }));
 
   const chipStyle = useAnimatedStyle(() => ({ opacity: chipShown.value }));
 
@@ -344,12 +333,13 @@ export default function HomeScreen() {
   // shows only when enabled and not selecting; otherwise the FAB keeps its place.
   const fabBottom = insets.bottom + barHeight + PADDING_MARGIN.xl;
 
-  // While selecting, the end of the list scrolls clear of the toolbar: room for the toolbar's top above the screen's
-  // bottom, less what the quick note bar already keeps below the list.
-  const [toolbarHeight, setToolbarHeight] = useState(0);
+  // While selecting, the add button rides just above the selection bar, and the end of the list scrolls clear of it:
+  // the bar's height and a gap, less what the quick note bar (its top margin included) already keeps below the list.
+  const [selectionBarHeight, setSelectionBarHeight] = useState(SELECTION_BAR_RESERVED);
+  const selectFabBottom = insets.bottom + selectionBarHeight + PADDING_MARGIN.lg;
   const selectPadding = Math.max(
     0,
-    TOOLBAR_REST_BOTTOM + toolbarHeight + PADDING_MARGIN.lg - (quickNoteEnabled ? barHeight : 0)
+    selectionBarHeight + PADDING_MARGIN.md - (quickNoteEnabled ? barHeight + PADDING_MARGIN.md : 0)
   );
   const listEmpty = filteredNotes.length === 0;
   const listContentStyle = useMemo(
@@ -486,24 +476,19 @@ export default function HomeScreen() {
                   <QuickNoteBar onHeightChange={setBarHeight} hidden={isDeleteMode} />
                 </KeyboardStickyView>
               )}
+
+              {/* Select mode's actions, in the quick note bar's place (over the end of the list when quick note is off). */}
+              <SelectionBar
+                hidden={!isDeleteMode}
+                onHeightChange={setSelectionBarHeight}
+                onImportant={toggleImportantNotesFromItems}
+                onProtect={toggleProtectedNotesFromItems}
+                onHide={toggleHiddenNotesFromItems}
+                onReadOnly={toggleReadOnlyNotesFromItems}
+              />
             </View>
           </View>
         </SafeAreaView>
-
-        <Animated.View
-          style={[styles.editModeToolbar, toolbarStyle, { pointerEvents: isDeleteMode ? "auto" : "none" }]}
-          aria-hidden={!isDeleteMode}
-          onLayout={(e) => setToolbarHeight(e.nativeEvent.layout.height)}
-        >
-          {/* aria-hidden keeps the hidden toolbar from screen readers; focusable keeps it out of the web tab order */}
-          <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} focusable={isDeleteMode} />
-
-          <ProtectNotesButton onPressProtect={toggleProtectedNotesFromItems} focusable={isDeleteMode} />
-
-          <HiddenNotesButton onPressHidden={toggleHiddenNotesFromItems} focusable={isDeleteMode} />
-
-          <ReadOnlyNotesButton onPressReadOnly={toggleReadOnlyNotesFromItems} focusable={isDeleteMode} />
-        </Animated.View>
 
         <WebViewWarmup />
 
@@ -511,6 +496,7 @@ export default function HomeScreen() {
           isDeleteMode={isDeleteMode}
           toggleDeleteMode={toggleDeleteMode}
           bottomOffset={quickNoteEnabled ? fabBottom : undefined}
+          selectBottom={selectFabBottom}
           onMenuToggle={setTypeMenuOpen}
         />
 
@@ -543,11 +529,6 @@ export default function HomeScreen() {
 }
 
 const keyExtractor = (note: Note) => note.id;
-
-/** The select toolbar at rest: its bottom this far above the screen's, beside the add button. */
-const TOOLBAR_REST_BOTTOM = 67;
-/** How far it rises from below the screen to its place. */
-const TOOLBAR_RISE = 125;
 
 /* STYLES */
 
@@ -637,19 +618,6 @@ const styles = StyleSheet.create({
     color: COLOR.textSecondary,
     fontFamily: FONT.semiBold,
     fontSize: FONTSIZE.small,
-  },
-  editModeToolbar: {
-    position: "absolute",
-    flexDirection: "row",
-    justifyContent: "center",
-    paddingHorizontal: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.surfaceMuted,
-    borderRadius: BORDER.big,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: GLASS.border,
-    bottom: TOOLBAR_REST_BOTTOM - TOOLBAR_RISE,
-    right: 110,
-    boxShadow: "0px 7px 7px rgba(0,0,0,0.5)",
   },
   loadingText: {
     color: COLOR.softWhite,
