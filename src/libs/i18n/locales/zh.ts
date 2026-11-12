@@ -1026,6 +1026,15 @@ const zh = {
       text_1_0: "Fast Memo 可在移动端和桌面端（Windows、macOS 和 Linux）使用，还有网页版。",
       text_2_0: "将每台设备连接到同一个 Google Firebase 项目或同一个 FastMemo Server，您的笔记就能在各处保持同步。",
     },
+    what_mcp: {
+      title: "有 MCP 服务器吗？",
+      text_1_0:
+        "仅限桌面应用：它让这台电脑上的 AI 代理（如 Claude Code、Codex、Claude Desktop 或 Cursor）搜索、读取和添加笔记。",
+      text_2_0: "在你于 设置 → MCP 中开启之前，它一直是关闭的。在那里你还能找到用于连接代理的复制文本，以及每个工具的开关。",
+      text_3_0: "锁定和隐藏的笔记不在代理的访问范围内：它们永远不会被找到或读取。",
+      text_4_0: "开启“在后台继续运行”后，即使窗口关闭，代理也能访问 Fast Memo。",
+      text_5_0: "代理读取的内容会发送给它所使用的模型的提供商。",
+    },
     what_desktop_shortcuts: {
       title: "电脑上有键盘快捷键吗？",
       text_1_0: "有，在桌面应用中：",

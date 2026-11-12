@@ -518,6 +518,11 @@ export default function HelpScreen() {
           { base: "help.what_platforms", body: <>{lines("help.what_platforms", ["text_1_0", "text_2_0"])}</> },
           ...(isTauri()
             ? [
+                // The local MCP server (ADR-032) exists only in the desktop app.
+                {
+                  base: "help.what_mcp",
+                  body: <>{lines("help.what_mcp", ["text_1_0", "text_2_0", "text_3_0", "text_4_0", "text_5_0"])}</>,
+                },
                 {
                   base: "help.what_desktop_shortcuts",
                   body: (

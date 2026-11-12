@@ -1086,6 +1086,16 @@ const de = {
       text_2_0:
         "Verbinden Sie jedes Gerät mit demselben Google-Firebase-Projekt oder demselben FastMemo Server, und Ihre Notizen bleiben überall synchron.",
     },
+    what_mcp: {
+      title: "Gibt es einen MCP-Server?",
+      text_1_0:
+        "Nur in der Desktop-App: Er lässt KI-Agenten auf diesem Computer, etwa Claude Code, Codex, Claude Desktop oder Cursor, Notizen suchen, lesen und hinzufügen.",
+      text_2_0:
+        "Er ist aus, bis du ihn unter Einstellungen → MCP einschaltest. Dort findest du auch den Text, den du kopierst, um deinen Agenten zu verbinden, und einen Schalter für jedes Werkzeug.",
+      text_3_0: "Gesperrte und versteckte Notizen bleiben für Agenten unerreichbar: Sie werden nie gefunden oder gelesen.",
+      text_4_0: "Mit „Im Hintergrund weiterlaufen“ erreichen Agenten Fast Memo auch bei geschlossenem Fenster.",
+      text_5_0: "Was ein Agent liest, wird an den Anbieter des Modells gesendet, das er verwendet.",
+    },
     what_desktop_shortcuts: {
       title: "Gibt es Tastenkürzel am Computer?",
       text_1_0: "Ja, in der Desktop-App:",

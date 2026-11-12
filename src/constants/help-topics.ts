@@ -2,7 +2,8 @@
  * The help topics an agent can ask for (`fastmemo_help`), in the order of the help screen (`app/settings/help.tsx`), which builds
  * its own list with JSX. `scripts/mcp.test.mjs` reads that file and fails when the two drift apart.
  *
- * Each base is an i18n key: its `title` and `text_N_M` strings are under it. The desktop app lists `help.what_desktop_shortcuts`.
+ * Each base is an i18n key: its `title` and `text_N_M` strings are under it. The desktop app lists `help.what_mcp` and
+ * `help.what_desktop_shortcuts`.
  */
 export const HELP_TOPICS: { catKey: string; bases: string[] }[] = [
   {
@@ -58,6 +59,7 @@ export const HELP_TOPICS: { catKey: string; bases: string[] }[] = [
       "help.what_report_problem",
       "help.what_webhooks",
       "help.what_platforms",
+      "help.what_mcp",
       "help.what_desktop_shortcuts",
     ],
   },

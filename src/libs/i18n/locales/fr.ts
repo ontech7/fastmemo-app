@@ -1086,6 +1086,16 @@ const fr = {
       text_2_0:
         "Connectez chaque appareil au même projet Google Firebase ou au même FastMemo Server et vos notes restent synchronisées partout.",
     },
+    what_mcp: {
+      title: "Y a-t-il un serveur MCP ?",
+      text_1_0:
+        "Uniquement dans l'app de bureau : il permet aux agents IA de cet ordinateur, comme Claude Code, Codex, Claude Desktop ou Cursor, de rechercher, lire et ajouter des notes.",
+      text_2_0:
+        "Il est désactivé tant que vous ne l'activez pas dans Paramètres → MCP. Vous y trouvez aussi le texte à copier pour connecter votre agent et un interrupteur pour chaque outil.",
+      text_3_0: "Les notes verrouillées et masquées restent hors de portée des agents : elles ne sont jamais trouvées ni lues.",
+      text_4_0: "Avec « Rester actif en arrière-plan », les agents atteignent Fast Memo même fenêtre fermée.",
+      text_5_0: "Ce qu'un agent lit est envoyé au fournisseur du modèle qu'il utilise.",
+    },
     what_desktop_shortcuts: {
       title: "Y a-t-il des raccourcis clavier sur ordinateur ?",
       text_1_0: "Oui, dans l'application de bureau :",
