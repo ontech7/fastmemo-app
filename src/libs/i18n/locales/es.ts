@@ -1381,6 +1381,19 @@ const es = {
     code: "Código: {{code}}",
   },
 
+  empty: {
+    notes_title: "Aún no hay notas",
+    notes_text: "Toca + para escribir la primera, o usa la nota rápida de abajo.",
+    notes_text_no_quick: "Toca + para escribir la primera.",
+    category_title: "Aquí aún no hay nada",
+    category_text: "Las notas que crees en esta categoría aparecen aquí.",
+    search_title: "No se encontraron notas",
+    search_text: "Prueba con otras palabras.",
+    trash_title: "La papelera está vacía",
+    trash_text: "Las notas eliminadas se quedan aquí {{days}} días.",
+    trash_text_unlimited: "Las notas eliminadas se quedan aquí hasta que las quites.",
+  },
+
   empty_title: "(Sin título)",
 };
 

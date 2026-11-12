@@ -1390,6 +1390,19 @@ const fr = {
     code: "Code : {{code}}",
   },
 
+  empty: {
+    notes_title: "Pas encore de notes",
+    notes_text: "Touchez + pour écrire la première, ou utilisez la note rapide ci-dessous.",
+    notes_text_no_quick: "Touchez + pour écrire la première.",
+    category_title: "Rien ici pour l'instant",
+    category_text: "Les notes que vous créez dans cette catégorie apparaissent ici.",
+    search_title: "Aucune note trouvée",
+    search_text: "Essayez d'autres mots.",
+    trash_title: "La corbeille est vide",
+    trash_text: "Les notes supprimées restent ici {{days}} jours.",
+    trash_text_unlimited: "Les notes supprimées restent ici jusqu'à ce que vous les retiriez.",
+  },
+
   empty_title: "(Pas de titre)",
 };
 

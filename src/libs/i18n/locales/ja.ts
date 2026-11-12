@@ -1359,6 +1359,19 @@ const ja = {
     code: "コード：{{code}}",
   },
 
+  empty: {
+    notes_title: "まだノートがありません",
+    notes_text: "+ をタップして最初のノートを書くか、下のクイックノートを使ってください。",
+    notes_text_no_quick: "+ をタップして最初のノートを書いてください。",
+    category_title: "まだ何もありません",
+    category_text: "このカテゴリで作成したノートがここに表示されます。",
+    search_title: "ノートが見つかりません",
+    search_text: "別の言葉で試してください。",
+    trash_title: "ゴミ箱は空です",
+    trash_text: "削除したノートはここに {{days}} 日間残ります。",
+    trash_text_unlimited: "削除したノートは、削除するまでここに残ります。",
+  },
+
   empty_title: "(タイトルなし)",
 };
 

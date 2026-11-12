@@ -1326,6 +1326,19 @@ const zh = {
     code: "代码：{{code}}",
   },
 
+  empty: {
+    notes_title: "还没有笔记",
+    notes_text: "点按 + 写下第一条，或使用下方的快速笔记。",
+    notes_text_no_quick: "点按 + 写下第一条。",
+    category_title: "这里还什么都没有",
+    category_text: "你在此类别中创建的笔记会显示在这里。",
+    search_title: "没有找到笔记",
+    search_text: "换个词试试。",
+    trash_title: "回收站是空的",
+    trash_text: "删除的笔记会在这里保留 {{days}} 天。",
+    trash_text_unlimited: "删除的笔记会一直保留在这里，直到你将其移除。",
+  },
+
   empty_title: "（无题）",
 };
 

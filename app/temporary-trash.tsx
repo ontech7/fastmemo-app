@@ -17,7 +17,8 @@ import TrashedNotesSettingsButton from "@/components/buttons/TrashedNotesSetting
 import TrashedNoteCard from "@/components/cards/TrashedNoteCard";
 import SearchInput from "@/components/inputs/SearchInput";
 import AppBackground from "@/components/ui/AppBackground";
-import { deleteNote, getTrashedNotesFilteredPerCategory } from "@/slicers/notesSlice";
+import EmptyState from "@/components/ui/EmptyState";
+import { deleteNote, getTemporaryTrashTimespan, getTrashedNotesFilteredPerCategory } from "@/slicers/notesSlice";
 import {
   selectorDeveloperMode,
   selectorIsFingerprintEnabled,
@@ -40,6 +41,7 @@ export default function TemporaryTrashScreen() {
 
   const selectorFingerprintEnabled = useSelector(selectorIsFingerprintEnabled);
   const devMode = useSelector(selectorDeveloperMode);
+  const trashDays = useSelector(getTemporaryTrashTimespan);
 
   const dispatch = useDispatch();
 
@@ -70,6 +72,20 @@ export default function TemporaryTrashScreen() {
 
     return trashedNotes.filter((note: Note) => note.title?.toLowerCase().includes(filterText.toLowerCase()));
   }, [filterText, trashedNotes]);
+
+  // An empty trash says how long notes stay; a search with no match says so (spec 5.3).
+  const unlimitedTrash = devMode.enabled && devMode.unlimitedTrashTime;
+  const searching = filterText.trim() !== "";
+  const emptyState = useMemo(
+    () =>
+      searching ? (
+        <EmptyState variant="search" />
+      ) : (
+        <EmptyState variant="trash" days={unlimitedTrash ? undefined : trashDays} />
+      ),
+    [searching, unlimitedTrash, trashDays]
+  );
+  const listContentStyle = filteredNotes.length === 0 ? styles.listContentEmpty : undefined;
 
   // hardware back for resetting deleteMode
   useEffect(() => {
@@ -165,6 +181,8 @@ export default function TemporaryTrashScreen() {
           />
         )}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={listContentStyle}
+        ListEmptyComponent={emptyState}
       />
     </SafeAreaView>
   );
@@ -173,6 +191,10 @@ export default function TemporaryTrashScreen() {
 /* STYLES */
 
 const styles = StyleSheet.create({
+  // An empty list's content fills the list, so its empty state sits in the middle.
+  listContentEmpty: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
     paddingTop: PADDING_MARGIN.xs,

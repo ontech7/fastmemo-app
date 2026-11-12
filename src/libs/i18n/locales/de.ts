@@ -1392,6 +1392,19 @@ const de = {
     code: "Code: {{code}}",
   },
 
+  empty: {
+    notes_title: "Noch keine Notizen",
+    notes_text: "Tippe auf +, um die erste zu schreiben, oder nutze die Schnellnotiz unten.",
+    notes_text_no_quick: "Tippe auf +, um die erste zu schreiben.",
+    category_title: "Hier ist noch nichts",
+    category_text: "Notizen, die du in dieser Kategorie erstellst, erscheinen hier.",
+    search_title: "Keine Notizen gefunden",
+    search_text: "Versuche es mit anderen Wörtern.",
+    trash_title: "Der Papierkorb ist leer",
+    trash_text: "Gelöschte Notizen bleiben {{days}} Tage hier.",
+    trash_text_unlimited: "Gelöschte Notizen bleiben hier, bis du sie entfernst.",
+  },
+
   empty_title: "(Kein Titel)",
 };
 

@@ -13,6 +13,7 @@ import SearchInput from "@/components/inputs/SearchInput";
 import QuickNoteBar, { QUICK_NOTE_BAR_RESERVED } from "@/components/notes/QuickNoteBar";
 import SafeAreaView from "@/components/SafeAreaView";
 import Sidebar from "@/components/Sidebar";
+import EmptyState from "@/components/ui/EmptyState";
 import TourSpotlight from "@/components/ui/TourSpotlight";
 import WebViewWarmup from "@/components/WebViewWarmup";
 import { configs } from "@/configs";
@@ -350,7 +351,26 @@ export default function HomeScreen() {
     0,
     TOOLBAR_REST_BOTTOM + toolbarHeight + PADDING_MARGIN.lg - (quickNoteEnabled ? barHeight : 0)
   );
-  const listContentStyle = useMemo(() => ({ paddingBottom: isDeleteMode ? selectPadding : 0 }), [isDeleteMode, selectPadding]);
+  const listEmpty = filteredNotes.length === 0;
+  const listContentStyle = useMemo(
+    () => ({ paddingBottom: isDeleteMode ? selectPadding : 0, flexGrow: listEmpty ? 1 : undefined }),
+    [isDeleteMode, selectPadding, listEmpty]
+  );
+
+  // An empty list says why (spec 5.3): a search with no match, or no notes ("All") or none in this category. Hidden
+  // notes with "show hidden" off count as no notes: nothing hints at them.
+  const searching = (showDeepSearch ? deepFilterText : filterText).trim() !== "";
+  const emptyState = useMemo(
+    () =>
+      searching ? (
+        <EmptyState variant="search" />
+      ) : currentCategory.index ? (
+        <EmptyState variant="notes" quickNote={quickNoteEnabled} />
+      ) : (
+        <EmptyState variant="category" categoryIcon={currentCategory.icon} />
+      ),
+    [searching, currentCategory.index, currentCategory.icon, quickNoteEnabled]
+  );
 
   // The first-note tour's steps on this screen (once the changelog check has settled; not over the note-type menu).
   const [typeMenuOpen, setTypeMenuOpen] = useState(false);
@@ -450,6 +470,7 @@ export default function HomeScreen() {
                   renderItem={renderNote}
                   keyExtractor={keyExtractor}
                   contentContainerStyle={listContentStyle}
+                  ListEmptyComponent={emptyState}
                 />
               </View>
 

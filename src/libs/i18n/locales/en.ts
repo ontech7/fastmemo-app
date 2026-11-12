@@ -1361,6 +1361,19 @@ const en = {
     code: "Code: {{code}}",
   },
 
+  empty: {
+    notes_title: "No notes yet",
+    notes_text: "Tap + to write your first one, or use the quick note below.",
+    notes_text_no_quick: "Tap + to write your first one.",
+    category_title: "Nothing here yet",
+    category_text: "Notes you create in this category show up here.",
+    search_title: "No notes found",
+    search_text: "Try other words.",
+    trash_title: "The trash is empty",
+    trash_text: "Deleted notes stay here for {{days}} days.",
+    trash_text_unlimited: "Deleted notes stay here until you remove them.",
+  },
+
   empty_title: "(No title)",
 };
 

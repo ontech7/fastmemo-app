@@ -1,0 +1,99 @@
+import { useTranslation } from "react-i18next";
+import { StyleSheet, Text, View } from "react-native";
+
+import EmptyCategoryIllustration from "@/components/ui/illustrations/EmptyCategoryIllustration";
+import EmptyNotesIllustration from "@/components/ui/illustrations/EmptyNotesIllustration";
+import EmptySearchIllustration from "@/components/ui/illustrations/EmptySearchIllustration";
+import EmptyTrashIllustration from "@/components/ui/illustrations/EmptyTrashIllustration";
+import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
+
+interface Props {
+  variant: "notes" | "category" | "search" | "trash";
+  /** `category`: the icon of the category being shown. */
+  categoryIcon?: string;
+  /** `notes`: whether the quick note bar is on (the text mentions it only then). */
+  quickNote?: boolean;
+  /** `trash`: the days notes stay there; undefined when they stay until removed (the developer option). */
+  days?: number;
+}
+
+/*
+ * What an empty list says (spec 5.3): a drawing in the "ghost cards" style, a title and one sentence, centred in the
+ * list's area. Passed as a list's `ListEmptyComponent`, whose content container grows to the list's height.
+ */
+export default function EmptyState({ variant, categoryIcon, quickNote = true, days }: Props) {
+  const { t } = useTranslation();
+
+  let drawing;
+  let title: string;
+  let text: string;
+  switch (variant) {
+    case "notes":
+      drawing = <EmptyNotesIllustration />;
+      title = t("empty.notes_title");
+      text = quickNote ? t("empty.notes_text") : t("empty.notes_text_no_quick");
+      break;
+    case "category":
+      drawing = categoryIcon ? <EmptyCategoryIllustration categoryIcon={categoryIcon} /> : <EmptyNotesIllustration />;
+      title = t("empty.category_title");
+      text = t("empty.category_text");
+      break;
+    case "search":
+      drawing = <EmptySearchIllustration />;
+      title = t("empty.search_title");
+      text = t("empty.search_text");
+      break;
+    case "trash":
+      drawing = <EmptyTrashIllustration />;
+      title = t("empty.trash_title");
+      text = days === undefined ? t("empty.trash_text_unlimited") : t("empty.trash_text", { days });
+      break;
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.drawing}>{drawing}</View>
+      <Text style={styles.title} accessibilityRole="header">
+        {title}
+      </Text>
+      <Text style={styles.text}>{text}</Text>
+    </View>
+  );
+}
+
+/**
+ * Room kept free at the bottom of the list's area: the add button, and the first-note tour's tip above it, which must not
+ * cover the text. The block is centred in what is left, a little above the middle.
+ */
+const BOTTOM_ROOM = 160;
+
+/* STYLES */
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: PADDING_MARGIN.sm,
+    paddingHorizontal: PADDING_MARGIN.md,
+    paddingBottom: BOTTOM_ROOM,
+  },
+  drawing: {
+    marginBottom: PADDING_MARGIN.sm,
+  },
+  title: {
+    color: COLOR.textPrimary,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.paragraph,
+    letterSpacing: -0.2,
+    textAlign: "center",
+  },
+  text: {
+    maxWidth: 260,
+    color: COLOR.textSecondary,
+    fontFamily: FONT.regular,
+    fontSize: FONTSIZE.medium,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+});
