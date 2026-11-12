@@ -1,7 +1,7 @@
 import { LIFT } from "@/constants/styles";
 import Haptics, { ImpactFeedbackStyle, NotificationFeedbackType } from "@/libs/haptics";
-import { findDrop, isOwnPlace, toMoveIndex, withoutCard } from "@/libs/kanbanDrop";
-import type { DropColumn, DropLayout, DropTarget, Rect } from "@/libs/kanbanDrop";
+import { findDrop, isOwnPlace, toMoveIndex, withoutItem } from "@/libs/reorderDrop";
+import type { DropContainer, DropLayout, DropTarget, Rect } from "@/libs/reorderDrop";
 import { measureInWindow } from "@/libs/tourTargets";
 import type { KanbanColumn, KanbanItem } from "@/types";
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +15,7 @@ import { scheduleOnRN } from "react-native-worklets";
 /*
  * The kanban drag (ADR-037). Nothing is measured until a card is lifted: then the board, every column's card area and
  * every card are measured in window coordinates, once, with the scroll offsets of that moment, and the lifted card is
- * taken out of them (`withoutCard`). During the drag only the scroll moves them, so the UI thread finds the target from
+ * taken out of them (`withoutItem`). During the drag only the scroll moves them, so the UI thread finds the target from
  * those rectangles (`findDrop`) at every frame. JS hears when the target column changes (a haptic), when the slot
  * changes (the columns show it: the preview) and at the end, when the card settles into the slot.
  */
@@ -183,7 +183,7 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef }: Pro
   const showTarget = useCallback((column: number, index: number) => {
     const drag = dragRef.current;
     if (!drag) return;
-    const to = column >= 0 ? drag.lift.columns[column] : undefined;
+    const to = column >= 0 ? drag.lift.containers[column] : undefined;
     const targetColumnId = to ? to.id : drag.columnId;
     const targetIndex = to ? index : drag.index;
     setPreview((p) =>
@@ -211,7 +211,7 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef }: Pro
         );
         const measured = boxes.filter((b): b is { id: string; box: Rect } => b.box !== null);
         return {
-          column: { id: column.id, area, cards: measured.map((b) => b.box) } as DropColumn,
+          column: { id: column.id, area, items: measured.map((b) => b.box) } as DropContainer,
           ids: measured.map((b) => b.id),
         };
       };
@@ -230,14 +230,14 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef }: Pro
           }
 
           const measured: DropLayout = {
-            board,
-            columns: kept.map((m) => m.column),
-            boardScrollX: scrollX,
-            columnScrollY: kept.map((m) => scrollById[m.column.id] ?? 0),
+            frame: board,
+            containers: kept.map((m) => m.column),
+            frameScrollX: scrollX,
+            containerScrollY: kept.map((m) => scrollById[m.column.id] ?? 0),
           };
-          const box = measured.columns[c].cards[i];
+          const box = measured.containers[c].items[i];
           // The lifted card's place closes while it is in the air: the target is found among the others.
-          const dropLayout = withoutCard(measured, c, i);
+          const dropLayout = withoutItem(measured, c, i);
           dragRef.current = { item, columnId, column: c, index: i, box, lift: dropLayout };
 
           layout.set(dropLayout);
@@ -249,7 +249,7 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef }: Pro
           // The pointer is the gesture's: it wrote it at activation and keeps writing it while the measures come.
           const first = findDrop(
             dropLayout,
-            { boardScrollX: scrollX, columnScrollY: dropLayout.columnScrollY },
+            { frameScrollX: scrollX, containerScrollY: dropLayout.containerScrollY },
             pointerX.get(),
             pointerY.get()
           );
@@ -259,7 +259,7 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef }: Pro
           setPreview({
             sourceColumnId: columnId,
             sourceCardId: item.id,
-            targetColumnId: first ? dropLayout.columns[first.column].id : columnId,
+            targetColumnId: first ? dropLayout.containers[first.container].id : columnId,
             targetIndex: first ? first.index : i,
             height: box.height,
           });
@@ -336,19 +336,19 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef }: Pro
     // The target as of the release, not as of the last frame.
     const now = findDrop(
       dropLayout,
-      { boardScrollX: boardScrollX.get(), columnScrollY: dropLayout.columns.map((col) => scrollById[col.id] ?? 0) },
+      { frameScrollX: boardScrollX.get(), containerScrollY: dropLayout.containers.map((col) => scrollById[col.id] ?? 0) },
       pointerX.get(),
       pointerY.get()
     );
     const moves = now !== null && !isOwnPlace(now, drag.column, drag.index);
-    showTarget(moves ? now.column : -1, moves ? now.index : drag.index);
+    showTarget(moves ? now.container : -1, moves ? now.index : drag.index);
     settle(() => {
       if (moves) {
         // In the same React commit as the end of the preview: the order it showed becomes the board's.
         onDropRef.current(
           drag.item.id,
           drag.columnId,
-          dropLayout.columns[now.column].id,
+          dropLayout.containers[now.container].id,
           toMoveIndex(now, drag.column, drag.index)
         );
         Haptics.notificationAsync(NotificationFeedbackType.Success);

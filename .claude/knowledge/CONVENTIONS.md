@@ -982,6 +982,6 @@ What an error and a report carry is decided in ADR-035; the code is `src/libs/di
 | 20  | Always register unsaved typed text with `registerPendingFlush`             | The app can be killed in the background (LL-084)                                     |
 | 21  | Always resize a picture to its shown size before storing or sending it     | `reducePhoto`: 1600 px, JPEG 0.6 (LL-083, LL-088)                                    |
 | 22  | Always compute an editor's handlers with `updateNoteAsync((current) => …)` | Stable handlers: only the row that changed renders (`useTodoList`)                   |
-| 23  | Always write drag geometry as a pure worklet with a Node test              | Numbers in, numbers out, on the UI thread (`kanbanDrop`, ADR-037)                    |
+| 23  | Always write drag geometry as a pure worklet with a Node test              | Numbers in, numbers out, on the UI thread (`reorderDrop`, ADR-037)                   |
 | 24  | Always keep the children's order still while something is dragged          | Host a placeholder in an existing child: a moved node ends its web gesture (ADR-037) |
 | 25  | Always portal a web overlay with `position: fixed` to `document.body`      | RN-web's ScrollView has a transform: fixed would be relative to it (ADR-037)         |

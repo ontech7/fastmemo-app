@@ -3,8 +3,8 @@ import KanbanColumn from "@/components/kanban/KanbanColumn";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import Haptics from "@/libs/haptics";
-import { BOARD_SLACK, edgeStep, findDrop } from "@/libs/kanbanDrop";
-import type { DropTarget } from "@/libs/kanbanDrop";
+import { edgeStep, findDrop, FRAME_SLACK } from "@/libs/reorderDrop";
+import type { DropTarget } from "@/libs/reorderDrop";
 import { useKanbanDrag, useKanbanDragged } from "@/providers/KanbanDragProvider";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { selectorDeveloperMode } from "@/slicers/settingsSlice";
@@ -37,7 +37,7 @@ const MAX_SPEED = 840;
 const sameTarget = (a: DropTarget | null, b: DropTarget | null) => {
   "worklet";
   if (a === null || b === null) return a === b;
-  return a.column === b.column && a.index === b.index;
+  return a.container === b.container && a.index === b.index;
 };
 
 interface Props {
@@ -83,25 +83,25 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
     const x = pointerX.get();
     const y = pointerY.get();
     const now = boardScrollX.get();
-    const found = findDrop(l, { boardScrollX: now, columnScrollY: l.columns.map((c) => offsets[c.id] ?? 0) }, x, y);
+    const found = findDrop(l, { frameScrollX: now, containerScrollY: l.containers.map((c) => offsets[c.id] ?? 0) }, x, y);
     if (!sameTarget(target.get(), found)) {
       target.set(found);
-      scheduleOnRN(showTarget, found ? found.column : -1, found ? found.index : 0);
+      scheduleOnRN(showTarget, found ? found.container : -1, found ? found.index : 0);
     }
-    const column = found ? found.column : -1;
+    const column = found ? found.container : -1;
     if (column !== lastColumn.get()) {
       if (column !== -1) scheduleOnRN(Haptics.selectionAsync);
       lastColumn.set(column);
     }
 
-    const { board } = l;
+    const { frame: board } = l;
     const left = x - board.x;
     const right = board.x + board.width - x;
     const max = Math.max(0, contentWidth.get() - board.width);
     let next = now;
     const ms = frame.timeSincePreviousFrame;
-    if (left < EDGE && left > -BOARD_SLACK) next = Math.max(0, now - edgeStep(left, EDGE, MAX_SPEED, ms));
-    else if (right < EDGE && right > -BOARD_SLACK) next = Math.min(max, now + edgeStep(right, EDGE, MAX_SPEED, ms));
+    if (left < EDGE && left > -FRAME_SLACK) next = Math.max(0, now - edgeStep(left, EDGE, MAX_SPEED, ms));
+    else if (right < EDGE && right > -FRAME_SLACK) next = Math.min(max, now + edgeStep(right, EDGE, MAX_SPEED, ms));
     if (next !== now) scrollTo(boardRef, next, 0, false);
   }, false);
   const setDragFrames = drag.setActive;
@@ -110,7 +110,7 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
     (now, previous) => {
       if (now === previous) return;
       // The lift's own column is where the drag starts: no haptic for it.
-      if (now === 1) lastColumn.set(target.get()?.column ?? -1);
+      if (now === 1) lastColumn.set(target.get()?.container ?? -1);
       scheduleOnRN(setDragFrames, now === 1);
     }
   );

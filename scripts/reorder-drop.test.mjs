@@ -1,6 +1,7 @@
-// Where a dragged kanban card lands: computed from the rectangles measured when it was lifted and the scroll since, and
-// handed to moveCard, the card ends in the slot the drag showed (spec 4; the gap, 2026-11-12).
-// Run: node scripts/kanban-drop.test.mjs
+// Where a dragged item lands (boards, lists, categories: ADR-037, the reorder engine): computed from the rectangles
+// measured when it was lifted and the scroll since. Handed to moveCard (a board) or moveById (one array), the item ends in
+// the slot the drag showed.
+// Run: node scripts/reorder-drop.test.mjs
 
 import { build } from "esbuild";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -9,11 +10,11 @@ import os from "node:os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const src = join(__dirname, "..", "src");
-const out = join(os.tmpdir(), "kanban-drop.bundle.mjs");
+const out = join(os.tmpdir(), "reorder-drop.bundle.mjs");
 
 await build({
   stdin: {
-    contents: `export * from "@/libs/kanbanDrop"; export { moveCard } from "@/libs/kanbanOps";`,
+    contents: `export * from "@/libs/reorderDrop"; export { moveCard } from "@/libs/kanbanOps";`,
     resolveDir: src,
     loader: "ts",
   },
@@ -24,7 +25,7 @@ await build({
   logLevel: "error",
   alias: { "@": src },
 });
-const { findDrop, isOwnPlace, moveCard, edgeStep, withoutCard, toMoveIndex, BOARD_SLACK } = await import(
+const { findDrop, isOwnPlace, moveCard, moveById, stepIndex, edgeStep, withoutItem, toMoveIndex, FRAME_SLACK } = await import(
   pathToFileURL(out).href
 );
 
@@ -58,22 +59,22 @@ const layout = (heights) => {
       y += height + CARD_GAP;
       return card;
     });
-    return { id, area: { x, y: AREA_Y, width: COLUMN_WIDTH, height: 400 }, cards };
+    return { id, area: { x, y: AREA_Y, width: COLUMN_WIDTH, height: 400 }, items: cards };
   });
   return {
-    board: { x: 0, y: 100, width: 360, height: 600 },
-    columns,
-    boardScrollX: 0,
-    columnScrollY: columns.map(() => 0),
+    frame: { x: 0, y: 100, width: 360, height: 600 },
+    containers: columns,
+    frameScrollX: 0,
+    containerScrollY: columns.map(() => 0),
   };
 };
 /** The board's columns as the note holds them: card ids `<column in lower case><index>`. */
 const columnsOf = (l) =>
-  l.columns.map((column) => ({
+  l.containers.map((column) => ({
     id: column.id,
     name: column.id,
     color: "#fff",
-    items: column.cards.map((_, i) => ({ id: `${column.id.toLowerCase()}${i}`, text: "" })),
+    items: column.items.map((_, i) => ({ id: `${column.id.toLowerCase()}${i}`, text: "" })),
   }));
 const order = (columns, id) =>
   columns
@@ -83,36 +84,36 @@ const order = (columns, id) =>
 
 console.log("\nfindDrop");
 
-ok("the constant", BOARD_SLACK === 24, BOARD_SLACK);
+ok("the constant", FRAME_SLACK === 24, FRAME_SLACK);
 
 const L = layout({ A: [40, 120, 40], B: [], C: [60] }); // A's cards at y 220-260, 268-388, 396-436; B is empty
-const still = { boardScrollX: 0, columnScrollY: [0, 0, 0] };
+const still = { frameScrollX: 0, containerScrollY: [0, 0, 0] };
 const at = (x, y, scroll = still) => findDrop(L, scroll, x, y);
 
-ok("above the first card", at(100, 225)?.column === 0 && at(100, 225)?.index === 0, at(100, 225));
+ok("above the first card", at(100, 225)?.container === 0 && at(100, 225)?.index === 0, at(100, 225));
 ok(
   "between cards of different heights: the middle decides",
   at(100, 220 + 40 + 8 + 59)?.index === 1 && at(100, 220 + 40 + 8 + 61)?.index === 2,
   [at(100, 327), at(100, 329)]
 );
 ok("below the last card", at(100, 560)?.index === 3, at(100, 560));
-ok("an empty column: slot 0", at(18 + 312 + 10, 400)?.column === 1 && at(18 + 312 + 10, 400)?.index === 0, at(340, 400));
-ok("a target is its column and slot only", Object.keys(at(100, 225)).sort().join() === "column,index", at(100, 225));
+ok("an empty column: slot 0", at(18 + 312 + 10, 400)?.container === 1 && at(18 + 312 + 10, 400)?.index === 0, at(340, 400));
+ok("a target is its column and slot only", Object.keys(at(100, 225)).sort().join() === "container,index", at(100, 225));
 ok(
   "a column scrolled by 100 since the lift",
-  at(100, 235, { boardScrollX: 0, columnScrollY: [100, 0, 0] })?.index === 2,
-  at(100, 235, { boardScrollX: 0, columnScrollY: [100, 0, 0] })
+  at(100, 235, { frameScrollX: 0, containerScrollY: [100, 0, 0] })?.index === 2,
+  at(100, 235, { frameScrollX: 0, containerScrollY: [100, 0, 0] })
 );
 ok(
   "a board scrolled by 312 since the lift: the same point is the next column",
-  at(100, 400, { boardScrollX: 312, columnScrollY: [0, 0, 0] })?.column === 1,
-  at(100, 400, { boardScrollX: 312, columnScrollY: [0, 0, 0] })
+  at(100, 400, { frameScrollX: 312, containerScrollY: [0, 0, 0] })?.container === 1,
+  at(100, 400, { frameScrollX: 312, containerScrollY: [0, 0, 0] })
 );
-ok("in the gap: the nearer column", at(18 + 300 + 2, 300)?.column === 0 && at(18 + 300 + 10, 300)?.column === 1, [
+ok("in the gap: the nearer column", at(18 + 300 + 2, 300)?.container === 0 && at(18 + 300 + 10, 300)?.container === 1, [
   at(320, 300),
   at(328, 300),
 ]);
-const atLast = { boardScrollX: 624, columnScrollY: [0, 0, 0] }; // scrolled to the third column
+const atLast = { frameScrollX: 624, containerScrollY: [0, 0, 0] }; // scrolled to the third column
 ok("left of the first column, right of the last: nowhere", at(5, 300) === null && at(330, 300, atLast) === null, [
   at(5, 300),
   at(330, 300, atLast),
@@ -123,28 +124,28 @@ ok("far above or below the board: nowhere", at(100, 60) === null && at(100, 100 
 ]);
 ok("just outside the board still counts", at(100, 100 + 600 + 10) !== null);
 ok("far beside the board: nowhere", at(360 + 30, 300) === null && at(-30, 300) === null);
-ok("the first and the last column", at(20, 300)?.column === 0 && at(100, 300, atLast)?.column === 2);
+ok("the first and the last column", at(20, 300)?.container === 0 && at(100, 300, atLast)?.container === 2);
 
-console.log("\nwithoutCard: the lifted card's place closes");
+console.log("\nwithoutItem: the lifted card's place closes");
 
 {
-  const W = withoutCard(L, 0, 1); // a1 (120 high) lifted: a2 moves up to where a1 was
-  ok("the lifted card is gone from its column", W.columns[0].cards.length === 2, W.columns[0].cards);
+  const W = withoutItem(L, 0, 1); // a1 (120 high) lifted: a2 moves up to where a1 was
+  ok("the lifted card is gone from its column", W.containers[0].items.length === 2, W.containers[0].items);
   ok(
     "the cards after it move up by its place (its height and the gap)",
-    W.columns[0].cards[0].y === 220 && W.columns[0].cards[1].y === 268 && W.columns[0].cards[1].height === 40,
-    W.columns[0].cards
+    W.containers[0].items[0].y === 220 && W.containers[0].items[1].y === 268 && W.containers[0].items[1].height === 40,
+    W.containers[0].items
   );
-  ok("the other columns and the board are the same", W.columns[2] === L.columns[2] && W.board === L.board);
-  ok("the measured layout is not changed", L.columns[0].cards.length === 3 && L.columns[0].cards[2].y === 396);
-  const last = withoutCard(L, 0, 2);
+  ok("the other columns and the board are the same", W.containers[2] === L.containers[2] && W.frame === L.frame);
+  ok("the measured layout is not changed", L.containers[0].items.length === 3 && L.containers[0].items[2].y === 396);
+  const last = withoutItem(L, 0, 2);
   ok(
     "the last card lifted: nothing moves",
-    last.columns[0].cards.length === 2 && last.columns[0].cards[1].y === 268,
-    last.columns[0].cards
+    last.containers[0].items.length === 2 && last.containers[0].items[1].y === 268,
+    last.containers[0].items
   );
-  const only = withoutCard(L, 2, 0);
-  ok("the only card lifted: an empty column", only.columns[2].cards.length === 0, only.columns[2]);
+  const only = withoutItem(L, 2, 0);
+  ok("the only card lifted: an empty column", only.containers[2].items.length === 0, only.containers[2]);
 }
 
 console.log("\nwith moveCard: the card ends in the slot the drag showed");
@@ -152,11 +153,11 @@ console.log("\nwith moveCard: the card ends in the slot the drag showed");
 const cols = columnsOf(L); // A: a0 a1 a2, B: -, C: c0
 /** Lifts card `index` of column `column`, points at (x, y), and drops: the board's columns afterwards. */
 const drag = (column, index, x, y, scroll = still) => {
-  const W = withoutCard(L, column, index);
+  const W = withoutItem(L, column, index);
   const target = findDrop(W, scroll, x, y);
   if (!target || isOwnPlace(target, column, index)) return { target, columns: cols };
   const card = cols[column].items[index].id;
-  const moved = moveCard(cols, card, cols[column].id, cols[target.column].id, toMoveIndex(target, column, index));
+  const moved = moveCard(cols, card, cols[column].id, cols[target.container].id, toMoveIndex(target, column, index));
   return { target, columns: moved };
 };
 // Without a0, A is a1 at 220-340 and a2 at 348-388.
@@ -174,13 +175,13 @@ ok("just past the next card's middle is the next slot", order(drag(0, 1, 100, 30
   ]);
 }
 ok("above the first card of another column", order(drag(0, 0, 100, 225, atLast).columns, "C") === "a0,c0");
-ok("another column is never its own place", !isOwnPlace({ column: 1, index: 0 }, 0, 0));
+ok("another column is never its own place", !isOwnPlace({ container: 1, index: 0 }, 0, 0));
 ok(
   "a slot after the lifted card's own counts one more for moveCard",
-  toMoveIndex({ column: 0, index: 2 }, 0, 1) === 3 &&
-    toMoveIndex({ column: 0, index: 1 }, 0, 1) === 1 &&
-    toMoveIndex({ column: 0, index: 0 }, 0, 1) === 0 &&
-    toMoveIndex({ column: 1, index: 2 }, 0, 1) === 2
+  toMoveIndex({ container: 0, index: 2 }, 0, 1) === 3 &&
+    toMoveIndex({ container: 0, index: 1 }, 0, 1) === 1 &&
+    toMoveIndex({ container: 0, index: 0 }, 0, 1) === 0 &&
+    toMoveIndex({ container: 1, index: 2 }, 0, 1) === 2
 );
 
 // The edge scroll (KanbanBoard, KanbanColumn): a speed per second, so a 120 Hz screen scrolls as far as a 60 Hz one.
@@ -208,6 +209,50 @@ ok(
     "edge scroll: the first frame (no length) counts as one 60 Hz frame",
     near(edgeStep(0, 48, 600, null), 10) && near(edgeStep(0, 48, 600, undefined), 10),
     edgeStep(0, 48, 600, null)
+  );
+}
+
+console.log("\nmoveById: one array, moveCard's rules");
+{
+  const L4 = ["a", "b", "c", "d"].map((id) => ({ id }));
+  const ids = (l) => l.map((x) => x.id).join("");
+  ok("down two", ids(moveById(L4, "a", 3)) === "bcad");
+  ok("to the end", ids(moveById(L4, "a", 4)) === "bcda");
+  ok("up to the top", ids(moveById(L4, "d", 0)) === "dabc");
+  ok("its own slot: the same array", moveById(L4, "b", 1) === L4 && moveById(L4, "b", 2) === L4);
+  ok("a missing id: the same array", moveById(L4, "zz", 0) === L4);
+  ok("out of range clamps", ids(moveById(L4, "a", 99)) === "bcda" && ids(moveById(L4, "d", -5)) === "dabc");
+  let agree = true;
+  for (let f = 0; f < 4; f++) {
+    for (let t = 0; t <= 4; t++) {
+      const board = [{ id: "c", items: L4.map((x) => ({ ...x, text: x.id })) }];
+      const viaCard = moveCard(board, L4[f].id, "c", "c", t)[0]
+        .items.map((x) => x.id)
+        .join("");
+      if (ids(moveById(L4, L4[f].id, t)) !== viaCard) agree = false;
+    }
+  }
+  ok("agrees with moveCard for every pair", agree);
+}
+
+console.log("\nstepIndex: one place up or down");
+{
+  ok("down from 0 of 4", stepIndex(0, 1, 4) === 2);
+  ok("up from 2 of 4", stepIndex(2, -1, 4) === 1);
+  ok("up at the top: none", stepIndex(0, -1, 4) === null);
+  ok("down at the end: none", stepIndex(3, 1, 4) === null);
+  const L3 = ["a", "b", "c"].map((id) => ({ id }));
+  ok(
+    "applied: down",
+    moveById(L3, "a", stepIndex(0, 1, 3))
+      .map((x) => x.id)
+      .join("") === "bac"
+  );
+  ok(
+    "applied: up",
+    moveById(L3, "c", stepIndex(2, -1, 3))
+      .map((x) => x.id)
+      .join("") === "acb"
   );
 }
 

@@ -197,9 +197,10 @@ src/
     reloadApp.ts       # Reopens the app (expo-updates reload, DevSettings fallback); .web.ts: a page reload
     reducePhoto.ts     # A picture as it goes into a note or a report: 1600 px long side, JPEG 0.6, base64 (LL-083, LL-088)
     kanbanOps.ts       # moveCard: returns the board unchanged when the move can't complete (LL-078, scripts/kanban.test.mjs)
-    kanbanDrop.ts      # Where a dragged card lands, from the rectangles measured at lift (without it) and the scroll since:
-                       #   findDrop, withoutCard, isOwnPlace, toMoveIndex, edgeStep, worklets (ADR-037,
-                       #   scripts/kanban-drop.test.mjs)
+    reorderDrop.ts     # Where a dragged item lands (boards: N containers; lists, categories: one), from the rectangles
+                       #   measured at lift (without it) and the scroll since: findDrop, withoutItem, isOwnPlace,
+                       #   toMoveIndex, edgeStep (worklets); moveById, stepIndex on one array (ADR-037,
+                       #   scripts/reorder-drop.test.mjs)
     netStatus.ts       # createNetStatus: the web/desktop connection status, one probe timer for the app (LL-082,
                        #   scripts/net-status.test.mjs)
     quickNoteDraft.ts  # The quick note bar's unsent text, kept on the device (@quickNoteDraft, LL-084)

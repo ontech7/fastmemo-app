@@ -39,7 +39,7 @@ export default function KanbanDragOverlay() {
   );
 
   const cardStyle = useAnimatedStyle(() => {
-    const board = layout.get()?.board;
+    const board = layout.get()?.frame;
     const t = lifted.get();
     return {
       width: liftWidth.get(),

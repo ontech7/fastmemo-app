@@ -1,5 +1,5 @@
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
-import { edgeStep } from "@/libs/kanbanDrop";
+import { edgeStep } from "@/libs/reorderDrop";
 import { useKanbanDrag, useKanbanPreview } from "@/providers/KanbanDragProvider";
 import { memo, useCallback, useEffect, useRef, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
@@ -109,8 +109,8 @@ function KanbanColumn({
   const autoScroll = useFrameCallback((frame) => {
     const t = target.get();
     const l = layout.get();
-    if (active.get() !== 1 || !t || !l || l.columns[t.column]?.id !== columnId) return;
-    const area = l.columns[t.column].area;
+    if (active.get() !== 1 || !t || !l || l.containers[t.container]?.id !== columnId) return;
+    const area = l.containers[t.container].area;
     const y = pointerYIn(area.y, area.height);
     if (y === null) return;
     const now = columnScrollY.get()[columnId] ?? 0;
@@ -133,7 +133,7 @@ function KanbanColumn({
   const borderStyle = useAnimatedStyle(() => {
     const t = target.get();
     const l = layout.get();
-    const isTarget = active.get() === 1 && t !== null && l !== null && l.columns[t.column]?.id === columnId;
+    const isTarget = active.get() === 1 && t !== null && l !== null && l.containers[t.container]?.id === columnId;
     return { borderColor: isTarget ? COLOR.accentSoft : GLASS.border };
   });
 
