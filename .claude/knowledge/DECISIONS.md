@@ -387,6 +387,17 @@ closes (`flushOnExit`, which also flushes the persistor).
 - ~~Tauri v1's native Quit (Cmd+Q, Dock) terminates without `onCloseRequested`~~: since Tauri 2 (ADR-015) the window close and
   the app menu's Quit (Cmd+Q) wait for the flush; Dock Quit, logout and OS session end still don't
 
+**Note (4.1.0): the code page batches too.** A code note's page (`src/editor/codemirror-entry.js`) used to post the whole
+document on every key. It now posts it 50 ms after the last change, and at the latest 250 ms after the first one not yet sent.
+It also posts at once when the editor is left, the page is hidden or goes away, or the app asks for the text (`flush`). The app
+asks when it leaves the foreground (`registerPendingFlush` in `NoteCodeEditor`) and when the note screen loses focus. On the web
+and the desktop the page is a same-origin frame, and the app _takes_ the text synchronously (`takePendingChange`): a closing tab
+unloads the frame first, and a message posted then never arrives. So a blur or hide posts the text but leaves it pending. A
+`setCode` that opens a new document drops a pending send, as its document number is stale. Accepted, as for a keystroke in
+flight: a character typed less than 50 ms before a tab switch or leaving the note is lost. Also, on the web, closing a tab
+within the commit pause (300 ms) loses that edit on 4.0.0 as well: the write started at `pagehide` (a Web Lock, then IndexedDB)
+doesn't finish.
+
 ---
 
 ## ADR-014: OTA Updates (EAS Update) for Android, Counted on Top of the Store Version

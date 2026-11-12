@@ -92,10 +92,56 @@ window.addEventListener("message", function (event) {
   }
 });
 
+// The text goes to the app when typing pauses, not on every key: each message carries the whole document, which costs
+// a copy and a parse per key on a long tab. It goes out CHANGE_DEBOUNCE_MS after the last change and at the latest
+// CHANGE_MAX_WAIT_MS after the first one not yet sent (a held key doesn't hold the text back), and at once when the
+// editor is left, the page is hidden, or the app asks for it (`flush`: the app is going to the background). The message
+// carries the document and `currentDoc` as they are when it is sent (ADR-013).
+const CHANGE_DEBOUNCE_MS = 50;
+const CHANGE_MAX_WAIT_MS = 250;
+let changeTimer = null;
+let firstPendingAt = 0;
+
+function cancelPendingChange() {
+  if (changeTimer) clearTimeout(changeTimer);
+  changeTimer = null;
+  firstPendingAt = 0;
+}
+
+/**
+ * The `change` message of the text not yet sent, or null: it is then no longer pending. On the web the page is a
+ * same-origin frame and the app calls this synchronously when it is hidden or closing, since a message posted while a
+ * tab closes never arrives.
+ */
+window.takePendingChange = function () {
+  if (!firstPendingAt) return null;
+  cancelPendingChange();
+  return JSON.stringify({ type: "change", code: view.state.doc.toString(), doc: currentDoc });
+};
+
+function sendChangeNow() {
+  const change = window.takePendingChange();
+  if (change) sendToReact(change);
+}
+
+// The editor is left, the page is hidden or goes away: the text is posted, and stays pending. A closing tab takes the
+// focus away and unloads this frame before the app's page, and a message posted then never arrives, so the app must
+// still be able to take it (`takePendingChange`). If the page lives on, the armed timer sends it once more: the app
+// ignores a change it already has.
+function postPendingChange() {
+  if (firstPendingAt) sendToReact(JSON.stringify({ type: "change", code: view.state.doc.toString(), doc: currentDoc }));
+}
+
+function scheduleChange() {
+  const now = Date.now();
+  if (!firstPendingAt) firstPendingAt = now;
+  if (changeTimer) clearTimeout(changeTimer);
+  const wait = Math.max(0, Math.min(CHANGE_DEBOUNCE_MS, firstPendingAt + CHANGE_MAX_WAIT_MS - now));
+  changeTimer = setTimeout(sendChangeNow, wait);
+}
+
 const changeListener = EditorView.updateListener.of((update) => {
-  if (update.docChanged && !suppressChange) {
-    sendToReact(JSON.stringify({ type: "change", code: update.state.doc.toString(), doc: currentDoc }));
-  }
+  if (update.docChanged && !suppressChange) scheduleChange();
 });
 
 // A fresh state per document (initial content, tab switch), so undo never crosses into another tab.
@@ -123,6 +169,12 @@ const view = new EditorView({
   parent: document.getElementById("editor"),
 });
 setLanguage(currentLang);
+
+view.contentDOM.addEventListener("blur", postPendingChange);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") postPendingChange();
+});
+window.addEventListener("pagehide", postPendingChange);
 
 window.handleMessage = function (msgStr) {
   try {
@@ -156,8 +208,13 @@ window.handleMessage = function (msgStr) {
         view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: msg.code } });
         suppressChange = false;
       } else {
+        // A new document (a tab switch): the text not yet sent belonged to the one replaced, and the app would refuse it
+        // (its document number is stale). A remote or undoable edit leaves the timer alone: its send carries the merge.
+        cancelPendingChange();
         view.setState(createState(msg.code));
       }
+    } else if (msg.type === "flush") {
+      sendChangeNow();
     } else if (msg.type === "focus") {
       view.focus();
     } else if (msg.type === "setLanguage" && msg.language !== currentLang) {

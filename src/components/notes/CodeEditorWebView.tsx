@@ -24,6 +24,11 @@ export interface CodeEditorWebViewRef {
   setLanguage: (language: string) => void;
   setReadOnly: (readOnly: boolean) => void;
   focus: () => void;
+  /**
+   * Asks the page for its text now instead of when typing pauses (the app is going to the background, the tab closes).
+   * On the web the text is handed to `onChange` before this returns.
+   */
+  flush: () => void;
 }
 
 interface Props {
@@ -100,6 +105,20 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
           webViewRef.current?.requestFocus?.();
         }
         sendMessage(JSON.stringify({ type: "focus" }));
+      },
+      flush: () => {
+        if (!isWeb) {
+          // The answer arrives while the app is in the background, and is written at once (useNoteEditor).
+          sendMessage(JSON.stringify({ type: "flush" }));
+          return;
+        }
+        // On the web the page is a same-origin frame (react-native-web-webview renders an iframe with srcDoc), and a
+        // message it posts while the tab closes never arrives: its text not yet sent is taken synchronously.
+        const page = (webViewRef.current as any)?.frameRef?.contentWindow;
+        const change = page?.takePendingChange?.();
+        if (!change) return;
+        const data = JSON.parse(change);
+        if ((data.doc ?? 0) === docRef.current) onChangeRef.current(data.code);
       },
     }));
 

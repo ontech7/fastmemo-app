@@ -247,6 +247,105 @@ const shownText = () => evaluate(`[...document.querySelectorAll(".cm-line")].map
   ok("no exception in the page", pageErrors.length === 0, pageErrors.join("\n"));
 }
 
+// When the page sends the text: once typing pauses (50 ms), at the latest 250 ms after the first change not yet sent,
+// and at once when the editor is left, the page is hidden or the app asks for it (a flush).
+{
+  /** The `change` messages the page sent, oldest first. */
+  const changes = async () =>
+    JSON.parse(await evaluate(`JSON.stringify(window.__messages)`))
+      .map((m) => JSON.parse(m))
+      .filter((m) => m.type === "change");
+  /** Real key events on the editor, one character at a time. */
+  const typeKeys = async (text, { gapMs = 0 } = {}) => {
+    await evaluate(`document.querySelector(".cm-content").focus()`);
+    for (const ch of text) {
+      await send("Input.dispatchKeyEvent", { type: "keyDown", key: ch, text: ch, unmodifiedText: ch });
+      await send("Input.dispatchKeyEvent", { type: "keyUp", key: ch });
+      if (gapMs) await sleep(gapMs);
+    }
+  };
+  /** Lets any pending send go out, then forgets every message. */
+  const reset = async () => {
+    await sleep(400);
+    await evaluate(`window.__messages = []`);
+  };
+  const handle = (msg) => evaluate(`window.handleMessage(${JSON.stringify(JSON.stringify(msg))})`);
+
+  await send("Emulation.setFocusEmulationEnabled", { enabled: true });
+  await openCode("");
+  await reset();
+  await typeKeys("abc", { gapMs: 10 });
+  ok("nothing is sent while typing", (await changes()).length === 0, JSON.stringify(await changes()));
+  await sleep(120);
+  const typed = await changes();
+  ok(
+    "one message once typing pauses, with the whole text",
+    typed.length === 1 && typed[0].code === "abc",
+    JSON.stringify(typed)
+  );
+
+  await reset();
+  await typeKeys("x".repeat(30), { gapMs: 20 });
+  ok("a long burst still sends on the way", (await changes()).length >= 2, (await changes()).length);
+
+  await reset();
+  await typeKeys("q");
+  await evaluate(`document.querySelector(".cm-content").blur()`);
+  ok("leaving the editor sends at once", (await changes()).length === 1, (await changes()).length);
+  // A closing tab takes the focus away first: the text stays for the app to take.
+  ok("after a blur the text can still be taken", (await evaluate(`window.takePendingChange?.() ?? null`)) !== null);
+
+  await reset();
+  await typeKeys("w");
+  await handle({ type: "flush" });
+  ok("a flush request sends at once", (await changes()).length === 1, (await changes()).length);
+
+  // On the web the page is a same-origin frame, and a closing tab never delivers a message posted while it closes: the
+  // app takes the text not yet sent, synchronously.
+  await reset();
+  await typeKeys("t");
+  const taken = await evaluate(`window.takePendingChange?.() ?? null`);
+  const takenChange = taken && JSON.parse(taken);
+  ok("the text not yet sent can be taken at once", takenChange?.type === "change" && takenChange.code.endsWith("t"), taken);
+  await sleep(120);
+  ok("once taken it isn't sent again", (await changes()).length === 0, JSON.stringify(await changes()));
+  ok("nothing to take when everything was sent", (await evaluate(`window.takePendingChange?.() ?? null`)) === null);
+
+  await reset();
+  await typeKeys("v");
+  await evaluate(`Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));`);
+  ok("hiding the page sends at once", (await changes()).length === 1, (await changes()).length);
+  await evaluate(`delete document.visibilityState`);
+  // A closing tab unloads the frame before the app, and a message posted then never arrives: the text stays for the
+  // app to take.
+  ok("after a hide the text can still be taken", (await evaluate(`window.takePendingChange?.() ?? null`)) !== null);
+
+  await reset();
+  await typeKeys("p");
+  await evaluate(`window.dispatchEvent(new Event("pagehide"))`);
+  ok("leaving the page sends at once", (await changes()).length === 1, (await changes()).length);
+  ok("after a pagehide the text can still be taken", (await evaluate(`window.takePendingChange?.() ?? null`)) !== null);
+
+  await reset();
+  await typeKeys("z");
+  await handle({ type: "setCode", code: "other", doc: 7 });
+  await sleep(120);
+  ok("a replaced document sends nothing, old or new", (await changes()).length === 0, JSON.stringify(await changes()));
+
+  await reset();
+  await typeKeys("k");
+  await handle({ type: "setCode", code: (await shownText()) + "!", doc: 8, remote: true });
+  await sleep(120);
+  const merged = (await changes()).at(-1);
+  ok(
+    "after another device's edit the merged text is sent with the new document's number",
+    merged?.doc === 8 && merged?.code === "kother!",
+    JSON.stringify(merged)
+  );
+  ok("no exception while typing", pageErrors.length === 0, pageErrors.join("\n"));
+}
+
 ws.close();
 const exited = new Promise((resolve) => chrome.once("exit", resolve));
 chrome.kill();

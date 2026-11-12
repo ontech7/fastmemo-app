@@ -15,10 +15,12 @@ import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName } from "@/libs/ai";
+import { registerPendingFlush } from "@/libs/registry";
 import { selectorAIAssistant, selectorWebhook_addCodeNote } from "@/slicers/settingsSlice";
 import type { CodeNote, CodeTab } from "@/types";
 import { isStringEmpty } from "@/utils/string";
 
+import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -136,6 +138,21 @@ export default function NoteCodeEditor({ initialNote }: Props) {
         .join(" "),
     onRemoteChange,
   });
+
+  // The page sends its text when typing pauses: the app going to the background or the tab closing asks for it now. On
+  // the web it is handed over before flush() returns and committed here; on a phone it arrives while the app isn't
+  // active, and useNoteEditor writes it at once.
+  useEffect(
+    () =>
+      registerPendingFlush(() => {
+        editorRef.current?.flush();
+        flushNote();
+      }),
+    [flushNote]
+  );
+  // Leaving the note asks for it too: the screen stays mounted through its transition, long enough for the answer, which
+  // the editor commits when it goes away.
+  useFocusEffect(useCallback(() => () => editorRef.current?.flush(), []));
 
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [editingTabTitle, setEditingTabTitle] = useState<string | null>(null);
