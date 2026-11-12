@@ -12,7 +12,7 @@ import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
 import { moveCard } from "@/libs/kanbanOps";
-import KanbanDragProvider from "@/providers/KanbanDragProvider";
+import ReorderProvider from "@/providers/ReorderProvider";
 import { selectorAIAssistant, selectorWebhook_addKanbanNote } from "@/slicers/settingsSlice";
 import type { KanbanNote } from "@/types";
 import { isKanbanNoteEmpty } from "@/utils/noteEmpty";
@@ -144,7 +144,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
 
           <View style={styles.boardContainer}>
             <GestureHandlerRootView style={{ flex: 1 }}>
-              <KanbanDragProvider onDrop={onDrop} columnsRef={columnsRef}>
+              <ReorderProvider containersRef={columnsRef} onDrop={onDrop} tick="container">
                 <KanbanBoard
                   note={note}
                   updateNoteAsync={updateNoteAsync}
@@ -152,7 +152,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
                   snapInterval={snapInterval}
                   initialFocusCardId={initialFocusCardId}
                 />
-              </KanbanDragProvider>
+              </ReorderProvider>
             </GestureHandlerRootView>
           </View>
 

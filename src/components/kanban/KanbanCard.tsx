@@ -1,6 +1,5 @@
 import DragIcon from "@/components/icons/DragIcon";
-import { useKanbanDrag } from "@/providers/KanbanDragProvider";
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { memo, useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Platform,
@@ -11,26 +10,15 @@ import {
   View,
   type ViewInstance,
 } from "react-native";
-import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import Animated from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
-import KanbanSlot, { CARD_LAYOUT } from "./KanbanSlot";
+import ReorderHandle from "@/components/reorder/ReorderHandle";
+import ReorderSlot, { ITEM_LAYOUT } from "@/components/reorder/ReorderSlot";
+import { useReorder } from "@/providers/ReorderProvider";
 
 import type { KanbanItem } from "@/types";
-
-const isWeb = Platform.OS === "web";
-
-/** A finger lifts a card after a 200 ms press; a mouse at once, after 4 px (the web build sees every pointer as a mouse). */
-const ACTIVATION = isWeb ? { minDistance: 4 } : { activateAfterLongPress: 200 };
-
-/** A handle's mouse press neither starts the board's mouse drag-to-scroll nor selects the page's text (web). */
-const holdMouse = (event: { preventDefault: () => void; stopPropagation: () => void }) => {
-  event.preventDefault();
-  event.stopPropagation();
-};
 
 interface Props {
   item: KanbanItem;
@@ -71,48 +59,15 @@ function KanbanCard({
 
   const [height, setHeight] = useState(40);
 
-  const { pointerX, pointerY, registerCard, lift, release, cancel } = useKanbanDrag();
+  const { registerItem } = useReorder();
 
-  // Measured by the provider at lift only.
+  // Measured by the engine at lift only.
   const rowRef = useRef<ViewInstance>(null);
-  useEffect(() => registerCard(columnId, item.id, rowRef), [registerCard, columnId, item.id]);
-
-  // The card as it is now, for the lift: the gesture is built once and doesn't follow the text.
-  const itemRef = useRef(item);
-  useLayoutEffect(() => {
-    itemRef.current = item;
-  }, [item]);
-  const onLift = useCallback((x: number, y: number) => lift(itemRef.current, columnId, x, y), [lift, columnId]);
-
-  // Its worklets write the pointer on the UI thread; JS hears of the drag at lift and at the end only.
-  const panConfig = useMemo(
-    () => ({
-      enabled: !disabled,
-      ...ACTIVATION,
-      onActivate: (event: { absoluteX: number; absoluteY: number }) => {
-        "worklet";
-        pointerX.set(event.absoluteX);
-        pointerY.set(event.absoluteY);
-        scheduleOnRN(onLift, event.absoluteX, event.absoluteY);
-      },
-      onUpdate: (event: { absoluteX: number; absoluteY: number }) => {
-        "worklet";
-        pointerX.set(event.absoluteX);
-        pointerY.set(event.absoluteY);
-      },
-      onDeactivate: (event: { canceled: boolean }) => {
-        "worklet";
-        if (event.canceled) scheduleOnRN(cancel);
-        else scheduleOnRN(release);
-      },
-    }),
-    [disabled, pointerX, pointerY, onLift, release, cancel]
-  );
-  const panGesture = usePanGesture(panConfig);
+  useEffect(() => registerItem(columnId, item.id, rowRef), [registerItem, columnId, item.id]);
 
   return (
-    <Animated.View layout={animateLayout ? CARD_LAYOUT : undefined} style={folded && styles.folded}>
-      {slotHeight ? <KanbanSlot height={slotHeight} /> : null}
+    <Animated.View layout={animateLayout ? ITEM_LAYOUT : undefined} style={folded && styles.folded}>
+      {slotHeight ? <ReorderSlot height={slotHeight} /> : null}
       <View ref={rowRef} style={styles.container}>
         <View style={styles.cardWrapper}>
           <View style={styles.cardContent}>
@@ -131,19 +86,7 @@ function KanbanCard({
               onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
             />
 
-            <GestureDetector gesture={panGesture}>
-              <Animated.View
-                style={[styles.dragHandle, isWeb && styles.dragHandleWeb]}
-                {...(isWeb && { onMouseDown: holdMouse })}
-              >
-                <DragIcon
-                  iconProps={{
-                    color: COLOR.textSecondary,
-                    opacity: 0.9,
-                  }}
-                />
-              </Animated.View>
-            </GestureDetector>
+            <ReorderHandle item={item} containerId={columnId} disabled={disabled} style={styles.dragHandle} />
           </View>
 
           <TouchableOpacity
@@ -254,11 +197,6 @@ const styles = StyleSheet.create({
     borderRightWidth: 0,
     borderColor: GLASS.border,
   },
-  // The web build sees every pointer as a mouse: without this a touch on the handle scrolls the page instead of lifting.
-  dragHandleWeb: {
-    touchAction: "none",
-    cursor: "grab",
-  } as object,
   dragHandle: {
     alignItems: "center",
     justifyContent: "center",

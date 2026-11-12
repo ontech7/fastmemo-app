@@ -2,13 +2,12 @@ import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import KanbanColumn from "@/components/kanban/KanbanColumn";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
-import Haptics from "@/libs/haptics";
-import { edgeStep, findDrop, FRAME_SLACK } from "@/libs/reorderDrop";
-import type { DropTarget } from "@/libs/reorderDrop";
-import { useKanbanDrag, useKanbanDragged } from "@/providers/KanbanDragProvider";
+import ReorderOverlay from "@/components/reorder/ReorderOverlay";
+import { edgeStep, FRAME_SLACK } from "@/libs/reorderDrop";
+import { useReorder, useReorderDragged } from "@/providers/ReorderProvider";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { selectorDeveloperMode } from "@/slicers/settingsSlice";
-import type { KanbanColumn as KanbanColumnType, KanbanNote } from "@/types";
+import type { KanbanColumn as KanbanColumnType, KanbanItem, KanbanNote } from "@/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MouseEvent, ScrollViewInstance, TextInputInstance, ViewInstance } from "react-native";
@@ -25,7 +24,7 @@ import Animated, {
 import { scheduleOnRN } from "react-native-worklets";
 import { useSelector } from "react-redux";
 import uuid from "react-uuid";
-import KanbanDragOverlay from "./KanbanDragOverlay";
+import { KanbanCardStatic } from "./KanbanCard";
 
 const isWeb = Platform.OS === "web";
 
@@ -34,11 +33,8 @@ const EDGE = 48;
 /** At most this many pixels per second, faster the closer to the edge (14 per frame at 60 Hz). */
 const MAX_SPEED = 840;
 
-const sameTarget = (a: DropTarget | null, b: DropTarget | null) => {
-  "worklet";
-  if (a === null || b === null) return a === b;
-  return a.container === b.container && a.index === b.index;
-};
+/** The card in the air, as the drag's layer draws it: read-only, at its measured height. */
+const renderLiftedCard = (item: KanbanItem, height: number | undefined) => <KanbanCardStatic item={item} height={height} />;
 
 interface Props {
   note: KanbanNote;
@@ -58,42 +54,26 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
   const maxColumns =
     devMode.enabled && devMode.unlimitedKanbanColumns ? Number.MAX_SAFE_INTEGER : configs.notes.maxKanbanColumns;
 
-  const { active, returning, pointerX, pointerY, target, layout, boardScrollX, columnScrollY, registerBoard, showTarget } =
-    useKanbanDrag();
-  const dragged = useKanbanDragged();
+  const { active, returning, pointerX, layout, frameScrollX: boardScrollX, registerFrame } = useReorder();
+  const dragged = useReorderDragged();
   const isDragging = dragged !== null;
 
-  // The board's box: the drag's layer origin, measured by the provider at lift.
+  // The board's box: the drag's layer origin, measured by the engine at lift.
   const rootRef = useRef<ViewInstance>(null);
-  useEffect(() => registerBoard(rootRef), [registerBoard]);
+  useEffect(() => registerFrame(rootRef), [registerFrame]);
 
   const boardRef = useAnimatedRef<Animated.ScrollView>();
   useScrollViewOffset(boardRef, boardScrollX);
   const contentWidth = useSharedValue(0);
   const onContentSizeChange = useCallback((w: number) => contentWidth.set(w), [contentWidth]);
 
-  // While a card is in the air (UI thread): the target under the pointer, a haptic when its column changes, and the
-  // board scrolling sideways near its edges. JS hears of a new slot (the columns show it) and of a new column only.
-  const lastColumn = useSharedValue(-1);
-  const drag = useFrameCallback((frame) => {
+  // While a card is in the air (UI thread): the board scrolls sideways near its edges. The engine finds the target.
+  const edgeScroll = useFrameCallback((frame) => {
     if (active.get() !== 1 || returning.get() === 1) return;
     const l = layout.get();
     if (!l) return;
-    const offsets = columnScrollY.get();
     const x = pointerX.get();
-    const y = pointerY.get();
     const now = boardScrollX.get();
-    const found = findDrop(l, { frameScrollX: now, containerScrollY: l.containers.map((c) => offsets[c.id] ?? 0) }, x, y);
-    if (!sameTarget(target.get(), found)) {
-      target.set(found);
-      scheduleOnRN(showTarget, found ? found.container : -1, found ? found.index : 0);
-    }
-    const column = found ? found.container : -1;
-    if (column !== lastColumn.get()) {
-      if (column !== -1) scheduleOnRN(Haptics.selectionAsync);
-      lastColumn.set(column);
-    }
-
     const { frame: board } = l;
     const left = x - board.x;
     const right = board.x + board.width - x;
@@ -104,14 +84,11 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
     else if (right < EDGE && right > -FRAME_SLACK) next = Math.min(max, now + edgeStep(right, EDGE, MAX_SPEED, ms));
     if (next !== now) scrollTo(boardRef, next, 0, false);
   }, false);
-  const setDragFrames = drag.setActive;
+  const setEdgeScroll = edgeScroll.setActive;
   useAnimatedReaction(
     () => active.get(),
     (now, previous) => {
-      if (now === previous) return;
-      // The lift's own column is where the drag starts: no haptic for it.
-      if (now === 1) lastColumn.set(target.get()?.container ?? -1);
-      scheduleOnRN(setDragFrames, now === 1);
+      if (now !== previous) scheduleOnRN(setEdgeScroll, now === 1);
     }
   );
 
@@ -370,7 +347,7 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
         </View>
       )}
 
-      <KanbanDragOverlay />
+      <ReorderOverlay renderLifted={renderLiftedCard} />
 
       <ConfirmOrCancelDialog
         open={!!pendingColumn}

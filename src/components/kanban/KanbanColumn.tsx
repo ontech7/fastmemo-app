@@ -1,41 +1,18 @@
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
-import { edgeStep } from "@/libs/reorderDrop";
-import { useKanbanDrag, useKanbanPreview } from "@/providers/KanbanDragProvider";
-import { memo, useCallback, useEffect, useRef, type RefObject } from "react";
+import ReorderSlot from "@/components/reorder/ReorderSlot";
+import { useReorderContainer } from "@/components/reorder/useReorderContainer";
+import { useReorder, useReorderPreview } from "@/providers/ReorderProvider";
+import { memo, useCallback, useRef, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  type LayoutChangeEvent,
-  StyleSheet,
-  Text,
-  TextInput,
-  type TextInputInstance,
-  TouchableOpacity,
-  View,
-  type ViewInstance,
-} from "react-native";
+import { StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View, type ViewInstance } from "react-native";
 import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
 import ChevronRightIcon from "react-native-heroicons/outline/ChevronRightIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
-import Animated, {
-  scrollTo,
-  useAnimatedReaction,
-  useAnimatedRef,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useFrameCallback,
-  useSharedValue,
-} from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
+import Animated, { useAnimatedRef, useAnimatedStyle } from "react-native-reanimated";
 import KanbanCard from "./KanbanCard";
-import KanbanSlot from "./KanbanSlot";
 
 import type { KanbanColumn as KanbanColumnType } from "@/types";
-
-/** Held this close to the top or bottom of a column's card area, a card scrolls it. */
-const EDGE = 40;
-/** At most this many pixels per second, faster the closer to the edge (10 per frame at 60 Hz). */
-const MAX_SPEED = 600;
 
 interface Props {
   column: KanbanColumnType;
@@ -73,61 +50,22 @@ function KanbanColumn({
 }: Props) {
   const { t } = useTranslation();
 
-  const { active, target, layout, pointerY, columnScrollY, registerColumn } = useKanbanDrag();
+  const { active, target, layout } = useReorder();
   // Re-renders when a drag starts, when its slot moves, and at its end: never while the card only follows the pointer.
-  const preview = useKanbanPreview();
+  const preview = useReorderPreview();
 
-  // The card area, measured by the provider at lift only.
+  // The card area, measured by the engine at lift only; the column scrolls near its edges while a card is held there.
   const areaRef = useRef<ViewInstance>(null);
-  useEffect(() => registerColumn(column.id, { area: areaRef }), [registerColumn, column.id]);
-
   const listRef = useAnimatedRef<Animated.ScrollView>();
   const columnId = column.id;
-  const scrollHandler = useAnimatedScrollHandler(
-    (event) => {
-      columnScrollY.modify((offsets) => {
-        "worklet";
-        offsets[columnId] = event.contentOffset.y;
-        return offsets;
-      });
-    },
-    [columnId]
-  );
-  const contentHeight = useSharedValue(0);
-  const viewHeight = useSharedValue(0);
-  const onContentSizeChange = useCallback((_: number, h: number) => contentHeight.set(h), [contentHeight]);
-  const onListLayout = useCallback((e: LayoutChangeEvent) => viewHeight.set(e.nativeEvent.layout.height), [viewHeight]);
-
-  /** The pointer's height inside the card area (clamped), or null when it is well outside it. */
-  const pointerYIn = (top: number, height: number) => {
-    "worklet";
-    const y = pointerY.get() - top;
-    return y < -EDGE || y > height + EDGE ? null : Math.min(Math.max(y, 0), height);
-  };
-
-  // While a card is held near this column's top or bottom edge, the column scrolls (UI thread).
-  const autoScroll = useFrameCallback((frame) => {
-    const t = target.get();
-    const l = layout.get();
-    if (active.get() !== 1 || !t || !l || l.containers[t.container]?.id !== columnId) return;
-    const area = l.containers[t.container].area;
-    const y = pointerYIn(area.y, area.height);
-    if (y === null) return;
-    const now = columnScrollY.get()[columnId] ?? 0;
-    const max = Math.max(0, contentHeight.get() - viewHeight.get());
-    let next = now;
-    const ms = frame.timeSincePreviousFrame;
-    if (y < EDGE) next = Math.max(0, now - edgeStep(y, EDGE, MAX_SPEED, ms));
-    else if (y > area.height - EDGE) next = Math.min(max, now + edgeStep(area.height - y, EDGE, MAX_SPEED, ms));
-    if (next !== now) scrollTo(listRef, 0, next, false);
-  }, false);
-  const setAutoScroll = autoScroll.setActive;
-  useAnimatedReaction(
-    () => active.get(),
-    (now, previous) => {
-      if (now !== previous) scheduleOnRN(setAutoScroll, now === 1);
-    }
-  );
+  const {
+    scrollHandler,
+    onContentSizeChange,
+    onLayout: onListLayout,
+  } = useReorderContainer(columnId, {
+    scrollRef: listRef,
+    areaRef,
+  });
 
   // The column under the pointer has an accent edge (no re-render: only its color changes, so nothing moves).
   const borderStyle = useAnimatedStyle(() => {
@@ -145,8 +83,8 @@ function KanbanColumn({
 
   // While a card is in the air: its own place folded, and the slot where it would land, above the card at that slot or
   // after the last one. The children keep their order: a card hosts the slot, nothing is inserted among them.
-  const foldedId = preview?.sourceColumnId === column.id ? preview.sourceCardId : null;
-  const slotIndex = preview?.targetColumnId === column.id ? preview.targetIndex : -1;
+  const foldedId = preview?.sourceContainerId === column.id ? preview.sourceItemId : null;
+  const slotIndex = preview?.targetContainerId === column.id ? preview.targetIndex : -1;
   let shown = 0;
   const rows = column.items.map((item) => {
     const folded = item.id === foldedId;
@@ -248,7 +186,7 @@ function KanbanColumn({
             onContentSizeChange={onContentSizeChange}
           >
             {rows}
-            {trailingSlot ? <KanbanSlot height={trailingSlot} /> : null}
+            {trailingSlot ? <ReorderSlot height={trailingSlot} /> : null}
             {rows.length === 0 && !trailingSlot ? (
               <Text style={styles.noCards}>{t ? t("kanban.no_cards") : "No cards"}</Text>
             ) : null}
