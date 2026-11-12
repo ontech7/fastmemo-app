@@ -1,5 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import EmptyCategoryIllustration from "@/components/ui/illustrations/EmptyCategoryIllustration";
 import EmptyNotesIllustration from "@/components/ui/illustrations/EmptyNotesIllustration";
@@ -19,10 +22,19 @@ interface Props {
 
 /*
  * What an empty list says (spec 5.3): a drawing in the "ghost cards" style, a title and one sentence, centred in the
- * list's area. Passed as a list's `ListEmptyComponent`, whose content container grows to the list's height.
+ * list's area. Passed as a list's `ListEmptyComponent`, whose content container grows to the list's height. With the
+ * keyboard up (a search typed) the list keeps its height under the keyboard, and the add button rides above the keyboard:
+ * the block rises by half the part the keyboard covers, centred in what is still visible, clear of the button.
  */
 export default function EmptyState({ variant, categoryIcon, quickNote = true, days }: Props) {
   const { t } = useTranslation();
+
+  // `height` is the keyboard's, negative while it is up; the bottom inset is already below the list.
+  const { height } = useReanimatedKeyboardAnimation();
+  const { bottom } = useSafeAreaInsets();
+  const keyboardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: Math.min(0, (height.value + bottom) / 2) }],
+  }));
 
   let drawing;
   let title: string;
@@ -51,13 +63,13 @@ export default function EmptyState({ variant, categoryIcon, quickNote = true, da
   }
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, keyboardStyle]}>
       <View style={styles.drawing}>{drawing}</View>
       <Text style={styles.title} accessibilityRole="header">
         {title}
       </Text>
       <Text style={styles.text}>{text}</Text>
-    </View>
+    </Animated.View>
   );
 }
 
