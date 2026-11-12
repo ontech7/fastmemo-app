@@ -1,6 +1,6 @@
 import { LIFT } from "@/constants/styles";
 import Haptics, { ImpactFeedbackStyle, NotificationFeedbackType } from "@/libs/haptics";
-import { findDrop, isOwnPlace, toMoveIndex, withoutItem } from "@/libs/reorderDrop";
+import { findDrop, isOwnPlace, stepIndex, toMoveIndex, withoutItem } from "@/libs/reorderDrop";
 import type { DropContainer, DropLayout, DropTarget, Rect } from "@/libs/reorderDrop";
 import { measureInWindow } from "@/libs/tourTargets";
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -78,6 +78,11 @@ export interface ReorderContextValue {
   lift(item: ReorderItem, containerId: string, pointerX: number, pointerY: number): void;
   release(): void;
   cancel(): void;
+  /**
+   * Moves an item one place up (-1) or down (1) in its container, at once, without a drag: the keyboard's arrows and the
+   * screen reader's actions. Nothing at an end, nor while an item is in the air.
+   */
+  move(itemId: string, containerId: string, delta: -1 | 1): void;
 }
 
 export interface ReorderDragged<T extends ReorderItem> {
@@ -440,6 +445,20 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
     settle(finish);
   }, [finish, settle, showTarget, returning]);
 
+  const move = useCallback(
+    (itemId: string, containerId: string, delta: -1 | 1) => {
+      if (dragRef.current || active.get() === 1) return;
+      const container = (containersRef.current ?? []).find((c) => c.id === containerId);
+      if (!container) return;
+      const index = container.items.findIndex((it) => it.id === itemId);
+      const toIndex = stepIndex(index, delta, container.items.length);
+      if (toIndex === null) return;
+      onDropRef.current(itemId, containerId, containerId, toIndex);
+      Haptics.notificationAsync(NotificationFeedbackType.Success);
+    },
+    [active, containersRef]
+  );
+
   // Never changes for the provider's life: every item and container reads it without rendering again.
   const value = useMemo<ReorderContextValue>(
     () => ({
@@ -465,6 +484,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       lift,
       release,
       cancel,
+      move,
     }),
     [
       active,
@@ -489,6 +509,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       lift,
       release,
       cancel,
+      move,
     ]
   );
 

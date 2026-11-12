@@ -2,7 +2,8 @@ import DragIcon from "@/components/icons/DragIcon";
 import { COLOR } from "@/constants/styles";
 import { useReorder, type ReorderItem } from "@/providers/ReorderProvider";
 import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
-import { Platform, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Platform, StyleSheet, type AccessibilityActionEvent, type StyleProp, type ViewStyle } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import Animated from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
@@ -27,12 +28,18 @@ interface Props<T extends ReorderItem> {
   children?: ReactNode;
 }
 
+/** What a screen reader offers on a handle besides dragging. */
+const ACTIONS = ["moveUp", "moveDown"] as const;
+
 /*
  * What lifts an item (ADR-037, ADR-038): its pan gesture writes the pointer on the UI thread; JS hears of the drag at lift
  * and at the end only. The item registers its own box (`registerItem`): the handle is only where the finger goes.
+ * Without dragging, a screen reader's "move up"/"move down" and, on web and desktop, the arrow keys on the focused handle
+ * move the item one place (`move`).
  */
 export default function ReorderHandle<T extends ReorderItem>({ item, containerId, disabled, style, children }: Props<T>) {
-  const { pointerX, pointerY, lift, release, cancel } = useReorder();
+  const { t } = useTranslation();
+  const { pointerX, pointerY, lift, release, cancel, move } = useReorder();
 
   // The item as it is now, for the lift: the gesture is built once and doesn't follow the item's text.
   const itemRef = useRef(item);
@@ -66,9 +73,50 @@ export default function ReorderHandle<T extends ReorderItem>({ item, containerId
   );
   const panGesture = usePanGesture(panConfig);
 
+  const itemId = item.id;
+  const accessibilityActions = useMemo(
+    () => [
+      { name: ACTIONS[0], label: t("a11y.move_up") },
+      { name: ACTIONS[1], label: t("a11y.move_down") },
+    ],
+    [t]
+  );
+  const onAccessibilityAction = useCallback(
+    (event: AccessibilityActionEvent) => {
+      if (disabled) return;
+      if (event.nativeEvent.actionName === ACTIONS[0]) move(itemId, containerId, -1);
+      else if (event.nativeEvent.actionName === ACTIONS[1]) move(itemId, containerId, 1);
+    },
+    [disabled, move, itemId, containerId]
+  );
+  // Web and desktop: the handle takes the keyboard's focus, and the arrows move the item.
+  const keyProps = useMemo(
+    () =>
+      isWeb && !disabled
+        ? {
+            tabIndex: 0,
+            onKeyDown: (event: { key: string; preventDefault: () => void }) => {
+              if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+              event.preventDefault();
+              move(itemId, containerId, event.key === "ArrowUp" ? -1 : 1);
+            },
+          }
+        : {},
+    [disabled, move, itemId, containerId]
+  );
+
   return (
     <GestureDetector gesture={panGesture}>
-      <Animated.View style={[style, isWeb && styles.web]} {...(isWeb && { onMouseDown: holdMouse })}>
+      <Animated.View
+        style={[style, isWeb && styles.web]}
+        accessible={!disabled}
+        accessibilityRole="button"
+        accessibilityLabel={t("a11y.reorder")}
+        accessibilityActions={disabled ? undefined : accessibilityActions}
+        onAccessibilityAction={onAccessibilityAction}
+        {...(isWeb && { onMouseDown: holdMouse })}
+        {...(keyProps as object)}
+      >
         {children ?? <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />}
       </Animated.View>
     </GestureDetector>
