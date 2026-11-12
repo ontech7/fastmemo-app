@@ -12,6 +12,8 @@ const EDITOR_BG = "#282c34";
 interface SetCodeOptions {
   undoable?: boolean;
   remote?: boolean;
+  /** What the new document is (a tab's id): a change made in it is reported with it, even after it was replaced. */
+  tag?: string;
 }
 
 export interface CodeEditorWebViewRef {
@@ -35,13 +37,19 @@ interface Props {
   initialCode: string;
   language: string;
   readOnly: boolean;
-  onChange: (code: string) => void;
+  /**
+   * The text of the document on screen (no `tag`), or the last text of one a tab switch just replaced, sent at the
+   * switch: `tag` is the one it was set with (`initialTag` for the first).
+   */
+  onChange: (code: string, tag?: string) => void;
+  /** The `tag` of the document the editor opens with. */
+  initialTag?: string;
   /** Fires once the editor's WebView has built and painted its content. */
   onReady?: () => void;
 }
 
 const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
-  ({ initialCode, language, readOnly, onChange, onReady }, ref) => {
+  ({ initialCode, language, readOnly, onChange, onReady, initialTag }, ref) => {
     // `WebView<object>`, not bare `WebView`: v14 defaults the props generic to
     // `undefined`, which collapses the props type to `undefined` under strict: false.
     const webViewRef = useRef<WebView<object>>(null);
@@ -51,6 +59,8 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
     // Documents sent to the editor: a change it reports carries the one it was made in, and one made in a document
     // replaced since (a keystroke on its way as another device's edit or a tab switch arrives) would undo the new one.
     const docRef = useRef(0);
+    // Each document's tag: a replaced document's last text (`final`, sent at a tab switch) goes where it belongs.
+    const docTags = useRef(new Map<number, string | undefined>([[0, initialTag]]));
 
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
@@ -80,16 +90,19 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
     );
 
     useImperativeHandle(ref, () => ({
-      setCode: (code: string, options?: SetCodeOptions) =>
+      setCode: (code: string, options?: SetCodeOptions) => {
+        const doc = ++docRef.current;
+        docTags.current.set(doc, options?.tag);
         sendMessage(
           JSON.stringify({
             type: "setCode",
             code,
-            doc: ++docRef.current,
+            doc,
             undoable: !!options?.undoable,
             remote: !!options?.remote,
           })
-        ),
+        );
+      },
       setLanguage: (lang: string) => sendMessage(JSON.stringify({ type: "setLanguage", language: lang })),
       setReadOnly: (ro: boolean) => sendMessage(JSON.stringify({ type: "setReadOnly", readOnly: ro })),
       focus: () => {
@@ -137,6 +150,11 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
             reportPageError("codemirror", data.data);
           } else if (data.type === "change" && (data.doc ?? 0) === docRef.current) {
             onChangeRef.current(data.code);
+          } else if (data.type === "change" && data.final === true && docTags.current.get(data.doc ?? 0) !== undefined) {
+            // The last text of a document a tab switch replaced: stored in its own tab. Any other change of an old
+            // document stays refused (it could undo another device's edit merged since).
+            onChangeRef.current(data.code, docTags.current.get(data.doc ?? 0));
+            docTags.current.delete(data.doc ?? 0);
           }
         } catch {}
       },

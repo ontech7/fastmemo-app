@@ -327,11 +327,19 @@ const shownText = () => evaluate(`[...document.querySelectorAll(".cm-line")].map
   ok("leaving the page sends at once", (await changes()).length === 1, (await changes()).length);
   ok("after a pagehide the text can still be taken", (await evaluate(`window.takePendingChange?.() ?? null`)) !== null);
 
+  // A tab switch replaces the document: the text typed in the old one and not sent yet goes at once, as that
+  // document's last (`final`), so the app can store it in the tab it belongs to; the new document sends nothing.
   await reset();
   await typeKeys("z");
   await handle({ type: "setCode", code: "other", doc: 7 });
+  const atSwitch = await changes();
+  ok(
+    "a replaced document sends its unsent text at once, as its last",
+    atSwitch.length === 1 && atSwitch[0].final === true && atSwitch[0].doc !== 7 && atSwitch[0].code.endsWith("z"),
+    JSON.stringify(atSwitch)
+  );
   await sleep(120);
-  ok("a replaced document sends nothing, old or new", (await changes()).length === 0, JSON.stringify(await changes()));
+  ok("...and nothing else, old or new", (await changes()).length === 1, JSON.stringify(await changes()));
 
   await reset();
   await typeKeys("k");

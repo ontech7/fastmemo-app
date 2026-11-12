@@ -180,6 +180,7 @@ window.handleMessage = function (msgStr) {
   try {
     const msg = JSON.parse(msgStr);
     if (msg.type === "setCode") {
+      const previousDoc = currentDoc;
       currentDoc = msg.doc ?? currentDoc;
       if (msg.remote) {
         // Another device's edit of this document: only the span that differs is replaced, so the cursor and selection
@@ -208,8 +209,13 @@ window.handleMessage = function (msgStr) {
         view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: msg.code } });
         suppressChange = false;
       } else {
-        // A new document (a tab switch): the text not yet sent belonged to the one replaced, and the app would refuse it
-        // (its document number is stale). A remote or undoable edit leaves the timer alone: its send carries the merge.
+        // A new document (a tab switch): the text not yet sent belonged to the one replaced. It goes now, with that
+        // document's number and marked as its last (`final`): the app stores it in the tab it belongs to (any other
+        // change of an old document it refuses). A remote or undoable edit leaves the timer alone: its send carries the
+        // merge.
+        if (firstPendingAt) {
+          sendToReact(JSON.stringify({ type: "change", code: view.state.doc.toString(), doc: previousDoc, final: true }));
+        }
         cancelPendingChange();
         view.setState(createState(msg.code));
       }

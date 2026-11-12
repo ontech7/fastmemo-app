@@ -118,7 +118,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
       const shown = remote.tabs.find((tab) => tab.id === shownTabIdRef.current);
       const tab = shown ?? remote.tabs[0];
       if (!shown && tab) setShownTabId(tab.id);
-      editorRef.current?.setCode(tab?.code || "", { remote: !!shown });
+      editorRef.current?.setCode(tab?.code || "", { remote: !!shown, tag: tab?.id });
       editorRef.current?.setLanguage(tab?.language || "plaintext");
     },
     [setShownTabId]
@@ -180,7 +180,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
     });
     if (!added) return;
     setShownTabId(newTab.id);
-    editorRef.current?.setCode("");
+    editorRef.current?.setCode("", { tag: newTab.id });
     editorRef.current?.setLanguage("javascript");
     setTimeout(() => tabScrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [updateNoteAsync, setShownTabId]);
@@ -202,7 +202,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
       const shown = nextShown as CodeTab | null;
       if (!shown) return;
       setShownTabId(shown.id);
-      editorRef.current?.setCode(shown.code || "");
+      editorRef.current?.setCode(shown.code || "", { tag: shown.id });
       editorRef.current?.setLanguage(shown.language || "plaintext");
     },
     [updateNoteAsync, setShownTabId]
@@ -215,17 +215,25 @@ export default function NoteCodeEditor({ initialNote }: Props) {
       const target = note.tabs.find((tab) => tab.id === tabId);
       if (!target) return;
       setShownTabId(tabId);
-      editorRef.current?.setCode(target.code || "");
+      editorRef.current?.setCode(target.code || "", { tag: tabId });
       editorRef.current?.setLanguage(target.language || "plaintext");
     },
     [note.tabs, setShownTabId]
   );
 
+  // The editor's text goes to the tab it was typed in (`tabId`: the one on screen, or one a tab switch just left, whose
+  // last text the page sends at the switch); a tab removed meanwhile takes nothing.
   const updateTabCode = useCallback(
-    (code: string) =>
+    (code: string, tabId?: string) =>
       updateNoteAsync((current) => {
         const shown = shownTabIn(current, shownTabIdRef.current);
-        return { ...current, tabs: current.tabs.map((tab) => (tab.id === shown ? { ...tab, code } : tab)), activeTabId: shown };
+        const target = tabId ?? shown;
+        if (!current.tabs.some((tab) => tab.id === target)) return current;
+        return {
+          ...current,
+          tabs: current.tabs.map((tab) => (tab.id === target ? { ...tab, code } : tab)),
+          activeTabId: shown,
+        };
       }),
     [updateNoteAsync]
   );
@@ -366,6 +374,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
               language={activeTab?.language || "plaintext"}
               readOnly={note.readOnly}
               onChange={updateTabCode}
+              initialTag={activeTab?.id}
               onReady={() => setEditorPainted(true)}
             />
 
