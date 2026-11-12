@@ -69,6 +69,8 @@ const MAX_ATTACHMENTS = 3;
 interface Message {
   title: string | null;
   description: string | null;
+  /** The report went out: the dialog shows a check, not a warning sign. */
+  success?: boolean;
 }
 
 export default function ReportScreen() {
@@ -89,8 +91,8 @@ export default function ReportScreen() {
 
   const [isLoading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
-  const showMessage = useCallback((title: string | null, description: string | null) => {
-    setMessage({ title, description });
+  const showMessage = useCallback((title: string | null, description: string | null, success = false) => {
+    setMessage({ title, description, success });
   }, []);
   const [showSent, setShowSent] = useState(false);
 
@@ -203,7 +205,7 @@ export default function ReportScreen() {
 
     if (ok) {
       dispatch(reportSent(new Date().toISOString()));
-      showMessage(t("report.messages.success.title"), t("report.messages.success.text"));
+      showMessage(t("report.messages.success.title"), t("report.messages.success.text"), true);
     } else {
       if (error && !isTransientNetworkError(error)) Sentry.captureException(error);
       showMessage(t("report.messages.error.title"), t("report.messages.error.text"));
@@ -217,6 +219,7 @@ export default function ReportScreen() {
     <>
       <ConfirmOrCancelDialog
         open={message !== null}
+        success={message?.success}
         title={message?.title}
         description={message?.description ?? ""}
         onConfirm={() => setMessage(null)}

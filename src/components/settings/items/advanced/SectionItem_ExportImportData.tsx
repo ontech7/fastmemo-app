@@ -43,6 +43,7 @@ export default function SectionItem_ExportImportData({ isLast }: Props) {
 
       <ConfirmOrCancelDialog
         open={success}
+        success
         title={t("report.messages.success.title")}
         description={t("popup.generic_success_description")}
         onConfirm={dismissSuccess}

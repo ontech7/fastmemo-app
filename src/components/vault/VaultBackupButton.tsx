@@ -27,6 +27,7 @@ export function VaultBackupButton() {
 
       <ConfirmOrCancelDialog
         open={success}
+        success
         title={t("report.messages.success.title")}
         description={t("popup.generic_success_description")}
         onConfirm={dismissSuccess}

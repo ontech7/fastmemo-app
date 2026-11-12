@@ -91,6 +91,7 @@ export default function SectionItem_WipeData({ isLast }: Props) {
 
       <ConfirmOrCancelDialog
         open={showSuccessDialog}
+        success
         title={t("report.messages.success.title")}
         description={t("popup.generic_success_description")}
         onConfirm={() => setShowSuccessDialog(false)}

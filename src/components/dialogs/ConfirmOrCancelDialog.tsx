@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import CheckCircleIcon from "react-native-heroicons/outline/CheckCircleIcon";
 import ExclamationTriangleIcon from "react-native-heroicons/outline/ExclamationTriangleIcon";
 
 import { COLOR } from "@/constants/styles";
@@ -16,6 +17,8 @@ interface Props {
   onConfirm: () => void;
   /** Its confirm deletes something: a warning haptic when it's pressed (not on cancel). */
   destructive?: boolean;
+  /** It tells that something went well: a check instead of the warning sign. */
+  success?: boolean;
 }
 
 export default function ConfirmOrCancelDialog({
@@ -27,13 +30,20 @@ export default function ConfirmOrCancelDialog({
   confirmLabel = null,
   onConfirm,
   destructive = false,
+  success = false,
 }: Props) {
   const { t } = useTranslation();
 
   return (
     <ComplexDialog
       open={open}
-      adornmentStart={<ExclamationTriangleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />}
+      adornmentStart={
+        success ? (
+          <CheckCircleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />
+        ) : (
+          <ExclamationTriangleIcon size={22} color={COLOR.softWhite} style={{ marginBottom: -3 }} />
+        )
+      }
       title={title || t("warning")}
       description={description}
       cancel={
