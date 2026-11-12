@@ -196,8 +196,9 @@ src/
                        #   (scripts/diagnostics.test.mjs)
     reloadApp.ts       # Reopens the app (expo-updates reload, DevSettings fallback); .web.ts: a page reload
     reducePhoto.ts     # A picture as it goes into a note or a report: 1600 px long side, JPEG 0.6, base64 (LL-083, LL-088)
-    kanbanOps.ts       # Board operations (moveCard, reorderCards) that return the board unchanged when they can't complete
-                       #   (LL-078, scripts/kanban.test.mjs)
+    kanbanOps.ts       # moveCard: returns the board unchanged when the move can't complete (LL-078, scripts/kanban.test.mjs)
+    kanbanDrop.ts      # Where a dragged card lands, from the rectangles measured at lift and the scroll since: findDrop,
+                       #   isOwnPlace, worklets (ADR-037, scripts/kanban-drop.test.mjs)
     netStatus.ts       # createNetStatus: the web/desktop connection status, one probe timer for the app (LL-082,
                        #   scripts/net-status.test.mjs)
     quickNoteDraft.ts  # The quick note bar's unsent text, kept on the device (@quickNoteDraft, LL-084)
@@ -227,7 +228,8 @@ src/
 
   providers/           # React context providers
     AppUpdateProvider.tsx   # Update check (/api/version): the icon, the desktop installer prompt, the APK's prompt + download
-    KanbanDragProvider.tsx  # Kanban drag-and-drop state (reanimated shared values)
+    KanbanDragProvider.tsx  # The kanban drag (ADR-037): measures at lift; two contexts, a value that never changes (shared
+                            #   values, register/lift/release) and the card in the air (board and overlay only)
     SyncOnProvider.tsx      # Headless: runs the sync engine while connected + unlocked, turns its events into UI
     DiagnosticsProvider.tsx # Headless: Sentry's language and cloud tags, the route trail (as patterns, ADR-035)
 

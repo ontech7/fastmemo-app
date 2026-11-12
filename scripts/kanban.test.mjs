@@ -1,4 +1,4 @@
-// Kanban board operations: a move or a reorder never loses or doubles a card, whatever happened to the board (a column
+// Kanban board operations: a move never loses or doubles a card, whatever happened to the board (a column
 // deleted, a card gone, a stale index) (LL-078).
 // Run: node scripts/kanban.test.mjs
 
@@ -20,7 +20,7 @@ await build({
   logLevel: "error",
   alias: { "@": src },
 });
-const { moveCard, reorderCards } = await import(pathToFileURL(out).href);
+const { moveCard } = await import(pathToFileURL(out).href);
 
 let passed = 0;
 let failed = 0;
@@ -61,20 +61,6 @@ ok(
 ok("a deleted source column changes nothing", moveCard(same, "a2", "gone", "B", 0) === same);
 ok("the board it got is never changed", JSON.stringify(same) === JSON.stringify(board()));
 ok("a card keeps its fields", moveCard(board(), "a2", "A", "B", 0)[1].items[0].text === "a2");
-
-console.log("\nreorderCards");
-ok(
-  "reorder takes the same cards",
-  ids(reorderCards(same, "A", [same[0].items[2], same[0].items[0], same[0].items[1]]), "A") === "a3,a1,a2"
-);
-ok("reorder refuses a list with a card missing", reorderCards(same, "A", [same[0].items[0]]) === same);
-ok("reorder refuses a doubled card", reorderCards(same, "A", [same[0].items[0], same[0].items[0], same[0].items[1]]) === same);
-ok(
-  "reorder refuses a card from elsewhere",
-  reorderCards(same, "A", [same[0].items[0], same[0].items[1], same[1].items[0]]) === same
-);
-ok("reorder refuses a column that isn't there", reorderCards(same, "gone", []) === same);
-ok("the same order changes nothing", reorderCards(same, "A", [...same[0].items]) === same);
 
 console.log("\n5000 random moves");
 {

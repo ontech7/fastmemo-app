@@ -103,6 +103,10 @@ export const SHADOW = {
   glow: {
     boxShadow: `0px 0px 16px ${COLOR.accentMuted}8C`,
   },
+  // A card held in the air while it is dragged (kanban): a deep drop shadow and a faint accent halo.
+  lifted: {
+    boxShadow: `0px 16px 30px rgba(0,0,0,0.6), 0px 0px 18px ${COLOR.accent}59`,
+  },
 } as const;
 
 export const FONTSIZE = {

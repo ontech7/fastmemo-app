@@ -1,4 +1,4 @@
-const ImpactFeedbackStyle = {
+export const ImpactFeedbackStyle = {
   Light: "light",
   Medium: "medium",
   Heavy: "heavy",
@@ -6,7 +6,7 @@ const ImpactFeedbackStyle = {
   Rigid: "rigid",
 } as const;
 
-const NotificationFeedbackType = {
+export const NotificationFeedbackType = {
   Success: "success",
   Warning: "warning",
   Error: "error",

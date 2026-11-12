@@ -2,14 +2,38 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MAR
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { memo, useCallback, useEffect, useRef, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
+import {
+  type LayoutChangeEvent,
+  StyleSheet,
+  Text,
+  TextInput,
+  type TextInputInstance,
+  TouchableOpacity,
+  View,
+  type ViewInstance,
+} from "react-native";
 import ChevronLeftIcon from "react-native-heroicons/outline/ChevronLeftIcon";
 import ChevronRightIcon from "react-native-heroicons/outline/ChevronRightIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
+import Animated, {
+  scrollTo,
+  useAnimatedReaction,
+  useAnimatedRef,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useFrameCallback,
+  useSharedValue,
+} from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import KanbanCard from "./KanbanCard";
 
 import type { KanbanColumn as KanbanColumnType } from "@/types";
+
+/** Held this close to the top or bottom of a column's card area, a card scrolls it. */
+const EDGE = 40;
+/** At most this many pixels per frame, faster the closer to the edge. */
+const MAX_SPEED = 10;
 
 interface Props {
   column: KanbanColumnType;
@@ -47,17 +71,66 @@ function KanbanColumn({
 }: Props) {
   const { t } = useTranslation();
 
-  const columnRef = useRef(null);
-  const { registerColumnPosition, isDragging, targetColumnId, sourceColumnId } = useKanbanDrag();
+  const { active, target, layout, pointerY, columnScrollY, registerColumn } = useKanbanDrag();
 
-  // register column position for drop detection
-  useEffect(() => {
-    if (columnRef.current) {
-      columnRef.current.measureInWindow((x, y, width, height) => {
-        registerColumnPosition(column.id, x, width);
+  // The card area, measured by the provider at lift only.
+  const areaRef = useRef<ViewInstance>(null);
+  useEffect(() => registerColumn(column.id, { area: areaRef }), [registerColumn, column.id]);
+
+  const listRef = useAnimatedRef<Animated.ScrollView>();
+  const columnId = column.id;
+  const scrollHandler = useAnimatedScrollHandler(
+    (event) => {
+      columnScrollY.modify((offsets) => {
+        "worklet";
+        offsets[columnId] = event.contentOffset.y;
+        return offsets;
       });
+    },
+    [columnId]
+  );
+  const contentHeight = useSharedValue(0);
+  const viewHeight = useSharedValue(0);
+  const onContentSizeChange = useCallback((_: number, h: number) => contentHeight.set(h), [contentHeight]);
+  const onListLayout = useCallback((e: LayoutChangeEvent) => viewHeight.set(e.nativeEvent.layout.height), [viewHeight]);
+
+  /** The pointer's height inside the card area (clamped), or null when it is well outside it. */
+  const pointerYIn = (top: number, height: number) => {
+    "worklet";
+    const y = pointerY.get() - top;
+    return y < -EDGE || y > height + EDGE ? null : Math.min(Math.max(y, 0), height);
+  };
+
+  // While a card is held near this column's top or bottom edge, the column scrolls (UI thread).
+  const autoScroll = useFrameCallback(() => {
+    const t = target.get();
+    const l = layout.get();
+    if (active.get() !== 1 || !t || !l || l.columns[t.column]?.id !== columnId) return;
+    const area = l.columns[t.column].area;
+    const y = pointerYIn(area.y, area.height);
+    if (y === null) return;
+    const now = columnScrollY.get()[columnId] ?? 0;
+    const max = Math.max(0, contentHeight.get() - viewHeight.get());
+    let next = now;
+    if (y < EDGE) next = Math.max(0, now - MAX_SPEED * (1 - y / EDGE));
+    else if (y > area.height - EDGE) next = Math.min(max, now + MAX_SPEED * (1 - (area.height - y) / EDGE));
+    if (next !== now) scrollTo(listRef, 0, next, false);
+  }, false);
+  const setAutoScroll = autoScroll.setActive;
+  useAnimatedReaction(
+    () => active.get(),
+    (now, previous) => {
+      if (now !== previous) scheduleOnRN(setAutoScroll, now === 1);
     }
-  }, [column.id, columnWidth, registerColumnPosition]);
+  );
+
+  // The column under the pointer has an accent edge (no re-render: only its color changes, so nothing moves).
+  const borderStyle = useAnimatedStyle(() => {
+    const t = target.get();
+    const l = layout.get();
+    const isTarget = active.get() === 1 && t !== null && l !== null && l.columns[t.column]?.id === columnId;
+    return { borderColor: isTarget ? COLOR.accentSoft : GLASS.border };
+  });
 
   const cycleColor = useCallback(() => {
     const currentIndex = KANBAN_COLUMN_COLORS.indexOf(column.color as (typeof KANBAN_COLUMN_COLORS)[number]);
@@ -65,10 +138,8 @@ function KanbanColumn({
     setColumnColor(column.id, KANBAN_COLUMN_COLORS[nextIndex]);
   }, [column.id, column.color, setColumnColor]);
 
-  const isDropTarget = isDragging && targetColumnId === column.id && sourceColumnId !== column.id;
-
   return (
-    <View ref={columnRef} style={[styles.container, { width: columnWidth }, isDropTarget && styles.dropTarget]}>
+    <Animated.View style={[styles.container, { width: columnWidth }, borderStyle]}>
       <View style={styles.header}>
         <TouchableOpacity
           activeOpacity={0.7}
@@ -132,29 +203,35 @@ function KanbanColumn({
       </Text>
 
       <View style={styles.cardsContainer}>
-        {column.items.length > 0 ? (
-          <ScrollView
+        <View ref={areaRef} style={styles.cardsArea} onLayout={onListLayout}>
+          <Animated.ScrollView
+            ref={listRef}
             style={styles.cardsList}
             showsVerticalScrollIndicator={false}
             nestedScrollEnabled
             contentContainerStyle={styles.cardsListContent}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            onContentSizeChange={onContentSizeChange}
           >
-            {column.items.map((item, index) => (
-              <KanbanCard
-                key={item.id}
-                item={item}
-                columnId={column.id}
-                setText={setCardText}
-                deleteItem={deleteCard}
-                disabled={disabled}
-                autoFocus={item.id === autoFocusCardId}
-                inputRef={item.id === autoFocusCardId ? autoFocusCardInputRef : undefined}
-              />
-            ))}
-          </ScrollView>
-        ) : (
-          <Text style={styles.noCards}>{t ? t("kanban.no_cards") : "No cards"}</Text>
-        )}
+            {column.items.length > 0 ? (
+              column.items.map((item) => (
+                <KanbanCard
+                  key={item.id}
+                  item={item}
+                  columnId={column.id}
+                  setText={setCardText}
+                  deleteItem={deleteCard}
+                  disabled={disabled}
+                  autoFocus={item.id === autoFocusCardId}
+                  inputRef={item.id === autoFocusCardId ? autoFocusCardInputRef : undefined}
+                />
+              ))
+            ) : (
+              <Text style={styles.noCards}>{t ? t("kanban.no_cards") : "No cards"}</Text>
+            )}
+          </Animated.ScrollView>
+        </View>
       </View>
 
       {!disabled && (
@@ -163,7 +240,7 @@ function KanbanColumn({
           <Text style={styles.addCardText}>{t ? t("kanban.add_card") : "Add card"}</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -175,10 +252,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: GLASS.border,
     overflow: "hidden",
-  },
-  dropTarget: {
-    borderColor: COLOR.accentSoft,
-    borderWidth: 2,
   },
   header: {
     flexDirection: "row",
@@ -218,6 +291,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_MARGIN.sm,
     paddingTop: PADDING_MARGIN.sm,
     minHeight: 100,
+  },
+  cardsArea: {
+    flex: 1,
   },
   cardsList: {
     flex: 1,

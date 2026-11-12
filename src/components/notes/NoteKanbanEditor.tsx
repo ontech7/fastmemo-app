@@ -11,12 +11,12 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MAR
 import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
-import { moveCard as moveCardOn, reorderCards as reorderCardsOn } from "@/libs/kanbanOps";
+import { moveCard } from "@/libs/kanbanOps";
 import KanbanDragProvider from "@/providers/KanbanDragProvider";
 import { selectorAIAssistant, selectorWebhook_addKanbanNote } from "@/slicers/settingsSlice";
-import type { KanbanItem, KanbanNote } from "@/types";
+import type { KanbanNote } from "@/types";
 import { isStringEmpty } from "@/utils/string";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -45,8 +45,6 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
 
   const columnWidth = Math.min(screenWidth, 500) - PADDING_MARGIN.lg * 2 - COLUMN_PEEK;
   const snapInterval = columnWidth + PADDING_MARGIN.md;
-
-  const scrollViewRef = useRef(null);
 
   const memoInitialNote = useMemo<KanbanNote>(
     () => ({
@@ -103,26 +101,21 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
     [updateNoteAsync]
   );
 
-  /* Card movement for drag provider */
+  /* The drag */
 
-  // On the board as it is now (it may have been reloaded with another device's change): a move that can't complete, or that
-  // changes nothing, commits nothing (LL-078).
-  const moveCard = useCallback(
+  // The board as it is now, read by the drag at lift: a ref, so a keystroke doesn't render the drag's provider.
+  const columnsRef = useRef(note.columns);
+  useLayoutEffect(() => {
+    columnsRef.current = note.columns;
+  }, [note.columns]);
+
+  // On the board as it is at the drop (it may have changed meanwhile, here or on another device): a move that can't
+  // complete, or that changes nothing, commits nothing (LL-078).
+  const onDrop = useCallback(
     (cardId: string, fromColumnId: string, toColumnId: string, toIndex: number) => {
       updateNoteAsync((current) => {
         if (current.readOnly) return current;
-        const columns = moveCardOn(current.columns, cardId, fromColumnId, toColumnId, toIndex);
-        return columns === current.columns ? current : { ...current, columns };
-      });
-    },
-    [updateNoteAsync]
-  );
-
-  const reorderCards = useCallback(
-    (columnId: string, newItems: KanbanItem[]) => {
-      updateNoteAsync((current) => {
-        if (current.readOnly) return current;
-        const columns = reorderCardsOn(current.columns, columnId, newItems);
+        const columns = moveCard(current.columns, cardId, fromColumnId, toColumnId, toIndex);
         return columns === current.columns ? current : { ...current, columns };
       });
     },
@@ -160,20 +153,12 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
 
           <View style={styles.boardContainer}>
             <GestureHandlerRootView style={{ flex: 1 }}>
-              <KanbanDragProvider
-                columns={note.columns}
-                onMoveCard={moveCard}
-                onReorderCards={reorderCards}
-                scrollViewRef={scrollViewRef}
-                columnWidth={columnWidth}
-                columnGap={PADDING_MARGIN.md}
-              >
+              <KanbanDragProvider onDrop={onDrop} columnsRef={columnsRef} columnWidth={columnWidth}>
                 <KanbanBoard
                   note={note}
                   updateNoteAsync={updateNoteAsync}
                   columnWidth={columnWidth}
                   snapInterval={snapInterval}
-                  scrollViewRef={scrollViewRef}
                   initialFocusCardId={initialFocusCardId}
                 />
               </KanbanDragProvider>

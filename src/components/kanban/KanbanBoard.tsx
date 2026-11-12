@@ -2,28 +2,43 @@ import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import KanbanColumn from "@/components/kanban/KanbanColumn";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
-import { useKanbanDrag } from "@/providers/KanbanDragProvider";
+import Haptics from "@/libs/haptics";
+import { BOARD_SLACK, findDrop } from "@/libs/kanbanDrop";
+import type { DropTarget } from "@/libs/kanbanDrop";
+import { useKanbanDrag, useKanbanDragged } from "@/providers/KanbanDragProvider";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { selectorDeveloperMode } from "@/slicers/settingsSlice";
 import type { KanbanColumn as KanbanColumnType, KanbanNote } from "@/types";
-import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type {
-  LayoutChangeEvent,
-  MouseEvent,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  ScrollViewInstance,
-  TextInputInstance,
-} from "react-native";
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import type { MouseEvent, ScrollViewInstance, TextInputInstance, ViewInstance } from "react-native";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
+import Animated, {
+  scrollTo,
+  useAnimatedReaction,
+  useAnimatedRef,
+  useFrameCallback,
+  useScrollViewOffset,
+  useSharedValue,
+} from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import { useSelector } from "react-redux";
 import uuid from "react-uuid";
 import KanbanDragOverlay from "./KanbanDragOverlay";
 
 const isWeb = Platform.OS === "web";
+
+/** Held this close to the board's left or right edge, a card scrolls it sideways. */
+const EDGE = 48;
+/** At most this many pixels per frame, faster the closer to the edge. */
+const MAX_SPEED = 14;
+
+const sameTarget = (a: DropTarget | null, b: DropTarget | null) => {
+  "worklet";
+  if (a === null || b === null) return a === b;
+  return a.column === b.column && a.index === b.index && a.line.x === b.line.x && a.line.y === b.line.y;
+};
 
 interface Props {
   note: KanbanNote;
@@ -31,19 +46,11 @@ interface Props {
   updateNoteAsync: (update: (current: KanbanNote) => KanbanNote) => void;
   columnWidth: number;
   snapInterval: number;
-  scrollViewRef: RefObject<ScrollViewInstance | null>;
   /** Card id to autofocus on mount (only set for brand-new notes). */
   initialFocusCardId?: string | null;
 }
 
-export default function KanbanBoard({
-  note,
-  updateNoteAsync,
-  columnWidth,
-  snapInterval,
-  scrollViewRef,
-  initialFocusCardId,
-}: Props) {
+export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapInterval, initialFocusCardId }: Props) {
   const { t } = useTranslation();
 
   const devMode = useSelector(selectorDeveloperMode);
@@ -51,12 +58,57 @@ export default function KanbanBoard({
   const maxColumns =
     devMode.enabled && devMode.unlimitedKanbanColumns ? Number.MAX_SAFE_INTEGER : configs.notes.maxKanbanColumns;
 
-  const { isDragging, updateScrollOffset, setOverlayOffset, fingerX, containerOffsetX } = useKanbanDrag();
+  const { active, returning, pointerX, pointerY, target, layout, boardScrollX, columnScrollY, registerBoard } = useKanbanDrag();
+  const dragged = useKanbanDragged();
+  const isDragging = dragged !== null;
 
-  const autoScrollRef = useRef(null);
-  const scrollOffsetRef = useRef(0);
-  const overlayRootRef = useRef(null);
-  const [containerWidth, setContainerWidth] = useState(0);
+  // The board's box: the drag's layer origin, measured by the provider at lift.
+  const rootRef = useRef<ViewInstance>(null);
+  useEffect(() => registerBoard(rootRef), [registerBoard]);
+
+  const boardRef = useAnimatedRef<Animated.ScrollView>();
+  useScrollViewOffset(boardRef, boardScrollX);
+  const contentWidth = useSharedValue(0);
+  const onContentSizeChange = useCallback((w: number) => contentWidth.set(w), [contentWidth]);
+
+  // While a card is in the air (UI thread): the target under the pointer, a haptic when its column changes, and the
+  // board scrolling sideways near its edges. Nothing else runs per frame, and JS only hears of the column change.
+  const lastColumn = useSharedValue(-1);
+  const drag = useFrameCallback(() => {
+    if (active.get() !== 1 || returning.get() === 1) return;
+    const l = layout.get();
+    if (!l) return;
+    const offsets = columnScrollY.get();
+    const x = pointerX.get();
+    const y = pointerY.get();
+    const now = boardScrollX.get();
+    const found = findDrop(l, { boardScrollX: now, columnScrollY: l.columns.map((c) => offsets[c.id] ?? 0) }, x, y);
+    if (!sameTarget(target.get(), found)) target.set(found);
+    const column = found ? found.column : -1;
+    if (column !== lastColumn.get()) {
+      if (column !== -1) scheduleOnRN(Haptics.selectionAsync);
+      lastColumn.set(column);
+    }
+
+    const { board } = l;
+    const left = x - board.x;
+    const right = board.x + board.width - x;
+    const max = Math.max(0, contentWidth.get() - board.width);
+    let next = now;
+    if (left < EDGE && left > -BOARD_SLACK) next = Math.max(0, now - MAX_SPEED * (1 - Math.max(left, 0) / EDGE));
+    else if (right < EDGE && right > -BOARD_SLACK) next = Math.min(max, now + MAX_SPEED * (1 - Math.max(right, 0) / EDGE));
+    if (next !== now) scrollTo(boardRef, next, 0, false);
+  }, false);
+  const setDragFrames = drag.setActive;
+  useAnimatedReaction(
+    () => active.get(),
+    (now, previous) => {
+      if (now === previous) return;
+      // The lift's own column is where the drag starts: no haptic for it.
+      if (now === 1) lastColumn.set(target.get()?.column ?? -1);
+      scheduleOnRN(setDragFrames, now === 1);
+    }
+  );
 
   // Only the card whose id matches `focusCardId` autofocuses: the first card of a
   // new note (set at mount so its freshly-mounted input grabs focus), then
@@ -82,29 +134,6 @@ export default function KanbanBoard({
   const dragStartX = useRef(0);
   const dragScrollLeft = useRef(0);
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const offset = event.nativeEvent.contentOffset.x;
-      scrollOffsetRef.current = offset;
-      updateScrollOffset(offset);
-    },
-    [updateScrollOffset]
-  );
-
-  // measure overlay root to register offset relative to window
-  const handleOverlayLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      const { width } = event.nativeEvent.layout;
-      setContainerWidth(width);
-
-      if (!overlayRootRef.current) return;
-      overlayRootRef.current.measureInWindow((x, y) => {
-        setOverlayOffset(x, y);
-      });
-    },
-    [setOverlayOffset]
-  );
-
   // Drag-to-scroll handlers for web/desktop
   const handleMouseDown = useCallback(
     (event: MouseEvent) => {
@@ -116,9 +145,9 @@ export default function KanbanBoard({
 
       setIsDraggingScroll(true);
       dragStartX.current = event.nativeEvent.pageX;
-      dragScrollLeft.current = scrollOffsetRef.current;
+      dragScrollLeft.current = boardScrollX.get();
     },
-    [isDragging]
+    [isDragging, boardScrollX]
   );
 
   const handleMouseMove = useCallback(
@@ -130,11 +159,9 @@ export default function KanbanBoard({
       const walk = dragStartX.current - x;
       const newOffset = dragScrollLeft.current + walk;
 
-      scrollOffsetRef.current = newOffset;
-      updateScrollOffset(newOffset);
-      scrollViewRef.current?.scrollTo({ x: newOffset, animated: false });
+      (boardRef.current as unknown as ScrollViewInstance | null)?.scrollTo({ x: newOffset, animated: false });
     },
-    [isDraggingScroll, isDragging, scrollViewRef, updateScrollOffset]
+    [isDraggingScroll, isDragging, boardRef]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -146,43 +173,6 @@ export default function KanbanBoard({
     if (!isWeb) return;
     setIsDraggingScroll(false);
   }, []);
-
-  // auto-scroll when dragging near edges
-  useEffect(() => {
-    if (!isDragging || containerWidth === 0) {
-      if (autoScrollRef.current) {
-        clearInterval(autoScrollRef.current);
-        autoScrollRef.current = null;
-      }
-      return;
-    }
-
-    const EDGE_THRESHOLD = 50;
-    const SCROLL_SPEED = 10;
-
-    autoScrollRef.current = setInterval(() => {
-      const x = fingerX.value - containerOffsetX.value;
-
-      if (x < EDGE_THRESHOLD) {
-        const newOffset = Math.max(0, scrollOffsetRef.current - SCROLL_SPEED);
-        scrollOffsetRef.current = newOffset;
-        updateScrollOffset(newOffset);
-        scrollViewRef.current?.scrollTo({ x: newOffset, animated: false });
-      } else if (x > containerWidth - EDGE_THRESHOLD) {
-        const newOffset = scrollOffsetRef.current + SCROLL_SPEED;
-        scrollOffsetRef.current = newOffset;
-        updateScrollOffset(newOffset);
-        scrollViewRef.current?.scrollTo({ x: newOffset, animated: false });
-      }
-    }, 16);
-
-    return () => {
-      if (autoScrollRef.current) {
-        clearInterval(autoScrollRef.current);
-        autoScrollRef.current = null;
-      }
-    };
-  }, [isDragging, fingerX, containerOffsetX, containerWidth, scrollViewRef, updateScrollOffset]);
 
   /* Column operations: each computes from the note as it is when it runs (`current`), so a keystroke gives no column or
      card a new handler, and only what changed renders again. */
@@ -313,10 +303,10 @@ export default function KanbanBoard({
   );
 
   return (
-    <View style={{ flex: 1 }} ref={overlayRootRef} onLayout={handleOverlayLayout}>
+    <View style={styles.root} ref={rootRef}>
       {note.columns.length > 0 ? (
-        <ScrollView
-          ref={scrollViewRef}
+        <Animated.ScrollView
+          ref={boardRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.columnsScrollView}
@@ -324,8 +314,8 @@ export default function KanbanBoard({
           snapToAlignment="start"
           decelerationRate="fast"
           scrollEnabled={!isDragging}
-          onScroll={handleScroll}
           scrollEventThrottle={16}
+          onContentSizeChange={onContentSizeChange}
           {...(isWeb && {
             onMouseDown: handleMouseDown,
             onMouseMove: handleMouseMove,
@@ -359,7 +349,7 @@ export default function KanbanBoard({
               <Text style={styles.addColumnText}>{t("kanban.add_column")}</Text>
             </TouchableOpacity>
           )}
-        </ScrollView>
+        </Animated.ScrollView>
       ) : (
         <View style={styles.emptyBoard}>
           <Text style={styles.emptyBoardText}>{t("kanban.no_columns")}</Text>
@@ -372,7 +362,7 @@ export default function KanbanBoard({
         </View>
       )}
 
-      <KanbanDragOverlay columnWidth={columnWidth} />
+      <KanbanDragOverlay />
 
       <ConfirmOrCancelDialog
         open={!!pendingColumn}
@@ -395,6 +385,9 @@ export default function KanbanBoard({
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   columnsScrollView: {
     paddingHorizontal: PADDING_MARGIN.lg,
     paddingBottom: PADDING_MARGIN.lg,

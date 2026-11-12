@@ -1,16 +1,35 @@
 import DragIcon from "@/components/icons/DragIcon";
-import Haptics from "@/libs/haptics";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
-import { memo, useRef, useState, type RefObject } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, StyleSheet, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+  Platform,
+  StyleSheet,
+  TextInput,
+  type TextInputInstance,
+  TouchableOpacity,
+  View,
+  type ViewInstance,
+} from "react-native";
+import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
-import Animated, { runOnJS, useAnimatedStyle } from "react-native-reanimated";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 
-import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 import type { KanbanItem } from "@/types";
+
+const isWeb = Platform.OS === "web";
+
+/** A finger lifts a card after a 200 ms press; a mouse at once, after 4 px (the web build sees every pointer as a mouse). */
+const ACTIVATION = isWeb ? { minDistance: 4 } : { activateAfterLongPress: 200 };
+
+/** A handle's mouse press neither starts the board's mouse drag-to-scroll nor selects the page's text (web). */
+const holdMouse = (event: { preventDefault: () => void; stopPropagation: () => void }) => {
+  event.preventDefault();
+  event.stopPropagation();
+};
 
 interface Props {
   item: KanbanItem;
@@ -31,64 +50,51 @@ function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, 
 
   const [height, setHeight] = useState(40);
 
-  const { startDrag, updateDragPosition, endDrag, isDragging, draggedItem } = useKanbanDrag();
+  const { draggedId, pointerX, pointerY, registerCard, lift, release, cancel } = useKanbanDrag();
 
-  const cardRef = useRef(null);
-  const cardPositionRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
-  const isBeingDragged = isDragging && draggedItem?.id === item.id;
+  // Measured by the provider at lift only.
+  const rowRef = useRef<ViewInstance>(null);
+  useEffect(() => registerCard(columnId, item.id, rowRef), [registerCard, columnId, item.id]);
 
-  // store card position on layout
-  const handleLayout = () => {
-    if (cardRef.current) {
-      cardRef.current.measureInWindow((x, y, width, height) => {
-        cardPositionRef.current = { x, y, width, height };
-      });
-    }
-  };
+  // The card as it is now, for the lift: the gesture is built once and doesn't follow the text.
+  const itemRef = useRef(item);
+  useLayoutEffect(() => {
+    itemRef.current = item;
+  }, [item]);
+  const onLift = useCallback((x: number, y: number) => lift(itemRef.current, columnId, x, y), [lift, columnId]);
 
-  const handleDragStart = (absoluteX: number, absoluteY: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  // Its worklets write the pointer on the UI thread; JS hears of the drag at lift and at the end only.
+  const panConfig = useMemo(
+    () => ({
+      enabled: !disabled,
+      ...ACTIVATION,
+      onActivate: (event: { absoluteX: number; absoluteY: number }) => {
+        "worklet";
+        pointerX.set(event.absoluteX);
+        pointerY.set(event.absoluteY);
+        scheduleOnRN(onLift, event.absoluteX, event.absoluteY);
+      },
+      onUpdate: (event: { absoluteX: number; absoluteY: number }) => {
+        "worklet";
+        pointerX.set(event.absoluteX);
+        pointerY.set(event.absoluteY);
+      },
+      onDeactivate: (event: { canceled: boolean }) => {
+        "worklet";
+        if (event.canceled) scheduleOnRN(cancel);
+        else scheduleOnRN(release);
+      },
+    }),
+    [disabled, pointerX, pointerY, onLift, release, cancel]
+  );
+  const panGesture = usePanGesture(panConfig);
 
-    // measure live position to avoid stale values after horizontal scroll
-    if (cardRef.current && cardRef.current.measureInWindow) {
-      cardRef.current.measureInWindow((x, y) => {
-        cardPositionRef.current = { ...cardPositionRef.current, x, y };
-        startDrag(item, columnId, absoluteX, absoluteY, x, y);
-      });
-    } else {
-      const cardX = cardPositionRef.current.x;
-      const cardY = cardPositionRef.current.y;
-      startDrag(item, columnId, absoluteX, absoluteY, cardX, cardY);
-    }
-  };
-
-  const handleDragUpdate = (absoluteX: number, absoluteY: number) => {
-    updateDragPosition(absoluteX, absoluteY);
-  };
-
-  const handleDragEnd = (absoluteX: number, absoluteY: number) => {
-    endDrag(absoluteX, absoluteY);
-  };
-
-  const panGesture = Gesture.Pan()
-    .enabled(!disabled)
-    .activateAfterLongPress(200)
-    .onStart((event) => {
-      runOnJS(handleDragStart)(event.absoluteX, event.absoluteY);
-    })
-    .onUpdate((event) => {
-      runOnJS(handleDragUpdate)(event.absoluteX, event.absoluteY);
-    })
-    .onEnd((event) => {
-      runOnJS(handleDragEnd)(event.absoluteX, event.absoluteY);
-    });
-
-  const animatedCardStyle = useAnimatedStyle(() => ({
-    opacity: isBeingDragged ? 0.3 : 1,
-  }));
+  // The original stays in place, faded, while it is in the air: no card renders for it.
+  const cardId = item.id;
+  const animatedCardStyle = useAnimatedStyle(() => ({ opacity: draggedId.get() === cardId ? 0.3 : 1 }));
 
   return (
-    <View ref={cardRef} style={styles.container} onLayout={handleLayout}>
+    <View ref={rowRef} style={styles.container}>
       <Animated.View style={[styles.cardWrapper, animatedCardStyle]}>
         <View style={styles.cardContent}>
           <TextInput
@@ -99,7 +105,7 @@ function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, 
             scrollEnabled={false}
             onChangeText={(value) => setText(columnId, item.id, value)}
             value={item.text}
-            editable={!disabled && !isBeingDragged}
+            editable={!disabled}
             placeholderTextColor={COLOR.textMuted}
             cursorColor={COLOR.softWhite}
             autoFocus={autoFocus}
@@ -107,7 +113,10 @@ function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, 
           />
 
           <GestureDetector gesture={panGesture}>
-            <Animated.View style={styles.dragHandle}>
+            <Animated.View
+              style={[styles.dragHandle, isWeb && styles.dragHandleWeb]}
+              {...(isWeb && { onMouseDown: holdMouse })}
+            >
               <DragIcon
                 iconProps={{
                   color: COLOR.textSecondary,
@@ -147,12 +156,12 @@ export function KanbanCardStatic({ item }: KanbanCardStaticProps) {
     <View style={styles.container}>
       <View style={[styles.cardWrapper, styles.cardWrapperFloating]}>
         <View style={styles.cardContent}>
-          <View style={styles.textInputStatic}>
-            <Animated.Text style={styles.textStatic} numberOfLines={3}>
+          <View style={[styles.textInputStatic, styles.floatingEdge]}>
+            <Animated.Text style={styles.textStatic} numberOfLines={6}>
               {item.text || " "}
             </Animated.Text>
           </View>
-          <View style={styles.dragHandle}>
+          <View style={[styles.dragHandle, styles.floatingEdge]}>
             <DragIcon
               iconProps={{
                 color: COLOR.textSecondary,
@@ -181,7 +190,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardWrapperFloating: {
-    boxShadow: "0px 4px 8px rgba(0,0,0,0.3)",
+    borderRadius: BORDER.normal,
+    ...SHADOW.lifted,
+  },
+  // The lifted card's edge: one accent line around the text and the handle.
+  floatingEdge: {
+    borderColor: COLOR.accentSoft,
   },
   cardContent: {
     flex: 1,
@@ -222,6 +236,11 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     color: COLOR.textPrimary,
   },
+  // The web build sees every pointer as a mouse: without this a touch on the handle scrolls the page instead of lifting.
+  dragHandleWeb: {
+    touchAction: "none",
+    cursor: "grab",
+  } as object,
   dragHandle: {
     alignItems: "center",
     justifyContent: "center",

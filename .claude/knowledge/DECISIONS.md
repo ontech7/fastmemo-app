@@ -1845,3 +1845,49 @@ and to recognise the entry it pushed.
 
 - The marker's `rev` is informative only (nothing reads it today); the stored note decides what goes out.
 - An outbox read by a version older than 4.0.0 would see markers, but no such version reads these entries.
+
+---
+
+## ADR-037: The Kanban Drag Measures at Lift
+
+**Status:** Accepted (2026-11-12), plan 1 of 4.1.0 (Task 24)  
+**Context:** The old drag sent the pointer through the JS thread at every frame (`runOnJS` per pan update). It also chose the
+drop slot from constants (`headerHeight = 120`, `itemHeight = 60`) that ignored real card heights, a column's own scroll and
+where the board sits in the window. Columns registered positions measured at layout, which went stale after a scroll. Nothing
+showed where the card would land.  
+**Decision:**
+
+- **Nothing is measured until a lift.** At lift (JS, once), `measureInWindow` takes the board, every column's card area and
+  every card, in the board's order, with the scroll offsets of that moment, into a `DropLayout` in a shared value. During the
+  drag only scroll moves them, so the boxes now are the measured ones shifted by the scroll since. A card or column that can't
+  be measured is left out; if the dragged card can't be, there is no drag. The lifted card shows a few milliseconds after the
+  press: the measures are asynchronous.
+- **The geometry is a pure worklet** (`libs/kanbanDrop.ts`: `findDrop`, `isOwnPlace`), tested in Node
+  (`scripts/kanban-drop.test.mjs`). It runs on the UI thread at every frame. The column is the one whose span holds the pointer
+  (in a gap, the nearer edge). The slot is the number of its cards whose middle is above the pointer, which is what `moveCard`
+  expects.
+- **Threads:** the handle's pan gesture (Gesture Handler 3's `usePanGesture`) writes the pointer on the UI thread. One frame
+  callback on the board finds the target and scrolls the board near its edges; one per column scrolls it near its top and
+  bottom. JS is called at lift, when the target column changes (a selection haptic) and at the end. The provider has two
+  contexts: one never changes (shared values and stable functions, read by every card and column), and the other holds the card
+  in the air (read by the board and the overlay). A drag renders no card besides the moved one.
+- **The line, not the opening gap** (the user's choice): a 3 px accent line with a dot shows the landing place. The other cards
+  don't move during the drag. The opening gap the user liked more would re-lay out the column at every slot change and stutter.
+- **The web's pointer rule:** the web build sees every pointer as a mouse, so on the web and the desktop a card lifts after 4 px
+  of movement (`minDistance`), with `touchAction: "none"` on the handle. Phones lift after a 200 ms press. The handle's mouse
+  press neither starts the board's drag-to-scroll nor selects text.
+- **Drop:** the target as of the release. A card dropped off the board, or on its own place, springs back
+  (`damping 15, stiffness 220`) and nothing is dispatched. The spring is capped at 600 ms because the desktop webview reports
+  its end seconds late. Reduced motion: no spring and no animated lift scale. The editor applies a drop with `moveCard` on the
+  board as it is then, so a board changed under the drag (here or on another device) changes nothing.
+
+**Alternatives rejected:**
+
+- **Positions registered by the columns at layout:** stale after any scroll, and a re-measure per layout change of every column.
+- **The slot from a fixed card height:** wrong with cards of several lines.
+
+**Trade-offs:**
+
+- The rectangles are those of the lift: a remote change during the drag can move a column under the line. The drop still goes by
+  column id, so it lands nowhere rather than in the wrong column.
+- One frame callback per column, active only while a card is in the air.

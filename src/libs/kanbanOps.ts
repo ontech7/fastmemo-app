@@ -1,4 +1,4 @@
-import type { KanbanColumn, KanbanItem } from "@/types";
+import type { KanbanColumn } from "@/types";
 
 /**
  * Moves a card to slot `toIndex` of `toColumnId` (a slot counted in the target's cards as they are before the move,
@@ -41,23 +41,4 @@ export function moveCard(
   return columns.map((column, i) =>
     i === from ? { ...column, items: fromNext } : i === to ? { ...column, items: toNext } : column
   );
-}
-
-/** Replaces a column's cards with `items` only if they are the same cards in another order; otherwise `columns` itself. */
-export function reorderCards(columns: KanbanColumn[], columnId: string, items: KanbanItem[]): KanbanColumn[] {
-  const index = columns.findIndex((column) => column.id === columnId);
-  if (index < 0) return columns;
-
-  const current = columns[index].items ?? [];
-  if (items.length !== current.length) return columns;
-
-  const ids = new Set(current.map((item) => item.id));
-  const seen = new Set<string>();
-  for (const item of items) {
-    if (!ids.has(item.id) || seen.has(item.id)) return columns;
-    seen.add(item.id);
-  }
-  if (items.every((item, i) => item.id === current[i].id)) return columns;
-
-  return columns.map((column, i) => (i === index ? { ...column, items: [...items] } : column));
 }
