@@ -40,7 +40,10 @@ const ANIMATION_DURATION_CLOSE = DURATION.fast;
 interface Props {
   isDeleteMode: boolean;
   toggleDeleteMode: () => void;
-  /** Lifts the FAB group so it rides just above a bottom bar (e.g. the quick-note bar). Defaults to `FAB_BOTTOM`. */
+  /**
+   * Lifts the FAB group so it rides just above a bottom bar (e.g. the quick-note bar). Defaults to `FAB_BOTTOM`. In select
+   * mode the group slides down to `FAB_BOTTOM`, beside the toolbar, by a transform: its `bottom` never changes.
+   */
   bottomOffset?: number;
   /** Told when the note-type menu opens or closes. */
   onMenuToggle?: (open: boolean) => void;
@@ -117,6 +120,7 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
   const menuProgress = useSharedValue(0);
   const secondaryVisible = useSharedValue(1);
   const hintPop = useSharedValue(1);
+  const modeDrop = useSharedValue(0);
 
   const directNoteType = useMemo<(typeof NOTE_TYPES)[number]>(() => {
     const targetKey: NoteCreationType =
@@ -210,6 +214,16 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCloseIcon, isDeleteMode]);
 
+  // Select mode: down from above the bar to the toolbar's line, a transform (no relayout).
+  const selectDrop = isDeleteMode && bottomOffset !== undefined ? bottomOffset - FAB_BOTTOM : 0;
+  useEffect(() => {
+    modeDrop.value = withTiming(selectDrop, {
+      duration: isDeleteMode ? DURATION.base : DURATION.fast,
+      easing: isDeleteMode ? EASING.enter : EASING.exit,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectDrop]);
+
   useEffect(() => {
     onMenuToggle?.(isOverlayOpen);
   }, [isOverlayOpen, onMenuToggle]);
@@ -237,6 +251,10 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
   const secondaryFabAnimatedStyle = useAnimatedStyle(() => ({
     opacity: secondaryVisible.value,
     transform: [{ scale: interpolate(secondaryVisible.value, [0, 1], [0.6, 1]) }],
+  }));
+
+  const modeDropStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: modeDrop.value }],
   }));
 
   const backdropAnimatedStyle = useAnimatedStyle(() => ({
@@ -283,47 +301,49 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
         offset={{ closed: 0, opened: insets.bottom }}
         style={[styles.fabGroup, { bottom: bottomOffset ?? FAB_BOTTOM, pointerEvents: "box-none" }]}
       >
-        <Animated.View
-          style={[secondaryFabAnimatedStyle, { pointerEvents: isDeleteMode ? "none" : "auto" }]}
-          aria-hidden={isDeleteMode}
-        >
-          <TouchableOpacity
-            style={styles.fabSecondary}
-            activeOpacity={0.7}
-            onPress={toggleOverlay}
-            testID={isDeleteMode ? undefined : SHORTCUT_TARGET.noteTypes}
-            focusable={!isDeleteMode}
-            accessibilityRole="button"
-            accessibilityLabel={t("a11y.note_types")}
-            aria-expanded={isOverlayOpen}
+        <Animated.View style={[styles.fabRow, modeDropStyle, { pointerEvents: "box-none" }]}>
+          <Animated.View
+            style={[secondaryFabAnimatedStyle, { pointerEvents: isDeleteMode ? "none" : "auto" }]}
+            aria-hidden={isDeleteMode}
           >
-            <Animated.View style={chevronAnimatedStyle}>
-              <ChevronUpIcon size={20} color={COLOR.softWhite} />
-            </Animated.View>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <TouchableOpacity
-          ref={addTarget}
-          style={styles.fab}
-          activeOpacity={0.7}
-          onPress={createDirect}
-          testID={isDeleteMode ? SHORTCUT_TARGET.back : SHORTCUT_TARGET.newNote}
-          accessibilityRole="button"
-          accessibilityLabel={isDeleteMode ? t("a11y.exit_selection") : t("a11y.new_note")}
-        >
-          <Animated.View style={closeIconAnimatedStyle}>
-            <PlusIcon size={28} color={COLOR.softWhite} />
+            <TouchableOpacity
+              style={styles.fabSecondary}
+              activeOpacity={0.7}
+              onPress={toggleOverlay}
+              testID={isDeleteMode ? undefined : SHORTCUT_TARGET.noteTypes}
+              focusable={!isDeleteMode}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.note_types")}
+              aria-expanded={isOverlayOpen}
+            >
+              <Animated.View style={chevronAnimatedStyle}>
+                <ChevronUpIcon size={20} color={COLOR.softWhite} />
+              </Animated.View>
+            </TouchableOpacity>
           </Animated.View>
 
-          {showTypeHint && (
-            <Animated.View
-              style={[styles.fabHintBadge, { backgroundColor: hintColor }, hintAnimatedStyle, { pointerEvents: "none" }]}
-            >
-              <HintIcon size={13} color={COLOR.darkBlue} />
+          <TouchableOpacity
+            ref={addTarget}
+            style={styles.fab}
+            activeOpacity={0.7}
+            onPress={createDirect}
+            testID={isDeleteMode ? SHORTCUT_TARGET.back : SHORTCUT_TARGET.newNote}
+            accessibilityRole="button"
+            accessibilityLabel={isDeleteMode ? t("a11y.exit_selection") : t("a11y.new_note")}
+          >
+            <Animated.View style={closeIconAnimatedStyle}>
+              <PlusIcon size={28} color={COLOR.softWhite} />
             </Animated.View>
-          )}
-        </TouchableOpacity>
+
+            {showTypeHint && (
+              <Animated.View
+                style={[styles.fabHintBadge, { backgroundColor: hintColor }, hintAnimatedStyle, { pointerEvents: "none" }]}
+              >
+                <HintIcon size={13} color={COLOR.darkBlue} />
+              </Animated.View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
       </KeyboardStickyView>
     </>
   );
@@ -335,6 +355,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: FAB_BOTTOM,
     right: FAB_RIGHT,
+  },
+  fabRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: PADDING_MARGIN.lg,

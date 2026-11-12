@@ -16,6 +16,7 @@ import Sidebar from "@/components/Sidebar";
 import TourSpotlight from "@/components/ui/TourSpotlight";
 import WebViewWarmup from "@/components/WebViewWarmup";
 import { configs } from "@/configs";
+import { DURATION, EASING } from "@/constants/motion";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useCloudStatus } from "@/hooks/useCloudStatus";
 import { useRouter } from "@/hooks/useRouter";
@@ -56,7 +57,7 @@ import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
 import DocumentMagnifyingGlassIcon from "react-native-heroicons/outline/DocumentMagnifyingGlassIcon";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector, useStore } from "react-redux";
 
@@ -195,8 +196,10 @@ export default function HomeScreen() {
     setIsDeleteMode((p: boolean) => !p);
   }, [isDeleteMode]);
 
+  // A haptic for each card picked or let go (the long press that opens the mode picks one: one haptic).
   const selectNote = useCallback((currId: string, currLocked: boolean) => {
     const idAndLocked = `${currId}|${currLocked}`;
+    Haptics.selectionAsync();
 
     setSelectedNotes((prevIds: string[]) => {
       if (prevIds.includes(idAndLocked)) {
@@ -248,14 +251,6 @@ export default function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDeleteMode]);
 
-  // vibration feedback when deleteMode
-  useEffect(() => {
-    if (!isDeleteMode) {
-      return;
-    }
-    Haptics.selectionAsync();
-  }, [isDeleteMode]);
-
   // check trashed notes data and delete
   useEffect(() => {
     const isUnlimitedTrash = devMode.enabled && devMode.unlimitedTrashTime;
@@ -287,60 +282,27 @@ export default function HomeScreen() {
     return resetStates;
   }, [navigation]);
 
-  // animations
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const height = useSharedValue(1);
-  // Measured height of the row, so `main`'s collapse animates against a numeric
-  // maxHeight. An animated *percentage* maxHeight (`"100%"`) resolves unreliably
-  // on the New Architecture (Fabric): Yoga's percentage pass races with
-  // Reanimated's synchronous updates and stays stuck on a stale base, leaving
-  // `main` collapsed until some unrelated event (e.g. the keyboard showing)
-  // forces a relayout. A pixel value tracked via onLayout stays correct.
-  const containerHeight = useSharedValue(0);
-
-  const animatedOpacity = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
-  const animatedTranslate = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  const animatedMaxHeight = useAnimatedStyle(() =>
-    containerHeight.value > 0 ? { maxHeight: containerHeight.value * height.value } : {}
-  );
+  // Select mode moves things by transforms and fades only: the list keeps its height (no relayout). The toolbar rises
+  // from below the screen, the trash chip fades in the header, the quick note bar fades out (QuickNoteBar `hidden`) and
+  // the add button slides down beside the toolbar (AddNoteOverlayButton).
+  const selectShown = useSharedValue(0);
+  const chipShown = useSharedValue(0);
 
   useEffect(() => {
-    if (isDeleteMode) {
-      opacity.value = withTiming(1, {
-        duration: 250,
-        easing: Easing.inOut(Easing.ease),
-      });
-      translateY.value = withTiming(-125, {
-        duration: 250,
-        easing: Easing.inOut(Easing.ease),
-      });
-      height.value = withTiming(0.8, {
-        duration: 250,
-        easing: Easing.inOut(Easing.ease),
-      });
-    } else {
-      opacity.value = withTiming(0, {
-        duration: 250,
-        easing: Easing.inOut(Easing.ease),
-      });
-      translateY.value = withTiming(0, {
-        duration: 250,
-        easing: Easing.inOut(Easing.ease),
-      });
-      height.value = withTiming(1, {
-        duration: 250,
-        easing: Easing.inOut(Easing.ease),
-      });
-    }
+    selectShown.value = withTiming(isDeleteMode ? 1 : 0, {
+      duration: isDeleteMode ? DURATION.base : DURATION.fast,
+      easing: isDeleteMode ? EASING.enter : EASING.exit,
+    });
+    chipShown.value = withTiming(isDeleteMode ? 1 : 0, { duration: DURATION.fast });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDeleteMode]);
+
+  const toolbarStyle = useAnimatedStyle(() => ({
+    opacity: selectShown.value,
+    transform: [{ translateY: -TOOLBAR_RISE * selectShown.value }],
+  }));
+
+  const chipStyle = useAnimatedStyle(() => ({ opacity: chipShown.value }));
 
   // changelog for new version
   useEffect(() => {
@@ -379,8 +341,16 @@ export default function HomeScreen() {
   // Lift the FAB to sit just above the quick-note bar (which grows with its text):
   // clear the bottom safe-area inset + the bar's reported height + a gap. The bar
   // shows only when enabled and not selecting; otherwise the FAB keeps its place.
-  const showQuickBar = quickNoteEnabled && !isDeleteMode;
   const fabBottom = insets.bottom + barHeight + PADDING_MARGIN.xl;
+
+  // While selecting, the end of the list scrolls clear of the toolbar: room for the toolbar's top above the screen's
+  // bottom, less what the quick note bar already keeps below the list.
+  const [toolbarHeight, setToolbarHeight] = useState(0);
+  const selectPadding = Math.max(
+    0,
+    TOOLBAR_REST_BOTTOM + toolbarHeight + PADDING_MARGIN.lg - (quickNoteEnabled ? barHeight : 0)
+  );
+  const listContentStyle = useMemo(() => ({ paddingBottom: isDeleteMode ? selectPadding : 0 }), [isDeleteMode, selectPadding]);
 
   // The first-note tour's steps on this screen (once the changelog check has settled; not over the note-type menu).
   const [typeMenuOpen, setTypeMenuOpen] = useState(false);
@@ -419,14 +389,9 @@ export default function HomeScreen() {
 
       <View style={styles.container}>
         <SafeAreaView style={styles.safe}>
-          <View
-            style={styles.row}
-            onLayout={(e) => {
-              containerHeight.value = e.nativeEvent.layout.height;
-            }}
-          >
+          <View style={styles.row}>
             <Sidebar />
-            <Animated.View style={[styles.main, animatedMaxHeight]}>
+            <View style={styles.main}>
               <View style={styles.header}>
                 <View style={styles.titleBlock}>
                   <Text style={styles.headerTitle}>{t("home.notes")}</Text>
@@ -446,11 +411,13 @@ export default function HomeScreen() {
                   )}
                 </View>
 
-                {isDeleteMode && (
-                  <View style={styles.headerActions}>
-                    <DeleteNotesButton onPressDelete={() => setShowDeleteNotesDialog(true)} />
-                  </View>
-                )}
+                {/* Always mounted (no relayout on entering the mode): faded out, it takes no touch, focus or screen reader. */}
+                <Animated.View
+                  style={[styles.headerActions, chipStyle, { pointerEvents: isDeleteMode ? "auto" : "none" }]}
+                  aria-hidden={!isDeleteMode}
+                >
+                  <DeleteNotesButton onPressDelete={() => setShowDeleteNotesDialog(true)} focusable={isDeleteMode} />
+                </Animated.View>
               </View>
 
               <View style={styles.searchRow}>
@@ -482,6 +449,7 @@ export default function HomeScreen() {
                   extraData={listExtraData}
                   renderItem={renderNote}
                   keyExtractor={keyExtractor}
+                  contentContainerStyle={listContentStyle}
                 />
               </View>
 
@@ -490,17 +458,21 @@ export default function HomeScreen() {
                   relayout) makes it track the keyboard 1:1 instead of lagging behind a
                   layout-animating KeyboardAvoidingView. `opened: insets.bottom` cancels the
                   bottom inset the keyboard already covers, so it rests just above the keyboard.
-                  Hidden in delete mode (the column collapses for the edit toolbar). */}
-              {showQuickBar && (
+                  Faded out in select mode, still mounted: the list keeps its height and the text stays. */}
+              {quickNoteEnabled && (
                 <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
-                  <QuickNoteBar onHeightChange={setBarHeight} />
+                  <QuickNoteBar onHeightChange={setBarHeight} hidden={isDeleteMode} />
                 </KeyboardStickyView>
               )}
-            </Animated.View>
+            </View>
           </View>
         </SafeAreaView>
 
-        <Animated.View style={[styles.editModeToolbar, animatedTranslate, animatedOpacity]} aria-hidden={!isDeleteMode}>
+        <Animated.View
+          style={[styles.editModeToolbar, toolbarStyle, { pointerEvents: isDeleteMode ? "auto" : "none" }]}
+          aria-hidden={!isDeleteMode}
+          onLayout={(e) => setToolbarHeight(e.nativeEvent.layout.height)}
+        >
           {/* aria-hidden keeps the hidden toolbar from screen readers; focusable keeps it out of the web tab order */}
           <FavoriteNotesButton onPressSave={toggleImportantNotesFromItems} focusable={isDeleteMode} />
 
@@ -516,7 +488,7 @@ export default function HomeScreen() {
         <AddNoteOverlayButton
           isDeleteMode={isDeleteMode}
           toggleDeleteMode={toggleDeleteMode}
-          bottomOffset={showQuickBar ? fabBottom : undefined}
+          bottomOffset={quickNoteEnabled ? fabBottom : undefined}
           onMenuToggle={setTypeMenuOpen}
         />
 
@@ -549,6 +521,11 @@ export default function HomeScreen() {
 }
 
 const keyExtractor = (note: Note) => note.id;
+
+/** The select toolbar at rest: its bottom this far above the screen's, beside the add button. */
+const TOOLBAR_REST_BOTTOM = 67;
+/** How far it rises from below the screen to its place. */
+const TOOLBAR_RISE = 125;
 
 /* STYLES */
 
@@ -648,7 +625,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER.big,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: GLASS.border,
-    bottom: -58,
+    bottom: TOOLBAR_REST_BOTTOM - TOOLBAR_RISE,
     right: 110,
     boxShadow: "0px 7px 7px rgba(0,0,0,0.5)",
   },

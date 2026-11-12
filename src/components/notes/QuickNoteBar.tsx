@@ -1,3 +1,4 @@
+import { DURATION, EASING } from "@/constants/motion";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import Haptics from "@/libs/haptics";
@@ -14,12 +15,12 @@ import { webhook } from "@/utils/webhook";
 import type { Href } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, StyleSheet, TextInput, type TextInputInstance, type TextInputKeyPressEvent, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, type TextInputInstance, type TextInputKeyPressEvent } from "react-native";
 import ArrowsPointingOutIcon from "react-native-heroicons/outline/ArrowsPointingOutIcon";
 import PaperAirplaneIcon from "react-native-heroicons/outline/PaperAirplaneIcon";
 import PencilSquareIcon from "react-native-heroicons/outline/PencilSquareIcon";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
-import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useDispatch, useSelector } from "react-redux";
 import uuid from "react-uuid";
 
@@ -41,6 +42,8 @@ export const QUICK_NOTE_BAR_RESERVED = ROW_MIN_HEIGHT + MARGIN_BOTTOM;
 interface Props {
   /** Reports the bar's reserved height (row + bottom margin) so the home screen can keep the FAB above it. */
   onHeightChange?: (height: number) => void;
+  /** Select mode: the bar fades out and takes no touch, focus or screen reader, still mounted so its text stays. */
+  hidden?: boolean;
 }
 
 /**
@@ -56,7 +59,7 @@ interface Props {
  * field saves nothing. Text typed and not sent is kept as a draft on the device
  * (`quickNoteDraft`) and put back in the bar after the app was closed.
  */
-export default function QuickNoteBar({ onHeightChange }: Props) {
+export default function QuickNoteBar({ onHeightChange, hidden = false }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
   const dispatch = useDispatch();
@@ -71,6 +74,16 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
   const { progress } = useReanimatedKeyboardAnimation();
   const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
 
+  // Hidden in select mode: a fade, no relayout (the list keeps its height).
+  const shown = useSharedValue(hidden ? 0 : 1);
+  useEffect(() => {
+    shown.value = withTiming(hidden ? 0 : 1, {
+      duration: hidden ? DURATION.fast : DURATION.base,
+      easing: hidden ? EASING.exit : EASING.enter,
+    });
+  }, [hidden, shown]);
+  const shownStyle = useAnimatedStyle(() => ({ opacity: shown.value }));
+
   const inputRef = useRef<TextInputInstance>(null);
   // Mirror of `text` read by the flush handlers, so saving never trips on a stale
   // closure: it's cleared synchronously before any follow-up press can re-enter.
@@ -79,6 +92,11 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
   const [focused, setFocused] = useState(false);
 
   const hasText = text.trim().length > 0;
+
+  // A hidden bar keeps no focus (nor the keyboard it holds up).
+  useEffect(() => {
+    if (hidden) inputRef.current?.blur();
+  }, [hidden]);
 
   const onChangeText = useCallback((value: string) => {
     const hadText = textRef.current.trim().length > 0;
@@ -198,12 +216,13 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
   }, [flush, router]);
 
   return (
-    <View style={styles.wrapper}>
+    <Animated.View style={[styles.wrapper, shownStyle, { pointerEvents: hidden ? "none" : "auto" }]} aria-hidden={hidden}>
       <Animated.View style={[styles.backdrop, backdropStyle]} pointerEvents="none" />
 
       <Pressable
         style={[styles.bar, focused && styles.barFocused]}
         onPress={() => inputRef.current?.focus()}
+        focusable={!hidden}
         onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height + MARGIN_BOTTOM)}
       >
         <PencilSquareIcon size={20} color={focused ? COLOR.accentSoft : COLOR.textMuted} />
@@ -221,6 +240,7 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
           cursorColor={COLOR.softWhite}
           multiline
           scrollEnabled
+          focusable={!hidden}
         />
 
         {/* Both actions gate on `hasText`, not `focused`: on web, tapping a button blurs the
@@ -232,6 +252,7 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t("a11y.open_full_note")}
             hitSlop={8}
+            focusable={!hidden}
             style={styles.iconButton}
           >
             <ArrowsPointingOutIcon size={18} color={COLOR.textSecondary} />
@@ -244,13 +265,14 @@ export default function QuickNoteBar({ onHeightChange }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t("a11y.save_note")}
             hitSlop={8}
+            focusable={!hidden}
             style={styles.sendButton}
           >
             <PaperAirplaneIcon size={18} color={COLOR.softWhite} />
           </Pressable>
         )}
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 

@@ -8,6 +8,7 @@ import KeyIcon from "react-native-heroicons/outline/KeyIcon";
 import SignalSlashIcon from "react-native-heroicons/outline/SignalSlashIcon";
 import StarIcon from "react-native-heroicons/outline/StarIcon";
 import UsersIcon from "react-native-heroicons/outline/UsersIcon";
+import Animated, { ZoomIn } from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
 import { useRouter } from "@/hooks/useRouter";
@@ -17,6 +18,7 @@ import { storeUnlockedNote } from "@/libs/registry";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isStringEmpty } from "@/utils/string";
 
+import { DURATION } from "@/constants/motion";
 import { NOTE_TYPES } from "@/constants/note-types";
 import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
@@ -35,6 +37,9 @@ interface Props {
   /** Something the first-note tour can point at, under this name. */
   tourTarget?: string;
 }
+
+/** A selected card's check mark zooms in (one builder for every card). */
+const CHECK_ENTERING = ZoomIn.duration(DURATION.fast);
 
 /** Color of the card's left border — the type signal (red kept for important). */
 function getCardAccent(type: Note["type"], important: boolean): string {
@@ -135,7 +140,11 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
             isSelected && styles.deleteCheckboxSelected,
           ]}
         >
-          {isSelected && <CheckIcon size={14} color={COLOR.softWhite} />}
+          {isSelected && (
+            <Animated.View entering={CHECK_ENTERING}>
+              <CheckIcon size={14} color={COLOR.softWhite} />
+            </Animated.View>
+          )}
         </View>
       ) : (
         !category.index && (

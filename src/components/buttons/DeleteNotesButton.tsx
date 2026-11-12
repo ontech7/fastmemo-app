@@ -8,13 +8,20 @@ import { COLOR } from "@/constants/styles";
 interface Props {
   onPressDelete: () => void;
   color?: string | null;
+  focusable?: boolean;
 }
 
-export default function DeleteNotesButton({ onPressDelete, color = null }: Props) {
+export default function DeleteNotesButton({ onPressDelete, color = null, focusable }: Props) {
   const { t } = useTranslation();
 
   return (
-    <TouchableOpacity activeOpacity={0.7} onPress={onPressDelete} accessibilityRole="button" accessibilityLabel={t("delete")}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={onPressDelete}
+      focusable={focusable}
+      accessibilityRole="button"
+      accessibilityLabel={t("delete")}
+    >
       <IconChip>
         <TrashIcon size={20} color={color || COLOR.softWhite} />
       </IconChip>
