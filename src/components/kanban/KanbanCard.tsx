@@ -13,10 +13,11 @@ import {
 } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
-import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import KanbanSlot, { CARD_LAYOUT } from "./KanbanSlot";
 
 import type { KanbanItem } from "@/types";
 
@@ -43,14 +44,34 @@ interface Props {
   // once the screen transition settles (mount-time autoFocus alone is dropped
   // mid-transition on native).
   inputRef?: RefObject<TextInputInstance | null>;
+  /** The card in the air: its place folds away while it stays mounted (its gesture is the one running). */
+  folded?: boolean;
+  /** A card is in the air: layout changes slide (the slot opening, a place closing). */
+  animateLayout?: boolean;
+  /**
+   * The slot of the card in the air opens above this card, this high. Inside the card's own box: the column's children
+   * never change order during a drag, which on the web would move the lifted card's node and end its gesture.
+   */
+  slotHeight?: number;
 }
 
-function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, inputRef }: Props) {
+function KanbanCard({
+  item,
+  columnId,
+  setText,
+  deleteItem,
+  disabled,
+  autoFocus,
+  inputRef,
+  folded,
+  animateLayout,
+  slotHeight,
+}: Props) {
   const { t } = useTranslation();
 
   const [height, setHeight] = useState(40);
 
-  const { draggedId, pointerX, pointerY, registerCard, lift, release, cancel } = useKanbanDrag();
+  const { pointerX, pointerY, registerCard, lift, release, cancel } = useKanbanDrag();
 
   // Measured by the provider at lift only.
   const rowRef = useRef<ViewInstance>(null);
@@ -89,58 +110,57 @@ function KanbanCard({ item, columnId, setText, deleteItem, disabled, autoFocus, 
   );
   const panGesture = usePanGesture(panConfig);
 
-  // The original stays in place, faded, while it is in the air: no card renders for it.
-  const cardId = item.id;
-  const animatedCardStyle = useAnimatedStyle(() => ({ opacity: draggedId.get() === cardId ? 0.3 : 1 }));
-
   return (
-    <View ref={rowRef} style={styles.container}>
-      <Animated.View style={[styles.cardWrapper, animatedCardStyle]}>
-        <View style={styles.cardContent}>
-          <TextInput
-            ref={inputRef}
-            style={[styles.textInput, { height }]}
-            textAlignVertical="center"
-            multiline
-            scrollEnabled={false}
-            onChangeText={(value) => setText(columnId, item.id, value)}
-            value={item.text}
-            editable={!disabled}
-            placeholderTextColor={COLOR.textMuted}
-            cursorColor={COLOR.softWhite}
-            autoFocus={autoFocus}
-            onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
-          />
+    <Animated.View layout={animateLayout ? CARD_LAYOUT : undefined} style={folded && styles.folded}>
+      {slotHeight ? <KanbanSlot height={slotHeight} /> : null}
+      <View ref={rowRef} style={styles.container}>
+        <View style={styles.cardWrapper}>
+          <View style={styles.cardContent}>
+            <TextInput
+              ref={inputRef}
+              style={[styles.textInput, { height }]}
+              textAlignVertical="center"
+              multiline
+              scrollEnabled={false}
+              onChangeText={(value) => setText(columnId, item.id, value)}
+              value={item.text}
+              editable={!disabled}
+              placeholderTextColor={COLOR.textMuted}
+              cursorColor={COLOR.softWhite}
+              autoFocus={autoFocus}
+              onContentSizeChange={(event) => setHeight(event.nativeEvent.contentSize.height)}
+            />
 
-          <GestureDetector gesture={panGesture}>
-            <Animated.View
-              style={[styles.dragHandle, isWeb && styles.dragHandleWeb]}
-              {...(isWeb && { onMouseDown: holdMouse })}
-            >
-              <DragIcon
-                iconProps={{
-                  color: COLOR.textSecondary,
-                  opacity: 0.9,
-                }}
-              />
-            </Animated.View>
-          </GestureDetector>
-        </View>
-
-        <TouchableOpacity
-          activeOpacity={0.7}
-          disabled={disabled}
-          style={styles.deleteButton}
-          onPress={() => deleteItem(columnId, item.id)}
-          accessibilityRole="button"
-          accessibilityLabel={t("a11y.delete_item")}
-        >
-          <View style={styles.deleteChip}>
-            <TrashIcon size={16} color={COLOR.textMuted} />
+            <GestureDetector gesture={panGesture}>
+              <Animated.View
+                style={[styles.dragHandle, isWeb && styles.dragHandleWeb]}
+                {...(isWeb && { onMouseDown: holdMouse })}
+              >
+                <DragIcon
+                  iconProps={{
+                    color: COLOR.textSecondary,
+                    opacity: 0.9,
+                  }}
+                />
+              </Animated.View>
+            </GestureDetector>
           </View>
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            disabled={disabled}
+            style={styles.deleteButton}
+            onPress={() => deleteItem(columnId, item.id)}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.delete_item")}
+          >
+            <View style={styles.deleteChip}>
+              <TrashIcon size={16} color={COLOR.textMuted} />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Animated.View>
   );
 }
 
@@ -149,18 +169,29 @@ export default memo(KanbanCard);
 // static card component for the floating overlay (no gestures)
 interface KanbanCardStaticProps {
   item: KanbanItem;
+  /**
+   * The lifted card's measured height: drawn at exactly that size, it becomes the real card at the drop without a hop
+   * (its own layout would make it taller than a one-line card).
+   */
+  height?: number;
 }
 
-export function KanbanCardStatic({ item }: KanbanCardStaticProps) {
+export function KanbanCardStatic({ item, height }: KanbanCardStaticProps) {
   return (
     <View style={styles.container}>
       <View style={[styles.cardWrapper, styles.cardWrapperFloating]}>
         <View style={styles.cardContent}>
-          <View style={[styles.textInputStatic, styles.floatingEdge]}>
-            <Animated.Text style={styles.textStatic} numberOfLines={6}>
-              {item.text || " "}
-            </Animated.Text>
-          </View>
+          {/* The card's own text field, read-only: it lays the text out exactly as the card does. */}
+          <TextInput
+            style={[styles.textInput, styles.floatingEdge, height !== undefined && { height }]}
+            textAlignVertical="center"
+            multiline
+            scrollEnabled={false}
+            editable={false}
+            focusable={false}
+            value={item.text}
+            pointerEvents="none"
+          />
           <View style={[styles.dragHandle, styles.floatingEdge]}>
             <DragIcon
               iconProps={{
@@ -184,6 +215,12 @@ const styles = StyleSheet.create({
   container: {
     position: "relative",
     marginBottom: PADDING_MARGIN.sm,
+  },
+  // Its place closed, the card still mounted: nothing of it shows or takes room.
+  folded: {
+    height: 0,
+    overflow: "hidden",
+    opacity: 0,
   },
   cardWrapper: {
     flexDirection: "row",
@@ -216,25 +253,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRightWidth: 0,
     borderColor: GLASS.border,
-  },
-  textInputStatic: {
-    minHeight: 44,
-    flex: 1,
-    justifyContent: "center",
-    paddingTop: Platform.OS === "ios" ? 10 : 8,
-    paddingBottom: Platform.OS === "ios" ? 10 : 8,
-    paddingHorizontal: PADDING_MARGIN.md,
-    backgroundColor: COLOR.surface,
-    borderTopLeftRadius: BORDER.normal,
-    borderBottomLeftRadius: BORDER.normal,
-    borderWidth: 1,
-    borderRightWidth: 0,
-    borderColor: GLASS.border,
-  },
-  textStatic: {
-    fontSize: FONTSIZE.medium,
-    fontFamily: FONT.regular,
-    color: COLOR.textPrimary,
   },
   // The web build sees every pointer as a mouse: without this a touch on the handle scrolls the page instead of lifting.
   dragHandleWeb: {

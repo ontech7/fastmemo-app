@@ -1,7 +1,8 @@
 /*
- * Where a dragged kanban card lands. The rectangles are measured when the card is lifted; what moves during the drag is
- * only scroll (the board sideways, each column up and down), so the boxes now are the measured ones shifted by the scroll
- * since. Pure numbers and plain objects, worklets: the drag runs this on the UI thread at every move.
+ * Where a dragged kanban card lands. The rectangles are measured when the card is lifted, and the lifted card is taken
+ * out of them (`withoutCard`): its place closes while it is in the air, and the slot it would land in opens. What moves
+ * during the drag is then only scroll (the board sideways, each column up and down), so the boxes now are those shifted
+ * by the scroll since. Pure numbers and plain objects, worklets: the drag runs this on the UI thread at every move.
  */
 
 /** In window coordinates. */
@@ -37,22 +38,17 @@ export interface DropScroll {
 
 export interface DropTarget {
   column: number;
-  /** A slot in the column's cards as they are (the dragged one included): what `moveCard` expects. */
+  /**
+   * A slot among the column's cards in the layout given: without the lifted card, when the layout comes from
+   * `withoutCard`. `toMoveIndex` turns it into what `moveCard` expects.
+   */
   index: number;
-  line: { x: number; y: number; width: number };
 }
 
-/** The line is this much shorter than the card area on each side. */
-export const LINE_INSET = 8;
 /** How far outside the board the pointer still counts. */
 export const BOARD_SLACK = 24;
 
-/** Where the line goes in an empty column, below the card area's top. */
-const EMPTY_LINE_OFFSET = 6;
-/** How far the line sits above the first card or below the last. */
-const EDGE_LINE_OFFSET = 4;
-
-/** The slot under the pointer and where its line is drawn, or null when the pointer is off the board. */
+/** The slot under the pointer, or null when the pointer is off the board. */
 export function findDrop(layout: DropLayout, scroll: DropScroll, pointerX: number, pointerY: number): DropTarget | null {
   "worklet";
   const { board, columns } = layout;
@@ -84,35 +80,49 @@ export function findDrop(layout: DropLayout, scroll: DropScroll, pointerX: numbe
     }
   }
 
-  const { area, cards } = columns[column];
+  const { cards } = columns[column];
   const dy = (scroll.columnScrollY[column] ?? 0) - (layout.columnScrollY[column] ?? 0);
   let index = 0;
   for (let i = 0; i < cards.length; i++) {
     if (cards[i].y - dy + cards[i].height / 2 < pointerY) index++;
   }
-
-  let y: number;
-  if (cards.length === 0) {
-    y = area.y + EMPTY_LINE_OFFSET;
-  } else if (index === 0) {
-    y = cards[0].y - dy - EDGE_LINE_OFFSET;
-  } else if (index === cards.length) {
-    const lastCard = cards[cards.length - 1];
-    y = lastCard.y - dy + lastCard.height + EDGE_LINE_OFFSET;
-  } else {
-    const above = cards[index - 1];
-    const below = cards[index];
-    y = (above.y + above.height + below.y) / 2 - dy;
-  }
-  y = Math.min(Math.max(y, area.y), area.y + area.height);
-
-  return { column, index, line: { x: area.x - dx + LINE_INSET, y, width: area.width - 2 * LINE_INSET } };
+  return { column, index };
 }
 
-/** Whether dropping there would leave the card where it is. */
+/**
+ * The layout with card `index` of column `column` taken out, as the column shows it while that card is in the air: the
+ * cards after it move up by its place (from its top to the next card's top). Nothing else changes; the layout given is
+ * left as it is.
+ */
+export function withoutCard(layout: DropLayout, column: number, index: number): DropLayout {
+  "worklet";
+  const source = layout.columns[column];
+  if (!source || index < 0 || index >= source.cards.length) return layout;
+  const cards = source.cards;
+  const step = index + 1 < cards.length ? cards[index + 1].y - cards[index].y : 0;
+  const kept: Rect[] = [];
+  for (let i = 0; i < cards.length; i++) {
+    if (i < index) kept.push(cards[i]);
+    else if (i > index) kept.push({ x: cards[i].x, y: cards[i].y - step, width: cards[i].width, height: cards[i].height });
+  }
+  const columns = layout.columns.slice();
+  columns[column] = { id: source.id, area: source.area, cards: kept };
+  return { board: layout.board, columns, boardScrollX: layout.boardScrollX, columnScrollY: layout.columnScrollY };
+}
+
+/** Whether dropping there would leave the card where it is (a target found without the card: `withoutCard`). */
 export function isOwnPlace(target: DropTarget, sourceColumn: number, sourceIndex: number): boolean {
   "worklet";
-  return target.column === sourceColumn && (target.index === sourceIndex || target.index === sourceIndex + 1);
+  return target.column === sourceColumn && target.index === sourceIndex;
+}
+
+/**
+ * The slot for `moveCard`, which counts the card where it still is: in its own column, a slot after its place is one
+ * more there.
+ */
+export function toMoveIndex(target: DropTarget, sourceColumn: number, sourceIndex: number): number {
+  "worklet";
+  return target.column === sourceColumn && target.index > sourceIndex ? target.index + 1 : target.index;
 }
 
 /** A 60 Hz frame: what a frame counts when its length isn't known (the first one). */

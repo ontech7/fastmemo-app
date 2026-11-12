@@ -45,6 +45,8 @@ export const COLOR = {
   // where the full accent reads too loud against the dark surface.
   accentMuted: "#475AA6",
   accentMutedBorder: "#5E72C4",
+  // The accent as a faint wash: a place being shown, such as the slot a dragged kanban card will land in.
+  accentFaint: "rgba(79, 107, 255, 0.10)",
   // The dim layer over everything but what a tour step shows
   scrim: "rgba(2, 4, 14, 0.82)",
 } as const;
@@ -107,6 +109,14 @@ export const SHADOW = {
   lifted: {
     boxShadow: `0px 16px 30px rgba(0,0,0,0.6), 0px 0px 18px ${COLOR.accent}59`,
   },
+} as const;
+
+/** A dragged kanban card or list row: how far it lifts (scale, tilt in degrees) and how fast it lifts and settles. */
+export const LIFT = {
+  scale: 1.05,
+  tilt: -2,
+  ms: 120,
+  settleMs: 160,
 } as const;
 
 export const FONTSIZE = {

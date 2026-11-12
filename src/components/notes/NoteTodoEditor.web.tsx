@@ -10,14 +10,17 @@ import { useTodoList } from "@/hooks/useTodoList";
 import {
   closestCenter,
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
@@ -26,7 +29,7 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } fr
 
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
-import TodoItem from "@/components/todo/TodoItem.web";
+import TodoItem, { TodoItemLifted } from "@/components/todo/TodoItem.web";
 
 import type { TodoNote } from "@/types";
 
@@ -75,8 +78,14 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the ids, not on the list
   const itemIds = useMemo(() => note.list.map((item) => item.id), [idsKey]);
 
+  // The row in the air is drawn by the overlay, lifted like a kanban card; its place in the list shows the slot.
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeItem = activeId ? note.list.find((item) => item.id === activeId) : undefined;
+  const handleDragStart = useCallback(({ active }: DragStartEvent) => setActiveId(String(active.id)), []);
+  const handleDragCancel = useCallback(() => setActiveId(null), []);
   const handleDragEnd = useCallback(
     ({ active, over }: DragEndEvent) => {
+      setActiveId(null);
       if (over && active.id !== over.id) moveItem(String(active.id), String(over.id));
     },
     [moveItem]
@@ -131,7 +140,13 @@ export default function NoteTodoEditor({ initialNote }: Props) {
       >
         <ScrollView style={styles.draggableList}>
           {note.list.length > 0 ? (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragCancel={handleDragCancel}
+              onDragEnd={handleDragEnd}
+            >
               <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
                 {note.list.map((item, index) => {
                   const stepStatus: "done" | "ongoing" | "future" = item.checked
@@ -158,6 +173,13 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                   );
                 })}
               </SortableContext>
+              {/* On the page itself: react-native-web's ScrollView has a transform, which would place the overlay's
+                  `position: fixed` (and the box dnd-kit measures for the drop) relative to the list instead. */}
+              {typeof document !== "undefined" &&
+                createPortal(
+                  <DragOverlay>{activeItem ? <TodoItemLifted item={activeItem} /> : null}</DragOverlay>,
+                  document.body
+                )}
             </DndContext>
           ) : (
             <Text style={styles.noItems}>{t("note.no_items")}</Text>

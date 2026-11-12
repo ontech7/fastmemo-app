@@ -27,8 +27,10 @@ import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem.native";
 import AppBackground from "@/components/ui/AppBackground";
+import DropSlot, { ROW_DELETE_INSET } from "@/components/ui/DropSlot";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { useTodoList } from "@/hooks/useTodoList";
+import Haptics, { ImpactFeedbackStyle, NotificationFeedbackType } from "@/libs/haptics";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
@@ -114,6 +116,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           checkItem={checkItem}
           deleteItem={deleteItem}
           drag={drag}
+          lifted={isActive}
           disabled={isActive || readOnly}
           autoFocus={item.id === focusId}
           inputRef={item.id === focusId ? focusInputRef : undefined}
@@ -129,7 +132,16 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     [focusId, stepMode, firstUncheckedIndex, total, readOnly, animationsReady, setItemText, checkItem, deleteItem]
   );
 
-  const onDragEnd = useCallback(({ data }: { data: TodoItemType[] }) => reorder(data), [reorder]);
+  // The kanban drag's feel (ADR-037): a firm tap at lift, a tick each time the slot moves, a success when it moved.
+  const onDragBegin = useCallback(() => Haptics.impactAsync(ImpactFeedbackStyle.Medium), []);
+  const onPlaceholderIndexChange = useCallback(() => Haptics.selectionAsync(), []);
+  const onDragEnd = useCallback(
+    ({ data, from, to }: { data: TodoItemType[]; from: number; to: number }) => {
+      if (from !== to) Haptics.notificationAsync(NotificationFeedbackType.Success);
+      reorder(data);
+    },
+    [reorder]
+  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -184,7 +196,10 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                       contentContainerStyle={{ paddingTop: PADDING_MARGIN.xl, paddingBottom: PADDING_MARGIN.md }}
                       ref={draggableListRef}
                       data={note.list}
+                      onDragBegin={onDragBegin}
+                      onPlaceholderIndexChange={onPlaceholderIndexChange}
                       onDragEnd={onDragEnd}
+                      renderPlaceholder={renderSlot}
                       keyExtractor={(item) => item.id}
                       renderItem={renderTodoItem}
                     />
@@ -249,7 +264,18 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
 /* STYLES */
 
+/**
+ * Where the row being dragged will land: the same slot as a kanban card's, in the row's place. The list draws its
+ * placeholder outside its side padding, so the slot keeps it itself.
+ */
+const renderSlot = () => <DropSlot style={styles.slot} />;
+
 const styles = StyleSheet.create({
+  slot: {
+    marginBottom: PADDING_MARGIN.sm,
+    marginLeft: PADDING_MARGIN.lg,
+    marginRight: PADDING_MARGIN.lg + ROW_DELETE_INSET,
+  },
   container: {
     height: SIZE.full,
     paddingVertical: PADDING_MARGIN.lg,

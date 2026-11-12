@@ -37,7 +37,7 @@ const MAX_SPEED = 840;
 const sameTarget = (a: DropTarget | null, b: DropTarget | null) => {
   "worklet";
   if (a === null || b === null) return a === b;
-  return a.column === b.column && a.index === b.index && a.line.x === b.line.x && a.line.y === b.line.y;
+  return a.column === b.column && a.index === b.index;
 };
 
 interface Props {
@@ -58,7 +58,8 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
   const maxColumns =
     devMode.enabled && devMode.unlimitedKanbanColumns ? Number.MAX_SAFE_INTEGER : configs.notes.maxKanbanColumns;
 
-  const { active, returning, pointerX, pointerY, target, layout, boardScrollX, columnScrollY, registerBoard } = useKanbanDrag();
+  const { active, returning, pointerX, pointerY, target, layout, boardScrollX, columnScrollY, registerBoard, showTarget } =
+    useKanbanDrag();
   const dragged = useKanbanDragged();
   const isDragging = dragged !== null;
 
@@ -72,7 +73,7 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
   const onContentSizeChange = useCallback((w: number) => contentWidth.set(w), [contentWidth]);
 
   // While a card is in the air (UI thread): the target under the pointer, a haptic when its column changes, and the
-  // board scrolling sideways near its edges. Nothing else runs per frame, and JS only hears of the column change.
+  // board scrolling sideways near its edges. JS hears of a new slot (the columns show it) and of a new column only.
   const lastColumn = useSharedValue(-1);
   const drag = useFrameCallback((frame) => {
     if (active.get() !== 1 || returning.get() === 1) return;
@@ -83,7 +84,10 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
     const y = pointerY.get();
     const now = boardScrollX.get();
     const found = findDrop(l, { boardScrollX: now, columnScrollY: l.columns.map((c) => offsets[c.id] ?? 0) }, x, y);
-    if (!sameTarget(target.get(), found)) target.set(found);
+    if (!sameTarget(target.get(), found)) {
+      target.set(found);
+      scheduleOnRN(showTarget, found ? found.column : -1, found ? found.index : 0);
+    }
     const column = found ? found.column : -1;
     if (column !== lastColumn.get()) {
       if (column !== -1) scheduleOnRN(Haptics.selectionAsync);

@@ -1,14 +1,16 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 
-import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, LIFT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 import DragIcon from "@/components/icons/DragIcon";
+import DropSlot from "@/components/ui/DropSlot";
 
 interface TodoItemData {
   id: string;
@@ -38,6 +40,7 @@ interface Props {
 // The drag handle is a DOM element (dnd-kit's listeners): its style objects are made once.
 const HANDLE_STYLE: React.CSSProperties = { cursor: "grab", padding: 8, display: "flex", alignItems: "center" };
 const HANDLE_STYLE_DISABLED: React.CSSProperties = { ...HANDLE_STYLE, cursor: "default" };
+const HANDLE_STYLE_LIFTED: React.CSSProperties = { ...HANDLE_STYLE, cursor: "grabbing" };
 
 const STEP_COLUMN_WIDTH = 50;
 const STEP_CIRCLE_SIZE = 34;
@@ -71,7 +74,7 @@ function TodoItem({
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition: transition ?? "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease",
-    opacity: isDragging ? 0.5 : 1,
+    position: "relative",
   };
 
   if (hidden && item.checked) {
@@ -83,7 +86,9 @@ function TodoItem({
   if (!stepMode) {
     return (
       <div ref={setNodeRef} style={style}>
-        <View style={[styles.todoItemContainer, item.checked && styles.todoItemChecked]}>
+        {/* In the air (the overlay draws it): its place in the list is the slot, of its size. */}
+        {isDragging && <DropSlot style={styles.slot} />}
+        <View style={[styles.todoItemContainer, item.checked && styles.todoItemChecked, isDragging && styles.inTheAir]}>
           <div {...attributes} {...listeners} style={disabled ? HANDLE_STYLE_DISABLED : HANDLE_STYLE}>
             <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
           </div>
@@ -212,7 +217,73 @@ function TodoItem({
   );
 }
 
+interface TodoItemLiftedProps {
+  item: TodoItemData;
+}
+
+/** The row in the air (the list's DragOverlay): lifted like a kanban card in the air (ADR-037); nothing in it reacts. */
+export function TodoItemLifted({ item }: TodoItemLiftedProps) {
+  const reducedMotion = useReducedMotion();
+  const lift = useSharedValue(reducedMotion ? 1 : 0);
+  useEffect(() => {
+    if (!reducedMotion) lift.set(withTiming(1, { duration: LIFT.ms }));
+  }, [lift, reducedMotion]);
+  const liftStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${LIFT.tilt * lift.get()}deg` }, { scale: 1 + (LIFT.scale - 1) * lift.get() }] as const,
+  }));
+
+  return (
+    <Animated.View style={[styles.todoItemContainer, styles.liftedRow, liftStyle]}>
+      <div style={HANDLE_STYLE_LIFTED}>
+        <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
+      </div>
+      <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked, styles.edgeLifted]}>
+        {item.checked && <CheckIcon size={24} color={COLOR.softWhite} />}
+      </View>
+      <View style={[styles.listItemInputFree, styles.edgeLifted]}>
+        <Text style={styles.liftedText} numberOfLines={6}>
+          {item.text || " "}
+        </Text>
+      </View>
+      <View style={styles.deleteButton}>
+        <View style={styles.deleteChip}>
+          <TrashIcon size={16} color={COLOR.textMuted} />
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+/** The delete button (32, its padding) and the row's gap: the slot stops where the row's body does. */
+const DELETE_SPAN = 32 + PADDING_MARGIN.xs * 2 + PADDING_MARGIN.sm;
+
 const styles = StyleSheet.create({
+  /* dragging */
+  slot: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: DELETE_SPAN,
+    bottom: PADDING_MARGIN.sm,
+  },
+  inTheAir: {
+    opacity: 0,
+  },
+  liftedRow: {
+    marginBottom: 0,
+    borderRadius: BORDER.normal,
+    ...SHADOW.lifted,
+  },
+  edgeLifted: {
+    borderColor: COLOR.accentSoft,
+  },
+  liftedText: {
+    fontSize: FONTSIZE.inputTitle,
+    lineHeight: FONTSIZE.inputTitle * 1.35,
+    fontFamily: FONT.regular,
+    color: COLOR.textPrimary,
+  },
+
   /* free mode */
   todoItemChecked: {
     opacity: 0.55,

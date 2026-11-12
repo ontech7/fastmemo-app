@@ -55,7 +55,7 @@ src/
     buttons/           # 26 button components (each a single-purpose TouchableOpacity)
     cards/             # NoteCard, TrashedNoteCard, OrganizeCategoryCard, OrderedCategoryCard
     notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor; NoteImageMenu (ADR-024)
-    kanban/            # KanbanBoard, KanbanColumn, KanbanCard, KanbanDragOverlay
+    kanban/            # KanbanBoard, KanbanColumn, KanbanCard, KanbanDragOverlay, KanbanSlot (where the card in the air lands)
     settings/          # Settings UI system (Section, SectionHeader, SectionWrapper, items/)
     vault/             # VaultScaffold (shared chrome for the 6 vault screens) + VaultBackupButton (optional quick export before a risky op)
     dialogs/           # ComplexDialog, ConfirmOrCancelDialog, SecretPassphraseDialog, VaultPromptDialog; KEEP_DIALOG_TOUCHES (spread
@@ -71,7 +71,7 @@ src/
     renderers/         # ContextMenu
     ui/                # Design primitives: AppBackground, GlassSurface, IconChip, PopupMenu (under a trigger, or `at` a point),
                        # ImageViewer (full screen, pinch/pan/double tap), TourSpotlight, TourTip, BlinkingDot,
-                       # ProgressBar (a download: AI model, APK update)
+                       # ProgressBar (a download: AI model, APK update), DropSlot (where a dragged card or row lands)
     # Standalone: CategoryIcon, LoadingSpinner, SafeAreaView, Sidebar, VirtualNumberKeyboard
     CrashScreen.tsx    # The error boundary's fallback (ADR-035): reopen, a report sent in place; no store, router or useTranslation
 
@@ -197,8 +197,9 @@ src/
     reloadApp.ts       # Reopens the app (expo-updates reload, DevSettings fallback); .web.ts: a page reload
     reducePhoto.ts     # A picture as it goes into a note or a report: 1600 px long side, JPEG 0.6, base64 (LL-083, LL-088)
     kanbanOps.ts       # moveCard: returns the board unchanged when the move can't complete (LL-078, scripts/kanban.test.mjs)
-    kanbanDrop.ts      # Where a dragged card lands, from the rectangles measured at lift and the scroll since: findDrop,
-                       #   isOwnPlace, worklets (ADR-037, scripts/kanban-drop.test.mjs)
+    kanbanDrop.ts      # Where a dragged card lands, from the rectangles measured at lift (without it) and the scroll since:
+                       #   findDrop, withoutCard, isOwnPlace, toMoveIndex, edgeStep, worklets (ADR-037,
+                       #   scripts/kanban-drop.test.mjs)
     netStatus.ts       # createNetStatus: the web/desktop connection status, one probe timer for the app (LL-082,
                        #   scripts/net-status.test.mjs)
     quickNoteDraft.ts  # The quick note bar's unsent text, kept on the device (@quickNoteDraft, LL-084)
@@ -228,8 +229,8 @@ src/
 
   providers/           # React context providers
     AppUpdateProvider.tsx   # Update check (/api/version): the icon, the desktop installer prompt, the APK's prompt + download
-    KanbanDragProvider.tsx  # The kanban drag (ADR-037): measures at lift; two contexts, a value that never changes (shared
-                            #   values, register/lift/release) and the card in the air (board and overlay only)
+    KanbanDragProvider.tsx  # The kanban drag (ADR-037): measures at lift; three contexts: a value that never changes (shared
+                            #   values, register/lift/release), the card in the air (board, overlay) and the preview (columns)
     SyncOnProvider.tsx      # Headless: runs the sync engine while connected + unlocked, turns its events into UI
     DiagnosticsProvider.tsx # Headless: Sentry's language and cloud tags, the route trail (as patterns, ADR-035)
 

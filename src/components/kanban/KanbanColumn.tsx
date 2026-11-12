@@ -1,6 +1,6 @@
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
 import { edgeStep } from "@/libs/kanbanDrop";
-import { useKanbanDrag } from "@/providers/KanbanDragProvider";
+import { useKanbanDrag, useKanbanPreview } from "@/providers/KanbanDragProvider";
 import { memo, useCallback, useEffect, useRef, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -28,6 +28,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import KanbanCard from "./KanbanCard";
+import KanbanSlot from "./KanbanSlot";
 
 import type { KanbanColumn as KanbanColumnType } from "@/types";
 
@@ -73,6 +74,8 @@ function KanbanColumn({
   const { t } = useTranslation();
 
   const { active, target, layout, pointerY, columnScrollY, registerColumn } = useKanbanDrag();
+  // Re-renders when a drag starts, when its slot moves, and at its end: never while the card only follows the pointer.
+  const preview = useKanbanPreview();
 
   // The card area, measured by the provider at lift only.
   const areaRef = useRef<ViewInstance>(null);
@@ -139,6 +142,33 @@ function KanbanColumn({
     const nextIndex = (currentIndex + 1) % KANBAN_COLUMN_COLORS.length;
     setColumnColor(column.id, KANBAN_COLUMN_COLORS[nextIndex]);
   }, [column.id, column.color, setColumnColor]);
+
+  // While a card is in the air: its own place folded, and the slot where it would land, above the card at that slot or
+  // after the last one. The children keep their order: a card hosts the slot, nothing is inserted among them.
+  const foldedId = preview?.sourceColumnId === column.id ? preview.sourceCardId : null;
+  const slotIndex = preview?.targetColumnId === column.id ? preview.targetIndex : -1;
+  let shown = 0;
+  const rows = column.items.map((item) => {
+    const folded = item.id === foldedId;
+    const slotHeight = preview && !folded && shown === slotIndex ? preview.height : 0;
+    if (!folded) shown++;
+    return (
+      <KanbanCard
+        key={item.id}
+        item={item}
+        columnId={column.id}
+        setText={setCardText}
+        deleteItem={deleteCard}
+        disabled={disabled}
+        autoFocus={item.id === autoFocusCardId}
+        inputRef={item.id === autoFocusCardId ? autoFocusCardInputRef : undefined}
+        folded={folded}
+        animateLayout={preview !== null}
+        slotHeight={slotHeight}
+      />
+    );
+  });
+  const trailingSlot = preview && slotIndex !== -1 && slotIndex >= shown ? preview.height : 0;
 
   return (
     <Animated.View style={[styles.container, { width: columnWidth }, borderStyle]}>
@@ -216,22 +246,11 @@ function KanbanColumn({
             scrollEventThrottle={16}
             onContentSizeChange={onContentSizeChange}
           >
-            {column.items.length > 0 ? (
-              column.items.map((item) => (
-                <KanbanCard
-                  key={item.id}
-                  item={item}
-                  columnId={column.id}
-                  setText={setCardText}
-                  deleteItem={deleteCard}
-                  disabled={disabled}
-                  autoFocus={item.id === autoFocusCardId}
-                  inputRef={item.id === autoFocusCardId ? autoFocusCardInputRef : undefined}
-                />
-              ))
-            ) : (
+            {rows}
+            {trailingSlot ? <KanbanSlot height={trailingSlot} /> : null}
+            {rows.length === 0 && !trailingSlot ? (
               <Text style={styles.noCards}>{t ? t("kanban.no_cards") : "No cards"}</Text>
-            )}
+            ) : null}
           </Animated.ScrollView>
         </View>
       </View>

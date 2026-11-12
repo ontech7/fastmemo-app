@@ -9,11 +9,12 @@ import Animated, {
   FadeOut,
   LinearTransition,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
 
-import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, LIFT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 import DragIcon from "@/components/icons/DragIcon";
 
@@ -31,6 +32,8 @@ interface Props {
   checkItem: (id: string) => void;
   deleteItem: (id: string) => void;
   drag: () => void;
+  /** Being dragged: it lifts like a kanban card (tilt, scale, accent edge, shadow). */
+  lifted?: boolean;
   disabled: boolean;
   hidden?: boolean;
   autoFocus: boolean;
@@ -64,6 +67,7 @@ function TodoItem({
   checkItem,
   deleteItem,
   drag,
+  lifted = false,
   disabled,
   hidden = false,
   autoFocus,
@@ -88,6 +92,17 @@ function TodoItem({
       easing: Easing.out(Easing.cubic),
     });
   }, [isOngoing, circleFill]);
+
+  // 0 flat, 1 lifted.
+  const reducedMotion = useReducedMotion();
+  const lift = useSharedValue(0);
+  useEffect(() => {
+    const to = lifted ? 1 : 0;
+    lift.set(reducedMotion ? to : withTiming(to, { duration: lifted ? LIFT.ms : LIFT.settleMs }));
+  }, [lifted, reducedMotion, lift]);
+  const liftStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${LIFT.tilt * lift.get()}deg` }, { scale: 1 + (LIFT.scale - 1) * lift.get() }] as const,
+  }));
 
   const circleFillStyle = useAnimatedStyle(() => ({
     opacity: circleFill.value,
@@ -114,7 +129,7 @@ function TodoItem({
   if (!stepMode) {
     return (
       <Animated.View layout={rowLayout} entering={rowEntering} exiting={rowExiting} style={styles.row}>
-        <View style={[styles.inner, item.checked && styles.innerChecked]}>
+        <Animated.View style={[styles.inner, item.checked && styles.innerChecked, lifted && styles.innerLifted, liftStyle]}>
           <TouchableOpacity
             activeOpacity={0.7}
             disabled={disabled}
@@ -124,7 +139,7 @@ function TodoItem({
             accessibilityLabel={item.text || t("a11y.item")}
             aria-checked={item.checked}
           >
-            <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked]}>
+            <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked, lifted && styles.edgeLifted]}>
               {item.checked && (
                 <Animated.View entering={CHECK_ENTERING} exiting={CHECK_EXITING}>
                   <CheckIcon size={24} color={COLOR.softWhite} />
@@ -135,7 +150,7 @@ function TodoItem({
 
           <TextInput
             ref={inputRef}
-            style={[styles.listItemInputFree, item.checked && styles.listItemInputChecked]}
+            style={[styles.listItemInputFree, item.checked && styles.listItemInputChecked, lifted && styles.edgeLifted]}
             textAlignVertical="center"
             multiline
             onChangeText={(value) => setText(item.id, value)}
@@ -148,14 +163,14 @@ function TodoItem({
           <TouchableOpacity
             activeOpacity={0.7}
             disabled={disabled}
-            style={styles.drag}
+            style={[styles.drag, lifted && styles.edgeLifted]}
             onPressIn={drag}
             // A drag starts on touch-down, which a screen reader's double tap can't drive
             accessible={false}
           >
             <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         <TouchableOpacity
           activeOpacity={0.7}
@@ -260,6 +275,14 @@ const styles = StyleSheet.create({
   },
   innerChecked: {
     opacity: 0.55,
+  },
+  // Being dragged: raised like a kanban card in the air.
+  innerLifted: {
+    borderRadius: BORDER.normal,
+    ...SHADOW.lifted,
+  },
+  edgeLifted: {
+    borderColor: COLOR.accentSoft,
   },
   checkTouch: {
     marginRight: PADDING_MARGIN.sm,

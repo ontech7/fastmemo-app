@@ -1,5 +1,5 @@
 // Where a dragged kanban card lands: computed from the rectangles measured when it was lifted and the scroll since, and
-// handed to moveCard, the card ends where the drop line was (spec 4).
+// handed to moveCard, the card ends in the slot the drag showed (spec 4; the gap, 2026-11-12).
 // Run: node scripts/kanban-drop.test.mjs
 
 import { build } from "esbuild";
@@ -24,7 +24,9 @@ await build({
   logLevel: "error",
   alias: { "@": src },
 });
-const { findDrop, isOwnPlace, moveCard, edgeStep, LINE_INSET, BOARD_SLACK } = await import(pathToFileURL(out).href);
+const { findDrop, isOwnPlace, moveCard, edgeStep, withoutCard, toMoveIndex, BOARD_SLACK } = await import(
+  pathToFileURL(out).href
+);
 
 let passed = 0;
 let failed = 0;
@@ -81,7 +83,7 @@ const order = (columns, id) =>
 
 console.log("\nfindDrop");
 
-ok("the constants", LINE_INSET === 8 && BOARD_SLACK === 24, { LINE_INSET, BOARD_SLACK });
+ok("the constant", BOARD_SLACK === 24, BOARD_SLACK);
 
 const L = layout({ A: [40, 120, 40], B: [], C: [60] }); // A's cards at y 220-260, 268-388, 396-436; B is empty
 const still = { boardScrollX: 0, columnScrollY: [0, 0, 0] };
@@ -94,20 +96,8 @@ ok(
   [at(100, 327), at(100, 329)]
 );
 ok("below the last card", at(100, 560)?.index === 3, at(100, 560));
-ok(
-  "an empty column: slot 0, line at the top of its card area",
-  at(18 + 312 + 10, 400)?.column === 1 && at(18 + 312 + 10, 400)?.index === 0 && at(18 + 312 + 10, 400)?.line.y === 226,
-  at(340, 400)
-);
-ok("the line sits in the gap", at(100, 220 + 40 + 8 + 61)?.line.y === 220 + 40 + 8 + 120 + 4, at(100, 329));
-// 4 above the first card is 216, above the card area: clamped to its top.
-ok("the line above the first card", at(100, 225)?.line.y === 220, at(100, 225));
-ok("the line below the last card", at(100, 560)?.line.y === 436 + 4, at(100, 560));
-ok(
-  "the line spans the card area minus the inset",
-  at(100, 225)?.line.x === 18 + 8 && at(100, 225)?.line.width === 300 - 16,
-  at(100, 225)
-);
+ok("an empty column: slot 0", at(18 + 312 + 10, 400)?.column === 1 && at(18 + 312 + 10, 400)?.index === 0, at(340, 400));
+ok("a target is its column and slot only", Object.keys(at(100, 225)).sort().join() === "column,index", at(100, 225));
 ok(
   "a column scrolled by 100 since the lift",
   at(100, 235, { boardScrollX: 0, columnScrollY: [100, 0, 0] })?.index === 2,
@@ -116,11 +106,6 @@ ok(
 ok(
   "a board scrolled by 312 since the lift: the same point is the next column",
   at(100, 400, { boardScrollX: 312, columnScrollY: [0, 0, 0] })?.column === 1,
-  at(100, 400, { boardScrollX: 312, columnScrollY: [0, 0, 0] })
-);
-ok(
-  "a board scrolled: the line follows the column",
-  at(100, 400, { boardScrollX: 312, columnScrollY: [0, 0, 0] })?.line.x === 18 + 8,
   at(100, 400, { boardScrollX: 312, columnScrollY: [0, 0, 0] })
 );
 ok("in the gap: the nearer column", at(18 + 300 + 2, 300)?.column === 0 && at(18 + 300 + 10, 300)?.column === 1, [
@@ -138,41 +123,65 @@ ok("far above or below the board: nowhere", at(100, 60) === null && at(100, 100 
 ]);
 ok("just outside the board still counts", at(100, 100 + 600 + 10) !== null);
 ok("far beside the board: nowhere", at(360 + 30, 300) === null && at(-30, 300) === null);
-ok(
-  "a line never leaves the card area",
-  at(100, 225, { boardScrollX: 0, columnScrollY: [300, 0, 0] })?.line.y >= 220 &&
-    at(100, 225, { boardScrollX: 0, columnScrollY: [-300, 0, 0] })?.line.y <= 620,
-  [
-    at(100, 225, { boardScrollX: 0, columnScrollY: [300, 0, 0] }),
-    at(100, 225, { boardScrollX: 0, columnScrollY: [-300, 0, 0] }),
-  ]
-);
 ok("the first and the last column", at(20, 300)?.column === 0 && at(100, 300, atLast)?.column === 2);
 
-console.log("\nwith moveCard: the card ends where the line was");
+console.log("\nwithoutCard: the lifted card's place closes");
+
+{
+  const W = withoutCard(L, 0, 1); // a1 (120 high) lifted: a2 moves up to where a1 was
+  ok("the lifted card is gone from its column", W.columns[0].cards.length === 2, W.columns[0].cards);
+  ok(
+    "the cards after it move up by its place (its height and the gap)",
+    W.columns[0].cards[0].y === 220 && W.columns[0].cards[1].y === 268 && W.columns[0].cards[1].height === 40,
+    W.columns[0].cards
+  );
+  ok("the other columns and the board are the same", W.columns[2] === L.columns[2] && W.board === L.board);
+  ok("the measured layout is not changed", L.columns[0].cards.length === 3 && L.columns[0].cards[2].y === 396);
+  const last = withoutCard(L, 0, 2);
+  ok(
+    "the last card lifted: nothing moves",
+    last.columns[0].cards.length === 2 && last.columns[0].cards[1].y === 268,
+    last.columns[0].cards
+  );
+  const only = withoutCard(L, 2, 0);
+  ok("the only card lifted: an empty column", only.columns[2].cards.length === 0, only.columns[2]);
+}
+
+console.log("\nwith moveCard: the card ends in the slot the drag showed");
 
 const cols = columnsOf(L); // A: a0 a1 a2, B: -, C: c0
-ok("down in its own column", order(moveCard(cols, "a0", "A", "A", at(100, 560).index), "A") === "a1,a2,a0");
-ok("up in its own column", order(moveCard(cols, "a2", "A", "A", at(100, 225).index), "A") === "a2,a0,a1");
-ok("into the middle of its own column", order(moveCard(cols, "a0", "A", "A", at(100, 329).index), "A") === "a1,a0,a2");
+/** Lifts card `index` of column `column`, points at (x, y), and drops: the board's columns afterwards. */
+const drag = (column, index, x, y, scroll = still) => {
+  const W = withoutCard(L, column, index);
+  const target = findDrop(W, scroll, x, y);
+  if (!target || isOwnPlace(target, column, index)) return { target, columns: cols };
+  const card = cols[column].items[index].id;
+  const moved = moveCard(cols, card, cols[column].id, cols[target.column].id, toMoveIndex(target, column, index));
+  return { target, columns: moved };
+};
+// Without a0, A is a1 at 220-340 and a2 at 348-388.
+ok("down in its own column, to the end", order(drag(0, 0, 100, 560).columns, "A") === "a1,a2,a0");
+ok("down in its own column, between the others", order(drag(0, 0, 100, 345).columns, "A") === "a1,a0,a2");
+ok("up in its own column, to the top", order(drag(0, 2, 100, 225).columns, "A") === "a2,a0,a1");
+// Without a1, A is a0 at 220-260 and a2 at 268-308: between their middles is a1's own slot.
+ok("its own place: nothing moves", isOwnPlace(drag(0, 1, 100, 270).target, 0, 1), drag(0, 1, 100, 270).target);
+ok("just past the next card's middle is the next slot", order(drag(0, 1, 100, 300).columns, "A") === "a0,a2,a1");
 {
-  const target = at(340, 400);
-  const moved = moveCard(cols, "a1", "A", L.columns[target.column].id, target.index);
+  const moved = drag(0, 1, 340, 400).columns;
   ok("into an empty column", order(moved, "A") === "a0,a2" && order(moved, "B") === "a1", [
     order(moved, "A"),
     order(moved, "B"),
   ]);
 }
-{
-  const target = at(100, 225, atLast);
-  const moved = moveCard(cols, "a0", "A", L.columns[target.column].id, target.index);
-  ok("above the first card of another column", order(moved, "C") === "a0,c0", order(moved, "C"));
-}
+ok("above the first card of another column", order(drag(0, 0, 100, 225, atLast).columns, "C") === "a0,c0");
+ok("another column is never its own place", !isOwnPlace({ column: 1, index: 0 }, 0, 0));
 ok(
-  "its own place",
-  isOwnPlace(at(100, 225), 0, 0) && isOwnPlace(at(100, 220 + 40 + 2), 0, 0) && !isOwnPlace(at(100, 560), 0, 0)
+  "a slot after the lifted card's own counts one more for moveCard",
+  toMoveIndex({ column: 0, index: 2 }, 0, 1) === 3 &&
+    toMoveIndex({ column: 0, index: 1 }, 0, 1) === 1 &&
+    toMoveIndex({ column: 0, index: 0 }, 0, 1) === 0 &&
+    toMoveIndex({ column: 1, index: 2 }, 0, 1) === 2
 );
-ok("another column is never its own place", !isOwnPlace(at(340, 400), 0, 0));
 
 // The edge scroll (KanbanBoard, KanbanColumn): a speed per second, so a 120 Hz screen scrolls as far as a 60 Hz one.
 {

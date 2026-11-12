@@ -1,5 +1,5 @@
 import Haptics, { ImpactFeedbackStyle, NotificationFeedbackType } from "@/libs/haptics";
-import { findDrop, isOwnPlace } from "@/libs/kanbanDrop";
+import { findDrop, isOwnPlace, toMoveIndex, withoutCard } from "@/libs/kanbanDrop";
 import type { DropColumn, DropLayout, DropTarget, Rect } from "@/libs/kanbanDrop";
 import { measureInWindow } from "@/libs/tourTargets";
 import type { KanbanColumn, KanbanItem } from "@/types";
@@ -13,19 +13,20 @@ import { scheduleOnRN } from "react-native-worklets";
 
 /*
  * The kanban drag (ADR-037). Nothing is measured until a card is lifted: then the board, every column's card area and
- * every card are measured in window coordinates, once, with the scroll offsets of that moment. During the drag only the
- * scroll moves them, so the UI thread finds the target from those rectangles (`findDrop`) at every frame, and JS is
- * called when the target column changes (a haptic) and at the end.
+ * every card are measured in window coordinates, once, with the scroll offsets of that moment, and the lifted card is
+ * taken out of them (`withoutCard`). During the drag only the scroll moves them, so the UI thread finds the target from
+ * those rectangles (`findDrop`) at every frame. JS hears when the target column changes (a haptic), when the slot
+ * changes (the columns show it: the preview) and at the end, when the card settles into the slot.
  */
 
-const SPRING_BACK = { damping: 15, stiffness: 220 };
-/** By then the spring is within about 1% of the way it had to go back. */
-const SPRING_BACK_MS = 600;
+const SETTLE = { damping: 18, stiffness: 260 };
+/** By then the spring is within about 1% of the way it had to go. */
+const SETTLE_MS = 450;
 
 export interface KanbanDragContextValue {
   /** 1 while a card is in the air. */
   active: SharedValue<number>;
-  /** 1 while the lifted card springs back to its place (no target then). */
+  /** 1 while the lifted card settles into its slot, at the end. */
   returning: SharedValue<number>;
   draggedId: SharedValue<string | null>;
   pointerX: SharedValue<number>;
@@ -50,6 +51,10 @@ export interface KanbanDragContextValue {
   registerColumn(columnId: string, node: { area: RefObject<ViewInstance | null> }): () => void;
   registerCard(columnId: string, cardId: string, node: RefObject<ViewInstance | null>): () => void;
   registerBoard(node: RefObject<ViewInstance | null>): void;
+  /** The slot shown in a column: where the lifted card settles at the end. */
+  registerSlot(node: RefObject<ViewInstance | null>): () => void;
+  /** The board's frame callback, when the slot under the pointer changes: column -1 is nowhere (its own place). */
+  showTarget(column: number, index: number): void;
   /** Called from the handle's gesture, on the JS thread. */
   lift(item: KanbanItem, columnId: string, pointerX: number, pointerY: number): void;
   release(): void;
@@ -61,20 +66,32 @@ export interface KanbanDragged {
   columnId: string;
 }
 
+/**
+ * What the columns show while a card is in the air: its own place folded (the card stays mounted: its gesture is
+ * running) and a slot of its height where it would land. The same order the drop then commits, so the drop moves nothing.
+ */
+export interface KanbanPreview {
+  sourceColumnId: string;
+  sourceCardId: string;
+  targetColumnId: string;
+  /** A slot among the target column's cards without the lifted one. */
+  targetIndex: number;
+  height: number;
+}
+
 interface Props {
   children: ReactNode;
   /** Applies a drop. The editor does it on the board as it is at that moment (kanbanOps.moveCard). */
   onDrop: (cardId: string, fromColumnId: string, toColumnId: string, toIndex: number) => void;
   /** The board's columns as they are now, read at lift only (a ref: a keystroke must not re-render the provider). */
   columnsRef: RefObject<KanbanColumn[]>;
-  columnWidth: number;
 }
 
 const KanbanDragContext = createContext<KanbanDragContextValue | null>(null);
 const KanbanDraggedContext = createContext<KanbanDragged | null>(null);
-const KanbanColumnWidthContext = createContext(0);
+const KanbanPreviewContext = createContext<KanbanPreview | null>(null);
 
-export default function KanbanDragProvider({ children, onDrop, columnsRef, columnWidth }: Props) {
+export default function KanbanDragProvider({ children, onDrop, columnsRef }: Props) {
   const reducedMotion = useReducedMotion();
 
   const active = useSharedValue(0);
@@ -93,12 +110,22 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef, colum
   const columnScrollY = useSharedValue<Record<string, number>>({});
 
   const [dragged, setDragged] = useState<KanbanDragged | null>(null);
+  const [preview, setPreview] = useState<KanbanPreview | null>(null);
+  const slotRef = useRef<RefObject<ViewInstance | null> | null>(null);
 
   const boardRef = useRef<RefObject<ViewInstance | null> | null>(null);
   const columnAreas = useRef(new Map<string, RefObject<ViewInstance | null>>());
   const cards = useRef(new Map<string, Map<string, RefObject<ViewInstance | null>>>());
-  // The drag in progress, for the JS side: which card, from where, and its box at lift.
-  const dragRef = useRef<{ item: KanbanItem; columnId: string; box: Rect; lift: DropLayout } | null>(null);
+  // The drag in progress, for the JS side: which card, from where (column, index), its box at lift, and the layout
+  // measured then without it.
+  const dragRef = useRef<{
+    item: KanbanItem;
+    columnId: string;
+    column: number;
+    index: number;
+    box: Rect;
+    lift: DropLayout;
+  } | null>(null);
   // A lift whose measures are still coming: a release before they arrive abandons it.
   const liftSeq = useRef(0);
 
@@ -117,6 +144,13 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef, colum
     columnAreas.current.set(columnId, node.area);
     return () => {
       if (columnAreas.current.get(columnId) === node.area) columnAreas.current.delete(columnId);
+    };
+  }, []);
+
+  const registerSlot = useCallback((node: RefObject<ViewInstance | null>) => {
+    slotRef.current = node;
+    return () => {
+      if (slotRef.current === node) slotRef.current = null;
     };
   }, []);
 
@@ -141,7 +175,19 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef, colum
     target.set(null);
     draggedId.set(null);
     setDragged(null);
+    setPreview(null);
   }, [active, returning, target, draggedId]);
+
+  const showTarget = useCallback((column: number, index: number) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const to = column >= 0 ? drag.lift.columns[column] : undefined;
+    const targetColumnId = to ? to.id : drag.columnId;
+    const targetIndex = to ? index : drag.index;
+    setPreview((p) =>
+      !p || (p.targetColumnId === targetColumnId && p.targetIndex === targetIndex) ? p : { ...p, targetColumnId, targetIndex }
+    );
+  }, []);
 
   const lift = useCallback(
     (item: KanbanItem, columnId: string, x: number, y: number) => {
@@ -181,14 +227,16 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef, colum
             return;
           }
 
-          const dropLayout: DropLayout = {
+          const measured: DropLayout = {
             board,
             columns: kept.map((m) => m.column),
             boardScrollX: scrollX,
             columnScrollY: kept.map((m) => scrollById[m.column.id] ?? 0),
           };
-          const box = kept[c].column.cards[i];
-          dragRef.current = { item, columnId, box, lift: dropLayout };
+          const box = measured.columns[c].cards[i];
+          // The lifted card's place closes while it is in the air: the target is found among the others.
+          const dropLayout = withoutCard(measured, c, i);
+          dragRef.current = { item, columnId, column: c, index: i, box, lift: dropLayout };
 
           layout.set(dropLayout);
           sourceColumn.set(c);
@@ -197,16 +245,22 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef, colum
           grabY.set(y - box.y);
           liftWidth.set(box.width);
           // The pointer is the gesture's: it wrote it at activation and keeps writing it while the measures come.
-          target.set(
-            findDrop(
-              dropLayout,
-              { boardScrollX: scrollX, columnScrollY: dropLayout.columnScrollY },
-              pointerX.get(),
-              pointerY.get()
-            )
+          const first = findDrop(
+            dropLayout,
+            { boardScrollX: scrollX, columnScrollY: dropLayout.columnScrollY },
+            pointerX.get(),
+            pointerY.get()
           );
+          target.set(first);
           draggedId.set(item.id);
           setDragged({ item, columnId });
+          setPreview({
+            sourceColumnId: columnId,
+            sourceCardId: item.id,
+            targetColumnId: first ? dropLayout.columns[first.column].id : columnId,
+            targetIndex: first ? first.index : i,
+            height: box.height,
+          });
           active.set(1);
         }
       );
@@ -229,33 +283,46 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef, colum
     ]
   );
 
-  /** The lifted card goes back to where its original is now (the board or its column may have scrolled), then away. */
-  const springBack = useCallback(() => {
-    const drag = dragRef.current;
-    if (!drag || reducedMotionRef.current) {
-      finish();
-      return;
-    }
-    const c = sourceColumn.get();
-    const dx = boardScrollX.get() - drag.lift.boardScrollX;
-    const dy = (columnScrollY.get()[drag.columnId] ?? 0) - (drag.lift.columnScrollY[c] ?? 0);
-    returning.set(1);
-    target.set(null);
-    // The spring settles slowly to the last fraction of a pixel, and the desktop's webview reports its end seconds late:
-    // the card goes away once it is back in place, whichever comes first, and only if it is still this drag.
-    const seq = liftSeq.current;
-    const done = () => {
-      if (liftSeq.current === seq) finish();
-    };
-    setTimeout(done, SPRING_BACK_MS);
-    pointerX.set(withSpring(drag.box.x - dx + grabX.get(), SPRING_BACK));
-    pointerY.set(
-      withSpring(drag.box.y - dy + grabY.get(), SPRING_BACK, () => {
-        "worklet";
-        scheduleOnRN(done);
-      })
-    );
-  }, [finish, sourceColumn, boardScrollX, columnScrollY, returning, target, pointerX, pointerY, grabX, grabY]);
+  /**
+   * The end of every drag: the lifted card springs into the slot the columns show (measured now: the board or its column
+   * may have scrolled), then `done` runs, once, and only for this drag. Without motion, at once.
+   */
+  const settle = useCallback(
+    (done: () => void) => {
+      const seq = liftSeq.current;
+      const once = () => {
+        if (liftSeq.current === seq) done();
+      };
+      if (reducedMotionRef.current) {
+        once();
+        return;
+      }
+      returning.set(1);
+      // Two frames: the slot is laid out where the last target put it.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          measureInWindow(slotRef.current?.current).then((slot) => {
+            if (liftSeq.current !== seq) return;
+            if (!slot) {
+              once();
+              return;
+            }
+            // The spring settles slowly to the last fraction of a pixel, and the desktop's webview reports its end
+            // late: the drag ends at the spring's end or after SETTLE_MS, whichever comes first.
+            setTimeout(once, SETTLE_MS);
+            pointerX.set(withSpring(slot.x + grabX.get(), SETTLE));
+            pointerY.set(
+              withSpring(slot.y + grabY.get(), SETTLE, () => {
+                "worklet";
+                scheduleOnRN(once);
+              })
+            );
+          });
+        })
+      );
+    },
+    [returning, pointerX, pointerY, grabX, grabY]
+  );
 
   const release = useCallback(() => {
     const drag = dragRef.current;
@@ -266,32 +333,41 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef, colum
     }
     if (returning.get() === 1) return;
     const dropLayout = drag.lift;
-    const dx = boardScrollX.get() - dropLayout.boardScrollX;
     const scrollById = columnScrollY.get();
     // The target as of the release, not as of the last frame.
     const now = findDrop(
       dropLayout,
-      { boardScrollX: dropLayout.boardScrollX + dx, columnScrollY: dropLayout.columns.map((col) => scrollById[col.id] ?? 0) },
+      { boardScrollX: boardScrollX.get(), columnScrollY: dropLayout.columns.map((col) => scrollById[col.id] ?? 0) },
       pointerX.get(),
       pointerY.get()
     );
-    if (!now || isOwnPlace(now, sourceColumn.get(), sourceIndex.get())) {
-      springBack();
-      return;
-    }
-    onDropRef.current(drag.item.id, drag.columnId, dropLayout.columns[now.column].id, now.index);
-    Haptics.notificationAsync(NotificationFeedbackType.Success);
-    finish();
-  }, [finish, springBack, returning, boardScrollX, columnScrollY, pointerX, pointerY, sourceColumn, sourceIndex]);
+    const moves = now !== null && !isOwnPlace(now, drag.column, drag.index);
+    showTarget(moves ? now.column : -1, moves ? now.index : drag.index);
+    settle(() => {
+      if (moves) {
+        // In the same React commit as the end of the preview: the order it showed becomes the board's.
+        onDropRef.current(
+          drag.item.id,
+          drag.columnId,
+          dropLayout.columns[now.column].id,
+          toMoveIndex(now, drag.column, drag.index)
+        );
+        Haptics.notificationAsync(NotificationFeedbackType.Success);
+      }
+      finish();
+    });
+  }, [finish, settle, showTarget, returning, boardScrollX, columnScrollY, pointerX, pointerY]);
 
   const cancel = useCallback(() => {
-    if (!dragRef.current) {
+    const drag = dragRef.current;
+    if (!drag) {
       finish();
       return;
     }
     if (returning.get() === 1) return;
-    springBack();
-  }, [finish, springBack, returning]);
+    showTarget(-1, drag.index);
+    settle(finish);
+  }, [finish, settle, showTarget, returning]);
 
   // Never changes for the life of the board: every card and column reads it without rendering again.
   const value = useMemo<KanbanDragContextValue>(
@@ -313,6 +389,8 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef, colum
       registerColumn,
       registerCard,
       registerBoard,
+      registerSlot,
+      showTarget,
       lift,
       release,
       cancel,
@@ -335,6 +413,8 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef, colum
       registerColumn,
       registerCard,
       registerBoard,
+      registerSlot,
+      showTarget,
       lift,
       release,
       cancel,
@@ -343,9 +423,9 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef, colum
 
   return (
     <KanbanDragContext.Provider value={value}>
-      <KanbanColumnWidthContext.Provider value={columnWidth}>
-        <KanbanDraggedContext.Provider value={dragged}>{children}</KanbanDraggedContext.Provider>
-      </KanbanColumnWidthContext.Provider>
+      <KanbanDraggedContext.Provider value={dragged}>
+        <KanbanPreviewContext.Provider value={preview}>{children}</KanbanPreviewContext.Provider>
+      </KanbanDraggedContext.Provider>
     </KanbanDragContext.Provider>
   );
 }
@@ -363,7 +443,7 @@ export function useKanbanDragged(): KanbanDragged | null {
   return useContext(KanbanDraggedContext);
 }
 
-/** The board's column width, for the overlay's line. */
-export function useKanbanColumnWidth(): number {
-  return useContext(KanbanColumnWidthContext);
+/** The order the columns show while a card is in the air, or null. Changes at lift, when the slot moves, and at the end. */
+export function useKanbanPreview(): KanbanPreview | null {
+  return useContext(KanbanPreviewContext);
 }
