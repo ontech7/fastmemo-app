@@ -10,6 +10,7 @@ import StarIcon from "react-native-heroicons/outline/StarIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import { formatDateTime, reverseDate } from "@/utils/date";
+import { isKnownNoteType } from "@/utils/noteType";
 import { isStringEmpty } from "@/utils/string";
 import { webhook } from "@/utils/webhook";
 
@@ -157,17 +158,27 @@ function TrashedNoteCard({ content, isSelected, selectNote, isDeleteMode, toggle
             )}
           </View>
 
-          <View style={styles.meta}>
-            <Text style={[styles.date, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
-              {t("note.updated")}
-              <Text style={styles.dateValue}>{updatedDate}</Text>
-            </Text>
+          {/* A note of a type this version can't open says so in place of its dates; it can still be restored,
+              selected and deleted here: none of that changes anything inside it (spec 5.5). */}
+          {isKnownNoteType(type) ? (
+            <View style={styles.meta}>
+              <Text style={[styles.date, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
+                {t("note.updated")}
+                <Text style={styles.dateValue}>{updatedDate}</Text>
+              </Text>
 
-            <Text style={[styles.date, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
-              {t("note.created")}
-              <Text style={styles.dateValue}>{createdDate}</Text>
-            </Text>
-          </View>
+              <Text style={[styles.date, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
+                {t("note.created")}
+                <Text style={styles.dateValue}>{createdDate}</Text>
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.meta}>
+              <Text style={styles.updateToOpen} numberOfLines={2}>
+                {t("note.update_to_open")}
+              </Text>
+            </View>
+          )}
 
           <CountdownDate deleteDate={deleteDate} fg={fg} chipBg={chipBg} />
         </View>
@@ -268,6 +279,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     opacity: 0.6,
   },
+  updateToOpen: { fontSize: FONTSIZE.small, fontFamily: FONT.medium, color: COLOR.accentDeep },
   dateValue: { fontFamily: FONT.semiBold },
   countdown: {
     alignSelf: "flex-start",

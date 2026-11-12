@@ -1850,85 +1850,81 @@ and to recognise the entry it pushed.
 
 ## ADR-037: The Kanban Drag Measures at Lift
 
-**Status:** Accepted (2026-11-12), plan 1 of 4.1.0 (Task 24); the landing place changed from a line to a gap the same
-day, after the user's judgement on the real Pixel. Generalized by ADR-038 the same day: one engine for boards, lists and
-categories (`libs/kanbanDrop.ts` became `libs/reorderDrop.ts`, `KanbanDragProvider` became `ReorderProvider`)  
-**Context:** The old drag sent the pointer through the JS thread at every frame (`runOnJS` per pan update). It also
-chose the drop slot from constants (`headerHeight = 120`, `itemHeight = 60`) that ignored real card heights, a column's
-own scroll and where the board sits in the window. Columns registered positions measured at layout, which went stale
-after a scroll. Nothing showed where the card would land.  
+**Status:** Accepted (2026-11-12), plan 1 of 4.1.0 (Task 24); the landing place changed from a line to a gap the same day, after
+the user's judgement on the real Pixel. Generalized by ADR-038 the same day: one engine for boards, lists and categories
+(`libs/kanbanDrop.ts` became `libs/reorderDrop.ts`, `KanbanDragProvider` became `ReorderProvider`)  
+**Context:** The old drag sent the pointer through the JS thread at every frame (`runOnJS` per pan update). It also chose the
+drop slot from constants (`headerHeight = 120`, `itemHeight = 60`) that ignored real card heights, a column's own scroll and
+where the board sits in the window. Columns registered positions measured at layout, which went stale after a scroll. Nothing
+showed where the card would land.  
 **Decision:**
 
-- **Nothing is measured until a lift.** At lift (JS, once), `measureInWindow` takes the board, every column's card area
-  and every card, in the board's order, with the scroll offsets of that moment, into a `DropLayout` in a shared value.
-  During the drag only scroll moves them, so the boxes now are the measured ones shifted by the scroll since. A card or
-  column that can't be measured is left out; if the dragged card can't be, there is no drag. The lifted card shows a few
-  milliseconds after the press: the measures are asynchronous.
-- **The geometry is a pure worklet** (`libs/kanbanDrop.ts`: `findDrop`, `withoutCard`, `isOwnPlace`, `toMoveIndex`,
-  `edgeStep`), tested in Node (`scripts/kanban-drop.test.mjs`). It runs on the UI thread at every frame. The lifted card
-  is taken out of the measured layout (`withoutCard`: the cards after it move up by its place), as the column shows it
-  while it is in the air. The column is the one whose span holds the pointer (in a gap, the nearer edge). The slot is
-  the number of its other cards whose middle is above the pointer; `toMoveIndex` turns it into what `moveCard` expects.
-- **Threads:** the handle's pan gesture (Gesture Handler 3's `usePanGesture`) writes the pointer on the UI thread. One
-  frame callback on the board finds the target and scrolls the board near its edges; one per column scrolls it near its
-  top and bottom. Both edge scrolls move by the frame's real length (`edgeStep`, a speed per second: 840 for the board,
-  600 for a column), never a fixed step per frame: the real Pixel runs at 120 Hz and scrolled twice as fast as the 60 Hz
-  emulator (found 2026-11-12). JS is called at lift, when the target column changes (a selection haptic), when the slot
-  changes, and at the end. The provider's contexts: one never changes (shared values and stable functions, read by every
-  card and column), one holds the card in the air (the board and the overlay), and one the preview (the columns). A drag
-  renders the columns only when the slot moves, and of their cards only those whose slot or fold changed (`memo`).
-- **The gap, not a line** (2026-11-12, the user on the Pixel: the line "non si vede bene per niente"). The lifted card
-  follows the finger, so a line at the finger's height sits under it. Now the columns show the order the drop will
-  commit (the preview): the lifted card's own place folds away (the card stays mounted: its gesture is running) and a
-  slot of its measured height opens where it would land, a dashed accent outline (`ui/DropSlot`). The cards slide (a 160
-  ms `LinearTransition`, only while a card is in the air).
-- **No child changes place during a drag.** The slot is drawn inside the card it opens above (`slotHeight`), or after
-  the last card; nothing is inserted among the cards. A keyed reorder would move the folded card's own node, and on the
-  web that ends its gesture (found: every upward drag stopped at once).
-- **The lifted copy is the card's own text field**, read-only, at the card's measured size: it becomes the real card at
-  the drop without a hop.
-- **The web's pointer rule:** the web build sees every pointer as a mouse, so on the web and the desktop a card lifts
-  after 4 px of movement (`minDistance`), with `touchAction: "none"` on the handle. Phones lift after a 200 ms press.
-  The handle's mouse press neither starts the board's drag-to-scroll nor selects text.
-- **Drop:** the target as of the release. The lifted card lands in the slot, measured then, in `LIFT.dropMs` (120 ms,
-  easing out, flattening its tilt and scale), and the move is committed in the same React commit that ends the preview:
-  the screen already shows that order, so nothing moves at the drop. Off the board or on its own place, the slot is its
-  own place: it lands there and nothing is dispatched. Short on purpose (the user, 2026-11-12: a first version took up
-  to a second, and moving many items in a row must not wait on it); the drag ends 60 ms later at the latest, as the
-  desktop webview reports an animation's end late. Reduced motion: no landing and no animated lift. The editor applies a
-  drop with `moveCard` on the board as it is then, so a board changed under the drag (here or on another device) changes
-  nothing.
-- **Lists share the look** — *superseded by ADR-038: lists now use the board's own engine; the library and its
-  workarounds below are gone (LL-090).* (the user asked for it): the same lift (`LIFT`: scale, tilt, timings), accent edge, shadow
-  and slot. On phones `react-native-draggable-flatlist` keeps its own gap: its placeholder is `DropSlot`, the active row
-  gets `lifted`, the haptics are the board's (lift, slot change, a moved drop), and its spring is a little under critical
-  damping and clamped (`DROP_SPRING`: it reaches its place in ~105 ms and stops; critically damped it crept ~150 ms more,
-  and the library's default crawls for a second while the next drag waits on it). The lifted row settles flat from the
-  release (`onRelease` sets a shared value, the row eases on the UI thread). Only 5 screens of rows stay mounted
-  (`windowSize`): with FlatList's 21, a 300-row list was mounted whole, every row ran the drag's per-frame worklet and
-  re-attached it at lift and at drop, and the drop froze ~80 ms (12.8% janky frames on a Pixel 10 Pro, 3.5% with 5). One
-  frame stays: at the drop the library holds each row's offset until the row's `onLayout`, which on the New Architecture
-  comes a frame after the new order is drawn (seen before this change too). A row whose place didn't change, or that was
-  still sliding when the drop counted, is never laid out again and kept its offset, drawn over another row (the user hit
-  it once the drop was fast): 100 ms after each drop the rows move down a point for 100 ms, which lays every mounted row
-  out and clears the offsets. On the
-  web dnd-kit's `DragOverlay` draws the lifted row (its drop in `LIFT.dropMs`), in a portal on `document.body`
-  (react-native-web's ScrollView has a transform, which would place the overlay's `position: fixed` and the box dnd-kit
-  measures relative to the list), and the row's own place shows the slot.
+- **Nothing is measured until a lift.** At lift (JS, once), `measureInWindow` takes the board, every column's card area and
+  every card, in the board's order, with the scroll offsets of that moment, into a `DropLayout` in a shared value. During the
+  drag only scroll moves them, so the boxes now are the measured ones shifted by the scroll since. A card or column that can't
+  be measured is left out; if the dragged card can't be, there is no drag. The lifted card shows a few milliseconds after the
+  press: the measures are asynchronous.
+- **The geometry is a pure worklet** (`libs/kanbanDrop.ts`: `findDrop`, `withoutCard`, `isOwnPlace`, `toMoveIndex`, `edgeStep`),
+  tested in Node (`scripts/kanban-drop.test.mjs`). It runs on the UI thread at every frame. The lifted card is taken out of the
+  measured layout (`withoutCard`: the cards after it move up by its place), as the column shows it while it is in the air. The
+  column is the one whose span holds the pointer (in a gap, the nearer edge). The slot is the number of its other cards whose
+  middle is above the pointer; `toMoveIndex` turns it into what `moveCard` expects.
+- **Threads:** the handle's pan gesture (Gesture Handler 3's `usePanGesture`) writes the pointer on the UI thread. One frame
+  callback on the board finds the target and scrolls the board near its edges; one per column scrolls it near its top and
+  bottom. Both edge scrolls move by the frame's real length (`edgeStep`, a speed per second: 840 for the board, 600 for a
+  column), never a fixed step per frame: the real Pixel runs at 120 Hz and scrolled twice as fast as the 60 Hz emulator (found
+  2026-11-12). JS is called at lift, when the target column changes (a selection haptic), when the slot changes, and at the end.
+  The provider's contexts: one never changes (shared values and stable functions, read by every card and column), one holds the
+  card in the air (the board and the overlay), and one the preview (the columns). A drag renders the columns only when the slot
+  moves, and of their cards only those whose slot or fold changed (`memo`).
+- **The gap, not a line** (2026-11-12, the user on the Pixel: the line "non si vede bene per niente"). The lifted card follows
+  the finger, so a line at the finger's height sits under it. Now the columns show the order the drop will commit (the preview):
+  the lifted card's own place folds away (the card stays mounted: its gesture is running) and a slot of its measured height
+  opens where it would land, a dashed accent outline (`ui/DropSlot`). The cards slide (a 160 ms `LinearTransition`, only while a
+  card is in the air).
+- **No child changes place during a drag.** The slot is drawn inside the card it opens above (`slotHeight`), or after the last
+  card; nothing is inserted among the cards. A keyed reorder would move the folded card's own node, and on the web that ends its
+  gesture (found: every upward drag stopped at once).
+- **The lifted copy is the card's own text field**, read-only, at the card's measured size: it becomes the real card at the drop
+  without a hop.
+- **The web's pointer rule:** the web build sees every pointer as a mouse, so on the web and the desktop a card lifts after 4 px
+  of movement (`minDistance`), with `touchAction: "none"` on the handle. Phones lift after a 200 ms press. The handle's mouse
+  press neither starts the board's drag-to-scroll nor selects text.
+- **Drop:** the target as of the release. The lifted card lands in the slot, measured then, in `LIFT.dropMs` (120 ms, easing
+  out, flattening its tilt and scale), and the move is committed in the same React commit that ends the preview: the screen
+  already shows that order, so nothing moves at the drop. Off the board or on its own place, the slot is its own place: it lands
+  there and nothing is dispatched. Short on purpose (the user, 2026-11-12: a first version took up to a second, and moving many
+  items in a row must not wait on it); the drag ends 60 ms later at the latest, as the desktop webview reports an animation's
+  end late. Reduced motion: no landing and no animated lift. The editor applies a drop with `moveCard` on the board as it is
+  then, so a board changed under the drag (here or on another device) changes nothing.
+- **Lists share the look** — _superseded by ADR-038: lists now use the board's own engine; the library and its workarounds below
+  are gone (LL-090)._ (the user asked for it): the same lift (`LIFT`: scale, tilt, timings), accent edge, shadow and slot. On
+  phones `react-native-draggable-flatlist` keeps its own gap: its placeholder is `DropSlot`, the active row gets `lifted`, the
+  haptics are the board's (lift, slot change, a moved drop), and its spring is a little under critical damping and clamped
+  (`DROP_SPRING`: it reaches its place in ~105 ms and stops; critically damped it crept ~150 ms more, and the library's default
+  crawls for a second while the next drag waits on it). The lifted row settles flat from the release (`onRelease` sets a shared
+  value, the row eases on the UI thread). Only 5 screens of rows stay mounted (`windowSize`): with FlatList's 21, a 300-row list
+  was mounted whole, every row ran the drag's per-frame worklet and re-attached it at lift and at drop, and the drop froze ~80
+  ms (12.8% janky frames on a Pixel 10 Pro, 3.5% with 5). One frame stays: at the drop the library holds each row's offset until
+  the row's `onLayout`, which on the New Architecture comes a frame after the new order is drawn (seen before this change too).
+  A row whose place didn't change, or that was still sliding when the drop counted, is never laid out again and kept its offset,
+  drawn over another row (the user hit it once the drop was fast): 100 ms after each drop the rows move down a point for 100 ms,
+  which lays every mounted row out and clears the offsets. On the web dnd-kit's `DragOverlay` draws the lifted row (its drop in
+  `LIFT.dropMs`), in a portal on `document.body` (react-native-web's ScrollView has a transform, which would place the overlay's
+  `position: fixed` and the box dnd-kit measures relative to the list), and the row's own place shows the slot.
 
 **Alternatives rejected:**
 
-- **Positions registered by the columns at layout:** stale after any scroll, and a re-measure per layout change of every
-  column.
+- **Positions registered by the columns at layout:** stale after any scroll, and a re-measure per layout change of every column.
 - **The slot from a fixed card height:** wrong with cards of several lines.
 - **A line at the landing place** (the first version, 2026-11-12): covered by the card in the air.
-- **Cards shifted by transforms during the drag:** no renders, but at the drop the transforms would have to reset in the
-  same frame as React's commit of the new order, which the two threads can't promise.
+- **Cards shifted by transforms during the drag:** no renders, but at the drop the transforms would have to reset in the same
+  frame as React's commit of the new order, which the two threads can't promise.
 
 **Trade-offs:**
 
-- The rectangles are those of the lift: a remote change during the drag can move a column under the slot. The drop still
-  goes by column id, so it lands nowhere rather than in the wrong column.
+- The rectangles are those of the lift: a remote change during the drag can move a column under the slot. The drop still goes by
+  column id, so it lands nowhere rather than in the wrong column.
 - The columns render when the slot moves (a few times per drag, never per frame).
 - One frame callback per column, active only while a card is in the air.
 
@@ -1936,61 +1932,59 @@ after a scroll. Nothing showed where the card would land.
 
 **Status:** Accepted (2026-11-12), plan 1 of 4.1.0, after Task 24 (spec `2026-11-12-reorder-engine-design`); generalizes
 ADR-037  
-**Context:** after ADR-037 the board's drag felt right on the Pixel ("Sembra abbastanza smooth, ottimo"), while lists
-still used `react-native-draggable-flatlist` on phones and `@dnd-kit` on the web and desktop. On a 300-row list the
-library froze ~83 ms at each drop, drew one broken frame at every drop and could leave rows drawn over others (LL-090).
-The user: "Per la lista allora magari sfruttiamo il codice nostro, adattato per todo-list? E togliamo
-react-native-draggable-flatlist ... la sfruttiamo per il re-order delle categorie". The categories' Organize page used an
-edit mode where categories were numbered one tap at a time.  
+**Context:** after ADR-037 the board's drag felt right on the Pixel ("Sembra abbastanza smooth, ottimo"), while lists still used
+`react-native-draggable-flatlist` on phones and `@dnd-kit` on the web and desktop. On a 300-row list the library froze ~83 ms at
+each drop, drew one broken frame at every drop and could leave rows drawn over others (LL-090). The user: "Per la lista allora
+magari sfruttiamo il codice nostro, adattato per todo-list? E togliamo react-native-draggable-flatlist ... la sfruttiamo per il
+re-order delle categorie". The categories' Organize page used an edit mode where categories were numbered one tap at a time.  
 **Decision:**
 
-- **One engine** for boards, todo lists (free mode; steps mode has no handle) and the categories' Organize page, on
-  Android, the web and the desktop: `providers/ReorderProvider.tsx` (the drag's state, the target tracking on the UI
-  thread), `components/reorder/` (`ReorderHandle`, `ReorderSlot`, `ReorderOverlay`, `useReorderContainer`,
-  `useItemSlide`, `scrollViews`) and the geometry in `libs/reorderDrop.ts` (`findDrop`, `withoutItem`, `slotInItems`,
-  `isOwnPlace`, `toMoveIndex`, `edgeStep`, `moveById`, `stepIndex`; `scripts/reorder-drop.test.mjs`). A board is N
-  containers, a list or the categories one. The caller draws the lifted copy and applies a drop to its own data
-  (`moveCard`, `useTodoList.moveItemTo` → `moveById`, `moveCategory`). Everything ADR-037 decided holds: measured at lift,
-  a slot inside an item, no child moves during a drag, the drop in `LIFT.dropMs` committed with the end of the preview.
-- **A slot is a place among the container's items as they are now.** A long list's rows far from the screen aren't
-  mounted, so they aren't measured: `slotInItems` turns a slot among the measured items into the place before that item
-  (or after the last measured one) in the data, at every slot change and again at the drop. A row added or deleted
-  meanwhile (another device) moves the slot with its item.
-- **The slot follows the lifted item's top edge**, not the finger (`findDrop`'s `itemTop`): an item gives up its place
-  when that edge passes its middle. The drag starts in the item's own place wherever the finger holds it, and moves a
-  place after half an item; by the finger, a press a pixel below the middle moved the next item at once.
-- **No slide in the commits that lift and drop.** Items slide (160 ms) only while an item is in the air. On phones one
-  custom layout function (`itemLayout`) reads a shared value that the lift and the drop set to 0 before their commits and
-  that comes back two frames after the commit is on screen: no prop changes on 300 rows. The item's box and what it shows
-  inside it slide together (`useItemSlide`): the box sliding alone drew the rows at the two ends of a two-place move
-  jumping. The web has no custom layout transitions: there the box slides by a provider signal (`useReorderSliding`), and
-  at a drop the leftover Reanimated animation names are cleared (`libs/reorderSlides.web.ts`): WebKit (the desktop) played
-  a slide again when the drop moved its element.
-- **Android's touch:** the handle's pan activates after 1 ms (a long-press pan fails once the finger passes the 8 dp slop
-  before the wait, and a finger always does); a mouse after 4 px. The handle claims React Native's touch
-  (`onStartShouldSetResponder`): a touchable around the list took it after the lift and the drag was cancelled. A screen
-  using the engine needs a `GestureHandlerRootView` (the app has none at its root). The list keeps
-  `removeClippedSubviews` off (the lifted row's place was detached during the edge scroll) and scroll views stop scrolling
-  by touch while an item is in the air (the edge scroll does it).
-- **One item in the air:** the first handle to activate owns the pointer (`owner`); a second finger neither lifts its
-  item nor moves the lifted one, and only the owner's release or cancel ends the drag. An item that unmounts while it is
-  in the air (deleted on another device) cancels its drag: its gesture's end never comes.
-- **Without dragging:** every handle offers "move up"/"move down" to screen readers, and on the web and desktop it takes
-  the focus and moves with the arrow keys (`move`), saved like a drop.
+- **One engine** for boards, todo lists (free mode; steps mode has no handle) and the categories' Organize page, on Android, the
+  web and the desktop: `providers/ReorderProvider.tsx` (the drag's state, the target tracking on the UI thread),
+  `components/reorder/` (`ReorderHandle`, `ReorderSlot`, `ReorderOverlay`, `useReorderContainer`, `useItemSlide`, `scrollViews`)
+  and the geometry in `libs/reorderDrop.ts` (`findDrop`, `withoutItem`, `slotInItems`, `isOwnPlace`, `toMoveIndex`, `edgeStep`,
+  `moveById`, `stepIndex`; `scripts/reorder-drop.test.mjs`). A board is N containers, a list or the categories one. The caller
+  draws the lifted copy and applies a drop to its own data (`moveCard`, `useTodoList.moveItemTo` → `moveById`, `moveCategory`).
+  Everything ADR-037 decided holds: measured at lift, a slot inside an item, no child moves during a drag, the drop in
+  `LIFT.dropMs` committed with the end of the preview.
+- **A slot is a place among the container's items as they are now.** A long list's rows far from the screen aren't mounted, so
+  they aren't measured: `slotInItems` turns a slot among the measured items into the place before that item (or after the last
+  measured one) in the data, at every slot change and again at the drop. A row added or deleted meanwhile (another device) moves
+  the slot with its item.
+- **The slot follows the lifted item's top edge**, not the finger (`findDrop`'s `itemTop`): an item gives up its place when that
+  edge passes its middle. The drag starts in the item's own place wherever the finger holds it, and moves a place after half an
+  item; by the finger, a press a pixel below the middle moved the next item at once.
+- **No slide in the commits that lift and drop.** Items slide (160 ms) only while an item is in the air. On phones one custom
+  layout function (`itemLayout`) reads a shared value that the lift and the drop set to 0 before their commits and that comes
+  back two frames after the commit is on screen: no prop changes on 300 rows. The item's box and what it shows inside it slide
+  together (`useItemSlide`): the box sliding alone drew the rows at the two ends of a two-place move jumping. The web has no
+  custom layout transitions: there the box slides by a provider signal (`useReorderSliding`), and at a drop the leftover
+  Reanimated animation names are cleared (`libs/reorderSlides.web.ts`): WebKit (the desktop) played a slide again when the drop
+  moved its element.
+- **Android's touch:** the handle's pan activates after 1 ms (a long-press pan fails once the finger passes the 8 dp slop before
+  the wait, and a finger always does); a mouse after 4 px. The handle claims React Native's touch (`onStartShouldSetResponder`):
+  a touchable around the list took it after the lift and the drag was cancelled. A screen using the engine needs a
+  `GestureHandlerRootView` (the app has none at its root). The list keeps `removeClippedSubviews` off (the lifted row's place
+  was detached during the edge scroll) and scroll views stop scrolling by touch while an item is in the air (the edge scroll
+  does it).
+- **One item in the air:** the first handle to activate owns the pointer (`owner`); a second finger neither lifts its item nor
+  moves the lifted one, and only the owner's release or cancel ends the drag. An item that unmounts while it is in the air
+  (deleted on another device) cancels its drag: its gesture's end never comes.
+- **Without dragging:** every handle offers "move up"/"move down" to screen readers, and on the web and desktop it takes the
+  focus and moves with the arrow keys (`move`), saved like a drop.
 - **Haptics:** at lift, at each slot change, and at a drop that moved something, everywhere.
-- **Categories:** each drop is saved at once (the user: "si sposta subito"); `moveCategory` renumbers every category in
-  the order shown ("All" 0) and queues only those whose `order` changed; equal orders (two devices) sort by icon
-  (`categoryOrder`).
-- **One row for every platform:** `TodoItem.tsx` replaced `TodoItem.native.tsx` and `TodoItem.web.tsx` (the user: "il
-  design della todo-list su desktop è un po' diversa ... rendila identica al mobile"); on the web a row's field is as
-  high as its text, measured after each change.
+- **Categories:** each drop is saved at once (the user: "si sposta subito"); `moveCategory` renumbers every category in the
+  order shown ("All" 0) and queues only those whose `order` changed; equal orders (two devices) sort by icon (`categoryOrder`).
+- **One row for every platform:** `TodoItem.tsx` replaced `TodoItem.native.tsx` and `TodoItem.web.tsx` (the user: "il design
+  della todo-list su desktop è un po' diversa ... rendila identica al mobile"); on the web a row's field is as high as its text,
+  measured after each change.
 - **Gone:** `react-native-draggable-flatlist`, `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`, the
   `InteractionManager` polyfill, `KanbanDragProvider`, `KanbanSlot`, `KanbanDragOverlay`, `libs/kanbanDrop.ts`.
 
 **Alternatives rejected:**
 
-- **Keeping draggable-flatlist with workarounds** (a 5-screen window, a 1-point relayout after each drop): one broken
-  frame stayed at every drop, and the library is unmaintained (it needed a polyfill since RN 0.87).
+- **Keeping draggable-flatlist with workarounds** (a 5-screen window, a 1-point relayout after each drop): one broken frame
+  stayed at every drop, and the library is unmaintained (it needed a polyfill since RN 0.87).
 - **dnd-kit on the web only:** two engines to keep alike, and the phones' problem stays.
 - **Rows moved by transforms:** at the drop the transforms would have to reset in the same frame as React's commit.
 
@@ -1998,5 +1992,33 @@ edit mode where categories were numbered one tap at a time.
 
 - Rows not mounted at lift are no targets until the next drag: a long drag stops at the last mounted row.
 - On the web every row renders twice per drag (the signal): measured on a 300-row list, no frame over 17 ms.
-- `reorderSlides.web.ts` depends on Reanimated's `REA-LAYOUT` animation names: a rename brings the second slide back on
-  the desktop only.
+- `reorderSlides.web.ts` depends on Reanimated's `REA-LAYOUT` animation names: a rename brings the second slide back on the
+  desktop only.
+
+## ADR-039: A Note of a Type This Version Doesn't Know
+
+**Status:** Accepted (2026-11-12), plan 1 of 4.1.0 (spec 5.5)  
+**Context:** a newer version can bring a note type this one has never seen (the whiteboard of 4.2.0), and sync brings it here.
+The note screen rendered nothing for a type it didn't know: a tap on the card opened a blank screen. An agent's tools had no
+editor for it either: an edit crashed on it.  
+**Decision:**
+
+- `utils/noteType.ts` `isKnownNoteType(type)`: `text`, `todo`, `kanban`, `code`, and a missing or empty type (older data, a text
+  note). Anything else is unknown.
+- **What the user sees:** its card in the home shows the title dimmed, "Aggiorna Fast Memo per aprire questa nota"
+  (`note.update_to_open`) in place of the date, an arrow-up in the avatar and an accent left edge. A tap shows the same sentence
+  as a toast and opens nothing; a long press does nothing, and in select mode it can't be ticked. Its address, reached inside
+  the app, goes home with the toast. In the trash the sentence replaces its dates, and there it can still be restored, selected
+  and deleted: none of that changes anything inside it. Deep search finds it by its title only.
+- **What is never done to it:** nothing reads or rewrites its content. The slices, the sync engine, `utils/crypt.ts` and the
+  note store don't look at the type: it is uploaded, downloaded and stored as it came (checked between two web profiles and the
+  local server: every field equal after the round trip, another note's change still synced).
+- **An agent can't reach it:** `isVisibleToAgent` (`libs/mcp/policy.ts`) also requires a known type, so for the local MCP server
+  it doesn't exist: not listed, not found, `NOT_FOUND` to read, edit or flag (`scripts/mcp.test.mjs`).
+- The rules for adding new types across versions (what an older version may do with them) belong to the 4.2.0 plan.
+
+**Trade-offs:**
+
+- A note of a new type is safe on an older device, but unusable there until the app is updated.
+- A web page opened cold at its address lands on the home without the toast (the app starts from the home on a cold load);
+  nothing opens either way.

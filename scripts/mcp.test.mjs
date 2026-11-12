@@ -2246,5 +2246,31 @@ const request = (id, tool = "fastmemo_list_categories", args = {}) => ({
   );
 }
 
+/* ------------------------------------------------------------------------------------------------------------------ */
+/* A note of a type this version can't open                                                                            */
+/* ------------------------------------------------------------------------------------------------------------------ */
+
+console.log("\na note of a type this version can't open");
+
+{
+  const sketch = { ...textNote("wb1", 950), type: "board", text: undefined, title: "Schizzo del salotto" };
+  const notes = [...SEED, sketch];
+  ok("the filter: not visible", !P.isVisibleToAgent(sketch));
+
+  const { read, search } = harness(notes);
+  ok("not in the list", !ids(await search()).includes("wb1"));
+  ok("a search for its title finds nothing", ids(await search("schizzo")).length === 0);
+  ok("reading it: not found", (await read("wb1")).text === NOT_FOUND && (await read("wb1")).isError);
+
+  const { editNow, call, stored } = editor(notes);
+  const before = JSON.stringify(stored("wb1"));
+  ok("editing it: not found", (await editNow("wb1", { title: "x" })).text === NOT_FOUND);
+  ok(
+    "changing its flags: not found",
+    (await call("fastmemo_set_note_flags", { id: "wb1", important: true })).text === NOT_FOUND
+  );
+  ok("...and it is untouched", JSON.stringify(stored("wb1")) === before);
+}
+
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed === 0 ? 0 : 1);

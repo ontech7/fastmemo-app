@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import ArrowUpIcon from "react-native-heroicons/outline/ArrowUpIcon";
 import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
@@ -16,7 +17,9 @@ import { useTourTarget } from "@/hooks/useTourTarget";
 import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
 import { storeUnlockedNote } from "@/libs/registry";
 import { formatDateTime, reverseDate } from "@/utils/date";
+import { isKnownNoteType } from "@/utils/noteType";
 import { isStringEmpty } from "@/utils/string";
+import { toast } from "@/utils/toast";
 
 import { DURATION } from "@/constants/motion";
 import { NOTE_TYPES } from "@/constants/note-types";
@@ -72,7 +75,11 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
   // Another synced device has it open right now.
   const openElsewhere = useNoteOpenElsewhere(id);
 
+  // A note of a type this version can't open (spec 5.5): it says so, a tap explains, and it can't be opened or selected.
+  const known = isKnownNoteType(type);
+
   const onLongPressHandler = () => {
+    if (!known) return;
     if (!isDeleteMode) {
       selectNote(id, locked);
     }
@@ -81,6 +88,10 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
   };
 
   const onPressHandler = () => {
+    if (!known) {
+      if (!isDeleteMode) toast(t("note.update_to_open"));
+      return;
+    }
     if (isDeleteMode) {
       selectNote(id, locked);
       return;
@@ -102,8 +113,8 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
     }, "none");
   };
 
-  const isImportant = !!important;
-  const accent = getCardAccent(type, isImportant);
+  const isImportant = !!important && known;
+  const accent = known ? getCardAccent(type, isImportant) : COLOR.accent;
   const fg = isImportant ? COLOR.softWhite : COLOR.darkBlue;
   const chipBg = isImportant ? "rgba(255, 255, 255, 0.18)" : "rgba(2, 14, 53, 0.09)";
   const hasStatus = important || readOnly || locked || hidden || local;
@@ -129,10 +140,14 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
       ]}
       onPress={onPressHandler}
       onLongPress={onLongPressHandler}
-      accessibilityRole={isDeleteMode ? "checkbox" : "button"}
-      aria-checked={isDeleteMode ? isSelected : undefined}
+      accessibilityRole={isDeleteMode && known ? "checkbox" : "button"}
+      aria-checked={isDeleteMode && known ? isSelected : undefined}
     >
-      {isDeleteMode ? (
+      {!known ? (
+        <View style={[styles.avatar, styles.avatarUpdate]}>
+          <ArrowUpIcon size={20} color={COLOR.accentDeep} />
+        </View>
+      ) : isDeleteMode ? (
         <View
           style={[
             styles.deleteCheckbox,
@@ -162,7 +177,7 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
             </View>
           )}
 
-          <Text style={[styles.title, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.title, { color: fg }, !known && styles.titleUnknown]} numberOfLines={1} ellipsizeMode="tail">
             {isStringEmpty(title) ? t("empty_title") : title}
           </Text>
 
@@ -177,10 +192,16 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
           )}
         </View>
 
-        <Text style={[styles.date, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
-          {metaLabel}
-          <Text style={styles.dateValue}>{metaDate}</Text>
-        </Text>
+        {known ? (
+          <Text style={[styles.date, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
+            {metaLabel}
+            <Text style={styles.dateValue}>{metaDate}</Text>
+          </Text>
+        ) : (
+          <Text style={styles.updateToOpen} numberOfLines={2}>
+            {t("note.update_to_open")}
+          </Text>
+        )}
 
         {!!openElsewhere && (
           <View style={styles.presenceRow}>
@@ -264,6 +285,10 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   dateValue: { fontFamily: FONT.semiBold },
+  // A note this version can't open: dimmed title, the sentence in the accent, an arrow-up in an accent-tinted avatar.
+  titleUnknown: { opacity: 0.55 },
+  updateToOpen: { fontSize: FONTSIZE.small, fontFamily: FONT.medium, color: COLOR.accentDeep },
+  avatarUpdate: { backgroundColor: COLOR.accentFaint },
   presenceRow: { flexDirection: "row", alignItems: "center", gap: PADDING_MARGIN.xs + 1 },
   presence: { flexShrink: 1, fontSize: FONTSIZE.small, fontFamily: FONT.medium, opacity: 0.75 },
 });

@@ -219,6 +219,7 @@ src/
     sort.ts            # Sort comparators for Timestamped/Ordered items; importantFirst (LL-080)
     noteSearch.ts      # matchesDeepSearch: title, text, list items, board columns and cards, code tabs (LL-081)
     noteEmpty.ts       # isTodoNoteEmpty / isKanbanNoteEmpty: no title and nothing typed (empty rows/cards count as none)
+    noteType.ts        # isKnownNoteType: the types this version opens; any other is shown as "update to open" (ADR-039)
     imageSize.ts       # resizeFor, PHOTO_LONG_SIDE, PHOTO_QUALITY: the size a picture is reduced to (pure)
     string.ts          # String validation, formatting, size computation
     date.ts            # Date formatting with locale awareness

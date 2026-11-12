@@ -20,6 +20,7 @@ await build({
       export * from "@/utils/noteSearch";
       export * from "@/libs/quickNoteDraft";
       export * from "@/utils/noteEmpty";
+      export * from "@/utils/noteType";
     `,
     resolveDir: src,
     loader: "ts",
@@ -175,6 +176,13 @@ console.log("\na note left empty (not kept when its editor closes)");
   ok("board: no title, three empty cards", isKanbanNoteEmpty(board("", [["", ""], [""]])));
   ok("board: no title, one card typed", !isKanbanNoteEmpty(board("", [["", "uno"], []])));
   ok("board: a title, empty cards", !isKanbanNoteEmpty(board("Lavori", [[""]])));
+}
+
+console.log("\nisKnownNoteType");
+{
+  const { isKnownNoteType } = M;
+  ok("the four types and a missing one are known", ["text", "todo", "kanban", "code", undefined, ""].every(isKnownNoteType));
+  ok("anything else is not", !isKnownNoteType("board") && !isKnownNoteType(null) && !isKnownNoteType(7));
 }
 
 void storage;

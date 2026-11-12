@@ -11,13 +11,17 @@ import { getNote } from "@/slicers/notesSlice";
 import type { CodeNote, KanbanNote, TextNote, TodoNote } from "@/types";
 import type { NoteType } from "@/types/note";
 import { formatDateTime } from "@/utils/date";
+import { isKnownNoteType } from "@/utils/noteType";
+import { toast } from "@/utils/toast";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import uuid from "react-uuid";
 
 export default function NoteScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const { noteId } = useLocalSearchParams<{ noteId: string }>();
   const currentNote = useSelector(getNote(noteId));
@@ -91,6 +95,15 @@ export default function NoteScreen() {
     }
   }, [noteId, note, router]);
 
+  // A note of a type this version can't open (spec 5.5), reached by its address: home, saying why. Nothing is rendered
+  // and nothing in it is touched.
+  const unknownType = !!note && !isKnownNoteType(note.type);
+  useEffect(() => {
+    if (!unknownType) return;
+    toast(t("note.update_to_open"));
+    router.replace("/home");
+  }, [unknownType, noteId, router, t]);
+
   /*
    * A protected note asks for the secret code however its screen was reached (LL-085): a card that just asked for it
    * leaves a pass (`consumeUnlockedNote`), anything else (a link, a shortcut) asks here. Decided when the note is first
@@ -113,7 +126,7 @@ export default function NoteScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (passed || unlockedIdRef.current === noteId) return;
+      if (unknownType || passed || unlockedIdRef.current === noteId) return;
       if (askedIdRef.current !== noteId) {
         askedIdRef.current = noteId;
         unlockWithSecretRef.current(
@@ -127,7 +140,7 @@ export default function NoteScreen() {
         return;
       }
       routerRef.current.replace("/home");
-    }, [noteId, passed])
+    }, [noteId, passed, unknownType])
   );
 
   // The trail of an error (ADR-035): which kind of note was opened, never which one.
@@ -136,7 +149,7 @@ export default function NoteScreen() {
     if (openedType) addTrail("note.open", { type: openedType });
   }, [noteId, openedType]);
 
-  if (!note || !(passed || unlockedId === noteId)) {
+  if (!note || unknownType || !(passed || unlockedId === noteId)) {
     return null;
   }
 

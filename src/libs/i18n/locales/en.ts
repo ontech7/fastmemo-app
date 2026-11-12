@@ -211,6 +211,7 @@ const en = {
     },
   },
   note: {
+    update_to_open: "Update Fast Memo to open this note",
     title_placeholder: "Title",
     description_placeholder: "Write something here...",
     no_items: "There are no items.\nAdd one by pressing the bottom right button.",

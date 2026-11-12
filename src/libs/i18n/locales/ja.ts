@@ -211,6 +211,7 @@ const ja = {
     },
   },
   note: {
+    update_to_open: "このノートを開くには Fast Memo を更新してください",
     title_placeholder: "タイトル",
     description_placeholder: "ここに何かを書いてください...",
     no_items: "アイテムはありません。\n右下のボタンを押して1つ追加してください。",

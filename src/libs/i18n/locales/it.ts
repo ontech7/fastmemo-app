@@ -212,6 +212,7 @@ const it = {
     },
   },
   note: {
+    update_to_open: "Aggiorna Fast Memo per aprire questa nota",
     title_placeholder: "Titolo",
     description_placeholder: "Scrivi qualcosa qui…",
     no_items: "Non sono presenti elementi.\nAggiungine uno premendo il tasto in basso a destra.",

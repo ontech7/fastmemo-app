@@ -211,6 +211,7 @@ const fr = {
     },
   },
   note: {
+    update_to_open: "Mettez à jour Fast Memo pour ouvrir cette note",
     title_placeholder: "Titre",
     description_placeholder: "Écrivez quelque chose ici...",
     no_items: "Il n'y a aucun élément.\nAjoutez-en un en appuyant sur le bouton en bas à droite.",

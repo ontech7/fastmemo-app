@@ -210,6 +210,7 @@ const zh = {
     },
   },
   note: {
+    update_to_open: "更新 Fast Memo 以打开此笔记",
     title_placeholder: "标题",
     description_placeholder: "在这里写点东西...",
     no_items: "没有项目。\n按右下角的按钮添加一个。",
