@@ -2,7 +2,7 @@ import { DURATION, EASING } from "@/constants/motion";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import Haptics from "@/libs/haptics";
-import { loadQuickNoteDraft, saveQuickNoteDraft } from "@/libs/quickNoteDraft";
+import { loadQuickNoteDraft, onQuickNoteDraftCleared, saveQuickNoteDraft } from "@/libs/quickNoteDraft";
 import { registerPendingFlush } from "@/libs/registry";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import { addNote } from "@/slicers/notesSlice";
@@ -118,6 +118,16 @@ export default function QuickNoteBar({ onHeightChange, hidden = false }: Props) 
       active = false;
     };
   }, []);
+
+  // "Wipe data" takes the unsent text too: the bar empties (the draft on the device is removed by the wipe).
+  useEffect(
+    () =>
+      onQuickNoteDraftCleared(() => {
+        textRef.current = "";
+        setText("");
+      }),
+    []
+  );
 
   // Kept when the app goes to the background or the page hides, and when the bar goes away; not at every keystroke.
   useEffect(() => {

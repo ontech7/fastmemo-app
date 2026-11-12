@@ -16,6 +16,22 @@ export async function loadQuickNoteDraft(): Promise<string> {
   }
 }
 
+const clearedListeners = new Set<() => void>();
+
+/** The bar listens: when the data is wiped, its text goes too. Returns the unsubscribe. */
+export function onQuickNoteDraftCleared(listener: () => void): () => void {
+  clearedListeners.add(listener);
+  return () => {
+    clearedListeners.delete(listener);
+  };
+}
+
+/** "Wipe data": the draft is removed from the device and the bar showing it empties. Never rejects. */
+export async function clearQuickNoteDraft(): Promise<void> {
+  clearedListeners.forEach((listener) => listener());
+  await saveQuickNoteDraft("");
+}
+
 /** Keeps `text` as the draft; a blank text removes it. Never rejects. */
 export async function saveQuickNoteDraft(text: string): Promise<void> {
   try {

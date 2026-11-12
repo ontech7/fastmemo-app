@@ -3,6 +3,7 @@ import { createAction, createAsyncThunk } from "@reduxjs/toolkit";
 import type { AppRootState } from "@/slicers/store";
 
 import { cloud } from "@/libs/cloud";
+import { clearQuickNoteDraft } from "@/libs/quickNoteDraft";
 import { noteStore } from "@/libs/storage/notes";
 
 /**
@@ -24,6 +25,8 @@ export const wipeNotesThunk = createAsyncThunk<void, { wipeCloud: boolean }, { s
   "notes/wipeNotesThunk",
   async ({ wipeCloud }, { dispatch }) => {
     dispatch(wipeNotes());
+    // The quick note bar's unsent text is data too: wiped with the notes.
+    await clearQuickNoteDraft();
     await noteStore?.removeCopies();
 
     if (wipeCloud) {

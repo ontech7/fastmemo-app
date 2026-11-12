@@ -155,6 +155,19 @@ console.log("\nthe quick note bar's draft");
   ok("a failed read is an empty draft, not an error", (await loadQuickNoteDraft()) === "");
   storage.__reset();
 }
+{
+  // Wiping the data clears the draft too, and the bar showing it (review).
+  const { saveQuickNoteDraft, clearQuickNoteDraft, onQuickNoteDraftCleared } = M;
+  storage.__reset();
+  await saveQuickNoteDraft("una bozza da cancellare");
+  let heard = 0;
+  const off = onQuickNoteDraftCleared?.(() => heard++);
+  await clearQuickNoteDraft?.();
+  ok("cleared: gone from the device, and the bar is told", storage.get("@quickNoteDraft") === undefined && heard === 1);
+  off?.();
+  await clearQuickNoteDraft?.();
+  ok("...a bar that went away isn't", heard === 1);
+}
 
 console.log("\na note left empty (not kept when its editor closes)");
 {
