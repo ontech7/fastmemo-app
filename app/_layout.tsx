@@ -1,8 +1,6 @@
 // Must be first: installs global.crypto.getRandomValues (secure RNG) so crypto-js
 // can generate IVs/salts on native (Hermes), where there is no WebCrypto global.
 import "react-native-get-random-values";
-// Before anything renders a draggable list: re-provides InteractionManager (removed in RN 0.87).
-import "@/libs/polyfills/interactionManager";
 
 import "@/styles/global.css";
 
