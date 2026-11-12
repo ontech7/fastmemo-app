@@ -894,7 +894,7 @@ What an error and a report carry is decided in ADR-035; the code is `src/libs/di
 | Constants          | UPPER_SNAKE_CASE               | `COLOR`, `FONTSIZE`, `PADDING_MARGIN`                |
 | i18n keys          | snake_case                     | `title_placeholder`, `no_items`                      |
 | Screen functions   | PascalCase + `Screen` suffix   | `HomeScreen`, `GeneralSettingsScreen`                |
-| Provider functions | PascalCase + `Provider` suffix | `KanbanDragProvider`                                 |
+| Provider functions | PascalCase + `Provider` suffix | `ReorderProvider`                                    |
 
 ---
 
@@ -929,6 +929,7 @@ What an error and a report carry is decided in ADR-035; the code is `src/libs/di
 | 23  | Never pass object literals as `FlashList` / `FlatList` `extraData`                        | Use primitives or stable memoized objects; inline literals defeat row memoization (see LL-019)                                        |
 | 24  | Never subscribe imperative event listeners with unstable callback deps                    | Use a ref for the callback and subscribe once with `[]` deps (see LL-020)                                                             |
 | 25  | Never let an errored/empty cloud read drive a destructive write                           | Reads are tri-state (present/absent/error); skip-and-keep-local on doubt, a missed sync self-heals (see LL-023)                       |
+| 26  | Always reorder by drag through `ReorderProvider` and its components                       | Never a drag library: one engine for boards, lists, categories (ADR-038, LL-090)                                                      |
 | 26  | Never trust a decrypt that didn't throw                                                   | AES-CBC yields valid-looking garbage on the wrong key; verify the `CONTENT_MAGIC` marker before using output (see LL-024)             |
 | 27  | Never read authoritative cross-device state with cache-eligible `getDoc`/`getDocs`        | Use `getDocFromServer`/`getDocsFromServer`; the Firestore cache serves stale data and survives restarts (see LL-027)                  |
 | 28  | Never import icons from the `react-native-heroicons` barrels                              | Each barrel evaluates ~300 icons at startup; use deep imports (see LL-034)                                                            |

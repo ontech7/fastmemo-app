@@ -163,7 +163,7 @@ src/
   hooks/        -> Custom hooks (useCloudSync, useLiveNote, useTodoList, useRouter, useSecret, useNetInfo (.web: libs/netStatus), useCloudStatus, useVaultUnlocked, useVaultPrompt, useVaultProgress)
   libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), diagnostics/ (Sentry, the installation code, the report payload: ADR-035), haptics/, i18n/, mcp/ (local MCP server, page side), storage/, registry, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, netStatus, desktopCommands, desktopMenu, codeEditorPage, pageErrors, kanbanOps, quickNoteDraft, reducePhoto, reloadApp)
   utils/        -> Pure utility functions (sort, noteSearch, noteEmpty, imageSize, string, date, crypt, vault, secureRandom, ui, toast, webhook, export, platform, openUrl)
-  providers/    -> React context providers (KanbanDragProvider, SyncOnProvider, DiagnosticsProvider, AppUpdateProvider)
+  providers/    -> React context providers (ReorderProvider, SyncOnProvider, DiagnosticsProvider, AppUpdateProvider)
   constants/    -> Static constants (styles, icons, code-languages, note-types)
   configs/      -> App configuration (environment, defaults, business rules)
 src-tauri/      -> Desktop shell (Rust): window, menu, tray.rs, net.rs; src/mcp/: local MCP server (bridge, socket, protocol, tools, switches; ADR-032);

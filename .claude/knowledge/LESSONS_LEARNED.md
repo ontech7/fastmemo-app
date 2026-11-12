@@ -2385,6 +2385,29 @@ the desktop work of plan 2 (it touches `src-tauri`, which this plan doesn't).
 
 ---
 
+### LL-090: The list's drag library broke a frame at every drop on the New Architecture
+
+**Date:** 2026-11-12  
+**Severity:** Medium (a visible glitch at every drop on phones; rows left drawn over others)  
+**Category:** Performance / Bug (Android)  
+**What happened:** on a Pixel 10 Pro with a 300-row list, `react-native-draggable-flatlist` froze ~83 ms at each drop
+(every mounted row ran the library's per-frame worklet and re-attached it at lift and drop; 12.8% janky frames), drew
+one frame with rows shifted by a place at every drop, and a row never laid out again kept its drag offset: the user found
+a list with a row drawn over another. Two workarounds shipped on the branch (`d5a1470`: a 5-screen window and a clamped
+spring, 3.5% janky; `68ebc1f`: every row moved a point after each drop to force a layout); the broken frame stayed.  
+**Root cause:** the library holds each row's offset until the row's next `onLayout`, which on the New Architecture comes a
+frame after the new order is drawn, or never for a row whose place didn't change. It is unmaintained (it needed an
+`InteractionManager` polyfill since RN 0.87).  
+**Fix:** lists use the board's engine (ADR-038): the order changes once, in the commit that ends the drag; nothing moves
+in the tree during it. Measured with the engine: the drop lands in ~120 ms, done ~170 ms after release, no broken frame,
+1.75-2.4% janky frames. The library, its polyfill and dnd-kit were removed; the two workarounds went with them.  
+**Rule:** reorder by drag only through `ReorderProvider` and its components (CONVENTIONS ALWAYS 26), never a drag library.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-12 **Resolved in:** plan-1/fixes-performance-polish (`788d668`, `f9a922a`)
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

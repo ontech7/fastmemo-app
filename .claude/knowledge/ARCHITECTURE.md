@@ -55,14 +55,17 @@ src/
     buttons/           # 26 button components (each a single-purpose TouchableOpacity)
     cards/             # NoteCard, TrashedNoteCard, OrganizeCategoryCard, OrderedCategoryCard
     notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor; NoteImageMenu (ADR-024)
-    kanban/            # KanbanBoard, KanbanColumn, KanbanCard, KanbanDragOverlay, KanbanSlot (where the card in the air lands)
+    kanban/            # KanbanBoard, KanbanColumn, KanbanCard
+    reorder/           # The reorder engine's parts (ADR-038): ReorderHandle (pan, screen reader actions, arrow keys),
+                       #   ReorderSlot (where the item in the air lands), ReorderOverlay (the lifted copy),
+                       #   useReorderContainer (a container's scroll, edge scroll), useItemSlide, scrollViews
     settings/          # Settings UI system (Section, SectionHeader, SectionWrapper, items/)
     vault/             # VaultScaffold (shared chrome for the 6 vault screens) + VaultBackupButton (optional quick export before a risky op)
     dialogs/           # ComplexDialog, ConfirmOrCancelDialog, SecretPassphraseDialog, VaultPromptDialog; KEEP_DIALOG_TOUCHES (spread
                        #   onto a library <Dialog>: a tap on its own content doesn't reach the backdrop and close it, native + web)
     inputs/            # BaseInput, CodeInput, SearchNotesInput
     lists/             # FavoriteCategoryList, OrderedCategoryList, OrganizeCategoryList
-    todo/              # TodoItem.native.tsx, TodoItem.web.tsx
+    todo/              # TodoItem (one row for every platform), TodoList (.web: a ScrollView): a list on the engine
     ai/                # AIEditorActions.tsx (before/after preview: title, category -- ADR-027 --, rewrites), one file for the
                        #   phone and the desktop (centered cards and Esc on desktop, ADR-034)
     icons/             # Custom icon components
@@ -78,7 +81,8 @@ src/
   slicers/             # Redux state management
     store.ts           # Store configuration (nested persist, notes through the note store, legacy fold, typed hooks)
     notesSlice.ts      # Notes state: CRUD, trash, filters, revisions, cloud outbox, sync plans/pushes (29 reducers)
-    categoriesSlice.ts # Categories state: CRUD, reorder, cloud outbox, sync plans/pushes (9 reducers)
+    categoriesSlice.ts # Categories state: CRUD, moveCategory (a drop: renumbers, queues the changed), categoryOrder,
+                       #   cloud outbox, sync plans/pushes (10 reducers)
     settingsSlice.ts   # App settings: language, security, cloud, AI, dev mode (14 reducers)
     thunks/
       notes.ts         # wipeNotes (+ the cloud collection)
@@ -199,8 +203,9 @@ src/
     kanbanOps.ts       # moveCard: returns the board unchanged when the move can't complete (LL-078, scripts/kanban.test.mjs)
     reorderDrop.ts     # Where a dragged item lands (boards: N containers; lists, categories: one), from the rectangles
                        #   measured at lift (without it) and the scroll since: findDrop, withoutItem, isOwnPlace,
-                       #   toMoveIndex, edgeStep (worklets); moveById, stepIndex on one array (ADR-037,
-                       #   scripts/reorder-drop.test.mjs)
+                       #   toMoveIndex, slotInItems, edgeStep (worklets); moveById, stepIndex on one array (ADR-037,
+                       #   ADR-038, scripts/reorder-drop.test.mjs)
+    reorderSlides.ts   # forgetSlides: .web.ts clears Reanimated's leftover layout animations before a drop (WebKit)
     netStatus.ts       # createNetStatus: the web/desktop connection status, one probe timer for the app (LL-082,
                        #   scripts/net-status.test.mjs)
     quickNoteDraft.ts  # The quick note bar's unsent text, kept on the device (@quickNoteDraft, LL-084)
@@ -231,8 +236,9 @@ src/
 
   providers/           # React context providers
     AppUpdateProvider.tsx   # Update check (/api/version): the icon, the desktop installer prompt, the APK's prompt + download
-    KanbanDragProvider.tsx  # The kanban drag (ADR-037): measures at lift; three contexts: a value that never changes (shared
-                            #   values, register/lift/release), the card in the air (board, overlay) and the preview (columns)
+    ReorderProvider.tsx     # The reorder engine (ADR-037, ADR-038): boards, lists, categories; measures at lift; contexts: a
+                            #   value that never changes (shared values, register/lift/release/move, itemLayout), the item in
+                            #   the air, the preview (where the slot is), and the web's sliding signal
     SyncOnProvider.tsx      # Headless: runs the sync engine while connected + unlocked, turns its events into UI
     DiagnosticsProvider.tsx # Headless: Sentry's language and cloud tags, the route trail (as patterns, ADR-035)
 
