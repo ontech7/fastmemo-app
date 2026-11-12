@@ -2,10 +2,11 @@ import { LIFT } from "@/constants/styles";
 import Haptics, { ImpactFeedbackStyle, NotificationFeedbackType } from "@/libs/haptics";
 import { findDrop, isOwnPlace, stepIndex, toMoveIndex, withoutItem } from "@/libs/reorderDrop";
 import type { DropContainer, DropLayout, DropTarget, Rect } from "@/libs/reorderDrop";
+import { forgetSlides } from "@/libs/reorderSlides";
 import { measureInWindow } from "@/libs/tourTargets";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
-import { Keyboard } from "react-native";
+import { Keyboard, Platform } from "react-native";
 import type { ViewInstance } from "react-native";
 import {
   Easing,
@@ -126,6 +127,10 @@ interface Props<T extends ReorderItem> {
 const ReorderContext = createContext<ReorderContextValue | null>(null);
 const ReorderDraggedContext = createContext<ReorderDragged<ReorderItem> | null>(null);
 const ReorderPreviewContext = createContext<ReorderPreview | null>(null);
+const ReorderSlidingContext = createContext(false);
+
+/** The web has no custom layout transitions (`itemLayout`): its items slide by a prop, `useReorderSliding`. */
+const isWeb = Platform.OS === "web";
 
 const sameTarget = (a: DropTarget | null, b: DropTarget | null) => {
   "worklet";
@@ -179,10 +184,15 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
   // The items slide again once the commit that started or ended the drag is on screen (a long list takes more than a
   // frame to render it): two frames after it.
   const inAir = preview !== null;
+  // The web's items slide while an item is in the air, from two frames after the lift until the drop's commit.
+  const [sliding, setSliding] = useState(false);
   useEffect(() => {
     let second = 0;
     const first = requestAnimationFrame(() => {
-      second = requestAnimationFrame(() => slide.set(1));
+      second = requestAnimationFrame(() => {
+        slide.set(1);
+        if (isWeb) setSliding(inAir);
+      });
     });
     return () => {
       cancelAnimationFrame(first);
@@ -424,6 +434,8 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
         if (liftSeq.current !== seq) return;
         // The commit that ends the drag lays the items out where they land: no slide (back after it: below).
         slide.set(0);
+        if (isWeb) setSliding(false);
+        forgetSlides(frameRef.current?.current);
         done();
       };
       if (reducedMotionRef.current) {
@@ -511,6 +523,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       const index = container.items.findIndex((it) => it.id === itemId);
       const toIndex = stepIndex(index, delta, container.items.length);
       if (toIndex === null) return;
+      forgetSlides(frameRef.current?.current);
       onDropRef.current(itemId, containerId, containerId, toIndex);
       Haptics.notificationAsync(NotificationFeedbackType.Success);
     },
@@ -576,7 +589,9 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
   return (
     <ReorderContext.Provider value={value}>
       <ReorderDraggedContext.Provider value={dragged}>
-        <ReorderPreviewContext.Provider value={preview}>{children}</ReorderPreviewContext.Provider>
+        <ReorderPreviewContext.Provider value={preview}>
+          <ReorderSlidingContext.Provider value={sliding}>{children}</ReorderSlidingContext.Provider>
+        </ReorderPreviewContext.Provider>
       </ReorderDraggedContext.Provider>
     </ReorderContext.Provider>
   );
@@ -593,6 +608,14 @@ export function useReorder(): ReorderContextValue {
 /** The item in the air and its container, or null. Changes at lift and drop: read by the overlay and the frame only. */
 export function useReorderDragged<T extends ReorderItem>(): ReorderDragged<T> | null {
   return useContext(ReorderDraggedContext) as ReorderDragged<T> | null;
+}
+
+/**
+ * Whether the items should slide now (web): true while an item is in the air, but not in the commits that lift and drop
+ * it. Always false elsewhere, where `itemLayout` does it without rendering the items.
+ */
+export function useReorderSliding(): boolean {
+  return useContext(ReorderSlidingContext);
 }
 
 /** The order the containers show while an item is in the air, or null. Changes at lift, when the slot moves, at the end. */

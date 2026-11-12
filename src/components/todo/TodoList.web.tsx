@@ -5,7 +5,7 @@ import Animated, { useAnimatedRef } from "react-native-reanimated";
 import ReorderOverlay from "@/components/reorder/ReorderOverlay";
 import ReorderSlot from "@/components/reorder/ReorderSlot";
 import { useReorderContainer } from "@/components/reorder/useReorderContainer";
-import { LIST_CONTAINER, ROW_SLOT_STYLE, TodoItemStatic } from "@/components/todo/TodoItem.web";
+import { LIST_CONTAINER, TodoItemStatic } from "@/components/todo/TodoItem";
 import { PADDING_MARGIN } from "@/constants/styles";
 import ReorderProvider, { useReorder, useReorderPreview } from "@/providers/ReorderProvider";
 
@@ -76,7 +76,7 @@ function TodoListRows({ list, renderRow }: Pick<TodoListProps, "list" | "renderR
         onContentSizeChange={onContentSizeChange}
       >
         {rows}
-        {trailingSlot ? <ReorderSlot height={trailingSlot} style={ROW_SLOT_STYLE} /> : null}
+        {trailingSlot ? <ReorderSlot height={trailingSlot} /> : null}
       </Animated.ScrollView>
       <ReorderOverlay renderLifted={renderLiftedRow} />
     </View>

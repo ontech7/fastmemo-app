@@ -6,7 +6,7 @@ import ReorderOverlay from "@/components/reorder/ReorderOverlay";
 import ReorderSlot from "@/components/reorder/ReorderSlot";
 import { ReorderFlatList } from "@/components/reorder/scrollViews";
 import { useReorderContainer } from "@/components/reorder/useReorderContainer";
-import { LIST_CONTAINER, TodoItemStatic } from "@/components/todo/TodoItem.native";
+import { LIST_CONTAINER, TodoItemStatic } from "@/components/todo/TodoItem";
 import { PADDING_MARGIN } from "@/constants/styles";
 import ReorderProvider, { useReorder, useReorderPreview } from "@/providers/ReorderProvider";
 

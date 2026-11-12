@@ -16,7 +16,7 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } fr
 
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
-import TodoItem from "@/components/todo/TodoItem.web";
+import TodoItem from "@/components/todo/TodoItem";
 import TodoList, { type RowDrag } from "@/components/todo/TodoList";
 
 import type { TodoItem as TodoItemType, TodoNote } from "@/types";
@@ -129,7 +129,6 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           maxWidth: 800,
           width: SIZE.full,
           marginHorizontal: "auto",
-          paddingVertical: PADDING_MARGIN.lg,
         }}
       >
         {note.list.length > 0 ? (

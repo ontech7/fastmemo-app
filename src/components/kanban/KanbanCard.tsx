@@ -16,7 +16,7 @@ import Animated from "react-native-reanimated";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import ReorderHandle from "@/components/reorder/ReorderHandle";
 import ReorderSlot, { ITEM_LAYOUT } from "@/components/reorder/ReorderSlot";
-import { useReorder } from "@/providers/ReorderProvider";
+import { useReorder, useReorderSliding } from "@/providers/ReorderProvider";
 
 import type { KanbanItem } from "@/types";
 
@@ -64,8 +64,9 @@ function KanbanCard({
   const { registerItem, itemLayout } = useReorder();
   // While a card is in the air (never in the commits that lift and drop it): the card's box slides, and the card inside
   // it, so the slot moving several places slides every card between as one (see TodoItem). The web has no custom
-  // layout transitions: there the box slides alone, from the lift.
-  const boxLayout = animateLayout ? (isWeb ? ITEM_LAYOUT : itemLayout) : undefined;
+  // layout transitions: there the box slides alone, while the provider says so.
+  const sliding = useReorderSliding();
+  const boxLayout = isWeb ? (sliding ? ITEM_LAYOUT : undefined) : animateLayout ? itemLayout : undefined;
   const cardLayout = animateLayout && !isWeb ? itemLayout : undefined;
 
   // Measured by the engine at lift only.

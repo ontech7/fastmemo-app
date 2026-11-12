@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, type RefObject } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Platform,
@@ -8,6 +8,7 @@ import {
   type TextInputInstance,
   TouchableOpacity,
   View,
+  type TextInputContentSizeChangeEvent,
   type ViewInstance,
 } from "react-native";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
@@ -25,8 +26,8 @@ import Animated, {
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 import ReorderHandle from "@/components/reorder/ReorderHandle";
-import ReorderSlot from "@/components/reorder/ReorderSlot";
-import { useReorder } from "@/providers/ReorderProvider";
+import ReorderSlot, { ITEM_LAYOUT } from "@/components/reorder/ReorderSlot";
+import { useReorder, useReorderSliding } from "@/providers/ReorderProvider";
 
 import DragIcon from "@/components/icons/DragIcon";
 
@@ -65,8 +66,13 @@ interface Props {
 /** The list's only container in the reorder engine. */
 export const LIST_CONTAINER = "list";
 
+/** One row for phones, the web and desktop: the same look everywhere. */
+const isWeb = Platform.OS === "web";
+
 const STEP_COLUMN_WIDTH = 50;
 const STEP_CIRCLE_SIZE = 34;
+/** A text field's line on the web, where the field is as high as its lines (it doesn't grow by itself there). */
+const WEB_LINE = Math.round(FONTSIZE.inputTitle * 1.35);
 
 // One instance of each animation for every row (a builder made per render is a new prop each time).
 const ROW_LAYOUT = LinearTransition.springify().damping(18).stiffness(180);
@@ -111,6 +117,18 @@ function TodoItem({
 
   // Measured by the reorder engine at lift only (free mode: steps have no handle).
   const { registerItem, itemLayout } = useReorder();
+  // The web has no custom layout transitions: there the box slides alone, while a row is in the air (not in the lift's
+  // and the drop's commits), and the row inside it doesn't.
+  const sliding = useReorderSliding();
+  const boxLayout = isWeb ? (sliding ? ITEM_LAYOUT : undefined) : animationsReady ? itemLayout : undefined;
+  const rowSlide = !isWeb && animationsReady ? itemLayout : undefined;
+  // A multiline field grows with its text by itself on phones; on the web it is as high as its content says.
+  const [webHeight, setWebHeight] = useState<number>();
+  const onWebContentSize = useCallback(
+    (event: TextInputContentSizeChangeEvent) => setWebHeight(event.nativeEvent.contentSize.height),
+    []
+  );
+  const webHeightStyle = webHeight !== undefined ? { height: webHeight } : undefined;
   const rowRef = useRef<ViewInstance>(null);
   useEffect(() => (stepMode ? undefined : registerItem(LIST_CONTAINER, item.id, rowRef)), [registerItem, item.id, stepMode]);
 
@@ -141,7 +159,7 @@ function TodoItem({
       <Animated.View
         // The engine's slide (the slot opening, a place closing; none at the lift and the drop) is the row's own: one
         // transition that never changes, so a drag renders only the rows whose place or slot changes.
-        layout={animationsReady ? itemLayout : undefined}
+        layout={boxLayout}
         entering={rowEntering}
         exiting={rowExiting}
         style={folded && styles.folded}
@@ -150,7 +168,7 @@ function TodoItem({
         {/* The row slides inside its box too: the slot opening above it or closing moves the row in the box while the
             box itself slides, and only the two together keep each row where it should be at every frame (a slot two
             places away drew the rows at the two ends jumping and the ones between sliding). */}
-        <Animated.View ref={rowRef} layout={animationsReady ? itemLayout : undefined} style={styles.row}>
+        <Animated.View ref={rowRef} layout={rowSlide} style={styles.row}>
           <View style={[styles.inner, item.checked && styles.innerChecked]}>
             <TouchableOpacity
               activeOpacity={0.7}
@@ -172,9 +190,17 @@ function TodoItem({
 
             <TextInput
               ref={inputRef}
-              style={[styles.listItemInputFree, item.checked && styles.listItemInputChecked]}
+              style={[
+                styles.listItemInputFree,
+                isWeb && styles.webInputFree,
+                item.checked && styles.listItemInputChecked,
+                isWeb && webHeightStyle,
+              ]}
               textAlignVertical="center"
               multiline
+              numberOfLines={isWeb ? 1 : undefined}
+              scrollEnabled={!isWeb}
+              onContentSizeChange={isWeb ? onWebContentSize : undefined}
               onChangeText={(value) => setText(item.id, value)}
               value={item.text}
               editable={!disabled}
@@ -245,9 +271,18 @@ function TodoItem({
       <View style={styles.stepTextWrap}>
         <TextInput
           ref={inputRef}
-          style={[styles.stepTextInput, item.checked && styles.stepTextDone, isFuture && styles.stepTextFuture]}
+          style={[
+            styles.stepTextInput,
+            item.checked && styles.stepTextDone,
+            isFuture && styles.stepTextFuture,
+            isWeb && styles.webStepText,
+            isWeb && webHeightStyle,
+          ]}
           textAlignVertical="center"
           multiline
+          numberOfLines={isWeb ? 1 : undefined}
+          scrollEnabled={!isWeb}
+          onContentSizeChange={isWeb ? onWebContentSize : undefined}
           onChangeText={(value) => setText(item.id, value)}
           value={item.text}
           editable={!disabled}
@@ -371,6 +406,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: GLASS.border,
   },
+  // The web can't centre a text field's text: one line of WEB_LINE between paddings fills the row's 48 as on phones.
+  webInputFree: {
+    lineHeight: WEB_LINE,
+    paddingTop: (48 - WEB_LINE) / 2,
+    paddingBottom: (48 - WEB_LINE) / 2,
+  },
   checkboxFree: {
     backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
@@ -474,6 +515,11 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.inputTitle,
     fontFamily: FONT.semiBold,
     color: COLOR.textPrimary,
+  },
+  webStepText: {
+    lineHeight: WEB_LINE,
+    paddingTop: (38 - WEB_LINE) / 2,
+    paddingBottom: (38 - WEB_LINE) / 2,
   },
   stepTextDone: {
     color: COLOR.textMuted,

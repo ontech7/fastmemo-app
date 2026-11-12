@@ -24,7 +24,7 @@ import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton"
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import SafeAreaView from "@/components/SafeAreaView";
-import TodoItem from "@/components/todo/TodoItem.native";
+import TodoItem from "@/components/todo/TodoItem";
 import TodoList, { type RowDrag } from "@/components/todo/TodoList";
 import AppBackground from "@/components/ui/AppBackground";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
