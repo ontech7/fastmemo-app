@@ -2434,6 +2434,29 @@ font_scale 2.0`, `wm density 560` on the emulator).
 
 ---
 
+### LL-092: An error's own text reached Sentry unscrubbed
+
+**Date:** 2026-11-12  
+**Severity:** Medium (a Firebase project id, or a proxy's page text in front of a self-hosted server, could reach Sentry)  
+**Category:** Bug / Privacy  
+**What happened:** the final review of plan 1 found that `scrubEvent` rewrote the event's address and user only.
+`reportHandled` passes the raw error to Sentry, and some texts carry what must not leave the device: Firestore's "The
+database (default) does not exist for project <id> … ?project=<id>", a `ServerError` holding up to 200 characters of a
+non-JSON answer. Two more paths: on the web the `Referer` header (after the crash screen's restart, the crashed note's
+address) and an unreachable self-hosted server reported as an error, because the backend's `NoAnswerError` /
+`TimeoutError` had no `name` and the desktop's and Safari's texts ("Connection refused", "Load failed") matched nothing.  
+**Root cause:** the allow-list covered breadcrumbs and addresses; an error's message was treated as code, not data.  
+**Fix:** `scrubText` turns any address into `<url>`, a project id into `<project>` and the server's host into `<server>`,
+applied by `scrubEvent` to every exception value and the message; `Referer` is dropped; the backend's no-answer errors
+are named, and the transient patterns cover the platforms' texts. A report with pictures waits 60 s, not 10.  
+**Rule:** an error's text is data: everything that reaches Sentry goes through `scrubEvent`; test new scrubbing with the
+real error objects the backends throw.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-12 **Resolved in:** plan-1/fixes-performance-polish
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

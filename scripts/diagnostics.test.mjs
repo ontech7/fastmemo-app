@@ -289,5 +289,57 @@ ok(
     !isTransientNetworkError(undefined)
 );
 
+console.log("\nwhat reaches Sentry: an error's own text (review)");
+{
+  // Firestore's text when the project's database doesn't exist names the project twice.
+  const e = scrubEvent(
+    {
+      exception: {
+        values: [
+          {
+            type: "FirebaseError",
+            value:
+              "The database (default) does not exist for project fm-test-123 Please visit https://console.cloud.google.com/datastore/setup?project=fm-test-123 to add a Cloud Datastore or Cloud Firestore database.",
+          },
+        ],
+      },
+      message: "GET /v1/vault failed at https://notes.example.com/v1/vault (notes.example.com)",
+    },
+    ctx
+  );
+  const v = e.exception.values[0].value;
+  ok(
+    "an error's text loses its project id and its addresses",
+    !v.includes("fm-test-123") && !v.includes("console.cloud.google.com")
+  );
+  ok("...and keeps what it says", v.includes("does not exist"));
+  ok("the event's message loses the server's address and host", !e.message.includes("notes.example.com"));
+}
+{
+  const e = scrubEvent({
+    request: { url: "http://localhost/home", headers: { Referer: "http://localhost/notes/abc", "User-Agent": "UA" } },
+  });
+  ok("the page it came from (Referer) is not sent", e.request.headers.Referer === undefined);
+  ok("...the browser's name is", e.request.headers["User-Agent"] === "UA");
+}
+ok(
+  "a server that gives no answer is transient, whatever the platform says",
+  isTransientNetworkError(Object.assign(new Error("GET /v1/vault: x"), { name: "NoAnswerError" })) &&
+    isTransientNetworkError(new Error("GET /v1/vault: no answer in time")) &&
+    isTransientNetworkError(new TypeError("Load failed")) &&
+    isTransientNetworkError(
+      new Error("error sending request: client error (Connect): tcp connect error: Connection refused (os error 61)")
+    ) &&
+    isTransientNetworkError(new Error("dns error: failed to lookup address information"))
+);
+{
+  const { reportTimeoutMs } = M;
+  ok("a report without pictures waits 10 s", reportTimeoutMs?.(p) === 10_000);
+  ok(
+    "...with pictures 60 s (up to 3 MB to upload)",
+    reportTimeoutMs?.({ ...p, attachments: [{ name: "a.jpg", type: "image/jpeg", base64: "x" }] }) === 60_000
+  );
+}
+
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);

@@ -47,6 +47,7 @@ await build({
       export { SyncEngine } from "@/libs/cloud/syncEngine";
       export { ServerBackend } from "@/libs/cloud/serverBackend";
       export { CloudRouter } from "@/libs/cloud/router";
+      export { isTransientNetworkError } from "@/libs/diagnostics/scrub";
       export { cloudScope, isLoopbackUrl, isPlainHttp, isTailscaleUrl, normalizeServerUrl } from "@/libs/cloud/scope";
     `,
     resolveDir: src,
@@ -293,6 +294,13 @@ try {
     const started = Date.now();
     ok("verify: nothing listening fails, quickly", !(await closed.verify()) && Date.now() - started < 6000);
     ok("the devices, nothing listening: unreachable", (await closed.listDevices()) === "unreachable");
+    {
+      const read = await closed.readVault();
+      ok(
+        "nothing listening: the vault read's error is transient (not reported to Sentry)",
+        read.status === "error" && M.isTransientNetworkError(read.error)
+      );
+    }
     ok(
       "the devices, a wrong key: an error (the server answered)",
       (await makeBackend(server.url, "wrong-key-wrong-key-123").backend.listDevices()) === "error"

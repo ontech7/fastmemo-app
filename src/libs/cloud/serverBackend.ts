@@ -81,10 +81,15 @@ class ServerError extends Error {
 }
 
 /** The server gave no answer: the request didn't get through (server off, no network or VPN), or no answer in time. */
-class NoAnswerError extends Error {}
+class NoAnswerError extends Error {
+  // Named, so that diagnostics see an unreachable server as transient whatever the platform's own text says.
+  name = "NoAnswerError";
+}
 
 /** No answer in time: the link may be slow rather than down. */
-class TimeoutError extends NoAnswerError {}
+class TimeoutError extends NoAnswerError {
+  name = "TimeoutError";
+}
 
 /** A proxy's answer that the server behind it didn't (down, or not in time): 502-504, and Cloudflare's 52x and 530. */
 const GATEWAY_FAILURES = new Set([502, 503, 504, 521, 522, 523, 524, 530]);

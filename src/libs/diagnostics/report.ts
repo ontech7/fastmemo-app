@@ -168,6 +168,14 @@ export function attachmentsFit(attachments: ReportAttachment[]): boolean {
 }
 
 /** Posts a report. `ok` only when the answer is JSON with `success: true`. Never throws. */
+/**
+ * How long a send waits for the website's answer: 10 s, or 60 s when pictures ride along (up to 3 MB to upload on a
+ * phone's uplink, then the website mails it).
+ */
+export function reportTimeoutMs(payload: ReportPayload): number {
+  return payload.attachments?.length ? 60_000 : 10_000;
+}
+
 export async function sendReport(
   payload: ReportPayload,
   apiUrl: string,
@@ -175,7 +183,7 @@ export async function sendReport(
 ): Promise<{ ok: boolean; error?: unknown }> {
   const doFetch = options.fetch ?? fetch;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 10000);
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? reportTimeoutMs(payload));
 
   try {
     const response = await doFetch(`${apiUrl}/report/`, {

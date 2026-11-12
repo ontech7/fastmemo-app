@@ -91,12 +91,50 @@ export function scrubBreadcrumb<T extends { category?: string; data?: Record<str
   return null;
 }
 
-/** The event as it may be sent: its address as a pattern, the user as its id only. */
-export function scrubEvent<T extends { request?: { url?: string }; user?: Record<string, unknown> }>(event: T): T {
+/**
+ * An error's own text as it may be sent: any address becomes `<url>`, a Firebase project id `<project>`, the FastMemo
+ * server's host `<server>`. What the text says stays (Firestore names the project in some of its messages; a proxy's
+ * page in front of a server can carry its address).
+ */
+export function scrubText(text: string, context: ScrubContext = {}): string {
+  let out = text.replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>()]+/gi, "<url>");
+  out = out.replace(/\b(projects?)([ =/:]+)[a-z0-9][a-z0-9-]{2,}/gi, "$1$2<project>");
+  const host = hostOf(context.serverUrl ?? "");
+  if (host) out = out.split(host).join("<server>");
+  return out;
+}
+
+/**
+ * The event as it may be sent: its address as a pattern, no page it came from (`Referer`: on the web, after the crash
+ * screen's restart, the crashed note's address), the errors' texts scrubbed, the user as its id only.
+ */
+export function scrubEvent<
+  T extends {
+    request?: { url?: string; headers?: Record<string, string> };
+    user?: Record<string, unknown>;
+    exception?: { values?: { value?: string }[] };
+    message?: string;
+  },
+>(event: T, context: ScrubContext = {}): T {
   const next = { ...event };
-  if (next.request?.url !== undefined) {
-    next.request = { ...next.request, url: routePattern(next.request.url) };
+  if (next.request) {
+    const request = { ...next.request };
+    if (request.url !== undefined) request.url = routePattern(request.url);
+    if (request.headers) {
+      const { Referer: _referer, referer: _lower, ...headers } = request.headers;
+      request.headers = headers;
+    }
+    next.request = request;
   }
+  if (next.exception?.values) {
+    next.exception = {
+      ...next.exception,
+      values: next.exception.values.map((v) =>
+        typeof v.value === "string" ? { ...v, value: scrubText(v.value, context) } : v
+      ),
+    };
+  }
+  if (typeof next.message === "string") next.message = scrubText(next.message, context);
   if (next.user) {
     next.user = next.user.id !== undefined ? { id: next.user.id } : {};
   }
@@ -104,13 +142,18 @@ export function scrubEvent<T extends { request?: { url?: string }; user?: Record
 }
 
 const TRANSIENT_CODES = new Set(["unavailable", "deadline-exceeded", "firestore/unavailable", "firestore/deadline-exceeded"]);
-const TRANSIENT_MESSAGE = /network|failed to fetch|timed? ?out|offline/i;
+// The texts platforms give a request with no answer: browsers ("Failed to fetch", Safari's "Load failed"), React
+// Native ("Network request failed"), the desktop's Rust client ("Connection refused", "dns error"), the server backend.
+const TRANSIENT_MESSAGE =
+  /network|failed to fetch|load failed|timed? ?out|offline|no answer|connection refused|connect error|dns error|failed to lookup/i;
+/** The server backend's own errors for a request that got no answer (`NoAnswerError`, its `TimeoutError`). */
+const TRANSIENT_NAMES = new Set(["AbortError", "TimeoutError", "NoAnswerError"]);
 
 /** Being offline or a request that timed out: not an error worth reporting (the engine retries). */
 export function isTransientNetworkError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const { name, code, message } = error as { name?: unknown; code?: unknown; message?: unknown };
-  if (name === "AbortError" || name === "TimeoutError") return true;
+  if (typeof name === "string" && TRANSIENT_NAMES.has(name)) return true;
   if (typeof code === "string" && TRANSIENT_CODES.has(code)) return true;
   return typeof message === "string" && TRANSIENT_MESSAGE.test(message);
 }

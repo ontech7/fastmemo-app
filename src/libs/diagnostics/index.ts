@@ -46,7 +46,7 @@ export function initDiagnostics(): void {
     environment: configs.environment,
     sendDefaultPii: false,
     beforeBreadcrumb: (crumb) => scrubBreadcrumb(crumb, scrubContext),
-    beforeSend: (event) => scrubEvent(event),
+    beforeSend: (event) => scrubEvent(event, scrubContext),
   });
 
   Sentry.setTags({ ota: String(OTA_REVISION), platform_kind: getPlatformKind() });
