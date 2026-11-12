@@ -24,7 +24,7 @@ await build({
   logLevel: "error",
   alias: { "@": src },
 });
-const { findDrop, isOwnPlace, moveCard, LINE_INSET, BOARD_SLACK } = await import(pathToFileURL(out).href);
+const { findDrop, isOwnPlace, moveCard, edgeStep, LINE_INSET, BOARD_SLACK } = await import(pathToFileURL(out).href);
 
 let passed = 0;
 let failed = 0;
@@ -173,6 +173,34 @@ ok(
   isOwnPlace(at(100, 225), 0, 0) && isOwnPlace(at(100, 220 + 40 + 2), 0, 0) && !isOwnPlace(at(100, 560), 0, 0)
 );
 ok("another column is never its own place", !isOwnPlace(at(340, 400), 0, 0));
+
+// The edge scroll (KanbanBoard, KanbanColumn): a speed per second, so a 120 Hz screen scrolls as far as a 60 Hz one.
+{
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+  const second = (hz) => {
+    let total = 0;
+    for (let i = 0; i < hz; i++) total += edgeStep(0, 48, 840, 1000 / hz);
+    return total;
+  };
+  ok("edge scroll: a second at the edge moves its speed per second at 60 Hz", near(second(60), 840), second(60));
+  ok("edge scroll: the same distance at 120 Hz", near(second(120), 840), second(120));
+  ok(
+    "edge scroll: nothing at the edge zone's border or beyond",
+    edgeStep(48, 48, 840, 16) === 0 && edgeStep(90, 48, 840, 16) === 0
+  );
+  ok("edge scroll: half speed halfway into the zone", near(edgeStep(24, 48, 1000, 10), 5), edgeStep(24, 48, 1000, 10));
+  ok("edge scroll: past the edge counts as at it", near(edgeStep(-10, 48, 1000, 10), 10), edgeStep(-10, 48, 1000, 10));
+  ok(
+    "edge scroll: a stalled frame moves at most 50 ms worth",
+    near(edgeStep(0, 48, 1000, 400), 50),
+    edgeStep(0, 48, 1000, 400)
+  );
+  ok(
+    "edge scroll: the first frame (no length) counts as one 60 Hz frame",
+    near(edgeStep(0, 48, 600, null), 10) && near(edgeStep(0, 48, 600, undefined), 10),
+    edgeStep(0, 48, 600, null)
+  );
+}
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);

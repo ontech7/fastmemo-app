@@ -1868,9 +1868,12 @@ showed where the card would land.
   expects.
 - **Threads:** the handle's pan gesture (Gesture Handler 3's `usePanGesture`) writes the pointer on the UI thread. One frame
   callback on the board finds the target and scrolls the board near its edges; one per column scrolls it near its top and
-  bottom. JS is called at lift, when the target column changes (a selection haptic) and at the end. The provider has two
-  contexts: one never changes (shared values and stable functions, read by every card and column), and the other holds the card
-  in the air (read by the board and the overlay). A drag renders no card besides the moved one.
+  bottom. Both edge scrolls move by the frame's real length (`edgeStep`, a speed per second: 840 for the board, 600 for
+  a column), never a fixed step per frame: the real Pixel runs at 120 Hz and scrolled twice as fast as the 60 Hz
+  emulator (found 2026-11-12). JS is called at lift, when the target column changes (a selection haptic) and at the end.
+  The provider has two contexts: one never changes (shared values and stable functions, read by every card and
+  column), and the other holds the card in the air (read by the board and the overlay). A drag renders no card besides
+  the moved one.
 - **The line, not the opening gap** (the user's choice): a 3 px accent line with a dot shows the landing place. The other cards
   don't move during the drag. The opening gap the user liked more would re-lay out the column at every slot change and stutter.
 - **The web's pointer rule:** the web build sees every pointer as a mouse, so on the web and the desktop a card lifts after 4 px

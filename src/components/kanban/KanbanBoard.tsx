@@ -3,7 +3,7 @@ import KanbanColumn from "@/components/kanban/KanbanColumn";
 import { configs } from "@/configs";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN, SIZE } from "@/constants/styles";
 import Haptics from "@/libs/haptics";
-import { BOARD_SLACK, findDrop } from "@/libs/kanbanDrop";
+import { BOARD_SLACK, edgeStep, findDrop } from "@/libs/kanbanDrop";
 import type { DropTarget } from "@/libs/kanbanDrop";
 import { useKanbanDrag, useKanbanDragged } from "@/providers/KanbanDragProvider";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
@@ -31,8 +31,8 @@ const isWeb = Platform.OS === "web";
 
 /** Held this close to the board's left or right edge, a card scrolls it sideways. */
 const EDGE = 48;
-/** At most this many pixels per frame, faster the closer to the edge. */
-const MAX_SPEED = 14;
+/** At most this many pixels per second, faster the closer to the edge (14 per frame at 60 Hz). */
+const MAX_SPEED = 840;
 
 const sameTarget = (a: DropTarget | null, b: DropTarget | null) => {
   "worklet";
@@ -74,7 +74,7 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
   // While a card is in the air (UI thread): the target under the pointer, a haptic when its column changes, and the
   // board scrolling sideways near its edges. Nothing else runs per frame, and JS only hears of the column change.
   const lastColumn = useSharedValue(-1);
-  const drag = useFrameCallback(() => {
+  const drag = useFrameCallback((frame) => {
     if (active.get() !== 1 || returning.get() === 1) return;
     const l = layout.get();
     if (!l) return;
@@ -95,8 +95,9 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
     const right = board.x + board.width - x;
     const max = Math.max(0, contentWidth.get() - board.width);
     let next = now;
-    if (left < EDGE && left > -BOARD_SLACK) next = Math.max(0, now - MAX_SPEED * (1 - Math.max(left, 0) / EDGE));
-    else if (right < EDGE && right > -BOARD_SLACK) next = Math.min(max, now + MAX_SPEED * (1 - Math.max(right, 0) / EDGE));
+    const ms = frame.timeSincePreviousFrame;
+    if (left < EDGE && left > -BOARD_SLACK) next = Math.max(0, now - edgeStep(left, EDGE, MAX_SPEED, ms));
+    else if (right < EDGE && right > -BOARD_SLACK) next = Math.min(max, now + edgeStep(right, EDGE, MAX_SPEED, ms));
     if (next !== now) scrollTo(boardRef, next, 0, false);
   }, false);
   const setDragFrames = drag.setActive;

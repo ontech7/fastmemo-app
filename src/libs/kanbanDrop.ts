@@ -114,3 +114,21 @@ export function isOwnPlace(target: DropTarget, sourceColumn: number, sourceIndex
   "worklet";
   return target.column === sourceColumn && (target.index === sourceIndex || target.index === sourceIndex + 1);
 }
+
+/** A 60 Hz frame: what a frame counts when its length isn't known (the first one). */
+const FRAME_MS = 1000 / 60;
+/** The most one frame counts: a stalled frame doesn't turn into a jump. */
+const MAX_FRAME_MS = 50;
+
+/**
+ * How far an edge scroll moves in one frame. `inside` is the pointer's distance from the edge (0 or less: at it or past
+ * it); within `edge` of it the speed grows linearly to `maxPerSecond`. It is measured by the frame's real length
+ * (`timeSincePreviousFrame`), so a 120 Hz screen scrolls as fast as a 60 Hz one.
+ */
+export function edgeStep(inside: number, edge: number, maxPerSecond: number, frameMs: number | null | undefined): number {
+  "worklet";
+  if (inside >= edge) return 0;
+  const closeness = 1 - Math.max(inside, 0) / edge;
+  const ms = Math.min(Math.max(frameMs ?? FRAME_MS, 0), MAX_FRAME_MS);
+  return (maxPerSecond * closeness * ms) / 1000;
+}

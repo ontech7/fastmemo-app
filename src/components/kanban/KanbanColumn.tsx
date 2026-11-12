@@ -1,4 +1,5 @@
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
+import { edgeStep } from "@/libs/kanbanDrop";
 import { useKanbanDrag } from "@/providers/KanbanDragProvider";
 import { memo, useCallback, useEffect, useRef, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
@@ -32,8 +33,8 @@ import type { KanbanColumn as KanbanColumnType } from "@/types";
 
 /** Held this close to the top or bottom of a column's card area, a card scrolls it. */
 const EDGE = 40;
-/** At most this many pixels per frame, faster the closer to the edge. */
-const MAX_SPEED = 10;
+/** At most this many pixels per second, faster the closer to the edge (10 per frame at 60 Hz). */
+const MAX_SPEED = 600;
 
 interface Props {
   column: KanbanColumnType;
@@ -102,7 +103,7 @@ function KanbanColumn({
   };
 
   // While a card is held near this column's top or bottom edge, the column scrolls (UI thread).
-  const autoScroll = useFrameCallback(() => {
+  const autoScroll = useFrameCallback((frame) => {
     const t = target.get();
     const l = layout.get();
     if (active.get() !== 1 || !t || !l || l.columns[t.column]?.id !== columnId) return;
@@ -112,8 +113,9 @@ function KanbanColumn({
     const now = columnScrollY.get()[columnId] ?? 0;
     const max = Math.max(0, contentHeight.get() - viewHeight.get());
     let next = now;
-    if (y < EDGE) next = Math.max(0, now - MAX_SPEED * (1 - y / EDGE));
-    else if (y > area.height - EDGE) next = Math.min(max, now + MAX_SPEED * (1 - (area.height - y) / EDGE));
+    const ms = frame.timeSincePreviousFrame;
+    if (y < EDGE) next = Math.max(0, now - edgeStep(y, EDGE, MAX_SPEED, ms));
+    else if (y > area.height - EDGE) next = Math.min(max, now + edgeStep(area.height - y, EDGE, MAX_SPEED, ms));
     if (next !== now) scrollTo(listRef, 0, next, false);
   }, false);
   const setAutoScroll = autoScroll.setActive;
