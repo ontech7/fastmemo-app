@@ -129,6 +129,17 @@ The standard interactive element is `TouchableOpacity` with `activeOpacity={0.7}
   keyboard tab order (react-native-web has no `inert`).
 - Generic screen-reader names live under `a11y.*`.
 
+### Touch Targets and Haptics
+
+- Every touch target is at least **44 dp**. A control drawn smaller keeps its look and gets `hitSlop` up to 44 (a 20 dp chip:
+  `hitSlop={12}`); a menu row or a dialog action gets `minHeight: 44` with its content centred.
+- Every pressable shows it's pressed: `activeOpacity={0.7}` on a `TouchableOpacity`; a `Pressable` takes
+  `style={({ pressed }) => [..., pressed && styles.pressed]}` (opacity 0.7, or `GLASS.fillStrong` behind).
+- Haptics go through `haptic` from `@/libs/haptics` (`select()`, `success()`, `warn()`; fire and forget, a no-op on the web):
+  `select` when something is picked or a list row is ticked, `warn` on confirming something that deletes. A
+  `ConfirmOrCancelDialog` whose confirm deletes is marked `destructive` (the warning fires on confirm, never on cancel); a
+  `ComplexDialog` that deletes calls `haptic.warn()` in its confirm handler. A drag's haptics belong to the reorder engine.
+
 ### SafeAreaView
 
 Always use the project's custom `@/components/SafeAreaView`, not the one from `react-native-safe-area-context` directly.
@@ -449,6 +460,25 @@ backgroundColor: COLOR.scrim
   <View style={styles.headerSpacer} />
 </View>
 ```
+
+### Motion
+
+Durations, easings and springs come from `@/constants/motion`: `DURATION.fast` (120) for what goes out or a small change, `base`
+(200) for what comes in, `slow` (300) for a larger move; `EASING.enter` in, `EASING.exit` out; `SPRING.soft` / `snappy`; `LOOP`
+for animations that repeat. No literal duration or spring in a component. Something that leaves fades or moves out before it
+unmounts: an overlay menu keeps its `Modal` mounted until the closing timing's callback.
+
+### Empty Lists
+
+A list that can be empty passes `ui/EmptyState` as its `ListEmptyComponent`, with its content container at `flexGrow: 1` while
+empty: `notes` (home, "All": no notes, or only hidden ones with "show hidden" off), `category` (home, another category; its icon
+in the drawing), `search` (a search with no match, home or trash), `trash` (with the days notes stay, or none for the developer
+option). The drawings are `ui/illustrations/*`, sharing `illustrations/tokens.ts`.
+
+### Toasts
+
+`toast(text)` from `@/utils/toast` has one look on every platform (`GLASS.toastFill`, a 1 px `GLASS.border`, fully rounded,
+`FONT.medium` at `FONTSIZE.toast`, `COLOR.textPrimary`, a soft shadow) and no icon. Text only, through i18n.
 
 ---
 

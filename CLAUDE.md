@@ -118,7 +118,8 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 3. **Always use the `@/` path alias** for imports across module boundaries
 4. **Always use `import type { ... }` from "..."** for type-only imports
 5. **Always use `StyleSheet.create()`** at the bottom of component files for styles
-6. **Always use style constants** from `@/constants/styles` (COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, BORDER)
+6. **Always use style constants** from `@/constants/styles` (COLOR, GLASS, SHADOW, FONT, FONTSIZE, PADDING_MARGIN, BORDER);
+   Geist's weight through `fontFamily: FONT.*`, never `fontWeight`
 7. **Always wrap memoized components** (NoteCard, TodoItem, OrderedCategoryCard, etc.) with `memo()` from react
 8. **Always add translations for all 7 locales** when adding new UI strings (en, it, es, fr, de, zh, ja)
 9. **Always test on both web and native** when touching platform-split files
@@ -131,6 +132,8 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
     platform drops; hidden content gets `aria-hidden` + `focusable={false}` (CONVENTIONS)
 13. **Always stamp a revision (`touchNote`) in a reducer that changes a synced note** -- other devices ignore a change without a
     newer revision; `syncedRev` is written only by the sync engine's reducers (ADR-016, LL-040)
+14. **Always take durations, easings and springs from `@/constants/motion`** (`DURATION`, `EASING`, `SPRING`, `LOOP`): no
+    literal duration or spring in a component
 
 ## Tech Stack (Quick Reference)
 
@@ -164,7 +167,7 @@ src/
   libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), diagnostics/ (Sentry, the installation code, the report payload: ADR-035), haptics/, i18n/, mcp/ (local MCP server, page side), storage/, registry, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, netStatus, desktopCommands, desktopMenu, codeEditorPage, pageErrors, kanbanOps, quickNoteDraft, reducePhoto, reloadApp)
   utils/        -> Pure utility functions (sort, noteSearch, noteEmpty, noteType, imageSize, string, date, crypt, vault, secureRandom, ui, toast, webhook, export, platform, openUrl)
   providers/    -> React context providers (ReorderProvider, SyncOnProvider, DiagnosticsProvider, AppUpdateProvider)
-  constants/    -> Static constants (styles, icons, code-languages, note-types)
+  constants/    -> Static constants (styles, motion, layout, icons, code-languages, note-types)
   configs/      -> App configuration (environment, defaults, business rules)
 src-tauri/      -> Desktop shell (Rust): window, menu, tray.rs, net.rs; src/mcp/: local MCP server (bridge, socket, protocol, tools, switches; ADR-032);
                    src/ai/: the AI commands, engine loading, model download (ADR-034)

@@ -74,7 +74,11 @@ src/
     renderers/         # ContextMenu
     ui/                # Design primitives: AppBackground, GlassSurface, IconChip, PopupMenu (under a trigger, or `at` a point),
                        # ImageViewer (full screen, pinch/pan/double tap), TourSpotlight, TourTip, BlinkingDot,
-                       # ProgressBar (a download: AI model, APK update), DropSlot (where a dragged card or row lands)
+                       # ProgressBar (a download: AI model, APK update), DropSlot (where a dragged card or row lands),
+                       # EmptyState (an empty list: notes / category / search / trash, its drawing, title and sentence),
+                       # MenuItemPop (the staggered pop of an overlay menu's items)
+      illustrations/   # The drawings (react-native-svg, 176 x 112, "ghost cards"): EmptyNotes, EmptyCategory, EmptySearch,
+                       #   EmptyTrash, Crash; tokens.ts holds their shared values (ghost card, lit card, tile, line, accent)
     # Standalone: CategoryIcon, LoadingSpinner, SafeAreaView, Sidebar, VirtualNumberKeyboard
     CrashScreen.tsx    # The error boundary's fallback (ADR-035): reopen, a report sent in place; no store, router or useTranslation
 
@@ -244,7 +248,9 @@ src/
     DiagnosticsProvider.tsx # Headless: Sentry's language and cloud tags, the route trail (as patterns, ADR-035)
 
   constants/           # Static constants
-    styles.ts          # COLOR, FONTSIZE, FONTWEIGHT, PADDING_MARGIN, BORDER, SIZE, MONOSPACE_FONT
+    styles.ts          # COLOR, CARD_TYPE_COLOR, GLASS, BLUR, SHADOW, LIFT, FONT, FONTSIZE, FONTWEIGHT (pre-Geist), PADDING_MARGIN,
+                       #   BORDER, SIZE, MAX_WIDTH, MONOSPACE_FONT
+    motion.ts          # DURATION (fast/base/slow), EASING (enter/exit), SPRING (soft/snappy), LOOP: every animation's values
     icons.ts           # Available category icon names
     code-languages.ts  # Supported code editor languages; PLAIN_TEXT_LANGUAGES (no highlighter in the page, LL-086)
     note-types.ts      # Note type metadata
