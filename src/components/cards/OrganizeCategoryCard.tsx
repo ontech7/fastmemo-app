@@ -14,7 +14,7 @@ import ReorderHandle from "@/components/reorder/ReorderHandle";
 import ReorderSlot from "@/components/reorder/ReorderSlot";
 import { useItemSlide } from "@/components/reorder/useItemSlide";
 import { useReorder } from "@/providers/ReorderProvider";
-import { getNotesSizePerCategory } from "@/slicers/notesSlice";
+import { getNotesCountByCategory } from "@/slicers/notesSlice";
 
 import type { Category } from "@/types";
 
@@ -80,7 +80,8 @@ export default memo(OrganizeCategoryCard);
 /** The icon, the name and how many notes the category holds. */
 function CategoryCardBody({ category }: { category: Category }) {
   const { t } = useTranslation();
-  const notesSize = useSelector(getNotesSizePerCategory(category));
+  const counts = useSelector(getNotesCountByCategory);
+  const notesSize = category.index ? counts.total : (counts.byIcon[category.icon] ?? 0);
 
   return (
     <>

@@ -1,7 +1,7 @@
 import DragIcon from "@/components/icons/DragIcon";
 import { COLOR } from "@/constants/styles";
 import { useReorder, type ReorderItem } from "@/providers/ReorderProvider";
-import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, type AccessibilityActionEvent, type StyleProp, type ViewStyle } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
@@ -51,7 +51,7 @@ const ACTIONS = ["moveUp", "moveDown"] as const;
  */
 export default function ReorderHandle<T extends ReorderItem>({ item, containerId, disabled, style, children }: Props<T>) {
   const { t } = useTranslation();
-  const { pointerX, pointerY, lift, release, cancel, move } = useReorder();
+  const { pointerX, pointerY, owner, lift, release, cancel, move } = useReorder();
 
   // The item as it is now, for the lift: the gesture is built once and doesn't follow the item's text.
   const itemRef = useRef(item);
@@ -67,12 +67,17 @@ export default function ReorderHandle<T extends ReorderItem>({ item, containerId
       ...ACTIVATION,
       onActivate: (event: { absoluteX: number; absoluteY: number }) => {
         "worklet";
+        // One item in the air: a second finger on another handle neither lifts its item nor moves the pointer.
+        const current = owner.get();
+        if (current !== null && current !== itemId) return;
+        owner.set(itemId);
         pointerX.set(event.absoluteX);
         pointerY.set(event.absoluteY);
         scheduleOnRN(onLift, event.absoluteX, event.absoluteY);
       },
       onUpdate: (event: { absoluteX: number; absoluteY: number }) => {
         "worklet";
+        if (owner.get() !== itemId) return;
         pointerX.set(event.absoluteX);
         pointerY.set(event.absoluteY);
       },
@@ -82,9 +87,13 @@ export default function ReorderHandle<T extends ReorderItem>({ item, containerId
         else scheduleOnRN(release, itemId);
       },
     }),
-    [disabled, pointerX, pointerY, onLift, release, cancel, itemId]
+    [disabled, pointerX, pointerY, owner, onLift, release, cancel, itemId]
   );
   const panGesture = usePanGesture(panConfig);
+
+  // An item that goes while it is in the air (deleted on another device, a list switched to steps) ends its drag: its
+  // gesture's end never comes, and the engine would stay held until the screen closed.
+  useEffect(() => () => cancel(itemId), [cancel, itemId]);
   const accessibilityActions = useMemo(
     () => [
       { name: ACTIONS[0], label: t("a11y.move_up") },

@@ -1825,8 +1825,16 @@ console.log("\ncategories: a drop reorders, renumbers, and queues only what chan
       preloadedState: { categories: { ...base, items } },
     });
   };
-  const icons = (s) => s.getState().categories.items.map((c) => c.icon).join();
-  const orders = (s) => s.getState().categories.items.map((c) => c.order).join();
+  const icons = (s) =>
+    s
+      .getState()
+      .categories.items.map((c) => c.icon)
+      .join();
+  const orders = (s) =>
+    s
+      .getState()
+      .categories.items.map((c) => c.order)
+      .join();
   const queued = (s) => Object.keys(s.getState().categories.cloud.items.add).sort().join();
 
   const s = make(["all", "a", "b", "c", "d"].map((icon, i) => cat(icon, i)));
@@ -1850,6 +1858,30 @@ console.log("\ncategories: a drop reorders, renumbers, and queues only what chan
   const ties = make([cat("all", 0)]);
   ties.dispatch(C.addLocalCategories({ z: cat("z", 1), m: cat("m", 1) }));
   ok("equal orders sort by icon", icons(ties) === "all,m,z", icons(ties));
+
+  const plan = M.reconcileCategories([cat("all", 0)], { add: {}, delete: {} }, [cat("z", 1), cat("m", 1)]);
+  ok(
+    "a full sync sorts equal orders by icon too",
+    plan.items.map((c) => c.icon).join() === "all,m,z",
+    plan.items.map((c) => c.icon)
+  );
+
+  const gapped = make([cat("all", 0), cat("a", 2), cat("b", 3)]);
+  gapped.dispatch(C.createCategory({ name: "c", icon: "c" }));
+  ok(
+    "a new category goes after the last one, whatever the gaps",
+    orders(gapped) === "0,2,3,4" && icons(gapped) === "all,a,b,c",
+    [icons(gapped), orders(gapped)]
+  );
+
+  const counts = N.getNotesCountByCategory({
+    notes: { items: [{ category: { icon: "a" } }, { category: { icon: "a" } }, { category: { icon: "b" } }] },
+  });
+  ok(
+    "notes counted by category in one pass, and in all",
+    counts.byIcon.a === 2 && counts.byIcon.b === 1 && counts.total === 3,
+    counts
+  );
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

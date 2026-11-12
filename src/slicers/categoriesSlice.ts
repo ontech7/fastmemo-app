@@ -10,6 +10,7 @@ import type { CategoriesPushed } from "@/libs/cloud/syncEngine";
 import { defaultCategory } from "@/configs/default";
 import { only_if_cloudConnected } from "@/libs/cloud";
 import { moveById } from "@/libs/reorderDrop";
+import { category_order_sort } from "@/utils/sort";
 
 import { CATEGORY_MAP } from "@/constants/icons";
 
@@ -27,11 +28,8 @@ const initialState: CategoriesState = {
 
 type CloudQueue = CategoriesState["cloud"]["items"]["add"];
 
-/**
- * The categories' order: `order`, then the icon. Two devices that reorder close together can give two categories the
- * same `order`: they sort the same way everywhere.
- */
-export const categoryOrder = (a: Category, b: Category): number => a.order - b.order || a.icon.localeCompare(b.icon);
+/** The categories' order (`order`, then the icon): the same in the slice, a full sync and every list of them. */
+export const categoryOrder = category_order_sort;
 
 // An id is in one queue only, the latest operation (LL-033): uploads run before deletions, so a
 // category deleted and then re-created would otherwise be deleted again right after its upload.
@@ -59,7 +57,8 @@ const categoriesSlice = createSlice({
   reducers: {
     createCategory: (state, action: PayloadAction<{ name: string; icon: string }>) => {
       const category: Category = {
-        order: state.items.length,
+        // After the last one: orders from another device can have gaps, and `length` would tie with one of them.
+        order: state.items.reduce((last, item) => Math.max(last, item.order), -1) + 1,
         name: action.payload.name,
         icon: action.payload.icon,
         index: false,

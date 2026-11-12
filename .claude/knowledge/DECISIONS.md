@@ -1972,6 +1972,9 @@ edit mode where categories were numbered one tap at a time.
   using the engine needs a `GestureHandlerRootView` (the app has none at its root). The list keeps
   `removeClippedSubviews` off (the lifted row's place was detached during the edge scroll) and scroll views stop scrolling
   by touch while an item is in the air (the edge scroll does it).
+- **One item in the air:** the first handle to activate owns the pointer (`owner`); a second finger neither lifts its
+  item nor moves the lifted one, and only the owner's release or cancel ends the drag. An item that unmounts while it is
+  in the air (deleted on another device) cancels its drag: its gesture's end never comes.
 - **Without dragging:** every handle offers "move up"/"move down" to screen readers, and on the web and desktop it takes
   the focus and moves with the arrow keys (`move`), saved like a drop.
 - **Haptics:** at lift, at each slot change, and at a drop that moved something, everywhere.

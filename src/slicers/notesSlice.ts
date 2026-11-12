@@ -634,10 +634,17 @@ export const getNotesFilteredPerCategory = (currentCategory: Category, showHidde
     )
   );
 
-export const getNotesSizePerCategory = (category: Category) =>
-  createSelector([getAllNotes], (notes): number => {
-    return notes.filter((note) => category.index || note.category.icon === category.icon).length;
-  });
+/** How many notes each category holds, by icon, and in all: one pass over the notes, one selector for every card. */
+export const getNotesCountByCategory = createSelector(
+  [getAllNotes],
+  (notes): { total: number; byIcon: Record<string, number> } => {
+    const byIcon: Record<string, number> = {};
+    notes.forEach((note) => {
+      byIcon[note.category.icon] = (byIcon[note.category.icon] ?? 0) + 1;
+    });
+    return { total: notes.length, byIcon };
+  }
+);
 
 export const getTrashedNotesFilteredPerCategory = (showHidden: boolean) =>
   createSelector([getAllTrashedNotes], (notes): Note[] => importantFirst(notes, (note) => showHidden || !note.hidden));

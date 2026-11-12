@@ -20,6 +20,7 @@ import Animated, {
   useFrameCallback,
   useScrollViewOffset,
   useSharedValue,
+  type FrameInfo,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { useSelector } from "react-redux";
@@ -68,22 +69,28 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
   const onContentSizeChange = useCallback((w: number) => contentWidth.set(w), [contentWidth]);
 
   // While a card is in the air (UI thread): the board scrolls sideways near its edges. The engine finds the target.
-  const edgeScroll = useFrameCallback((frame) => {
-    if (active.get() !== 1 || returning.get() === 1) return;
-    const l = layout.get();
-    if (!l) return;
-    const x = pointerX.get();
-    const now = boardScrollX.get();
-    const { frame: board } = l;
-    const left = x - board.x;
-    const right = board.x + board.width - x;
-    const max = Math.max(0, contentWidth.get() - board.width);
-    let next = now;
-    const ms = frame.timeSincePreviousFrame;
-    if (left < EDGE && left > -FRAME_SLACK) next = Math.max(0, now - edgeStep(left, EDGE, MAX_SPEED, ms));
-    else if (right < EDGE && right > -FRAME_SLACK) next = Math.min(max, now + edgeStep(right, EDGE, MAX_SPEED, ms));
-    if (next !== now) scrollTo(boardRef, next, 0, false);
-  }, false);
+  // One worklet for the board's life: a new one each render re-registered the frame callback at every keystroke.
+  const scrollAtEdge = useCallback(
+    (frame: FrameInfo) => {
+      "worklet";
+      if (active.get() !== 1 || returning.get() === 1) return;
+      const l = layout.get();
+      if (!l) return;
+      const x = pointerX.get();
+      const now = boardScrollX.get();
+      const { frame: board } = l;
+      const left = x - board.x;
+      const right = board.x + board.width - x;
+      const max = Math.max(0, contentWidth.get() - board.width);
+      let next = now;
+      const ms = frame.timeSincePreviousFrame;
+      if (left < EDGE && left > -FRAME_SLACK) next = Math.max(0, now - edgeStep(left, EDGE, MAX_SPEED, ms));
+      else if (right < EDGE && right > -FRAME_SLACK) next = Math.min(max, now + edgeStep(right, EDGE, MAX_SPEED, ms));
+      if (next !== now) scrollTo(boardRef, next, 0, false);
+    },
+    [active, returning, layout, pointerX, boardScrollX, contentWidth, boardRef]
+  );
+  const edgeScroll = useFrameCallback(scrollAtEdge, false);
   const setEdgeScroll = edgeScroll.setActive;
   useAnimatedReaction(
     () => active.get(),

@@ -51,6 +51,8 @@ export interface ReorderContextValue {
   returning: SharedValue<number>;
   pointerX: SharedValue<number>;
   pointerY: SharedValue<number>;
+  /** The item whose handle writes the pointer (UI thread): the first to activate, until the drag ends. */
+  owner: SharedValue<string | null>;
   /** Where the pointer holds the lifted item, from its top left corner. */
   grabX: SharedValue<number>;
   grabY: SharedValue<number>;
@@ -140,6 +142,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
   const returning = useSharedValue(0);
   const pointerX = useSharedValue(0);
   const pointerY = useSharedValue(0);
+  const owner = useSharedValue<string | null>(null);
   const grabX = useSharedValue(0);
   const grabY = useSharedValue(0);
   const liftWidth = useSharedValue(0);
@@ -266,12 +269,13 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
     liftSeq.current++;
     liftingId.current = null;
     dragRef.current = null;
+    owner.set(null);
     active.set(0);
     returning.set(0);
     target.set(null);
     setDragged(null);
     setPreview(null);
-  }, [active, returning, target]);
+  }, [active, returning, target, owner]);
 
   /** A container's item ids now, without the lifted item. */
   const idsNow = useCallback(
@@ -399,7 +403,14 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       Promise.all([measureInWindow(frameRef.current?.current), Promise.all(order.map(measureContainer))]).then(
         ([frame, measuredContainers]) => {
           // Released before the measures came, or another lift started.
-          if (seq !== liftSeq.current || !frame) return;
+          if (seq !== liftSeq.current) return;
+          // The frame couldn't be measured (gone meanwhile): no drag, and the next lift may start.
+          if (!frame) {
+            liftSeq.current++;
+            liftingId.current = null;
+            owner.set(null);
+            return;
+          }
           const kept = measuredContainers.filter((c): c is NonNullable<typeof c> => c !== null);
           const c = kept.findIndex((m) => m.container.id === containerId);
           const i = c === -1 ? -1 : kept[c].ids.indexOf(item.id);
@@ -407,6 +418,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
           if (c === -1 || i === -1) {
             liftSeq.current++;
             liftingId.current = null;
+            owner.set(null);
             return;
           }
 
@@ -477,6 +489,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       target,
       placeOf,
       slide,
+      owner,
     ]
   );
 
@@ -631,6 +644,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       returning,
       pointerX,
       pointerY,
+      owner,
       grabX,
       grabY,
       liftWidth,
@@ -653,6 +667,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       returning,
       pointerX,
       pointerY,
+      owner,
       grabX,
       grabY,
       liftWidth,

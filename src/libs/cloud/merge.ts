@@ -1,5 +1,7 @@
 import type { Category, Note } from "@/types";
 
+import { category_order_sort } from "@/utils/sort";
+
 import { noteRev } from "./revision";
 import { contentToken } from "./token";
 import type { Tombstone } from "./types";
@@ -327,6 +329,6 @@ export const reconcileCategories = (
     .filter((category) => !category.index && !cloudIcons.has(category.icon) && !(category.icon in pending.add))
     .map((category) => category.icon);
 
-  const items = [...byIcon.values()].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const items = [...byIcon.values()].sort(category_order_sort);
   return { items, upload };
 };

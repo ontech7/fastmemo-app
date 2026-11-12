@@ -10,6 +10,13 @@ export const updatedAt_desc_sort = (a: Timestamped, b: Timestamped): number => b
 
 export const order_asc_sort = (a: Ordered, b: Ordered): number => a.order - b.order;
 
+/**
+ * The categories' order: `order`, then the icon. Two devices that reorder close together can give two categories the
+ * same `order`: they sort the same way everywhere (the slice, a full sync, every list of them).
+ */
+export const category_order_sort = (a: { order?: number; icon: string }, b: { order?: number; icon: string }): number =>
+  (a.order ?? 0) - (b.order ?? 0) || a.icon.localeCompare(b.icon);
+
 /** The notes `keep` accepts, important ones first, each group in the order it came in. One pass. */
 export function importantFirst<T extends { important?: boolean }>(notes: readonly T[], keep: (note: T) => boolean): T[] {
   const important: T[] = [];
