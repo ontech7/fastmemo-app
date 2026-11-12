@@ -1,6 +1,6 @@
 import { LIFT } from "@/constants/styles";
 import Haptics, { ImpactFeedbackStyle, NotificationFeedbackType } from "@/libs/haptics";
-import { findDrop, isOwnPlace, stepIndex, toMoveIndex, withoutItem } from "@/libs/reorderDrop";
+import { findDrop, isOwnPlace, slotInItems, stepIndex, toMoveIndex, withoutItem } from "@/libs/reorderDrop";
 import type { DropContainer, DropLayout, DropTarget, Rect } from "@/libs/reorderDrop";
 import { forgetSlides } from "@/libs/reorderSlides";
 import { measureInWindow } from "@/libs/tourTargets";
@@ -49,7 +49,6 @@ export interface ReorderContextValue {
   active: SharedValue<number>;
   /** 1 while the lifted item settles into its slot, at the end. */
   returning: SharedValue<number>;
-  draggedId: SharedValue<string | null>;
   pointerX: SharedValue<number>;
   pointerY: SharedValue<number>;
   /** Where the pointer holds the lifted item, from its top left corner. */
@@ -59,9 +58,6 @@ export interface ReorderContextValue {
   liftWidth: SharedValue<number>;
   target: SharedValue<DropTarget | null>;
   layout: SharedValue<DropLayout | null>;
-  /** The lifted item's place in `layout`: container and index. */
-  sourceContainer: SharedValue<number>;
-  sourceIndex: SharedValue<number>;
   /** The frame's sideways scroll (a board); 0 where the frame doesn't scroll. */
   frameScrollX: SharedValue<number>;
   /**
@@ -75,12 +71,11 @@ export interface ReorderContextValue {
   registerItem(containerId: string, itemId: string, node: RefObject<ViewInstance | null>): () => void;
   /** The slot shown in a container: where the lifted item settles at the end. */
   registerSlot(node: RefObject<ViewInstance | null>): () => void;
-  /** When the slot under the pointer changes: container -1 is nowhere (its own place). */
-  showTarget(container: number, index: number): void;
   /** Called from a handle's gesture, on the JS thread. */
   lift(item: ReorderItem, containerId: string, pointerX: number, pointerY: number): void;
-  release(): void;
-  cancel(): void;
+  /** The end of a handle's gesture: only the item's own ends its drag (another finger on another handle doesn't). */
+  release(itemId: string): void;
+  cancel(itemId: string): void;
   /**
    * Moves an item one place up (-1) or down (1) in its container, at once, without a drag: the keyboard's arrows and the
    * screen reader's actions. Nothing at an end, nor while an item is in the air.
@@ -143,7 +138,6 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
 
   const active = useSharedValue(0);
   const returning = useSharedValue(0);
-  const draggedId = useSharedValue<string | null>(null);
   const pointerX = useSharedValue(0);
   const pointerY = useSharedValue(0);
   const grabX = useSharedValue(0);
@@ -151,8 +145,6 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
   const liftWidth = useSharedValue(0);
   const target = useSharedValue<DropTarget | null>(null);
   const layout = useSharedValue<DropLayout | null>(null);
-  const sourceContainer = useSharedValue(-1);
-  const sourceIndex = useSharedValue(-1);
   const frameScrollX = useSharedValue(0);
   const containerScrollY = useSharedValue<Record<string, number>>({});
   // 0 while the lift's or the drop's commit lays the items out: they take their places at once.
@@ -186,10 +178,14 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
   const inAir = preview !== null;
   // The web's items slide while an item is in the air, from two frames after the lift until the drop's commit.
   const [sliding, setSliding] = useState(false);
+  // A lift or a drop that starts before the last commit's slide came back keeps it off for its own commit.
+  const slideGen = useRef(0);
   useEffect(() => {
+    const gen = slideGen.current;
     let second = 0;
     const first = requestAnimationFrame(() => {
       second = requestAnimationFrame(() => {
+        if (slideGen.current !== gen) return;
         slide.set(1);
         if (isWeb) setSliding(inAir);
       });
@@ -209,8 +205,12 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
   const dragRef = useRef<{
     item: ReorderItem;
     containerId: string;
+    /** Its container's place in `lift`. */
     container: number;
+    /** Its place in its container's items at lift (all of them, measured or not). */
     index: number;
+    /** Per container of `lift`: the ids of the items measured at lift, without the lifted one (the targets). */
+    measured: string[][];
     box: Rect;
     /**
      * Where the pointer holds the item, from its top: JS reads it here, not from `grabY`, whose `get` on JS gives the
@@ -221,6 +221,8 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
   } | null>(null);
   // A lift whose measures are still coming: a release before they arrive abandons it.
   const liftSeq = useRef(0);
+  // The item whose lift is waiting for its measures: only its own handle ends it, and no other lift starts meanwhile.
+  const liftingId = useRef<string | null>(null);
 
   const onDropRef = useRef(onDrop);
   const reducedMotionRef = useRef(reducedMotion);
@@ -262,21 +264,46 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
 
   const finish = useCallback(() => {
     liftSeq.current++;
+    liftingId.current = null;
     dragRef.current = null;
     active.set(0);
     returning.set(0);
     target.set(null);
-    draggedId.set(null);
     setDragged(null);
     setPreview(null);
-  }, [active, returning, target, draggedId]);
+  }, [active, returning, target]);
 
-  const showTarget = useCallback((container: number, index: number) => {
-    const drag = dragRef.current;
-    if (!drag) return;
-    const to = container >= 0 ? drag.lift.containers[container] : undefined;
-    const targetContainerId = to ? to.id : drag.containerId;
-    const targetIndex = to ? index : drag.index;
+  /** A container's item ids now, without the lifted item. */
+  const idsNow = useCallback(
+    (containerId: string, liftedId: string) =>
+      ((containersRef.current ?? []).find((c) => c.id === containerId)?.items ?? [])
+        .filter((it) => it.id !== liftedId)
+        .map((it) => it.id),
+    [containersRef]
+  );
+  /** Where the lifted item is now in its container (-1: gone meanwhile, deleted on another device). */
+  const sourceNow = useCallback(
+    (drag: { item: ReorderItem; containerId: string }) =>
+      ((containersRef.current ?? []).find((c) => c.id === drag.containerId)?.items ?? []).findIndex(
+        (it) => it.id === drag.item.id
+      ),
+    [containersRef]
+  );
+  /** A target found among the measured items (`findDrop`), as a slot among the container's items now. */
+  const placeOf = useCallback(
+    (drag: NonNullable<typeof dragRef.current>, target: DropTarget): DropTarget => ({
+      container: target.container,
+      index: slotInItems(
+        drag.measured[target.container] ?? [],
+        idsNow(drag.lift.containers[target.container].id, drag.item.id),
+        target.index
+      ),
+    }),
+    [idsNow]
+  );
+
+  /** The slot shown: in a container, at a place among its items without the lifted one. */
+  const showPlace = useCallback((targetContainerId: string, targetIndex: number) => {
     setPreview((p) =>
       !p || (p.targetContainerId === targetContainerId && p.targetIndex === targetIndex)
         ? p
@@ -284,10 +311,28 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
     );
   }, []);
 
+  /** When the slot under the pointer changes (UI thread → JS): container -1 is nowhere (its own place). */
+  const showTarget = useCallback(
+    (container: number, index: number) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      if (container < 0) {
+        const own = sourceNow(drag);
+        showPlace(drag.containerId, own === -1 ? drag.index : own);
+        return;
+      }
+      const place = placeOf(drag, { container, index });
+      showPlace(drag.lift.containers[container].id, place.index);
+    },
+    [placeOf, showPlace, sourceNow]
+  );
+
   // While an item is in the air (UI thread): the target under the pointer, and a haptic when the container or the slot
   // changes. JS hears of a new slot only.
   const lastTick = useSharedValue("");
-  const tracking = useFrameCallback(() => {
+  // One worklet for the provider's life: a new one each render re-registered the frame callback at every keystroke.
+  const trackTarget = useCallback(() => {
+    "worklet";
     if (active.get() !== 1 || returning.get() === 1) return;
     const l = layout.get();
     if (!l) return;
@@ -308,7 +353,8 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       if (key !== "") scheduleOnRN(Haptics.selectionAsync);
       lastTick.set(key);
     }
-  }, false);
+  }, [active, returning, layout, containerScrollY, frameScrollX, pointerX, pointerY, grabY, target, showTarget, lastTick]);
+  const tracking = useFrameCallback(trackTarget, false);
   const setTracking = tracking.setActive;
   useAnimatedReaction(
     () => active.get(),
@@ -325,8 +371,9 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
 
   const lift = useCallback(
     (item: ReorderItem, containerId: string, x: number, y: number) => {
-      if (dragRef.current || active.get() === 1) return;
+      if (dragRef.current || liftingId.current || active.get() === 1) return;
       const seq = ++liftSeq.current;
+      liftingId.current = item.id;
       Haptics.impactAsync(ImpactFeedbackStyle.Medium);
       Keyboard.dismiss();
 
@@ -359,6 +406,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
           // The dragged item itself can't be measured: no drag.
           if (c === -1 || i === -1) {
             liftSeq.current++;
+            liftingId.current = null;
             return;
           }
 
@@ -372,11 +420,21 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
           // The lifted item's place closes while it is in the air: the target is found among the others.
           const dropLayout = withoutItem(measured, c, i);
           const grab = y - box.y;
-          dragRef.current = { item, containerId, container: c, index: i, box, grabY: grab, lift: dropLayout };
+          const own = (order.find((o) => o.id === containerId)?.items ?? []).findIndex((it) => it.id === item.id);
+          const drag = {
+            item,
+            containerId,
+            container: c,
+            index: own === -1 ? i : own,
+            measured: kept.map((m) => m.ids.filter((id) => id !== item.id)),
+            box,
+            grabY: grab,
+            lift: dropLayout,
+          };
+          dragRef.current = drag;
+          liftingId.current = null;
 
           layout.set(dropLayout);
-          sourceContainer.set(c);
-          sourceIndex.set(i);
           grabX.set(x - box.x);
           grabY.set(grab);
           liftWidth.set(box.width);
@@ -389,15 +447,16 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
             pointerY.get() - grab
           );
           target.set(first);
-          draggedId.set(item.id);
+          const firstPlace = first ? placeOf(drag, first) : null;
           // The commit that starts the drag folds the item's place and opens the slot there: nothing moves, no slide.
+          slideGen.current++;
           slide.set(0);
           setDragged({ item, containerId });
           setPreview({
             sourceContainerId: containerId,
             sourceItemId: item.id,
-            targetContainerId: first ? dropLayout.containers[first.container].id : containerId,
-            targetIndex: first ? first.index : i,
+            targetContainerId: firstPlace ? dropLayout.containers[firstPlace.container].id : containerId,
+            targetIndex: firstPlace ? firstPlace.index : drag.index,
             height: box.height,
           });
           active.set(1);
@@ -410,18 +469,41 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       frameScrollX,
       containerScrollY,
       layout,
-      sourceContainer,
-      sourceIndex,
       grabX,
       grabY,
       liftWidth,
       pointerX,
       pointerY,
       target,
-      draggedId,
+      placeOf,
       slide,
     ]
   );
+
+  // A lift closes the keyboard, and the frame and the containers were measured while it was still up: when it is gone
+  // they are taller (the list reaches down to where the keyboard was), and the rows there are targets and the edge scroll
+  // is at the new bottom. The items didn't move: their rectangles stay.
+  useEffect(() => {
+    const subscription = Keyboard.addListener("keyboardDidHide", () => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const seq = liftSeq.current;
+      Promise.all([
+        measureInWindow(frameRef.current?.current),
+        Promise.all(drag.lift.containers.map((c) => measureInWindow(containerAreas.current.get(c.id)?.current))),
+      ]).then(([frame, areas]) => {
+        if (seq !== liftSeq.current || dragRef.current !== drag || !frame) return;
+        const remeasured: DropLayout = {
+          ...drag.lift,
+          frame,
+          containers: drag.lift.containers.map((c, k) => (areas[k] ? { ...c, area: areas[k] } : c)),
+        };
+        drag.lift = remeasured;
+        layout.set(remeasured);
+      });
+    });
+    return () => subscription.remove();
+  }, [layout]);
 
   /**
    * The end of every drag: the lifted item eases into the slot the containers show (measured now: the frame or its
@@ -433,6 +515,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       const once = () => {
         if (liftSeq.current !== seq) return;
         // The commit that ends the drag lays the items out where they land: no slide (back after it: below).
+        slideGen.current++;
         slide.set(0);
         if (isWeb) setSliding(false);
         forgetSlides(frameRef.current?.current);
@@ -466,58 +549,69 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
     [returning, pointerX, pointerY, grabX, grabY, slide]
   );
 
-  const release = useCallback(() => {
-    const drag = dragRef.current;
-    if (!drag) {
-      // Released before the lift's measures came: no drag.
-      finish();
-      return;
-    }
-    if (returning.get() === 1) return;
-    const dropLayout = drag.lift;
-    const scrollById = containerScrollY.get();
-    // The target as of the release, not as of the last frame.
-    const now = findDrop(
-      dropLayout,
-      {
-        frameScrollX: frameScrollX.get(),
-        containerScrollY: dropLayout.containers.map((c) => scrollById[c.id] ?? 0),
-      },
-      pointerX.get(),
-      pointerY.get(),
-      pointerY.get() - drag.grabY
-    );
-    const moves = now !== null && !isOwnPlace(now, drag.container, drag.index);
-    showTarget(moves ? now.container : -1, moves ? now.index : drag.index);
-    settle(() => {
-      if (moves) {
-        // In the same React commit as the end of the preview: the order it showed becomes the data's.
-        onDropRef.current(
-          drag.item.id,
-          drag.containerId,
-          dropLayout.containers[now.container].id,
-          toMoveIndex(now, drag.container, drag.index)
-        );
-        Haptics.notificationAsync(NotificationFeedbackType.Success);
+  const release = useCallback(
+    (itemId: string) => {
+      const drag = dragRef.current;
+      if (!drag) {
+        // Released before the lift's measures came: no drag. Another handle's finger leaves it alone.
+        if (liftingId.current === itemId) finish();
+        return;
       }
-      finish();
-    });
-  }, [finish, settle, showTarget, returning, frameScrollX, containerScrollY, pointerX, pointerY]);
+      if (drag.item.id !== itemId) return;
+      if (returning.get() === 1) return;
+      const dropLayout = drag.lift;
+      const scrollById = containerScrollY.get();
+      // The target as of the release, not as of the last frame.
+      const now = findDrop(
+        dropLayout,
+        {
+          frameScrollX: frameScrollX.get(),
+          containerScrollY: dropLayout.containers.map((c) => scrollById[c.id] ?? 0),
+        },
+        pointerX.get(),
+        pointerY.get(),
+        pointerY.get() - drag.grabY
+      );
+      // Measured slots are places among the items as they are now (rows not mounted at lift, another device's edits).
+      const own = sourceNow(drag);
+      const place = now !== null && own !== -1 ? placeOf(drag, now) : null;
+      const moves = place !== null && !isOwnPlace(place, drag.container, own);
+      if (place && moves) showPlace(dropLayout.containers[place.container].id, place.index);
+      else showPlace(drag.containerId, own === -1 ? drag.index : own);
+      settle(() => {
+        if (place && moves) {
+          // In the same React commit as the end of the preview: the order it showed becomes the data's.
+          onDropRef.current(
+            drag.item.id,
+            drag.containerId,
+            dropLayout.containers[place.container].id,
+            toMoveIndex(place, drag.container, own)
+          );
+          Haptics.notificationAsync(NotificationFeedbackType.Success);
+        }
+        finish();
+      });
+    },
+    [finish, settle, showPlace, placeOf, sourceNow, returning, frameScrollX, containerScrollY, pointerX, pointerY]
+  );
 
-  const cancel = useCallback(() => {
-    const drag = dragRef.current;
-    if (!drag) {
-      finish();
-      return;
-    }
-    if (returning.get() === 1) return;
-    showTarget(-1, drag.index);
-    settle(finish);
-  }, [finish, settle, showTarget, returning]);
+  const cancel = useCallback(
+    (itemId: string) => {
+      const drag = dragRef.current;
+      if (!drag) {
+        if (liftingId.current === itemId) finish();
+        return;
+      }
+      if (drag.item.id !== itemId || returning.get() === 1) return;
+      showTarget(-1, drag.index);
+      settle(finish);
+    },
+    [finish, settle, showTarget, returning]
+  );
 
   const move = useCallback(
     (itemId: string, containerId: string, delta: -1 | 1) => {
-      if (dragRef.current || active.get() === 1) return;
+      if (dragRef.current || liftingId.current || active.get() === 1) return;
       const container = (containersRef.current ?? []).find((c) => c.id === containerId);
       if (!container) return;
       const index = container.items.findIndex((it) => it.id === itemId);
@@ -535,7 +629,6 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
     () => ({
       active,
       returning,
-      draggedId,
       pointerX,
       pointerY,
       grabX,
@@ -543,15 +636,12 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       liftWidth,
       target,
       layout,
-      sourceContainer,
-      sourceIndex,
       frameScrollX,
       containerScrollY,
       registerFrame,
       registerContainer,
       registerItem,
       registerSlot,
-      showTarget,
       lift,
       release,
       cancel,
@@ -561,7 +651,6 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
     [
       active,
       returning,
-      draggedId,
       pointerX,
       pointerY,
       grabX,
@@ -569,15 +658,12 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       liftWidth,
       target,
       layout,
-      sourceContainer,
-      sourceIndex,
       frameScrollX,
       containerScrollY,
       registerFrame,
       registerContainer,
       registerItem,
       registerSlot,
-      showTarget,
       lift,
       release,
       cancel,

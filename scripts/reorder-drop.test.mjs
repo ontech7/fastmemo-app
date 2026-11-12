@@ -25,9 +25,8 @@ await build({
   logLevel: "error",
   alias: { "@": src },
 });
-const { findDrop, isOwnPlace, moveCard, moveById, stepIndex, edgeStep, withoutItem, toMoveIndex, FRAME_SLACK } = await import(
-  pathToFileURL(out).href
-);
+const { findDrop, isOwnPlace, moveCard, moveById, stepIndex, edgeStep, withoutItem, toMoveIndex, slotInItems, FRAME_SLACK } =
+  await import(pathToFileURL(out).href);
 
 let passed = 0;
 let failed = 0;
@@ -282,6 +281,37 @@ console.log("\nstepIndex: one place up or down");
       .map((x) => x.id)
       .join("") === "acb"
   );
+}
+
+console.log("\nslotInItems: a slot among the measured items, as a place in the whole container");
+{
+  const abc = ["a", "b", "c"];
+  ok(
+    "every item measured: the same slot",
+    [0, 1, 2, 3].every((k) => slotInItems(abc, abc, k) === k)
+  );
+  // A long list scrolled down: rows 2-179 weren't mounted at lift, so they weren't measured.
+  const rows = Array.from({ length: 300 }, (_, i) => `r${i}`);
+  const measured = ["r0", "r1", "r180", "r181", "r182"];
+  ok(
+    "before a measured row after the gap: that row's place",
+    slotInItems(measured, rows, 2) === 180,
+    slotInItems(measured, rows, 2)
+  );
+  ok(
+    "after the last measured row: the place after it, not the end",
+    slotInItems(measured, rows, 5) === 183,
+    slotInItems(measured, rows, 5)
+  );
+  ok("before the first: 0", slotInItems(measured, rows, 0) === 0);
+  ok(
+    "an item gone meanwhile (another device): after the one before it",
+    slotInItems(abc, ["a", "c"], 1) === 1 && slotInItems(abc, ["a", "c"], 2) === 1,
+    [slotInItems(abc, ["a", "c"], 1), slotInItems(abc, ["a", "c"], 2)]
+  );
+  ok("an item added above meanwhile: the slot follows its item", slotInItems(abc, ["x", "a", "b", "c"], 2) === 3);
+  ok("an empty container: 0", slotInItems([], [], 0) === 0);
+  ok("nothing measured left: 0", slotInItems(["a"], ["z"], 1) === 0);
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

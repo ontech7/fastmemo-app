@@ -9,6 +9,7 @@ import {
   useFrameCallback,
   useSharedValue,
   type AnimatedRef,
+  type FrameInfo,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 
@@ -56,28 +57,29 @@ export function useReorderContainer(containerId: string, { scrollRef, areaRef, e
   const onContentSizeChange = useCallback((_: number, h: number) => contentHeight.set(h), [contentHeight]);
   const onLayout = useCallback((e: LayoutChangeEvent) => viewHeight.set(e.nativeEvent.layout.height), [viewHeight]);
 
-  /** The pointer's height inside the area (clamped), or null when it is well outside it. */
-  const pointerYIn = (top: number, height: number) => {
-    "worklet";
-    const y = pointerY.get() - top;
-    return y < -edge || y > height + edge ? null : Math.min(Math.max(y, 0), height);
-  };
-
-  const autoScroll = useFrameCallback((frame) => {
-    const t = target.get();
-    const l = layout.get();
-    if (active.get() !== 1 || !t || !l || l.containers[t.container]?.id !== containerId) return;
-    const area = l.containers[t.container].area;
-    const y = pointerYIn(area.y, area.height);
-    if (y === null) return;
-    const now = containerScrollY.get()[containerId] ?? 0;
-    const max = Math.max(0, contentHeight.get() - viewHeight.get());
-    let next = now;
-    const ms = frame.timeSincePreviousFrame;
-    if (y < edge) next = Math.max(0, now - edgeStep(y, edge, maxSpeed, ms));
-    else if (y > area.height - edge) next = Math.min(max, now + edgeStep(area.height - y, edge, maxSpeed, ms));
-    if (next !== now) scrollTo(scrollRef, 0, next, false);
-  }, false);
+  // One worklet for the container's life: a new one each render re-registered the frame callback at every keystroke.
+  const scrollAtEdge = useCallback(
+    (frame: FrameInfo) => {
+      "worklet";
+      const t = target.get();
+      const l = layout.get();
+      if (active.get() !== 1 || !t || !l || l.containers[t.container]?.id !== containerId) return;
+      const area = l.containers[t.container].area;
+      // The pointer's height inside the area (clamped); nothing when it is well outside it.
+      const inside = pointerY.get() - area.y;
+      if (inside < -edge || inside > area.height + edge) return;
+      const y = Math.min(Math.max(inside, 0), area.height);
+      const now = containerScrollY.get()[containerId] ?? 0;
+      const max = Math.max(0, contentHeight.get() - viewHeight.get());
+      let next = now;
+      const ms = frame.timeSincePreviousFrame;
+      if (y < edge) next = Math.max(0, now - edgeStep(y, edge, maxSpeed, ms));
+      else if (y > area.height - edge) next = Math.min(max, now + edgeStep(area.height - y, edge, maxSpeed, ms));
+      if (next !== now) scrollTo(scrollRef, 0, next, false);
+    },
+    [target, layout, active, containerId, pointerY, edge, containerScrollY, contentHeight, viewHeight, maxSpeed, scrollRef]
+  );
+  const autoScroll = useFrameCallback(scrollAtEdge, false);
   const setAutoScroll = autoScroll.setActive;
   useAnimatedReaction(
     () => active.get(),

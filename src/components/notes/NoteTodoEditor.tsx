@@ -118,7 +118,6 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           stepMode={stepMode}
           stepStatus={stepStatus}
           stepNumber={stepMode ? index + 1 : undefined}
-          isFirst={index === 0}
           isLast={index === total - 1}
           animationsReady={animationsReady}
         />

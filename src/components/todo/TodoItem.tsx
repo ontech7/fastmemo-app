@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Platform,
@@ -8,7 +8,6 @@ import {
   type TextInputInstance,
   TouchableOpacity,
   View,
-  type TextInputContentSizeChangeEvent,
   type ViewInstance,
 } from "react-native";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
@@ -49,7 +48,6 @@ interface Props {
   folded?: boolean;
   /** The slot of the row in the air opens above this row, this high (inside its own box: the rows never change order). */
   slotHeight?: number;
-  hidden?: boolean;
   autoFocus: boolean;
   // Forwarded to the row's text input so the parent can focus it imperatively
   // once the screen transition settles (mount-time autoFocus alone is dropped
@@ -58,7 +56,6 @@ interface Props {
   stepMode?: boolean;
   stepStatus?: StepStatus;
   stepNumber?: number;
-  isFirst?: boolean;
   isLast?: boolean;
   animationsReady?: boolean;
 }
@@ -91,7 +88,6 @@ function TodoItem({
   disabled,
   folded = false,
   slotHeight = 0,
-  hidden = false,
   autoFocus,
   inputRef,
   stepMode = false,
@@ -122,12 +118,22 @@ function TodoItem({
   const sliding = useReorderSliding();
   const boxLayout = isWeb ? (sliding ? ITEM_LAYOUT : undefined) : animationsReady ? itemLayout : undefined;
   const rowSlide = !isWeb && animationsReady ? itemLayout : undefined;
-  // A multiline field grows with its text by itself on phones; on the web it is as high as its content says.
+  // A multiline field grows with its text by itself on phones. On the web it is as high as its text, measured after each
+  // change with its height let go first: a field never measures shorter than it is, so a line deleted kept it tall.
+  const webInputRef = useRef<TextInputInstance>(null);
   const [webHeight, setWebHeight] = useState<number>();
-  const onWebContentSize = useCallback(
-    (event: TextInputContentSizeChangeEvent) => setWebHeight(event.nativeEvent.contentSize.height),
-    []
-  );
+  useLayoutEffect(() => {
+    if (!isWeb) return;
+    const field = webInputRef.current as unknown as HTMLTextAreaElement | null;
+    if (!field?.style) return;
+    const height = field.style.height;
+    field.style.height = "auto";
+    // The text and the paddings, and the borders (the field's box includes them).
+    const fits = field.scrollHeight + field.offsetHeight - field.clientHeight;
+    field.style.height = height;
+    setWebHeight(fits);
+  }, [item.text, stepMode]);
+  const fieldRef = isWeb ? webInputRef : inputRef;
   const webHeightStyle = webHeight !== undefined ? { height: webHeight } : undefined;
   const rowRef = useRef<ViewInstance>(null);
   useEffect(() => (stepMode ? undefined : registerItem(LIST_CONTAINER, item.id, rowRef)), [registerItem, item.id, stepMode]);
@@ -140,10 +146,6 @@ function TodoItem({
   const handleCheck = () => {
     checkItem(item.id);
   };
-
-  if (hidden && item.checked) {
-    return null;
-  }
 
   // Root-level layout/entering/exiting animations are only enabled once the
   // screen navigation transition has settled. Running them while the screen is
@@ -189,7 +191,7 @@ function TodoItem({
             </TouchableOpacity>
 
             <TextInput
-              ref={inputRef}
+              ref={fieldRef}
               style={[
                 styles.listItemInputFree,
                 isWeb && styles.webInputFree,
@@ -200,7 +202,6 @@ function TodoItem({
               multiline
               numberOfLines={isWeb ? 1 : undefined}
               scrollEnabled={!isWeb}
-              onContentSizeChange={isWeb ? onWebContentSize : undefined}
               onChangeText={(value) => setText(item.id, value)}
               value={item.text}
               editable={!disabled}
@@ -270,7 +271,7 @@ function TodoItem({
 
       <View style={styles.stepTextWrap}>
         <TextInput
-          ref={inputRef}
+          ref={fieldRef}
           style={[
             styles.stepTextInput,
             item.checked && styles.stepTextDone,
@@ -282,7 +283,6 @@ function TodoItem({
           multiline
           numberOfLines={isWeb ? 1 : undefined}
           scrollEnabled={!isWeb}
-          onContentSizeChange={isWeb ? onWebContentSize : undefined}
           onChangeText={(value) => setText(item.id, value)}
           value={item.text}
           editable={!disabled}
@@ -329,6 +329,7 @@ export function TodoItemStatic({ item, height }: TodoItemStaticProps) {
         <TextInput
           style={[
             styles.listItemInputFree,
+            isWeb && styles.webInputFree,
             item.checked && styles.listItemInputChecked,
             styles.edgeLifted,
             height !== undefined && { height },
@@ -406,11 +407,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: GLASS.border,
   },
-  // The web can't centre a text field's text: one line of WEB_LINE between paddings fills the row's 48 as on phones.
+  // The web can't centre a text field's text: one line of WEB_LINE between paddings and the borders (1 each) fills the
+  // row's 48 as on phones.
   webInputFree: {
     lineHeight: WEB_LINE,
-    paddingTop: (48 - WEB_LINE) / 2,
-    paddingBottom: (48 - WEB_LINE) / 2,
+    paddingTop: (48 - 2 - WEB_LINE) / 2,
+    paddingBottom: (48 - 2 - WEB_LINE) / 2,
   },
   checkboxFree: {
     backgroundColor: COLOR.surface,
@@ -518,8 +520,8 @@ const styles = StyleSheet.create({
   },
   webStepText: {
     lineHeight: WEB_LINE,
-    paddingTop: (38 - WEB_LINE) / 2,
-    paddingBottom: (38 - WEB_LINE) / 2,
+    paddingTop: (38 - 2 - WEB_LINE) / 2,
+    paddingBottom: (38 - 2 - WEB_LINE) / 2,
   },
   stepTextDone: {
     color: COLOR.textMuted,

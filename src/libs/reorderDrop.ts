@@ -129,6 +129,26 @@ export function withoutItem(layout: DropLayout, container: number, index: number
   };
 }
 
+/**
+ * A slot found among the items measured at lift, as a place among a container's items now. `measured` is the ids of the
+ * items measured then, in order, without the lifted one; `items` the container's ids now, without it. A long list's rows
+ * far from the screen aren't mounted, so they aren't measured: slot `index` is "before the measured item `index`" (or
+ * "after the last measured one"), and that item's place now is where the slot goes. An item gone meanwhile (deleted on
+ * another device) gives the place after the nearest measured item before it.
+ */
+export function slotInItems(measured: readonly string[], items: readonly string[], index: number): number {
+  "worklet";
+  if (index < measured.length) {
+    const at = items.indexOf(measured[index]);
+    if (at !== -1) return at;
+  }
+  for (let j = Math.min(index, measured.length) - 1; j >= 0; j--) {
+    const at = items.indexOf(measured[j]);
+    if (at !== -1) return at + 1;
+  }
+  return 0;
+}
+
 /** Whether dropping there would leave the item where it is (a target found without the item: `withoutItem`). */
 export function isOwnPlace(target: DropTarget, sourceContainer: number, sourceIndex: number): boolean {
   "worklet";

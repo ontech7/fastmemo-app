@@ -58,6 +58,7 @@ export default function ReorderHandle<T extends ReorderItem>({ item, containerId
   useLayoutEffect(() => {
     itemRef.current = item;
   }, [item]);
+  const itemId = item.id;
   const onLift = useCallback((x: number, y: number) => lift(itemRef.current, containerId, x, y), [lift, containerId]);
 
   const panConfig = useMemo(
@@ -77,15 +78,13 @@ export default function ReorderHandle<T extends ReorderItem>({ item, containerId
       },
       onDeactivate: (event: { canceled: boolean }) => {
         "worklet";
-        if (event.canceled) scheduleOnRN(cancel);
-        else scheduleOnRN(release);
+        if (event.canceled) scheduleOnRN(cancel, itemId);
+        else scheduleOnRN(release, itemId);
       },
     }),
-    [disabled, pointerX, pointerY, onLift, release, cancel]
+    [disabled, pointerX, pointerY, onLift, release, cancel, itemId]
   );
   const panGesture = usePanGesture(panConfig);
-
-  const itemId = item.id;
   const accessibilityActions = useMemo(
     () => [
       { name: ACTIONS[0], label: t("a11y.move_up") },
