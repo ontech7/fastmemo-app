@@ -13,6 +13,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { DURATION, LOOP } from "@/constants/motion";
 
 interface Props {
   visible: boolean;
@@ -57,14 +58,14 @@ export default function DictationSheet({
     if (listening) {
       pulse.value = withRepeat(
         withSequence(
-          withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: 800, easing: Easing.inOut(Easing.ease) })
+          withTiming(1, { duration: LOOP.listening, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: LOOP.listening, easing: Easing.inOut(Easing.ease) })
         ),
         -1,
         false
       );
     } else {
-      pulse.value = withTiming(0, { duration: 200 });
+      pulse.value = withTiming(0, { duration: DURATION.base });
     }
   }, [listening, pulse]);
 

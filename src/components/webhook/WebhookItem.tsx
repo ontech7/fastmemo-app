@@ -4,8 +4,13 @@ import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { DURATION } from "@/constants/motion";
 
 import type { WebhookPayload } from "@/types";
+
+// One instance of each animation for every row (a builder made per render is a new prop each time).
+const WEBHOOK_ENTERING = FadeIn.duration(DURATION.base);
+const WEBHOOK_EXITING = FadeOut.duration(DURATION.fast);
 
 interface Props {
   title: string;
@@ -32,7 +37,7 @@ function WebhookItem({ title, webhook, setWebhookUrl, toggleWebhook }: Props) {
         >
           <View style={[styles.checkbox, webhook.enabled && styles.checkboxChecked]}>
             {webhook.enabled && (
-              <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)}>
+              <Animated.View entering={WEBHOOK_ENTERING} exiting={WEBHOOK_EXITING}>
                 <CheckIcon size={24} color={COLOR.softWhite} />
               </Animated.View>
             )}

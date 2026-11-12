@@ -1,10 +1,11 @@
 import TourTip from "@/components/ui/TourTip";
 import { BORDER, COLOR, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { DURATION, EASING } from "@/constants/motion";
 import type { TourRect } from "@/libs/tourTargets";
 import { measureInWindow, measureTourTarget, subscribeTourTargets } from "@/libs/tourTargets";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ViewInstance, ViewStyle } from "react-native";
-import { Animated, Dimensions, Easing, Platform, StyleSheet, View } from "react-native";
+import { Animated, Dimensions, Platform, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 interface Props {
@@ -96,8 +97,8 @@ export default function TourSpotlight({ targets, pointAt, passThrough = false, .
     if (!measured) return;
     Animated.timing(opacity, {
       toValue: 1,
-      duration: 250,
-      easing: Easing.out(Easing.cubic),
+      duration: DURATION.base,
+      easing: EASING.enter,
       useNativeDriver: Platform.OS !== "web",
     }).start();
   }, [measured, opacity]);

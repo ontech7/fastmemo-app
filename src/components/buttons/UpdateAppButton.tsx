@@ -7,6 +7,10 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTim
 import { useAppUpdate } from "@/providers/AppUpdateProvider";
 
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { DURATION, LOOP } from "@/constants/motion";
+
+/** The button pops in a little past its size and settles. */
+const APPEAR_EASING = Easing.out(Easing.back(1.6));
 
 /**
  * Sidebar action that surfaces an available app update. Hidden until an update
@@ -24,8 +28,8 @@ export default function UpdateAppButton() {
   useEffect(() => {
     if (!updateAvailable) return;
 
-    appear.value = withTiming(1, { duration: 320, easing: Easing.out(Easing.back(1.6)) });
-    pulse.value = withRepeat(withTiming(1.14, { duration: 950, easing: Easing.inOut(Easing.ease) }), -1, true);
+    appear.value = withTiming(1, { duration: DURATION.slow, easing: APPEAR_EASING });
+    pulse.value = withRepeat(withTiming(1.14, { duration: LOOP.pulse, easing: Easing.inOut(Easing.ease) }), -1, true);
   }, [updateAvailable, appear, pulse]);
 
   const animatedStyle = useAnimatedStyle(() => ({

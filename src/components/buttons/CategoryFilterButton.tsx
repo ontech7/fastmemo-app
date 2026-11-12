@@ -17,6 +17,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { LOOP } from "@/constants/motion";
 
 import CategoryIcon from "@/components/CategoryIcon";
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
@@ -60,10 +61,10 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
     if (deleteMode) {
       rotate.value = withRepeat(
         withSequence(
-          withTiming(0, { duration: 75, easing: Easing.linear }),
-          withTiming(5, { duration: 75, easing: Easing.linear }),
-          withTiming(0, { duration: 75, easing: Easing.linear }),
-          withTiming(-5, { duration: 75, easing: Easing.linear })
+          withTiming(0, { duration: LOOP.wiggle, easing: Easing.linear }),
+          withTiming(5, { duration: LOOP.wiggle, easing: Easing.linear }),
+          withTiming(0, { duration: LOOP.wiggle, easing: Easing.linear }),
+          withTiming(-5, { duration: LOOP.wiggle, easing: Easing.linear })
         ),
         -1,
         true

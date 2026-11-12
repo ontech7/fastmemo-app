@@ -13,7 +13,6 @@ import {
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import Animated, {
-  Easing,
   FadeIn,
   FadeOut,
   LinearTransition,
@@ -23,6 +22,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { DURATION, EASING, SPRING } from "@/constants/motion";
 
 import ReorderHandle from "@/components/reorder/ReorderHandle";
 import ReorderSlot from "@/components/reorder/ReorderSlot";
@@ -73,13 +73,13 @@ const STEP_CIRCLE_SIZE = 34;
 const WEB_LINE = Math.round(FONTSIZE.inputTitle * 1.35);
 
 // One instance of each animation for every row (a builder made per render is a new prop each time).
-const ROW_LAYOUT = LinearTransition.springify().damping(18).stiffness(180);
-const ROW_ENTERING = FadeIn.duration(220);
-const ROW_EXITING = FadeOut.duration(180);
-const CHECK_ENTERING = FadeIn.duration(180);
-const CHECK_EXITING = FadeOut.duration(120);
-const ONGOING_ENTERING = FadeIn.duration(220);
-const ONGOING_EXITING = FadeOut.duration(150);
+const ROW_LAYOUT = LinearTransition.springify().damping(SPRING.soft.damping).stiffness(SPRING.soft.stiffness);
+const ROW_ENTERING = FadeIn.duration(DURATION.base);
+const ROW_EXITING = FadeOut.duration(DURATION.fast);
+const CHECK_ENTERING = FadeIn.duration(DURATION.base);
+const CHECK_EXITING = FadeOut.duration(DURATION.fast);
+const ONGOING_ENTERING = FadeIn.duration(DURATION.base);
+const ONGOING_EXITING = FadeOut.duration(DURATION.fast);
 
 function TodoItem({
   item,
@@ -107,8 +107,8 @@ function TodoItem({
 
   useEffect(() => {
     circleFill.value = withTiming(isOngoing ? 1 : 0, {
-      duration: 320,
-      easing: Easing.out(Easing.cubic),
+      duration: DURATION.slow,
+      easing: EASING.enter,
     });
   }, [isOngoing, circleFill]);
 

@@ -1,5 +1,6 @@
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import { BORDER, COLOR, FONTSIZE, GLASS, MONOSPACE_FONT, PADDING_MARGIN } from "@/constants/styles";
+import { SPRING } from "@/constants/motion";
 import type { CodeTab } from "@/types";
 import { isStringEmpty } from "@/utils/string";
 import { useState } from "react";
@@ -56,7 +57,7 @@ export default function CodeDraggableTab({
     .onEnd((e) => {
       isDragging.value = false;
       runOnJS(onReorder)(index, e.translationX);
-      translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
+      translateX.value = withSpring(0, SPRING.snappy);
     });
 
   const tapGesture = Gesture.Tap().onEnd(() => {

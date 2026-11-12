@@ -11,6 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { COLOR } from "@/constants/styles";
+import { LOOP } from "@/constants/motion";
 
 interface Props {
   size?: number;
@@ -59,5 +60,5 @@ export default function BlinkingDot({
   );
 }
 
-const BLINK = { duration: 700, easing: Easing.inOut(Easing.ease) };
-const PING = { duration: 1600, easing: Easing.out(Easing.ease) };
+const BLINK = { duration: LOOP.blink, easing: Easing.inOut(Easing.ease) };
+const PING = { duration: LOOP.ping, easing: Easing.out(Easing.ease) };

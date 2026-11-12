@@ -6,6 +6,7 @@ import NoCloudIcon from "@/components/icons/NoCloudIcon";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import BlinkingDot from "@/components/ui/BlinkingDot";
 import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import useNetInfo from "@/hooks/useNetInfo";
@@ -21,14 +22,6 @@ import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } 
 import ArrowPathIcon from "react-native-heroicons/outline/ArrowPathIcon";
 import ComputerDesktopIcon from "react-native-heroicons/outline/ComputerDesktopIcon";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
-import Animated, {
-  cancelAnimation,
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
 /** How long the list may take before the screen says the cloud doesn't answer (it keeps waiting: a late list replaces it). */
@@ -79,28 +72,6 @@ export default function SyncedDevicesScreen() {
   const shownFailure = netInfo.isConnected ? failure : "offline";
   // Only the latest request's outcome is shown.
   const requestRef = useRef(0);
-
-  const blinkOpacity = useSharedValue(0);
-
-  const blinkStyle = useAnimatedStyle(() => ({
-    opacity: blinkOpacity.value,
-  }));
-
-  useEffect(() => {
-    blinkOpacity.value = withRepeat(
-      withTiming(1, {
-        duration: 1250,
-        easing: Easing.linear,
-      }),
-      -1,
-      true
-    );
-
-    return () => {
-      cancelAnimation(blinkOpacity);
-      blinkOpacity.value = 0;
-    };
-  }, [blinkOpacity]);
 
   // retrieve devices
 
@@ -345,7 +316,7 @@ export default function SyncedDevicesScreen() {
                             <ArrowPathIcon size={16} color={COLOR.accentSoft} />
                           </View>
                         </TouchableOpacity>
-                        <Animated.View style={[styles.currentDeviceDot, blinkStyle]} />
+                        <BlinkingDot size={18} style={styles.currentDeviceDot} />
                       </View>
                     ) : (
                       <TouchableOpacity
@@ -536,10 +507,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   currentDeviceDot: {
-    backgroundColor: COLOR.accentSoft,
-    width: 18,
-    height: 18,
-    borderRadius: BORDER.rounded,
     marginRight: PADDING_MARGIN.sm,
   },
   deleteChip: {

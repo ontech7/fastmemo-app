@@ -1,5 +1,6 @@
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { DURATION } from "@/constants/motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View, ViewStyle } from "react-native";
@@ -7,6 +8,9 @@ import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
 import ChevronUpIcon from "react-native-heroicons/outline/ChevronUpIcon";
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
 import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
+
+const BAR_ENTERING = FadeInDown.duration(DURATION.base);
+const BAR_EXITING = FadeOutUp.duration(DURATION.fast);
 
 /**
  * Inject JS into the pell-rich-editor WebView.
@@ -213,7 +217,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
   if (!visible) return null;
 
   return (
-    <Animated.View entering={FadeInDown.duration(200)} exiting={FadeOutUp.duration(200)} style={[styles.container, style]}>
+    <Animated.View entering={BAR_ENTERING} exiting={BAR_EXITING} style={[styles.container, style]}>
       <View style={styles.row}>
         <TextInput
           ref={searchInputRef}

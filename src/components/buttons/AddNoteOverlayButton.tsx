@@ -5,13 +5,11 @@ import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View, type 
 import ChevronUpIcon from "react-native-heroicons/outline/ChevronUpIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import Animated, {
-  Easing,
   Extrapolation,
   interpolate,
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
-  withSequence,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
@@ -28,6 +26,7 @@ import type { Href } from "expo-router";
 import { NOTE_TYPES } from "@/constants/note-types";
 import { noteTypeTarget, SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { DURATION, EASING, SPRING } from "@/constants/motion";
 import type { NoteCreationType } from "@/types";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -35,8 +34,8 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const FAB_RIGHT = 40;
 const FAB_BOTTOM = 60;
 
-const ANIMATION_DURATION_OPEN = 300;
-const ANIMATION_DURATION_CLOSE = 180;
+const ANIMATION_DURATION_OPEN = DURATION.slow;
+const ANIMATION_DURATION_CLOSE = DURATION.fast;
 
 interface Props {
   isDeleteMode: boolean;
@@ -190,7 +189,9 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
   // shared value (not entering/exiting layout animations) so it stays safe
   // while navigating away on press.
   useEffect(() => {
-    hintPop.value = withSequence(withTiming(0.6, { duration: 0 }), withSpring(1, { damping: 9, stiffness: 220 }));
+    // From 60% at once, then springs to its size.
+    hintPop.value = 0.6;
+    hintPop.value = withSpring(1, SPRING.snappy);
   }, [directNoteType.key, hintPop]);
 
   const hintAnimatedStyle = useAnimatedStyle(() => ({
@@ -200,11 +201,11 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
   useEffect(() => {
     closeRotation.value = withTiming(showCloseIcon ? 1 : 0, {
       duration: showCloseIcon ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
-      easing: Easing.out(Easing.cubic),
+      easing: EASING.enter,
     });
     secondaryVisible.value = withTiming(isDeleteMode ? 0 : 1, {
       duration: isDeleteMode ? ANIMATION_DURATION_CLOSE : ANIMATION_DURATION_OPEN,
-      easing: Easing.out(Easing.cubic),
+      easing: EASING.enter,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCloseIcon, isDeleteMode]);
@@ -216,11 +217,11 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
   useEffect(() => {
     chevronRotation.value = withTiming(isOverlayOpen ? 1 : 0, {
       duration: isOverlayOpen ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
-      easing: Easing.out(Easing.cubic),
+      easing: EASING.enter,
     });
     menuProgress.value = withTiming(isOverlayOpen ? 1 : 0, {
       duration: isOverlayOpen ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
-      easing: isOverlayOpen ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      easing: isOverlayOpen ? EASING.enter : EASING.exit,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOverlayOpen]);

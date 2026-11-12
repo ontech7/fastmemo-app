@@ -1,3 +1,4 @@
+import { EASING } from "@/constants/motion";
 import { LIFT } from "@/constants/styles";
 import Haptics, { ImpactFeedbackStyle, NotificationFeedbackType } from "@/libs/haptics";
 import { findDrop, isOwnPlace, slotInItems, stepIndex, toMoveIndex, withoutItem } from "@/libs/reorderDrop";
@@ -8,14 +9,7 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 import type { ReactNode, RefObject } from "react";
 import { Keyboard, Platform } from "react-native";
 import type { ViewInstance } from "react-native";
-import {
-  Easing,
-  useAnimatedReaction,
-  useFrameCallback,
-  useReducedMotion,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
+import { useAnimatedReaction, useFrameCallback, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import type { LayoutAnimationFunction, SharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 
@@ -29,11 +23,9 @@ import { scheduleOnRN } from "react-native-worklets";
  */
 
 /** The drop lands quickly (the user, 2026-11-12: moving things in a row must not wait on it), easing out. */
-const SETTLE = { duration: LIFT.dropMs, easing: Easing.out(Easing.cubic) };
+const SETTLE = { duration: LIFT.dropMs, easing: EASING.enter };
 /** The webview may report an animation's end late: the drag ends by then anyway. */
 const SETTLE_MS = LIFT.dropMs + 60;
-/** How long an item slides when the slot opens or its place closes (the kanban's `ITEM_LAYOUT`). */
-const SLIDE_MS = 160;
 
 export interface ReorderItem {
   id: string;
@@ -155,7 +147,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
   const itemLayout = useMemo<LayoutAnimationFunction>(
     () => (values) => {
       "worklet";
-      const timing = { duration: slide.get() === 1 ? SLIDE_MS : 0 };
+      const timing = { duration: slide.get() === 1 ? LIFT.slideMs : 0 };
       return {
         initialValues: {
           originX: values.currentOriginX,

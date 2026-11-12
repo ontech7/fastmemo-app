@@ -120,6 +120,8 @@ export const LIFT = {
   tilt: -2,
   ms: 120,
   dropMs: 120,
+  /** Items sliding to open the slot and close the lifted item's place (the board's feel, approved on the Pixel). */
+  slideMs: 160,
 } as const;
 
 export const FONTSIZE = {

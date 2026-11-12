@@ -3,10 +3,11 @@ import { createContext, useContext, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LayoutChangeEvent, ViewInstance } from "react-native";
 import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { DURATION, EASING } from "@/constants/motion";
 
 const DEFAULT_WIDTH = 230;
 const GAP = PADDING_MARGIN.sm; // space between the trigger and the menu
@@ -97,7 +98,7 @@ export default function PopupMenu({
     setMeasuredHeight(measured);
     if (!openedRef.current) {
       openedRef.current = true;
-      progress.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
+      progress.value = withTiming(1, { duration: DURATION.base, easing: EASING.enter });
     }
   };
 
@@ -108,7 +109,7 @@ export default function PopupMenu({
   };
 
   const close = () => {
-    progress.value = withTiming(0, { duration: 150, easing: Easing.in(Easing.cubic) }, (finished) => {
+    progress.value = withTiming(0, { duration: DURATION.fast, easing: EASING.exit }, (finished) => {
       if (finished) {
         runOnJS(finishClose)();
       }

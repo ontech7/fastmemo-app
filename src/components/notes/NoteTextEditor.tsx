@@ -15,6 +15,7 @@ import { noteTextLimit } from "@/libs/cloud";
 import { EDITOR_SANITIZE_JS } from "@/generated/editor-sanitize";
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { DURATION } from "@/constants/motion";
 import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
@@ -292,7 +293,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
     if (!editorInitialized) return;
     const animation = Animated.timing(editorOpacity, {
       toValue: 1,
-      duration: 220,
+      duration: DURATION.base,
       useNativeDriver: true,
     });
     animation.start();

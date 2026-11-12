@@ -5,7 +5,6 @@ import ArrowsRightLeftIcon from "react-native-heroicons/outline/ArrowsRightLeftI
 import ArrowsUpDownIcon from "react-native-heroicons/outline/ArrowsUpDownIcon";
 import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
 import Animated, {
-  Easing,
   Extrapolation,
   interpolate,
   type SharedValue,
@@ -16,12 +15,13 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BORDER, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { DURATION, EASING } from "@/constants/motion";
 import type { TodoNote } from "@/types";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const ANIMATION_DURATION_OPEN = 300;
-const ANIMATION_DURATION_CLOSE = 180;
+const ANIMATION_DURATION_OPEN = DURATION.slow;
+const ANIMATION_DURATION_CLOSE = DURATION.fast;
 
 const TODO_MODES = [
   { mode: "free", labelKey: "note.mode_free", icon: ArrowsUpDownIcon },
@@ -103,7 +103,7 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
   useEffect(() => {
     menuProgress.value = withTiming(isOpen ? 1 : 0, {
       duration: isOpen ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
-      easing: isOpen ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      easing: isOpen ? EASING.enter : EASING.exit,
     });
   }, [isOpen, menuProgress]);
 

@@ -17,6 +17,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import IconChip from "@/components/ui/IconChip";
 import { COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { DURATION } from "@/constants/motion";
+
+/** A zoom or a pan settling (Reanimated's default length, from the app's set). */
+const VIEWER_TIMING = { duration: DURATION.slow };
 
 interface Props {
   /** The image (a data: URL or a URL). The viewer is shown while it is mounted. */
@@ -66,9 +70,9 @@ export default function ImageViewer({ src, width, height, onClose, action }: Pro
     const ratio = next / scale.value;
     const nx = clamp(px - (px - x.value) * ratio, Math.max(0, (b.width * next - b.stageWidth) / 2));
     const ny = clamp(py - (py - y.value) * ratio, Math.max(0, (b.height * next - b.stageHeight) / 2));
-    scale.value = animate ? withTiming(next) : next;
-    x.value = animate ? withTiming(nx) : nx;
-    y.value = animate ? withTiming(ny) : ny;
+    scale.value = animate ? withTiming(next, VIEWER_TIMING) : next;
+    x.value = animate ? withTiming(nx, VIEWER_TIMING) : nx;
+    y.value = animate ? withTiming(ny, VIEWER_TIMING) : ny;
   };
 
   const pinch = usePinchGesture({

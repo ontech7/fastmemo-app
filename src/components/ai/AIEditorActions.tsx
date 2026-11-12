@@ -1,4 +1,5 @@
 import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, MAX_WIDTH, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
+import { DURATION, EASING } from "@/constants/motion";
 import useEngineSupport from "@/hooks/useEngineSupport";
 import type { AIModelId, EditorAction, LongNoteAction, LongNoteProgress } from "@/libs/ai";
 import {
@@ -52,20 +53,13 @@ import TagIcon from "react-native-heroicons/outline/TagIcon";
 import CheckCircleIcon from "react-native-heroicons/solid/CheckCircleIcon";
 import ExclamationCircleIcon from "react-native-heroicons/solid/ExclamationCircleIcon";
 import type { SharedValue } from "react-native-reanimated";
-import Animated, {
-  Easing,
-  Extrapolation,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const ANIM_OPEN = 250;
-const ANIM_CLOSE = 150;
+const ANIM_OPEN = DURATION.slow;
+const ANIM_CLOSE = DURATION.fast;
 const FEEDBACK_DURATION = 1500;
 
 const AI_COLOR = "#6C63FF";
@@ -272,7 +266,7 @@ export default function AIEditorActions({
   useEffect(() => {
     menuProgress.value = withTiming(isMenuOpen ? 1 : 0, {
       duration: isMenuOpen ? ANIM_OPEN : ANIM_CLOSE,
-      easing: isMenuOpen ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      easing: isMenuOpen ? EASING.enter : EASING.exit,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMenuOpen]);

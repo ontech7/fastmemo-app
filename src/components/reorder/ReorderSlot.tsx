@@ -1,12 +1,12 @@
 import DropSlot, { ROW_DELETE_INSET } from "@/components/ui/DropSlot";
-import { PADDING_MARGIN } from "@/constants/styles";
+import { LIFT, PADDING_MARGIN } from "@/constants/styles";
 import { useReorder } from "@/providers/ReorderProvider";
 import { useEffect, useRef } from "react";
 import { StyleSheet, View, type StyleProp, type ViewInstance, type ViewStyle } from "react-native";
 import Animated, { LinearTransition } from "react-native-reanimated";
 
 /** While an item is in the air, the items slide to open its slot and close its place, and the slot moves the same way. */
-export const ITEM_LAYOUT = LinearTransition.duration(160);
+export const ITEM_LAYOUT = LinearTransition.duration(LIFT.slideMs);
 
 interface Props {
   /** The lifted item's height: the slot is the place it will take. */
