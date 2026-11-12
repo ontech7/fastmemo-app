@@ -26,6 +26,8 @@ export const SELECTION_BAR_RESERVED = 64 + MARGIN_BOTTOM;
 const LABEL_MIN_ACTION_WIDTH = 64;
 /** The words grow with the system font size up to this much: past it they would not fit, and the bar would grow. */
 const LABEL_MAX_FONT_SCALE = 1.3;
+/** On a wide window (desktop, tablet) a compact bar, centred under the list: four actions spread over the whole column read as a banner. */
+const BAR_MAX_WIDTH = 440;
 
 interface Props {
   /** Out of select mode: faded out, no touch, focus or screen reader; still mounted, so it is measured before it shows. */
@@ -138,6 +140,9 @@ const styles = StyleSheet.create({
   },
   // Solid, not glass: over the end of the list (quick note off) it must read against the light cards.
   bar: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: BAR_MAX_WIDTH,
     flexDirection: "row",
     alignItems: "stretch",
     paddingHorizontal: PADDING_MARGIN.xs,
