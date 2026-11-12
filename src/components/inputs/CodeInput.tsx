@@ -11,15 +11,15 @@ import Animated, {
 
 import Haptics from "@/libs/haptics";
 
-import { DURATION, SPRING } from "@/constants/motion";
+import { DURATION } from "@/constants/motion";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 
 import VirtualNumberKeyboard from "@/components/VirtualNumberKeyboard";
 
 const separate = (string: string) => string.split("");
 
-/** A digit typed: its dot pops in. */
-const DOT_IN = ZoomIn.springify().damping(SPRING.snappy.damping).stiffness(SPRING.snappy.stiffness);
+/** A digit typed: its dot pops in, short and without a bounce (a spring read as too much at every key). */
+const DOT_IN = ZoomIn.duration(DURATION.fast);
 /** A wrong code: the row shakes, -8, 8, -6, 6, 0 over `DURATION.slow`. */
 const SHAKE = [-8, 8, -6, 6, 0];
 const SHAKE_STEP = { duration: DURATION.slow / SHAKE.length };
