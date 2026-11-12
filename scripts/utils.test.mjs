@@ -19,6 +19,7 @@ await build({
       export * from "@/utils/sort";
       export * from "@/utils/noteSearch";
       export * from "@/libs/quickNoteDraft";
+      export * from "@/utils/noteEmpty";
     `,
     resolveDir: src,
     loader: "ts",
@@ -152,6 +153,28 @@ console.log("\nthe quick note bar's draft");
   storage.__failReads(true);
   ok("a failed read is an empty draft, not an error", (await loadQuickNoteDraft()) === "");
   storage.__reset();
+}
+
+console.log("\na note left empty (not kept when its editor closes)");
+{
+  const { isTodoNoteEmpty, isKanbanNoteEmpty } = M;
+  const item = (text) => ({ id: text || "x", text, checked: false });
+  const todo = (title, texts) => ({ title, list: texts.map(item) });
+  ok("list: no title, no rows", isTodoNoteEmpty(todo("", [])));
+  ok("list: no title, one empty row", isTodoNoteEmpty(todo("", [""])));
+  ok("list: no title, three empty rows", isTodoNoteEmpty(todo("", ["", "", ""])));
+  ok("list: no title, three rows typed", !isTodoNoteEmpty(todo("", ["uno", "due", "tre"])));
+  ok("list: no title, one row typed among empty ones", !isTodoNoteEmpty(todo("", ["", "due", ""])));
+  ok("list: a title, no rows typed", !isTodoNoteEmpty(todo("Spesa", ["", ""])));
+  ok("list: a missing list", isTodoNoteEmpty({ title: "" }));
+  const board = (title, columns) => ({
+    title,
+    columns: columns.map((texts, i) => ({ id: `c${i}`, items: texts.map((text) => ({ id: text || "x", text })) })),
+  });
+  ok("board: no title, no columns", isKanbanNoteEmpty(board("", [])));
+  ok("board: no title, three empty cards", isKanbanNoteEmpty(board("", [["", ""], [""]])));
+  ok("board: no title, one card typed", !isKanbanNoteEmpty(board("", [["", "uno"], []])));
+  ok("board: a title, empty cards", !isKanbanNoteEmpty(board("Lavori", [[""]])));
 }
 
 void storage;

@@ -15,7 +15,7 @@ import { moveCard } from "@/libs/kanbanOps";
 import KanbanDragProvider from "@/providers/KanbanDragProvider";
 import { selectorAIAssistant, selectorWebhook_addKanbanNote } from "@/slicers/settingsSlice";
 import type { KanbanNote } from "@/types";
-import { isStringEmpty } from "@/utils/string";
+import { isKanbanNoteEmpty } from "@/utils/noteEmpty";
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
@@ -29,15 +29,6 @@ const COLUMN_PEEK = 40;
 interface Props {
   initialNote: KanbanNote;
 }
-
-const isKanbanNoteEmpty = (n: KanbanNote) => {
-  const no_title = isStringEmpty(n.title);
-  const no_columns = !n.columns?.length;
-  // A column holding only blank cards counts as having no cards, so a fresh note
-  // whose default empty card was never typed into still trashes itself on exit.
-  const no_cards = n.columns?.every((col) => (col.items ?? []).every((item) => isStringEmpty(item.text)));
-  return no_title && (no_columns || no_cards);
-};
 
 export default function NoteKanbanEditor({ initialNote }: Props) {
   const { t } = useTranslation();

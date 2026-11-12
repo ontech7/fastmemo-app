@@ -5,7 +5,8 @@ import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
-import { capitalize, isStringEmpty } from "@/utils/string";
+import { isTodoNoteEmpty } from "@/utils/noteEmpty";
+import { capitalize } from "@/utils/string";
 import { voiceTextToLines } from "@/utils/voiceTranscript";
 
 import type { TodoItem, TodoNote } from "@/types";
@@ -17,12 +18,6 @@ import type { TodoItem, TodoNote } from "@/types";
  * again (LL-018, LL-020). An action that has nothing to do returns `current` itself (nothing is committed). An item that
  * doesn't change keeps its object, so its row doesn't render either.
  */
-
-const isTodoNoteEmpty = (n: TodoNote) => {
-  const noTitle = isStringEmpty(n.title);
-  const noListItems = !n.list?.length || (n.list?.length === 1 && isStringEmpty(n.list?.[0].text));
-  return noTitle && noListItems;
-};
 
 const buildPayloadExtras = (n: TodoNote) => ({ list: n.list, mode: n.mode });
 
