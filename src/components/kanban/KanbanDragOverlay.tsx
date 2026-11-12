@@ -34,7 +34,7 @@ export default function KanbanDragOverlay() {
   useAnimatedReaction(
     () => returning.get(),
     (now, previous) => {
-      if (now === 1 && previous !== 1) lifted.set(withTiming(0, { duration: LIFT.settleMs }));
+      if (now === 1 && previous !== 1) lifted.set(withTiming(0, { duration: LIFT.dropMs }));
     }
   );
 

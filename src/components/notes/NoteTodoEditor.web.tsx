@@ -25,7 +25,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 
-import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, LIFT, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
@@ -40,6 +40,8 @@ interface Props {
 // Module-level: a new options object at each render makes new sensors, which change dnd-kit's context and render every
 // row again.
 const KEYBOARD_SENSOR_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
+// The drop lands quickly, as on the board (LIFT.dropMs): moving many rows in a row must not wait on it.
+const DROP_ANIMATION = { duration: LIFT.dropMs, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" };
 
 export default function NoteTodoEditor({ initialNote }: Props) {
   const { t } = useTranslation();
@@ -177,7 +179,9 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                   `position: fixed` (and the box dnd-kit measures for the drop) relative to the list instead. */}
               {typeof document !== "undefined" &&
                 createPortal(
-                  <DragOverlay>{activeItem ? <TodoItemLifted item={activeItem} /> : null}</DragOverlay>,
+                  <DragOverlay dropAnimation={DROP_ANIMATION}>
+                    {activeItem ? <TodoItemLifted item={activeItem} /> : null}
+                  </DragOverlay>,
                   document.body
                 )}
             </DndContext>

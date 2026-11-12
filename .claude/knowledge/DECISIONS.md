@@ -1889,19 +1889,21 @@ after a scroll. Nothing showed where the card would land.
 - **The web's pointer rule:** the web build sees every pointer as a mouse, so on the web and the desktop a card lifts
   after 4 px of movement (`minDistance`), with `touchAction: "none"` on the handle. Phones lift after a 200 ms press.
   The handle's mouse press neither starts the board's drag-to-scroll nor selects text.
-- **Drop:** the target as of the release. The lifted card settles into the slot, measured then
-  (`damping 18, stiffness 260`, flattening its tilt and scale), and the move is committed in the same React commit that
-  ends the preview: the screen already shows that order, so nothing moves at the drop. Off the board or on its own
-  place, the slot is its own place: it settles there and nothing is dispatched. The settle is capped at 450 ms because
-  the desktop webview reports a spring's end seconds late. Reduced motion: no settle and no animated lift. The editor
-  applies a drop with `moveCard` on the board as it is then, so a board changed under the drag (here or on another
-  device) changes nothing.
+- **Drop:** the target as of the release. The lifted card lands in the slot, measured then, in `LIFT.dropMs` (120 ms,
+  easing out, flattening its tilt and scale), and the move is committed in the same React commit that ends the preview:
+  the screen already shows that order, so nothing moves at the drop. Off the board or on its own place, the slot is its
+  own place: it lands there and nothing is dispatched. Short on purpose (the user, 2026-11-12: a first version took up
+  to a second, and moving many items in a row must not wait on it); the drag ends 60 ms later at the latest, as the
+  desktop webview reports an animation's end late. Reduced motion: no landing and no animated lift. The editor applies a
+  drop with `moveCard` on the board as it is then, so a board changed under the drag (here or on another device) changes
+  nothing.
 - **Lists share the look** (the user asked for it): the same lift (`LIFT`: scale, tilt, timings), accent edge, shadow
   and slot. On phones `react-native-draggable-flatlist` keeps its own gap: its placeholder is `DropSlot`, the active row
-  gets `lifted`, and the haptics are the board's (lift, slot change, a moved drop). On the web dnd-kit's `DragOverlay`
-  draws the lifted row, in a portal on `document.body` (react-native-web's ScrollView has a transform, which would place
-  the overlay's `position: fixed` and the box dnd-kit measures relative to the list), and the row's own place shows the
-  slot.
+  gets `lifted`, the haptics are the board's (lift, slot change, a moved drop), and its spring is stiff and critically
+  damped (`DROP_SPRING`, about 120 ms: the library's default crawls for a second and the next drag waits on it). On the
+  web dnd-kit's `DragOverlay` draws the lifted row (its drop in `LIFT.dropMs`), in a portal on `document.body`
+  (react-native-web's ScrollView has a transform, which would place the overlay's `position: fixed` and the box dnd-kit
+  measures relative to the list), and the row's own place shows the slot.
 
 **Alternatives rejected:**
 

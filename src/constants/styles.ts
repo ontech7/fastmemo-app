@@ -111,12 +111,15 @@ export const SHADOW = {
   },
 } as const;
 
-/** A dragged kanban card or list row: how far it lifts (scale, tilt in degrees) and how fast it lifts and settles. */
+/**
+ * A dragged kanban card or list row: how far it lifts (scale, tilt in degrees), how fast it lifts, and how fast a drop
+ * lands (short: moving many items in a row must not wait on it).
+ */
 export const LIFT = {
   scale: 1.05,
   tilt: -2,
   ms: 120,
-  settleMs: 160,
+  dropMs: 120,
 } as const;
 
 export const FONTSIZE = {

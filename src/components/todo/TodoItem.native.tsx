@@ -98,7 +98,7 @@ function TodoItem({
   const lift = useSharedValue(0);
   useEffect(() => {
     const to = lifted ? 1 : 0;
-    lift.set(reducedMotion ? to : withTiming(to, { duration: lifted ? LIFT.ms : LIFT.settleMs }));
+    lift.set(reducedMotion ? to : withTiming(to, { duration: lifted ? LIFT.ms : LIFT.dropMs }));
   }, [lifted, reducedMotion, lift]);
   const liftStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${LIFT.tilt * lift.get()}deg` }, { scale: 1 + (LIFT.scale - 1) * lift.get() }] as const,

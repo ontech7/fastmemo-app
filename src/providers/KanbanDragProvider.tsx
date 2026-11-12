@@ -1,3 +1,4 @@
+import { LIFT } from "@/constants/styles";
 import Haptics, { ImpactFeedbackStyle, NotificationFeedbackType } from "@/libs/haptics";
 import { findDrop, isOwnPlace, toMoveIndex, withoutCard } from "@/libs/kanbanDrop";
 import type { DropColumn, DropLayout, DropTarget, Rect } from "@/libs/kanbanDrop";
@@ -7,7 +8,7 @@ import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRe
 import type { ReactNode, RefObject } from "react";
 import { Keyboard } from "react-native";
 import type { ViewInstance } from "react-native";
-import { useReducedMotion, useSharedValue, withSpring } from "react-native-reanimated";
+import { Easing, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 
@@ -19,9 +20,10 @@ import { scheduleOnRN } from "react-native-worklets";
  * changes (the columns show it: the preview) and at the end, when the card settles into the slot.
  */
 
-const SETTLE = { damping: 18, stiffness: 260 };
-/** By then the spring is within about 1% of the way it had to go. */
-const SETTLE_MS = 450;
+/** The drop lands quickly (the user, 2026-11-12: moving things in a row must not wait on it), easing out. */
+const SETTLE = { duration: LIFT.dropMs, easing: Easing.out(Easing.cubic) };
+/** The webview may report an animation's end late: the drag ends by then anyway. */
+const SETTLE_MS = LIFT.dropMs + 60;
 
 export interface KanbanDragContextValue {
   /** 1 while a card is in the air. */
@@ -298,28 +300,25 @@ export default function KanbanDragProvider({ children, onDrop, columnsRef }: Pro
         return;
       }
       returning.set(1);
-      // Two frames: the slot is laid out where the last target put it.
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          measureInWindow(slotRef.current?.current).then((slot) => {
-            if (liftSeq.current !== seq) return;
-            if (!slot) {
-              once();
-              return;
-            }
-            // The spring settles slowly to the last fraction of a pixel, and the desktop's webview reports its end
-            // late: the drag ends at the spring's end or after SETTLE_MS, whichever comes first.
-            setTimeout(once, SETTLE_MS);
-            pointerX.set(withSpring(slot.x + grabX.get(), SETTLE));
-            pointerY.set(
-              withSpring(slot.y + grabY.get(), SETTLE, () => {
-                "worklet";
-                scheduleOnRN(once);
-              })
-            );
-          });
-        })
-      );
+      // One frame: the slot is laid out where the last target put it.
+      requestAnimationFrame(() => {
+        measureInWindow(slotRef.current?.current).then((slot) => {
+          if (liftSeq.current !== seq) return;
+          if (!slot) {
+            once();
+            return;
+          }
+          // The drag ends when the card is in the slot, or after SETTLE_MS, whichever comes first.
+          setTimeout(once, SETTLE_MS);
+          pointerX.set(withTiming(slot.x + grabX.get(), SETTLE));
+          pointerY.set(
+            withTiming(slot.y + grabY.get(), SETTLE, () => {
+              "worklet";
+              scheduleOnRN(once);
+            })
+          );
+        });
+      });
     },
     [returning, pointerX, pointerY, grabX, grabY]
   );

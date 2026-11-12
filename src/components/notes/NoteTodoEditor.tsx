@@ -200,6 +200,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                       onPlaceholderIndexChange={onPlaceholderIndexChange}
                       onDragEnd={onDragEnd}
                       renderPlaceholder={renderSlot}
+                      animationConfig={DROP_SPRING}
                       keyExtractor={(item) => item.id}
                       renderItem={renderTodoItem}
                     />
@@ -263,6 +264,19 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 }
 
 /* STYLES */
+
+/**
+ * The rows making room and the drop landing: stiff and critically damped, about LIFT.dropMs. The library's default
+ * (overdamped, mass 0.2, stiffness 100) crawls for about a second before the drop counts, and the next drag waits on it.
+ */
+const DROP_SPRING = {
+  mass: 0.2,
+  stiffness: 400,
+  damping: 18,
+  overshootClamping: true,
+  restSpeedThreshold: 1,
+  restDisplacementThreshold: 0.5,
+};
 
 /**
  * Where the row being dragged will land: the same slot as a kanban card's, in the row's place. The list draws its
