@@ -82,6 +82,8 @@ export const GLASS = {
   navyFill: "rgba(18, 26, 64, 0.55)",
   border: "rgba(255, 255, 255, 0.12)",
   hairline: "rgba(255, 255, 255, 0.06)",
+  /** A toast's fill: deep navy, nearly opaque (it carries its own alpha). */
+  toastFill: "rgba(26, 34, 72, 0.94)",
 } as const;
 
 /** BlurView intensities (native) / px radius mapping (web backdrop-filter). */
@@ -133,6 +135,7 @@ export const FONTSIZE = {
   small: 12,
   inputTitle: 18,
   cardTitle: 18,
+  toast: 13,
 } as const;
 
 export const FONTWEIGHT = {
