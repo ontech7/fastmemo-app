@@ -314,6 +314,9 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
           ref={boardRef}
           horizontal
           showsHorizontalScrollIndicator={false}
+          // A tap on a button or a card acts at once with the keyboard up (Add card while typing in a card); a tap on
+          // empty space still closes it. The default spends the first tap on closing the keyboard.
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.columnsScrollView}
           snapToInterval={snapInterval}
           snapToAlignment="start"

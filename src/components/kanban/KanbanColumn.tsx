@@ -241,6 +241,7 @@ function KanbanColumn({
             style={styles.cardsList}
             showsVerticalScrollIndicator={false}
             nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.cardsListContent}
             onScroll={scrollHandler}
             scrollEventThrottle={16}
