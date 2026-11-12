@@ -1,82 +1,122 @@
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, type ViewInstance } from "react-native";
+import Animated, { useAnimatedRef } from "react-native-reanimated";
+import { useDispatch } from "react-redux";
 
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
-import OrganizeCategoryCard from "@/components/cards/OrganizeCategoryCard";
+import OrganizeCategoryCard, {
+  CATEGORIES_CONTAINER,
+  OrganizeCategoryCardStatic,
+} from "@/components/cards/OrganizeCategoryCard";
+import ReorderOverlay from "@/components/reorder/ReorderOverlay";
+import ReorderSlot from "@/components/reorder/ReorderSlot";
+import { ReorderScrollView } from "@/components/reorder/scrollViews";
+import { useReorderContainer } from "@/components/reorder/useReorderContainer";
+import ReorderProvider, { useReorder, useReorderPreview } from "@/providers/ReorderProvider";
+import { categoryOrder, moveCategory } from "@/slicers/categoriesSlice";
 
 import type { Category } from "@/types";
 
-interface OrderedCategories {
-  reorganizedCategoryList: Category[];
-  notNumberedCategoryList: Category[];
-}
-
 interface Props {
-  orderedCategories: OrderedCategories;
-  setOrderedCategories: (categories: OrderedCategories) => void;
-  editMode: boolean;
+  categories: Category[];
 }
 
-export default function OrganizeCategoryList({ orderedCategories, setOrderedCategories, editMode }: Props) {
-  const { t } = useTranslation();
+/** A category as the reorder engine sees it: its icon is its id. */
+type OrganizedCategory = Category & { id: string };
 
-  const { reorganizedCategoryList, notNumberedCategoryList } = orderedCategories;
+/** The category in the air, as the engine's layer draws it. */
+const renderLiftedCategory = (category: OrganizedCategory, height: number | undefined) => (
+  <OrganizeCategoryCardStatic category={category} height={height} />
+);
 
-  // "All" is the index category: always pinned first and never reorderable/editable.
-  const indexCategory =
-    reorganizedCategoryList.find((category) => category.index) ?? notNumberedCategoryList.find((category) => category.index);
+/*
+ * The Organize page's categories (ADR-038): "All" first, fixed; the others reorder by drag, each drop saved at once
+ * (`moveCategory`), which also moves them in the home's category bar.
+ */
+export default function OrganizeCategoryList({ categories }: Props) {
+  const dispatch = useDispatch();
 
-  const hasCustomCategories =
-    reorganizedCategoryList.some((category) => !category.index) || notNumberedCategoryList.some((category) => !category.index);
+  const sorted = useMemo(() => [...categories].sort(categoryOrder), [categories]);
+  const indexCategory = sorted.find((category) => category.index);
+  const others = useMemo<OrganizedCategory[]>(
+    () => sorted.filter((category) => !category.index).map((category) => ({ ...category, id: category.icon })),
+    [sorted]
+  );
+
+  // The categories as they are now, read by the drag at lift.
+  const containersRef = useRef([{ id: CATEGORIES_CONTAINER, items: others }]);
+  useLayoutEffect(() => {
+    containersRef.current = [{ id: CATEGORIES_CONTAINER, items: others }];
+  }, [others]);
+
+  const onDrop = useCallback(
+    (icon: string, _from: string, _to: string, toIndex: number) => dispatch(moveCategory({ icon, toIndex })),
+    [dispatch]
+  );
 
   return (
-    <View style={styles.categoryList}>
-      {indexCategory && (
-        <OrganizeCategoryCard
-          category={indexCategory}
-          order={0}
-          locked
-          editMode={editMode}
-          orderedCategories={orderedCategories}
-          setOrderedCategories={setOrderedCategories}
-        />
-      )}
+    <ReorderProvider containersRef={containersRef} onDrop={onDrop}>
+      <OrganizeRows indexCategory={indexCategory} others={others} />
+    </ReorderProvider>
+  );
+}
 
-      {reorganizedCategoryList.map(
-        (category, i) =>
-          !category.index && (
-            <OrganizeCategoryCard
-              key={category.icon}
-              category={category}
-              order={i}
-              editMode={editMode}
-              orderedCategories={orderedCategories}
-              setOrderedCategories={setOrderedCategories}
-            />
-          )
-      )}
+function OrganizeRows({ indexCategory, others }: { indexCategory?: Category; others: OrganizedCategory[] }) {
+  const { t } = useTranslation();
+  const preview = useReorderPreview();
+  const { registerFrame } = useReorder();
 
-      {notNumberedCategoryList.map(
-        (category, i) =>
-          !category.index && (
-            <OrganizeCategoryCard
-              key={category.icon}
-              category={category}
-              order={i}
-              notNumbered={true}
-              editMode={editMode}
-              orderedCategories={orderedCategories}
-              setOrderedCategories={setOrderedCategories}
-            />
-          )
-      )}
+  // The list's box: the frame and its only container's area, measured by the engine at lift.
+  const frameRef = useRef<ViewInstance>(null);
+  useEffect(() => registerFrame(frameRef), [registerFrame]);
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const { scrollHandler, onContentSizeChange, onLayout, scrollEnabled } = useReorderContainer(CATEGORIES_CONTAINER, {
+    scrollRef,
+    areaRef: frameRef,
+  });
 
-      {!hasCustomCategories && (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>{t("organizecategory.empty")}</Text>
-        </View>
-      )}
+  // While a category is in the air: its own place folded, and the slot above the category at that slot (among the
+  // others without it) or after the last one. The cards keep their order: a card hosts the slot.
+  let shown = 0;
+  const rows = others.map((category) => {
+    const folded = category.id === preview?.sourceItemId;
+    const slotHeight = preview && !folded && shown === preview.targetIndex ? preview.height : 0;
+    if (!folded) shown++;
+    return (
+      <OrganizeCategoryCard
+        key={category.id}
+        category={category}
+        folded={folded}
+        slotHeight={slotHeight}
+        animateLayout={preview !== null}
+      />
+    );
+  });
+  const trailingSlot = preview && preview.targetIndex >= shown ? preview.height : 0;
+
+  return (
+    <View ref={frameRef} style={styles.frame} onLayout={onLayout}>
+      <ReorderScrollView
+        ref={scrollRef}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        onContentSizeChange={onContentSizeChange}
+        scrollEnabled={scrollEnabled}
+        contentContainerStyle={styles.content}
+      >
+        {indexCategory && <OrganizeCategoryCard category={indexCategory} locked />}
+        {rows}
+        {trailingSlot ? <ReorderSlot height={trailingSlot} style={styles.slot} /> : null}
+
+        {others.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>{t("organizecategory.empty")}</Text>
+          </View>
+        )}
+      </ReorderScrollView>
+      <ReorderOverlay renderLifted={renderLiftedCategory} />
     </View>
   );
 }
@@ -84,10 +124,18 @@ export default function OrganizeCategoryList({ orderedCategories, setOrderedCate
 /* STYLES */
 
 const styles = StyleSheet.create({
-  categoryList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  frame: {
+    flex: 1,
     width: SIZE.full,
+  },
+  // Room for "All"'s lock badge above the first card, and for the add button over the end of the list.
+  content: {
+    paddingTop: PADDING_MARGIN.sm,
+    paddingBottom: 140,
+  },
+  slot: {
+    marginBottom: PADDING_MARGIN.md,
+    marginRight: 0,
   },
   emptyState: {
     width: SIZE.full,

@@ -1815,5 +1815,42 @@ await scenario("a locked vault queues nothing and still cancels a pending deleti
   ok("unlocked again, a commit queues its marker", d.store.getState().notes.cloud.items.add.n2?.id === "n2");
 });
 
+console.log("\ncategories: a drop reorders, renumbers, and queues only what changed");
+{
+  const cat = (icon, order) => ({ name: icon, icon, order, index: icon === "all", selected: icon === "all" });
+  const make = (items) => {
+    const base = M.categoriesReducer(undefined, { type: "@@init" });
+    return M.configureStore({
+      reducer: { categories: M.categoriesReducer },
+      preloadedState: { categories: { ...base, items } },
+    });
+  };
+  const icons = (s) => s.getState().categories.items.map((c) => c.icon).join();
+  const orders = (s) => s.getState().categories.items.map((c) => c.order).join();
+  const queued = (s) => Object.keys(s.getState().categories.cloud.items.add).sort().join();
+
+  const s = make(["all", "a", "b", "c", "d"].map((icon, i) => cat(icon, i)));
+  s.dispatch(C.moveCategory({ icon: "c", toIndex: 0 }));
+  ok("c first after All", icons(s) === "all,c,a,b,d", icons(s));
+  ok("renumbered 0..4", orders(s) === "0,1,2,3,4", orders(s));
+  ok("only the categories whose order changed are queued", queued(s) === "a,b,c", queued(s));
+
+  const before = s.getState().categories;
+  s.dispatch(C.moveCategory({ icon: "a", toIndex: 1 }));
+  ok("its own slot: nothing changes", s.getState().categories === before);
+  s.dispatch(C.moveCategory({ icon: "zz", toIndex: 0 }));
+  ok("an unknown icon: nothing changes", s.getState().categories === before);
+  s.dispatch(C.moveCategory({ icon: "all", toIndex: 3 }));
+  ok("All can't move", s.getState().categories === before);
+
+  const gaps = make([cat("all", 0), cat("a", 5), cat("b", 9), cat("c", 12)]);
+  gaps.dispatch(C.moveCategory({ icon: "a", toIndex: 2 }));
+  ok("gaps from older orders close", icons(gaps) === "all,b,a,c" && orders(gaps) === "0,1,2,3", [icons(gaps), orders(gaps)]);
+
+  const ties = make([cat("all", 0)]);
+  ties.dispatch(C.addLocalCategories({ z: cat("z", 1), m: cat("m", 1) }));
+  ok("equal orders sort by icon", icons(ties) === "all,m,z", icons(ties));
+}
+
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed === 0 ? 0 : 1);

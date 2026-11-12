@@ -23,7 +23,6 @@ import DocumentTextIcon from "react-native-heroicons/outline/DocumentTextIcon";
 import EllipsisVerticalIcon from "react-native-heroicons/outline/EllipsisVerticalIcon";
 import FolderPlusIcon from "react-native-heroicons/outline/FolderPlusIcon";
 import PaperAirplaneIcon from "react-native-heroicons/outline/PaperAirplaneIcon";
-import PencilSquareIcon from "react-native-heroicons/outline/PencilSquareIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import QuestionMarkCircleIcon from "react-native-heroicons/outline/QuestionMarkCircleIcon";
 import RectangleGroupIcon from "react-native-heroicons/outline/RectangleGroupIcon";
@@ -356,19 +355,7 @@ export default function HelpScreen() {
                   <RectangleGroupIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
                   {t("help.how_organize_categories.text_1_1")}
                 </Text>
-                <Text style={styles.sectionItemList_text}>
-                  {t("help.how_organize_categories.text_2_0")} <PencilSquareIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
-                  {t("help.how_organize_categories.text_2_1")}
-                </Text>
-                {txt("help.how_organize_categories.text_3_0")}
-                <Text style={styles.sectionItemList_text}>
-                  {t("help.how_organize_categories.text_4_0")} <CheckIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
-                  {t("help.how_organize_categories.text_4_1")}
-                </Text>
-                <Text style={styles.sectionItemList_text}>
-                  {t("help.how_organize_categories.text_5_0")} <XMarkIcon color={COLOR.textSecondary} size={ICON_SIZE} />{" "}
-                  {t("help.how_organize_categories.text_5_1")}
-                </Text>
+                {txt("help.how_organize_categories.text_2_0")}
               </>
             ),
           },

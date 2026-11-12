@@ -15,12 +15,11 @@ import Animated from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 import ReorderHandle from "@/components/reorder/ReorderHandle";
-import ReorderSlot, { ITEM_LAYOUT } from "@/components/reorder/ReorderSlot";
-import { useReorder, useReorderSliding } from "@/providers/ReorderProvider";
+import ReorderSlot from "@/components/reorder/ReorderSlot";
+import { useItemSlide } from "@/components/reorder/useItemSlide";
+import { useReorder } from "@/providers/ReorderProvider";
 
 import type { KanbanItem } from "@/types";
-
-const isWeb = Platform.OS === "web";
 
 interface Props {
   item: KanbanItem;
@@ -61,22 +60,18 @@ function KanbanCard({
 
   const [height, setHeight] = useState(40);
 
-  const { registerItem, itemLayout } = useReorder();
-  // While a card is in the air (never in the commits that lift and drop it): the card's box slides, and the card inside
-  // it, so the slot moving several places slides every card between as one (see TodoItem). The web has no custom
-  // layout transitions: there the box slides alone, while the provider says so.
-  const sliding = useReorderSliding();
-  const boxLayout = isWeb ? (sliding ? ITEM_LAYOUT : undefined) : animateLayout ? itemLayout : undefined;
-  const cardLayout = animateLayout && !isWeb ? itemLayout : undefined;
+  const { registerItem } = useReorder();
+  // Only while a card is in the air on phones: a board mounts its cards during the screen's transition.
+  const slide = useItemSlide(!!animateLayout);
 
   // Measured by the engine at lift only.
   const rowRef = useRef<ViewInstance>(null);
   useEffect(() => registerItem(columnId, item.id, rowRef), [registerItem, columnId, item.id]);
 
   return (
-    <Animated.View layout={boxLayout} style={folded && styles.folded}>
+    <Animated.View layout={slide.box} style={folded && styles.folded}>
       {slotHeight ? <ReorderSlot height={slotHeight} /> : null}
-      <Animated.View ref={rowRef} layout={cardLayout} style={styles.container}>
+      <Animated.View ref={rowRef} layout={slide.inner} style={styles.container}>
         <View style={styles.cardWrapper}>
           <View style={styles.cardContent}>
             <TextInput

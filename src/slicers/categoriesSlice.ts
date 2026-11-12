@@ -9,7 +9,7 @@ import type { CategoriesPushed } from "@/libs/cloud/syncEngine";
 
 import { defaultCategory } from "@/configs/default";
 import { only_if_cloudConnected } from "@/libs/cloud";
-import { order_asc_sort } from "@/utils/sort";
+import { moveById } from "@/libs/reorderDrop";
 
 import { CATEGORY_MAP } from "@/constants/icons";
 
@@ -26,6 +26,12 @@ const initialState: CategoriesState = {
 };
 
 type CloudQueue = CategoriesState["cloud"]["items"]["add"];
+
+/**
+ * The categories' order: `order`, then the icon. Two devices that reorder close together can give two categories the
+ * same `order`: they sort the same way everywhere.
+ */
+export const categoryOrder = (a: Category, b: Category): number => a.order - b.order || a.icon.localeCompare(b.icon);
 
 // An id is in one queue only, the latest operation (LL-033): uploads run before deletions, so a
 // category deleted and then re-created would otherwise be deleted again right after its upload.
@@ -98,7 +104,7 @@ const categoriesSlice = createSlice({
     setCategories: (state, action: PayloadAction<{ categories: Category[]; reorder?: boolean; fromSync?: boolean }>) => {
       const { categories, reorder, fromSync } = action.payload;
 
-      state.items = reorder ? [...categories].sort(order_asc_sort) : categories;
+      state.items = reorder ? [...categories].sort(categoryOrder) : categories;
 
       if (!fromSync) {
         only_if_cloudConnected(() => {
@@ -107,6 +113,32 @@ const categoriesSlice = createSlice({
           });
         });
       }
+    },
+
+    /**
+     * A drop on the Organize page: the category goes to slot `toIndex` among the others (`moveById`; "All", the index
+     * category, stays first and can't move). Every category is numbered again in the order shown, and only those whose
+     * `order` changed go to the cloud: a drop doesn't write every category.
+     */
+    moveCategory: (state, action: PayloadAction<{ icon: string; toIndex: number }>) => {
+      const { icon, toIndex } = action.payload;
+      const sorted = [...state.items].sort(categoryOrder);
+      const first = sorted.filter((category) => category.index);
+      const others = sorted.filter((category) => !category.index);
+      // A category's id is its icon.
+      const ids = others.map((category) => ({ id: category.icon }));
+      const moved = moveById(ids, icon, toIndex);
+      // An unknown icon, the index category, or its own slot.
+      if (moved === ids) return;
+      const byIcon = new Map(others.map((category) => [category.icon, category]));
+      state.items = [...first, ...moved.map(({ id }) => byIcon.get(id)!)];
+      state.items.forEach((category, order) => {
+        if (category.order === order) return;
+        category.order = order;
+        only_if_cloudConnected(() => {
+          queueCloudAdd(state, category);
+        });
+      });
     },
 
     swapCategory: (state, action: PayloadAction<{ icon: string }>) => {
@@ -149,7 +181,7 @@ const categoriesSlice = createSlice({
           state.items[idx] = { ...cloudCategory, selected: state.items[idx].selected };
         }
       });
-      state.items.sort(order_asc_sort);
+      state.items.sort(categoryOrder);
     },
 
     deleteLocalCategories: (state, action: PayloadAction<Record<string, Category>>) => {
@@ -166,7 +198,7 @@ const categoriesSlice = createSlice({
           });
         }
       });
-      state.items.sort(order_asc_sort);
+      state.items.sort(categoryOrder);
     },
 
     /** Full sync result (see `reconcileCategories`). */
@@ -203,6 +235,7 @@ export const {
   createCategory,
   deleteCategory,
   setCategories,
+  moveCategory,
   swapCategory,
   updateCategory,
   addLocalCategories,

@@ -25,8 +25,9 @@ import Animated, {
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 import ReorderHandle from "@/components/reorder/ReorderHandle";
-import ReorderSlot, { ITEM_LAYOUT } from "@/components/reorder/ReorderSlot";
-import { useReorder, useReorderSliding } from "@/providers/ReorderProvider";
+import ReorderSlot from "@/components/reorder/ReorderSlot";
+import { useItemSlide } from "@/components/reorder/useItemSlide";
+import { useReorder } from "@/providers/ReorderProvider";
 
 import DragIcon from "@/components/icons/DragIcon";
 
@@ -112,12 +113,9 @@ function TodoItem({
   }, [isOngoing, circleFill]);
 
   // Measured by the reorder engine at lift only (free mode: steps have no handle).
-  const { registerItem, itemLayout } = useReorder();
-  // The web has no custom layout transitions: there the box slides alone, while a row is in the air (not in the lift's
-  // and the drop's commits), and the row inside it doesn't.
-  const sliding = useReorderSliding();
-  const boxLayout = isWeb ? (sliding ? ITEM_LAYOUT : undefined) : animationsReady ? itemLayout : undefined;
-  const rowSlide = !isWeb && animationsReady ? itemLayout : undefined;
+  const { registerItem } = useReorder();
+  // Once the screen has settled: layout transitions on rows mounting during it crash Reanimated (below).
+  const slide = useItemSlide(animationsReady);
   // A multiline field grows with its text by itself on phones. On the web it is as high as its text, measured after each
   // change with its height let go first: a field never measures shorter than it is, so a line deleted kept it tall.
   const webInputRef = useRef<TextInputInstance>(null);
@@ -161,7 +159,7 @@ function TodoItem({
       <Animated.View
         // The engine's slide (the slot opening, a place closing; none at the lift and the drop) is the row's own: one
         // transition that never changes, so a drag renders only the rows whose place or slot changes.
-        layout={boxLayout}
+        layout={slide.box}
         entering={rowEntering}
         exiting={rowExiting}
         style={folded && styles.folded}
@@ -170,7 +168,7 @@ function TodoItem({
         {/* The row slides inside its box too: the slot opening above it or closing moves the row in the box while the
             box itself slides, and only the two together keep each row where it should be at every frame (a slot two
             places away drew the rows at the two ends jumping and the ones between sliding). */}
-        <Animated.View ref={rowRef} layout={rowSlide} style={styles.row}>
+        <Animated.View ref={rowRef} layout={slide.inner} style={styles.row}>
           <View style={[styles.inner, item.checked && styles.innerChecked]}>
             <TouchableOpacity
               activeOpacity={0.7}

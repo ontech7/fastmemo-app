@@ -1,137 +1,127 @@
+import { memo, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View, type ViewInstance } from "react-native";
 import LockClosedIcon from "react-native-heroicons/outline/LockClosedIcon";
+import Animated from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
 import { useRouter } from "@/hooks/useRouter";
 
-import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
-import { getNotesSizePerCategory } from "@/slicers/notesSlice";
 import CategoryIcon from "@/components/CategoryIcon";
+import DragIcon from "@/components/icons/DragIcon";
+import ReorderHandle from "@/components/reorder/ReorderHandle";
+import ReorderSlot from "@/components/reorder/ReorderSlot";
+import { useItemSlide } from "@/components/reorder/useItemSlide";
+import { useReorder } from "@/providers/ReorderProvider";
+import { getNotesSizePerCategory } from "@/slicers/notesSlice";
 
 import type { Category } from "@/types";
 
-interface OrderedCategories {
-  reorganizedCategoryList: Category[];
-  notNumberedCategoryList: Category[];
-}
+/** The Organize page's only container in the reorder engine. A category's id there is its icon. */
+export const CATEGORIES_CONTAINER = "categories";
 
 interface Props {
   category: Category;
-  order: number;
-  notNumbered?: boolean;
+  /** "All", the index category: first, no handle, a lock. */
   locked?: boolean;
-  editMode: boolean;
-  orderedCategories: OrderedCategories;
-  setOrderedCategories: (categories: OrderedCategories) => void;
+  /** The category in the air: its place folds away while it stays mounted (its gesture is the one running). */
+  folded?: boolean;
+  /** The slot of the category in the air opens above this one, this high. */
+  slotHeight?: number;
+  /** While a category is in the air: the cards slide to open the slot and close its place. */
+  animateLayout?: boolean;
 }
 
-export default function OrganizeCategoryCard({
-  category,
-  order,
-  notNumbered = false,
-  locked = false,
-  editMode,
-  orderedCategories,
-  setOrderedCategories,
-}: Props) {
-  const { t } = useTranslation();
-
+/*
+ * A category on the Organize page: a tap opens its edit page, its handle drags it to a new place (ADR-038), saved at the
+ * drop (`moveCategory`).
+ */
+function OrganizeCategoryCard({ category, locked = false, folded = false, slotHeight = 0, animateLayout = false }: Props) {
   const router = useRouter();
-
   const { name, icon } = category;
 
-  const notesSize = useSelector(getNotesSizePerCategory(category)); //TODO: memoize
+  // Measured by the reorder engine at lift only; "All" isn't a target.
+  const { registerItem } = useReorder();
+  const cardRef = useRef<ViewInstance>(null);
+  useEffect(() => (locked ? undefined : registerItem(CATEGORIES_CONTAINER, icon, cardRef)), [registerItem, icon, locked]);
+  const slide = useItemSlide(animateLayout);
+  const item = useMemo(() => ({ ...category, id: category.icon }), [category]);
 
-  const navigateToCreateCategory = () => {
+  const openEditPage = () => {
     router.push({
       pathname: "/categories/create",
-      params: {
-        name,
-        icon,
-        isUpdateCategory: "true",
-      },
+      params: { name, icon, isUpdateCategory: "true" },
     });
-  };
-
-  const removeFromReorganizedCategoryList = () => {
-    //TODO: adjust
-    setOrderedCategories({
-      reorganizedCategoryList: [
-        ...orderedCategories.reorganizedCategoryList.slice(0, order),
-        ...orderedCategories.reorganizedCategoryList.slice(order + 1),
-      ],
-      notNumberedCategoryList: [
-        ...orderedCategories.reorganizedCategoryList.slice(order, order + 1),
-        ...orderedCategories.notNumberedCategoryList,
-      ],
-    });
-  };
-
-  const addToReorganizedCategoryList = () => {
-    //TODO: adjust
-    setOrderedCategories({
-      reorganizedCategoryList: [
-        ...orderedCategories.reorganizedCategoryList,
-        ...orderedCategories.notNumberedCategoryList.slice(order, order + 1),
-      ],
-      notNumberedCategoryList: [
-        ...orderedCategories.notNumberedCategoryList.slice(0, order),
-        ...orderedCategories.notNumberedCategoryList.slice(order + 1),
-      ],
-    });
-  };
-
-  const organizeCategories = () => {
-    if (!notNumbered) {
-      removeFromReorganizedCategoryList();
-    } else {
-      addToReorganizedCategoryList();
-    }
   };
 
   return (
-    <View style={styles.buttonWrapper}>
-      <TouchableOpacity
-        style={styles.button}
-        activeOpacity={locked ? 1 : 0.7}
-        disabled={locked}
-        onPress={() => {
-          if (!editMode) {
-            navigateToCreateCategory();
-          } else {
-            organizeCategories();
-          }
-        }}
-      >
-        <View style={styles.categoryWrapper}>
-          <CategoryIcon name={icon} color={COLOR.textPrimary} />
+    <Animated.View layout={slide.box} style={folded && styles.folded}>
+      {slotHeight ? <ReorderSlot height={slotHeight} style={styles.slot} /> : null}
+      <Animated.View ref={cardRef} layout={slide.inner} style={styles.card}>
+        <TouchableOpacity
+          style={[styles.button, locked && styles.buttonLocked]}
+          activeOpacity={locked ? 1 : 0.7}
+          disabled={locked}
+          onPress={openEditPage}
+          accessibilityRole="button"
+        >
+          <CategoryCardBody category={category} />
+        </TouchableOpacity>
 
-          <Text style={styles.categoryName}>{t(name)}</Text>
-        </View>
-
-        <View style={styles.numberOfNotesWrapper}>
-          <Text style={styles.textNumberOfNotes}>{t("createcategory.notes_num")}</Text>
-
-          <View style={styles.numberOfNotes_wrapper}>
-            <Text style={styles.numberOfNotes}>{notesSize}</Text>
+        {locked ? (
+          <View style={styles.lock}>
+            <LockClosedIcon size={12} color={COLOR.softWhite} />
           </View>
-        </View>
-      </TouchableOpacity>
+        ) : (
+          <ReorderHandle item={item} containerId={CATEGORIES_CONTAINER} style={styles.handle} />
+        )}
+      </Animated.View>
+    </Animated.View>
+  );
+}
 
-      {locked ? (
-        <View style={styles.categoryPosition_wrapper}>
-          <LockClosedIcon size={12} color={COLOR.softWhite} />
+export default memo(OrganizeCategoryCard);
+
+/** The icon, the name and how many notes the category holds. */
+function CategoryCardBody({ category }: { category: Category }) {
+  const { t } = useTranslation();
+  const notesSize = useSelector(getNotesSizePerCategory(category));
+
+  return (
+    <>
+      <View style={styles.categoryWrapper}>
+        <CategoryIcon name={category.icon} color={COLOR.textPrimary} />
+        <Text style={styles.categoryName}>{t(category.name)}</Text>
+      </View>
+
+      <View style={styles.numberOfNotesWrapper}>
+        <Text style={styles.textNumberOfNotes}>{t("createcategory.notes_num")}</Text>
+        <View style={styles.numberOfNotes_wrapper}>
+          <Text style={styles.numberOfNotes}>{notesSize}</Text>
         </View>
-      ) : (
-        !notNumbered &&
-        !!order && (
-          <View style={styles.categoryPosition_wrapper}>
-            <Text style={styles.categoryPosition}>{order}</Text>
-          </View>
-        )
-      )}
+      </View>
+    </>
+  );
+}
+
+interface OrganizeCategoryCardStaticProps {
+  category: Category;
+  /** The lifted card's measured height: drawn at exactly that size, it becomes the real card at the drop without a hop. */
+  height?: number;
+}
+
+/** A category as the reorder engine's layer draws it in the air: read-only, raised (accent edge, shadow). */
+export function OrganizeCategoryCardStatic({ category, height }: OrganizeCategoryCardStaticProps) {
+  return (
+    <View style={[styles.card, styles.cardLifted, height !== undefined && { height }]}>
+      <View style={styles.button}>
+        <CategoryCardBody category={category} />
+      </View>
+      <View style={styles.handle}>
+        <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
+      </View>
     </View>
   );
 }
@@ -139,22 +129,50 @@ export default function OrganizeCategoryCard({
 /* STYLES */
 
 const styles = StyleSheet.create({
-  buttonWrapper: {
+  // Its place closed, the card still mounted: nothing of it shows or takes room.
+  folded: {
+    height: 0,
+    overflow: "hidden",
+    opacity: 0,
+  },
+  // A card's place: its gap below, and the card's full width (no delete button beside it).
+  slot: {
+    marginBottom: PADDING_MARGIN.md,
+    marginRight: 0,
+  },
+  card: {
     position: "relative",
     width: SIZE.full,
-  },
-  button: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: PADDING_MARGIN.md,
-    paddingHorizontal: PADDING_MARGIN.md,
+    alignItems: "stretch",
     marginBottom: PADDING_MARGIN.md,
     backgroundColor: COLOR.surface,
     borderRadius: BORDER.normal,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: GLASS.border,
   },
-  categoryPosition_wrapper: {
+  cardLifted: {
+    marginBottom: 0,
+    borderColor: COLOR.accentSoft,
+    ...SHADOW.lifted,
+  },
+  button: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: PADDING_MARGIN.md,
+    paddingLeft: PADDING_MARGIN.md,
+  },
+  // "All" has no handle: its count keeps the card's right padding.
+  buttonLocked: {
+    paddingRight: PADDING_MARGIN.md,
+  },
+  handle: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: PADDING_MARGIN.md,
+  },
+  lock: {
     position: "absolute",
     top: -6,
     left: -6,
@@ -167,12 +185,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: PADDING_MARGIN.xs,
-  },
-  categoryPosition: {
-    color: COLOR.softWhite,
-    fontFamily: FONT.semiBold,
-    fontSize: FONTSIZE.small,
-    textAlign: "center",
   },
   categoryWrapper: {
     flexDirection: "row",

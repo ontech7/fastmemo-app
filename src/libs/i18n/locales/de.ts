@@ -911,14 +911,7 @@ const de = {
       title: "Wie ändere ich die Reihenfolge meiner Kategorien?",
       text_1_0: "Tippen Sie auf der Startseite auf",
       text_1_1: "in der oberen linken Ecke.",
-      text_2_0: "Tippen Sie auf der Seite 'Organisieren' auf",
-      text_2_1: "um in den Organisieren-Modus zu gelangen.",
-      text_3_0:
-        "Tippen Sie auf eine Kategorie, um sie aufzunehmen, und dann auf eine andere, um sie dort abzulegen und die Reihenfolge zu ändern.",
-      text_4_0: "Wenn Sie mit der Reihenfolge zufrieden sind, tippen Sie auf",
-      text_4_1: "um sie zu speichern.",
-      text_5_0: "Um Ihre Änderungen zu verwerfen, tippen Sie auf",
-      text_5_1: "in der oberen rechten Ecke.",
+      text_2_0: "Ziehen Sie eine Kategorie an ihrem Griff an ihren neuen Platz: Die Reihenfolge wird sofort gespeichert.",
     },
     how_delete_category: {
       title: "Wie lösche ich eine Kategorie?",
@@ -1207,7 +1200,6 @@ const de = {
     passphrase_wrong: "Die von Ihnen eingegebene Passphrase ist falsch.",
     are_you_sure_wipe:
       "Sind Sie sicher, dass Sie Ihre Daten löschen möchten?\nSie verlieren alle erstellten Notizen und Kategorien.",
-    finish_organize_categories: "Fertigstellen, um Kategorien zu organisieren oder Ihre Änderungen rückgängig zu machen.",
     generic_success_description: "Der Vorgang war erfolgreich.",
   },
 
@@ -1251,8 +1243,6 @@ const de = {
     back: "Zurück",
     close: "Schließen",
     save: "Speichern",
-    edit: "Bearbeiten",
-    discard_changes: "Änderungen verwerfen",
     previous: "Vorherige",
     next: "Nächste",
     previous_match: "Vorheriger Treffer",
