@@ -122,7 +122,9 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
         <AnimatedTouchableOpacity
           style={[styles.button, selected && styles.selectedButton, rotateAnimStyle]}
           activeOpacity={0.7}
-          onPress={swapFavoriteCategory}
+          // While the categories wiggle, a tap on one asks to delete it, as its X does: the X sits at the sidebar's edge,
+          // where its touch area can't reach past the sidebar (Android doesn't deliver a touch outside a clipping parent).
+          onPress={!index && deleteMode ? () => setShowDeleteFavoriteCategoryDialog(true) : swapFavoriteCategory}
           accessibilityRole="tab"
           accessibilityLabel={index ? t("All") : name}
           aria-selected={selected}
@@ -139,7 +141,8 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.deleteButton}
-            // 20 dp drawn: the touch reaches 44.
+            // 20 dp drawn: the touch reaches 44 above, left and below; to the right the sidebar's edge stops it (the
+            // category's own tap does the same thing then).
             hitSlop={12}
             onPress={() => setShowDeleteFavoriteCategoryDialog(true)}
             accessibilityRole="button"
