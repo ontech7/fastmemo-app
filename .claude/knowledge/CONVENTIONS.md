@@ -369,6 +369,9 @@ For thunks that need typed dispatch, use `useAppDispatch` from `@/slicers/store`
 
 ## Styling Conventions
 
+The look itself (deep night blue, the accent used calm, glass on static chrome only, the cards) is in the `frontend-design`
+skill; this section is how styles are written.
+
 ### StyleSheet Pattern
 
 **Always** use `StyleSheet.create()` at the bottom of component files:
@@ -378,28 +381,40 @@ For thunks that need typed dispatch, use `useAppDispatch` from `@/slicers/store`
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLOR.darkBlue,
     padding: PADDING_MARGIN.md,
   },
   title: {
-    color: COLOR.softWhite,
-    fontSize: FONTSIZE.lg,
-    fontWeight: FONTWEIGHT.semiBold,
+    color: COLOR.textPrimary,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.subtitle,
   },
 });
 ```
 
+A screen's container has no opaque background: it renders `<AppBackground style={StyleSheet.absoluteFill} />` first.
+
 ### Style Constants
 
-Always use constants from `@/constants/styles`:
+Always use constants from `@/constants/styles` (and `@/constants/motion` for animation):
 
-| Constant         | Purpose                 | Key Values                                                                        |
-| ---------------- | ----------------------- | --------------------------------------------------------------------------------- |
-| `COLOR`          | All colors (dark theme) | `darkBlue` (bg), `softWhite` (text), `lightBlue`, `placeholder`, `red`, `yellow`  |
-| `FONTSIZE`       | Font size scale         | `xs`, `sm`, `md`, `lg`, `xl`, `xxl`                                               |
-| `FONTWEIGHT`     | Platform-aware weights  | `regular`, `medium`, `semiBold`, `bold` (iOS: "600", Android: "700" for semiBold) |
-| `PADDING_MARGIN` | Spacing scale           | `xs: 3`, `sm: 8`, `md: 12`, `lg: 18`, `xl: 35`, `xxl: 50`                         |
-| `BORDER`         | Border radius           | `small: 7`, `normal: 12`, `big: 20`, `rounded: 999`                               |
+| Constant                               | Purpose                                     | Keys                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `COLOR`                                | All colours                                 | surfaces `bg`, `bgElevated`, `surface`, `surfaceMuted`; text `textPrimary`, `textSecondary`, `textMuted`; accent `accent`, `accentSoft`, `accentDeep`, `accentMuted`, `accentMutedBorder`, `accentFaint`; `scrim` (every full veil); `softWhite` and `darkBlue` (text on a light card), `important`; older keys kept |
+| `CARD_TYPE_COLOR`                      | A note card's left edge by type             | `text`, `todo`, `kanban`, `code`                                                                                                                                                                                                                                                                                     |
+| `GLASS`                                | Translucent fills and borders               | `fill`, `fillStrong`, `navyFill`, `border`, `hairline`, `toastFill`                                                                                                                                                                                                                                                  |
+| `BLUR`                                 | `BlurView` intensities                      | `subtle`, `regular`, `strong`, `tint`                                                                                                                                                                                                                                                                                |
+| `SHADOW`                               | Shadows as `boxShadow` (spread into styles) | `card`, `fab`, `glow`, `lifted`                                                                                                                                                                                                                                                                                      |
+| `FONT`                                 | Geist, one family per weight                | `regular`, `medium`, `semiBold`, `bold`                                                                                                                                                                                                                                                                              |
+| `FONTSIZE`                             | Font sizes                                  | `title` 32, `intro` 28, `subtitle` 22, `inputTitle` / `cardTitle` 18, `paragraph` 16, `medium` 14, `toast` 13, `small` 12                                                                                                                                                                                            |
+| `PADDING_MARGIN`                       | Spacing scale                               | `xs: 3`, `sm: 8`, `md: 12`, `lg: 18`, `xl: 35`, `xxl: 50`                                                                                                                                                                                                                                                            |
+| `BORDER`                               | Radii                                       | `small: 7`, `normal: 12`, `big: 20`, `rounded: 999`                                                                                                                                                                                                                                                                  |
+| `SIZE`                                 | Percent sizes                               | `full`, `half`, `third`, `quarter`                                                                                                                                                                                                                                                                                   |
+| `MAX_WIDTH`                            | Widest a block grows on the desktop         | `dialog: 560`, `page: 760`, `keypad: 400` (a page's column: `CONTENT_COLUMN` from `@/constants/layout`)                                                                                                                                                                                                              |
+| `LIFT`                                 | A dragged card or row                       | `scale`, `tilt`, `ms`, `dropMs`, `slideMs`                                                                                                                                                                                                                                                                           |
+| `DURATION`, `EASING`, `SPRING`, `LOOP` | Motion (`@/constants/motion`)               | `fast 120` / `base 200` / `slow 300`; `enter` / `exit`; `soft` / `snappy`; loop periods                                                                                                                                                                                                                              |
+
+Geist's weight goes through `fontFamily: FONT.<weight>`, never `fontWeight` (each weight is its own font file). `FONTWEIGHT`
+remains in `styles.ts` for the last places that predate Geist; new code doesn't use it.
 
 ### Inline Styles
 
@@ -416,19 +431,20 @@ Acceptable uses of inline styles:
 ### Common Style Patterns
 
 ```tsx
-// Standard screen background
-backgroundColor: COLOR.darkBlue
-
-// Standard text color
-color: COLOR.softWhite
+// Text on the dark background, and secondary text
+color: COLOR.textPrimary
+color: COLOR.textSecondary
 
 // Standard input styling
 cursorColor={COLOR.softWhite}
-placeholderTextColor={COLOR.placeholder}
+placeholderTextColor={COLOR.textMuted}
 
-// Three-column header layout (repeated across screens -- candidate for shared component)
+// A full veil behind a menu or a sheet
+backgroundColor: COLOR.scrim
+
+// Screen header: back chip, centred title, a 42 px spacer (or IconChip actions) on the right
 <View style={styles.header}>
-  <BackButton />
+  <BackButton chip />
   <Text style={styles.headerTitle}>{t("screen.title")}</Text>
   <View style={styles.headerSpacer} />
 </View>

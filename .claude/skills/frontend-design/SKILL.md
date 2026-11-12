@@ -19,25 +19,27 @@ Any task that touches how the app *looks or is laid out*: new components, restyl
 - **Deep night-blue, dark-only.** No light theme, no theme provider. The base is dark; contrast lives in **cards and accents**, NOT in a loud background.
 - **Accent, used calm.** The brand accent is `COLOR.accent` (`#4F6BFF`), but filled interactive surfaces (FABs, selected states, switches, checkboxes) use the **muted** variant `COLOR.accentMuted` (`#475AA6`) with border `COLOR.accentMutedBorder` — the full-bright accent read too loud as a fill. `COLOR.accentSoft` is for **text/icon highlights** (selected menu rows, active toggles). Glows (`SHADOW.fab` / `SHADOW.glow`) are tinted `accentMuted`. The bright `accent`/`accentDeep` survive only in the `AppBackground` radial glow. **Never** multi-hue "rainbow" gradients on buttons.
 - **Background** = deep solid (`COLOR.bg`) + *subtle* SVG radial corner glows (`AppBackground`). The radial uses **many eased (quadratic-falloff) stops**, never a single `0→1` stop, which bands into visible rings on the dark backdrop. Each screen mounts its **own** `AppBackground` (see Screen Chrome) — the global one is not enough.
-- **Cards are the signature: light surface + colored left edge.** `NoteCard` / `TrashedNoteCard` are a light `COLOR.softWhite` surface with **dark text** and a **colored left border** (`borderLeftWidth`, color from `CARD_TYPE_COLOR` by type) that follows the `borderRadius` and curves with the card. The type icon chip echoes the same color. **Important notes** break out into a **solid red card** (`COLOR.important`, white text) so a "pinned" note is obvious at a glance. (The old per-type `GRADIENT.card*` fills were removed — do not reintroduce gradient card backgrounds.)
-- **Font: Geist.** Apply weight via `fontFamily: FONT.<weight>`, never `fontWeight` on Geist text (the weights are separate font files loaded in `_layout`).
+- **Cards are the signature: light surface + colored left edge.** `NoteCard` / `TrashedNoteCard` are a light `COLOR.softWhite` surface with **dark text** and a **colored left border** (`borderLeftWidth`, color from `CARD_TYPE_COLOR` by type) that follows the `borderRadius` and curves with the card. The type icon chip echoes the same color. **Important notes** break out into a **solid red card** (`COLOR.important`, white text) so a "pinned" note is obvious at a glance. (The old per-type gradient fills were removed — do not reintroduce gradient card backgrounds.)
+- **Font: Geist.** Apply weight via `fontFamily: FONT.<weight>`, never `fontWeight` (nor `FONTWEIGHT`) on Geist text (the weights are separate font files loaded in `_layout`).
 
 ## Token-First Rule (CRITICAL)
 
-All visual values come from `src/constants/styles.ts`. **Never hardcode** colors, radii, spacing, shadows, font families, or blur intensities in a component.
+All visual values come from `src/constants/styles.ts` (motion from `src/constants/motion.ts`). **Never hardcode** colors, radii, spacing, shadows, font families, or blur intensities in a component.
 
 | Token             | Use for                                                                              |
 | ----------------- | ------------------------------------------------------------------------------------ |
-| `COLOR`           | All colors. Dark surfaces (`bg`/`surface`/`surfaceMuted`), text (`textPrimary`/`textSecondary`/`textMuted`), accent (`accent`/`accentSoft`/`accentDeep`/`accentMuted`/`accentMutedBorder`), legacy keys kept. |
+| `COLOR`           | All colors. Dark surfaces (`bg`/`bgElevated`/`surface`/`surfaceMuted`), text (`textPrimary`/`textSecondary`/`textMuted`), accent (`accent`/`accentSoft`/`accentDeep`/`accentMuted`/`accentMutedBorder`/`accentFaint`), `scrim` (every full veil behind a menu or sheet), legacy keys kept (`darkBlue` is text on a light card, not a background). |
 | `CARD_TYPE_COLOR` | NoteCard left-border color by note type (`text`/`todo`/`kanban`/`code`). Important is separate (red). |
-| `GRADIENT`        | Color-stop arrays for `LinearGradient`. Effectively just `accent` now (same-hue sheen). |
-| `GLASS`           | Translucent fills + borders for frosted surfaces (`fill`/`fillStrong`/`border`/`hairline`). |
+| `GLASS`           | Translucent fills + borders for frosted surfaces (`fill`/`fillStrong`/`navyFill`/`border`/`hairline`; `toastFill` for toasts). |
 | `BLUR`            | `BlurView` intensities (`subtle`/`regular`/`strong`) + tint.                          |
-| `SHADOW`          | `card`, `fab`, `glow` elevation/glow presets (spread into styles; glow tint = accentMuted). |
+| `SHADOW`          | `card`, `fab`, `glow`, `lifted` as `boxShadow` (spread into styles; glow tint = accentMuted; `lifted` = a dragged card). |
 | `FONT`            | Geist families (`regular`/`medium`/`semiBold`/`bold`).                               |
 | `FONTSIZE`        | Text sizes.                                                                          |
 | `PADDING_MARGIN`  | Spacing scale (`xs`…`xxl`).                                                           |
 | `BORDER`          | Radii (`small`/`normal`/`big`/`rounded`).                                            |
+| `MAX_WIDTH`       | The widest a dialog, a settings page or the keypad grows on the desktop (`dialog`/`page`/`keypad`); a page's column is `CONTENT_COLUMN` (`@/constants/layout`). |
+| `LIFT`            | A dragged card or row: scale, tilt, lift/drop/slide durations.                        |
+| `DURATION` / `EASING` / `SPRING` / `LOOP` | Motion (`@/constants/motion`): `fast`/`base`/`slow`; `enter`/`exit`; `soft`/`snappy`; loop periods. No duration or spring literal in a component. |
 
 **Text hierarchy:** `textPrimary` (titles/body on dark), `textSecondary` (subtitles/secondary), `textMuted` (placeholders, disabled, captions). `softWhite` for icons/labels sitting on an accent/red fill.
 
@@ -50,11 +52,13 @@ In `src/components/ui/`:
 - **`AppBackground`** — deep bg + eased radial accent glows. Mounted globally in `_layout` **and** per-screen (see Screen Chrome).
 - **`IconChip`** — the standard **header icon-button surface**: 42×42 rounded (`BORDER.normal`) glass chip (`GLASS.fill` + hairline `GLASS.border`). Wrap header icons (back, options, filters, search toggle, settings `⋮`) in it, icon size `20`. `BackButton` has a `chip` prop that wraps its chevron in one.
 - **`GlassSurface`** — frosted surface: `BlurView` (native) + translucent fill fallback. Props: `intensity`, `radius`, `fill`, `bordered`, `androidBlur`. Used for search bars / title inputs / static bars.
-- **`GradientBackground`** / **`GradientButton`** — generic linear-gradient fill / same-hue gradient pressable (rare; default to solid+glow for primary actions).
 - **`PopupMenu`** (+ `PopupMenuOption` / `PopupMenuLabel` / `PopupMenuDivider`) — custom context menu. Anchors **just below its `trigger`** (right-aligned, flips above near the screen bottom) and opens as a **dropdown that expands from height 0 to its content height** (not a scale/fade). `selected` highlights a row in `accentSoft`; options auto-close via context.
-- **Radial FAB menu** (pattern, see `AddNoteOverlayButton` / `TodoModeMenuButton`) — a corner FAB that opens a **dimmed full-screen overlay** with options animating in on a staggered fade/translate/scale. Use this (not `PopupMenu`) for bottom-corner FAB menus. When such a button lives at the `SafeAreaView` level, align it to the content FABs with `useSafeAreaInsets()` (`bottom: insets.bottom + N`).
+- **`EmptyState`** (+ `illustrations/`, shared values in `illustrations/tokens.ts`) — an empty list's drawing, title and sentence (`notes`/`category`/`search`/`trash`); passed as a list's `ListEmptyComponent`.
+- **`MenuItemPop`** — the staggered pop of an overlay menu's items (fade, rise 20, grow from 80%).
+- **`BlinkingDot`**, **`ProgressBar`**, **`DropSlot`** (where a dragged item will land), **`ImageViewer`**, **`TourSpotlight`** / **`TourTip`** (the first-note tour).
+- **Radial FAB menu** (pattern, see `AddNoteOverlayButton` / `TodoModeMenuButton`) — a corner FAB that opens a **dimmed full-screen overlay** (`COLOR.scrim`) with options animating in through `MenuItemPop`; its `Modal` stays mounted until the closing animation ends. Use this (not `PopupMenu`) for bottom-corner FAB menus. When such a button lives at the `SafeAreaView` level, align it to the content FABs with `useSafeAreaInsets()` (`bottom: insets.bottom + N`).
 
-If a new visual need isn't covered, add a primitive here rather than scattering raw `LinearGradient`/`BlurView` across components.
+If a new visual need isn't covered, add a primitive here rather than scattering raw `BlurView`s across components.
 
 ## Screen Chrome (header + background)
 
@@ -72,7 +76,7 @@ Every full screen follows the same shell:
 
 1. **No `BlurView`/`GlassSurface` inside list items** (`NoteCard`, `TodoItem`, `KanbanCard`) or any `FlashList`/`FlatList` row. Glass/blur is for **static chrome only**: sidebar, search bar, FAB, toolbars, headers, dialogs.
 2. **`GlassSurface` `androidBlur` defaults OFF.** Android real blur is expensive — enable deliberately on a single static surface only. The translucent fill keeps the frosted look without it.
-3. **Solid fills + 1px borders in list items** (NoteCards, settings rows, kanban cards). Gradients are GPU-cheap but we no longer use them on cards; keep any gradient subtle/2-stop and never animate per-frame.
+3. **Solid fills + 1px borders in list items** (NoteCards, settings rows, kanban cards). No gradients on cards; the only gradient is `AppBackground`'s radial glow.
 4. Glow via `shadow*`/`elevation` is cheap; heavy `shadowRadius` on many list items is not — prefer it on chrome/FABs.
 
 ## Layout Conventions
