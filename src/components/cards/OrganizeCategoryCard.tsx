@@ -1,7 +1,6 @@
 import { memo, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View, type ViewInstance } from "react-native";
-import LockClosedIcon from "react-native-heroicons/outline/LockClosedIcon";
 import Animated from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
@@ -24,7 +23,7 @@ export const CATEGORIES_CONTAINER = "categories";
 
 interface Props {
   category: Category;
-  /** "All", the index category: first, no handle, a lock. */
+  /** "All", the index category: first, and no handle (it doesn't move). */
   locked?: boolean;
   /** The category in the air: its place folds away while it stays mounted (its gesture is the one running). */
   folded?: boolean;
@@ -70,13 +69,7 @@ function OrganizeCategoryCard({ category, locked = false, folded = false, slotHe
           <CategoryCardBody category={category} />
         </TouchableOpacity>
 
-        {locked ? (
-          <View style={styles.lock}>
-            <LockClosedIcon size={12} color={COLOR.softWhite} />
-          </View>
-        ) : (
-          <ReorderHandle item={item} containerId={CATEGORIES_CONTAINER} style={styles.handle} />
-        )}
+        {locked ? null : <ReorderHandle item={item} containerId={CATEGORIES_CONTAINER} style={styles.handle} />}
       </Animated.View>
     </Animated.View>
   );
@@ -141,7 +134,6 @@ const styles = StyleSheet.create({
     marginRight: 0,
   },
   card: {
-    position: "relative",
     width: SIZE.full,
     flexDirection: "row",
     alignItems: "stretch",
@@ -171,20 +163,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: PADDING_MARGIN.md,
-  },
-  lock: {
-    position: "absolute",
-    top: -6,
-    left: -6,
-    borderRadius: BORDER.rounded,
-    backgroundColor: COLOR.accentMuted,
-    borderColor: COLOR.bg,
-    borderWidth: 2,
-    minWidth: 22,
-    height: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: PADDING_MARGIN.xs,
   },
   categoryWrapper: {
     flexDirection: "row",

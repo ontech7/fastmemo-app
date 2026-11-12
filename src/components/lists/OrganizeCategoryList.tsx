@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View, type ViewInstance } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { useAnimatedRef } from "react-native-reanimated";
 import { useDispatch } from "react-redux";
 
@@ -56,10 +57,14 @@ export default function OrganizeCategoryList({ categories }: Props) {
     [dispatch]
   );
 
+  // The handles' gestures need a gesture root around them on Android (the app has none at its root): without it a
+  // finger on a handle did nothing.
   return (
-    <ReorderProvider containersRef={containersRef} onDrop={onDrop}>
-      <OrganizeRows indexCategory={indexCategory} others={others} />
-    </ReorderProvider>
+    <GestureHandlerRootView style={styles.frame}>
+      <ReorderProvider containersRef={containersRef} onDrop={onDrop}>
+        <OrganizeRows indexCategory={indexCategory} others={others} />
+      </ReorderProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -128,9 +133,8 @@ const styles = StyleSheet.create({
     flex: 1,
     width: SIZE.full,
   },
-  // Room for "All"'s lock badge above the first card, and for the add button over the end of the list.
+  // Room for the add button over the end of the list.
   content: {
-    paddingTop: PADDING_MARGIN.sm,
     paddingBottom: 140,
   },
   slot: {
