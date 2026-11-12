@@ -88,6 +88,7 @@ Every full screen follows the same shell:
 
 ## Learned Pitfalls (do these, they bit us)
 
+- **Large system font + display size.** At font 200% and the largest display size the home column is ~210 dp wide and text doubles: compact chrome with words (bars, chips) caps them (`maxFontSizeMultiplier`, one line, `adjustsFontSizeToFit`) and drops to icons when narrow (`SelectionBar`); a screen with a bottom button sizes its middle from the room left (`flex: 1` + measure), never from the window width (LL-091). Check at those settings on the emulator.
 - **Row dividers:** use `borderBottomWidth: 1`, **not** `StyleSheet.hairlineWidth`. Hairline is `1/PixelRatio` and lands on fractional pixels, so it visibly drops out on *some* rows at 2x/3x while showing on others. 1 logical px renders consistently and still reads thin with `GLASS.border`.
 - **Single radial stop bands.** `AppBackground` glows use ~8 eased stops (`peak * (1 - t)²`); a single `0→1` stop shows concentric rings.
 - **Transparent screens ghost during transitions** → per-screen `AppBackground` (see Screen Chrome).

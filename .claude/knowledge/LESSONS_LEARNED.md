@@ -2408,6 +2408,29 @@ in the tree during it. Measured with the engine: the drop lands in ~120 ms, done
 
 ---
 
+### LL-091: With the largest font and display size the intro's continue button was off screen
+
+**Date:** 2026-11-12  
+**Severity:** High (a person with those accessibility settings could not get past the intro into the app)  
+**Category:** Bug / Accessibility (Android)  
+**What happened:** with the system font at 200% and the largest display size (emulator, 1080x2400 at density 560), the
+intro's title took two lines, each step's description three, and the carousel's pictures kept their full height: "Continue"
+was pushed below the screen, and nothing scrolled. The same settings broke the select mode's labelled bar (words split
+mid-word, "Imp-ort...", the bar twice as tall) before it shipped.  
+**Root cause:** the pictures' height came from the window's width only (`ITEM_WIDTH * 1.8736`), never from the height left
+between the title and the button; nothing in the app caps or checks text grown by the system font size.  
+**Fix:** the carousel's area takes what is left (`flex: 1`) and is measured; a picture is as tall as its width allows or as
+that area minus the dots and four description lines at the system font size, whichever is smaller (letterboxed). The select
+bar caps its words (`maxFontSizeMultiplier` 1.3, one line, shrinking to fit) and shows icons alone below 64 dp per action.  
+**Rule:** a screen with a button at its bottom sizes its middle from the room left, not from the window; compact chrome with
+words caps their growth and has a narrow form. Check new screens at font 200% + largest display size (`settings put system
+font_scale 2.0`, `wm density 560` on the emulator).
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-12 **Resolved in:** plan-1/fixes-performance-polish
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

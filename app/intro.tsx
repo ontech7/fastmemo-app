@@ -13,10 +13,24 @@ import { useRouter } from "@/hooks/useRouter";
 import Carousel, { Pagination } from "@ontech7/react-native-snap-carousel";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Dimensions, Image, type ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Dimensions,
+  Image,
+  type ImageSourcePropType,
+  PixelRatio,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import ArrowRightIcon from "react-native-heroicons/outline/ArrowRightIcon";
 
 const { width: WINDOW_WIDTH, height: WINDOW_HEIGHT } = Dimensions.get("window");
+
+/** The dots under the carousel: the library's vertical padding (30 + 30) and a dot. */
+const PAGINATION_HEIGHT = 72;
+/** Room kept for a step's description under its picture: up to four lines, at the system font size. */
+const DESCRIPTION_LINES = 4;
 
 export default function IntroScreen() {
   const { t } = useTranslation();
@@ -31,7 +45,14 @@ export default function IntroScreen() {
   const LIMITER = DIMENSION_RATIO > 1.1 ? 1.1 : DIMENSION_RATIO < 0.8 ? 0.35 : DIMENSION_RATIO;
 
   const ITEM_WIDTH = Math.round((WINDOW_WIDTH / 2) * LIMITER);
-  const ITEM_HEIGHT = Math.round(ITEM_WIDTH * 1.8736);
+  // The picture's height: its width's, unless the carousel's area is shorter (large system font or display size). The
+  // continue button below must stay on screen: the picture shrinks (letterboxed), never the button.
+  const [areaHeight, setAreaHeight] = useState(0);
+  const descriptionRoom = PADDING_MARGIN.lg + DESCRIPTION_LINES * FONTSIZE.paragraph * 1.35 * PixelRatio.getFontScale();
+  const ITEM_HEIGHT = Math.max(
+    0,
+    Math.min(Math.round(ITEM_WIDTH * 1.8736), Math.floor(areaHeight - PAGINATION_HEIGHT - descriptionRoom))
+  );
 
   const carouselSteps = useMemo(
     () => [
@@ -77,19 +98,21 @@ export default function IntroScreen() {
 
       <Text style={styles.introTitle}>{t("intro.title")}</Text>
 
-      <View style={styles.carouselWrapper}>
-        <Carousel
-          disableIntervalMomentum={true}
-          ref={carouselRef}
-          data={carouselSteps}
-          renderItem={({ item }: { item: { image: ImageSourcePropType; description: string } }) => (
-            <CarouselItem item={item} width={ITEM_WIDTH} height={ITEM_HEIGHT} />
-          )}
-          sliderWidth={WINDOW_WIDTH}
-          itemWidth={ITEM_WIDTH}
-          useScrollView={true}
-          onSnapToItem={setActiveItemIndex}
-        />
+      <View style={styles.carouselWrapper} onLayout={(e) => setAreaHeight(e.nativeEvent.layout.height)}>
+        {areaHeight > 0 && (
+          <Carousel
+            disableIntervalMomentum={true}
+            ref={carouselRef}
+            data={carouselSteps}
+            renderItem={({ item }: { item: { image: ImageSourcePropType; description: string } }) => (
+              <CarouselItem item={item} width={ITEM_WIDTH} height={ITEM_HEIGHT} />
+            )}
+            sliderWidth={WINDOW_WIDTH}
+            itemWidth={ITEM_WIDTH}
+            useScrollView={true}
+            onSnapToItem={setActiveItemIndex}
+          />
+        )}
 
         <Pagination
           dotsLength={carouselSteps.length}
@@ -160,7 +183,10 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.paragraph,
     textAlign: "center",
   },
+  // The space between the title and the button, whatever is left of it.
   carouselWrapper: {
+    flex: 1,
+    overflow: "hidden",
     marginTop: 20,
     width: "100%",
     justifyContent: "center",
