@@ -1906,7 +1906,10 @@ after a scroll. Nothing showed where the card would land.
   (`windowSize`): with FlatList's 21, a 300-row list was mounted whole, every row ran the drag's per-frame worklet and
   re-attached it at lift and at drop, and the drop froze ~80 ms (12.8% janky frames on a Pixel 10 Pro, 3.5% with 5). One
   frame stays: at the drop the library holds each row's offset until the row's `onLayout`, which on the New Architecture
-  comes a frame after the new order is drawn (seen before this change too). On the
+  comes a frame after the new order is drawn (seen before this change too). A row whose place didn't change, or that was
+  still sliding when the drop counted, is never laid out again and kept its offset, drawn over another row (the user hit
+  it once the drop was fast): 100 ms after each drop the rows move down a point for 100 ms, which lays every mounted row
+  out and clears the offsets. On the
   web dnd-kit's `DragOverlay` draws the lifted row (its drop in `LIFT.dropMs`), in a portal on `document.body`
   (react-native-web's ScrollView has a transform, which would place the overlay's `position: fixed` and the box dnd-kit
   measures relative to the list), and the row's own place shows the slot.

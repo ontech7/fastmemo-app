@@ -143,10 +143,22 @@ export default function NoteTodoEditor({ initialNote }: Props) {
   }, [dropping]);
   const onRelease = useCallback(() => dropping.set(1), [dropping]);
   const onPlaceholderIndexChange = useCallback(() => Haptics.selectionAsync(), []);
+  // After a drop the list keeps each row's last drag offset until that row is laid out again, and a row that was still
+  // sliding when the drop counted, or whose place didn't change, is never laid out again: it stayed drawn over another
+  // row. Moving the rows by a point and back lays every mounted row out, and the offsets are cleared.
+  const [relayout, setRelayout] = useState(false);
+  const relayoutTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(relayoutTimer.current), []);
+
   const onDragEnd = useCallback(
     ({ data, from, to }: { data: TodoItemType[]; from: number; to: number }) => {
       if (from !== to) Haptics.notificationAsync(NotificationFeedbackType.Success);
       reorder(data);
+      clearTimeout(relayoutTimer.current);
+      relayoutTimer.current = setTimeout(() => {
+        setRelayout(true);
+        relayoutTimer.current = setTimeout(() => setRelayout(false), RELAYOUT_MS);
+      }, RELAYOUT_MS);
     },
     [reorder]
   );
@@ -201,7 +213,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                     <DraggableFlatList
                       containerStyle={{ flex: 1 }}
                       style={{ flex: 1, paddingHorizontal: PADDING_MARGIN.lg }}
-                      contentContainerStyle={{ paddingTop: PADDING_MARGIN.xl, paddingBottom: PADDING_MARGIN.md }}
+                      contentContainerStyle={relayout ? styles.listContentNudged : styles.listContent}
                       ref={draggableListRef}
                       data={note.list}
                       onDragBegin={onDragBegin}
@@ -296,6 +308,9 @@ const DROP_SPRING = {
  */
 const LIST_WINDOW = 5;
 
+/** After a drop: the wait before the rows are laid out again, and how long they stay a point lower (unseen). */
+const RELAYOUT_MS = 100;
+
 /**
  * Where the row being dragged will land: the same slot as a kanban card's, in the row's place. The list draws its
  * placeholder outside its side padding, so the slot keeps it itself.
@@ -351,6 +366,14 @@ const styles = StyleSheet.create({
   },
   draggableList: {
     flex: 1,
+  },
+  listContent: {
+    paddingTop: PADDING_MARGIN.xl,
+    paddingBottom: PADDING_MARGIN.md,
+  },
+  listContentNudged: {
+    paddingTop: PADDING_MARGIN.xl + 1,
+    paddingBottom: PADDING_MARGIN.md,
   },
   addButton: {
     padding: PADDING_MARGIN.md,
