@@ -35,7 +35,9 @@ const NumberKey = memo(function NumberKey({
         disabled={disabled}
         accessibilityRole="button"
       >
-        <Text style={styles.keyboard_text}>{value}</Text>
+        <Text style={styles.keyboard_text} maxFontSizeMultiplier={DIGIT_MAX_FONT_SCALE}>
+          {value}
+        </Text>
       </Pressable>
     </View>
   );
@@ -83,9 +85,16 @@ function VirtualNumberKeyboard({ onAdd, onRemove, disabled }: Props) {
   );
 }
 
+/** Digits are already large: past this a key can't hold them (a large system font). */
+const DIGIT_MAX_FONT_SCALE = 1.2;
+/** A key's height when there is room; less when there isn't (a large font or display size): the pad shrinks, never runs off. */
+const KEY_HEIGHT = 80;
+
 const styles = StyleSheet.create({
   keyboard_wrapper: {
     ...KEYPAD_COLUMN,
+    flex: 1,
+    maxHeight: KEY_HEIGHT * 4,
     borderTopLeftRadius: BORDER.normal,
     borderTopRightRadius: BORDER.normal,
     overflow: "hidden",
@@ -94,7 +103,7 @@ const styles = StyleSheet.create({
   },
   keyboard_input_wrapper: {
     width: SIZE.third,
-    height: 80,
+    height: "25%",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: GLASS.border,
   },

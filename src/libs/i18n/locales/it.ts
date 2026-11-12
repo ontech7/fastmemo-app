@@ -178,9 +178,9 @@ const it = {
   },
   secretcode: {
     title: "Codice Segreto",
-    oldCode: "Metti il ​​tuo vecchio codice segreto.",
+    oldCode: "Metti il tuo vecchio codice segreto.",
     newCode: "Ora inserisci il tuo nuovo codice segreto.",
-    repeatCode: "Ripeti il ​​tuo nuovo codice segreto.",
+    repeatCode: "Ripeti il tuo nuovo codice segreto.",
     savedCode: "Il tuo nuovo codice segreto è stato salvato!",
     unlockCode: "Inserisci il tuo codice segreto",
     error: "Il codice inserito non corrisponde. Riprova.",

@@ -90,12 +90,7 @@ export default function CodeInput({ value, onChangeCode, onSubmit, disabled, err
   }, [value]);
 
   return (
-    <View
-      style={{
-        height: "80%",
-        justifyContent: "space-between",
-      }}
-    >
+    <View style={styles.container}>
       <Animated.View style={[styles.row, shakeStyle]}>
         {CELLS.map((cell) => (
           <View key={cell} style={styles.numberInput}>
@@ -118,6 +113,13 @@ export default function CodeInput({ value, onChangeCode, onSubmit, disabled, err
 const CELLS = [0, 1, 2, 3];
 
 const styles = StyleSheet.create({
+  // At most 80% of the screen's area, less when the text above it needs the room (a large system font): it never pushes
+  // that text over the screen's title.
+  container: {
+    flex: 1,
+    maxHeight: "80%",
+    justifyContent: "space-between",
+  },
   row: {
     flexDirection: "row",
     justifyContent: "center",

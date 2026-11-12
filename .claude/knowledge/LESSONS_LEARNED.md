@@ -2421,7 +2421,10 @@ mid-word, "Imp-ort...", the bar twice as tall) before it shipped.
 between the title and the button; nothing in the app caps or checks text grown by the system font size.  
 **Fix:** the carousel's area takes what is left (`flex: 1`) and is measured; a picture is as tall as its width allows or as
 that area minus the dots and four description lines at the system font size, whichever is smaller (letterboxed). The select
-bar caps its words (`maxFontSizeMultiplier` 1.3, one line, shrinking to fit) and shows icons alone below 64 dp per action.  
+bar caps its words (`maxFontSizeMultiplier` 1.3, one line, shrinking to fit) and shows icons alone below 64 dp per action.
+The secret code screens had the same fault (a pad fixed at 80% of the area under four lines of text, keys 80 dp: the text
+went over the title, then the pad's last row off screen): the pad takes at most 80% and its keys share what is left, up to
+80 dp each; digits grow at most 1.2x.  
 **Rule:** a screen with a button at its bottom sizes its middle from the room left, not from the window; compact chrome with
 words caps their growth and has a narrow form. Check new screens at font 200% + largest display size (`settings put system
 font_scale 2.0`, `wm density 560` on the emulator).
