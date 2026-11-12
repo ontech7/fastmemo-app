@@ -18,6 +18,8 @@ export default function FavoriteNotesButton({ onPressSave, focusable }: Props) {
       style={styles.saveNoteButton}
       onPress={onPressSave}
       focusable={focusable}
+      // 40 dp drawn: the touch reaches 44.
+      hitSlop={2}
       accessibilityRole="button"
       accessibilityLabel={t("note.settings.important")}
     >

@@ -259,6 +259,7 @@ export default function AIAssistantScreen() {
 
       <ConfirmOrCancelDialog
         open={confirmDeleteOld}
+        destructive
         description={t("ai.old_models_confirm", { size: formatBytes(oldBytes) })}
         confirmLabel={t("ai.old_models_delete")}
         onConfirm={handleDeleteOld}

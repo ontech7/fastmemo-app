@@ -112,6 +112,11 @@ export default Sentry.wrap(function RootLayout() {
                 gap: PADDING_MARGIN.sm,
               },
               action: {
+                // A target of at least 44 dp, its label centred.
+                button: {
+                  minHeight: 44,
+                  justifyContent: "center",
+                },
                 text: {
                   color: COLOR.accentSoft,
                   fontSize: FONTSIZE.paragraph,

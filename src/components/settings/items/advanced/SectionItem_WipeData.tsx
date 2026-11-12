@@ -16,6 +16,7 @@ import SectionItemList_Text from "@/components/settings/components/item/SectionI
 import SectionItemList from "@/components/settings/components/list/SectionItemList";
 
 import { COLOR } from "@/constants/styles";
+import { haptic } from "@/libs/haptics";
 
 interface Props {
   isLast: boolean;
@@ -53,6 +54,7 @@ export default function SectionItem_WipeData({ isLast }: Props) {
         confirm={{
           label: t("wipe"),
           handler: () => {
+            haptic.warn();
             dispatch(wipeNotesThunk({ wipeCloud: false }));
             dispatch(wipeCategoriesThunk({ wipeCloud: false }));
             webhook(webhook_wipeData, {
@@ -68,6 +70,7 @@ export default function SectionItem_WipeData({ isLast }: Props) {
             ? {
                 label: t("wipeWithCloud"),
                 handler: () => {
+                  haptic.warn();
                   dispatch(wipeNotesThunk({ wipeCloud: true }));
                   dispatch(wipeCategoriesThunk({ wipeCloud: true }));
                   webhook(webhook_wipeData, {

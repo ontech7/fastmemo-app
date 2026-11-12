@@ -387,6 +387,7 @@ export default function HomeScreen() {
     <>
       <ConfirmOrCancelDialog
         open={showDeleteNotesDialog}
+        destructive
         description={t("popup.delete_notes")}
         onCancel={() => {
           toggleDeleteMode();

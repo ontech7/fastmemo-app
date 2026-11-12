@@ -253,7 +253,7 @@ export default function QuickNoteBar({ onHeightChange, hidden = false }: Props) 
             accessibilityLabel={t("a11y.open_full_note")}
             hitSlop={8}
             focusable={!hidden}
-            style={styles.iconButton}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
           >
             <ArrowsPointingOutIcon size={18} color={COLOR.textSecondary} />
           </Pressable>
@@ -266,7 +266,7 @@ export default function QuickNoteBar({ onHeightChange, hidden = false }: Props) 
             accessibilityLabel={t("a11y.save_note")}
             hitSlop={8}
             focusable={!hidden}
-            style={styles.sendButton}
+            style={({ pressed }) => [styles.sendButton, pressed && styles.pressed]}
           >
             <PaperAirplaneIcon size={18} color={COLOR.softWhite} />
           </Pressable>
@@ -277,6 +277,10 @@ export default function QuickNoteBar({ onHeightChange, hidden = false }: Props) 
 }
 
 const styles = StyleSheet.create({
+  // Pressed: the button dims, as a TouchableOpacity at 0.7.
+  pressed: {
+    opacity: 0.7,
+  },
   wrapper: {
     paddingTop: MARGIN_TOP,
     paddingBottom: MARGIN_BOTTOM,

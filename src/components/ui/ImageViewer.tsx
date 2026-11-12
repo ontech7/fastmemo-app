@@ -142,11 +142,23 @@ export default function ImageViewer({ src, width, height, onClose, action }: Pro
 
         <View style={[styles.actions, { top: insets.top + PADDING_MARGIN.md, right: insets.right + PADDING_MARGIN.lg }]}>
           {action && (
-            <Pressable onPress={action.onPress} accessibilityRole="button" accessibilityLabel={action.label} hitSlop={8}>
+            <Pressable
+              onPress={action.onPress}
+              style={({ pressed }) => pressed && styles.pressed}
+              accessibilityRole="button"
+              accessibilityLabel={action.label}
+              hitSlop={8}
+            >
               <IconChip>{action.icon}</IconChip>
             </Pressable>
           )}
-          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t("a11y.close")} hitSlop={8}>
+          <Pressable
+            onPress={onClose}
+            style={({ pressed }) => pressed && styles.pressed}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.close")}
+            hitSlop={8}
+          >
             <IconChip>
               <XMarkIcon size={20} color={COLOR.softWhite} />
             </IconChip>
@@ -160,6 +172,10 @@ export default function ImageViewer({ src, width, height, onClose, action }: Pro
 /* STYLES */
 
 const styles = StyleSheet.create({
+  // Pressed: the icon dims, as a TouchableOpacity at 0.7.
+  pressed: {
+    opacity: 0.7,
+  },
   root: {
     flex: 1,
     backgroundColor: COLOR.bg,

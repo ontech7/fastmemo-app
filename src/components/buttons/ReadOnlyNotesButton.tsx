@@ -18,6 +18,8 @@ export default function ReadOnlyNotesButton({ onPressReadOnly, focusable }: Prop
       style={styles.readOnlyNoteButton}
       onPress={onPressReadOnly}
       focusable={focusable}
+      // 40 dp drawn: the touch reaches 44.
+      hitSlop={2}
       accessibilityRole="button"
       accessibilityLabel={t("note.settings.readonly")}
     >

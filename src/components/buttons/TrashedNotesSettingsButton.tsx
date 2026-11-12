@@ -72,6 +72,7 @@ export default function TrashedNotesSettingsButton({
 
       <ConfirmOrCancelDialog
         open={showDeleteSelectedNotesDialog}
+        destructive
         description={t("popup.delete_notes_perma")}
         onCancel={() => setShowDeleteSelectedNotesDialog(false)}
         onConfirm={() => {
@@ -106,6 +107,7 @@ export default function TrashedNotesSettingsButton({
 
       <ConfirmOrCancelDialog
         open={showDeleteAllNotesDialog}
+        destructive
         description={t("popup.delete_all_notes_perma")}
         onCancel={() => setShowDeleteAllNotesDialog(false)}
         onConfirm={() => {

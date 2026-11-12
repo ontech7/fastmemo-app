@@ -17,6 +17,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { webhook } from "@/utils/webhook";
 
 import { BORDER, COLOR, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { haptic } from "@/libs/haptics";
 import { LOOP } from "@/constants/motion";
 
 import CategoryIcon from "@/components/CategoryIcon";
@@ -86,6 +87,7 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
         confirm={{
           label: t("delete_and_move"),
           handler: () => {
+            haptic.warn();
             dispatch(deleteCategory({ name, index, icon, selected, order: 0 }));
             dispatch(resetNotesCategory(icon));
             webhook(webhook_deleteCategory, {
@@ -99,6 +101,7 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
         cancel={{
           label: t("delete_with_notes"),
           handler: () => {
+            haptic.warn();
             dispatch(deleteCategory({ name, index, icon, selected, order: 0 }));
             dispatch(deleteNotesCategory(icon));
             webhook(webhook_deleteCategory, {
@@ -136,6 +139,8 @@ function CategoryFilterButton({ name, index, icon, selected, deleteMode, toggleD
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.deleteButton}
+            // 20 dp drawn: the touch reaches 44.
+            hitSlop={12}
             onPress={() => setShowDeleteFavoriteCategoryDialog(true)}
             accessibilityRole="button"
             accessibilityLabel={t("a11y.delete_category")}

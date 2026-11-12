@@ -236,7 +236,9 @@ const styles = StyleSheet.create({
     paddingTop: PADDING_MARGIN.xs,
     paddingBottom: PADDING_MARGIN.sm,
   },
+  // At least 44 dp tall, the content centred.
   option: {
+    minHeight: 44,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",

@@ -52,7 +52,7 @@ export default function SearchInput({ value, onChangeText, placeholder, icon, on
         <View style={styles.icon}>{icon ?? <MagnifyingGlassIcon size={18} color={COLOR.softWhite} />}</View>
       ) : (
         <Pressable
-          style={styles.icon}
+          style={({ pressed }) => [styles.icon, pressed && styles.pressed]}
           hitSlop={8}
           onPress={handleClear}
           accessibilityRole="button"
@@ -68,6 +68,10 @@ export default function SearchInput({ value, onChangeText, placeholder, icon, on
 /* STYLES */
 
 const styles = StyleSheet.create({
+  // Pressed: the icon dims, as a TouchableOpacity at 0.7.
+  pressed: {
+    opacity: 0.7,
+  },
   container: {
     flexDirection: "row",
     paddingHorizontal: PADDING_MARGIN.sm,

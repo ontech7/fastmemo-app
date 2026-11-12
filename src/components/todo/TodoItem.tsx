@@ -22,6 +22,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { haptic } from "@/libs/haptics";
 import { DURATION, EASING, SPRING } from "@/constants/motion";
 
 import ReorderHandle from "@/components/reorder/ReorderHandle";
@@ -141,7 +142,9 @@ function TodoItem({
     transform: [{ scale: 0.6 + 0.4 * circleFill.value }],
   }));
 
+  // A haptic for each row ticked or unticked (the box is disabled on a read-only list).
   const handleCheck = () => {
+    haptic.select();
     checkItem(item.id);
   };
 

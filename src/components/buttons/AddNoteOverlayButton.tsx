@@ -309,6 +309,8 @@ export default function AddNoteOverlayButton({ isDeleteMode, toggleDeleteMode, b
             <TouchableOpacity
               style={styles.fabSecondary}
               activeOpacity={0.7}
+              // 36 dp drawn: the touch reaches 44.
+              hitSlop={4}
               onPress={toggleOverlay}
               testID={isDeleteMode ? undefined : SHORTCUT_TARGET.noteTypes}
               focusable={!isDeleteMode}

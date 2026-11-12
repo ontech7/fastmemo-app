@@ -233,6 +233,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
         />
         <Text style={styles.matchCount}>{matchCount > 0 ? `${currentMatch}/${matchCount}` : "0/0"}</Text>
         <TouchableOpacity
+          activeOpacity={0.7}
           style={styles.iconButton}
           onPress={() => navigateMatch("prev")}
           accessibilityRole="button"
@@ -242,6 +243,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
           <ChevronUpIcon size={18} color={matchCount > 0 ? COLOR.softWhite : COLOR.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity
+          activeOpacity={0.7}
           style={styles.iconButton}
           onPress={() => navigateMatch("next")}
           accessibilityRole="button"
@@ -252,6 +254,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
         </TouchableOpacity>
         {!readOnly && (
           <TouchableOpacity
+            activeOpacity={0.7}
             style={styles.iconButton}
             onPress={() => setShowReplace(!showReplace)}
             accessibilityRole="button"
@@ -263,6 +266,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
           </TouchableOpacity>
         )}
         <TouchableOpacity
+          activeOpacity={0.7}
           style={styles.iconButton}
           onPress={onClose}
           accessibilityRole="button"
@@ -281,12 +285,17 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
             placeholderTextColor={COLOR.textSecondary}
             cursorColor={COLOR.softWhite}
           />
-          <TouchableOpacity style={styles.actionButton} onPress={replaceCurrentMatch} disabled={matchCount === 0}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.actionButton}
+            onPress={replaceCurrentMatch}
+            disabled={matchCount === 0}
+          >
             <Text style={[styles.actionButtonText, matchCount === 0 && { color: COLOR.textMuted }]}>
               {t("note.find_replace.replace_one")}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={replaceAll} disabled={matchCount === 0}>
+          <TouchableOpacity activeOpacity={0.7} style={styles.actionButton} onPress={replaceAll} disabled={matchCount === 0}>
             <Text style={[styles.actionButtonText, matchCount === 0 && { color: COLOR.textMuted }]}>
               {t("note.find_replace.replace_all")}
             </Text>

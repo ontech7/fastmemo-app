@@ -358,6 +358,7 @@ export default function KanbanBoard({ note, updateNoteAsync, columnWidth, snapIn
 
       <ConfirmOrCancelDialog
         open={!!pendingColumn}
+        destructive
         description={
           pendingColumn
             ? t("kanban.delete_column_confirm", {

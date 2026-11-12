@@ -11,4 +11,20 @@ const Haptics = {
   NotificationFeedbackType,
 };
 
+/** Fire and forget: a failed vibration is never an error. */
+const fire = (vibrate: () => Promise<void>): void => {
+  try {
+    vibrate().catch(() => {});
+  } catch {
+    // no vibrator, or the module isn't there: nothing to tell
+  }
+};
+
+/** The app's haptics by meaning: a pick, a done, a warning (a destructive confirm). */
+export const haptic = {
+  select: (): void => fire(() => ExpoHaptics.selectionAsync()),
+  success: (): void => fire(() => ExpoHaptics.notificationAsync(ExpoHaptics.NotificationFeedbackType.Success)),
+  warn: (): void => fire(() => ExpoHaptics.notificationAsync(ExpoHaptics.NotificationFeedbackType.Warning)),
+};
+
 export default Haptics;

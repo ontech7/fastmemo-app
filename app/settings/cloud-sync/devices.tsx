@@ -190,6 +190,7 @@ export default function SyncedDevicesScreen() {
 
       <ConfirmOrCancelDialog
         open={confirmOpen}
+        destructive
         title={t("synceddevices.remove_title")}
         description={t("synceddevices.remove_description", { name: removing?.modelName ?? "" })}
         confirmLabel={t("synceddevices.remove_confirm")}

@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import ExclamationTriangleIcon from "react-native-heroicons/outline/ExclamationTriangleIcon";
 
 import { COLOR } from "@/constants/styles";
+import { haptic } from "@/libs/haptics";
 
 import ComplexDialog from "./ComplexDialog";
 
@@ -13,6 +14,8 @@ interface Props {
   onCancel?: (() => void) | null;
   confirmLabel?: string | null;
   onConfirm: () => void;
+  /** Its confirm deletes something: a warning haptic when it's pressed (not on cancel). */
+  destructive?: boolean;
 }
 
 export default function ConfirmOrCancelDialog({
@@ -23,6 +26,7 @@ export default function ConfirmOrCancelDialog({
   onCancel = null,
   confirmLabel = null,
   onConfirm,
+  destructive = false,
 }: Props) {
   const { t } = useTranslation();
 
@@ -42,7 +46,12 @@ export default function ConfirmOrCancelDialog({
       }
       confirm={{
         label: confirmLabel || t("confirm"),
-        handler: onConfirm,
+        handler: destructive
+          ? () => {
+              haptic.warn();
+              onConfirm();
+            }
+          : onConfirm,
       }}
     />
   );

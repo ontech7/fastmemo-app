@@ -18,6 +18,8 @@ export default function HiddenNotesButton({ onPressHidden, focusable }: Props) {
       style={styles.hiddenNoteButton}
       onPress={onPressHidden}
       focusable={focusable}
+      // 40 dp drawn: the touch reaches 44.
+      hitSlop={2}
       accessibilityRole="button"
       accessibilityLabel={t("note.settings.hide")}
     >

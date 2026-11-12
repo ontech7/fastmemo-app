@@ -82,6 +82,7 @@ export default function CodeDraggableTab({
     <>
       <ConfirmOrCancelDialog
         open={showDeleteConfirm}
+        destructive
         description={t("code.delete_tab_confirm")}
         onCancel={() => setShowDeleteConfirm(false)}
         onConfirm={() => {

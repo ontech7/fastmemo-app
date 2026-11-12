@@ -114,6 +114,7 @@ export default function IntroScreen() {
         <View style={styles.carouselContainer}>
           {isDesktop && (
             <TouchableOpacity
+              activeOpacity={0.7}
               style={[styles.navButton, styles.navButtonLeft, !canScrollPrev && styles.navButtonDisabled]}
               onPress={scrollPrev}
               accessibilityRole="button"
@@ -157,6 +158,7 @@ export default function IntroScreen() {
 
           {isDesktop && (
             <TouchableOpacity
+              activeOpacity={0.7}
               style={[styles.navButton, styles.navButtonRight, !canScrollNext && styles.navButtonDisabled]}
               onPress={scrollNext}
               accessibilityRole="button"
@@ -171,6 +173,7 @@ export default function IntroScreen() {
         <View style={styles.paginationContainer} accessibilityRole="tablist">
           {carouselSteps.map((_, index) => (
             <TouchableOpacity
+              activeOpacity={0.7}
               key={index}
               onPress={() => emblaApi?.scrollTo(index)}
               accessibilityRole="tab"

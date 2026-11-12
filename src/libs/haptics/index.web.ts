@@ -20,4 +20,11 @@ const Haptics = {
   NotificationFeedbackType,
 };
 
+/** The app's haptics by meaning; the web has no vibration, so nothing happens. */
+export const haptic = {
+  select: (): void => {},
+  success: (): void => {},
+  warn: (): void => {},
+};
+
 export default Haptics;

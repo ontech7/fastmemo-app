@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { VaultBackupButton } from "@/components/vault/VaultBackupButton";
 import { VaultButton, VaultDescription, VaultScreen } from "@/components/vault/VaultScaffold";
 import { useRouter } from "@/hooks/useRouter";
+import { haptic } from "@/libs/haptics";
 
 /**
  * Last-resort reset for when both passphrase and recovery key are lost. This
@@ -17,6 +18,7 @@ export default function VaultResetScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
 
   const confirm = () => {
+    haptic.warn();
     router.replace({ pathname: "/settings/cloud-sync/vault-setup", params: { projectId, mode: "reset" } });
   };
 

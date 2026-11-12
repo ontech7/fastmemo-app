@@ -18,6 +18,8 @@ export default function ProtectNotesButton({ onPressProtect, focusable }: Props)
       style={styles.protectNoteButton}
       onPress={onPressProtect}
       focusable={focusable}
+      // 40 dp drawn: the touch reaches 44.
+      hitSlop={2}
       accessibilityRole="button"
       accessibilityLabel={t("note.settings.protect")}
     >
