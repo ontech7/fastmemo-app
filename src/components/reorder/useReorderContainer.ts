@@ -1,7 +1,7 @@
 import { edgeStep } from "@/libs/reorderDrop";
-import { useReorder } from "@/providers/ReorderProvider";
+import { useReorder, useReorderDragged } from "@/providers/ReorderProvider";
 import { useCallback, useEffect, type RefObject } from "react";
-import type { LayoutChangeEvent, ViewInstance } from "react-native";
+import { Platform, type LayoutChangeEvent, type ViewInstance } from "react-native";
 import {
   scrollTo,
   useAnimatedReaction,
@@ -29,10 +29,15 @@ interface Options {
 /**
  * A vertical container of the reorder engine (a board's column, a list, the categories): it registers its area, tells
  * the engine its scroll offset, and scrolls near its top or bottom edge while the target is in it (UI thread). The scroll
- * view takes `onScroll={scrollHandler}` and `onContentSizeChange`; the area view takes `onLayout`.
+ * view takes `onScroll={scrollHandler}`, `onContentSizeChange` and `scrollEnabled`; the area view takes `onLayout`.
  */
 export function useReorderContainer(containerId: string, { scrollRef, areaRef, edge = EDGE, maxSpeed = MAX_SPEED }: Options) {
   const { active, target, layout, pointerY, containerScrollY, registerContainer } = useReorder();
+  // While an item is in the air the container scrolls only by the edge scroll: on Android a native scroll view whose
+  // offset moves under a held finger takes the touch, and the drag ended as cancelled the moment the edge scroll began.
+  // (The web keeps it: a scroll view that can't scroll hides its scrollbar, and the rows would move sideways.)
+  const dragging = useReorderDragged() !== null;
+  const scrollEnabled = Platform.OS === "web" || !dragging;
 
   useEffect(() => registerContainer(containerId, { area: areaRef }), [registerContainer, containerId, areaRef]);
 
@@ -81,5 +86,5 @@ export function useReorderContainer(containerId: string, { scrollRef, areaRef, e
     }
   );
 
-  return { scrollHandler, onContentSizeChange, onLayout };
+  return { scrollHandler, onContentSizeChange, onLayout, scrollEnabled };
 }

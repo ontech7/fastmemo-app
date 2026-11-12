@@ -10,8 +10,20 @@ import { scheduleOnRN } from "react-native-worklets";
 
 const isWeb = Platform.OS === "web";
 
-/** A finger lifts an item after a 200 ms press; a mouse at once, after 4 px (the web build sees every pointer as a mouse). */
-const ACTIVATION = isWeb ? { minDistance: 4 } : { activateAfterLongPress: 200 };
+/**
+ * A finger lifts the item as it touches the handle (as 4.0.0's list did); a mouse after 4 px (the web build sees every
+ * pointer as a mouse). On Android a pan that waits for a press fails as soon as the finger moves past the touch slop
+ * (8 dp) before the wait is over, and a finger that touches and drags at once always does: with 200 ms, and even with
+ * 60 ms, the drag didn't start in a list. The wait is one millisecond: the drag starts before the first move arrives.
+ */
+const ACTIVATION = isWeb ? { minDistance: 4 } : { activateAfterLongPress: 1 };
+
+/**
+ * A finger on the handle is the handle's for React Native's touch system too (Android, iOS). Otherwise a touchable around
+ * the list (the editor's tap-to-close-the-keyboard) took the touch a moment after the drag had started, and Android took
+ * that as a native view grabbing the touch: it cancelled the drag (the lifted row glowed and dropped back).
+ */
+const claimTouch = () => true;
 
 /** A handle's mouse press neither starts a board's mouse drag-to-scroll nor selects the page's text (web). */
 const holdMouse = (event: { preventDefault: () => void; stopPropagation: () => void }) => {
@@ -115,6 +127,7 @@ export default function ReorderHandle<T extends ReorderItem>({ item, containerId
         accessibilityActions={disabled ? undefined : accessibilityActions}
         onAccessibilityAction={onAccessibilityAction}
         {...(isWeb && { onMouseDown: holdMouse })}
+        {...(!isWeb && !disabled && { onStartShouldSetResponder: claimTouch })}
         {...(keyProps as object)}
       >
         {children ?? <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />}

@@ -50,8 +50,20 @@ export interface DropTarget {
 /** How far outside the frame the pointer still counts. */
 export const FRAME_SLACK = 24;
 
-/** The slot under the pointer, or null when the pointer is off the frame. */
-export function findDrop(layout: DropLayout, scroll: DropScroll, pointerX: number, pointerY: number): DropTarget | null {
+/**
+ * The slot under the pointer, or null when the pointer is off the frame. The pointer picks the container; within it, the
+ * slot is where `itemTop` is, the lifted item's top edge (the pointer less where it holds the item), when given: an item
+ * gives up its slot once that edge passes its middle. So the drag starts in the item's own place wherever the finger
+ * holds it, and moves a slot after half an item, up or down; by the pointer alone a finger a pixel below the middle of
+ * the item moved it at once.
+ */
+export function findDrop(
+  layout: DropLayout,
+  scroll: DropScroll,
+  pointerX: number,
+  pointerY: number,
+  itemTop: number = pointerY
+): DropTarget | null {
   "worklet";
   const { frame, containers } = layout;
   if (containers.length === 0) return null;
@@ -86,7 +98,7 @@ export function findDrop(layout: DropLayout, scroll: DropScroll, pointerX: numbe
   const dy = (scroll.containerScrollY[container] ?? 0) - (layout.containerScrollY[container] ?? 0);
   let index = 0;
   for (let i = 0; i < items.length; i++) {
-    if (items[i].y - dy + items[i].height / 2 < pointerY) index++;
+    if (items[i].y - dy + items[i].height / 2 < itemTop) index++;
   }
   return { container, index };
 }

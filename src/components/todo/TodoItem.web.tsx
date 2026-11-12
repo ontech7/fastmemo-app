@@ -1,16 +1,16 @@
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, type ViewInstance } from "react-native";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 
-import { BORDER, COLOR, FONT, FONTSIZE, GLASS, LIFT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 import DragIcon from "@/components/icons/DragIcon";
-import DropSlot from "@/components/ui/DropSlot";
+import ReorderHandle from "@/components/reorder/ReorderHandle";
+import ReorderSlot, { ITEM_LAYOUT } from "@/components/reorder/ReorderSlot";
+import { useReorder } from "@/providers/ReorderProvider";
 
 interface TodoItemData {
   id: string;
@@ -26,6 +26,10 @@ interface Props {
   checkItem: (id: string) => void;
   deleteItem: (id: string) => void;
   disabled: boolean;
+  /** The row in the air (free mode): its place folds away while it stays mounted (its gesture is the one running). */
+  folded?: boolean;
+  /** The slot of the row in the air opens above this row, this high (inside its own box: the rows never change order). */
+  slotHeight?: number;
   hidden?: boolean;
   autoFocus: boolean;
   stepMode?: boolean;
@@ -37,10 +41,8 @@ interface Props {
   animationsReady?: boolean;
 }
 
-// The drag handle is a DOM element (dnd-kit's listeners): its style objects are made once.
-const HANDLE_STYLE: React.CSSProperties = { cursor: "grab", padding: 8, display: "flex", alignItems: "center" };
-const HANDLE_STYLE_DISABLED: React.CSSProperties = { ...HANDLE_STYLE, cursor: "default" };
-const HANDLE_STYLE_LIFTED: React.CSSProperties = { ...HANDLE_STYLE, cursor: "grabbing" };
+/** The list's only container in the reorder engine. */
+export const LIST_CONTAINER = "list";
 
 const STEP_COLUMN_WIDTH = 50;
 const STEP_CIRCLE_SIZE = 34;
@@ -51,6 +53,8 @@ function TodoItem({
   checkItem,
   deleteItem,
   disabled,
+  folded = false,
+  slotHeight = 0,
   hidden = false,
   autoFocus,
   stepMode = false,
@@ -62,20 +66,14 @@ function TodoItem({
   const [height, setHeight] = useState(40);
   const [pressing, setPressing] = useState(false);
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-    disabled: stepMode,
-  });
+  // Measured by the reorder engine at lift only (free mode: steps have no handle).
+  const { registerItem } = useReorder();
+  const rowRef = useRef<ViewInstance>(null);
+  useEffect(() => (stepMode ? undefined : registerItem(LIST_CONTAINER, item.id, rowRef)), [registerItem, item.id, stepMode]);
 
   const isOngoing = stepMode && stepStatus === "ongoing";
   const isFuture = stepMode && stepStatus === "future";
   const isStepDone = stepMode && stepStatus === "done";
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition ?? "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease",
-    position: "relative",
-  };
 
   if (hidden && item.checked) {
     return null;
@@ -85,13 +83,10 @@ function TodoItem({
 
   if (!stepMode) {
     return (
-      <div ref={setNodeRef} style={style}>
-        {/* In the air (the overlay draws it): its place in the list is the slot, of its size. */}
-        {isDragging && <DropSlot style={styles.slot} />}
-        <View style={[styles.todoItemContainer, item.checked && styles.todoItemChecked, isDragging && styles.inTheAir]}>
-          <div {...attributes} {...listeners} style={disabled ? HANDLE_STYLE_DISABLED : HANDLE_STYLE}>
-            <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
-          </div>
+      <Animated.View layout={ITEM_LAYOUT} style={folded && styles.folded}>
+        {slotHeight ? <ReorderSlot height={slotHeight} style={styles.slot} /> : null}
+        <View ref={rowRef} style={[styles.todoItemContainer, item.checked && styles.todoItemChecked]}>
+          <ReorderHandle item={item} containerId={LIST_CONTAINER} disabled={disabled} style={styles.handle} />
 
           <TouchableOpacity
             activeOpacity={0.7}
@@ -134,7 +129,7 @@ function TodoItem({
             </View>
           </TouchableOpacity>
         </View>
-      </div>
+      </Animated.View>
     );
   }
 
@@ -145,7 +140,7 @@ function TodoItem({
   const circleFillBg = isOngoing ? COLOR.accent : isStepDone ? COLOR.accentMuted : COLOR.surface;
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <View>
       <View style={styles.stepRow}>
         <View style={styles.stepColumn}>
           <TouchableOpacity
@@ -213,44 +208,48 @@ function TodoItem({
           </View>
         </TouchableOpacity>
       </View>
-    </div>
+    </View>
   );
 }
 
-interface TodoItemLiftedProps {
+interface TodoItemStaticProps {
   item: TodoItemData;
+  /** The lifted row's measured height: drawn at exactly that size, it becomes the real row at the drop without a hop. */
+  height?: number;
 }
 
-/** The row in the air (the list's DragOverlay): lifted like a kanban card in the air (ADR-037); nothing in it reacts. */
-export function TodoItemLifted({ item }: TodoItemLiftedProps) {
-  const reducedMotion = useReducedMotion();
-  const lift = useSharedValue(reducedMotion ? 1 : 0);
-  useEffect(() => {
-    if (!reducedMotion) lift.set(withTiming(1, { duration: LIFT.ms }));
-  }, [lift, reducedMotion]);
-  const liftStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${LIFT.tilt * lift.get()}deg` }, { scale: 1 + (LIFT.scale - 1) * lift.get() }] as const,
-  }));
-
+/** A free-mode row as the reorder engine's layer draws it in the air: read-only, raised (accent edge, shadow). */
+export function TodoItemStatic({ item, height }: TodoItemStaticProps) {
   return (
-    <Animated.View style={[styles.todoItemContainer, styles.liftedRow, liftStyle]}>
-      <div style={HANDLE_STYLE_LIFTED}>
+    <View style={[styles.todoItemContainer, styles.liftedRow, item.checked && styles.todoItemChecked]}>
+      <View style={styles.handle}>
         <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
-      </div>
+      </View>
       <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked, styles.edgeLifted]}>
         {item.checked && <CheckIcon size={24} color={COLOR.softWhite} />}
       </View>
-      <View style={[styles.listItemInputFree, styles.edgeLifted]}>
-        <Text style={styles.liftedText} numberOfLines={6}>
-          {item.text || " "}
-        </Text>
-      </View>
+      {/* The row's own text field, read-only: it lays the text out exactly as the row does. */}
+      <TextInput
+        style={[
+          styles.listItemInputFree,
+          item.checked && styles.listItemInputChecked,
+          styles.edgeLifted,
+          height !== undefined && { height },
+        ]}
+        textAlignVertical="top"
+        multiline
+        scrollEnabled={false}
+        editable={false}
+        focusable={false}
+        value={item.text}
+        pointerEvents="none"
+      />
       <View style={styles.deleteButton}>
         <View style={styles.deleteChip}>
           <TrashIcon size={16} color={COLOR.textMuted} />
         </View>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -260,14 +259,19 @@ const DELETE_SPAN = 32 + PADDING_MARGIN.xs * 2 + PADDING_MARGIN.sm;
 const styles = StyleSheet.create({
   /* dragging */
   slot: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: DELETE_SPAN,
-    bottom: PADDING_MARGIN.sm,
+    marginBottom: PADDING_MARGIN.sm,
+    marginRight: DELETE_SPAN,
   },
-  inTheAir: {
+  // Its place closed, the row still mounted: nothing of it shows or takes room.
+  folded: {
+    height: 0,
+    overflow: "hidden",
     opacity: 0,
+  },
+  handle: {
+    padding: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   liftedRow: {
     marginBottom: 0,
@@ -276,12 +280,6 @@ const styles = StyleSheet.create({
   },
   edgeLifted: {
     borderColor: COLOR.accentSoft,
-  },
-  liftedText: {
-    fontSize: FONTSIZE.inputTitle,
-    lineHeight: FONTSIZE.inputTitle * 1.35,
-    fontFamily: FONT.regular,
-    color: COLOR.textPrimary,
   },
 
   /* free mode */
@@ -429,3 +427,6 @@ const styles = StyleSheet.create({
 });
 
 export default memo(TodoItem);
+
+/** The slot's margins in a list on the web: the row's body only (the delete button stays outside it). */
+export const ROW_SLOT_STYLE = styles.slot;

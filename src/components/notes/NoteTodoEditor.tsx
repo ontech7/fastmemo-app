@@ -11,9 +11,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import DraggableFlatList, { type RenderItemParams } from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useSharedValue } from "react-native-reanimated";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
@@ -27,11 +25,10 @@ import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem.native";
+import TodoList, { type RowDrag } from "@/components/todo/TodoList";
 import AppBackground from "@/components/ui/AppBackground";
-import DropSlot, { ROW_DELETE_INSET } from "@/components/ui/DropSlot";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { useTodoList } from "@/hooks/useTodoList";
-import Haptics, { ImpactFeedbackStyle, NotificationFeedbackType } from "@/libs/haptics";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
 
@@ -43,8 +40,6 @@ interface Props {
 
 export default function NoteTodoEditor({ initialNote }: Props) {
   const { t } = useTranslation();
-
-  const draggableListRef = useRef(null);
 
   const {
     note,
@@ -64,7 +59,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     deleteItem,
     addItem,
     setMode,
-    reorder,
+    moveItemTo,
     addSuggestedItems,
     insertVoiceLines,
     setTitleFromAI,
@@ -98,13 +93,11 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
   const readOnly = !!note.readOnly;
 
-  // Not a function of the list: a keystroke changes one item, and only that row renders again (the list hands each
-  // row a stable `drag` and `getIndex`). What every row shows (the mode, the focus, the ongoing step, the last row)
-  // is a dependency, so a change there reaches every row, and `memo` keeps the rows whose props stayed the same.
-  const dropping = useSharedValue(0);
+  // Not a function of the list: a keystroke changes one item, and only that row renders again. What every row shows (the
+  // mode, the focus, the ongoing step, the last row) is a dependency, so a change there reaches every row, and `memo`
+  // keeps the rows whose props stayed the same. `drag` changes only while a row is in the air (ADR-038).
   const renderTodoItem = useCallback(
-    ({ item, drag, isActive, getIndex }: RenderItemParams<TodoItemType>) => {
-      const index = getIndex() ?? 0;
+    (item: TodoItemType, index: number, drag: RowDrag) => {
       const stepStatus: "done" | "ongoing" | "future" = item.checked
         ? "done"
         : index === firstUncheckedIndex
@@ -117,10 +110,9 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           setText={setItemText}
           checkItem={checkItem}
           deleteItem={deleteItem}
-          drag={drag}
-          lifted={isActive}
-          dropping={isActive ? dropping : undefined}
-          disabled={isActive || readOnly}
+          disabled={readOnly}
+          folded={drag.folded}
+          slotHeight={drag.slotHeight}
           autoFocus={item.id === focusId}
           inputRef={item.id === focusId ? focusInputRef : undefined}
           stepMode={stepMode}
@@ -132,35 +124,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         />
       );
     },
-    [focusId, stepMode, firstUncheckedIndex, total, readOnly, animationsReady, setItemText, checkItem, deleteItem, dropping]
-  );
-
-  // The kanban drag's feel (ADR-037): a firm tap at lift, a tick each time the slot moves, a success when it moved.
-  // The lifted row settles flat from the release, on the UI thread: the drop counts only once the row has landed.
-  const onDragBegin = useCallback(() => {
-    dropping.set(0);
-    Haptics.impactAsync(ImpactFeedbackStyle.Medium);
-  }, [dropping]);
-  const onRelease = useCallback(() => dropping.set(1), [dropping]);
-  const onPlaceholderIndexChange = useCallback(() => Haptics.selectionAsync(), []);
-  // After a drop the list keeps each row's last drag offset until that row is laid out again, and a row that was still
-  // sliding when the drop counted, or whose place didn't change, is never laid out again: it stayed drawn over another
-  // row. Moving the rows by a point and back lays every mounted row out, and the offsets are cleared.
-  const [relayout, setRelayout] = useState(false);
-  const relayoutTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(relayoutTimer.current), []);
-
-  const onDragEnd = useCallback(
-    ({ data, from, to }: { data: TodoItemType[]; from: number; to: number }) => {
-      if (from !== to) Haptics.notificationAsync(NotificationFeedbackType.Success);
-      reorder(data);
-      clearTimeout(relayoutTimer.current);
-      relayoutTimer.current = setTimeout(() => {
-        setRelayout(true);
-        relayoutTimer.current = setTimeout(() => setRelayout(false), RELAYOUT_MS);
-      }, RELAYOUT_MS);
-    },
-    [reorder]
+    [focusId, stepMode, firstUncheckedIndex, total, readOnly, animationsReady, setItemText, checkItem, deleteItem]
   );
 
   return (
@@ -210,22 +174,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
               <View style={{ flex: 1 }}>
                 <GestureHandlerRootView style={styles.draggableList}>
                   {note.list.length > 0 ? (
-                    <DraggableFlatList
-                      containerStyle={{ flex: 1 }}
-                      style={{ flex: 1, paddingHorizontal: PADDING_MARGIN.lg }}
-                      contentContainerStyle={relayout ? styles.listContentNudged : styles.listContent}
-                      ref={draggableListRef}
-                      data={note.list}
-                      onDragBegin={onDragBegin}
-                      onRelease={onRelease}
-                      onPlaceholderIndexChange={onPlaceholderIndexChange}
-                      onDragEnd={onDragEnd}
-                      renderPlaceholder={renderSlot}
-                      animationConfig={DROP_SPRING}
-                      windowSize={LIST_WINDOW}
-                      keyExtractor={(item) => item.id}
-                      renderItem={renderTodoItem}
-                    />
+                    <TodoList list={note.list} renderRow={renderTodoItem} moveItemTo={moveItemTo} />
                   ) : (
                     <Text style={styles.noItems}>{t("note.no_items")}</Text>
                   )}
@@ -287,42 +236,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
 
 /* STYLES */
 
-/**
- * The rows making room and the drop landing, in about LIFT.dropMs. A little under critical damping, and clamped: it reaches
- * its place in ~105 ms and stops there. Critically damped, it crept ~150 ms more before the drop counted; the library's
- * default (overdamped, mass 0.2, stiffness 100) crawls for about a second, and the next drag waits on it.
- */
-const DROP_SPRING = {
-  mass: 0.2,
-  stiffness: 200,
-  damping: 9,
-  overshootClamping: true,
-  restSpeedThreshold: 1,
-  restDisplacementThreshold: 0.5,
-};
-
-/**
- * Screens of rows kept mounted (the visible one included). FlatList's default, 21, mounts a 300-item list whole, and every
- * mounted row runs the drag's per-frame worklet and re-attaches it at lift and at drop: the drop froze for ~80 ms on a
- * Pixel. Five screens still cover a fling.
- */
-const LIST_WINDOW = 5;
-
-/** After a drop: the wait before the rows are laid out again, and how long they stay a point lower (unseen). */
-const RELAYOUT_MS = 100;
-
-/**
- * Where the row being dragged will land: the same slot as a kanban card's, in the row's place. The list draws its
- * placeholder outside its side padding, so the slot keeps it itself.
- */
-const renderSlot = () => <DropSlot style={styles.slot} />;
-
 const styles = StyleSheet.create({
-  slot: {
-    marginBottom: PADDING_MARGIN.sm,
-    marginLeft: PADDING_MARGIN.lg,
-    marginRight: PADDING_MARGIN.lg + ROW_DELETE_INSET,
-  },
   container: {
     height: SIZE.full,
     paddingVertical: PADDING_MARGIN.lg,
@@ -366,14 +280,6 @@ const styles = StyleSheet.create({
   },
   draggableList: {
     flex: 1,
-  },
-  listContent: {
-    paddingTop: PADDING_MARGIN.xl,
-    paddingBottom: PADDING_MARGIN.md,
-  },
-  listContentNudged: {
-    paddingTop: PADDING_MARGIN.xl + 1,
-    paddingBottom: PADDING_MARGIN.md,
   },
   addButton: {
     padding: PADDING_MARGIN.md,

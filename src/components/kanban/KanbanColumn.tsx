@@ -1,5 +1,6 @@
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, KANBAN_COLUMN_COLORS, PADDING_MARGIN } from "@/constants/styles";
 import ReorderSlot from "@/components/reorder/ReorderSlot";
+import { ReorderScrollView } from "@/components/reorder/scrollViews";
 import { useReorderContainer } from "@/components/reorder/useReorderContainer";
 import { useReorder, useReorderPreview } from "@/providers/ReorderProvider";
 import { memo, useCallback, useRef, type RefObject } from "react";
@@ -62,6 +63,7 @@ function KanbanColumn({
     scrollHandler,
     onContentSizeChange,
     onLayout: onListLayout,
+    scrollEnabled,
   } = useReorderContainer(columnId, {
     scrollRef: listRef,
     areaRef,
@@ -174,11 +176,12 @@ function KanbanColumn({
 
       <View style={styles.cardsContainer}>
         <View ref={areaRef} style={styles.cardsArea} onLayout={onListLayout}>
-          <Animated.ScrollView
+          <ReorderScrollView
             ref={listRef}
             style={styles.cardsList}
             showsVerticalScrollIndicator={false}
             nestedScrollEnabled
+            scrollEnabled={scrollEnabled}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.cardsListContent}
             onScroll={scrollHandler}
@@ -190,7 +193,7 @@ function KanbanColumn({
             {rows.length === 0 && !trailingSlot ? (
               <Text style={styles.noCards}>{t ? t("kanban.no_cards") : "No cards"}</Text>
             ) : null}
-          </Animated.ScrollView>
+          </ReorderScrollView>
         </View>
       </View>
 

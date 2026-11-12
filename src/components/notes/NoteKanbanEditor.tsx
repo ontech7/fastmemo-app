@@ -144,7 +144,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
 
           <View style={styles.boardContainer}>
             <GestureHandlerRootView style={{ flex: 1 }}>
-              <ReorderProvider containersRef={columnsRef} onDrop={onDrop} tick="container">
+              <ReorderProvider containersRef={columnsRef} onDrop={onDrop}>
                 <KanbanBoard
                   note={note}
                   updateNoteAsync={updateNoteAsync}

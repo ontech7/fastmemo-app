@@ -148,6 +148,34 @@ console.log("\nwithoutItem: the lifted card's place closes");
   ok("the only card lifted: an empty column", only.containers[2].items.length === 0, only.containers[2]);
 }
 
+console.log("\nfindDrop with the lifted item's top: the slot follows the item, not where the finger holds it");
+
+{
+  const W = withoutItem(L, 0, 1); // a1 (220+48 = 268, 120 high) lifted: a0 at 220-260, a2 at 268-308
+  const lifted = (top, grab) => findDrop(W, still, 100, top + grab, top);
+  ok(
+    "at the lift, held anywhere on it: its own place",
+    [2, 60, 118].every((grab) => lifted(268, grab)?.index === 1),
+    [2, 60, 118].map((grab) => lifted(268, grab))
+  );
+  ok(
+    "down: the next slot once its top passes the next item's middle",
+    lifted(287, 60)?.index === 1 && lifted(289, 60)?.index === 2,
+    [lifted(287, 60), lifted(289, 60)]
+  );
+  ok(
+    "up: the slot above once its top passes the previous item's middle",
+    lifted(241, 60)?.index === 1 && lifted(239, 60)?.index === 0,
+    [lifted(241, 60), lifted(239, 60)]
+  );
+  ok(
+    "the container is still the finger's",
+    findDrop(W, still, 340, 400, 268)?.container === 1,
+    findDrop(W, still, 340, 400, 268)
+  );
+  ok("off the board is still the finger's", findDrop(W, still, 100, 60, 268) === null, findDrop(W, still, 100, 60, 268));
+}
+
 console.log("\nwith moveCard: the card ends in the slot the drag showed");
 
 const cols = columnsOf(L); // A: a0 a1 a2, B: -, C: c0

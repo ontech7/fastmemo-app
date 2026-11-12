@@ -1,6 +1,15 @@
-import { memo, useEffect, type RefObject } from "react";
+import { memo, useEffect, useRef, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  type TextInputInstance,
+  TouchableOpacity,
+  View,
+  type ViewInstance,
+} from "react-native";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import Animated, {
@@ -8,15 +17,16 @@ import Animated, {
   FadeIn,
   FadeOut,
   LinearTransition,
-  useAnimatedReaction,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
-  type SharedValue,
 } from "react-native-reanimated";
 
-import { BORDER, COLOR, FONT, FONTSIZE, GLASS, LIFT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+
+import ReorderHandle from "@/components/reorder/ReorderHandle";
+import ReorderSlot from "@/components/reorder/ReorderSlot";
+import { useReorder } from "@/providers/ReorderProvider";
 
 import DragIcon from "@/components/icons/DragIcon";
 
@@ -33,12 +43,11 @@ interface Props {
   setText: (id: string, text: string) => void;
   checkItem: (id: string) => void;
   deleteItem: (id: string) => void;
-  drag: () => void;
-  /** Being dragged: it lifts like a kanban card (tilt, scale, accent edge, shadow). */
-  lifted?: boolean;
-  /** The lifted row only: 1 once the finger leaves, and the row settles flat while it lands (a kanban card's drop). */
-  dropping?: SharedValue<number>;
   disabled: boolean;
+  /** The row in the air (free mode): its place folds away while it stays mounted (its gesture is the one running). */
+  folded?: boolean;
+  /** The slot of the row in the air opens above this row, this high (inside its own box: the rows never change order). */
+  slotHeight?: number;
   hidden?: boolean;
   autoFocus: boolean;
   // Forwarded to the row's text input so the parent can focus it imperatively
@@ -52,6 +61,9 @@ interface Props {
   isLast?: boolean;
   animationsReady?: boolean;
 }
+
+/** The list's only container in the reorder engine. */
+export const LIST_CONTAINER = "list";
 
 const STEP_COLUMN_WIDTH = 50;
 const STEP_CIRCLE_SIZE = 34;
@@ -70,10 +82,9 @@ function TodoItem({
   setText,
   checkItem,
   deleteItem,
-  drag,
-  lifted = false,
-  dropping,
   disabled,
+  folded = false,
+  slotHeight = 0,
   hidden = false,
   autoFocus,
   inputRef,
@@ -98,23 +109,10 @@ function TodoItem({
     });
   }, [isOngoing, circleFill]);
 
-  // 0 flat, 1 lifted.
-  const reducedMotion = useReducedMotion();
-  const lift = useSharedValue(0);
-  useEffect(() => {
-    const to = lifted ? 1 : 0;
-    lift.set(reducedMotion ? to : withTiming(to, { duration: lifted ? LIFT.ms : LIFT.dropMs }));
-  }, [lifted, reducedMotion, lift]);
-  useAnimatedReaction(
-    () => dropping?.get() ?? 0,
-    (now, previous) => {
-      if (now === 1 && previous !== 1) lift.set(reducedMotion ? 0 : withTiming(0, { duration: LIFT.dropMs }));
-    },
-    [dropping, reducedMotion]
-  );
-  const liftStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${LIFT.tilt * lift.get()}deg` }, { scale: 1 + (LIFT.scale - 1) * lift.get() }] as const,
-  }));
+  // Measured by the reorder engine at lift only (free mode: steps have no handle).
+  const { registerItem, itemLayout } = useReorder();
+  const rowRef = useRef<ViewInstance>(null);
+  useEffect(() => (stepMode ? undefined : registerItem(LIST_CONTAINER, item.id, rowRef)), [registerItem, item.id, stepMode]);
 
   const circleFillStyle = useAnimatedStyle(() => ({
     opacity: circleFill.value,
@@ -140,62 +138,66 @@ function TodoItem({
 
   if (!stepMode) {
     return (
-      <Animated.View layout={rowLayout} entering={rowEntering} exiting={rowExiting} style={styles.row}>
-        <Animated.View style={[styles.inner, item.checked && styles.innerChecked, lifted && styles.innerLifted, liftStyle]}>
+      <Animated.View
+        // The engine's slide (the slot opening, a place closing; none at the lift and the drop) is the row's own: one
+        // transition that never changes, so a drag renders only the rows whose place or slot changes.
+        layout={animationsReady ? itemLayout : undefined}
+        entering={rowEntering}
+        exiting={rowExiting}
+        style={folded && styles.folded}
+      >
+        {slotHeight ? <ReorderSlot height={slotHeight} /> : null}
+        {/* The row slides inside its box too: the slot opening above it or closing moves the row in the box while the
+            box itself slides, and only the two together keep each row where it should be at every frame (a slot two
+            places away drew the rows at the two ends jumping and the ones between sliding). */}
+        <Animated.View ref={rowRef} layout={animationsReady ? itemLayout : undefined} style={styles.row}>
+          <View style={[styles.inner, item.checked && styles.innerChecked]}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={disabled}
+              style={styles.checkTouch}
+              onPress={handleCheck}
+              accessibilityRole="checkbox"
+              accessibilityLabel={item.text || t("a11y.item")}
+              aria-checked={item.checked}
+            >
+              <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked]}>
+                {item.checked && (
+                  <Animated.View entering={CHECK_ENTERING} exiting={CHECK_EXITING}>
+                    <CheckIcon size={24} color={COLOR.softWhite} />
+                  </Animated.View>
+                )}
+              </View>
+            </TouchableOpacity>
+
+            <TextInput
+              ref={inputRef}
+              style={[styles.listItemInputFree, item.checked && styles.listItemInputChecked]}
+              textAlignVertical="center"
+              multiline
+              onChangeText={(value) => setText(item.id, value)}
+              value={item.text}
+              editable={!disabled}
+              cursorColor={COLOR.softWhite}
+              autoFocus={autoFocus}
+            />
+
+            <ReorderHandle item={item} containerId={LIST_CONTAINER} disabled={disabled} style={styles.drag} />
+          </View>
+
           <TouchableOpacity
             activeOpacity={0.7}
             disabled={disabled}
-            style={styles.checkTouch}
-            onPress={handleCheck}
-            accessibilityRole="checkbox"
-            accessibilityLabel={item.text || t("a11y.item")}
-            aria-checked={item.checked}
+            style={styles.deleteButton}
+            onPress={() => deleteItem(item.id)}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.delete_item")}
           >
-            <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked, lifted && styles.edgeLifted]}>
-              {item.checked && (
-                <Animated.View entering={CHECK_ENTERING} exiting={CHECK_EXITING}>
-                  <CheckIcon size={24} color={COLOR.softWhite} />
-                </Animated.View>
-              )}
+            <View style={styles.deleteChip}>
+              <TrashIcon size={16} color={COLOR.textMuted} />
             </View>
           </TouchableOpacity>
-
-          <TextInput
-            ref={inputRef}
-            style={[styles.listItemInputFree, item.checked && styles.listItemInputChecked, lifted && styles.edgeLifted]}
-            textAlignVertical="center"
-            multiline
-            onChangeText={(value) => setText(item.id, value)}
-            value={item.text}
-            editable={!disabled}
-            cursorColor={COLOR.softWhite}
-            autoFocus={autoFocus}
-          />
-
-          <TouchableOpacity
-            activeOpacity={0.7}
-            disabled={disabled}
-            style={[styles.drag, lifted && styles.edgeLifted]}
-            onPressIn={drag}
-            // A drag starts on touch-down, which a screen reader's double tap can't drive
-            accessible={false}
-          >
-            <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
-          </TouchableOpacity>
         </Animated.View>
-
-        <TouchableOpacity
-          activeOpacity={0.7}
-          disabled={disabled}
-          style={styles.deleteButton}
-          onPress={() => deleteItem(item.id)}
-          accessibilityRole="button"
-          accessibilityLabel={t("a11y.delete_item")}
-        >
-          <View style={styles.deleteChip}>
-            <TrashIcon size={16} color={COLOR.textMuted} />
-          </View>
-        </TouchableOpacity>
       </Animated.View>
     );
   }
@@ -272,10 +274,61 @@ function TodoItem({
   );
 }
 
+interface TodoItemStaticProps {
+  item: TodoItemData;
+  /** The lifted row's measured height: drawn at exactly that size, it becomes the real row at the drop without a hop. */
+  height?: number;
+}
+
+/** A free-mode row as the reorder engine's layer draws it in the air: read-only, raised (accent edge, shadow). */
+export function TodoItemStatic({ item, height }: TodoItemStaticProps) {
+  return (
+    <View style={styles.row}>
+      <View style={[styles.inner, styles.innerLifted, item.checked && styles.innerChecked]}>
+        <View style={styles.checkTouch}>
+          <View style={[styles.checkboxFree, item.checked && styles.checkboxFreeChecked, styles.edgeLifted]}>
+            {item.checked && <CheckIcon size={24} color={COLOR.softWhite} />}
+          </View>
+        </View>
+        {/* The row's own text field, read-only: it lays the text out exactly as the row does. */}
+        <TextInput
+          style={[
+            styles.listItemInputFree,
+            item.checked && styles.listItemInputChecked,
+            styles.edgeLifted,
+            height !== undefined && { height },
+          ]}
+          textAlignVertical="center"
+          multiline
+          scrollEnabled={false}
+          editable={false}
+          focusable={false}
+          value={item.text}
+          pointerEvents="none"
+        />
+        <View style={[styles.drag, styles.edgeLifted]}>
+          <DragIcon iconProps={{ color: COLOR.textSecondary, opacity: 0.9 }} />
+        </View>
+      </View>
+      <View style={styles.deleteButton}>
+        <View style={styles.deleteChip}>
+          <TrashIcon size={16} color={COLOR.textMuted} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 /* STYLES */
 
 const styles = StyleSheet.create({
   /* shared (free mode) */
+  // Its place closed, the row still mounted: nothing of it shows or takes room.
+  folded: {
+    height: 0,
+    overflow: "hidden",
+    opacity: 0,
+  },
   row: {
     flexDirection: "row",
     marginBottom: PADDING_MARGIN.sm,
@@ -288,7 +341,7 @@ const styles = StyleSheet.create({
   innerChecked: {
     opacity: 0.55,
   },
-  // Being dragged: raised like a kanban card in the air.
+  // In the air (the engine's layer): raised like a kanban card.
   innerLifted: {
     borderRadius: BORDER.normal,
     ...SHADOW.lifted,

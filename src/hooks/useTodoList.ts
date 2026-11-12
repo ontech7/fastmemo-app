@@ -4,6 +4,7 @@ import uuid from "react-uuid";
 import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
+import { moveById } from "@/libs/reorderDrop";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
 import { isTodoNoteEmpty } from "@/utils/noteEmpty";
 import { capitalize } from "@/utils/string";
@@ -139,30 +140,14 @@ export function useTodoList(initialNote: TodoNote) {
     [updateNoteAsync]
   );
 
-  const reorder = useCallback(
-    (list: TodoItem[]) =>
+  // A drop or a keyboard move, applied to the list as it is now (by id: a row deleted meanwhile, here or on another
+  // device, moves nothing). `toIndex` counts the row where it still is (moveById).
+  const moveItemTo = useCallback(
+    (itemId: string, toIndex: number) =>
       updateNoteAsync((current) => {
-        if (current.readOnly || list.length !== current.list.length) return current;
-        // The drag started from the list as it was: applied only if it holds the same items, each as it is now (an edit
-        // that arrived meanwhile is kept).
-        const byId = new Map(current.list.map((item) => [item.id, item]));
-        if (!list.every((item) => byId.has(item.id))) return current;
-        const next = list.map((item) => byId.get(item.id) as TodoItem);
-        return next.every((item, i) => item === current.list[i]) ? current : { ...current, list: next };
-      }),
-    [updateNoteAsync]
-  );
-
-  const moveItem = useCallback(
-    (fromId: string, toId: string) =>
-      updateNoteAsync((current) => {
-        if (current.readOnly || fromId === toId) return current;
-        const from = current.list.findIndex((item) => item.id === fromId);
-        const to = current.list.findIndex((item) => item.id === toId);
-        if (from === -1 || to === -1) return current;
-        const list = [...current.list];
-        list.splice(to, 0, list.splice(from, 1)[0]);
-        return { ...current, list };
+        if (current.readOnly) return current;
+        const list = moveById(current.list, itemId, toIndex) as TodoItem[];
+        return list === current.list ? current : { ...current, list };
       }),
     [updateNoteAsync]
   );
@@ -226,8 +211,7 @@ export function useTodoList(initialNote: TodoNote) {
     deleteItem,
     addItem,
     setMode,
-    reorder,
-    moveItem,
+    moveItemTo,
     addSuggestedItems,
     insertVoiceLines,
     setTitleFromAI,

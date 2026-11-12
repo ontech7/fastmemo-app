@@ -3,7 +3,7 @@ import Haptics, { ImpactFeedbackStyle, NotificationFeedbackType } from "@/libs/h
 import { findDrop, isOwnPlace, stepIndex, toMoveIndex, withoutItem } from "@/libs/reorderDrop";
 import type { DropContainer, DropLayout, DropTarget, Rect } from "@/libs/reorderDrop";
 import { measureInWindow } from "@/libs/tourTargets";
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { Keyboard } from "react-native";
 import type { ViewInstance } from "react-native";
@@ -15,7 +15,7 @@ import {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import type { SharedValue } from "react-native-reanimated";
+import type { LayoutAnimationFunction, SharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 
 /*
@@ -31,6 +31,8 @@ import { scheduleOnRN } from "react-native-worklets";
 const SETTLE = { duration: LIFT.dropMs, easing: Easing.out(Easing.cubic) };
 /** The webview may report an animation's end late: the drag ends by then anyway. */
 const SETTLE_MS = LIFT.dropMs + 60;
+/** How long an item slides when the slot opens or its place closes (the kanban's `ITEM_LAYOUT`). */
+const SLIDE_MS = 160;
 
 export interface ReorderItem {
   id: string;
@@ -83,6 +85,13 @@ export interface ReorderContextValue {
    * screen reader's actions. Nothing at an end, nor while an item is in the air.
    */
   move(itemId: string, containerId: string, delta: -1 | 1): void;
+  /**
+   * The layout transition of an item that should slide while an item is in the air but not in the commits that lift and
+   * drop it, as a board's cards do, without a prop that changes on every item then (a long list's rows): the same function
+   * always, which reads at each layout change whether the drag is starting or ending. A slide there drew the item that
+   * opens the slot a place lower for an instant (its box slid from where it was, with the slot already in it).
+   */
+  itemLayout: LayoutAnimationFunction;
 }
 
 export interface ReorderDragged<T extends ReorderItem> {
@@ -112,8 +121,6 @@ interface Props<T extends ReorderItem> {
    * data as it is at that moment.
    */
   onDrop: (itemId: string, fromContainerId: string, toContainerId: string, toIndex: number) => void;
-  /** The selection haptic: when the target container changes (a board), or when the slot does (a list). */
-  tick: "container" | "slot";
 }
 
 const ReorderContext = createContext<ReorderContextValue | null>(null);
@@ -126,7 +133,7 @@ const sameTarget = (a: DropTarget | null, b: DropTarget | null) => {
   return a.container === b.container && a.index === b.index;
 };
 
-export default function ReorderProvider<T extends ReorderItem>({ children, containersRef, onDrop, tick }: Props<T>) {
+export default function ReorderProvider<T extends ReorderItem>({ children, containersRef, onDrop }: Props<T>) {
   const reducedMotion = useReducedMotion();
 
   const active = useSharedValue(0);
@@ -143,9 +150,45 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
   const sourceIndex = useSharedValue(-1);
   const frameScrollX = useSharedValue(0);
   const containerScrollY = useSharedValue<Record<string, number>>({});
+  // 0 while the lift's or the drop's commit lays the items out: they take their places at once.
+  const slide = useSharedValue(1);
+  const itemLayout = useMemo<LayoutAnimationFunction>(
+    () => (values) => {
+      "worklet";
+      const timing = { duration: slide.get() === 1 ? SLIDE_MS : 0 };
+      return {
+        initialValues: {
+          originX: values.currentOriginX,
+          originY: values.currentOriginY,
+          width: values.currentWidth,
+          height: values.currentHeight,
+        },
+        animations: {
+          originX: withTiming(values.targetOriginX, timing),
+          originY: withTiming(values.targetOriginY, timing),
+          width: withTiming(values.targetWidth, timing),
+          height: withTiming(values.targetHeight, timing),
+        },
+      };
+    },
+    [slide]
+  );
 
   const [dragged, setDragged] = useState<ReorderDragged<ReorderItem> | null>(null);
   const [preview, setPreview] = useState<ReorderPreview | null>(null);
+  // The items slide again once the commit that started or ended the drag is on screen (a long list takes more than a
+  // frame to render it): two frames after it.
+  const inAir = preview !== null;
+  useEffect(() => {
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => slide.set(1));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [inAir, slide]);
   const slotRef = useRef<RefObject<ViewInstance | null> | null>(null);
 
   const frameRef = useRef<RefObject<ViewInstance | null> | null>(null);
@@ -159,6 +202,11 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
     container: number;
     index: number;
     box: Rect;
+    /**
+     * Where the pointer holds the item, from its top: JS reads it here, not from `grabY`, whose `get` on JS gives the
+     * UI thread's value, still the last drag's right after the `set` (the first slot came from the last drag's grab).
+     */
+    grabY: number;
     lift: DropLayout;
   } | null>(null);
   // A lift whose measures are still coming: a release before they arrive abandons it.
@@ -238,13 +286,14 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       l,
       { frameScrollX: frameScrollX.get(), containerScrollY: l.containers.map((c) => offsets[c.id] ?? 0) },
       pointerX.get(),
-      pointerY.get()
+      pointerY.get(),
+      pointerY.get() - grabY.get()
     );
     if (!sameTarget(target.get(), found)) {
       target.set(found);
       scheduleOnRN(showTarget, found ? found.container : -1, found ? found.index : 0);
     }
-    const key = !found ? "" : tick === "container" ? `${found.container}` : `${found.container}:${found.index}`;
+    const key = !found ? "" : `${found.container}:${found.index}`;
     if (key !== lastTick.get()) {
       if (key !== "") scheduleOnRN(Haptics.selectionAsync);
       lastTick.set(key);
@@ -258,7 +307,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       // Where the lift starts: no haptic for it.
       if (now === 1) {
         const t = target.get();
-        lastTick.set(!t ? "" : tick === "container" ? `${t.container}` : `${t.container}:${t.index}`);
+        lastTick.set(!t ? "" : `${t.container}:${t.index}`);
       }
       scheduleOnRN(setTracking, now === 1);
     }
@@ -312,23 +361,27 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
           const box = measured.containers[c].items[i];
           // The lifted item's place closes while it is in the air: the target is found among the others.
           const dropLayout = withoutItem(measured, c, i);
-          dragRef.current = { item, containerId, container: c, index: i, box, lift: dropLayout };
+          const grab = y - box.y;
+          dragRef.current = { item, containerId, container: c, index: i, box, grabY: grab, lift: dropLayout };
 
           layout.set(dropLayout);
           sourceContainer.set(c);
           sourceIndex.set(i);
           grabX.set(x - box.x);
-          grabY.set(y - box.y);
+          grabY.set(grab);
           liftWidth.set(box.width);
           // The pointer is the gesture's: it wrote it at activation and keeps writing it while the measures come.
           const first = findDrop(
             dropLayout,
             { frameScrollX: scrollX, containerScrollY: dropLayout.containerScrollY },
             pointerX.get(),
-            pointerY.get()
+            pointerY.get(),
+            pointerY.get() - grab
           );
           target.set(first);
           draggedId.set(item.id);
+          // The commit that starts the drag folds the item's place and opens the slot there: nothing moves, no slide.
+          slide.set(0);
           setDragged({ item, containerId });
           setPreview({
             sourceContainerId: containerId,
@@ -356,6 +409,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       pointerY,
       target,
       draggedId,
+      slide,
     ]
   );
 
@@ -367,7 +421,10 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
     (done: () => void) => {
       const seq = liftSeq.current;
       const once = () => {
-        if (liftSeq.current === seq) done();
+        if (liftSeq.current !== seq) return;
+        // The commit that ends the drag lays the items out where they land: no slide (back after it: below).
+        slide.set(0);
+        done();
       };
       if (reducedMotionRef.current) {
         once();
@@ -394,7 +451,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
         });
       });
     },
-    [returning, pointerX, pointerY, grabX, grabY]
+    [returning, pointerX, pointerY, grabX, grabY, slide]
   );
 
   const release = useCallback(() => {
@@ -415,7 +472,8 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
         containerScrollY: dropLayout.containers.map((c) => scrollById[c.id] ?? 0),
       },
       pointerX.get(),
-      pointerY.get()
+      pointerY.get(),
+      pointerY.get() - drag.grabY
     );
     const moves = now !== null && !isOwnPlace(now, drag.container, drag.index);
     showTarget(moves ? now.container : -1, moves ? now.index : drag.index);
@@ -485,6 +543,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       release,
       cancel,
       move,
+      itemLayout,
     }),
     [
       active,
@@ -510,6 +569,7 @@ export default function ReorderProvider<T extends ReorderItem>({ children, conta
       release,
       cancel,
       move,
+      itemLayout,
     ]
   );
 

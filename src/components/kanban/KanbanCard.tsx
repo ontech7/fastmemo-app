@@ -20,6 +20,8 @@ import { useReorder } from "@/providers/ReorderProvider";
 
 import type { KanbanItem } from "@/types";
 
+const isWeb = Platform.OS === "web";
+
 interface Props {
   item: KanbanItem;
   columnId: string;
@@ -59,16 +61,21 @@ function KanbanCard({
 
   const [height, setHeight] = useState(40);
 
-  const { registerItem } = useReorder();
+  const { registerItem, itemLayout } = useReorder();
+  // While a card is in the air (never in the commits that lift and drop it): the card's box slides, and the card inside
+  // it, so the slot moving several places slides every card between as one (see TodoItem). The web has no custom
+  // layout transitions: there the box slides alone, from the lift.
+  const boxLayout = animateLayout ? (isWeb ? ITEM_LAYOUT : itemLayout) : undefined;
+  const cardLayout = animateLayout && !isWeb ? itemLayout : undefined;
 
   // Measured by the engine at lift only.
   const rowRef = useRef<ViewInstance>(null);
   useEffect(() => registerItem(columnId, item.id, rowRef), [registerItem, columnId, item.id]);
 
   return (
-    <Animated.View layout={animateLayout ? ITEM_LAYOUT : undefined} style={folded && styles.folded}>
+    <Animated.View layout={boxLayout} style={folded && styles.folded}>
       {slotHeight ? <ReorderSlot height={slotHeight} /> : null}
-      <View ref={rowRef} style={styles.container}>
+      <Animated.View ref={rowRef} layout={cardLayout} style={styles.container}>
         <View style={styles.cardWrapper}>
           <View style={styles.cardContent}>
             <TextInput
@@ -102,7 +109,7 @@ function KanbanCard({
             </View>
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 }
