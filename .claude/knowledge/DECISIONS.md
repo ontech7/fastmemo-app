@@ -1899,8 +1899,14 @@ after a scroll. Nothing showed where the card would land.
   nothing.
 - **Lists share the look** (the user asked for it): the same lift (`LIFT`: scale, tilt, timings), accent edge, shadow
   and slot. On phones `react-native-draggable-flatlist` keeps its own gap: its placeholder is `DropSlot`, the active row
-  gets `lifted`, the haptics are the board's (lift, slot change, a moved drop), and its spring is stiff and critically
-  damped (`DROP_SPRING`, about 120 ms: the library's default crawls for a second and the next drag waits on it). On the
+  gets `lifted`, the haptics are the board's (lift, slot change, a moved drop), and its spring is a little under critical
+  damping and clamped (`DROP_SPRING`: it reaches its place in ~105 ms and stops; critically damped it crept ~150 ms more,
+  and the library's default crawls for a second while the next drag waits on it). The lifted row settles flat from the
+  release (`onRelease` sets a shared value, the row eases on the UI thread). Only 5 screens of rows stay mounted
+  (`windowSize`): with FlatList's 21, a 300-row list was mounted whole, every row ran the drag's per-frame worklet and
+  re-attached it at lift and at drop, and the drop froze ~80 ms (12.8% janky frames on a Pixel 10 Pro, 3.5% with 5). One
+  frame stays: at the drop the library holds each row's offset until the row's `onLayout`, which on the New Architecture
+  comes a frame after the new order is drawn (seen before this change too). On the
   web dnd-kit's `DragOverlay` draws the lifted row (its drop in `LIFT.dropMs`), in a portal on `document.body`
   (react-native-web's ScrollView has a transform, which would place the overlay's `position: fixed` and the box dnd-kit
   measures relative to the list), and the row's own place shows the slot.

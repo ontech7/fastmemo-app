@@ -8,10 +8,12 @@ import Animated, {
   FadeIn,
   FadeOut,
   LinearTransition,
+  useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, LIFT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
@@ -34,6 +36,8 @@ interface Props {
   drag: () => void;
   /** Being dragged: it lifts like a kanban card (tilt, scale, accent edge, shadow). */
   lifted?: boolean;
+  /** The lifted row only: 1 once the finger leaves, and the row settles flat while it lands (a kanban card's drop). */
+  dropping?: SharedValue<number>;
   disabled: boolean;
   hidden?: boolean;
   autoFocus: boolean;
@@ -68,6 +72,7 @@ function TodoItem({
   deleteItem,
   drag,
   lifted = false,
+  dropping,
   disabled,
   hidden = false,
   autoFocus,
@@ -100,6 +105,13 @@ function TodoItem({
     const to = lifted ? 1 : 0;
     lift.set(reducedMotion ? to : withTiming(to, { duration: lifted ? LIFT.ms : LIFT.dropMs }));
   }, [lifted, reducedMotion, lift]);
+  useAnimatedReaction(
+    () => dropping?.get() ?? 0,
+    (now, previous) => {
+      if (now === 1 && previous !== 1) lift.set(reducedMotion ? 0 : withTiming(0, { duration: LIFT.dropMs }));
+    },
+    [dropping, reducedMotion]
+  );
   const liftStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${LIFT.tilt * lift.get()}deg` }, { scale: 1 + (LIFT.scale - 1) * lift.get() }] as const,
   }));
