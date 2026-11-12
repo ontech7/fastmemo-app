@@ -1,6 +1,11 @@
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 
+import { DURATION } from "@/constants/motion";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+
+/** The veil and the card fade in (no snap). */
+const ENTER = FadeIn.duration(DURATION.base);
 
 interface Props {
   visible: boolean;
@@ -28,8 +33,8 @@ export default function LoadingSpinner({ visible, color = null, text = null, pro
   const pct = showBar ? Math.round((progress!.done / progress!.total) * 100) : 0;
 
   return (
-    <View style={styles.backdrop}>
-      <View style={styles.card}>
+    <Animated.View entering={ENTER} style={styles.backdrop}>
+      <Animated.View entering={ENTER} style={styles.card}>
         <ActivityIndicator size="large" color={color || COLOR.accentSoft} />
         {text && <Text style={styles.text}>{text}</Text>}
         {showBar && (
@@ -42,8 +47,8 @@ export default function LoadingSpinner({ visible, color = null, text = null, pro
             </Text>
           </View>
         )}
-      </View>
-    </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 

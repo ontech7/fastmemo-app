@@ -56,7 +56,7 @@ export default function CodeLanguagePickerModal({ visible, selectedLanguage, onS
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: COLOR.scrim,
     justifyContent: "center",
     alignItems: "center",
   },

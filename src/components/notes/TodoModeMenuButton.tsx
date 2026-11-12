@@ -4,17 +4,11 @@ import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewSt
 import ArrowsRightLeftIcon from "react-native-heroicons/outline/ArrowsRightLeftIcon";
 import ArrowsUpDownIcon from "react-native-heroicons/outline/ArrowsUpDownIcon";
 import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
-import Animated, {
-  Extrapolation,
-  interpolate,
-  type SharedValue,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { runOnJS, type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BORDER, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import MenuItemPop from "@/components/ui/MenuItemPop";
 import { DURATION, EASING } from "@/constants/motion";
 import type { TodoNote } from "@/types";
 
@@ -50,36 +44,17 @@ interface MenuItemProps {
 }
 
 function AnimatedMenuItem({ option, index, totalItems, menuProgress, label, onPress }: MenuItemProps) {
-  const reverseIndex = totalItems - 1 - index;
   const Icon = option.icon;
 
-  const animatedStyle = useAnimatedStyle((): ViewStyle => {
-    const staggerOffset = reverseIndex * 0.15;
-    const itemProgress = interpolate(
-      menuProgress.value,
-      [staggerOffset, Math.min(staggerOffset + 0.6, 1)],
-      [0, 1],
-      Extrapolation.CLAMP
-    );
-
-    return {
-      opacity: itemProgress,
-      transform: [
-        { translateY: interpolate(itemProgress, [0, 1], [20, 0]) },
-        { scale: interpolate(itemProgress, [0, 1], [0.8, 1]) },
-      ],
-    };
-  });
-
   return (
-    <Animated.View style={animatedStyle}>
+    <MenuItemPop index={index} total={totalItems} progress={menuProgress}>
       <TouchableOpacity style={styles.optionButton} activeOpacity={0.7} onPress={onPress} accessibilityRole="button">
         <View style={styles.optionIconContainer}>
           <Icon size={24} color={COLOR.softWhite} />
         </View>
         <Text style={styles.optionLabel}>{label}</Text>
       </TouchableOpacity>
-    </Animated.View>
+    </MenuItemPop>
   );
 }
 
@@ -93,6 +68,8 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
   const insets = useSafeAreaInsets();
 
   const [isOpen, setIsOpen] = useState(false);
+  // The menu's Modal stays up until its closing animation has ended (the items go out instead of being cut).
+  const [mounted, setMounted] = useState(false);
   // Left edge (window coords) of the trigger, so the menu opens exactly from the button.
   const [menuLeft, setMenuLeft] = useState(40);
   const menuProgress = useSharedValue(0);
@@ -101,10 +78,16 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
   const options = TODO_MODES.filter((m) => m.mode !== currentMode);
 
   useEffect(() => {
-    menuProgress.value = withTiming(isOpen ? 1 : 0, {
-      duration: isOpen ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
-      easing: isOpen ? EASING.enter : EASING.exit,
-    });
+    menuProgress.value = withTiming(
+      isOpen ? 1 : 0,
+      {
+        duration: isOpen ? ANIMATION_DURATION_OPEN : ANIMATION_DURATION_CLOSE,
+        easing: isOpen ? EASING.enter : EASING.exit,
+      },
+      (finished) => {
+        if (finished && !isOpen) runOnJS(setMounted)(false);
+      }
+    );
   }, [isOpen, menuProgress]);
 
   const backdropAnimatedStyle = useAnimatedStyle(() => ({ opacity: menuProgress.value }));
@@ -113,6 +96,7 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
     if (disabled) return;
     if (!isOpen) {
       triggerRef.current?.measureInWindow((x) => setMenuLeft(x));
+      setMounted(true);
     }
     setIsOpen((p) => !p);
   };
@@ -124,7 +108,13 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
 
   return (
     <>
-      <Modal visible={isOpen} transparent animationType="none" statusBarTranslucent onRequestClose={() => setIsOpen(false)}>
+      <Modal
+        visible={isOpen || mounted}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={() => setIsOpen(false)}
+      >
         <AnimatedPressable
           style={[
             styles.fullscreenOverlay,
@@ -184,7 +174,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    backgroundColor: COLOR.scrim,
     justifyContent: "flex-end",
     alignItems: "flex-start",
     // Sit above the floating AI action button (zIndex 6) so the mode dropdown

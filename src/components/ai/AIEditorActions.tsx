@@ -1,4 +1,5 @@
-import { BORDER, COLOR, FONTSIZE, FONTWEIGHT, MAX_WIDTH, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, MAX_WIDTH, PADDING_MARGIN, SHADOW, SIZE } from "@/constants/styles";
+import MenuItemPop from "@/components/ui/MenuItemPop";
 import { DURATION, EASING } from "@/constants/motion";
 import useEngineSupport from "@/hooks/useEngineSupport";
 import type { AIModelId, EditorAction, LongNoteAction, LongNoteProgress } from "@/libs/ai";
@@ -53,7 +54,7 @@ import TagIcon from "react-native-heroicons/outline/TagIcon";
 import CheckCircleIcon from "react-native-heroicons/solid/CheckCircleIcon";
 import ExclamationCircleIcon from "react-native-heroicons/solid/ExclamationCircleIcon";
 import type { SharedValue } from "react-native-reanimated";
-import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -61,8 +62,6 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const ANIM_OPEN = DURATION.slow;
 const ANIM_CLOSE = DURATION.fast;
 const FEEDBACK_DURATION = 1500;
-
-const AI_COLOR = "#6C63FF";
 
 /** The share of the window a preview box takes before it scrolls: the result, what the user reads, gets more. */
 const BEFORE_MAX_HEIGHT = 0.2;
@@ -187,6 +186,8 @@ export default function AIEditorActions({
   const engineReady = desktop ? engineSupport?.available === true : supportsAI();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // The menu's Modal stays up until its closing animation has ended (the items go out instead of being cut).
+  const [menuMounted, setMenuMounted] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>("idle");
   // Staged result of a content-modifying action: shown as a before/after preview
   // and applied only when the user confirms (nothing is overwritten automatically).
@@ -241,6 +242,7 @@ export default function AIEditorActions({
     Keyboard.dismiss();
     if (!isMenuOpen) {
       triggerRef.current?.measureInWindow((x) => setMenuLeft(x));
+      setMenuMounted(true);
       // the model loads while the user picks an action
       prewarmContext(aiSettings.selectedModel);
       let tooLongNow: ReadonlySet<EditorAction> = NO_ACTIONS;
@@ -264,10 +266,16 @@ export default function AIEditorActions({
   );
 
   useEffect(() => {
-    menuProgress.value = withTiming(isMenuOpen ? 1 : 0, {
-      duration: isMenuOpen ? ANIM_OPEN : ANIM_CLOSE,
-      easing: isMenuOpen ? EASING.enter : EASING.exit,
-    });
+    menuProgress.value = withTiming(
+      isMenuOpen ? 1 : 0,
+      {
+        duration: isMenuOpen ? ANIM_OPEN : ANIM_CLOSE,
+        easing: isMenuOpen ? EASING.enter : EASING.exit,
+      },
+      (finished) => {
+        if (finished && !isMenuOpen) runOnJS(setMenuMounted)(false);
+      }
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMenuOpen]);
 
@@ -538,7 +546,13 @@ export default function AIEditorActions({
 
   return (
     <>
-      <Modal visible={isMenuOpen} transparent animationType="none" statusBarTranslucent onRequestClose={closeMenu}>
+      <Modal
+        visible={isMenuOpen || menuMounted}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={closeMenu}
+      >
         <AnimatedPressable
           style={[styles.overlay, backdropStyle, { paddingBottom: menuBottomOffset, paddingLeft: menuLeft }]}
           onPress={closeMenu}
@@ -601,7 +615,7 @@ export default function AIEditorActions({
         <View style={styles.previewBackdrop}>
           <View style={[styles.previewCard, desktop && styles.previewCardDesktop]}>
             <View style={styles.previewHeader}>
-              <LanguageIcon size={18} color={AI_COLOR} />
+              <LanguageIcon size={18} color={COLOR.accentSoft} />
               <Text style={styles.previewTitle}>{t("ai.editor.translate_to")}</Text>
             </View>
             <ScrollView style={styles.previewScroll}>
@@ -618,7 +632,7 @@ export default function AIEditorActions({
                     <Text style={styles.optionName}>{language.name}</Text>
                     {index === 0 ? <Text style={styles.optionHint}>{t("ai.editor.app_language")}</Text> : null}
                   </View>
-                  {index === 0 ? <CheckIcon size={18} color={AI_COLOR} /> : null}
+                  {index === 0 ? <CheckIcon size={18} color={COLOR.accentSoft} /> : null}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -639,7 +653,7 @@ export default function AIEditorActions({
         <View style={styles.previewBackdrop}>
           <View style={[styles.previewCard, desktop && styles.previewCardDesktop]}>
             <View style={styles.previewHeader}>
-              <SparklesIcon size={18} color={AI_COLOR} />
+              <SparklesIcon size={18} color={COLOR.accentSoft} />
               <Text style={styles.previewTitle}>{preview?.title}</Text>
               {/* in the header, always in sight whatever the boxes show */}
               {preview?.streaming && preview.progress && preview.progress.total > 1 ? (
@@ -666,10 +680,10 @@ export default function AIEditorActions({
                 </ScrollView>
               </View>
               <View style={styles.previewSection}>
-                <Text style={[styles.previewLabel, { color: AI_COLOR }]}>{t("ai.editor.after")}</Text>
+                <Text style={[styles.previewLabel, { color: COLOR.accentSoft }]}>{t("ai.editor.after")}</Text>
                 {preview?.streaming && !preview.after ? (
                   <View style={[styles.previewBox, styles.previewAfter, styles.previewBoxContent]}>
-                    <ActivityIndicator size="small" color={AI_COLOR} />
+                    <ActivityIndicator size="small" color={COLOR.accentSoft} />
                   </View>
                 ) : preview?.choices ? (
                   <View style={styles.previewChoices} accessibilityRole="radiogroup">
@@ -683,7 +697,7 @@ export default function AIEditorActions({
                         aria-checked={name === preview.after}
                       >
                         <Text style={[styles.optionText, styles.optionName]}>{categoryLabel(name)}</Text>
-                        {name === preview.after ? <CheckIcon size={18} color={AI_COLOR} /> : null}
+                        {name === preview.after ? <CheckIcon size={18} color={COLOR.accentSoft} /> : null}
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -739,29 +753,10 @@ interface AnimatedItemProps {
 }
 
 function AnimatedActionItem({ action, index, totalItems, menuProgress, onPress, label, disabled, hint }: AnimatedItemProps) {
-  const reverseIndex = totalItems - 1 - index;
   const Icon = action.icon;
 
-  const animatedStyle = useAnimatedStyle((): ViewStyle => {
-    const staggerOffset = reverseIndex * 0.15;
-    const itemProgress = interpolate(
-      menuProgress.value,
-      [staggerOffset, Math.min(staggerOffset + 0.6, 1)],
-      [0, 1],
-      Extrapolation.CLAMP
-    );
-
-    return {
-      opacity: itemProgress,
-      transform: [
-        { translateY: interpolate(itemProgress, [0, 1], [15, 0]) },
-        { scale: interpolate(itemProgress, [0, 1], [0.85, 1]) },
-      ],
-    };
-  });
-
   return (
-    <Animated.View style={animatedStyle}>
+    <MenuItemPop index={index} total={totalItems} progress={menuProgress}>
       <TouchableOpacity
         style={[styles.actionButton, disabled && { opacity: 0.4 }]}
         activeOpacity={disabled ? 1 : 0.7}
@@ -776,7 +771,7 @@ function AnimatedActionItem({ action, index, totalItems, menuProgress, onPress, 
           {hint ? <Text style={styles.actionHint}>{hint}</Text> : null}
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </MenuItemPop>
   );
 }
 
@@ -791,7 +786,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    backgroundColor: COLOR.scrim,
     justifyContent: "flex-end",
     alignItems: "flex-start",
     zIndex: 5,
@@ -808,11 +803,12 @@ const styles = StyleSheet.create({
   actionLabel: {
     color: COLOR.softWhite,
     fontSize: FONTSIZE.medium,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   actionHint: {
     color: COLOR.placeholder,
     fontSize: FONTSIZE.small,
+    fontFamily: FONT.regular,
     marginTop: 2,
   },
   actionIconContainer: {
@@ -836,7 +832,7 @@ const styles = StyleSheet.create({
   },
   previewBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: COLOR.scrim,
     justifyContent: "center",
     paddingHorizontal: PADDING_MARGIN.lg,
   },
@@ -863,7 +859,7 @@ const styles = StyleSheet.create({
   previewTitle: {
     color: COLOR.softWhite,
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   previewScroll: {
     flexGrow: 0,
@@ -871,7 +867,7 @@ const styles = StyleSheet.create({
   previewLabel: {
     color: COLOR.lightBlue,
     fontSize: FONTSIZE.small,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
     marginBottom: PADDING_MARGIN.xs,
     textTransform: "uppercase",
   },
@@ -879,6 +875,7 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
     color: COLOR.placeholder,
     fontSize: FONTSIZE.small,
+    fontFamily: FONT.regular,
   },
   optionRow: {
     flexDirection: "row",
@@ -904,14 +901,17 @@ const styles = StyleSheet.create({
   optionName: {
     color: COLOR.softWhite,
     fontSize: FONTSIZE.medium,
+    fontFamily: FONT.regular,
   },
   optionHint: {
     color: COLOR.placeholder,
     fontSize: FONTSIZE.small,
+    fontFamily: FONT.regular,
   },
   previewHint: {
     color: COLOR.placeholder,
     fontSize: FONTSIZE.small,
+    fontFamily: FONT.regular,
     marginTop: PADDING_MARGIN.xs,
   },
   previewBody: {
@@ -932,6 +932,7 @@ const styles = StyleSheet.create({
   },
   previewText: {
     fontSize: FONTSIZE.medium,
+    fontFamily: FONT.regular,
     lineHeight: 22,
   },
   previewBefore: {
@@ -964,7 +965,7 @@ const styles = StyleSheet.create({
     borderColor: COLOR.blue,
   },
   previewApply: {
-    backgroundColor: AI_COLOR,
+    backgroundColor: COLOR.accent,
   },
   previewApplyWaiting: {
     opacity: 0.4,
@@ -972,11 +973,11 @@ const styles = StyleSheet.create({
   previewCancelLabel: {
     color: COLOR.lightBlue,
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
   previewApplyLabel: {
     color: COLOR.softWhite,
     fontSize: FONTSIZE.paragraph,
-    fontWeight: FONTWEIGHT.semiBold,
+    fontFamily: FONT.semiBold,
   },
 });

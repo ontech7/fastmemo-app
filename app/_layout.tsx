@@ -120,7 +120,7 @@ export default Sentry.wrap(function RootLayout() {
                 text: {
                   color: COLOR.accentSoft,
                   fontSize: FONTSIZE.paragraph,
-                  fontWeight: "600",
+                  fontFamily: FONT.semiBold,
                 },
               },
             }}

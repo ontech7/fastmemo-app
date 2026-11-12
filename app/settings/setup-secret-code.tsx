@@ -129,7 +129,7 @@ export default function SetupSecretCodeScreen() {
           <Text style={[styles.codeTextSuggestion, styles.codeTextSuggestionError]}>{t("setupcode.error")}</Text>
         )}
 
-        <CodeInput value={code} onChangeCode={onChangeCode} onSubmit={onSubmit} disabled={error} />
+        <CodeInput value={code} onChangeCode={onChangeCode} onSubmit={onSubmit} disabled={error} error={error} />
       </View>
     </SafeAreaView>
   );

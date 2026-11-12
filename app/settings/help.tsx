@@ -1,8 +1,8 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import {
   ActivityIndicator,
-  Animated,
   Keyboard,
   Platform,
   Pressable,
@@ -50,6 +50,7 @@ import { isTauri } from "@/utils/platform";
 
 import { CONTENT_COLUMN } from "@/constants/layout";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { DURATION, EASING } from "@/constants/motion";
 
 /** Locales for which a translated online guide exists; anything else uses "en". */
 const GUIDE_LOCALES = ["en", "it", "de", "es", "fr", "ja", "zh"];
@@ -697,11 +698,22 @@ interface AccordionProps {
 
 const Accordion = ({ title, children, defaultOpen = false }: AccordionProps) => {
   const [isOpenAccordion, setIsOpenAccordion] = useState(defaultOpen);
-  // Mount the body lazily: it stays unrendered until the accordion is first
-  // opened (and stays mounted afterwards). This keeps the screen's initial
-  // render cheap — only the headers paint, not every body's text and inline
-  // SVG icons — so opening the Help screen is near-instant.
+  // Mount the body lazily: it stays unrendered until the accordion is first opened (and stays mounted afterwards). This
+  // keeps the screen's first render cheap (only the headers paint, not every body's text and inline SVG icons).
   const [hasOpened, setHasOpened] = useState(defaultOpen);
+
+  // The section opens and closes by its body's height, from 0 to the answer's measured height, the answer fading in and
+  // out with it: the sections below slide on every platform (a layout transition moved them on the web only when they
+  // re-rendered, so there they jumped).
+  const open = useSharedValue(defaultOpen ? 1 : 0);
+  const answerHeight = useSharedValue(0);
+  useEffect(() => {
+    open.value = withTiming(isOpenAccordion ? 1 : 0, {
+      duration: isOpenAccordion ? DURATION.base : DURATION.fast,
+      easing: isOpenAccordion ? EASING.enter : EASING.exit,
+    });
+  }, [isOpenAccordion, open]);
+  const bodyStyle = useAnimatedStyle(() => ({ height: answerHeight.value * open.value, opacity: open.value }));
 
   const toggleAccordion = () => {
     setHasOpened(true);
@@ -731,16 +743,15 @@ const Accordion = ({ title, children, defaultOpen = false }: AccordionProps) => 
         />
       </TouchableOpacity>
 
-      <Animated.View
-        style={[
-          styles.sectionList,
-          {
-            height: isOpenAccordion ? "auto" : 0,
-            paddingVertical: isOpenAccordion ? PADDING_MARGIN.md : 0,
-          },
-        ]}
-      >
-        {hasOpened ? children : null}
+      <Animated.View style={[styles.sectionBody, bodyStyle]} aria-hidden={!isOpenAccordion}>
+        <View
+          style={styles.sectionList}
+          onLayout={(e) => {
+            answerHeight.value = e.nativeEvent.layout.height;
+          }}
+        >
+          {hasOpened ? children : null}
+        </View>
       </Animated.View>
     </View>
   );
@@ -898,12 +909,20 @@ const styles = StyleSheet.create({
     fontFamily: FONT.semiBold,
     marginRight: PADDING_MARGIN.sm,
   },
-  sectionList: {
+  // Its height animates (Accordion): the answer inside keeps its own height, measured.
+  sectionBody: {
     height: 0,
+    overflow: "hidden",
+  },
+  sectionList: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     borderRadius: BORDER.normal,
     overflow: "hidden",
     paddingHorizontal: PADDING_MARGIN.lg,
-    paddingVertical: 0,
+    paddingVertical: PADDING_MARGIN.md,
   },
   sectionItemList_text: {
     color: COLOR.textSecondary,

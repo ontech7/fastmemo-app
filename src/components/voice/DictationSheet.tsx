@@ -166,7 +166,7 @@ export default function DictationSheet({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: COLOR.scrim,
   },
   sheet: {
     position: "absolute",
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     gap: PADDING_MARGIN.sm,
     paddingVertical: PADDING_MARGIN.md,
     borderRadius: BORDER.normal,
-    backgroundColor: "#6C63FF",
+    backgroundColor: COLOR.accent,
   },
   action: {
     flex: 1,

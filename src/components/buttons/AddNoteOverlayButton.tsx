@@ -1,11 +1,10 @@
 import type { Ref } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
+import { BackHandler, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ChevronUpIcon from "react-native-heroicons/outline/ChevronUpIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import Animated, {
-  Extrapolation,
   interpolate,
   type SharedValue,
   useAnimatedStyle,
@@ -26,6 +25,7 @@ import type { Href } from "expo-router";
 import { NOTE_TYPES } from "@/constants/note-types";
 import { noteTypeTarget, SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import MenuItemPop from "@/components/ui/MenuItemPop";
 import { DURATION, EASING, SPRING } from "@/constants/motion";
 import type { NoteCreationType } from "@/types";
 
@@ -61,29 +61,10 @@ interface MenuItemProps {
 }
 
 function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, label, focusable, testID }: MenuItemProps) {
-  const reverseIndex = totalItems - 1 - index;
   const Icon = noteType.icon;
 
-  const animatedStyle = useAnimatedStyle((): ViewStyle => {
-    const staggerOffset = reverseIndex * 0.15;
-    const itemProgress = interpolate(
-      menuProgress.value,
-      [staggerOffset, Math.min(staggerOffset + 0.6, 1)],
-      [0, 1],
-      Extrapolation.CLAMP
-    );
-
-    return {
-      opacity: itemProgress,
-      transform: [
-        { translateY: interpolate(itemProgress, [0, 1], [20, 0]) },
-        { scale: interpolate(itemProgress, [0, 1], [0.8, 1]) },
-      ],
-    };
-  });
-
   return (
-    <Animated.View style={animatedStyle}>
+    <MenuItemPop index={index} total={totalItems} progress={menuProgress}>
       <TouchableOpacity
         style={styles.noteTypeButton}
         activeOpacity={0.7}
@@ -97,7 +78,7 @@ function AnimatedMenuItem({ noteType, index, totalItems, menuProgress, onPress, 
           <Icon size={28} color={COLOR.softWhite} />
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </MenuItemPop>
   );
 }
 
@@ -395,7 +376,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    backgroundColor: COLOR.scrim,
     justifyContent: "flex-end",
     alignItems: "flex-end",
     paddingBottom: 130,

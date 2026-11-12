@@ -140,7 +140,7 @@ export default function SecretCodeScreen() {
           </Text>
         )}
 
-        <CodeInput value={code} onChangeCode={onChangeCode} onSubmit={onSubmit} disabled={error} />
+        <CodeInput value={code} onChangeCode={onChangeCode} onSubmit={onSubmit} disabled={error} error={error} />
       </View>
     </SafeAreaView>
   );
