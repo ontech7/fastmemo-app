@@ -52,9 +52,11 @@ src/
 
   components/          # UI components (domain-grouped)
     cloud/             # CloudUnreachableLine (the home's line when the cloud can't be reached), CloudStatusDot (ADR-029)
-    buttons/           # 26 button components (each a single-purpose TouchableOpacity)
+    buttons/           # 18 button components (each a single-purpose TouchableOpacity)
     cards/             # NoteCard, TrashedNoteCard, OrganizeCategoryCard, OrderedCategoryCard
     notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor; NoteImageMenu (ADR-024)
+                       # QuickNoteBar (the home's capture bar); SelectionBar (select mode's actions in its place: words, or
+                       #   icons alone where the column is narrow; LL-091)
     kanban/            # KanbanBoard, KanbanColumn, KanbanCard
     reorder/           # The reorder engine's parts (ADR-038): ReorderHandle (pan, screen reader actions, arrow keys),
                        #   ReorderSlot (where the item in the air lands), ReorderOverlay (the lifted copy),
