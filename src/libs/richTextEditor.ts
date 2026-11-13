@@ -1,5 +1,13 @@
-import { BORDER, COLOR, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { noteBlockCss } from "@/libs/noteHtml";
 import { SCROLLBAR_CSS } from "@/styles/scrollbar";
+
+/** The kinds of line of a text note. */
+export type LineType = "p" | "h1" | "h2" | "quote" | "code" | "ul" | "ol" | "todo";
+/** The page command that makes the caret's lines this kind, or text again if they already are. */
+export const lineCommand = (type: LineType) => `window.__fm && window.__fm.toggle(${JSON.stringify(type)})`;
+/** A hairline under the caret's line, the caret on a text line after it. */
+export const RULE_COMMAND = "window.__fm && window.__fm.rule()";
 
 /** The text editor page's look (RichEditor's `editorStyle`). */
 export const RICH_TEXT_STYLE = {
@@ -22,6 +30,7 @@ export const RICH_TEXT_STYLE = {
     pre pre { margin: 0; padding: 0; background: none; }
     h1:empty, pre:empty { display: none; }
     pre span { font-family: inherit !important; background-color: transparent !important; white-space: inherit !important; }
+    ${noteBlockCss({ text: COLOR.softWhite, muted: COLOR.textSecondary, accent: COLOR.accentMuted, line: GLASS.border, boxFill: "transparent" })}
     ${SCROLLBAR_CSS}
   `,
   // Horizontal inset lives here (not on containerStyle) so it matches the header
@@ -79,9 +88,10 @@ export const imageCommand = (image: EditorImage, change: ImageChange, value?: st
  * What the text editor's page runs besides pell (react-native-pell-rich-editor), injected once it is up
  * (`RichEditor.command`). Pell's own block buttons nest an element in one of its kind on every press (a heading inside a
  * heading, a code block inside a code block), mix them (a list inside a heading or a code block) and never turn them off.
- * Here a line is one of text, heading, code, bullet or numbered item, and pressing the button of what it already is turns it
- * back into text. The changes go through `execCommand`, so the editor's undo keeps working (only the repair of markup saved
- * before this, which undo keeps, doesn't).
+ * Here a line is one of text, heading 1 or 2, quote, code, or a bullet, numbered or checkbox item, and pressing the button
+ * of what it already is turns it back into text. Most changes go through `execCommand`, so the editor's undo keeps working
+ * (only the repair of markup saved before this, which undo keeps, doesn't); a checkbox list's items, a rule and Enter in a
+ * checkbox or quote line are the page's own changes, with an undo of its own (`pageChange`).
  * Tested by `scripts/richtext.test.mjs` on the real page.
  */
 export const RICH_TEXT_SCRIPT = String.raw`
@@ -89,7 +99,9 @@ export const RICH_TEXT_SCRIPT = String.raw`
   if (window.__fm) return;
   var $ = document;
   var content = function () { return $.querySelector(".pell-content"); };
-  var exec = function (command, value) { return $.execCommand(command, false, value === undefined ? null : value); };
+  // The browser's own execCommand: document.execCommand's undo and redo go through the page's history first (below).
+  var nativeExec = $.execCommand.bind($);
+  var exec = function (command, value) { return nativeExec(command, false, value === undefined ? null : value); };
   var selection = function () { return $.getSelection(); };
   var element = function (node) { return node && (node.nodeType === 1 ? node : node.parentNode); };
   var closest = function (node, selector) {
@@ -98,13 +110,20 @@ export const RICH_TEXT_SCRIPT = String.raw`
     return e && e !== c && c.contains(e) ? e : null;
   };
   var isList = function (type) { return type === "ul" || type === "ol"; };
+  // A checkbox list is the editor library's own: <ol class="x-todo">, each item starting with its box.
+  var isTodo = function (list) { return list.nodeName === "OL" && list.classList.contains("x-todo"); };
+  var isTodoItem = function (e) { return e.nodeName === "LI" && isTodo(e.parentNode); };
+  var listKind = function (list) { return isTodo(list) ? "todo" : list.nodeName === "OL" ? "ol" : "ul"; };
   var typeAt = function (node) {
     if (closest(node, "pre")) return "code";
     if (closest(node, "h1")) return "h1";
+    if (closest(node, "h2")) return "h2";
     var li = closest(node, "li");
-    if (li) return li.parentNode.nodeName === "OL" ? "ol" : "ul";
+    if (li) return listKind(li.parentNode);
+    if (closest(node, "blockquote")) return "quote";
     return "p";
   };
+  var BLOCK = { h1: "h1", h2: "h2", quote: "blockquote", code: "pre" };
   var touched = function (range, selector) {
     return [].filter.call(content().querySelectorAll(selector), function (e) { return range.intersectsNode(e); });
   };
@@ -148,7 +167,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
   var keepSelection = function (change) {
     var s = selection();
     // An empty line has no text to find the caret by: there the commands' own placement is right.
-    if (!s.rangeCount || !(closest(s.focusNode, "li,h1,pre,div") || content()).textContent) return change();
+    if (!s.rangeCount || !(closest(s.focusNode, "li,h1,h2,blockquote,pre,div") || content()).textContent) return change();
     var a = [textOffset(s.anchorNode, s.anchorOffset), atNodeStart(s.anchorNode, s.anchorOffset)];
     var f = [textOffset(s.focusNode, s.focusOffset), atNodeStart(s.focusNode, s.focusOffset)];
     change();
@@ -168,14 +187,208 @@ export const RICH_TEXT_SCRIPT = String.raw`
     });
   };
 
+  // The content changed by the page itself: the app is told as the library tells it (CONTENT_CHANGE, 50 ms after the
+  // last change), without the library's own input handling, which reformats the line the caret is in.
+  var changeTimer = null;
+  var contentChanged = function () {
+    if (changeTimer) clearTimeout(changeTimer);
+    changeTimer = setTimeout(function () {
+      changeTimer = null;
+      if (content().isContentEditable) post("CONTENT_CHANGE", content().innerHTML);
+    }, 50);
+  };
+
+  // What execCommand can't write as the library writes it (a checkbox list's items and boxes, a rule, Enter in a checkbox
+  // or quote line) is changed in the document directly and recorded: undo puts the very same nodes back, so the browser's
+  // own history of the edits before and after it still applies. Undo and redo (the bar, the keys, execCommand) take the
+  // page's change when the content is still what it left, with the very nodes it put there (the browser can rebuild the
+  // same markup with nodes of its own), else the browser's. A tick isn't an edit to undo: the boxes' ticks don't count.
+  var history = { undo: [], redo: [] };
+  var HISTORY_LIMIT = 100;
+  var snapshot = function () { return content().innerHTML.replace(/ checked=""/g, ""); };
+  var caretNow = function () {
+    var s = selection();
+    if (!s.rangeCount || !content().contains(s.anchorNode)) return null;
+    return [textOffset(s.anchorNode, s.anchorOffset), atNodeStart(s.anchorNode, s.anchorOffset),
+      textOffset(s.focusNode, s.focusOffset), atNodeStart(s.focusNode, s.focusOffset)];
+  };
+  var putCaret = function (at) {
+    if (!at) return;
+    var a = pointAt(at[0], at[1]), f = pointAt(at[2], at[3]);
+    if (a && f) selection().setBaseAndExtent(a[0], a[1], f[0], f[1]);
+  };
+  var recorded = function (change) {
+    var observer = new MutationObserver(function () {});
+    observer.observe(content(), { childList: true, subtree: true, attributes: true, attributeOldValue: true,
+      characterData: true, characterDataOldValue: true });
+    var records;
+    try { change(); } finally {
+      records = observer.takeRecords();
+      observer.disconnect();
+    }
+    return records;
+  };
+  // The changes the records describe, taken back, the last first.
+  var putBack = function (records) {
+    for (var i = records.length - 1; i >= 0; i--) {
+      var m = records[i];
+      if (m.type === "attributes") {
+        if (m.oldValue === null) m.target.removeAttribute(m.attributeName);
+        else m.target.setAttribute(m.attributeName, m.oldValue);
+      } else if (m.type === "characterData") m.target.data = m.oldValue;
+      else {
+        [].forEach.call(m.addedNodes, function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
+        [].forEach.call(m.removedNodes, function (n) { m.target.insertBefore(n, m.nextSibling); });
+      }
+    }
+  };
+  // A change of the page's own. keepCaret: the selection goes back where it was by its characters (a box holds none).
+  var entry = function (records, caret) {
+    var nodes = [];
+    records.forEach(function (m) {
+      [].forEach.call(m.addedNodes, function (n) { if (n.isConnected && nodes.indexOf(n) < 0) nodes.push(n); });
+    });
+    return { records: records, after: snapshot(), nodes: nodes, caret: caret };
+  };
+  var isTop = function (top) {
+    return !!top && top.after === snapshot() && top.nodes.every(function (n) { return n.isConnected; });
+  };
+  var pageChange = function (change, keepCaret) {
+    var before = caretNow();
+    var records = recorded(change);
+    if (keepCaret) putCaret(before);
+    if (!records.length) return;
+    history.undo.push(entry(records, before));
+    if (history.undo.length > HISTORY_LIMIT) history.undo.shift();
+    history.redo = [];
+    contentChanged();
+  };
+  var step = function (from, to) {
+    var top = from[from.length - 1];
+    if (!isTop(top)) return false;
+    from.pop();
+    var at = caretNow();
+    var records = recorded(function () { putBack(top.records); });
+    putCaret(top.caret);
+    to.push(entry(records, at));
+    contentChanged();
+    refreshToolbar();
+    return true;
+  };
+  var undo = function () {
+    if (!content().isContentEditable) return false;
+    return step(history.undo, history.redo) || exec("undo");
+  };
+  var redo = function () {
+    if (!content().isContentEditable) return false;
+    return step(history.redo, history.undo) || exec("redo");
+  };
+  var pageHasTop = function (stack) { return isTop(stack[stack.length - 1]); };
+
+  // Lines and checkbox items. A line is a list item, or a block of the note that holds no other line.
+  var LINE = "li,div,p,h1,h2,blockquote,pre";
+  var linesIn = function (range) {
+    return [].filter.call(content().querySelectorAll(LINE), function (e) {
+      if (!range.intersectsNode(e)) return false;
+      if (e.nodeName === "LI") return true;
+      return !closest(e.parentNode, "li") && !e.querySelector(LINE);
+    });
+  };
+  var BOX_HTML = '<span contenteditable="false" class="x-todo-box"><input type="checkbox"></span>';
+  var newBox = function () {
+    var t = $.createElement("template");
+    t.innerHTML = BOX_HTML;
+    return t.content.firstChild;
+  };
+  var boxOf = function (li) {
+    var f = li.firstChild;
+    return f && f.nodeType === 1 && f.classList.contains("x-todo-box") ? f : null;
+  };
+  // No text and no picture: an empty line (a box holds neither).
+  var blank = function (e) { return !e.textContent.replace(/​/g, "") && !e.querySelector("img"); };
+  // An empty line needs a <br> to be a line the caret can be in.
+  var fill = function (e) { if (blank(e) && !e.querySelector("br")) e.appendChild($.createElement("br")); };
+  var sameList = function (a, b) {
+    return !!a && a.nodeType === 1 && (a.nodeName === "UL" || a.nodeName === "OL") && listKind(a) === listKind(b);
+  };
+  // A list joins the lists of its kind right before and after it.
+  var join = function (list) {
+    var prev = list.previousSibling, next;
+    if (sameList(prev, list)) {
+      while (list.firstChild) prev.appendChild(list.firstChild);
+      list.remove();
+      list = prev;
+    }
+    next = list.nextSibling;
+    if (sameList(next, list)) {
+      while (next.firstChild) list.appendChild(next.firstChild);
+      next.remove();
+    }
+  };
+  // Every line given becomes kind: text ("p"), or an item of a list of that kind ("ul", "ol", "todo"). An item leaves its
+  // list, which is split around it; a checkbox item starts with its box, and no other line has one; lists of one kind that
+  // end up side by side are one list.
+  var convert = function (lines, kind) {
+    var lists = [];
+    lines.forEach(function (line) {
+      var item = line.nodeName === "LI" ? line : null;
+      if (item ? listKind(item.parentNode) === kind : kind === "p" && (line.nodeName === "DIV" || line.nodeName === "P")) return;
+      if (item) {
+        var list = item.parentNode, rest = list.cloneNode(false);
+        while (item.nextSibling) rest.appendChild(item.nextSibling);
+        list.parentNode.insertBefore(rest, list.nextSibling);
+        list.parentNode.insertBefore(item, rest);
+        lists.push(list, rest);
+        var box = boxOf(item);
+        if (box && kind !== "todo") box.remove();
+      }
+      var holder = kind === "p" ? $.createElement("div") : item || $.createElement("li");
+      if (holder !== line) {
+        if (line.nodeName === "PRE") flattenCode(line);
+        while (line.firstChild) holder.appendChild(line.firstChild);
+        line.parentNode.replaceChild(holder, line);
+      }
+      if (kind === "todo" && !boxOf(holder)) holder.insertBefore(newBox(), holder.firstChild);
+      fill(holder);
+      if (kind !== "p") {
+        var target = $.createElement(kind === "ul" ? "ul" : "ol");
+        if (kind === "todo") target.className = "x-todo";
+        holder.parentNode.replaceChild(target, holder);
+        target.appendChild(holder);
+        lists.push(target);
+      }
+    });
+    lists.forEach(function (list) {
+      if (!list.isConnected) return;
+      if (!list.firstChild) return list.remove();
+      join(list);
+    });
+  };
+  // A change to or from a checkbox line, which is the page's own.
+  var relist = function (current, type) {
+    var range = function () { return selection().getRangeAt(0); };
+    var items = function () { return linesIn(range()).filter(isTodoItem); };
+    if (current === type) return pageChange(function () { convert(items(), "p"); }, true);
+    if (type === "todo") {
+      // A heading, a quote or a code block becomes text first, by the browser.
+      if (!isList(current) && current !== "p") off(current);
+      // A line of the note's own (text right in it) becomes a block first.
+      if (!linesIn(range()).length) exec("formatBlock", "<div>");
+      return pageChange(function () { convert(linesIn(range()), "todo"); }, true);
+    }
+    if (isList(type)) return pageChange(function () { convert(linesIn(range()), type); }, true);
+    pageChange(function () { convert(items(), "p"); }, true);
+    if (typeAt(range().startContainer) !== type) on(type);
+  };
+
   var listCommand = function (type) { return type === "ol" ? "insertOrderedList" : "insertUnorderedList"; };
   var off = function (type) {
     if (isList(type)) return exec(listCommand(type));
     var range = selection().getRangeAt(0);
-    touched(range, type === "h1" ? "h1" : "pre").forEach(function (block) {
+    touched(range, BLOCK[type]).forEach(function (block) {
       if (!block.isConnected) return;
       // Notes saved before these fixes can hold a heading around a list, or a block nested in one of its kind.
-      if (block.querySelector("ul,ol,pre,h1,div")) return unwrap(block);
+      if (block.querySelector("ul,ol,pre,h1,h2,blockquote,div")) return unwrap(block);
       if (type === "code") flattenCode(block);
       selectContents(block);
       exec("formatBlock", "<div>");
@@ -183,16 +396,19 @@ export const RICH_TEXT_SCRIPT = String.raw`
   };
   var on = function (type) {
     if (isList(type)) return exec(listCommand(type));
-    exec("formatBlock", type === "h1" ? "<h1>" : "<pre>");
+    exec("formatBlock", "<" + BLOCK[type] + ">");
   };
 
-  // A line is text, a heading, code, or a bullet or numbered item. Pressing the button of what it is makes it text.
+  // A line is text, a heading (1 or 2), a quote, code, or a bullet, numbered or checkbox item. Pressing the button of what
+  // it is makes it text; a list item becomes another kind of item in place.
   var toggle = function (type) {
     var s = selection();
     // A read-only note (RichEditor's disabled): the repair of old markup would change it.
-    if (!s.rangeCount || !content().isContentEditable) return;
+    if (!s.rangeCount || !content().isContentEditable || !(type === "p" || BLOCK[type] || isList(type) || type === "todo")) return;
     keepSelection(function () {
       var current = typeAt(s.getRangeAt(0).startContainer);
+      if (current === "todo" || type === "todo") return relist(current, type);
+      if (type === "p") return current !== "p" && off(current);
       if (current === type) return off(type);
       if (current !== "p" && !(isList(current) && isList(type))) off(current);
       if (typeAt(s.getRangeAt(0).startContainer) !== type) on(type);
@@ -208,6 +424,38 @@ export const RICH_TEXT_SCRIPT = String.raw`
     exec("insertParagraph");
     refreshToolbar();
   };
+
+  // A rule under the caret's line, and the caret on a new text line after it; never inside a line, a list or a code block.
+  var rule = function () {
+    var s = selection();
+    if (!s.rangeCount || !content().isContentEditable) return;
+    var node = s.focusNode;
+    if (closest(node, "pre") || closest(node, "li")) return;
+    var line = element(node);
+    while (line && line !== content() && line.parentNode !== content()) line = line.parentNode;
+    if (line === content()) line = null;
+    pageChange(function () {
+      var hr = $.createElement("hr"), next = $.createElement("div");
+      next.appendChild($.createElement("br"));
+      content().insertBefore(hr, line ? line.nextSibling : null);
+      content().insertBefore(next, hr.nextSibling);
+      caretAt(next, 0);
+    });
+    refreshToolbar();
+  };
+
+  // A box ticks with a click or a tap in a note that can be changed, and the app gets the content; in a read-only note
+  // nothing changes. Before the library's own handling, whose input handler would reformat the caret's line.
+  var isBox = function (e) { return e.nodeName === "INPUT" && !!closest(e, ".x-todo-box"); };
+  $.addEventListener("click", function (e) {
+    if (!isBox(e.target)) return;
+    e.stopPropagation();
+    if (!content().isContentEditable) return e.preventDefault();
+    if (e.target.checked) e.target.setAttribute("checked", "");
+    else e.target.removeAttribute("checked");
+    contentChanged();
+  }, true);
+  $.addEventListener("input", function (e) { if (isBox(e.target)) e.stopPropagation(); }, true);
 
   // The last node of root, at any depth, that take() accepts: a line's text can be inside a <b> or a <span>.
   var lastOf = function (root, take) {
@@ -254,13 +502,84 @@ export const RICH_TEXT_SCRIPT = String.raw`
     return true;
   };
 
-  // Before pell's own Enter handling, which loses the caret in a code block that isn't pell's.
+  var caretAt = function (node, offset) {
+    var r = $.createRange();
+    r.setStart(node, offset);
+    r.collapse(true);
+    select(r);
+  };
+  // What follows the caret in a line, taken out of it (the caret is collapsed).
+  var restOf = function (line) {
+    var s = selection(), r = $.createRange();
+    r.setStart(s.focusNode, s.focusOffset);
+    r.setEnd(line, line.childNodes.length);
+    var box = line.nodeName === "LI" && boxOf(line);
+    // never the box: a caret before it is a caret at the start of the text
+    if (box && r.comparePoint(box, 0) >= 0) r.setStartAfter(box);
+    return r.extractContents();
+  };
+  // Enter in a checkbox line: a new line under it with an empty box, taking what follows the caret; on an empty checkbox
+  // line, the line leaves the list and becomes text.
+  var enterInItem = function (item) {
+    if (blank(item)) return pageChange(function () { convert([item], "p"); }, true);
+    pageChange(function () {
+      var rest = restOf(item), next = $.createElement("li");
+      next.appendChild(newBox());
+      next.appendChild(rest);
+      fill(next);
+      fill(item);
+      item.parentNode.insertBefore(next, item.nextSibling);
+      caretAt(next, 1);
+    });
+  };
+  // Enter in a quote line: the quote goes on in a new line; on an empty quote line, the line becomes text.
+  var enterInQuote = function (quote) {
+    pageChange(function () {
+      if (blank(quote)) {
+        var line = $.createElement("div");
+        while (quote.firstChild) line.appendChild(quote.firstChild);
+        fill(line);
+        quote.parentNode.replaceChild(line, quote);
+        return caretAt(line, 0);
+      }
+      var next = $.createElement("blockquote");
+      next.appendChild(restOf(quote));
+      fill(next);
+      fill(quote);
+      quote.parentNode.insertBefore(next, quote.nextSibling);
+      caretAt(next, 0);
+    });
+  };
+  // The page's own Enter, in a checkbox or quote line: true when it took it.
+  var enter = function () {
+    var s = selection();
+    if (!s.rangeCount || !content().isContentEditable) return false;
+    var item = closest(s.focusNode, "li"), quote = closest(s.focusNode, "blockquote");
+    if (item && !isTodoItem(item)) return false;
+    if (!item && !quote) return false;
+    if (!s.isCollapsed) exec("delete");
+    if (item) enterInItem(item);
+    else enterInQuote(quote);
+    refreshToolbar();
+    return true;
+  };
+
+  // Before pell's own Enter handling, which loses the caret in a code block that isn't pell's, makes a quote's new line
+  // text, and adds a checkbox list's boxes its own way.
   $.addEventListener("keydown", function (e) {
     if (e.key !== "Enter" || e.isComposing) return;
-    var s = selection(), pre = s.rangeCount && closest(s.focusNode, "pre");
-    if (!pre) return;
+    var s = selection(), node = s.rangeCount && s.focusNode, pre = node && closest(node, "pre");
+    if (pre) {
+      e.stopPropagation();
+      if (leaveCode(pre)) e.preventDefault();
+      return;
+    }
+    var item = node && closest(node, "li");
+    if (!(item && isTodoItem(item)) && !(node && !item && closest(node, "blockquote"))) return;
     e.stopPropagation();
-    if (leaveCode(pre)) e.preventDefault();
+    // Shift+Enter: a line break inside the line, the browser's
+    if (e.shiftKey) return;
+    if (enter()) e.preventDefault();
   }, true);
 
   // Cmd+B, Cmd+I and Cmd+U on a Mac, Ctrl elsewhere: bold, italic and underline, as the toolbar's buttons. WebKit on macOS
@@ -280,6 +599,18 @@ export const RICH_TEXT_SCRIPT = String.raw`
   }, true);
 
   content().addEventListener("beforeinput", function (e) {
+    // From the system's menu (the desktop's Edit menu): the page's history first.
+    if (e.inputType === "historyUndo" || e.inputType === "historyRedo") {
+      var stack = e.inputType === "historyUndo" ? history.undo : history.redo;
+      if (!pageHasTop(stack)) return;
+      e.preventDefault();
+      if (stack === history.undo) undo();
+      else redo();
+      return;
+    }
+    // An edit of the browser's: what the page undid can't be redone after it.
+    history.redo = [];
+    if (e.inputType === "insertParagraph" && enter()) return e.preventDefault();
     var s = selection();
     if (!s.rangeCount || !s.isCollapsed) return;
     var node = s.focusNode, offset = s.focusOffset;
@@ -292,7 +623,9 @@ export const RICH_TEXT_SCRIPT = String.raw`
       r.setEnd(node, offset);
       if (r.toString().length || r.cloneContents().querySelector("img")) return;
       e.preventDefault();
-      exec(listCommand(li.parentNode.nodeName === "OL" ? "ol" : "ul"));
+      // a checkbox line: its box goes and it becomes text; the items around it stay checkbox lists
+      if (isTodoItem(li)) pageChange(function () { convert([li], "p"); }, true);
+      else exec(listCommand(li.parentNode.nodeName === "OL" ? "ol" : "ul"));
       refreshToolbar();
       return;
     }
@@ -470,6 +803,24 @@ export const RICH_TEXT_SCRIPT = String.raw`
   }).observe(content(), { childList: true, characterData: true, subtree: true });
   postCount();
 
-  window.__fm = { toggle: toggle, insertImage: insertImage, image: image };
+  // Undo and redo, from the keys: Cmd+Z and Shift+Cmd+Z on a Mac, Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y elsewhere.
+  $.addEventListener("keydown", function (e) {
+    var mod = MAC ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey;
+    if (!mod || e.altKey || e.isComposing || content().contentEditable !== "true") return;
+    var letter = /^[a-z]$/i.test(e.key) ? e.key.toLowerCase() : e.code === "KeyZ" ? "z" : e.code === "KeyY" ? "y" : "";
+    var isRedo = (letter === "z" && e.shiftKey) || (!MAC && letter === "y" && !e.shiftKey);
+    if (!isRedo && !(letter === "z" && !e.shiftKey)) return;
+    e.preventDefault();
+    if (isRedo) redo();
+    else undo();
+  }, true);
+  // The library's bar sends undo and redo as execCommand: through the page's history too.
+  $.execCommand = function (command, ui, value) {
+    if (command === "undo") return undo();
+    if (command === "redo") return redo();
+    return nativeExec(command, ui, value);
+  };
+
+  window.__fm = { toggle: toggle, rule: rule, insertImage: insertImage, image: image };
 })();
 `;

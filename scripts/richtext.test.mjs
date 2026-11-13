@@ -10,6 +10,8 @@ import { dirname, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { EVERY_LINE, EVERY_LINE_TEXT, TODO_BOX as BOX, TODO_BOX_DONE as DONE } from "./lib/everyLine.mjs";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const CHROME =
@@ -138,7 +140,15 @@ const open = async (html) => {
   await post({ type: "content", name: "command", data: RICH_TEXT_SCRIPT });
 };
 // The toolbar: the line types go to the page script (after focusContentEditor), the rest to pell, as NoteTextEditor does.
-const LINE_TYPES = { heading1: "h1", code: "code", unorderedList: "ul", orderedList: "ol" };
+const LINE_TYPES = {
+  heading1: "h1",
+  heading2: "h2",
+  quote: "quote",
+  code: "code",
+  unorderedList: "ul",
+  orderedList: "ol",
+  checkboxList: "todo",
+};
 const press = async (action) => {
   if (!LINE_TYPES[action]) return post({ type: action, name: "result" });
   await post({ type: "content", name: "focus" });
@@ -182,11 +192,27 @@ const type = async (text) => {
 const state = () =>
   evaluate(`(() => {
     const c = document.querySelector(".pell-content"), s = getSelection();
+    const kindOf = (e) => {
+      const li = e.closest("li");
+      if (e.closest("pre")) return "code";
+      if (e.closest("h1")) return "h1";
+      if (e.closest("h2")) return "h2";
+      if (li) return li.parentNode.nodeName === "OL" ? (li.parentNode.classList.contains("x-todo") ? "todo" : "ol") : "ul";
+      if (e.closest("blockquote")) return "quote";
+      return "p";
+    };
     const lines = {};
+    // the kind of each line by its whole text (a line's text can be in several nodes: "con <b>grassetto</b>")
+    const blocks = {};
+    for (const e of c.querySelectorAll("li, :scope > div, :scope > p, :scope > h1, :scope > h2, :scope > blockquote, :scope > pre"))
+      if (e.textContent.trim()) blocks[e.textContent.trim()] = kindOf(e);
+    // a checkbox item holds one box, its first child; no box anywhere else
+    const items = [...c.querySelectorAll("ol.x-todo > li")];
+    const boxes = items.every((li) => li.querySelectorAll(".x-todo-box").length === 1 && li.firstChild?.classList?.contains("x-todo-box")) &&
+      c.querySelectorAll(".x-todo-box").length === items.length;
     const w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
     for (let n; (n = w.nextNode()); ) {
-      const e = n.parentNode, li = e.closest("li");
-      const type = e.closest("pre") ? "code" : e.closest("h1") ? "h1" : li ? li.parentNode.nodeName.toLowerCase() : "p";
+      const type = kindOf(n.parentNode);
       for (const line of n.data.split("\\n")) if (line.trim()) lines[line.trim()] = type;
     }
     const f = s.focusNode;
@@ -194,12 +220,18 @@ const state = () =>
       html: c.innerHTML,
       text: c.textContent,
       lines,
+      blocks,
+      boxes,
       pres: c.querySelectorAll("pre").length,
       // a single line break at the end of a block shows no line
       pre: c.querySelector("pre") && c.querySelector("pre").innerText,
       caret: f ? (f.nodeType === 3 ? f.data : f.nodeName) + "@" + s.focusOffset : null,
       maxFont: Math.max(...[...c.querySelectorAll("*")].map((e) => parseFloat(getComputedStyle(e).fontSize)), 16),
-      nested: ["h1 h1", "pre pre", "h1 pre", "pre h1", "h1 ul", "h1 ol", "pre ul", "pre ol", "li h1", "li pre"].filter((q) => c.querySelector(q)),
+      nested: [
+        "h1 h1", "pre pre", "h1 pre", "pre h1", "h1 ul", "h1 ol", "pre ul", "pre ol", "li h1", "li pre",
+        "h2 h2", "h1 h2", "h2 h1", "blockquote blockquote", "blockquote ul", "blockquote ol", "li blockquote", "li h2",
+        "pre h2", "pre blockquote",
+      ].filter((q) => c.querySelector(q)),
     };
   })()`);
 
@@ -224,6 +256,9 @@ const CONTEXTS = {
   heading: `<div>${A}</div><h1>${B}</h1><div>${G}</div>`,
   code: `<div>${A}</div><pre>${B}</pre><div>${G}</div>`,
   "pell code": `<div>${A}</div><pre><code type="">${B}</code></pre><div>${G}</div>`,
+  heading2: `<div>${A}</div><h2>${B}</h2><div>${G}</div>`,
+  quote: `<div>${A}</div><blockquote>${B}</blockquote><div>${G}</div>`,
+  checks: `<ol class="x-todo"><li>${BOX}${A}</li><li>${DONE}${B}</li><li>${BOX}${G}</li></ol>`,
 };
 const SELECTIONS = {
   caret: { caret: B, at: 2 },
@@ -258,6 +293,7 @@ for (const [ctxName, html] of Object.entries(CONTEXTS)) {
         `${s1.nested} ${s2.nested}\n    ${s1.html}\n    ${s2.html}`
       );
       check(name + ", font", s1.maxFont <= 32 && s2.maxFont <= 32, `${s1.maxFont}px / ${s2.maxFont}px`);
+      check(name + ", boxes", s1.boxes && s2.boxes, `${s1.html}\n    ${s2.html}`);
       check(
         name + ", text",
         s1.text === s0.text && s2.text === s0.text,
@@ -999,6 +1035,312 @@ await post({ type: "content", name: "setDisable", data: false });
     "a burst of typing posts far fewer counts than keystrokes",
     counts.length >= 1 && counts.length <= 3 && last(counts) === 11,
     JSON.stringify(counts)
+  );
+}
+
+// 8. The kinds of line added in 4.1.0 (spec B.2): heading 2, quote, checkbox lines, a rule. A checkbox list is the editor
+// library's own markup, so a 4.0.0 device keeps it.
+{
+  const clickBox = async (index) => {
+    const [bx, by] = await evaluate(
+      `(() => { const r = document.querySelectorAll(".pell-content .x-todo-box input")[${index}].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`
+    );
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: bx, y: by, button: "left", clickCount: 1 });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: bx, y: by, button: "left", clickCount: 1 });
+    await sleep(90);
+  };
+  const run = async ([kind, arg]) => {
+    if (kind === "select") await select(arg);
+    else if (kind === "press") await press(arg);
+    else if (kind === "key") await key(arg);
+    else if (kind === "type") await type(arg);
+    else if (kind === "click") await clickBox(arg);
+    else if (kind === "rule") await post({ type: "content", name: "command", data: "window.__fm.rule()" });
+    else if (kind === "readOnly") await post({ type: "content", name: "setDisable", data: true });
+  };
+  const sanitized = (html) => evaluate(`window.__fmSanitize(${JSON.stringify(html)})`);
+  const three = `<div>${A}</div><div>${B}</div><div>${G}</div>`;
+  const CHECKS = CONTEXTS.checks;
+  const html = (s) => clean(s.html);
+  const CASES = [
+    {
+      name: "text to checkbox",
+      start: `<div>${A}</div>`,
+      steps: [
+        ["select", { caret: A, at: 5 }],
+        ["press", "checkboxList"],
+      ],
+      ok: (s) => html(s) === `<ol class="x-todo"><li>${BOX}${A}</li></ol>` && s.caret === `${A}@5`,
+    },
+    {
+      name: "three lines at once",
+      start: three,
+      steps: [
+        ["select", { from: [A, 0], to: [G, G.length] }],
+        ["press", "checkboxList"],
+      ],
+      // the selection still from the first character to the last
+      ok: async (s) =>
+        html(s) === `<ol class="x-todo"><li>${BOX}${A}</li><li>${BOX}${B}</li><li>${BOX}${G}</li></ol>` &&
+        (await evaluate("getSelection().toString().replace(/\\s+/g, '')")) === `${A}${B}${G}`.replace(/\s+/g, ""),
+    },
+    {
+      name: "checkbox to bullets",
+      start: CHECKS,
+      steps: [
+        ["select", { caret: A, at: 1 }],
+        ["press", "unorderedList"],
+      ],
+      ok: (s) => html(s) === `<ul><li>${A}</li></ul><ol class="x-todo"><li>${DONE}${B}</li><li>${BOX}${G}</li></ol>` && s.boxes,
+    },
+    {
+      name: "checkbox to bullets and back",
+      start: CHECKS,
+      steps: [
+        ["select", { caret: A, at: 1 }],
+        ["press", "unorderedList"],
+        ["press", "checkboxList"],
+      ],
+      ok: (s) => html(s) === CHECKS,
+    },
+    {
+      name: "tick",
+      start: CHECKS,
+      steps: [["click", 0]],
+      content: true,
+      ok: (s) => (s.html.match(/checked=""/g) || []).length === 2 && s.html.startsWith(`<ol class="x-todo"><li>${DONE}${A}`),
+    },
+    { name: "untick", start: CHECKS, steps: [["click", 1]], ok: (s) => !s.html.includes("checked") },
+    {
+      name: "tick in a read-only note",
+      start: CHECKS,
+      steps: [["readOnly"], ["click", 0]],
+      content: false,
+      ok: (s) => s.html === CHECKS,
+    },
+    {
+      name: "Enter in a checkbox line",
+      start: `<ol class="x-todo"><li>${BOX}alpha</li></ol>`,
+      steps: [
+        ["select", end("alpha")],
+        ["key", "Enter"],
+        ["type", "x"],
+      ],
+      ok: (s) => html(s) === `<ol class="x-todo"><li>${BOX}alpha</li><li>${BOX}x</li></ol>`,
+    },
+    {
+      name: "Enter in a ticked line",
+      start: `<ol class="x-todo"><li>${DONE}alpha</li></ol>`,
+      steps: [
+        ["select", end("alpha")],
+        ["key", "Enter"],
+        ["type", "x"],
+      ],
+      ok: (s) => html(s) === `<ol class="x-todo"><li>${DONE}alpha</li><li>${BOX}x</li></ol>`,
+    },
+    {
+      name: "Enter on an empty box",
+      start: `<ol class="x-todo"><li>${BOX}alpha</li></ol>`,
+      steps: [
+        ["select", end("alpha")],
+        ["key", "Enter"],
+        ["key", "Enter"],
+        ["type", "y"],
+      ],
+      ok: (s) => html(s) === `<ol class="x-todo"><li>${BOX}alpha</li></ol><div>y</div>`,
+    },
+    {
+      name: "Backspace after the box",
+      start: CHECKS,
+      steps: [
+        ["select", { caret: B, at: 0 }],
+        ["key", "Backspace"],
+      ],
+      ok: (s) =>
+        html(s) === `<ol class="x-todo"><li>${BOX}${A}</li></ol><div>${B}</div><ol class="x-todo"><li>${BOX}${G}</li></ol>`,
+    },
+    {
+      name: "heading 2",
+      start: `<div>${A}</div>`,
+      steps: [
+        ["select", { caret: A, at: 2 }],
+        ["press", "heading2"],
+      ],
+      ok: (s) => html(s) === `<h2>${A}</h2>`,
+    },
+    {
+      name: "heading 2, pressed again",
+      start: `<div>${A}</div>`,
+      steps: [
+        ["select", { caret: A, at: 2 }],
+        ["press", "heading2"],
+        ["press", "heading2"],
+      ],
+      ok: (s) => html(s) === `<div>${A}</div>`,
+    },
+    {
+      name: "Enter after a heading 2",
+      start: "<h2>alpha</h2>",
+      steps: [
+        ["select", end("alpha")],
+        ["key", "Enter"],
+        ["type", "x"],
+      ],
+      ok: (s) => html(s) === "<h2>alpha</h2><div>x</div>",
+    },
+    {
+      name: "quote",
+      start: `<div>${A}</div>`,
+      steps: [
+        ["select", { caret: A, at: 2 }],
+        ["press", "quote"],
+      ],
+      ok: (s) => html(s) === `<blockquote>${A}</blockquote>`,
+    },
+    {
+      name: "quote, pressed again",
+      start: `<div>${A}</div>`,
+      steps: [
+        ["select", { caret: A, at: 2 }],
+        ["press", "quote"],
+        ["press", "quote"],
+      ],
+      ok: (s) => html(s) === `<div>${A}</div>`,
+    },
+    {
+      name: "Enter in a quote",
+      start: "<blockquote>alpha</blockquote>",
+      steps: [
+        ["select", end("alpha")],
+        ["key", "Enter"],
+        ["type", "x"],
+        ["key", "Enter"],
+        ["key", "Enter"],
+        ["type", "y"],
+      ],
+      ok: (s) =>
+        s.blocks.alpha === "quote" &&
+        s.blocks.x === "quote" &&
+        s.blocks.y === "p" &&
+        html(s).endsWith("<div>y</div>") &&
+        !s.nested.length,
+    },
+    {
+      name: "rule",
+      start: `<div>${A}</div><div>${B}</div>`,
+      steps: [["select", { caret: A, at: 3 }], ["rule"], ["type", "x"]],
+      ok: (s) => html(s) === `<div>${A}</div><hr><div>x</div><div>${B}</div>`,
+    },
+    {
+      name: "rule in a code block",
+      start: "<pre>alpha</pre>",
+      steps: [["select", { caret: "alpha", at: 2 }], ["rule"]],
+      ok: (s) => s.html === "<pre>alpha</pre>",
+    },
+    {
+      name: "an old checkbox list",
+      start: `<ol class="x-todo"><li>${DONE}fatto</li></ol>`,
+      steps: [],
+      ok: async (s) =>
+        s.lines.fatto === "todo" &&
+        (await evaluate(`getComputedStyle(document.querySelector(".pell-content li")).textDecorationLine`)) === "line-through",
+    },
+    {
+      name: "every kind together",
+      start: EVERY_LINE,
+      steps: [],
+      ok: (s) =>
+        EVERY_LINE_TEXT.every(
+          (text, i) => s.blocks[text] === ["p", "h1", "h2", "quote", "code", "ul", "ol", "todo", "todo", "p"][i]
+        ) && s.html === EVERY_LINE,
+    },
+  ];
+  for (const c of CASES) {
+    await open(c.start);
+    await listenToPage();
+    for (const step of c.steps) await run(step);
+    const s = await state();
+    const messages = c.content === undefined ? null : await posted("CONTENT_CHANGE");
+    check(c.name, await c.ok(s), s.html);
+    if (c.content === true)
+      check(`${c.name}, the app is told`, messages.length === 1 && messages[0].data === s.html, JSON.stringify(messages));
+    if (c.content === false) check(`${c.name}, the app isn't told`, !messages.length, JSON.stringify(messages));
+    check(`${c.name}, boxes`, s.boxes, s.html);
+    check(
+      `${c.name}, the sanitizer keeps it`,
+      (await sanitized(s.html)) === s.html,
+      `${s.html}\n    ${await sanitized(s.html)}`
+    );
+    // undo once after the case's first press brings the start back
+    const first = c.steps.findIndex(([kind]) => kind === "press" || kind === "rule");
+    if (first < 0) continue;
+    await open(c.start);
+    for (const step of c.steps.slice(0, first + 1)) await run(step);
+    await press("undo");
+    const u = await state();
+    check(`${c.name}, undo`, clean(u.html) === clean(c.start), `${c.start} -> ${u.html}`);
+  }
+
+  // The page's own changes share one undo with the browser's: typing after a change is undone first, then the change.
+  const undoKey = async (shift = false) => {
+    const zKey = {
+      key: shift ? "Z" : "z",
+      code: "KeyZ",
+      windowsVirtualKeyCode: 90,
+      modifiers: (mac ? 4 : 2) | (shift ? 8 : 0),
+    };
+    await send("Input.dispatchKeyEvent", { type: "keyDown", ...zKey });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", ...zKey });
+    await sleep(90);
+  };
+  const made = `<ol class="x-todo"><li>${BOX}${A}</li></ol>`;
+  await open(`<div>${A}</div>`);
+  await select(end(A));
+  await press("checkboxList");
+  await type("x");
+  check(
+    "typing in a new checkbox line",
+    html(await state()) === `<ol class="x-todo"><li>${BOX}${A}x</li></ol>`,
+    (await state()).html
+  );
+  await press("undo");
+  check("undo: the typing first", html(await state()) === made, (await state()).html);
+  await press("undo");
+  check("undo: then the checkbox list", html(await state()) === `<div>${A}</div>`, (await state()).html);
+  await press("redo");
+  check("redo: the checkbox list", html(await state()) === made, (await state()).html);
+  await press("redo");
+  check("redo: then the typing", html(await state()) === `<ol class="x-todo"><li>${BOX}${A}x</li></ol>`, (await state()).html);
+
+  await open(`<div>${A}</div>`);
+  await select(end(A));
+  await press("checkboxList");
+  await undoKey();
+  check(`${mac ? "Cmd" : "Ctrl"}+Z undoes the page's change`, html(await state()) === `<div>${A}</div>`, (await state()).html);
+  await undoKey(true);
+  check(`${mac ? "Shift+Cmd" : "Ctrl+Shift"}+Z redoes it`, html(await state()) === made, (await state()).html);
+
+  await open(`<div>${A}</div>`);
+  await select(end(A));
+  await press("checkboxList");
+  await clickBox(0);
+  await press("undo");
+  check(
+    "a tick isn't an edit to undo: undo takes the list back",
+    html(await state()) === `<div>${A}</div>`,
+    (await state()).html
+  );
+
+  await open(`<div>${A}</div><div>${B}</div>`);
+  await select({ caret: A, at: 2 });
+  await run(["rule"]);
+  await type("x");
+  await press("undo");
+  await press("undo");
+  check(
+    "a rule and what was typed after it, undone",
+    html(await state()) === `<div>${A}</div><div>${B}</div>`,
+    (await state()).html
   );
 }
 
