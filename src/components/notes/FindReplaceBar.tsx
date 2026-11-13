@@ -119,8 +119,9 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
     [editorRef]
   );
 
+  /** `keepKeyboardDown`: selecting the match focuses the note's page, which raises the phone's keyboard; it is let go. */
   const performSearch = useCallback(
-    (text: string) => {
+    (text: string, keepKeyboardDown = false) => {
       const count = countMatches(text);
       setMatchCount(count);
       if (!text || count === 0) {
@@ -141,6 +142,7 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
             sel.removeAllRanges();
             sel.addRange(range);
             window.find(${quoted}, false, false, true, false, false, false);
+            ${keepKeyboardDown ? "if (document.activeElement && document.activeElement.blur) document.activeElement.blur();" : ""}
           }
         })();
         true;
@@ -212,9 +214,11 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
 
   useEffect(() => {
     if (!visible) return;
-    const timer = setTimeout(() => performSearch(searchText), 300);
+    // The word a search result opened the note on: shown, with the keyboard down (the person came to read it).
+    const fromResult = !!initialQuery && searchText === initialQuery;
+    const timer = setTimeout(() => performSearch(searchText, fromResult), 300);
     return () => clearTimeout(timer);
-  }, [visible, searchText, performSearch]);
+  }, [visible, searchText, performSearch, initialQuery]);
 
   useEffect(() => {
     if (!visible) return;
