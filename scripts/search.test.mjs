@@ -14,7 +14,7 @@ const out = join(os.tmpdir(), "search.bundle.mjs");
 
 await build({
   stdin: {
-    contents: `export * from "@/libs/search/fold"; export * from "@/libs/search/tags"; export * from "@/libs/search/lines"; export * from "@/libs/search/search"; export * from "@/libs/search/cache"; export * from "@/libs/search/findOnOpen";`,
+    contents: `export * from "@/libs/search/fold"; export * from "@/libs/search/tags"; export * from "@/libs/search/lines"; export * from "@/libs/search/search"; export * from "@/libs/search/cache"; export * from "@/libs/search/findOnOpen"; export * from "@/libs/search/picker";`,
     resolveDir: src,
     loader: "ts",
   },
@@ -40,6 +40,7 @@ const {
   searchNotes,
   cutLine,
   LINE_MAX,
+  pickNotes,
 } = await import(pathToFileURL(out).href);
 
 let passed = 0;
@@ -377,6 +378,42 @@ ok(
     return f.word === "x" && f.tabId === "t1";
   })() && takeFindOnOpen("a") === null
 );
+
+// the notes a link to a note is picked from (spec B.4)
+{
+  const notes = [
+    text("n1", "Spesa settimanale", ""),
+    text("n2", "Città da vedere", ""),
+    text("n3", "Lista SPESA", "", { hidden: true }),
+    text("n4", "Spese di casa", ""),
+    text("n5", "Altro", ""),
+    text("n6", "Speciale", ""),
+    text("n7", "spettacoli", ""),
+    text("n8", "Spedizioni", ""),
+  ];
+  const ids = (list) => list.map((n) => n.id).join(",");
+  ok(
+    "another case matches",
+    ids(pickNotes(notes, "SPES", { excludeId: "x", showHidden: false })) === "n1,n4",
+    ids(pickNotes(notes, "SPES", { excludeId: "x", showHidden: false }))
+  );
+  ok("accents don't count", ids(pickNotes(notes, "citta", { excludeId: "x", showHidden: false })) === "n2");
+  ok("the note being edited isn't listed", ids(pickNotes(notes, "spes", { excludeId: "n1", showHidden: false })) === "n4");
+  ok(
+    "a hidden note only when hidden notes are shown",
+    ids(pickNotes(notes, "spesa", { excludeId: "x", showHidden: false })) === "n1" &&
+      ids(pickNotes(notes, "spesa", { excludeId: "x", showHidden: true })) === "n1,n3"
+  );
+  ok(
+    "in the order given, five at most",
+    ids(pickNotes(notes, "sp", { excludeId: "x", showHidden: true })) === "n1,n3,n4,n6,n7"
+  );
+  ok("max is honoured", pickNotes(notes, "sp", { excludeId: "x", showHidden: true, max: 2 }).length === 2);
+  ok(
+    "an empty query matches every note",
+    ids(pickNotes(notes, "", { excludeId: "n5", showHidden: false })) === "n1,n2,n4,n6,n7"
+  );
+}
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);

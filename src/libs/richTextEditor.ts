@@ -68,6 +68,27 @@ export const LINK_CANCEL_COMMAND = "window.__fm && window.__fm.linkCancel()";
 /** The caret's link taken away, its text kept. */
 export const UNLINK_COMMAND = "window.__fm && window.__fm.unlink()";
 
+/** `[[` was typed (or what follows it changed, or it went away): `data` is `EditorPicker`. */
+export const PICKER_MESSAGE = "FASTMEMO_NOTE_PICKER";
+export interface EditorPicker {
+  open: boolean;
+  query: string;
+}
+/** A key for the picker while it is open: `data` is `PickerKey`. */
+export const PICKER_KEY_MESSAGE = "FASTMEMO_NOTE_PICKER_KEY";
+export type PickerKey = "up" | "down" | "enter" | "escape";
+/** A note link was tapped or clicked: `data` is the note's id. */
+export const NOTE_LINK_MESSAGE = "FASTMEMO_NOTE_LINK";
+/** A link to the note `noteId` labelled `label`: in place of `[[` and its query, or where the caret was (`pickStart`). */
+export const noteLinkCommand = (noteId: string, label: string) =>
+  `window.__fm && window.__fm.noteLink(${JSON.stringify(noteId)}, ${JSON.stringify(label)})`;
+/** The picker closed by the app: the page stops reporting the `[[` being typed. */
+export const PICKER_CLOSE_COMMAND = "window.__fm && window.__fm.closePicker()";
+/** Whether the app shows rows for the picker: only then do the arrows, Enter and Esc go to it, not to the text. */
+export const pickerShownCommand = (shown: boolean) => `window.__fm && window.__fm.pickerShown(${shown ? "true" : "false"})`;
+/** The bar's "Link to a note": remembers the caret, since the picker's field takes the focus. */
+export const PICK_START_COMMAND = "window.__fm && window.__fm.pickStart()";
+
 /** The text editor page's look (RichEditor's `editorStyle`). */
 export const RICH_TEXT_STYLE = {
   backgroundColor: "transparent",
@@ -89,7 +110,7 @@ export const RICH_TEXT_STYLE = {
     pre pre { margin: 0; padding: 0; background: none; }
     h1:empty, pre:empty { display: none; }
     pre span { font-family: inherit !important; background-color: transparent !important; white-space: inherit !important; }
-    ${noteBlockCss({ text: COLOR.softWhite, muted: COLOR.textSecondary, accent: COLOR.accentMuted, line: GLASS.border, boxFill: "transparent", link: COLOR.accentSoft })}
+    ${noteBlockCss({ text: COLOR.softWhite, muted: COLOR.textSecondary, accent: COLOR.accentMuted, line: GLASS.border, boxFill: "transparent", link: COLOR.accentSoft, pill: COLOR.accentMuted + "47", pillBorder: COLOR.accentMuted + "99", pillText: COLOR.textPrimary })}
     ${SCROLLBAR_CSS}
   `,
   // Horizontal inset lives here (not on containerStyle) so it matches the header
@@ -160,7 +181,20 @@ export const RICH_TEXT_SCRIPT = String.raw`
   var content = function () { return $.querySelector(".pell-content"); };
   // The browser's own execCommand: document.execCommand's undo and redo go through the page's history first (below).
   var nativeExec = $.execCommand.bind($);
-  var exec = function (command, value) { return nativeExec(command, false, value === undefined ? null : value); };
+  // formatBlock stops at a contenteditable="false" element, which would split a line holding a note link: for it, the
+  // links are plain inline elements (their attributes back in the same order after).
+  var exec = function (command, value) {
+    if (command !== "formatBlock") return nativeExec(command, false, value === undefined ? null : value);
+    var pills = [].slice.call(content().querySelectorAll('a[href^="#fm-note-"][contenteditable="false"]'));
+    pills.forEach(function (a) { a.removeAttribute("contenteditable"); });
+    try { return nativeExec(command, false, value); } finally {
+      // the moved lines are the browser's copies: theirs too
+      pills.forEach(function (a) { a.setAttribute("contenteditable", "false"); });
+      [].forEach.call(content().querySelectorAll('a[href^="#fm-note-"]:not([contenteditable])'), function (a) {
+        a.setAttribute("contenteditable", "false");
+      });
+    }
+  };
   var selection = function () { return $.getSelection(); };
   var element = function (node) { return node && (node.nodeType === 1 ? node : node.parentNode); };
   var closest = function (node, selector) {
@@ -954,7 +988,11 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (!a || !content().contains(a)) return;
     e.preventDefault();
     e.stopPropagation();
-    if (isNoteLink(a)) return;
+    if (isNoteLink(a)) {
+      var id = NOTE_ID.exec(a.getAttribute("href"));
+      if (id) post("${NOTE_LINK_MESSAGE}", id[1]);
+      return;
+    }
     var editable = content().isContentEditable;
     post("${LINK_MESSAGE}", {
       href: a.getAttribute("href"),
@@ -965,6 +1003,103 @@ export const RICH_TEXT_SCRIPT = String.raw`
       direct: !editable || (MAC ? e.metaKey : e.ctrlKey),
     });
   }, true);
+
+  // Links to another note (spec B.4): <a href="#fm-note-<id>" contenteditable="false">label</a>, one character for the
+  // caret. While the text before the caret ends with [[ and up to 40 characters with no [, no ] and no line break, the
+  // app's picker is open (PICKER_MESSAGE) and, while the app shows rows for it (pickerShown), gets the arrows, Enter and
+  // Esc (PICKER_KEY_MESSAGE); never in a code block or a read-only note, and nothing changes while a word is being
+  // composed. Esc keeps that [[ closed until it goes. From the bar's menu (pickStart) the caret is remembered.
+  var NOTE_ID = /^#fm-note-([A-Za-z0-9~_-]{1,80})$/;
+  var TRIGGER = /\[\[([^\[\]\n]{0,40})$/;
+  var composing = false, picker = null, dismissed = null, pickRange = null, pickerRows = false;
+  var CLOSED = JSON.stringify({ open: false, query: "" }), pickerPosted = CLOSED;
+  var triggerAt = function () {
+    var s = selection();
+    if (!s.rangeCount || !s.isCollapsed || !content().isContentEditable) return null;
+    var node = s.anchorNode;
+    if (!node || node.nodeType !== 3 || !content().contains(node) || closest(node, "pre")) return null;
+    var m = TRIGGER.exec(node.data.slice(0, s.anchorOffset));
+    return m ? { node: node, start: m.index, end: s.anchorOffset, query: m[1] } : null;
+  };
+  var checkPicker = function () {
+    if (composing) return;
+    var t = triggerAt();
+    if (!t) dismissed = null;
+    else if (dismissed && dismissed.node === t.node && dismissed.start === t.start) t = null;
+    picker = t;
+    var now = t ? JSON.stringify({ open: true, query: t.query }) : CLOSED;
+    if (now === pickerPosted) return;
+    pickerPosted = now;
+    if (!t) pickerRows = false;
+    post("${PICKER_MESSAGE}", JSON.parse(now));
+  };
+  var closePicker = function () {
+    if (picker) dismissed = picker;
+    var range = pickRange;
+    pickRange = null;
+    if (range && content().contains(range.startContainer)) {
+      content().focus();
+      select(range);
+    }
+    checkPicker();
+  };
+  content().addEventListener("compositionstart", function () { composing = true; });
+  content().addEventListener("compositionend", function () { composing = false; checkPicker(); });
+  content().addEventListener("input", function () { checkPicker(); });
+  var PICKER_KEYS = { ArrowUp: "up", ArrowDown: "down", Enter: "enter", Escape: "escape" };
+  window.addEventListener("keydown", function (e) {
+    var name = PICKER_KEYS[e.key];
+    if (!name || e.isComposing || composing || pickerPosted === CLOSED || !pickerRows) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    post("${PICKER_KEY_MESSAGE}", name);
+    if (name === "escape") closePicker();
+  }, true);
+  // The caret never stays inside a note link (an engine that lets it in): it goes after it.
+  var keepOutOfNoteLinks = function () {
+    var s = selection();
+    if (!s.rangeCount || !s.isCollapsed) return;
+    var a = closest(s.anchorNode, 'a[contenteditable="false"]');
+    if (a && isNoteLink(a)) caretAfter(a);
+  };
+  var pickerShown = function (shown) { pickerRows = !!shown && pickerPosted !== CLOSED; };
+  var pickStart = function () {
+    var s = selection();
+    pickRange = s.rangeCount && content().contains(s.anchorNode) ? s.getRangeAt(0).cloneRange() : null;
+  };
+  var noteLink = function (id, label) {
+    if (!content().isContentEditable || !/^[A-Za-z0-9~_-]{1,80}$/.test(id)) return;
+    // The [[ last seen (the app's row may have taken the focus), else the one at the caret.
+    var t = picker && picker.node.isConnected && picker.node.data.substr(picker.start, 2) === "[[" ? picker : triggerAt();
+    var range = null;
+    if (t && t.node.isConnected) {
+      range = $.createRange();
+      range.setStart(t.node, t.start);
+      range.setEnd(t.node, Math.min(t.end, t.node.length));
+    } else if (pickRange && content().contains(pickRange.startContainer)) range = pickRange;
+    else {
+      var s = selection();
+      if (s.rangeCount && content().contains(s.anchorNode)) range = s.getRangeAt(0);
+    }
+    pickRange = null;
+    if (!range || closest(range.startContainer, "pre")) return;
+    content().focus();
+    pageChange(function () {
+      // A no-break space: a plain one at the end of a line is dropped by the browser when typing after it.
+      var a = $.createElement("a"), space = $.createTextNode("\u00a0");
+      a.setAttribute("href", "#fm-note-" + id);
+      a.setAttribute("contenteditable", "false");
+      a.textContent = label;
+      range.deleteContents();
+      range.insertNode(space);
+      range.insertNode(a);
+      var r = $.createRange();
+      r.setStart(space, 1);
+      r.collapse(true);
+      select(r);
+    });
+    checkPicker();
+  };
 
   // The bar's commands by name (FormatCommand): nothing else, and nothing in a read-only note.
   var COMMANDS = ["bold", "italic", "underline", "strikeThrough", "subscript", "superscript", "justifyLeft", "justifyCenter", "undo", "redo"];
@@ -1006,8 +1141,13 @@ export const RICH_TEXT_SCRIPT = String.raw`
     lastState = now;
     post("${STATE_MESSAGE}", JSON.parse(now));
   };
+  var onSelection = function () {
+    keepOutOfNoteLinks();
+    checkPicker();
+    postState();
+  };
   $.addEventListener("selectionchange", function () {
-    if (!stateFrame) stateFrame = requestAnimationFrame(postState);
+    if (!stateFrame) stateFrame = requestAnimationFrame(onSelection);
   });
   // A touch or a click on the text: the bar closes its menu.
   content().addEventListener("pointerdown", function () { post("${TOUCH_MESSAGE}", null); });
@@ -1030,6 +1170,10 @@ export const RICH_TEXT_SCRIPT = String.raw`
     link: thenState(link),
     linkCancel: linkCancel,
     unlink: thenState(unlink),
+    noteLink: thenState(noteLink),
+    pickStart: pickStart,
+    pickerShown: pickerShown,
+    closePicker: closePicker,
     state: state,
   };
 })();

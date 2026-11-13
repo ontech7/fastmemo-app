@@ -30,7 +30,7 @@ const tmp = mkdtempSync(join(os.tmpdir(), "richtext-"));
 const entry = join(tmp, "entry.mjs");
 writeFileSync(
   entry,
-  `export { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE, COUNT_MESSAGE, STATE_MESSAGE, TOUCH_MESSAGE, formatCommand, imageCommand, LINK_MESSAGE, LINK_START_MESSAGE, LINK_START_COMMAND, LINK_CANCEL_COMMAND, linkCommand, UNLINK_COMMAND } from ${JSON.stringify(join(root, "src/libs/richTextEditor.ts"))};
+  `export { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE, COUNT_MESSAGE, STATE_MESSAGE, TOUCH_MESSAGE, formatCommand, imageCommand, LINK_MESSAGE, LINK_START_MESSAGE, LINK_START_COMMAND, LINK_CANCEL_COMMAND, linkCommand, UNLINK_COMMAND, PICKER_MESSAGE, PICKER_KEY_MESSAGE, NOTE_LINK_MESSAGE, noteLinkCommand, PICKER_CLOSE_COMMAND, PICK_START_COMMAND, pickerShownCommand } from ${JSON.stringify(join(root, "src/libs/richTextEditor.ts"))};
    export { getTextLength } from ${JSON.stringify(join(root, "src/utils/string.ts"))};
    export { PAGE_ERROR_SCRIPT, PAGE_ERROR_MESSAGE } from ${JSON.stringify(join(root, "src/libs/pageErrors.ts"))};
    export { EDITOR_SANITIZE_JS } from ${JSON.stringify(join(root, "src/generated/editor-sanitize.ts"))};
@@ -77,6 +77,13 @@ const {
   LINK_START_MESSAGE,
   linkCommand,
   UNLINK_COMMAND,
+  PICKER_MESSAGE,
+  PICKER_KEY_MESSAGE,
+  NOTE_LINK_MESSAGE,
+  noteLinkCommand,
+  PICKER_CLOSE_COMMAND,
+  PICK_START_COMMAND,
+  pickerShownCommand,
   STATE_MESSAGE,
   TOUCH_MESSAGE,
 } = await import(pathToFileURL(join(tmp, "page.bundle.mjs")));
@@ -186,6 +193,9 @@ const select = (spec) =>
 const KEYS = {
   Enter: { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r" },
   Backspace: { key: "Backspace", code: "Backspace", windowsVirtualKeyCode: 8, commands: ["deleteBackward"] },
+  ArrowDown: { key: "ArrowDown", code: "ArrowDown", windowsVirtualKeyCode: 40, commands: ["moveDown"] },
+  ArrowLeft: { key: "ArrowLeft", code: "ArrowLeft", windowsVirtualKeyCode: 37, commands: ["moveLeft"] },
+  Escape: { key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 },
 };
 const key = async (name) => {
   await send("Input.dispatchKeyEvent", { type: "keyDown", ...KEYS[name] });
@@ -1613,6 +1623,253 @@ await post({ type: "content", name: "setDisable", data: false });
   await listen();
   clicked = await clickLink();
   check("a note link posts no web link message", !clicked.length, JSON.stringify(clicked));
+}
+
+// 11. Links to another note (spec B.4): [[ opens the app's picker, the pick becomes a pill that is one character, a tap
+// on it asks the app to open the note.
+{
+  const NOTE_A = '<a href="#fm-note-abc" contenteditable="false">Spesa</a>';
+  const listen = () =>
+    evaluate(`(() => {
+      window.__picked = [];
+      window.addEventListener("message", (e) => {
+        try { const m = JSON.parse(e.data); if ([${JSON.stringify(PICKER_MESSAGE)}, ${JSON.stringify(PICKER_KEY_MESSAGE)}, ${JSON.stringify(NOTE_LINK_MESSAGE)}, ${JSON.stringify(LINK_MESSAGE)}].includes(m.type)) window.__picked.push(m); } catch (error) {}
+      });
+    })()`);
+  const got = async () => {
+    await sleep(150);
+    return evaluate(`window.__picked.splice(0)`);
+  };
+  const last = (list, type) =>
+    list
+      .filter((m) => m.type === type)
+      .map((m) => m.data)
+      .pop();
+  const cmd = (script) => post({ type: "content", name: "command", data: script });
+  const caretText = () =>
+    evaluate(
+      `(() => { const s = getSelection(); return s.anchorNode.nodeType === 3 ? s.anchorNode.data.slice(0, s.anchorOffset) : "<" + s.anchorNode.nodeName + ">" + s.anchorOffset; })()`
+    );
+  const sanitizedSame = async (name) => {
+    const h = (await state()).html;
+    check(`${name}, the sanitizer keeps it`, (await evaluate(`window.__fmSanitize(${JSON.stringify(h)})`)) === h, h);
+  };
+
+  await open("<div>alpha</div>");
+  await listen();
+  await select(end("alpha"));
+  await type("[[");
+  let msgs = await got();
+  check(
+    "typing [[ opens the picker with nothing typed",
+    JSON.stringify(last(msgs, PICKER_MESSAGE)) === '{"open":true,"query":""}',
+    JSON.stringify(msgs)
+  );
+  await type("s");
+  await type("pe");
+  msgs = await got();
+  check(
+    "what follows [[ is the query",
+    JSON.stringify(last(msgs, PICKER_MESSAGE)) === '{"open":true,"query":"spe"}',
+    JSON.stringify(msgs)
+  );
+  await key("ArrowDown");
+  msgs = await got();
+  check("no rows shown: the arrow is the text's", !msgs.some((m) => m.type === PICKER_KEY_MESSAGE), JSON.stringify(msgs));
+  await select(end("[[spe"));
+  await cmd(pickerShownCommand(true));
+  await key("ArrowDown");
+  msgs = await got();
+  check(
+    "with the picker open, the down arrow goes to the app",
+    last(msgs, PICKER_KEY_MESSAGE) === "down",
+    JSON.stringify(msgs)
+  );
+  check("...and the caret doesn't move", (await caretText()) === "alpha[[spe", await caretText());
+  await key("Enter");
+  msgs = await got();
+  check(
+    "Enter goes to the app too, and adds no line",
+    last(msgs, PICKER_KEY_MESSAGE) === "enter" && (await state()).html === "<div>alpha[[spe</div>",
+    (await state()).html
+  );
+  await cmd(noteLinkCommand("abc", "Spesa"));
+  check(
+    "noteLink replaces [[ and the query with the link and a space",
+    (await state()).html === `<div>alpha${NOTE_A}&nbsp;</div>`,
+    (await state()).html
+  );
+  msgs = await got();
+  check(
+    "...and the picker closes",
+    JSON.stringify(last(msgs, PICKER_MESSAGE)) === '{"open":false,"query":""}',
+    JSON.stringify(msgs)
+  );
+  await sanitizedSame("a note link");
+  await type("x");
+  check("typing next to it goes outside it", (await state()).html === `<div>alpha${NOTE_A}&nbsp;x</div>`, (await state()).html);
+  await press("undo");
+  await press("undo");
+  check("undo brings [[spe back", (await state()).html === "<div>alpha[[spe</div>", (await state()).html);
+
+  await open(`<div>alpha ${NOTE_A} </div>`);
+  await select({ after: "a" });
+  await key("ArrowLeft");
+  await sleep(100);
+  const inside = await evaluate(`!!getSelection().anchorNode.parentElement.closest("a")`);
+  check("the caret never stays inside the link", !inside, await caretText());
+  await open(`<div>alpha ${NOTE_A} </div>`);
+  await evaluate(
+    `(() => { const c = document.querySelector(".pell-content"); c.focus(); const r = document.createRange(); r.setStart(c.firstChild.lastChild, 1); getSelection().removeAllRanges(); getSelection().addRange(r); })()`
+  );
+  await key("Backspace");
+  await key("Backspace");
+  const afterBack = (await state()).html;
+  check(
+    "Backspace twice after it (the space, then the link): no link, no stray text",
+    !afterBack.includes("<a") && !afterBack.includes("Spesa") && afterBack.replace(/&nbsp;| |<br>/g, "") === "<div>alpha</div>",
+    afterBack
+  );
+
+  await open("<div>alpha</div>");
+  await listen();
+  await select(end("alpha"));
+  await type("[[sp");
+  await got();
+  await key("Backspace");
+  await key("Backspace");
+  await key("Backspace");
+  msgs = await got();
+  check(
+    "deleting back past the brackets closes the picker",
+    JSON.stringify(last(msgs, PICKER_MESSAGE)) === '{"open":false,"query":""}',
+    JSON.stringify(msgs)
+  );
+  await type("[[x");
+  await got();
+  await cmd(pickerShownCommand(true));
+  await key("Escape");
+  msgs = await got();
+  check(
+    "Esc closes it, and goes to the app",
+    JSON.stringify(last(msgs, PICKER_MESSAGE)) === '{"open":false,"query":""}' && last(msgs, PICKER_KEY_MESSAGE) === "escape",
+    JSON.stringify(msgs)
+  );
+  await type("y");
+  msgs = await got();
+  check(
+    "...and it stays closed while the same [[ is typed on",
+    !msgs.some((m) => m.type === PICKER_MESSAGE && m.data.open),
+    JSON.stringify(msgs)
+  );
+  await type(" [[");
+  msgs = await got();
+  check(
+    "another [[ opens it again",
+    JSON.stringify(last(msgs, PICKER_MESSAGE)) === '{"open":true,"query":""}',
+    JSON.stringify(msgs)
+  );
+  await cmd(pickerShownCommand(false));
+  await key("Enter");
+  msgs = await got();
+  check(
+    "open with no rows shown, Enter is the text's",
+    !msgs.some((m) => m.type === PICKER_KEY_MESSAGE) && (await state()).html.includes("<br>"),
+    (await state()).html
+  );
+  await press("undo");
+  await select(end("y [["));
+  await cmd(PICKER_CLOSE_COMMAND);
+  msgs = await got();
+  check(
+    "closePicker closes it",
+    JSON.stringify(last(msgs, PICKER_MESSAGE)) === '{"open":false,"query":""}',
+    JSON.stringify(msgs)
+  );
+
+  await open("<pre>alpha </pre>");
+  await listen();
+  await select(end("alpha "));
+  await type("[[");
+  msgs = await got();
+  check("[[ in a code block posts nothing", !msgs.some((m) => m.type === PICKER_MESSAGE), JSON.stringify(msgs));
+
+  // From the bar's menu: the caret is remembered before the picker's field takes the focus.
+  await open("<div>one two</div>");
+  await select(end("one"));
+  await cmd(PICK_START_COMMAND);
+  await evaluate(`(() => { document.querySelector(".pell-content").blur(); getSelection().removeAllRanges(); })()`);
+  await cmd(noteLinkCommand("abc", "Spesa"));
+  check(
+    "from the menu, the link goes where the caret was",
+    (await state()).html === `<div>one${NOTE_A}&nbsp; two</div>`,
+    (await state()).html
+  );
+  await select(end("two"));
+  await cmd(PICK_START_COMMAND);
+  await evaluate(`(() => { document.querySelector(".pell-content").blur(); getSelection().removeAllRanges(); })()`);
+  await cmd(PICKER_CLOSE_COMMAND);
+  check(
+    "closed from the menu with no pick, the caret goes back",
+    (await evaluate(
+      `getSelection().anchorNode.data.slice(0, getSelection().anchorOffset) + "|" + (document.activeElement === document.querySelector(".pell-content"))`
+    )) === " two|true",
+    await evaluate(`getSelection().rangeCount && getSelection().anchorNode.nodeName`)
+  );
+  await cmd(noteLinkCommand("bad id!", "x"));
+  check(
+    "an id that isn't one does nothing",
+    (await state()).html === `<div>one${NOTE_A}&nbsp; two</div>`,
+    (await state()).html
+  );
+
+  // A line holding a note link changes kind whole (formatBlock stops at a contenteditable="false" element).
+  await open(`<div>Un ${NOTE_A} qui</div>`);
+  await select(end("qui"));
+  await press("heading2");
+  check(
+    "a line with a note link becomes a heading whole",
+    (await state()).html === `<h2>Un ${NOTE_A} qui</h2>`,
+    (await state()).html
+  );
+  await press("heading2");
+  check("...and text again", (await state()).html === `<div>Un ${NOTE_A} qui</div>`, (await state()).html);
+
+  // Following it: in any note, editable or not, a click asks the app, never navigates, and is no web link.
+  const clickNoteLink = async () => {
+    const [lx, ly] = await evaluate(
+      `(() => { const r = document.querySelector(".pell-content a").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`
+    );
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: lx, y: ly, button: "left", clickCount: 1 });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: lx, y: ly, button: "left", clickCount: 1 });
+    return got();
+  };
+  await open(`<div>alpha ${NOTE_A}</div>`);
+  await listen();
+  const where = await evaluate("location.href");
+  msgs = await clickNoteLink();
+  check(
+    "a click on a note link asks the app to open the note",
+    last(msgs, NOTE_LINK_MESSAGE) === "abc" && !msgs.some((m) => m.type === LINK_MESSAGE),
+    JSON.stringify(msgs)
+  );
+  check("the page doesn't navigate", (await evaluate("location.href")) === where);
+  await post({ type: "content", name: "setDisable", data: true });
+  msgs = await clickNoteLink();
+  check("...in a read-only note too", last(msgs, NOTE_LINK_MESSAGE) === "abc", JSON.stringify(msgs));
+  await post({ type: "content", name: "setDisable", data: false });
+
+  // What the sanitizer keeps of a note link, and what it takes from a link into the app.
+  check(
+    "a note link comes back from the sanitizer unchanged",
+    (await evaluate(
+      `window.__fmSanitize(${JSON.stringify(`<div><a href="#fm-note-abc123" contenteditable="false">Altra nota</a></div>`)})`
+    )) === '<div><a href="#fm-note-abc123" contenteditable="false">Altra nota</a></div>'
+  );
+  for (const scheme of ["fastmemoapp", "fastmemoapptest"]) {
+    const clean = await evaluate(`window.__fmSanitize(${JSON.stringify(`<a href="${scheme}://notes/abc">x</a>`)})`);
+    check(`a ${scheme}:// link loses its address`, clean === "<a>x</a>", clean);
+  }
 }
 
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");

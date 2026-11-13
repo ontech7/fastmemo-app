@@ -212,6 +212,7 @@ const en = {
     },
   },
   note: {
+    not_found: "Note not found",
     format: {
       undo: "Undo",
       redo: "Redo",
@@ -249,6 +250,7 @@ const en = {
       open: "Open",
       edit: "Edit",
       remove: "Remove link",
+      search_notes: "Search a note…",
     },
     update_to_open: "Update Fast Memo to open this note",
     duplicated: "Note duplicated",

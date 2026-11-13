@@ -211,6 +211,7 @@ const zh = {
     },
   },
   note: {
+    not_found: "未找到笔记",
     format: {
       undo: "撤销",
       redo: "重做",
@@ -248,6 +249,7 @@ const zh = {
       open: "打开",
       edit: "编辑",
       remove: "移除链接",
+      search_notes: "搜索笔记…",
     },
     update_to_open: "更新 Fast Memo 以打开此笔记",
     duplicated: "笔记已复制",

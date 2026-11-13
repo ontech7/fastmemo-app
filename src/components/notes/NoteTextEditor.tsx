@@ -5,6 +5,7 @@ import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import LinkDialog from "@/components/notes/LinkDialog";
 import NoteImageMenu from "@/components/notes/NoteImageMenu";
 import NoteLinkMenu from "@/components/notes/NoteLinkMenu";
+import NoteLinkPicker from "@/components/notes/NoteLinkPicker";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
 import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
@@ -30,12 +31,19 @@ import type {
   EditorImage,
   EditorLink,
   EditorLinkStart,
+  EditorPicker,
   EditorState,
   FormatCommand,
   ImageChange,
   LineType,
+  PickerKey,
 } from "@/libs/richTextEditor";
 import { normalizeLink } from "@/libs/links";
+import { storeUnlockedNote } from "@/libs/registry";
+import { pickNotes } from "@/libs/search/picker";
+import { useRouter } from "@/hooks/useRouter";
+import { useSecret } from "@/hooks/useSecret";
+import { getNotesFilteredPerCategory } from "@/slicers/notesSlice";
 import { reportPageError } from "@/libs/diagnostics";
 import { PAGE_ERROR_MESSAGE, PAGE_ERROR_SCRIPT } from "@/libs/pageErrors";
 import { reducePhoto } from "@/libs/reducePhoto";
@@ -51,6 +59,13 @@ import {
   LINK_START_COMMAND,
   LINK_START_MESSAGE,
   linkCommand,
+  NOTE_LINK_MESSAGE,
+  noteLinkCommand,
+  PICK_START_COMMAND,
+  PICKER_CLOSE_COMMAND,
+  PICKER_KEY_MESSAGE,
+  PICKER_MESSAGE,
+  pickerShownCommand,
   RICH_TEXT_SCRIPT,
   RICH_TEXT_STYLE,
   RULE_COMMAND,
@@ -61,10 +76,11 @@ import {
 import {
   selectorAIAssistant,
   selectorDeveloperMode,
+  selectorShowHidden,
   selectorVoiceRecognition,
   selectorWebhook_addTextNote,
 } from "@/slicers/settingsSlice";
-import type { TextNote } from "@/types";
+import type { Note, TextNote } from "@/types";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
 import { openUrl } from "@/utils/openUrl";
 import { toast } from "@/utils/toast";
@@ -163,6 +179,12 @@ const PLAIN_STATE: EditorState = {
   center: false,
   link: false,
 };
+
+/** Every live note, as the home orders them: what a link to a note is picked from, and followed to. */
+const selectLinkableNotes = getNotesFilteredPerCategory(
+  { order: 0, name: "All", icon: "", index: true, selected: false },
+  true
+);
 
 export default function NoteTextEditor({ initialNote }: Props) {
   const { t } = useTranslation();
@@ -343,6 +365,15 @@ export default function NoteTextEditor({ initialNote }: Props) {
   // What the page says about the caret (STATE_MESSAGE): the bar lights its controls by it.
   const [formatState, setFormatState] = useState<EditorState>(PLAIN_STATE);
   const formatBarRef = useRef<TextFormatBarRef>(null);
+  // The picker of a link to a note: open from [[ in the text, or from the bar's menu with a field of its own.
+  const [picker, setPicker] = useState<{ query: string; fromMenu: boolean } | null>(null);
+  const [pickerSelected, setPickerSelected] = useState(0);
+  // The page's messages about links to other notes, handled by the latest render (they read its notes and picker).
+  const noteLinkEventsRef = useRef({
+    trigger: (_: EditorPicker) => {},
+    key: (_: PickerKey) => {},
+    follow: (_: string) => {},
+  });
 
   const onEditorMessage = useCallback((message: { type?: string; data?: unknown }) => {
     if (message?.type === RELOAD_SHOWN) reloadsShownRef.current = message.data as number;
@@ -363,6 +394,9 @@ export default function NoteTextEditor({ initialNote }: Props) {
       else editorBoxRef.current?.measureInWindow((x, y) => setTappedLink({ link, at: { x: x + link.x, y: y + link.y } }));
     }
     if (message?.type === LINK_START_MESSAGE) setLinkDialog({ ...(message.data as EditorLinkStart), key: Date.now() });
+    if (message?.type === PICKER_MESSAGE) noteLinkEventsRef.current.trigger(message.data as EditorPicker);
+    if (message?.type === PICKER_KEY_MESSAGE) noteLinkEventsRef.current.key(message.data as PickerKey);
+    if (message?.type === NOTE_LINK_MESSAGE && typeof message.data === "string") noteLinkEventsRef.current.follow(message.data);
     if (message?.type === IMAGE_FAILED_MESSAGE) toast(i18n.t("note.image.failed"));
     if (message?.type === PAGE_ERROR_MESSAGE) reportPageError("richtext", message.data);
   }, []);
@@ -421,10 +455,97 @@ export default function NoteTextEditor({ initialNote }: Props) {
     (kind: InsertKind) => {
       if (kind === "image") pickImage();
       else if (kind === "link") sendToPage(LINK_START_COMMAND);
-      else if (kind === "rule") sendToPage(RULE_COMMAND);
+      else if (kind === "noteLink") {
+        // The picker's field takes the focus: the page remembers the caret first.
+        richTextEditor.current?.command(PICK_START_COMMAND);
+        setPicker({ query: "", fromMenu: true });
+        setPickerSelected(0);
+      } else if (kind === "rule") sendToPage(RULE_COMMAND);
     },
     [pickImage, sendToPage]
   );
+
+  // Links to another note (spec B.4): the picker, open from [[ in the text or from the bar's menu, and a tap on a link.
+  const router = useRouter();
+  const { unlockWithSecret } = useSecret();
+  const showHidden = useSelector(selectorShowHidden);
+  const linkableNotes = useSelector(selectLinkableNotes);
+  const picked = useMemo(
+    () => (picker ? pickNotes(linkableNotes, picker.query, { excludeId: note.id, showHidden }) : []),
+    [picker, linkableNotes, note.id, showHidden]
+  );
+  // The page hands the arrows, Enter and Esc over only while there are rows to move through.
+  const rowsShown = !!picker && !picker.fromMenu && picked.length > 0;
+  useEffect(() => {
+    richTextEditor.current?.command(pickerShownCommand(rowsShown));
+  }, [rowsShown]);
+
+  const pickNote = useCallback(
+    (target: Note) => {
+      setPicker(null);
+      sendToPage(noteLinkCommand(target.id, isStringEmpty(target.title) ? t("empty_title") : target.title));
+    },
+    [sendToPage, t]
+  );
+  const closePicker = useCallback(() => {
+    setPicker(null);
+    richTextEditor.current?.command(PICKER_CLOSE_COMMAND);
+  }, []);
+  const onPickerKey = useCallback(
+    (key: PickerKey) => {
+      if (key === "up") setPickerSelected((i) => Math.max(0, i - 1));
+      else if (key === "down") setPickerSelected((i) => Math.min(picked.length - 1, i + 1));
+      else if (key === "escape") closePicker();
+      else if (picked[pickerSelected]) pickNote(picked[pickerSelected]);
+    },
+    [picked, pickerSelected, pickNote, closePicker]
+  );
+  const onPickerSearch = useCallback((query: string) => {
+    setPicker({ query, fromMenu: true });
+    setPickerSelected(0);
+  }, []);
+
+  // A tap on a note link: the note it names, if this device still has it; the code first for a hidden one while hidden
+  // notes aren't shown (a protected one is asked by its own screen). Back returns here.
+  const followNoteLink = useCallback(
+    (id: string) => {
+      flushNote();
+      const target = linkableNotes.find((n) => n.id === id);
+      if (!target) return toast(t("note.not_found"));
+      if (target.hidden && !showHidden) {
+        unlockWithSecret((codeRouter, isFingerprint) => {
+          if (target.locked) storeUnlockedNote(id);
+          if (isFingerprint) codeRouter.push(`/notes/${id}`);
+          else codeRouter.replace(`/notes/${id}`);
+        }, "none");
+        return;
+      }
+      router.push(`/notes/${id}`);
+    },
+    [flushNote, linkableNotes, showHidden, unlockWithSecret, router, t]
+  );
+
+  useEffect(() => {
+    noteLinkEventsRef.current = {
+      trigger: (data) => {
+        setPicker((current) => (current?.fromMenu ? current : data.open ? { query: data.query, fromMenu: false } : null));
+        setPickerSelected(0);
+      },
+      key: onPickerKey,
+      follow: followNoteLink,
+    };
+  }, [onPickerKey, followNoteLink]);
+
+  const pickerView =
+    picker && (picked.length > 0 || picker.fromMenu) ? (
+      <NoteLinkPicker
+        notes={picked}
+        query={picker.query}
+        selected={pickerSelected}
+        onPick={pickNote}
+        search={picker.fromMenu ? { value: picker.query, onChange: onPickerSearch, onKey: onPickerKey } : undefined}
+      />
+    ) : undefined;
 
   const confirmLink = useCallback(
     (href: string, text: string) => {
@@ -606,6 +727,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
               onLine={onLine}
               onFormat={onFormat}
               onInsert={onInsert}
+              above={pickerView}
             />
           )}
         </KeyboardAvoidingView>
@@ -623,7 +745,14 @@ export default function NoteTextEditor({ initialNote }: Props) {
                 <DismissKeyboardButton showKeyboardDismiss onPress={() => richTextEditor.current?.dismissKeyboard()} />
               </View>
             )}
-            <TextFormatBar ref={formatBarRef} state={formatState} onLine={onLine} onFormat={onFormat} onInsert={onInsert} />
+            <TextFormatBar
+              ref={formatBarRef}
+              state={formatState}
+              onLine={onLine}
+              onFormat={onFormat}
+              onInsert={onInsert}
+              above={pickerView}
+            />
           </View>
         </KeyboardStickyView>
       )}

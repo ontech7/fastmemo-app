@@ -212,6 +212,7 @@ const de = {
     },
   },
   note: {
+    not_found: "Notiz nicht gefunden",
     format: {
       undo: "Rückgängig",
       redo: "Wiederholen",
@@ -249,6 +250,7 @@ const de = {
       open: "Öffnen",
       edit: "Bearbeiten",
       remove: "Link entfernen",
+      search_notes: "Notiz suchen…",
     },
     update_to_open: "Aktualisiere Fast Memo, um diese Notiz zu öffnen",
     duplicated: "Notiz dupliziert",

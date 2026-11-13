@@ -212,6 +212,7 @@ const ja = {
     },
   },
   note: {
+    not_found: "メモが見つかりません",
     format: {
       undo: "元に戻す",
       redo: "やり直す",
@@ -249,6 +250,7 @@ const ja = {
       open: "開く",
       edit: "編集",
       remove: "リンクを削除",
+      search_notes: "メモを検索…",
     },
     update_to_open: "このノートを開くには Fast Memo を更新してください",
     duplicated: "ノートを複製しました",
