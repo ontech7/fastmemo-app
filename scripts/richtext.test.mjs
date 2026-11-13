@@ -30,7 +30,7 @@ const tmp = mkdtempSync(join(os.tmpdir(), "richtext-"));
 const entry = join(tmp, "entry.mjs");
 writeFileSync(
   entry,
-  `export { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE, COUNT_MESSAGE, STATE_MESSAGE, TOUCH_MESSAGE, formatCommand, imageCommand } from ${JSON.stringify(join(root, "src/libs/richTextEditor.ts"))};
+  `export { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE, COUNT_MESSAGE, STATE_MESSAGE, TOUCH_MESSAGE, formatCommand, imageCommand, LINK_MESSAGE, LINK_START_MESSAGE, LINK_START_COMMAND, LINK_CANCEL_COMMAND, linkCommand, UNLINK_COMMAND } from ${JSON.stringify(join(root, "src/libs/richTextEditor.ts"))};
    export { getTextLength } from ${JSON.stringify(join(root, "src/utils/string.ts"))};
    export { PAGE_ERROR_SCRIPT, PAGE_ERROR_MESSAGE } from ${JSON.stringify(join(root, "src/libs/pageErrors.ts"))};
    export { EDITOR_SANITIZE_JS } from ${JSON.stringify(join(root, "src/generated/editor-sanitize.ts"))};
@@ -71,6 +71,12 @@ const {
   formatCommand,
   getTextLength,
   imageCommand,
+  LINK_MESSAGE,
+  LINK_START_COMMAND,
+  LINK_CANCEL_COMMAND,
+  LINK_START_MESSAGE,
+  linkCommand,
+  UNLINK_COMMAND,
   STATE_MESSAGE,
   TOUCH_MESSAGE,
 } = await import(pathToFileURL(join(tmp, "page.bundle.mjs")));
@@ -1454,6 +1460,159 @@ await post({ type: "content", name: "setDisable", data: false });
     await sleep(120);
   }
   check("a pointerdown on the text posts a touch", (await touches()) >= 1, "no touch");
+}
+
+// 10. Links (spec B.3): made from the dialog's answer, edited whole, removed; a click never navigates, it asks the app.
+{
+  const listen = () =>
+    evaluate(`(() => {
+      window.__links = [];
+      window.addEventListener("message", (e) => {
+        try { const m = JSON.parse(e.data); if (m.type === ${JSON.stringify(LINK_MESSAGE)} || m.type === ${JSON.stringify(LINK_START_MESSAGE)} || m.type === ${JSON.stringify(STATE_MESSAGE)}) window.__links.push(m); } catch (error) {}
+      });
+    })()`);
+  const got = async (type) => {
+    await sleep(150);
+    return evaluate(`window.__links.splice(0).filter((m) => m.type === ${JSON.stringify(type)}).map((m) => m.data)`);
+  };
+  const cmd = (script) => post({ type: "content", name: "command", data: script });
+  const blur = () =>
+    evaluate(`(() => { document.querySelector(".pell-content").blur(); getSelection().removeAllRanges(); })()`);
+  const sanitizedSame = async (name) => {
+    const h = (await state()).html;
+    check(`${name}, the sanitizer keeps it`, (await evaluate(`window.__fmSanitize(${JSON.stringify(h)})`)) === h, h);
+  };
+
+  await open("<div>alpha one</div>");
+  await listen();
+  await select({ text: "one" });
+  await cmd(LINK_START_COMMAND);
+  let answer = await got(LINK_START_MESSAGE);
+  check(
+    "linkStart answers the selected text",
+    JSON.stringify(answer) === JSON.stringify([{ text: "one", href: null }]),
+    JSON.stringify(answer)
+  );
+  await blur();
+  await cmd(linkCommand("https://example.com", "one"));
+  check(
+    "link() writes the link on the remembered selection",
+    (await state()).html === '<div>alpha <a href="https://example.com">one</a></div>',
+    (await state()).html
+  );
+  await sanitizedSame("a link");
+  await press("undo");
+  check("undo takes the link away", (await state()).html === "<div>alpha one</div>", (await state()).html);
+
+  await select({ text: "alpha" });
+  await cmd(LINK_START_COMMAND);
+  await blur();
+  await cmd(LINK_CANCEL_COMMAND);
+  check(
+    "linkCancel puts the remembered selection back, focused",
+    (await evaluate(
+      `getSelection().toString() + "|" + (document.activeElement === document.querySelector(".pell-content"))`
+    )) === "alpha|true",
+    await evaluate(`getSelection().toString() + "|" + (document.activeElement === document.querySelector(".pell-content"))`)
+  );
+  await cmd(LINK_CANCEL_COMMAND);
+  check("linkCancel twice changes nothing", (await state()).html === "<div>alpha one</div>", (await state()).html);
+
+  await open('<div>alpha <a href="https://example.com">one</a></div>');
+  await listen();
+  await select({ caret: "one", at: 1 });
+  let st = (await got(STATE_MESSAGE)).pop();
+  check("the state says the caret is in a link", st?.link === true, JSON.stringify(st));
+  check("a link's own underline doesn't light the underline control", st?.underline === false, JSON.stringify(st));
+  await cmd(LINK_START_COMMAND);
+  answer = await got(LINK_START_MESSAGE);
+  check(
+    "linkStart in a link answers its address and text",
+    JSON.stringify(answer) === JSON.stringify([{ text: "one", href: "https://example.com" }]),
+    JSON.stringify(answer)
+  );
+  await blur();
+  await cmd(linkCommand("https://example.org", "uno"));
+  check(
+    "link() replaces the link whole",
+    (await state()).html === '<div>alpha <a href="https://example.org">uno</a></div>',
+    (await state()).html
+  );
+  await select({ caret: "uno", at: 1 });
+  await cmd(UNLINK_COMMAND);
+  check("unlink() keeps the text", (await state()).html === "<div>alpha uno</div>", (await state()).html);
+  await press("undo");
+  check(
+    "undo brings the link back",
+    (await state()).html === '<div>alpha <a href="https://example.org">uno</a></div>',
+    (await state()).html
+  );
+  await press("undo");
+  check(
+    "undo again: the link as it was before its edit",
+    (await state()).html === '<div>alpha <a href="https://example.com">one</a></div>',
+    (await state()).html
+  );
+
+  await open("<div>alpha one</div>");
+  await select(end("one"));
+  await cmd(LINK_START_COMMAND);
+  await cmd(linkCommand("https://example.com/?a=1&b=2", "x < y & z"));
+  check(
+    "a text with < and & is written escaped",
+    (await state()).html === '<div>alpha one<a href="https://example.com/?a=1&amp;b=2">x &lt; y &amp; z</a></div>',
+    (await state()).html
+  );
+  await sanitizedSame("an escaped link");
+
+  await open("<pre>alpha one</pre>");
+  await select({ text: "one" });
+  await cmd(LINK_START_COMMAND);
+  await cmd(linkCommand("https://example.com", "one"));
+  check("no link in a code block", (await state()).html === "<pre>alpha one</pre>", (await state()).html);
+
+  await open('<div>alpha <u><a href="https://example.com">one</a></u></div>');
+  await listen();
+  await select({ caret: "one", at: 1 });
+  st = (await got(STATE_MESSAGE)).pop();
+  check("an underlined link lights the underline control", st?.underline === true, JSON.stringify(st));
+
+  const clickLink = async (modifiers = 0) => {
+    const [lx, ly] = await evaluate(
+      `(() => { const r = document.querySelector(".pell-content a").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`
+    );
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: lx, y: ly, button: "left", clickCount: 1, modifiers });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: lx, y: ly, button: "left", clickCount: 1, modifiers });
+    return got(LINK_MESSAGE);
+  };
+  await open('<div>alpha <a href="https://example.com">one</a></div>');
+  await listen();
+  const where = await evaluate("location.href");
+  let clicked = await clickLink();
+  check(
+    "a click on a link asks the app, not direct",
+    clicked.length === 1 &&
+      clicked[0].href === "https://example.com" &&
+      clicked[0].text === "one" &&
+      clicked[0].editable === true &&
+      clicked[0].direct === false,
+    JSON.stringify(clicked)
+  );
+  check("the page doesn't navigate", (await evaluate("location.href")) === where, await evaluate("location.href"));
+  clicked = await clickLink(mac ? 4 : 2);
+  check("Ctrl/Cmd + click: direct", clicked.length === 1 && clicked[0].direct === true, JSON.stringify(clicked));
+  await post({ type: "content", name: "setDisable", data: true });
+  clicked = await clickLink();
+  check(
+    "in a read-only note: direct",
+    clicked.length === 1 && clicked[0].direct === true && clicked[0].editable === false,
+    JSON.stringify(clicked)
+  );
+  await post({ type: "content", name: "setDisable", data: false });
+  await open('<div>alpha <a href="#fm-note-abc" contenteditable="false">Altra</a></div>');
+  await listen();
+  clicked = await clickLink();
+  check("a note link posts no web link message", !clicked.length, JSON.stringify(clicked));
 }
 
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");

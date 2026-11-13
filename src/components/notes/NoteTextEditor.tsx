@@ -2,7 +2,9 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import DismissKeyboardButton from "@/components/buttons/DismissKeyboardButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
+import LinkDialog from "@/components/notes/LinkDialog";
 import NoteImageMenu from "@/components/notes/NoteImageMenu";
+import NoteLinkMenu from "@/components/notes/NoteLinkMenu";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
 import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
@@ -24,7 +26,16 @@ import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
 import i18n from "@/libs/i18n";
-import type { EditorImage, EditorState, FormatCommand, ImageChange, LineType } from "@/libs/richTextEditor";
+import type {
+  EditorImage,
+  EditorLink,
+  EditorLinkStart,
+  EditorState,
+  FormatCommand,
+  ImageChange,
+  LineType,
+} from "@/libs/richTextEditor";
+import { normalizeLink } from "@/libs/links";
 import { reportPageError } from "@/libs/diagnostics";
 import { PAGE_ERROR_MESSAGE, PAGE_ERROR_SCRIPT } from "@/libs/pageErrors";
 import { reducePhoto } from "@/libs/reducePhoto";
@@ -35,11 +46,17 @@ import {
   IMAGE_MESSAGE,
   imageCommand,
   lineCommand,
+  LINK_CANCEL_COMMAND,
+  LINK_MESSAGE,
+  LINK_START_COMMAND,
+  LINK_START_MESSAGE,
+  linkCommand,
   RICH_TEXT_SCRIPT,
   RICH_TEXT_STYLE,
   RULE_COMMAND,
   STATE_MESSAGE,
   TOUCH_MESSAGE,
+  UNLINK_COMMAND,
 } from "@/libs/richTextEditor";
 import {
   selectorAIAssistant,
@@ -49,6 +66,7 @@ import {
 } from "@/slicers/settingsSlice";
 import type { TextNote } from "@/types";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
+import { openUrl } from "@/utils/openUrl";
 import { toast } from "@/utils/toast";
 import { voiceTextToHtml } from "@/utils/voiceTranscript";
 import * as ImagePicker from "expo-image-picker";
@@ -207,6 +225,10 @@ export default function NoteTextEditor({ initialNote }: Props) {
   // An image tapped in the editor, and where on screen: its menu is open.
   const [tappedImage, setTappedImage] = useState<{ image: EditorImage; at: { x: number; y: number } } | null>(null);
   const editorBoxRef = useRef<ViewInstance>(null);
+  // A link tapped in the editor, and where on screen: its menu is open.
+  const [tappedLink, setTappedLink] = useState<{ link: EditorLink; at: { x: number; y: number } } | null>(null);
+  // The link dialog, open with what it starts from; `key` mounts it anew for each link.
+  const [linkDialog, setLinkDialog] = useState<(EditorLinkStart & { key: number }) | null>(null);
   // The RichEditor (a WebView) is mounted immediately into a reserved, flex-sized
   // box — never gated behind an idle timer — so the editor is present as the
   // screen fades in instead of flashing empty and popping in later. The WebView
@@ -334,6 +356,13 @@ export default function NoteTextEditor({ initialNote }: Props) {
       // The page gives the point in itself: the editor's box is where the page is on screen.
       editorBoxRef.current?.measureInWindow((x, y) => setTappedImage({ image, at: { x: x + image.x, y: y + image.y } }));
     }
+    if (message?.type === LINK_MESSAGE) {
+      const link = message.data as EditorLink;
+      // Read-only, or a Cmd/Ctrl click: the link opens at once. Only the system ever opens it, never the page.
+      if (link.direct) openLink(link.href);
+      else editorBoxRef.current?.measureInWindow((x, y) => setTappedLink({ link, at: { x: x + link.x, y: y + link.y } }));
+    }
+    if (message?.type === LINK_START_MESSAGE) setLinkDialog({ ...(message.data as EditorLinkStart), key: Date.now() });
     if (message?.type === IMAGE_FAILED_MESSAGE) toast(i18n.t("note.image.failed"));
     if (message?.type === PAGE_ERROR_MESSAGE) reportPageError("richtext", message.data);
   }, []);
@@ -342,6 +371,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
     richTextEditor.current?.command(imageCommand(image, change, value));
   }, []);
   const closeImageMenu = useCallback(() => setTappedImage(null), []);
+  const closeLinkMenu = useCallback(() => setTappedLink(null), []);
 
   const onEditorInitialized = useCallback(() => {
     editorReadyRef.current = true;
@@ -390,10 +420,27 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const onInsert = useCallback(
     (kind: InsertKind) => {
       if (kind === "image") pickImage();
+      else if (kind === "link") sendToPage(LINK_START_COMMAND);
       else if (kind === "rule") sendToPage(RULE_COMMAND);
     },
     [pickImage, sendToPage]
   );
+
+  const confirmLink = useCallback(
+    (href: string, text: string) => {
+      setLinkDialog(null);
+      sendToPage(linkCommand(href, text));
+    },
+    [sendToPage]
+  );
+  const cancelLink = useCallback(() => {
+    setLinkDialog(null);
+    richTextEditor.current?.command(LINK_CANCEL_COMMAND);
+  }, []);
+  // The caret is in the tapped link (the tap put it there): the dialog edits that link.
+  const editTappedLink = useCallback(() => sendToPage(LINK_START_COMMAND), [sendToPage]);
+  const unlinkTapped = useCallback(() => sendToPage(UNLINK_COMMAND), [sendToPage]);
+  const openTappedLink = useCallback(() => tappedLink && openLink(tappedLink.link.href), [tappedLink]);
 
   // Built only while the find bar is open: stripping a long note at every pause costs for nothing otherwise.
   const plainNoteText = useMemo(() => (showFindReplace ? stripHtml(note.text) : ""), [showFindReplace, note.text]);
@@ -588,9 +635,36 @@ export default function NoteTextEditor({ initialNote }: Props) {
         onClose={closeImageMenu}
       />
 
+      <NoteLinkMenu
+        link={tappedLink?.link ?? null}
+        at={tappedLink?.at ?? null}
+        onOpen={openTappedLink}
+        onEdit={editTappedLink}
+        onRemove={unlinkTapped}
+        onClose={closeLinkMenu}
+      />
+
+      {linkDialog && (
+        <LinkDialog
+          key={linkDialog.key}
+          visible
+          initialText={linkDialog.text}
+          initialAddress={linkDialog.href ?? ""}
+          onConfirm={confirmLink}
+          onClose={cancelLink}
+        />
+      )}
+
       <EditorTourTip />
     </View>
   );
+}
+
+/** A link's address, opened by the system when it is one a note may hold: the page never opens anything itself. */
+function openLink(href: string) {
+  const link = normalizeLink(href);
+  if (link) openUrl(link);
+  else toast(i18n.t("note.link.invalid"));
 }
 
 const styles = StyleSheet.create({

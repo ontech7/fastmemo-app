@@ -62,8 +62,8 @@ interface Entry {
   onPress: () => void;
 }
 
-/** The inserts the editor has wired: a link and a link to a note come with Tasks 13 and 14. */
-const WIRED_INSERTS: readonly InsertKind[] = ["image", "photo", "rule"];
+/** The inserts the editor has wired: a link to a note comes with Task 14. */
+const WIRED_INSERTS: readonly InsertKind[] = ["image", "photo", "link", "rule"];
 
 /** The bar's own height, menus never counted: the editor keeps this much room for it above the keyboard. */
 export const TEXT_FORMAT_BAR_HEIGHT = 44 + 2 * PADDING_MARGIN.sm + 1;

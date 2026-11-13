@@ -20,6 +20,7 @@ await build({
       export * from "@/libs/quickNoteDraft";
       export * from "@/utils/noteEmpty";
       export * from "@/utils/noteType";
+      export * from "@/libs/links";
     `,
     resolveDir: src,
     loader: "ts",
@@ -143,6 +144,18 @@ console.log("\nisKnownNoteType");
   const { isKnownNoteType } = M;
   ok("the four types and a missing one are known", ["text", "todo", "kanban", "code", undefined, ""].every(isKnownNoteType));
   ok("anything else is not", !isKnownNoteType("board") && !isKnownNoteType(null) && !isKnownNoteType(7));
+}
+
+console.log("\nlinks a text note may hold");
+{
+  const { normalizeLink, noteLinkHref, noteLinkId } = M;
+  ok("no scheme gets https", normalizeLink("  example.com/a ") === "https://example.com/a" && normalizeLink("localhost:3000/x") === "https://localhost:3000/x");
+  ok("the four schemes, any case", ["https://a.it", "HTTP://a.it", "mailto:a@b.it", "tel:+39021234"].every((l) => normalizeLink(l) === l));
+  ok("a bare email address", normalizeLink("anna@example.com") === "mailto:anna@example.com");
+  ok("everything else is refused", ["javascript:alert(1)", "file:///etc/passwd", "ftp://a.it", "fastmemoapp://notes/1", "FastMemoApp://x", "data:text/html,x", "intent://x", "", "   ", "due parole"].every((l) => normalizeLink(l) === null));
+  ok("a user and password in the address are refused", normalizeLink("user:password@host") === null && normalizeLink("https://user:pw@a.it/") === null);
+  ok("note links", noteLinkHref("abc-1") === "#fm-note-abc-1" && noteLinkId("#fm-note-abc-1") === "abc-1" && noteLinkId("https://a.it/#fm-note-x") === null && noteLinkId("#other") === null && noteLinkId("#fm-note-") === null);
+  ok("a note id is 1 to 80 of A-Z a-z 0-9 ~ _ -", noteLinkId("#fm-note-" + "a".repeat(80)) === "a".repeat(80) && noteLinkId("#fm-note-" + "a".repeat(81)) === null && noteLinkId("#fm-note-a/b") === null);
 }
 
 void storage;

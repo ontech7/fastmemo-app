@@ -10,6 +10,8 @@ export interface BlockColors {
   line: string;
   /** An empty box. */
   boxFill: string;
+  /** A link's text. */
+  link: string;
 }
 
 /** The tick of a ticked box: white, on the accent. */
@@ -40,5 +42,6 @@ export function noteBlockCss(colors: BlockColors): string {
     }
     .x-todo-box input:checked { background: ${colors.accent} ${TICK} center / 12px no-repeat; border-color: ${colors.accent}; }
     .x-todo li:has(input:checked) { color: ${colors.muted}; text-decoration-line: line-through; }
+    a[href] { color: ${colors.link}; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
   `;
 }

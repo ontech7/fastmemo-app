@@ -40,6 +40,34 @@ export const STATE_MESSAGE = "FASTMEMO_STATE";
 export const TOUCH_MESSAGE = "FASTMEMO_TOUCH";
 export const formatCommand = (command: FormatCommand) => `window.__fm && window.__fm.run(${JSON.stringify(command)})`;
 
+/** A link was tapped or clicked. `direct`: open it now (a read-only note, or Ctrl/Cmd + click). */
+export const LINK_MESSAGE = "FASTMEMO_LINK";
+export interface EditorLink {
+  href: string;
+  text: string;
+  /** Where it was tapped, in the editor. */
+  x: number;
+  y: number;
+  editable: boolean;
+  direct: boolean;
+}
+/** Answer to `__fm.linkStart()`: what the dialog starts from. */
+export const LINK_START_MESSAGE = "FASTMEMO_LINK_START";
+export interface EditorLinkStart {
+  text: string;
+  /** The address of the link the caret is in, which is then what gets edited. */
+  href: string | null;
+}
+/** Remembers the selection (the dialog takes the focus) and answers with LINK_START_MESSAGE. */
+export const LINK_START_COMMAND = "window.__fm && window.__fm.linkStart()";
+/** A link with this address and text on the remembered selection, or in place of the link being edited; literals only. */
+export const linkCommand = (href: string, text: string) =>
+  `window.__fm && window.__fm.link(${JSON.stringify(href)}, ${JSON.stringify(text)})`;
+/** The dialog was closed with no link: the remembered selection is put back. */
+export const LINK_CANCEL_COMMAND = "window.__fm && window.__fm.linkCancel()";
+/** The caret's link taken away, its text kept. */
+export const UNLINK_COMMAND = "window.__fm && window.__fm.unlink()";
+
 /** The text editor page's look (RichEditor's `editorStyle`). */
 export const RICH_TEXT_STYLE = {
   backgroundColor: "transparent",
@@ -61,7 +89,7 @@ export const RICH_TEXT_STYLE = {
     pre pre { margin: 0; padding: 0; background: none; }
     h1:empty, pre:empty { display: none; }
     pre span { font-family: inherit !important; background-color: transparent !important; white-space: inherit !important; }
-    ${noteBlockCss({ text: COLOR.softWhite, muted: COLOR.textSecondary, accent: COLOR.accentMuted, line: GLASS.border, boxFill: "transparent" })}
+    ${noteBlockCss({ text: COLOR.softWhite, muted: COLOR.textSecondary, accent: COLOR.accentMuted, line: GLASS.border, boxFill: "transparent", link: COLOR.accentSoft })}
     ${SCROLLBAR_CSS}
   `,
   // Horizontal inset lives here (not on containerStyle) so it matches the header
@@ -852,6 +880,92 @@ export const RICH_TEXT_SCRIPT = String.raw`
     return nativeExec(command, ui, value);
   };
 
+  // Links (LINK_START_MESSAGE, LINK_MESSAGE). The dialog takes the focus, so linkStart() remembers the selection, and
+  // link() puts it back before writing; a link is never made in a code block. A note link (#fm-note-) is another thing.
+  var isNoteLink = function (a) { return (a.getAttribute("href") || "").indexOf("#fm-note-") === 0; };
+  var webLinkAt = function (node) {
+    var a = closest(node, "a[href]");
+    return a && !isNoteLink(a) ? a : null;
+  };
+  var linkRange = null, linkEdited = null;
+  var linkStart = function () {
+    var s = selection();
+    if (!s.rangeCount || !content().isContentEditable) return;
+    var range = s.getRangeAt(0);
+    if (closest(range.startContainer, "pre")) return;
+    var a = webLinkAt(range.startContainer);
+    linkEdited = a;
+    linkRange = range.cloneRange();
+    post("${LINK_START_MESSAGE}", a ? { text: a.textContent, href: a.getAttribute("href") } : { text: s.toString(), href: null });
+  };
+  // The selected text made a link is the browser's (createLink); a link with other text, or one edited, is the page's own
+  // change (insertHTML and unlink leave a font-size span and turn spaces into &nbsp;).
+  var caretAfter = function (node) {
+    var r = $.createRange();
+    r.setStartAfter(node);
+    r.collapse(true);
+    select(r);
+  };
+  var link = function (href, text) {
+    if (!linkRange || !content().isContentEditable) return;
+    var range = linkRange, edited = linkEdited;
+    linkRange = linkEdited = null;
+    if (!content().contains(range.startContainer) || closest(range.startContainer, "pre")) return;
+    content().focus();
+    if (edited && edited.isConnected) {
+      return pageChange(function () {
+        edited.setAttribute("href", href);
+        if (edited.textContent !== text) {
+          while (edited.firstChild) edited.removeChild(edited.firstChild);
+          edited.appendChild($.createTextNode(text));
+        }
+        caretAfter(edited);
+      });
+    }
+    select(range);
+    if (!range.collapsed && range.toString() === text) return exec("createLink", href);
+    pageChange(function () {
+      var a = $.createElement("a");
+      a.setAttribute("href", href);
+      a.textContent = text;
+      range.deleteContents();
+      range.insertNode(a);
+      caretAfter(a);
+    });
+  };
+  var linkCancel = function () {
+    var range = linkRange;
+    linkRange = linkEdited = null;
+    if (!range || !content().contains(range.startContainer)) return;
+    content().focus();
+    select(range);
+  };
+  var unlink = function () {
+    var s = selection(), a = s.rangeCount && webLinkAt(s.getRangeAt(0).startContainer);
+    if (!a || !content().isContentEditable) return;
+    pageChange(function () {
+      while (a.firstChild) a.parentNode.insertBefore(a.firstChild, a);
+      a.remove();
+    }, true);
+  };
+  // A click or tap on a link never navigates: the app opens it, or shows its menu. A note link is handled apart.
+  $.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[href]");
+    if (!a || !content().contains(a)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (isNoteLink(a)) return;
+    var editable = content().isContentEditable;
+    post("${LINK_MESSAGE}", {
+      href: a.getAttribute("href"),
+      text: a.textContent,
+      x: e.clientX,
+      y: e.clientY,
+      editable: editable,
+      direct: !editable || (MAC ? e.metaKey : e.ctrlKey),
+    });
+  }, true);
+
   // The bar's commands by name (FormatCommand): nothing else, and nothing in a read-only note.
   var COMMANDS = ["bold", "italic", "underline", "strikeThrough", "subscript", "superscript", "justifyLeft", "justifyCenter", "undo", "redo"];
   var run = function (command) {
@@ -873,7 +987,8 @@ export const RICH_TEXT_SCRIPT = String.raw`
       line: typeAt(node),
       bold: queryState("bold"),
       italic: queryState("italic"),
-      underline: queryState("underline"),
+      // A link is drawn underlined, which the browser takes for underline: in a link only a u element counts.
+      underline: link ? !!closest(node, "u") : queryState("underline"),
       strike: queryState("strikeThrough"),
       sub: queryState("subscript"),
       sup: queryState("superscript"),
@@ -911,6 +1026,10 @@ export const RICH_TEXT_SCRIPT = String.raw`
     insertImage: thenState(insertImage),
     image: thenState(image),
     run: thenState(run),
+    linkStart: linkStart,
+    link: thenState(link),
+    linkCancel: linkCancel,
+    unlink: thenState(unlink),
     state: state,
   };
 })();
