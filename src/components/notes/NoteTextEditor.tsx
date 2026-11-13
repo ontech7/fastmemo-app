@@ -8,6 +8,8 @@ import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import FindReplaceBar from "@/components/notes/FindReplaceBar";
+import TextFormatBar, { TEXT_FORMAT_BAR_HEIGHT } from "@/components/notes/TextFormatBar";
+import type { InsertKind, TextFormatBarRef } from "@/components/notes/TextFormatBar";
 import { takeFindOnOpen } from "@/libs/search/findOnOpen";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
@@ -22,17 +24,22 @@ import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
 import { findCategoryByName, stripHtml } from "@/libs/ai";
 import i18n from "@/libs/i18n";
-import type { EditorImage, ImageChange } from "@/libs/richTextEditor";
+import type { EditorImage, EditorState, FormatCommand, ImageChange, LineType } from "@/libs/richTextEditor";
 import { reportPageError } from "@/libs/diagnostics";
 import { PAGE_ERROR_MESSAGE, PAGE_ERROR_SCRIPT } from "@/libs/pageErrors";
 import { reducePhoto } from "@/libs/reducePhoto";
 import {
   COUNT_MESSAGE,
+  formatCommand,
   IMAGE_FAILED_MESSAGE,
   IMAGE_MESSAGE,
   imageCommand,
+  lineCommand,
   RICH_TEXT_SCRIPT,
   RICH_TEXT_STYLE,
+  RULE_COMMAND,
+  STATE_MESSAGE,
+  TOUCH_MESSAGE,
 } from "@/libs/richTextEditor";
 import {
   selectorAIAssistant,
@@ -46,26 +53,18 @@ import { toast } from "@/utils/toast";
 import { voiceTextToHtml } from "@/utils/voiceTranscript";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
-import type { ReactElement } from "react";
-import { cloneElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { TouchableOpacityProps, ViewInstance } from "react-native";
+import type { ViewInstance } from "react-native";
 import { Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
 import { KeyboardAvoidingView, KeyboardStickyView } from "react-native-keyboard-controller";
-import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor";
+import { RichEditor } from "react-native-pell-rich-editor";
 import { useSelector } from "react-redux";
-import heading1Icon from "~/assets/actions/heading1.png";
 
 interface Props {
   initialNote: TextNote;
 }
-
-// First-paint guess for the formatting bar's height (dismiss button + RichToolbar),
-// replaced by the real measured height on its first layout. It only needs to be at
-// least the real height so the bar parks fully below the screen while the keyboard
-// is down (and so the editor reserves enough room for it while the keyboard is up).
-const BAR_HEIGHT_ESTIMATE = 100;
 
 // DOMPurify in the editor's page, before any note is loaded (LL-060). What guarantees it is `injectedJavaScript`: the
 // script ends the web iframe's page, and Android evaluates it when the page finished, ahead of the onLoad that sets the
@@ -73,24 +72,6 @@ const BAR_HEIGHT_ESTIMATE = 100;
 // `true;` ends what the phone's WebView evaluates.
 // The page's own errors are forwarded first, so a failure of the sanitizer or of the page reaches Sentry (ADR-035).
 const EDITOR_SANITIZE_SCRIPT = `${PAGE_ERROR_SCRIPT}\n${EDITOR_SANITIZE_JS}\ntrue;`;
-
-const TOOLBAR_LABEL_KEYS: Record<string, string> = {
-  [actions.undo]: "a11y.format.undo",
-  [actions.redo]: "a11y.format.redo",
-  [actions.insertImage]: "a11y.format.image",
-  [actions.heading1]: "a11y.format.heading",
-  [actions.setBold]: "a11y.format.bold",
-  [actions.setItalic]: "a11y.format.italic",
-  [actions.setStrikethrough]: "a11y.format.strikethrough",
-  [actions.setUnderline]: "a11y.format.underline",
-  [actions.alignLeft]: "a11y.format.align_left",
-  [actions.alignCenter]: "a11y.format.align_center",
-  [actions.setSubscript]: "a11y.format.subscript",
-  [actions.setSuperscript]: "a11y.format.superscript",
-  [actions.insertBulletsList]: "a11y.format.bullet_list",
-  [actions.insertOrderedList]: "a11y.format.numbered_list",
-  [actions.code]: "a11y.format.code",
-};
 
 // Run inside the editor's page (`command`, where `$` is its document) around a reload with another device's change:
 // a focused editor's caret keeps its place in the text, shifted by what changed before it, instead of jumping to the
@@ -152,53 +133,18 @@ const restoreCaret = (reload: number) => `${LINEAR_TEXT}
   else { s.selectAllChildren(c); s.collapseToEnd(); }
 `;
 
-// Every other action is a format the cursor's text either has or not.
-const NON_TOGGLE_ACTIONS = new Set<string>([actions.undo, actions.redo, actions.insertImage]);
-
-const renderToolbarAction = (
-  RichToolbar.prototype as unknown as {
-    _defaultRenderAction(action: string, selected: boolean): ReactElement;
-  }
-)._defaultRenderAction;
-const pressToolbarAction = (RichToolbar.prototype as unknown as { _onPress(action: string): void })._onPress;
-
-// The buttons that set what a line is, done by the page script (RICH_TEXT_SCRIPT) instead of pell.
-const LINE_TYPES: Record<string, string> = {
-  [actions.heading1]: "h1",
-  [actions.code]: "code",
-  [actions.insertBulletsList]: "ul",
-  [actions.insertOrderedList]: "ol",
+/** The bar's state before the page has said where the caret is: a plain text line. */
+const PLAIN_STATE: EditorState = {
+  line: "p",
+  bold: false,
+  italic: false,
+  underline: false,
+  strike: false,
+  sub: false,
+  sup: false,
+  center: false,
+  link: false,
 };
-
-// RichToolbar renders its action buttons with no role or name and has no prop to add them, so decorate the
-// buttons its default renderer returns (`_renderAction` calls it through `this`, so the override is used). It has no
-// prop for its list's padding either: the first and last buttons get a margin, so they don't touch the screen edges.
-// Nor for its own actions: the line types go to the page script.
-class LabeledRichToolbar extends RichToolbar {
-  _onPress(action: string) {
-    const editor = (this as unknown as { editor?: RichEditor }).editor;
-    const type = LINE_TYPES[action];
-    if (!type || !editor) return pressToolbarAction.call(this, action);
-    editor.focusContentEditor();
-    editor.command(`window.__fm && window.__fm.toggle(${JSON.stringify(type)})`);
-  }
-
-  _defaultRenderAction(action: string, selected: boolean) {
-    const isToggle = !NON_TOGGLE_ACTIONS.has(action);
-    const button = renderToolbarAction.call(this, action, selected) as ReactElement<TouchableOpacityProps>;
-    const list = this.props.actions ?? [];
-    return cloneElement(button, {
-      style: [
-        button.props.style,
-        action === list[0] && styles.firstToolbarAction,
-        action === list[list.length - 1] && styles.lastToolbarAction,
-      ],
-      accessibilityRole: isToggle ? "checkbox" : "button",
-      accessibilityLabel: TOOLBAR_LABEL_KEYS[action] ? i18n.t(TOOLBAR_LABEL_KEYS[action]) : undefined,
-      "aria-checked": isToggle ? selected : undefined,
-    });
-  }
-}
 
 export default function NoteTextEditor({ initialNote }: Props) {
   const { t } = useTranslation();
@@ -372,8 +318,15 @@ export default function NoteTextEditor({ initialNote }: Props) {
     [setText]
   );
 
+  // What the page says about the caret (STATE_MESSAGE): the bar lights its controls by it.
+  const [formatState, setFormatState] = useState<EditorState>(PLAIN_STATE);
+  const formatBarRef = useRef<TextFormatBarRef>(null);
+
   const onEditorMessage = useCallback((message: { type?: string; data?: unknown }) => {
     if (message?.type === RELOAD_SHOWN) reloadsShownRef.current = message.data as number;
+    if (message?.type === STATE_MESSAGE) setFormatState(message.data as EditorState);
+    // A touch on the text closes the bar's menu.
+    if (message?.type === TOUCH_MESSAGE) formatBarRef.current?.closeMenu();
     // The page counts what it shows after every change (typing, a reload, an undo): the app doesn't parse the note.
     if (message?.type === COUNT_MESSAGE && typeof message.data === "number") setNoteTextLength(message.data);
     if (message?.type === IMAGE_MESSAGE) {
@@ -407,11 +360,13 @@ export default function NoteTextEditor({ initialNote }: Props) {
   // (see render): it stays glued to the keyboard's top edge and slides off-screen
   // as the keyboard closes — entirely on the UI thread, with no keyboard listeners,
   // no per-keystroke re-render, and no display:none/flex toggle (that toggle is what
-  // made the toolbar pop in with a jump on note creation). `barHeight` is its measured
-  // height: the sticky view parks itself exactly that far below the screen when the
+  // made the toolbar pop in with a jump on note creation). `barHeight` is its height
+  // (the bar's own, which an open menu never changes, and on iOS the dismiss button
+  // above it): the sticky view parks itself exactly that far below the screen when the
   // keyboard is down, and the editor reserves the same amount of extra keyboard offset
-  // so the caret never lands behind the floating bar.
-  const [barHeight, setBarHeight] = useState(BAR_HEIGHT_ESTIMATE);
+  // so the caret never lands behind the floating bar. A read-only note has no bar.
+  const [dismissHeight, setDismissHeight] = useState(0);
+  const barHeight = note.readOnly ? 0 : TEXT_FORMAT_BAR_HEIGHT + dismissHeight;
 
   useFocusEffect(
     useCallback(() => {
@@ -421,32 +376,23 @@ export default function NoteTextEditor({ initialNote }: Props) {
     }, [])
   );
 
-  const toolbarActions = useMemo(
-    () => [
-      actions.undo,
-      actions.redo,
-      actions.insertImage,
-      actions.heading1,
-      actions.setBold,
-      actions.setItalic,
-      actions.setStrikethrough,
-      actions.setUnderline,
-      actions.alignLeft,
-      actions.alignCenter,
-      actions.setSubscript,
-      actions.setSuperscript,
-      actions.insertBulletsList,
-      actions.insertOrderedList,
-      actions.code,
-    ],
-    []
-  );
-
-  const toolbarIconMap = useMemo(
-    () => ({
-      heading1: heading1Icon,
-    }),
-    []
+  // The bar's choices go to the page, focused first only if it lost the focus: on Android focusContentEditor moves the
+  // focus through a hidden field first (the library can't tell the keyboard is up there), which drops the selection.
+  const pageFocusedRef = useRef(false);
+  const onPageFocus = useCallback(() => (pageFocusedRef.current = true), []);
+  const onPageBlur = useCallback(() => (pageFocusedRef.current = false), []);
+  const sendToPage = useCallback((script: string) => {
+    if (!pageFocusedRef.current) richTextEditor.current?.focusContentEditor();
+    richTextEditor.current?.command(script);
+  }, []);
+  const onLine = useCallback((type: LineType) => sendToPage(lineCommand(type)), [sendToPage]);
+  const onFormat = useCallback((command: FormatCommand) => sendToPage(formatCommand(command)), [sendToPage]);
+  const onInsert = useCallback(
+    (kind: InsertKind) => {
+      if (kind === "image") pickImage();
+      else if (kind === "rule") sendToPage(RULE_COMMAND);
+    },
+    [pickImage, sendToPage]
   );
 
   // Built only while the find bar is open: stripping a long note at every pause costs for nothing otherwise.
@@ -545,6 +491,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
               allowFileAccess={true}
               onChange={onEditorChange}
               onMessage={onEditorMessage}
+              onFocus={onPageFocus}
+              onBlur={onPageBlur}
               initialContentHTML={initialNote.text}
               placeholder={t("note.description_placeholder")}
               pasteAsPlainText
@@ -600,27 +548,17 @@ export default function NoteTextEditor({ initialNote }: Props) {
             </EditorActionDock>
           )}
 
-          {/* On web there is no soft keyboard, so the formatting toolbar is simply
-            docked at the bottom of the editor. Native renders it in a
-            KeyboardStickyView outside the KAV (see below) so it can stick to the
-            keyboard's edge. */}
-          {Platform.OS === "web" && (
-            <LabeledRichToolbar
-              style={[styles.richToolbarContainer, styles.richToolbarContainerDesktop]}
-              // On web, capping the inner list at the bar width (rather than pinning it to
-              // 100%) lets it keep its intrinsic width when the icons fit — so the bar's
-              // alignItems:center centers them — while still capping + falling back to
-              // react-native-web's horizontal overflow-x scrolling on narrow viewports.
-              flatContainerStyle={styles.richToolbarFlatContainer}
-              editor={richTextEditor}
-              onPressAddImage={pickImage}
-              iconSize={22}
-              iconTint={COLOR.softWhite}
-              selectedIconTint={COLOR.accentSoft}
-              unselectedButtonStyle={styles.toolbarAction}
-              selectedButtonStyle={styles.toolbarActionSelected}
-              actions={toolbarActions}
-              iconMap={toolbarIconMap}
+          {/* On web there is no soft keyboard, so the formatting bar is simply docked at the bottom of the editor.
+            Native renders it in a KeyboardStickyView outside the KAV (see below) so it can stick to the keyboard's
+            edge. A read-only note has no bar. */}
+          {Platform.OS === "web" && !note.readOnly && (
+            <TextFormatBar
+              ref={formatBarRef}
+              docked
+              state={formatState}
+              onLine={onLine}
+              onFormat={onFormat}
+              onInsert={onInsert}
             />
           )}
         </KeyboardAvoidingView>
@@ -629,24 +567,16 @@ export default function NoteTextEditor({ initialNote }: Props) {
       {/* Native: the formatting toolbar glued to the top edge of the keyboard. It
           slides up with the keyboard and parks fully below the screen (offset.closed
           = its own height) when the keyboard is down — no React state, no reflow. */}
-      {Platform.OS !== "web" && (
+      {Platform.OS !== "web" && !note.readOnly && (
         <KeyboardStickyView offset={{ closed: barHeight, opened: 0 }} style={styles.stickyToolbar}>
-          <View onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}>
+          {/* A menu opens above the bar, over the text: it never counts in barHeight. */}
+          <View>
             {Platform.OS === "ios" && (
-              <DismissKeyboardButton showKeyboardDismiss onPress={() => richTextEditor.current?.dismissKeyboard()} />
+              <View onLayout={(e) => setDismissHeight(e.nativeEvent.layout.height)}>
+                <DismissKeyboardButton showKeyboardDismiss onPress={() => richTextEditor.current?.dismissKeyboard()} />
+              </View>
             )}
-            <LabeledRichToolbar
-              style={styles.richToolbarContainer}
-              editor={richTextEditor}
-              onPressAddImage={pickImage}
-              iconSize={22}
-              iconTint={COLOR.softWhite}
-              selectedIconTint={COLOR.accentSoft}
-              unselectedButtonStyle={styles.toolbarAction}
-              selectedButtonStyle={styles.toolbarActionSelected}
-              actions={toolbarActions}
-              iconMap={toolbarIconMap}
-            />
+            <TextFormatBar ref={formatBarRef} state={formatState} onLine={onLine} onFormat={onFormat} onInsert={onInsert} />
           </View>
         </KeyboardStickyView>
       )}
@@ -728,33 +658,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  richToolbarContainer: {
-    width: SIZE.full,
-    // The 44 high buttons centered in the padding (the height counts the top border too).
-    height: 44 + 2 * PADDING_MARGIN.sm + 1,
-    paddingVertical: PADDING_MARGIN.sm,
-    backgroundColor: COLOR.surface,
-    borderTopWidth: 1,
-    borderTopColor: GLASS.border,
-  },
-  // A 48x44 touch target per button; the selected format gets a soft fill besides its tint.
-  toolbarAction: {
-    width: 48,
-    height: 44,
-    borderRadius: BORDER.normal,
-  },
-  toolbarActionSelected: {
-    width: 48,
-    height: 44,
-    borderRadius: BORDER.normal,
-    backgroundColor: GLASS.fillStrong,
-  },
-  firstToolbarAction: {
-    marginLeft: PADDING_MARGIN.md,
-  },
-  lastToolbarAction: {
-    marginRight: PADDING_MARGIN.md,
-  },
   // Native formatting bar: pinned to the bottom of the screen, full width. The
   // KeyboardStickyView translates it up to sit on the keyboard's edge (and below the
   // screen when the keyboard is closed); it must stay outside the SafeAreaView's
@@ -764,21 +667,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-  },
-  richToolbarContainerDesktop: {
-    borderRadius: BORDER.normal,
-    overflow: "hidden",
-    // drop the full-width pin so the horizontal margins below actually inset the
-    // bar from the window edges (the parent stretches it back to fill the gap).
-    width: "auto",
-    marginHorizontal: PADDING_MARGIN.lg,
-    // A border all round: one more pixel than the pinned bar's top one.
-    height: 44 + 2 * PADDING_MARGIN.sm + 2,
-    borderWidth: 1,
-    borderColor: GLASS.border,
-  },
-  richToolbarFlatContainer: {
-    maxWidth: SIZE.full,
   },
   textWrapper: {
     marginVertical: PADDING_MARGIN.xl,
