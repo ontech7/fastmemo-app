@@ -212,6 +212,7 @@ const zh = {
   },
   note: {
     update_to_open: "更新 Fast Memo 以打开此笔记",
+    duplicated: "笔记已复制",
     title_placeholder: "标题",
     description_placeholder: "在这里写点东西...",
     no_items: "没有项目。\n按右下角的按钮添加一个。",
@@ -238,6 +239,7 @@ const zh = {
       sync_to_cloud: "同步到云端",
       made_offline: "笔记现已离线",
       synced_as_duplicate: "已作为副本同步到云端",
+      duplicate: "复制",
       changecategory: "更改类别",
       share: "分享",
       export: "导出",

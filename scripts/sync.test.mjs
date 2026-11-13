@@ -48,6 +48,7 @@ await build({
       export { noteRev, nextRev, adoptLegacySyncState, fromOlderVersion } from "@/libs/cloud/revision";
       export { contentToken } from "@/libs/cloud/token";
       export { SyncEngine } from "@/libs/cloud/syncEngine";
+      export { copyOfNote } from "@/libs/noteCopy";
     `,
     resolveDir: src,
     loader: "ts",
@@ -1814,6 +1815,35 @@ await scenario("a locked vault queues nothing and still cancels a pending deleti
   d.dispatch(N.addNote({ ...d.get("n2"), text: "z" }));
   ok("unlocked again, a commit queues its marker", d.store.getState().notes.cloud.items.add.n2?.id === "n2");
 });
+
+console.log("\nduplicate: the copy goes through addNote (spec A.4)");
+{
+  const original = note("o1", 100, { syncedRev: 100 });
+  const offline = note("o2", 200, { syncedRev: 200, local: true });
+  const base = M.notesReducer(undefined, { type: "@@init" });
+  const store = M.configureStore({
+    reducer: { notes: M.notesReducer },
+    preloadedState: { notes: { ...base, items: [original, offline] } },
+  });
+  let n = 0;
+  const fresh = (id) => ({ id, now: 5000, date: "D", newId: () => "x" + ++n });
+  store.dispatch(M.notes.addNote(M.copyOfNote(original, fresh("c1"))));
+  store.dispatch(M.notes.addNote(M.copyOfNote(offline, fresh("c2"))));
+  const state = store.getState().notes;
+  const byId = (id) => state.items.find((x) => x.id === id);
+  const queued = Object.keys(state.cloud.items.add);
+  ok(
+    "the copy gets a revision and is queued for upload once",
+    typeof byId("c1")?.rev === "number" && queued.filter((id) => id === "c1").length === 1,
+    { rev: byId("c1")?.rev, queued }
+  );
+  ok("the copy of an offline note is queued nowhere", byId("c2")?.local === true && !queued.includes("c2"), queued);
+  ok(
+    "the original's revision and queue entry don't change",
+    byId("o1").rev === 100 && byId("o1").syncedRev === 100 && !queued.includes("o1") && !queued.includes("o2"),
+    byId("o1")
+  );
+}
 
 console.log("\ncategories: a drop reorders, renumbers, and queues only what changed");
 {

@@ -213,6 +213,7 @@ const de = {
   },
   note: {
     update_to_open: "Aktualisiere Fast Memo, um diese Notiz zu öffnen",
+    duplicated: "Notiz dupliziert",
     title_placeholder: "Titel",
     description_placeholder: "Schreiben Sie hier etwas…",
     no_items: "Es sind keine Elemente vorhanden.\nFügen Sie eines hinzu, indem Sie auf die Schaltfläche unten rechts klicken.",
@@ -239,6 +240,7 @@ const de = {
       sync_to_cloud: "Mit Cloud synchronisieren",
       made_offline: "Notiz ist jetzt offline",
       synced_as_duplicate: "Als Kopie in die Cloud synchronisiert",
+      duplicate: "Duplizieren",
       changecategory: "Kategorie ändern",
       share: "Teilen",
       export: "Exportieren",

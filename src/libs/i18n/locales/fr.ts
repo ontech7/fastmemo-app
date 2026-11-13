@@ -213,6 +213,7 @@ const fr = {
   },
   note: {
     update_to_open: "Mettez à jour Fast Memo pour ouvrir cette note",
+    duplicated: "Note dupliquée",
     title_placeholder: "Titre",
     description_placeholder: "Écrivez quelque chose ici...",
     no_items: "Il n'y a aucun élément.\nAjoutez-en un en appuyant sur le bouton en bas à droite.",
@@ -239,6 +240,7 @@ const fr = {
       sync_to_cloud: "Synchroniser avec le cloud",
       made_offline: "La note est maintenant hors ligne",
       synced_as_duplicate: "Synchronisée dans le cloud en tant que copie",
+      duplicate: "Dupliquer",
       changecategory: "Changer de catégorie",
       share: "Partager",
       export: "Exporter",

@@ -213,6 +213,7 @@ const ja = {
   },
   note: {
     update_to_open: "このノートを開くには Fast Memo を更新してください",
+    duplicated: "ノートを複製しました",
     title_placeholder: "タイトル",
     description_placeholder: "ここに何かを書いてください...",
     no_items: "アイテムはありません。\n右下のボタンを押して1つ追加してください。",
@@ -239,6 +240,7 @@ const ja = {
       sync_to_cloud: "クラウドに同期",
       made_offline: "ノートはオフラインになりました",
       synced_as_duplicate: "コピーとしてクラウドに同期しました",
+      duplicate: "複製",
       changecategory: "カテゴリを変更",
       share: "共有",
       export: "エクスポート",

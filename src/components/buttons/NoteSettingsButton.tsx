@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import ArrowUpTrayIcon from "react-native-heroicons/outline/ArrowUpTrayIcon";
 import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import DocumentDuplicateIcon from "react-native-heroicons/outline/DocumentDuplicateIcon";
 import EllipsisVerticalIcon from "react-native-heroicons/outline/EllipsisVerticalIcon";
 import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
 import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
@@ -28,8 +29,10 @@ import { COLOR } from "@/constants/styles";
 
 import { useSecret } from "@/hooks/useSecret";
 import { detachNote, reattachNote, temporaryDeleteNote } from "@/slicers/notesSlice";
+import { duplicateNote } from "@/slicers/thunks/duplicateNote";
 import { selectorWebhook_temporaryDeleteNote } from "@/slicers/settingsSlice";
 
+import type { AppDispatch } from "@/slicers/store";
 import type { Note, RootState, TextNote } from "@/types";
 
 interface Props {
@@ -47,6 +50,8 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
   const { id, type, title, important, readOnly, hidden, locked, local } = note;
 
   const webhook_temporaryDeleteNote = useSelector(selectorWebhook_temporaryDeleteNote);
+  // Duplicate is offered once the note is in the store: a note never saved has nothing to copy.
+  const saved = useSelector((state: RootState) => state.notes.items.some((stored) => stored.id === id));
 
   const dispatch = useDispatch();
   const store = useStore<RootState>();
@@ -169,6 +174,13 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
     setShowExportDialog(true);
   };
 
+  // A copy of the note as it is now (the pending edits committed first); the person stays in the original.
+  const duplicate = async () => {
+    flushNote();
+    const copyId = await (dispatch as AppDispatch)(duplicateNote(id)).unwrap();
+    toast(copyId ? t("note.duplicated") : t("ai.editor.no_content"));
+  };
+
   const changeCategory = () => {
     // A brand-new note only enters the Redux store on its first committed edit, so
     // commit the pending batch first. Empty notes are dropped instead of saved, so
@@ -228,6 +240,14 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
         </PopupMenuToggleRow>
 
         <PopupMenuDivider />
+
+        {saved && (
+          <PopupMenuOption
+            label={t("note.settings.duplicate")}
+            trailing={<DocumentDuplicateIcon size={16} color={COLOR.textSecondary} />}
+            onSelect={duplicate}
+          />
+        )}
 
         <PopupMenuOption
           label={t("note.settings.changecategory")}
