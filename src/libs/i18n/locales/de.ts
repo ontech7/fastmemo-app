@@ -199,12 +199,13 @@ const de = {
   home: {
     notes: "Notizen",
     search: "Nach etwas suchen…",
+    search_in: "In {{category}}",
+    search_elsewhere: "Andere Kategorien",
+    tags_title: "Tags in Ihren Notizen",
     quickNote: "Schnelle Notiz…",
-    deepSearch: "Tiefensuche (Text, Listen…)",
     selected_count: "{{count}} ausgewählt",
 
     filters: {
-      deepSearch: "Tiefensuche",
       orderBy: "Sortieren nach:",
       createdAt: "Erstellungsdatum",
       updatedAt: "Aktualisierungsdatum",
@@ -1049,7 +1050,9 @@ const de = {
       text_1_0: "Tippen Sie oben auf der Startseite auf das Filtersymbol, um zu ändern, wie Ihre Notizen angezeigt werden.",
       text_2_0: "• Sortieren nach — nach Erstellungsdatum oder letzter Aktualisierung, aufsteigend oder absteigend.",
       text_3_0:
-        "• Tiefensuche — sucht in den Titeln und auch in Text, Listen, Kanban-Boards und Code der Notizen (fragt zuerst nach Ihrem Geheimcode).",
+        "• Suche: Tippen Sie in das Feld oben auf der Startseite. Sie sucht in den Titeln und in jeder Art von Notiz, in allen Kategorien, ohne Groß- und Kleinschreibung oder Akzente zu beachten. Geben Sie mehrere Wörter ein, um die Notizen zu finden, die alle enthalten. Geschützte Notizen werden nur über ihren Titel gefunden.",
+      text_4_0:
+        "• Tags: Schreiben Sie irgendwo in einer Notiz ein Wort mit # davor (#arbeit). Geben Sie # in das Suchfeld ein, um Ihre Tags zu sehen, und tippen Sie auf einen, um seine Notizen zu finden.",
     },
     what_language: {
       title: "Wie ändere ich die Sprache?",
@@ -1272,6 +1275,7 @@ const de = {
     start_listening: "Zuhören starten",
     stop_listening: "Zuhören beenden",
     clear_search: "Suche löschen",
+    tag_row: "Tag {{tag}}, Notizen: {{count}}",
     delete_item: "Eintrag löschen",
     change_column_color: "Spaltenfarbe ändern",
     move_column_left: "Spalte nach links verschieben",

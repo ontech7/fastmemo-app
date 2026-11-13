@@ -198,12 +198,13 @@ const zh = {
   home: {
     notes: "笔记",
     search: "搜索内容...",
+    search_in: "{{category}} 中",
+    search_elsewhere: "其他分类",
+    tags_title: "笔记中的标签",
     quickNote: "快速笔记…",
-    deepSearch: "深度搜索（文本、列表等）",
     selected_count: "已选 {{count}}",
 
     filters: {
-      deepSearch: "深度搜索",
       orderBy: "排序方式:",
       createdAt: "创建日期",
       updatedAt: "更新日期",
@@ -994,7 +995,10 @@ const zh = {
       title: "主页筛选器是如何工作的？",
       text_1_0: "点击主页顶部的筛选图标，可以更改笔记的显示方式。",
       text_2_0: "• 排序方式 — 按创建日期或最后更新时间排序，升序或降序。",
-      text_3_0: "• 深度搜索 — 搜索标题，并且还会搜索笔记中的文本、列表、看板和代码（首先会要求输入您的密码）。",
+      text_3_0:
+        "• 搜索：在主页顶部的输入框中输入。它会在标题和每种笔记的内容中搜索，覆盖所有分类，不区分大小写和重音。输入多个词可找到同时包含这些词的笔记。受保护的笔记只能通过标题找到。",
+      text_4_0:
+        "• 标签：在笔记中的任意位置写一个前面带 # 的词（#工作）。在搜索框中输入 # 可查看您的标签，点击其中一个即可找到它的笔记。",
     },
     what_language: {
       title: "如何更改语言？",
@@ -1207,6 +1211,7 @@ const zh = {
     start_listening: "开始聆听",
     stop_listening: "停止聆听",
     clear_search: "清除搜索",
+    tag_row: "标签 {{tag}}，笔记：{{count}}",
     delete_item: "删除项目",
     change_column_color: "更改列颜色",
     move_column_left: "向左移动列",

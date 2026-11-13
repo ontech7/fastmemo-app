@@ -199,12 +199,13 @@ const en = {
   home: {
     notes: "Notes",
     search: "Search something...",
+    search_in: "In {{category}}",
+    search_elsewhere: "Other categories",
+    tags_title: "Tags in your notes",
     quickNote: "Quick note…",
-    deepSearch: "Deep search (text, lists…)",
     selected_count: "{{count}} selected",
 
     filters: {
-      deepSearch: "Deep search",
       orderBy: "Order by:",
       createdAt: "Creation date",
       updatedAt: "Update date",
@@ -1024,7 +1025,9 @@ const en = {
       text_1_0: "Tap the filter icon at the top of the Home screen to change how your notes are shown.",
       text_2_0: "• Order by — sort by creation date or last update, ascending or descending.",
       text_3_0:
-        "• Deep search — searches the titles and also inside the notes' text, lists, Kanban boards and code (it asks for your secret code first).",
+        "• Search: type in the field at the top of the home. It looks in titles and inside every kind of note, in all categories, ignoring capitals and accents. Type more words to find the notes that have all of them. Protected notes are found by their title only.",
+      text_4_0:
+        "• Tags: write a word with # in front (#work) anywhere in a note. Type # in the search field to see your tags, and tap one to find its notes.",
     },
     what_language: {
       title: "How do I change the language?",
@@ -1243,6 +1246,7 @@ const en = {
     start_listening: "Start listening",
     stop_listening: "Stop listening",
     clear_search: "Clear search",
+    tag_row: "Tag {{tag}}, notes: {{count}}",
     delete_item: "Delete item",
     change_column_color: "Change column color",
     move_column_left: "Move column left",

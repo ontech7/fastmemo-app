@@ -199,12 +199,13 @@ const es = {
   home: {
     notes: "Notas",
     search: "Buscar algo...",
+    search_in: "En {{category}}",
+    search_elsewhere: "Otras categorías",
+    tags_title: "Etiquetas en tus notas",
     quickNote: "Nota rápida…",
-    deepSearch: "Búsqueda profunda (texto, listas…)",
     selected_count: "{{count}} seleccionadas",
 
     filters: {
-      deepSearch: "Búsqueda profunda",
       orderBy: "Ordenar por:",
       createdAt: "Fecha de creación",
       updatedAt: "Fecha de actualización",
@@ -1041,7 +1042,9 @@ const es = {
         "Toca el icono de filtro en la parte superior de la pantalla de inicio para cambiar cómo se muestran tus notas.",
       text_2_0: "• Ordenar por: ordena por fecha de creación o última actualización, de forma ascendente o descendente.",
       text_3_0:
-        "• Búsqueda profunda: busca en los títulos y también dentro del texto, las listas, los tableros Kanban y el código de las notas (pide tu código secreto primero).",
+        "• Búsqueda: escribe en el campo de arriba de la pantalla de inicio. Busca en los títulos y dentro de cada tipo de nota, en todas las categorías, sin tener en cuenta mayúsculas ni acentos. Escribe varias palabras para encontrar las notas que las contienen todas. Las notas protegidas solo se encuentran por su título.",
+      text_4_0:
+        "• Etiquetas: escribe una palabra con # delante (#trabajo) en cualquier parte de una nota. Escribe # en el campo de búsqueda para ver tus etiquetas, y toca una para encontrar sus notas.",
     },
     what_language: {
       title: "¿Cómo cambio el idioma?",
@@ -1262,6 +1265,7 @@ const es = {
     start_listening: "Empezar a escuchar",
     stop_listening: "Dejar de escuchar",
     clear_search: "Borrar búsqueda",
+    tag_row: "Etiqueta {{tag}}, notas: {{count}}",
     delete_item: "Eliminar elemento",
     change_column_color: "Cambiar color de la columna",
     move_column_left: "Mover columna a la izquierda",

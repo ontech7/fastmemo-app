@@ -17,7 +17,6 @@ await build({
     contents: `
       export * from "@/utils/imageSize";
       export * from "@/utils/sort";
-      export * from "@/utils/noteSearch";
       export * from "@/libs/quickNoteDraft";
       export * from "@/utils/noteEmpty";
       export * from "@/utils/noteType";
@@ -84,58 +83,6 @@ console.log("\nimportant notes first, in the chosen order");
     importantFirst(list, (x) => x.id !== 2)
       .map((x) => x.id)
       .join() === "4,1,3"
-  );
-}
-
-console.log("\ndeep search");
-{
-  const { matchesDeepSearch } = M;
-  const base = { id: "x", title: "Spesa di Natale", important: false };
-  ok("title", matchesDeepSearch({ ...base, type: "text", text: "" }, "natale"));
-  ok(
-    "text, through its markup",
-    matchesDeepSearch({ ...base, type: "text", text: "<div>com<b>pra</b>re il <i>panettone</i></div>" }, "panettone")
-  );
-  ok(
-    "list item",
-    matchesDeepSearch({ ...base, type: "todo", list: [{ id: "1", text: "Torrone", checked: false }] }, "torrone")
-  );
-  ok(
-    "column name",
-    matchesDeepSearch({ ...base, type: "kanban", columns: [{ id: "c", name: "Da Fare", color: "", items: [] }] }, "da fare")
-  );
-  ok(
-    "card",
-    matchesDeepSearch(
-      { ...base, type: "kanban", columns: [{ id: "c", name: "", color: "", items: [{ id: "k", text: "Regalo Anna" }] }] },
-      "anna"
-    )
-  );
-  ok(
-    "tab title and code",
-    matchesDeepSearch(
-      {
-        ...base,
-        type: "code",
-        tabs: [{ id: "t", title: "Lista.py", code: "print('ciao')", language: "python" }],
-        activeTabId: "t",
-      },
-      "lista.py"
-    ) &&
-      matchesDeepSearch(
-        { ...base, type: "code", tabs: [{ id: "t", title: "", code: "print('ciao')", language: "python" }], activeTabId: "t" },
-        "ciao"
-      )
-  );
-  ok("no match", !matchesDeepSearch({ ...base, type: "todo", list: [] }, "pasqua"));
-  ok(
-    "an unknown type by title only",
-    matchesDeepSearch({ ...base, type: "board", strokes: "natale-not-here" }, "spesa") &&
-      !matchesDeepSearch({ ...base, type: "board" }, "zzz")
-  );
-  ok(
-    "missing parts don't throw",
-    !matchesDeepSearch({ ...base, type: "kanban" }, "zzz") && !matchesDeepSearch({ id: "y", type: "code" }, "zzz")
   );
 }
 

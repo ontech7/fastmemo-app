@@ -2,30 +2,20 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet } from "react-native";
 import ArrowLongDownIcon from "react-native-heroicons/outline/ArrowLongDownIcon";
 import ArrowLongUpIcon from "react-native-heroicons/outline/ArrowLongUpIcon";
-import CheckIcon from "react-native-heroicons/outline/CheckIcon";
-import DocumentMagnifyingGlassIcon from "react-native-heroicons/outline/DocumentMagnifyingGlassIcon";
 import FunnelIcon from "react-native-heroicons/outline/FunnelIcon";
 import { useDispatch, useSelector } from "react-redux";
 
 import GlassSurface from "@/components/ui/GlassSurface";
-import PopupMenu, { PopupMenuDivider, PopupMenuLabel, PopupMenuOption } from "@/components/ui/PopupMenu";
+import PopupMenu, { PopupMenuLabel, PopupMenuOption } from "@/components/ui/PopupMenu";
 import { getNoteFilters, reorderNotes, setNoteFilters } from "@/slicers/notesSlice";
 
 import { BORDER, COLOR } from "@/constants/styles";
-import { useSecret } from "@/hooks/useSecret";
 
-interface Props {
-  filters: {
-    showDeepSearch: boolean;
-    toggleDeepSearch: () => void;
-  };
-}
-
-export default function NoteFiltersButton({ filters }: Props) {
+/** The home's sort: by creation or update date, ascending or descending. */
+export default function NoteFiltersButton() {
   const { t } = useTranslation();
 
   const dispatch = useDispatch();
-  const { unlockWithSecret } = useSecret();
 
   const selectorNotesOrder = useSelector(getNoteFilters);
 
@@ -59,22 +49,6 @@ export default function NoteFiltersButton({ filters }: Props) {
         </GlassSurface>
       }
     >
-      <PopupMenuOption
-        label={t("home.filters.deepSearch")}
-        selected={filters.showDeepSearch}
-        leading={filters.showDeepSearch ? <CheckIcon size={16} color={COLOR.accentSoft} /> : undefined}
-        trailing={<DocumentMagnifyingGlassIcon size={16} color={COLOR.textSecondary} />}
-        onSelect={() => {
-          if (!filters.showDeepSearch) {
-            unlockWithSecret(filters.toggleDeepSearch);
-          } else {
-            filters.toggleDeepSearch();
-          }
-        }}
-      />
-
-      <PopupMenuDivider />
-
       <PopupMenuLabel>{t("home.filters.orderBy")}</PopupMenuLabel>
 
       <PopupMenuOption

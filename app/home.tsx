@@ -2,6 +2,7 @@ import AddNoteOverlayButton from "@/components/buttons/AddNoteOverlayButton";
 import DeleteNotesButton from "@/components/buttons/DeleteNotesButton";
 import NoteFiltersButton from "@/components/buttons/NoteFiltersButton";
 import NoteCard from "@/components/cards/NoteCard";
+import TagRow from "@/components/cards/TagRow";
 import CloudUnreachableLine from "@/components/cloud/CloudUnreachableLine";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import VaultPromptDialog from "@/components/dialogs/VaultPromptDialog";
@@ -17,11 +18,15 @@ import { configs } from "@/configs";
 import { DURATION } from "@/constants/motion";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useCloudStatus } from "@/hooks/useCloudStatus";
+import { useNoteSearch } from "@/hooks/useNoteSearch";
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
 import { useVaultPrompt } from "@/hooks/useVaultPrompt";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
+import { addTrail } from "@/libs/diagnostics";
 import Haptics from "@/libs/haptics";
+import type { SearchHit } from "@/libs/search/search";
+import type { TagCount } from "@/libs/search/tags";
 import { windowReady } from "@/libs/windowReady";
 import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
@@ -44,8 +49,7 @@ import {
   selectorWebhook_updateNote,
   setTourStep,
 } from "@/slicers/settingsSlice";
-import type { Note, RootState } from "@/types";
-import { matchesDeepSearch } from "@/utils/noteSearch";
+import type { Category, Note, RootState } from "@/types";
 import { webhook } from "@/utils/webhook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FlashList } from "@shopify/flash-list";
@@ -53,11 +57,19 @@ import { useFocusEffect, useIsFocused, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
-import DocumentMagnifyingGlassIcon from "react-native-heroicons/outline/DocumentMagnifyingGlassIcon";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector, useStore } from "react-redux";
+
+/** What the home's list holds: notes, and while searching the groups' headings and the tags. */
+type HomeRow =
+  | { kind: "note"; note: Note; hit?: SearchHit }
+  | { kind: "header"; id: string; title: string; count?: number }
+  | { kind: "tag"; tag: TagCount };
+
+/** The search reads every category: the home's selector, with "All". */
+const ALL_CATEGORIES: Category = { order: 0, name: "All", icon: "", index: true, selected: false };
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -87,6 +99,8 @@ export default function HomeScreen() {
   // fresh array on every render and rebuild the whole list (jank while typing).
   const selectNotes = useMemo(() => getNotesFilteredPerCategory(currentCategory, showHidden), [currentCategory, showHidden]);
   const notes = useSelector(selectNotes);
+  const selectAllNotes = useMemo(() => getNotesFilteredPerCategory(ALL_CATEGORIES, showHidden), [showHidden]);
+  const allNotes = useSelector(selectAllNotes);
 
   // @ts-ignore
   const trashedNotes = store.getState().notes.temporaryItems;
@@ -109,8 +123,6 @@ export default function HomeScreen() {
   // Live height the quick-note bar reports, so the FAB can ride just above it.
   const [barHeight, setBarHeight] = useState(QUICK_NOTE_BAR_RESERVED);
 
-  const [showDeepSearch, setShowDeepSearch] = useState(false);
-  const [deepFilterText, setDeepFilterText] = useState("");
   const [filterText, setFilterText] = useState("");
 
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
@@ -210,29 +222,73 @@ export default function HomeScreen() {
     });
   }, []);
 
-  const filteredNotes = useMemo(() => {
-    const text = (showDeepSearch ? deepFilterText : filterText).trim().toLowerCase();
-    if (!text) return notes;
-    return showDeepSearch
-      ? notes.filter((note: Note) => matchesDeepSearch(note, text))
-      : notes.filter((note: Note) => note.title?.toLowerCase().includes(filterText.toLowerCase()));
-  }, [filterText, deepFilterText, showDeepSearch, notes]);
+  // One search over every category's notes: titles and content of every type, protected notes by title only (no
+  // secret code to search), hidden ones only while shown.
+  const searchResult = useNoteSearch(allNotes, filterText, {
+    categoryIcon: currentCategory.index ? null : currentCategory.icon,
+    showHidden,
+  });
+  const searching = searchResult !== null;
+
+  // Once each time the field goes from empty to not empty: never the text.
+  const typing = filterText.trim() !== "";
+  useEffect(() => {
+    if (typing) addTrail("search");
+  }, [typing]);
+
+  const categoryLabel = currentCategory.name !== "All" ? currentCategory.name : t("All");
+  const rows = useMemo((): HomeRow[] => {
+    if (!searchResult) return notes.map((note) => ({ kind: "note", note }));
+    const out: HomeRow[] = [];
+    if (searchResult.tags.length) {
+      out.push({ kind: "header", id: "tags", title: t("home.tags_title") });
+      for (const tag of searchResult.tags) out.push({ kind: "tag", tag });
+    }
+    const { here, elsewhere } = searchResult;
+    if (here.length && elsewhere.length) {
+      out.push({ kind: "header", id: "here", title: t("home.search_in", { category: categoryLabel }), count: here.length });
+    }
+    for (const hit of here) out.push({ kind: "note", note: hit.note, hit });
+    if (elsewhere.length) {
+      out.push({ kind: "header", id: "elsewhere", title: t("home.search_elsewhere"), count: elsewhere.length });
+      for (const hit of elsewhere) out.push({ kind: "note", note: hit.note, hit });
+    }
+    return out;
+  }, [searchResult, notes, t, categoryLabel]);
+  // "The notes on screen": the count next to the category, and what the selection works on.
+  const noteCount = useMemo(() => rows.reduce((count, row) => count + (row.kind === "note" ? 1 : 0), 0), [rows]);
+
+  const searchTag = useCallback((tag: TagCount) => setFilterText("#" + tag.label), []);
 
   // Stable across unrelated re-renders (focus changes, quick-note bar height, ...), so FlashList
   // only re-renders its cells when the selection or delete mode actually change (LL-019).
-  const renderNote = useCallback(
-    ({ item, index }: { item: Note; index: number }) => (
-      <NoteCard
-        content={item}
-        isSelected={selectedNotes.includes(`${item.id}|${item.locked}`)}
-        selectNote={selectNote}
-        isDeleteMode={isDeleteMode}
-        toggleDeleteMode={toggleDeleteMode}
-        // The tour's last step points at the first note.
-        tourTarget={tourStep === "explore" && index === 0 ? "firstNote" : undefined}
-      />
-    ),
-    [selectedNotes, selectNote, isDeleteMode, toggleDeleteMode, tourStep]
+  const renderRow = useCallback(
+    ({ item, index }: { item: HomeRow; index: number }) => {
+      if (item.kind === "header") {
+        return (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
+            {item.count !== undefined && <Text style={styles.sectionTitle}>{item.count}</Text>}
+          </View>
+        );
+      }
+      if (item.kind === "tag") return <TagRow tag={item.tag} onPress={searchTag} />;
+      return (
+        <NoteCard
+          content={item.note}
+          hit={item.hit}
+          isSelected={selectedNotes.includes(`${item.note.id}|${item.note.locked}`)}
+          selectNote={selectNote}
+          isDeleteMode={isDeleteMode}
+          toggleDeleteMode={toggleDeleteMode}
+          // The tour's last step points at the first note.
+          tourTarget={tourStep === "explore" && index === 0 ? "firstNote" : undefined}
+        />
+      );
+    },
+    [selectedNotes, selectNote, isDeleteMode, toggleDeleteMode, tourStep, searchTag]
   );
   const listExtraData = useMemo(() => ({ isDeleteMode, selectedNotes, tourStep }), [isDeleteMode, selectedNotes, tourStep]);
 
@@ -320,14 +376,6 @@ export default function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // filters
-
-  const toggleDeepSearch = () => {
-    setShowDeepSearch((p: boolean) => !p);
-    setFilterText("");
-    setDeepFilterText("");
-  };
-
   // Lift the FAB to sit just above the quick-note bar (which grows with its text):
   // clear the bottom safe-area inset + the bar's reported height + a gap. The bar
   // shows only when enabled and not selecting; otherwise the FAB keeps its place.
@@ -341,7 +389,7 @@ export default function HomeScreen() {
     0,
     selectionBarHeight + PADDING_MARGIN.md - (quickNoteEnabled ? barHeight + PADDING_MARGIN.md : 0)
   );
-  const listEmpty = filteredNotes.length === 0;
+  const listEmpty = rows.length === 0;
   const listContentStyle = useMemo(
     () => ({ paddingBottom: isDeleteMode ? selectPadding : 0, flexGrow: listEmpty ? 1 : undefined }),
     [isDeleteMode, selectPadding, listEmpty]
@@ -349,7 +397,6 @@ export default function HomeScreen() {
 
   // An empty list says why (spec 5.3): a search with no match, or no notes ("All") or none in this category. Hidden
   // notes with "show hidden" off count as no notes: nothing hints at them.
-  const searching = (showDeepSearch ? deepFilterText : filterText).trim() !== "";
   const emptyState = useMemo(
     () =>
       searching ? (
@@ -416,7 +463,7 @@ export default function HomeScreen() {
                         {currentCategory.name != "All" ? currentCategory.name : t("All")}
                       </Text>
                       <View style={styles.countBadge}>
-                        <Text style={styles.countText}>{filteredNotes.length}</Text>
+                        <Text style={styles.countText}>{noteCount}</Text>
                       </View>
                     </View>
                   )}
@@ -433,19 +480,13 @@ export default function HomeScreen() {
 
               <View style={styles.searchRow}>
                 <SearchInput
-                  value={!showDeepSearch ? filterText : deepFilterText}
-                  onChangeText={!showDeepSearch ? setFilterText : setDeepFilterText}
-                  placeholder={!showDeepSearch ? t("home.search") : t("home.deepSearch")}
-                  icon={showDeepSearch ? <DocumentMagnifyingGlassIcon size={18} color={COLOR.softWhite} /> : undefined}
+                  value={filterText}
+                  onChangeText={setFilterText}
+                  placeholder={t("home.search")}
                   containerStyle={styles.searchInputFlex}
                 />
 
-                <NoteFiltersButton
-                  filters={{
-                    showDeepSearch,
-                    toggleDeepSearch,
-                  }}
-                />
+                <NoteFiltersButton />
               </View>
 
               <View style={styles.listWrapper}>
@@ -456,10 +497,11 @@ export default function HomeScreen() {
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                   keyboardDismissMode="on-drag"
-                  data={filteredNotes}
+                  data={rows}
                   extraData={listExtraData}
-                  renderItem={renderNote}
+                  renderItem={renderRow}
                   keyExtractor={keyExtractor}
+                  getItemType={getItemType}
                   contentContainerStyle={listContentStyle}
                   ListEmptyComponent={emptyState}
                 />
@@ -528,7 +570,9 @@ export default function HomeScreen() {
   );
 }
 
-const keyExtractor = (note: Note) => note.id;
+const keyExtractor = (row: HomeRow) =>
+  row.kind === "note" ? "note:" + row.note.id : row.kind === "tag" ? "tag:" + row.tag.key : "header:" + row.id;
+const getItemType = (row: HomeRow) => row.kind;
 
 /* STYLES */
 
@@ -618,6 +662,23 @@ const styles = StyleSheet.create({
     color: COLOR.textSecondary,
     fontFamily: FONT.semiBold,
     fontSize: FONTSIZE.small,
+  },
+  // A search's groups ("In Work", "Other categories") and the tag list's heading, with their counts.
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: PADDING_MARGIN.md,
+    paddingHorizontal: PADDING_MARGIN.xs,
+    paddingTop: PADDING_MARGIN.xs,
+    paddingBottom: PADDING_MARGIN.sm,
+  },
+  sectionTitle: {
+    flexShrink: 1,
+    color: COLOR.textMuted,
+    fontFamily: FONT.semiBold,
+    fontSize: FONTSIZE.small,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   loadingText: {
     color: COLOR.softWhite,

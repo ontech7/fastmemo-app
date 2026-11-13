@@ -23,12 +23,14 @@ import { toast } from "@/utils/toast";
 
 import { DURATION } from "@/constants/motion";
 import { NOTE_TYPES } from "@/constants/note-types";
-import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, MONOSPACE_FONT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
 import CategoryIcon from "@/components/CategoryIcon";
+import MarkedText from "@/components/ui/MarkedText";
 import { useSecret } from "@/hooks/useSecret";
 import { getNoteFilters } from "@/slicers/notesSlice";
 
+import type { SearchHit } from "@/libs/search/search";
 import type { Note } from "@/types";
 
 interface Props {
@@ -39,6 +41,8 @@ interface Props {
   toggleDeleteMode: () => void;
   /** Something the first-note tour can point at, under this name. */
   tourTarget?: string;
+  /** In a search's results: the title's marked words, and the line that matched (outside a search a card has no line). */
+  hit?: SearchHit;
 }
 
 /** A selected card's check mark zooms in (one builder for every card). */
@@ -60,7 +64,7 @@ function getCardAccent(type: Note["type"], important: boolean): string {
   }
 }
 
-function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode, tourTarget }: Props) {
+function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode, tourTarget, hit }: Props) {
   const { t } = useTranslation();
 
   const router = useRouter();
@@ -177,9 +181,18 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
             </View>
           )}
 
-          <Text style={[styles.title, { color: fg }, !known && styles.titleUnknown]} numberOfLines={1} ellipsizeMode="tail">
-            {isStringEmpty(title) ? t("empty_title") : title}
-          </Text>
+          {hit && !isStringEmpty(hit.title) ? (
+            <MarkedText
+              text={hit.title}
+              ranges={hit.titleRanges}
+              style={[styles.title, { color: fg }, !known && styles.titleUnknown]}
+              numberOfLines={1}
+            />
+          ) : (
+            <Text style={[styles.title, { color: fg }, !known && styles.titleUnknown]} numberOfLines={1} ellipsizeMode="tail">
+              {isStringEmpty(title) ? t("empty_title") : title}
+            </Text>
+          )}
 
           {hasStatus && (
             <View style={styles.statusRow}>
@@ -191,6 +204,29 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
             </View>
           )}
         </View>
+
+        {hit?.line && (
+          <View style={styles.hitRow}>
+            {!!hit.line.label && (
+              <View style={[styles.hitChip, { backgroundColor: chipBg }]}>
+                <Text style={[styles.hitChipText, { color: fg }]} numberOfLines={1}>
+                  {hit.line.label}
+                </Text>
+              </View>
+            )}
+            <MarkedText
+              text={hit.line.text}
+              ranges={hit.line.ranges}
+              style={[styles.hitLine, hit.line.mono && styles.hitLineMono, { color: fg }]}
+              numberOfLines={1}
+            />
+            {hit.line.more > 0 && (
+              <View style={[styles.hitChip, { backgroundColor: chipBg }]}>
+                <Text style={[styles.hitChipText, { color: fg }]}>+{hit.line.more}</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {known ? (
           <Text style={[styles.date, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
@@ -285,6 +321,12 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   dateValue: { fontFamily: FONT.semiBold },
+  // A search result's line: the column's chip, the line with its marked words, "+N" for the other lines that match.
+  hitRow: { flexDirection: "row", alignItems: "center", gap: PADDING_MARGIN.xs + 1 },
+  hitLine: { flex: 1, minWidth: 0, fontSize: FONTSIZE.small, fontFamily: FONT.regular, opacity: 0.8 },
+  hitLineMono: { fontFamily: MONOSPACE_FONT },
+  hitChip: { flexShrink: 0, maxWidth: "40%", paddingHorizontal: PADDING_MARGIN.xs + 1, borderRadius: BORDER.small },
+  hitChipText: { fontSize: FONTSIZE.small - 2, fontFamily: FONT.semiBold },
   // A note this version can't open: dimmed title, the sentence in the accent, an arrow-up in an accent-tinted avatar.
   titleUnknown: { opacity: 0.55 },
   updateToOpen: { fontSize: FONTSIZE.small, fontFamily: FONT.medium, color: COLOR.accentDeep },

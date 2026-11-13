@@ -489,7 +489,7 @@ export default function HelpScreen() {
           },
           {
             base: "help.what_home_filters",
-            body: <>{lines("help.what_home_filters", ["text_1_0", "text_2_0", "text_3_0"])}</>,
+            body: <>{lines("help.what_home_filters", ["text_1_0", "text_2_0", "text_3_0", "text_4_0"])}</>,
           },
           { base: "help.what_language", body: <>{lines("help.what_language", ["text_1_0", "text_2_0"])}</> },
         ],

@@ -199,12 +199,13 @@ const fr = {
   home: {
     notes: "Notes",
     search: "Chercher quelque chose...",
+    search_in: "Dans {{category}}",
+    search_elsewhere: "Autres catégories",
+    tags_title: "Tags dans vos notes",
     quickNote: "Note rapide…",
-    deepSearch: "Recherche approfondie (texte, listes…)",
     selected_count: "{{count}} sélectionnées",
 
     filters: {
-      deepSearch: "Recherche approfondie",
       orderBy: "Trier par:",
       createdAt: "Date de création",
       updatedAt: "Date de mise à jour",
@@ -1049,7 +1050,9 @@ const fr = {
         "Appuyez sur l'icône de filtre en haut de la page d'accueil pour changer la façon dont vos notes sont affichées.",
       text_2_0: "• Trier par — trier par date de création ou dernière mise à jour, par ordre croissant ou décroissant.",
       text_3_0:
-        "• Recherche approfondie — rechercher dans les titres et aussi dans le texte, les listes, les tableaux Kanban et le code des notes (votre code secret est d'abord demandé).",
+        "• Recherche : tapez dans le champ en haut de l'accueil. Elle cherche dans les titres et dans chaque type de note, dans toutes les catégories, sans tenir compte des majuscules ni des accents. Tapez plusieurs mots pour trouver les notes qui les contiennent tous. Les notes protégées ne se trouvent que par leur titre.",
+      text_4_0:
+        "• Tags : écrivez un mot précédé de # (#travail) n'importe où dans une note. Tapez # dans le champ de recherche pour voir vos tags, et appuyez sur l'un d'eux pour trouver ses notes.",
     },
     what_language: {
       title: "Comment changer la langue ?",
@@ -1271,6 +1274,7 @@ const fr = {
     start_listening: "Commencer l'écoute",
     stop_listening: "Arrêter l'écoute",
     clear_search: "Effacer la recherche",
+    tag_row: "Tag {{tag}}, notes : {{count}}",
     delete_item: "Supprimer l'élément",
     change_column_color: "Changer la couleur de la colonne",
     move_column_left: "Déplacer la colonne à gauche",

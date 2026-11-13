@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { docOf, warmUp } from "@/libs/search/cache";
-import { searchNotes } from "@/libs/search/search";
+import { parseQuery, searchNotes } from "@/libs/search/search";
 import type { SearchResult, SearchScope } from "@/libs/search/search";
 import type { Note } from "@/types";
 
@@ -22,8 +22,8 @@ export function useNoteSearch(notes: readonly Note[], text: string, scope: Searc
 
   useEffect(() => warmUp(notes), [notes]);
 
-  // Cleared: the normal list at once, not 100 ms later.
-  const query = text.trim() ? settled : "";
+  // Cleared: the normal list at once, not 100 ms later. Searched by its terms, so a space more doesn't search again.
+  const query = text.trim() ? parseQuery(settled).join(" ") : "";
   const { categoryIcon, showHidden } = scope;
   return useMemo(
     () => searchNotes(notes, docOf, query, { categoryIcon, showHidden }),
