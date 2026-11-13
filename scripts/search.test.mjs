@@ -14,7 +14,7 @@ const out = join(os.tmpdir(), "search.bundle.mjs");
 
 await build({
   stdin: {
-    contents: `export * from "@/libs/search/fold"; export * from "@/libs/search/tags"; export * from "@/libs/search/lines"; export * from "@/libs/search/search";`,
+    contents: `export * from "@/libs/search/fold"; export * from "@/libs/search/tags"; export * from "@/libs/search/lines"; export * from "@/libs/search/search"; export * from "@/libs/search/cache";`,
     resolveDir: src,
     loader: "ts",
   },
@@ -25,9 +25,8 @@ await build({
   logLevel: "error",
   alias: { "@": src },
 });
-const { fold, tagsIn, tagCounts, htmlLines, noteDoc, parseQuery, searchNotes, cutLine, LINE_MAX } = await import(
-  pathToFileURL(out).href
-);
+const { docOf, hasDoc, warmUp, fold, tagsIn, tagCounts, htmlLines, noteDoc, parseQuery, searchNotes, cutLine, LINE_MAX } =
+  await import(pathToFileURL(out).href);
 
 let passed = 0;
 let failed = 0;
@@ -315,6 +314,26 @@ const t0 = performance.now();
 const r = searchNotes(many, (n) => docs.get(n), "prova 17 numero", all);
 const ms = performance.now() - t0;
 ok("2,000 notes in under 50 ms (" + ms.toFixed(1) + " ms)", ms < 50 && r.here.length > 0);
+
+// the cache and the warm-up
+const n1 = text("1", "uno", "<div>latte</div>");
+ok("the same note gives the same lines", docOf(n1) === docOf(n1));
+ok("a changed note is read again", docOf({ ...n1, text: "<div>pane</div>" }).lines[0].text === "pane");
+const queue = [];
+warmUp(many, (run) => queue.push(run));
+ok("nothing is read before the first slice", !many.some(hasDoc));
+let slices = 0;
+while (queue.length && slices < 10000) {
+  queue.shift()();
+  slices++;
+}
+ok("the warm-up reaches every note", many.every(hasDoc));
+const copies = many.map((n) => ({ ...n }));
+const q2 = [];
+const stop = warmUp(copies, (run) => q2.push(run));
+stop();
+q2.shift()?.();
+ok("stopped, it reads nothing more", q2.length === 0 && !copies.some(hasDoc));
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);
