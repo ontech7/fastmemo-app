@@ -8,6 +8,7 @@ import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import FindReplaceBar from "@/components/notes/FindReplaceBar";
+import { takeFindOnOpen } from "@/libs/search/findOnOpen";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
@@ -249,6 +250,14 @@ export default function NoteTextEditor({ initialNote }: Props) {
   });
 
   const [showFindReplace, setShowFindReplace] = useState(false);
+  // Opened from a search result: its word, shown in the find bar once the page is ready.
+  const [findWord, setFindWord] = useState<string | undefined>(undefined);
+  const pendingFindRef = useRef<string | null>(null);
+  useEffect(() => {
+    const found = takeFindOnOpen(initialNote.id);
+    if (found) pendingFindRef.current = found.word;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // An image tapped in the editor, and where on screen: its menu is open.
   const [tappedImage, setTappedImage] = useState<{ image: EditorImage; at: { x: number; y: number } } | null>(null);
   const editorBoxRef = useRef<ViewInstance>(null);
@@ -387,6 +396,11 @@ export default function NoteTextEditor({ initialNote }: Props) {
     setEditorInitialized(true);
     // Changed on another device while the page was loading: it loaded the text the screen opened with.
     if (noteRef.current.text !== initialNote.text) showRemote(noteRef.current.text);
+    if (pendingFindRef.current) {
+      setFindWord(pendingFindRef.current);
+      setShowFindReplace(true);
+      pendingFindRef.current = null;
+    }
   }, [initialNote.text, showRemote]);
 
   // The formatting toolbar rides on top of the keyboard in a KeyboardStickyView
@@ -462,7 +476,10 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
             <TouchableOpacity
               style={styles.searchToggle}
-              onPress={() => setShowFindReplace((prev) => !prev)}
+              onPress={() => {
+                setShowFindReplace((prev) => !prev);
+                setFindWord(undefined);
+              }}
               testID={showFindReplace ? undefined : SHORTCUT_TARGET.find}
               accessibilityRole="button"
               accessibilityLabel={t("a11y.search_in_note")}
@@ -504,10 +521,14 @@ export default function NoteTextEditor({ initialNote }: Props) {
         >
           <FindReplaceBar
             visible={showFindReplace}
-            onClose={() => setShowFindReplace(false)}
+            onClose={() => {
+              setShowFindReplace(false);
+              setFindWord(undefined);
+            }}
             editorRef={richTextEditor}
             plainText={plainNoteText}
             readOnly={note.readOnly}
+            initialQuery={findWord}
             style={{ marginTop: PADDING_MARGIN.md }}
           />
 

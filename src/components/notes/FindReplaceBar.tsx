@@ -33,10 +33,12 @@ interface Props {
   plainText: string;
   /** A read-only note: find only. Its text can't change, so replace would only make the count go down. */
   readOnly?: boolean;
+  /** Opened by a search result: the field starts with this text, the search runs, the field doesn't take the focus. */
+  initialQuery?: string;
   style?: ViewStyle;
 }
 
-export default function FindReplaceBar({ visible, onClose, editorRef, plainText, readOnly, style }: Props) {
+export default function FindReplaceBar({ visible, onClose, editorRef, plainText, readOnly, initialQuery, style }: Props) {
   const { t } = useTranslation();
 
   const [searchText, setSearchText] = useState("");
@@ -47,11 +49,22 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
 
   const searchInputRef = useRef<TextInputInstance>(null);
 
+  // Opened by a search result: its word goes in the field once (searched by the effect below), and again only after the
+  // parent has cleared it.
+  const [appliedQuery, setAppliedQuery] = useState<string | undefined>(undefined);
+  if (visible && initialQuery && initialQuery !== appliedQuery) {
+    setAppliedQuery(initialQuery);
+    setSearchText(initialQuery);
+  } else if (!initialQuery && appliedQuery !== undefined) {
+    setAppliedQuery(undefined);
+  }
+
   const wasVisibleRef = useRef(false);
   useEffect(() => {
     if (visible) {
       wasVisibleRef.current = true;
-      setTimeout(() => searchInputRef.current?.focus(), 200);
+      // From a search result the keyboard stays down: the person came to read the match.
+      if (!initialQuery) setTimeout(() => searchInputRef.current?.focus(), 200);
     } else if (wasVisibleRef.current) {
       wasVisibleRef.current = false;
       setSearchText("");

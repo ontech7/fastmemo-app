@@ -14,7 +14,7 @@ const out = join(os.tmpdir(), "search.bundle.mjs");
 
 await build({
   stdin: {
-    contents: `export * from "@/libs/search/fold"; export * from "@/libs/search/tags"; export * from "@/libs/search/lines"; export * from "@/libs/search/search"; export * from "@/libs/search/cache";`,
+    contents: `export * from "@/libs/search/fold"; export * from "@/libs/search/tags"; export * from "@/libs/search/lines"; export * from "@/libs/search/search"; export * from "@/libs/search/cache"; export * from "@/libs/search/findOnOpen";`,
     resolveDir: src,
     loader: "ts",
   },
@@ -25,8 +25,22 @@ await build({
   logLevel: "error",
   alias: { "@": src },
 });
-const { docOf, hasDoc, warmUp, fold, tagsIn, tagCounts, htmlLines, noteDoc, parseQuery, searchNotes, cutLine, LINE_MAX } =
-  await import(pathToFileURL(out).href);
+const {
+  setFindOnOpen,
+  takeFindOnOpen,
+  docOf,
+  hasDoc,
+  warmUp,
+  fold,
+  tagsIn,
+  tagCounts,
+  htmlLines,
+  noteDoc,
+  parseQuery,
+  searchNotes,
+  cutLine,
+  LINE_MAX,
+} = await import(pathToFileURL(out).href);
 
 let passed = 0;
 let failed = 0;
@@ -334,6 +348,18 @@ const stop = warmUp(copies, (run) => q2.push(run));
 stop();
 q2.shift()?.();
 ok("stopped, it reads nothing more", q2.length === 0 && !copies.some(hasDoc));
+
+// the word a result hands to the note it opens
+setFindOnOpen("a", { word: "x" });
+ok("another note takes nothing, and empties the slot", takeFindOnOpen("b") === null && takeFindOnOpen("a") === null);
+setFindOnOpen("a", { word: "x", tabId: "t1" });
+ok(
+  "its note takes it once",
+  (() => {
+    const f = takeFindOnOpen("a");
+    return f.word === "x" && f.tabId === "t1";
+  })() && takeFindOnOpen("a") === null
+);
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);

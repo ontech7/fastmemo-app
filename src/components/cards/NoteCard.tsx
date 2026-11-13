@@ -16,6 +16,7 @@ import { useRouter } from "@/hooks/useRouter";
 import { useTourTarget } from "@/hooks/useTourTarget";
 import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
 import { storeUnlockedNote } from "@/libs/registry";
+import { setFindOnOpen } from "@/libs/search/findOnOpen";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isKnownNoteType } from "@/utils/noteType";
 import { isStringEmpty } from "@/utils/string";
@@ -100,6 +101,9 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
       selectNote(id, locked);
       return;
     }
+
+    // A result whose content matched opens on its word (in memory: never in the route).
+    if (hit?.line) setFindOnOpen(id, { word: hit.line.word, tabId: hit.line.tabId });
 
     if (!locked) {
       router.push(`/notes/${id}`);
