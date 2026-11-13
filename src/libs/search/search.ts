@@ -125,8 +125,8 @@ function matches(doc: NoteDoc, terms: readonly string[]): boolean {
   });
 }
 
-function hitOf(note: Note, doc: NoteDoc, terms: readonly string[]): SearchHit {
-  const hit: SearchHit = { note, title: doc.title, titleRanges: rangesIn(doc.foldedTitle, terms) };
+/** The line shown under a result: the first that holds a term, cut around it; undefined when only the title matched. */
+function lineOf(doc: NoteDoc, terms: readonly string[]): HitLine | undefined {
   let first = -1;
   let more = 0;
   doc.folded.forEach((folded, index) => {
@@ -134,17 +134,38 @@ function hitOf(note: Note, doc: NoteDoc, terms: readonly string[]): SearchHit {
     if (first < 0) first = index;
     else more++;
   });
-  if (first < 0) return hit;
+  if (first < 0) return undefined;
 
   const source = doc.lines[first];
   const ranges = rangesIn(doc.folded[first], terms);
   const word = source.text.slice(ranges[0].start, ranges[0].end);
   const cut = cutLine(source.text, ranges);
-  hit.line = { text: cut.text, ranges: cut.ranges, more, word };
-  if (source.label !== undefined) hit.line.label = source.label;
-  if (source.mono) hit.line.mono = true;
-  if (source.tabId !== undefined) hit.line.tabId = source.tabId;
-  return hit;
+  const line: HitLine = { text: cut.text, ranges: cut.ranges, more, word };
+  if (source.label !== undefined) line.label = source.label;
+  if (source.mono) line.mono = true;
+  if (source.tabId !== undefined) line.tabId = source.tabId;
+  return line;
+}
+
+/**
+ * A result. Its line is worked out the first time it is read, then kept: a list draws a few results at a time, and a
+ * search that every note matches would otherwise cut a line for each of them at every keystroke.
+ */
+function hitOf(note: Note, doc: NoteDoc, terms: readonly string[]): SearchHit {
+  let line: HitLine | undefined;
+  let lineRead = false;
+  return {
+    note,
+    title: doc.title,
+    titleRanges: rangesIn(doc.foldedTitle, terms),
+    get line() {
+      if (!lineRead) {
+        line = lineOf(doc, terms);
+        lineRead = true;
+      }
+      return line;
+    },
+  };
 }
 
 /**

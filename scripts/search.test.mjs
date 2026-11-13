@@ -319,6 +319,23 @@ ok(
   "a protected note's tags come from its title only",
   find(tagged, "#segreto").here.length === 0 && ids(find(tagged, "#conti").here) === "p"
 );
+// a result's line is worked out when it is shown, not for every result (a list draws a few at a time)
+{
+  let reads = 0;
+  const counted = (note) => {
+    const doc = noteDoc(note);
+    return { ...doc, lines: new Proxy(doc.lines, { get: (t, k) => (/^\d+$/.test(String(k)) && reads++, t[k]) }) };
+  };
+  const all300 = Array.from({ length: 300 }, (_, i) => text("m" + i, "Nota " + i, "<div>parola comune " + i + "</div>"));
+  const r = searchNotes(all300, counted, "comune", all);
+  ok("300 results, no line read yet", r.here.length === 300 && reads === 0, reads);
+  ok(
+    "a shown result reads its line, once",
+    r.here[5].line.word === "comune" && r.here[5].line === r.here[5].line && reads > 0 && reads < 5,
+    reads
+  );
+}
+
 // speed
 const many = Array.from({ length: 2000 }, (_, i) =>
   text("n" + i, "Prova " + i, "<div>" + "parola ".repeat(120) + "numero " + i + "</div>")
