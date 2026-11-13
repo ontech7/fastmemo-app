@@ -1,0 +1,22 @@
+// The formatting bar's icons (redraws.html, section 2). Plus, the three dots and the tick are heroicons' own.
+export { default as UndoIcon } from "./UndoIcon";
+export { default as RedoIcon } from "./RedoIcon";
+export { default as ParagraphIcon } from "./ParagraphIcon";
+export { default as QuoteIcon } from "./QuoteIcon";
+export { default as CodeBlockIcon } from "./CodeBlockIcon";
+export { default as BulletListIcon } from "./BulletListIcon";
+export { default as NumberedListIcon } from "./NumberedListIcon";
+export { default as CheckListIcon } from "./CheckListIcon";
+export { default as ImageIcon } from "./ImageIcon";
+export { default as CameraIcon } from "./CameraIcon";
+export { default as LinkIcon } from "./LinkIcon";
+export { default as NoteLinkIcon } from "./NoteLinkIcon";
+export { default as RuleIcon } from "./RuleIcon";
+export { default as StrikeIcon } from "./StrikeIcon";
+export { default as AlignLeftIcon } from "./AlignLeftIcon";
+export { default as AlignCenterIcon } from "./AlignCenterIcon";
+export { default as SubscriptIcon } from "./SubscriptIcon";
+export { default as SuperscriptIcon } from "./SuperscriptIcon";
+export { default as PlusIcon } from "react-native-heroicons/outline/PlusIcon";
+export { default as MoreIcon } from "react-native-heroicons/outline/EllipsisHorizontalIcon";
+export { default as TickIcon } from "react-native-heroicons/outline/CheckIcon";
