@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { createContext, useContext, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LayoutChangeEvent, ViewInstance } from "react-native";
-import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -171,9 +171,11 @@ interface PopupMenuOptionProps {
   leading?: ReactNode;
   /** Rendered at the trailing edge (e.g. an action icon). */
   trailing?: ReactNode;
+  /** Deletes something: its text in the soft red (give the trailing icon `COLOR.dangerSoft` too). */
+  destructive?: boolean;
 }
 
-export function PopupMenuOption({ label, onSelect, disabled, selected, leading, trailing }: PopupMenuOptionProps) {
+export function PopupMenuOption({ label, onSelect, disabled, selected, leading, trailing, destructive }: PopupMenuOptionProps) {
   const { close } = usePopupMenu();
 
   return (
@@ -190,11 +192,54 @@ export function PopupMenuOption({ label, onSelect, disabled, selected, leading, 
     >
       <View style={styles.optionLabelRow}>
         {leading}
-        <Text style={[styles.optionText, selected && styles.optionTextSelected]} numberOfLines={1}>
+        <Text
+          style={[styles.optionText, selected && styles.optionTextSelected, destructive && styles.optionTextDestructive]}
+          numberOfLines={1}
+        >
           {label}
         </Text>
       </View>
       {trailing}
+    </Pressable>
+  );
+}
+
+/** A row of equal cells for `PopupMenuToggle`s. */
+export function PopupMenuToggleRow({ children }: { children: ReactNode }) {
+  return <View style={styles.toggleRow}>{children}</View>;
+}
+
+interface PopupMenuToggleProps {
+  /** The icon, drawn in the color given (white when on). */
+  icon: (color: string) => ReactNode;
+  /** Spoken, with the state. */
+  label: string;
+  on: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+}
+
+/** An icon switch, lit when on. Choosing it closes the menu, like an option. */
+export function PopupMenuToggle({ icon, label, on, onToggle, disabled }: PopupMenuToggleProps) {
+  const { close } = usePopupMenu();
+  return (
+    <Pressable
+      disabled={disabled}
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      aria-checked={on}
+      onPress={() => {
+        onToggle();
+        close();
+      }}
+      style={({ pressed }) => [
+        styles.toggle,
+        on && styles.toggleOn,
+        pressed && !on && styles.togglePressed,
+        disabled && styles.optionDisabled,
+      ]}
+    >
+      {icon(on ? COLOR.softWhite : COLOR.textSecondary)}
     </Pressable>
   );
 }
@@ -268,6 +313,32 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: COLOR.accentSoft,
     fontFamily: FONT.semiBold,
+  },
+  optionTextDestructive: {
+    color: COLOR.dangerSoft,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    gap: PADDING_MARGIN.xs + 1,
+    padding: PADDING_MARGIN.xs - 1,
+  },
+  // An icon switch: an equal share of the row, 44 high on the phone (a finger), 36 with a mouse.
+  toggle: {
+    flex: 1,
+    height: Platform.OS === "web" ? 36 : 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: BORDER.normal,
+    backgroundColor: GLASS.fill,
+    borderWidth: 1,
+    borderColor: GLASS.border,
+  },
+  toggleOn: {
+    backgroundColor: COLOR.accentMuted,
+    borderColor: COLOR.accentMutedBorder,
+  },
+  togglePressed: {
+    backgroundColor: GLASS.fillStrong,
   },
   label: {
     paddingHorizontal: PADDING_MARGIN.sm,

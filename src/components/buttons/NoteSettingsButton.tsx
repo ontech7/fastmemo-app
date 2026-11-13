@@ -17,7 +17,7 @@ import uuid from "react-uuid";
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import NoteInfoDialog from "@/components/dialogs/NoteInfoDialog";
 import IconChip from "@/components/ui/IconChip";
-import PopupMenu, { PopupMenuOption } from "@/components/ui/PopupMenu";
+import PopupMenu, { PopupMenuDivider, PopupMenuOption, PopupMenuToggle, PopupMenuToggleRow } from "@/components/ui/PopupMenu";
 import { useRouter } from "@/hooks/useRouter";
 import { stripHtml } from "@/libs/ai";
 import { exportAsPdf, exportAsTextFile, htmlToMarkdown } from "@/utils/export";
@@ -200,43 +200,40 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
           </IconChip>
         }
       >
+        <PopupMenuToggleRow>
+          <PopupMenuToggle
+            label={t("note.settings.important")}
+            on={important}
+            icon={(color) => <StarIcon size={18} color={color} />}
+            onToggle={toggleImportantNoteFromItems}
+          />
+          <PopupMenuToggle
+            label={t("note.settings.protect")}
+            on={locked}
+            icon={(color) => <KeyIcon size={18} color={color} />}
+            onToggle={toggleProtectedNoteFromItems}
+          />
+          <PopupMenuToggle
+            label={t("note.settings.readonly")}
+            on={readOnly}
+            icon={(color) => <BookOpenIcon size={18} color={color} />}
+            onToggle={toggleReadOnlyNoteFromItems}
+          />
+          <PopupMenuToggle
+            label={t("note.settings.hide")}
+            on={hidden}
+            icon={(color) => <EyeSlashIcon size={18} color={color} />}
+            onToggle={toggleHiddenNoteFromItems}
+          />
+        </PopupMenuToggleRow>
+
+        <PopupMenuDivider />
+
         <PopupMenuOption
-          label={t("note.settings.delete")}
+          label={t("note.settings.changecategory")}
           disabled={!id}
-          trailing={<TrashIcon size={16} color={COLOR.textSecondary} />}
-          onSelect={deleteNoteFromItems}
-        />
-
-        <PopupMenuOption
-          label={t("note.settings.important")}
-          selected={important}
-          leading={important ? <CheckIcon size={16} color={COLOR.accentSoft} /> : undefined}
-          trailing={<StarIcon size={16} color={COLOR.textSecondary} />}
-          onSelect={toggleImportantNoteFromItems}
-        />
-
-        <PopupMenuOption
-          label={t("note.settings.protect")}
-          selected={locked}
-          leading={locked ? <CheckIcon size={16} color={COLOR.accentSoft} /> : undefined}
-          trailing={<KeyIcon size={16} color={COLOR.textSecondary} />}
-          onSelect={toggleProtectedNoteFromItems}
-        />
-
-        <PopupMenuOption
-          label={t("note.settings.readonly")}
-          selected={readOnly}
-          leading={readOnly ? <CheckIcon size={16} color={COLOR.accentSoft} /> : undefined}
-          trailing={<BookOpenIcon size={16} color={COLOR.textSecondary} />}
-          onSelect={toggleReadOnlyNoteFromItems}
-        />
-
-        <PopupMenuOption
-          label={t("note.settings.hide")}
-          selected={hidden}
-          leading={hidden ? <CheckIcon size={16} color={COLOR.accentSoft} /> : undefined}
-          trailing={<EyeSlashIcon size={16} color={COLOR.textSecondary} />}
-          onSelect={toggleHiddenNoteFromItems}
+          trailing={<TagIcon size={16} color={COLOR.textSecondary} />}
+          onSelect={changeCategory}
         />
 
         <PopupMenuOption
@@ -246,13 +243,6 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
           leading={local ? <CheckIcon size={16} color={COLOR.accentSoft} /> : undefined}
           trailing={<SignalSlashIcon size={16} color={COLOR.textSecondary} />}
           onSelect={local ? syncNoteToCloud : makeNoteOffline}
-        />
-
-        <PopupMenuOption
-          label={t("note.settings.changecategory")}
-          disabled={!id}
-          trailing={<TagIcon size={16} color={COLOR.textSecondary} />}
-          onSelect={changeCategory}
         />
 
         {type === "text" && (
@@ -268,6 +258,16 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
           label={t("note.settings.info")}
           trailing={<InformationCircleIcon size={16} color={COLOR.textSecondary} />}
           onSelect={() => setShowInfoDialog(true)}
+        />
+
+        <PopupMenuDivider />
+
+        <PopupMenuOption
+          label={t("note.settings.delete")}
+          disabled={!id}
+          destructive
+          trailing={<TrashIcon size={16} color={COLOR.dangerSoft} />}
+          onSelect={deleteNoteFromItems}
         />
       </PopupMenu>
 

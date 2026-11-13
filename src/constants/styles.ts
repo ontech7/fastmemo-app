@@ -49,6 +49,8 @@ export const COLOR = {
   accentFaint: "rgba(79, 107, 255, 0.10)",
   // A search's typed word, marked in a result's title and line.
   accentMark: "rgba(79, 107, 255, 0.3)",
+  // A destructive entry's text and icon on a dark surface (a menu's Delete).
+  dangerSoft: "#FF9D9D",
   // The dim layer over everything but what a tour step shows
   scrim: "rgba(2, 4, 14, 0.82)",
 } as const;
