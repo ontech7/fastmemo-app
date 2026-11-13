@@ -1872,6 +1872,149 @@ await post({ type: "content", name: "setDisable", data: false });
   }
 }
 
+// 12. Shortcuts while typing (spec B.5): a marker at the very start of a text line, then a space, makes the line that
+// kind; "---" then Enter makes a rule. Nowhere else, never from a paste or inside a composition.
+{
+  const SHORT = [
+    ["#", "<h1>x</h1>"],
+    ["##", "<h2>x</h2>"],
+    ["-", "<ul><li>x</li></ul>"],
+    ["*", "<ul><li>x</li></ul>"],
+    ["1.", "<ol><li>x</li></ol>"],
+    ["[]", `<ol class="x-todo"><li>${BOX}x</li></ol>`],
+    [">", "<blockquote>x</blockquote>"],
+  ];
+  const emptyLine = async (html = "<div><br></div>") => {
+    await open(html);
+    // as select() does: then a touchend, so pell saves the selection like after a tap
+    await evaluate(
+      `(() => { const c = document.querySelector(".pell-content"); c.focus(); const r = document.createRange(); r.setStart(c.firstChild, 0); r.collapse(true); getSelection().removeAllRanges(); getSelection().addRange(r); c.dispatchEvent(new Event("touchend", { bubbles: true })); })()`
+    );
+    await sleep(90);
+  };
+  for (const [action, expected] of [
+    ["unorderedList", "<ul><li>x</li></ul>"],
+    ["orderedList", "<ol><li>x</li></ol>"],
+    ["checkboxList", `<ol class="x-todo"><li>${BOX}x</li></ol>`],
+  ]) {
+    await emptyLine();
+    await press(action);
+    await type("x");
+    check(
+      `the bar's ${action} on an empty line: the list isn't inside the line's <div>`,
+      (await state()).html === expected,
+      (await state()).html
+    );
+  }
+  // An empty line under another one: the caret stays on it.
+  const secondLine = async () => {
+    await open("<div>prima</div><div><br></div>");
+    await evaluate(
+      `(() => { const c = document.querySelector(".pell-content"); c.focus(); const r = document.createRange(); r.setStart(c.lastChild, 0); r.collapse(true); getSelection().removeAllRanges(); getSelection().addRange(r); c.dispatchEvent(new Event("touchend", { bubbles: true })); })()`
+    );
+    await sleep(90);
+  };
+  for (const [how, run, expected] of [
+    ["the bar's checkbox list", () => press("checkboxList"), `<div>prima</div><ol class="x-todo"><li>${BOX}x</li></ol>`],
+    ["the bar's bullet list", () => press("unorderedList"), "<div>prima</div><ul><li>x</li></ul>"],
+    [
+      "[] and a space",
+      async () => (await type("[]"), await type(" ")),
+      `<div>prima</div><ol class="x-todo"><li>${BOX}x</li></ol>`,
+    ],
+    ["- and a space", async () => (await type("-"), await type(" ")), "<div>prima</div><ul><li>x</li></ul>"],
+    ["# and a space", async () => (await type("#"), await type(" ")), "<div>prima</div><h1>x</h1>"],
+  ]) {
+    await secondLine();
+    await run();
+    await type("x");
+    check(
+      `${how} on an empty line under another: the caret stays on it`,
+      (await state()).html === expected,
+      (await state()).html
+    );
+  }
+  for (const [marker, expected] of SHORT) {
+    await emptyLine();
+    await type(marker);
+    await type(" ");
+    await type("x");
+    const html = (await state()).html;
+    check(`"${marker} " at the start of a text line: ${expected}`, html === expected, html);
+    const clean = await evaluate(`window.__fmSanitize(${JSON.stringify(html)})`);
+    check(`"${marker} ": the sanitizer keeps it`, clean === html, clean);
+    let back = html;
+    const textOf = (h) =>
+      h
+        .replace(/<[^>]+>/g, "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&gt;/g, ">");
+    for (let i = 0; i < 6 && !textOf(back).startsWith(marker); i++) {
+      await press("undo");
+      back = (await state()).html;
+    }
+    check(
+      `"${marker} ": undo gives the marker back as text, on a text line`,
+      /^<div>/.test(back) && textOf(back).startsWith(marker),
+      back
+    );
+  }
+
+  await emptyLine();
+  await type("a #");
+  await type(" ");
+  check(
+    "a marker after other text changes nothing",
+    (await state()).html.replace(/&nbsp;/g, " ") === "<div>a # </div>",
+    (await state()).html
+  );
+
+  for (const [name, html, at] of [
+    ["a heading", "<h1>t</h1>", "h1"],
+    ["a list item", "<ul><li>t</li></ul>", "li"],
+    ["a quote", "<blockquote>t</blockquote>", "blockquote"],
+    ["a code block", "<pre>t</pre>", "pre"],
+  ]) {
+    await open(html);
+    await evaluate(
+      `(() => { const c = document.querySelector(".pell-content"); c.focus(); const r = document.createRange(); r.setStart(c.querySelector(${JSON.stringify(at)}).firstChild, 0); r.collapse(true); getSelection().removeAllRanges(); getSelection().addRange(r); })()`
+    );
+    await type("#");
+    await type(" ");
+    const now = (await state()).html.replace(/&nbsp;/g, " ");
+    check(`"# " at the start of ${name} changes nothing`, now.includes("# t"), now);
+  }
+
+  await emptyLine();
+  await type("---");
+  await key("Enter");
+  await type("x");
+  check('"---" then Enter: a rule and a text line after it', (await state()).html === "<hr><div>x</div>", (await state()).html);
+  await emptyLine();
+  await type("--");
+  await key("Enter");
+  check(
+    '"--" then Enter: the two characters and a new line',
+    (await state()).html === "<div>--</div><div><br></div>",
+    (await state()).html
+  );
+
+  await emptyLine();
+  await send("Input.imeSetComposition", { text: "#", selectionStart: 1, selectionEnd: 1 });
+  await sleep(50);
+  await send("Input.insertText", { text: "# " });
+  await sleep(90);
+  await type("x");
+  check("a marker typed inside a composition changes nothing", !(await state()).html.includes("<h1>"), (await state()).html);
+
+  await emptyLine();
+  await evaluate(
+    `(() => { const dt = new DataTransfer(); dt.setData("text/plain", "# "); document.querySelector(".pell-content").dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true })); })()`
+  );
+  await sleep(150);
+  check("a pasted marker changes nothing", !(await state()).html.includes("<h1>"), (await state()).html);
+}
+
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");
 check("no page errors", !pageErrors.length, pageErrors.join("\n"));
 

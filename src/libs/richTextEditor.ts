@@ -422,7 +422,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
   // list, which is split around it; a checkbox item starts with its box, and no other line has one; lists of one kind that
   // end up side by side are one list.
   var convert = function (lines, kind) {
-    var lists = [];
+    var lists = [], made = [];
     lines.forEach(function (line) {
       var item = line.nodeName === "LI" ? line : null;
       if (item ? listKind(item.parentNode) === kind : kind === "p" && (line.nodeName === "DIV" || line.nodeName === "P")) return;
@@ -443,6 +443,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
       }
       if (kind === "todo" && !boxOf(holder)) holder.insertBefore(newBox(), holder.firstChild);
       fill(holder);
+      made.push(holder);
       if (kind !== "p") {
         var target = $.createElement(kind === "ul" ? "ul" : "ol");
         if (kind === "todo") target.className = "x-todo";
@@ -456,6 +457,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
       if (!list.firstChild) return list.remove();
       join(list);
     });
+    return made;
   };
   // A change to or from a checkbox line, which is the page's own.
   var relist = function (current, type) {
@@ -467,7 +469,11 @@ export const RICH_TEXT_SCRIPT = String.raw`
       if (!isList(current) && current !== "p") off(current);
       // A line of the note's own (text right in it) becomes a block first.
       if (!linesIn(range()).length) exec("formatBlock", "<div>");
-      return pageChange(function () { convert(linesIn(range()), "todo"); }, true);
+      var made = [];
+      pageChange(function () { made = convert(linesIn(range()), "todo"); }, true);
+      // An empty line has no character to put the caret back by: it goes after the new box.
+      if (made.length === 1 && blank(made[0]) && made[0].isConnected) caretAt(made[0], 1);
+      return;
     }
     if (isList(type)) return pageChange(function () { convert(linesIn(range()), type); }, true);
     pageChange(function () { convert(items(), "p"); }, true);
@@ -487,8 +493,27 @@ export const RICH_TEXT_SCRIPT = String.raw`
       exec("formatBlock", "<div>");
     });
   };
+  // Chrome makes the list of an empty line inside the line's <div>: the list takes the line's place.
+  var liftList = function () {
+    var s = selection();
+    if (!s.rangeCount) return;
+    var li = closest(s.anchorNode, "li"), list = li && li.parentNode, line = list && list.parentNode;
+    if (!line || line.parentNode !== content() || !(line.nodeName === "DIV" || line.nodeName === "P")) return;
+    var alone = [].every.call(line.childNodes, function (n) {
+      return n === list || n.nodeName === "BR" || (n.nodeType === 3 && !n.data.trim());
+    });
+    if (!alone) return;
+    var node = s.anchorNode, offset = s.anchorOffset;
+    pageChange(function () {
+      line.parentNode.replaceChild(list, line);
+      caretAt(node, offset);
+    });
+  };
   var on = function (type) {
-    if (isList(type)) return exec(listCommand(type));
+    if (isList(type)) {
+      exec(listCommand(type));
+      return liftList();
+    }
     exec("formatBlock", "<" + BLOCK[type] + ">");
   };
 
@@ -734,6 +759,80 @@ export const RICH_TEXT_SCRIPT = String.raw`
       }
     }
   });
+
+  // Shortcuts while typing (spec B.5): on a text line, a marker at its very start (#, ##, -, *, 1., [], >) followed by a
+  // space typed as finished text makes the line that kind; "---" alone on a line, then Enter, makes it a rule. The space
+  // goes in first, then the marker and the space are deleted and the line changes: undo gives the typed characters back.
+  // Never in another kind of line, from a paste, or inside a composition. SHORTCUTS_ON_TOUCH false: only without touch.
+  var SHORTCUTS_ON_TOUCH = true;
+  var SHORTCUTS = { "#": "h1", "##": "h2", "-": "ul", "*": "ul", "1.": "ol", "[]": "todo", ">": "quote" };
+  var shortcutsHere = function () { return SHORTCUTS_ON_TOUCH || !navigator.maxTouchPoints; };
+  // The text of the caret's line before the caret, or null when the caret isn't on a text line.
+  var lineBefore = function () {
+    var s = selection();
+    if (!s.rangeCount || !s.isCollapsed || !content().isContentEditable || !content().contains(s.anchorNode)) return null;
+    if (typeAt(s.anchorNode) !== "p") return null;
+    var r = $.createRange();
+    r.selectNodeContents(closest(s.anchorNode, "div,p") || content());
+    r.setEnd(s.anchorNode, s.anchorOffset);
+    return r;
+  };
+  var pendingShortcut = null;
+  content().addEventListener("beforeinput", function (e) {
+    pendingShortcut = null;
+    if (e.inputType !== "insertText" || e.data !== " " || e.isComposing || composing || !shortcutsHere()) return;
+    var r = lineBefore(), kind = r && SHORTCUTS[r.toString()];
+    if (kind) pendingShortcut = { kind: kind, marker: r.toString() };
+  });
+  // The input events of the page's own commands, kept from the library's handling (it would put a new list back in a
+  // <div>): the change is told to the app after (contentChanged).
+  var quiet = 0;
+  $.addEventListener("input", function (e) { if (quiet) e.stopImmediatePropagation(); }, true);
+  var quietly = function (change) {
+    quiet++;
+    try { change(); } finally { quiet--; }
+  };
+  // The typed space's own input event too: the app is told after the change.
+  $.addEventListener("input", function (e) {
+    var p = pendingShortcut;
+    pendingShortcut = null;
+    if (!p || e.inputType !== "insertText" || !content().contains(e.target)) return;
+    var r = lineBefore();
+    if (!r || r.toString().replace(/\u00a0/g, " ") !== p.marker + " ") return;
+    e.stopImmediatePropagation();
+    quietly(function () {
+      select(r);
+      exec("delete");
+      toggle(p.kind);
+    });
+    contentChanged();
+  }, true);
+  // "---" then Enter, before the other Enter handling.
+  content().addEventListener("beforeinput", function (e) {
+    if (e.inputType !== "insertParagraph" || !shortcutsHere()) return;
+    var r = lineBefore();
+    if (!r || r.toString() !== "---") return;
+    var line = closest(r.endContainer, "div,p");
+    var after = $.createRange();
+    after.selectNodeContents(line || content());
+    after.setStart(r.endContainer, r.endOffset);
+    if (after.toString() || (!line && content().childNodes.length > 1)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    pageChange(function () {
+      var hr = $.createElement("hr"), next = $.createElement("div");
+      next.appendChild($.createElement("br"));
+      if (line) {
+        line.parentNode.insertBefore(hr, line);
+        line.parentNode.replaceChild(next, line);
+      } else {
+        while (content().firstChild) content().removeChild(content().firstChild);
+        content().appendChild(hr);
+        content().appendChild(next);
+      }
+      caretAt(next, 0);
+    });
+  }, true);
 
   // Images. A tap on one (a touch that didn't move, or a click) asks the app for its menu (IMAGE_MESSAGE); the app's choice
   // comes back as __fm.image(index, key, change, value). The key is the image's data: a choice made on an image that has
