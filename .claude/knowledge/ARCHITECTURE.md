@@ -53,7 +53,8 @@ src/
   components/          # UI components (domain-grouped)
     cloud/             # CloudUnreachableLine (the home's line when the cloud can't be reached), CloudStatusDot (ADR-029)
     buttons/           # 18 button components (each a single-purpose TouchableOpacity)
-    cards/             # NoteCard, TrashedNoteCard, OrganizeCategoryCard, OrderedCategoryCard
+    cards/             # NoteCard (in a search: the title's marked words and the line that matched), TrashedNoteCard,
+                       #   OrganizeCategoryCard, OrderedCategoryCard, TagRow (a tag and its count, the search's tag list)
     notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor; NoteImageMenu (ADR-024)
                        # QuickNoteBar (the home's capture bar); SelectionBar (select mode's actions in its place: words, or
                        #   icons alone where the column is narrow; LL-091)
@@ -74,7 +75,8 @@ src/
     lottie/            # LottieAnimation.tsx, LottieAnimation.web.tsx
     webhook/           # WebhookItem
     renderers/         # ContextMenu
-    ui/                # Design primitives: AppBackground, GlassSurface, IconChip, PopupMenu (under a trigger, or `at` a point),
+    ui/                # Design primitives: AppBackground, GlassSurface, IconChip, PopupMenu (under a trigger, or `at` a point;
+                       #   options, labels, dividers, a row of icon switches, a destructive option), MarkedText (marked ranges),
                        # ImageViewer (full screen, pinch/pan/double tap), TourSpotlight, TourTip, BlinkingDot,
                        # ProgressBar (a download: AI model, APK update), DropSlot (where a dragged card or row lands),
                        # EmptyState (an empty list: notes / category / search / trash, its drawing, title and sentence),
@@ -92,6 +94,7 @@ src/
     settingsSlice.ts   # App settings: language, security, cloud, AI, dev mode (14 reducers)
     thunks/
       notes.ts         # wipeNotes (+ the cloud collection)
+      duplicateNote.ts # A copy of a live note (libs/noteCopy) through addNote, with the type's "note added" webhook
       categories.ts    # wipeCategories (+ the cloud collection)
 
   types/               # TypeScript type definitions
@@ -106,6 +109,7 @@ src/
   hooks/               # Custom React hooks
     useCloudSync.ts    # Cloud sync lifecycle management (connect, disconnect, full sync, handshake)
     useLiveNote.ts     # Open editor: reloads changes merged from other devices, publishes presence
+    useNoteSearch.ts   # The home's search: every category's notes, 100 ms after the last keystroke, warm-up while idle (ADR-040)
     useTodoList.ts     # A list note's state and actions, shared by both list editors: every action computes from the
                        #   current note (stable handlers), so typing in an item renders that row only (LL-018)
     useRouter.ts       # Expo Router wrapper with push-debounce (1000ms guard)
@@ -196,6 +200,10 @@ src/
       snippets.ts      # What to paste into each AI client
       types.ts         # What Rust and the page exchange: McpRequest, McpReply; and UpdateCheck
     windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
+    search/            # One search (ADR-040), no React: fold (case and accents, same length), lines (noteDoc: what a note says;
+                       #   a protected note's title alone), tags (words with #), search (matching, groups, the line), cache
+                       #   (docOf, kept against the note object; warmUp while idle), findOnOpen (the word a result hands its note)
+    noteCopy.ts        # copyOfNote: a copy sharing nothing with the original (new ids inside), the flags spec A.4 gives
     diagnostics/       # What an error and a report carry (ADR-035)
       index.ts         # initDiagnostics (Sentry init, tags, user id), setDiagnosticsContext, reportHandled, reportPageError,
                        #   addTrail, collectAlwaysFacts
@@ -223,7 +231,6 @@ src/
 
   utils/               # Pure utility functions
     sort.ts            # Sort comparators for Timestamped/Ordered items; importantFirst (LL-080)
-    noteSearch.ts      # matchesDeepSearch: title, text, list items, board columns and cards, code tabs (LL-081)
     noteEmpty.ts       # isTodoNoteEmpty / isKanbanNoteEmpty: no title and nothing typed (empty rows/cards count as none)
     noteType.ts        # isKnownNoteType: the types this version opens; any other is shown as "update to open" (ADR-039)
     imageSize.ts       # resizeFor, PHOTO_LONG_SIDE, PHOTO_QUALITY: the size a picture is reduced to (pure)

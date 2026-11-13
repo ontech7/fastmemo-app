@@ -2022,3 +2022,45 @@ editor for it either: an edit crashed on it.
 - A note of a new type is safe on an older device, but unusable there until the app is updated.
 - A web page opened cold at its address lands on the home without the toast (the app starts from the home on a cold load);
   nothing opens either way.
+
+---
+
+## ADR-040: One Search
+
+**Status:** Accepted (2026-11-13), plan 2 of 4.1.0 (spec A.1, A.2)  
+**Context:** the home's field filtered the open category by title; a "deep search" switch (behind the secret code) stripped
+the HTML of every text note at every keystroke. The user asked for a search "like Visual Studio Code's": one field that finds
+a word anywhere, says where, and opens on it. Tags were asked for too, without anything that looks like a second category
+system.  
+**Decision:**
+
+- **One field**, always searching titles and content of every type, in every category. The switch, its state and its strings
+  are gone. A query is split on spaces; a note matches when every word is in its title or in one of its lines, case and
+  accents ignored (`libs/search/fold.ts`, a fold that keeps the text's length, so a range in the folded text marks the same
+  characters in the original).
+- **What is read** (`libs/search/lines.ts` `noteDoc`): a text note's lines as they read (its own scanner, not a regex over the
+  whole HTML: a 300 KB picture is stepped over), every list item, every column name and card (with the column as the line's
+  label), every code tab's name and code (monospace). **A protected note gives its title alone**: its content is never read
+  into the search, so searching needs no code. A type this version doesn't know (ADR-039): its title alone.
+- **Kept against the note object** (`libs/search/cache.ts`, a `WeakMap`): a changed note is a new object in the store, so
+  nothing is stale and nothing is cleared. The home fills it while idle (`warmUp`, slices of at most 4 ms) after it has drawn;
+  a note not reached yet is read when a search needs it. The search runs 100 ms after the last keystroke (`useNoteSearch`),
+  by the parsed terms (a space more searches nothing again).
+- **Results**: in "All" one list; in a category, "In <category>" then "Other categories", headings only when both have notes.
+  The count next to the category is the number of results. A result whose content matched shows one line (the first that
+  holds a word, cut around it, words marked, "+N" for the others); a card outside a search never has it.
+- **Tags are words** (`libs/search/tags.ts`): `#`, a letter, up to 40 letters, digits, `_`, `-`, at a line's start or after a
+  space; not a colour (3, 6, 8 hex digits), not in code, not in a protected note's content. Nothing is stored. `#` alone lists
+  them by use; `#la` narrows and shows the notes that hold one; the word without `#` finds them too.
+- **Opening a result** hands the word to the note's find bar through a slot in memory (`libs/search/findOnOpen.ts`), never
+  the route (a route can end up in an error report). The keyboard stays down.
+- The trail gets `search` once each time the field goes from empty to not empty; never the text.
+
+**Rejected:** an index keyed by note id (it has to be invalidated on every change, and a missed one shows stale results);
+ranking by relevance (the list's own order is the one people know); tags as stored data or chips (a second way to file notes,
+the confusion with categories the user feared).
+
+**Trade-offs:**
+
+- Each note's lines stay in memory while its object lives (roughly its text once more), freed with it.
+- Accents are folded only for Latin, Greek and Cyrillic marks: kana with a voicing mark and Hangul stay as written.

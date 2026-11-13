@@ -140,6 +140,20 @@ The standard interactive element is `TouchableOpacity` with `activeOpacity={0.7}
   `ConfirmOrCancelDialog` whose confirm deletes is marked `destructive` (the warning fires on confirm, never on cancel); a
   `ComplexDialog` that deletes calls `haptic.warn()` in its confirm handler. A drag's haptics belong to the reorder engine.
 
+### Menus
+
+A menu is `ui/PopupMenu` with its parts: `PopupMenuOption` (an entry; `selected` for one with a state, `destructive` for one
+that deletes, in `COLOR.dangerSoft` with its icon in the same colour), `PopupMenuLabel`, `PopupMenuDivider`, and
+`PopupMenuToggleRow` of `PopupMenuToggle`s for on/off flags shown as icons (`accessibilityRole="switch"`, `aria-checked`, the
+label spoken). Choosing anything closes the menu. Delete goes last, after a divider. No new menu component: a new need is a new
+part of this one.
+
+### Reading a Note's Words
+
+Whatever reads a note's words for the person (the search, a picker of notes) goes through `libs/search`'s `docOf(note)`,
+never through the note's fields directly: it gives a protected note's title alone, so its content never reaches a list, a
+highlight or a count without the code (ADR-040).
+
 ### SafeAreaView
 
 Always use the project's custom `@/components/SafeAreaView`, not the one from `react-native-safe-area-context` directly.
@@ -908,7 +922,7 @@ What an error and a report carry is decided in ADR-035; the code is `src/libs/di
   dotted `area` (`sync.push.rejected`, `vault.check`, `ai.load`) and `extra` holding only ids, counts and codes. It is reported
   once per area and message per session, and being offline or a retried timeout is skipped for you. Never call
   `Sentry.captureException` directly for a new case, and never show the user a cloud-sync failure (rule 16).
-- **A step worth seeing before an error** is `addTrail(name, data?)` (`note.open`, `sync.push`, `ai.action`): a type, a count or
+- **A step worth seeing before an error** is `addTrail(name, data?)` (`note.open`, `note.duplicate`, `search`, `sync.push`, `ai.action`): a type, a count or
   an action name, never which note. Routes are added by `DiagnosticsProvider` as their pattern.
 - **A WebView page forwards its errors** with `PAGE_ERROR_SCRIPT` (`libs/pageErrors.ts`) injected before its own script; the
   app's message handler passes `PAGE_ERROR_MESSAGE` to `reportPageError(page, data)`. A new page gets both.
