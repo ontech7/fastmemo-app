@@ -9,6 +9,37 @@ export const lineCommand = (type: LineType) => `window.__fm && window.__fm.toggl
 /** A hairline under the caret's line, the caret on a text line after it. */
 export const RULE_COMMAND = "window.__fm && window.__fm.rule()";
 
+/** What the formatting bar asks the page by name (`formatCommand`); anything else does nothing. */
+export type FormatCommand =
+  | "bold"
+  | "italic"
+  | "underline"
+  | "strikeThrough"
+  | "subscript"
+  | "superscript"
+  | "justifyLeft"
+  | "justifyCenter"
+  | "undo"
+  | "redo";
+/** Where the caret is, for the bar: its line's kind and the styles on at the caret. */
+export interface EditorState {
+  line: LineType;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strike: boolean;
+  sub: boolean;
+  sup: boolean;
+  center: boolean;
+  /** The caret is in a web link (Task 13). */
+  link: boolean;
+}
+/** The page's message with the caret's state: its data is an `EditorState`. */
+export const STATE_MESSAGE = "FASTMEMO_STATE";
+/** The page's message that the text was touched or clicked (the bar closes its menu). */
+export const TOUCH_MESSAGE = "FASTMEMO_TOUCH";
+export const formatCommand = (command: FormatCommand) => `window.__fm && window.__fm.run(${JSON.stringify(command)})`;
+
 /** The text editor page's look (RichEditor's `editorStyle`). */
 export const RICH_TEXT_STYLE = {
   backgroundColor: "transparent",
@@ -821,6 +852,66 @@ export const RICH_TEXT_SCRIPT = String.raw`
     return nativeExec(command, ui, value);
   };
 
-  window.__fm = { toggle: toggle, rule: rule, insertImage: insertImage, image: image };
+  // The bar's commands by name (FormatCommand): nothing else, and nothing in a read-only note.
+  var COMMANDS = ["bold", "italic", "underline", "strikeThrough", "subscript", "superscript", "justifyLeft", "justifyCenter", "undo", "redo"];
+  var run = function (command) {
+    if (COMMANDS.indexOf(command) < 0 || !content().isContentEditable) return;
+    if (command === "undo") undo();
+    else if (command === "redo") redo();
+    else exec(command);
+    refreshToolbar();
+  };
+
+  // The caret's state for the bar (STATE_MESSAGE): posted when the selection moves (once a frame at most) and after every
+  // command, only when it differs from the last one posted, and never from a read-only note.
+  var queryState = function (command) { try { return $.queryCommandState(command); } catch (error) { return false; } };
+  var state = function () {
+    var s = selection(), node = s.rangeCount ? s.getRangeAt(0).startContainer : content();
+    var line = closest(node, "li,div,p,h1,h2,blockquote,pre") || content();
+    var link = closest(node, "a[href]");
+    return {
+      line: typeAt(node),
+      bold: queryState("bold"),
+      italic: queryState("italic"),
+      underline: queryState("underline"),
+      strike: queryState("strikeThrough"),
+      sub: queryState("subscript"),
+      sup: queryState("superscript"),
+      center: getComputedStyle(line).textAlign === "center",
+      link: !!link && link.getAttribute("href").indexOf("#fm-note-") !== 0,
+    };
+  };
+  var lastState = null, stateFrame = 0;
+  var postState = function () {
+    stateFrame = 0;
+    var s = selection();
+    if (!content().isContentEditable || !s.rangeCount || !content().contains(s.anchorNode)) return;
+    var now = JSON.stringify(state());
+    if (now === lastState) return;
+    lastState = now;
+    post("${STATE_MESSAGE}", JSON.parse(now));
+  };
+  $.addEventListener("selectionchange", function () {
+    if (!stateFrame) stateFrame = requestAnimationFrame(postState);
+  });
+  // A touch or a click on the text: the bar closes its menu.
+  content().addEventListener("pointerdown", function () { post("${TOUCH_MESSAGE}", null); });
+  // Every command of the page posts the state it leaves.
+  var thenState = function (command) {
+    return function () {
+      var result = command.apply(null, arguments);
+      postState();
+      return result;
+    };
+  };
+
+  window.__fm = {
+    toggle: thenState(toggle),
+    rule: thenState(rule),
+    insertImage: thenState(insertImage),
+    image: thenState(image),
+    run: thenState(run),
+    state: state,
+  };
 })();
 `;

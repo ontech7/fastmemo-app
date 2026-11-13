@@ -30,7 +30,7 @@ const tmp = mkdtempSync(join(os.tmpdir(), "richtext-"));
 const entry = join(tmp, "entry.mjs");
 writeFileSync(
   entry,
-  `export { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE, COUNT_MESSAGE, imageCommand } from ${JSON.stringify(join(root, "src/libs/richTextEditor.ts"))};
+  `export { RICH_TEXT_SCRIPT, RICH_TEXT_STYLE, COUNT_MESSAGE, STATE_MESSAGE, TOUCH_MESSAGE, formatCommand, imageCommand } from ${JSON.stringify(join(root, "src/libs/richTextEditor.ts"))};
    export { getTextLength } from ${JSON.stringify(join(root, "src/utils/string.ts"))};
    export { PAGE_ERROR_SCRIPT, PAGE_ERROR_MESSAGE } from ${JSON.stringify(join(root, "src/libs/pageErrors.ts"))};
    export { EDITOR_SANITIZE_JS } from ${JSON.stringify(join(root, "src/generated/editor-sanitize.ts"))};
@@ -68,8 +68,11 @@ const {
   RICH_TEXT_SCRIPT,
   RICH_TEXT_STYLE,
   createHTML,
+  formatCommand,
   getTextLength,
   imageCommand,
+  STATE_MESSAGE,
+  TOUCH_MESSAGE,
 } = await import(pathToFileURL(join(tmp, "page.bundle.mjs")));
 const page = join(tmp, "page.html");
 // RichEditor's props in NoteTextEditor
@@ -1342,6 +1345,115 @@ await post({ type: "content", name: "setDisable", data: false });
     html(await state()) === `<div>${A}</div><div>${B}</div>`,
     (await state()).html
   );
+}
+
+// 9. The bar's side of the page (spec B.1): the caret's state, posted when it changes, and the formatting commands by name.
+{
+  const listenToState = () =>
+    evaluate(`(() => {
+      window.__state = [];
+      window.addEventListener("message", (e) => {
+        try { const m = JSON.parse(e.data); if (m.type === ${JSON.stringify(STATE_MESSAGE)} || m.type === ${JSON.stringify(TOUCH_MESSAGE)}) window.__state.push(m); } catch (error) {}
+      });
+    })()`);
+  const states = async () => {
+    await sleep(120);
+    return evaluate(`window.__state.splice(0).filter((m) => m.type === ${JSON.stringify(STATE_MESSAGE)}).map((m) => m.data)`);
+  };
+  const touches = () => evaluate(`window.__state.splice(0).filter((m) => m.type === ${JSON.stringify(TOUCH_MESSAGE)}).length`);
+  const run = (command) => post({ type: "content", name: "command", data: formatCommand(command) });
+
+  await open(`<div>plain one</div><div>x <b>bold</b> y</div>`);
+  await listenToState();
+  await select({ caret: "plain one", at: 2 });
+  let got = await states();
+  check(
+    "the caret in a text line posts its state, once",
+    got.length === 1 &&
+      JSON.stringify(got[0]) ===
+        JSON.stringify({
+          line: "p",
+          bold: false,
+          italic: false,
+          underline: false,
+          strike: false,
+          sub: false,
+          sup: false,
+          center: false,
+          link: false,
+        }),
+    JSON.stringify(got)
+  );
+  await select({ caret: "plain one", at: 4 });
+  got = await states();
+  check("moving inside the same line posts nothing more", !got.length, JSON.stringify(got));
+  await select({ caret: "bold", at: 1 });
+  got = await states();
+  check("into bold text: bold", got.length === 1 && got[0].bold === true, JSON.stringify(got));
+
+  await open(EVERY_LINE);
+  await listenToState();
+  let last = null;
+  for (const [text, line] of [
+    ["Testo semplice", "p"],
+    ["Titolo uno", "h1"],
+    ["Titolo due", "h2"],
+    ["Una citazione", "quote"],
+    ["codice()", "code"],
+    ["punto", "ul"],
+    ["numero", "ol"],
+    ["da fare", "todo"],
+    ["fatto", "todo"],
+  ]) {
+    await select({ caret: text, at: 1 });
+    last = (await states()).pop() ?? last;
+    check(`the caret in "${text}" posts line ${line}`, last?.line === line, JSON.stringify(last));
+  }
+
+  await open(`<div>plain one</div>`);
+  await listenToState();
+  await select({ text: "plain" });
+  await states();
+  await run("bold");
+  got = await states();
+  check(
+    'run("bold") makes the selection bold and posts it',
+    (await state()).html.includes("<b>plain</b>") && got.some((g) => g.bold === true),
+    `${(await state()).html} ${JSON.stringify(got)}`
+  );
+  await run("justifyCenter");
+  got = await states();
+  check(
+    'run("justifyCenter") posts center',
+    got.some((g) => g.center === true),
+    JSON.stringify(got)
+  );
+  const before = (await state()).html;
+  await run("insertHTML");
+  check('run("insertHTML") does nothing', (await state()).html === before, (await state()).html);
+
+  await open(`<div>plain one</div><div>x <b>bold</b> y</div>`);
+  await post({ type: "content", name: "setDisable", data: true });
+  await listenToState();
+  await select({ caret: "bold", at: 1 });
+  await select({ text: "plain" });
+  await run("bold");
+  got = await states();
+  check("a read-only note posts no state", !got.length, JSON.stringify(got));
+  check('a read-only note: run("bold") changes nothing', !(await state()).html.includes("<b>plain"), (await state()).html);
+  await post({ type: "content", name: "setDisable", data: false });
+
+  await open(`<div>plain one</div>`);
+  await listenToState();
+  {
+    const [tx, ty] = await evaluate(
+      `(() => { const r = document.querySelector(".pell-content div").getBoundingClientRect(); return [r.x + 10, r.y + r.height / 2]; })()`
+    );
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: tx, y: ty, button: "left", clickCount: 1 });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: tx, y: ty, button: "left", clickCount: 1 });
+    await sleep(120);
+  }
+  check("a pointerdown on the text posts a touch", (await touches()) >= 1, "no touch");
 }
 
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");
