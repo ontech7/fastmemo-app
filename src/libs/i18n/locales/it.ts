@@ -514,7 +514,6 @@ const it = {
   },
   organizecategory: {
     title: "Organizza",
-    empty: "Nessuna categoria.\nTocca il pulsante + per crearne una.",
   },
   trashednotes: {
     title: "Note Cestinate",
@@ -1499,6 +1498,8 @@ const it = {
     trash_title: "Il cestino è vuoto",
     trash_text: "Le note eliminate restano qui per {{days}} giorni.",
     trash_text_unlimited: "Le note eliminate restano qui finché non le rimuovi.",
+    categories_title: "Ancora nessuna categoria",
+    categories_text: "Tocca + per creare la prima.",
     list_title: "Ancora nessun elemento",
     list_text: "Tocca + per aggiungere il primo.",
     list_text_read_only: "Questa lista non ha elementi.",

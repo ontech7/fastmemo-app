@@ -4,6 +4,7 @@ import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import EmptyCategoriesIllustration from "@/components/ui/illustrations/EmptyCategoriesIllustration";
 import EmptyCategoryIllustration from "@/components/ui/illustrations/EmptyCategoryIllustration";
 import EmptyListIllustration from "@/components/ui/illustrations/EmptyListIllustration";
 import EmptyNotesIllustration from "@/components/ui/illustrations/EmptyNotesIllustration";
@@ -12,7 +13,7 @@ import EmptyTrashIllustration from "@/components/ui/illustrations/EmptyTrashIllu
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
-  variant: "notes" | "category" | "search" | "trash" | "history" | "list";
+  variant: "notes" | "category" | "categories" | "search" | "trash" | "history" | "list";
   /** `category`: the icon of the category being shown. */
   categoryIcon?: string;
   /** `notes`: whether the quick note bar is on (the text mentions it only then). */
@@ -52,6 +53,11 @@ export default function EmptyState({ variant, categoryIcon, quickNote = true, da
       drawing = categoryIcon ? <EmptyCategoryIllustration categoryIcon={categoryIcon} /> : <EmptyNotesIllustration />;
       title = t("empty.category_title");
       text = t("empty.category_text");
+      break;
+    case "categories":
+      drawing = <EmptyCategoriesIllustration />;
+      title = t("empty.categories_title");
+      text = t("empty.categories_text");
       break;
     case "search":
       drawing = <EmptySearchIllustration />;

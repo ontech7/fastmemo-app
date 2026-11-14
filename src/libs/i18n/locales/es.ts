@@ -514,7 +514,6 @@ const es = {
   },
   organizecategory: {
     title: "Organizar",
-    empty: "Aún no hay categorías.\nToca el botón + para crear una.",
   },
   trashednotes: {
     title: "Notas Desechadas",
@@ -1506,6 +1505,8 @@ const es = {
     trash_title: "La papelera está vacía",
     trash_text: "Las notas eliminadas se quedan aquí {{days}} días.",
     trash_text_unlimited: "Las notas eliminadas se quedan aquí hasta que las quites.",
+    categories_title: "Aún no hay categorías",
+    categories_text: "Toca + para crear la primera.",
     list_title: "Aún no hay elementos",
     list_text: "Toca + para añadir el primero.",
     list_text_read_only: "Esta lista no tiene elementos.",

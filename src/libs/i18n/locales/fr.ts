@@ -518,7 +518,6 @@ const fr = {
   },
   organizecategory: {
     title: "Organiser",
-    empty: "Aucune catégorie pour l'instant.\nAppuyez sur le bouton + pour en créer une.",
   },
   trashednotes: {
     title: "Notes supprimées",
@@ -1516,6 +1515,8 @@ const fr = {
     trash_title: "La corbeille est vide",
     trash_text: "Les notes supprimées restent ici {{days}} jours.",
     trash_text_unlimited: "Les notes supprimées restent ici jusqu'à ce que vous les retiriez.",
+    categories_title: "Pas encore de catégorie",
+    categories_text: "Touchez + pour créer la première.",
     list_title: "Pas encore d'éléments",
     list_text: "Touchez + pour ajouter le premier.",
     list_text_read_only: "Cette liste n'a aucun élément.",

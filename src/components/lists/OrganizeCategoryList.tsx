@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, View, type ViewInstance } from "react-native";
+import { StyleSheet, View, type ViewInstance } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { useAnimatedRef } from "react-native-reanimated";
 import { useDispatch } from "react-redux";
 
-import { COLOR, FONT, FONTSIZE, PADDING_MARGIN, SIZE } from "@/constants/styles";
+import { PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 import OrganizeCategoryCard, {
   CATEGORIES_CONTAINER,
   OrganizeCategoryCardStatic,
 } from "@/components/cards/OrganizeCategoryCard";
 import ReorderOverlay from "@/components/reorder/ReorderOverlay";
+import EmptyState from "@/components/ui/EmptyState";
 import ReorderSlot from "@/components/reorder/ReorderSlot";
 import { ReorderScrollView } from "@/components/reorder/scrollViews";
 import { useReorderContainer } from "@/components/reorder/useReorderContainer";
@@ -69,7 +69,6 @@ export default function OrganizeCategoryList({ categories }: Props) {
 }
 
 function OrganizeRows({ indexCategory, others }: { indexCategory?: Category; others: OrganizedCategory[] }) {
-  const { t } = useTranslation();
   const preview = useReorderPreview();
   const { registerFrame } = useReorder();
 
@@ -109,17 +108,13 @@ function OrganizeRows({ indexCategory, others }: { indexCategory?: Category; oth
         scrollEventThrottle={16}
         onContentSizeChange={onContentSizeChange}
         scrollEnabled={scrollEnabled}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, others.length === 0 && styles.contentEmpty]}
       >
         {indexCategory && <OrganizeCategoryCard category={indexCategory} locked />}
         {rows}
         {trailingSlot ? <ReorderSlot height={trailingSlot} style={styles.slot} /> : null}
 
-        {others.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>{t("organizecategory.empty")}</Text>
-          </View>
-        )}
+        {others.length === 0 && <EmptyState variant="categories" />}
       </ReorderScrollView>
       <ReorderOverlay renderLifted={renderLiftedCategory} />
     </View>
@@ -137,21 +132,12 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 140,
   },
+  // No category besides "All": the drawing takes the room left under it.
+  contentEmpty: {
+    flexGrow: 1,
+  },
   slot: {
     marginBottom: PADDING_MARGIN.md,
     marginRight: 0,
-  },
-  emptyState: {
-    width: SIZE.full,
-    alignItems: "center",
-    paddingVertical: PADDING_MARGIN.xl,
-    paddingHorizontal: PADDING_MARGIN.lg,
-  },
-  emptyStateText: {
-    color: COLOR.textMuted,
-    fontFamily: FONT.regular,
-    fontSize: FONTSIZE.paragraph,
-    textAlign: "center",
-    lineHeight: 22,
   },
 });

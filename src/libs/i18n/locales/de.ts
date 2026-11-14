@@ -517,7 +517,6 @@ const de = {
   },
   organizecategory: {
     title: "Organisieren",
-    empty: "Noch keine Kategorien.\nTippe auf die Schaltfläche +, um eine zu erstellen.",
   },
   trashednotes: {
     title: "Vernichtete Notizen",
@@ -1518,6 +1517,8 @@ const de = {
     trash_title: "Der Papierkorb ist leer",
     trash_text: "Gelöschte Notizen bleiben {{days}} Tage hier.",
     trash_text_unlimited: "Gelöschte Notizen bleiben hier, bis du sie entfernst.",
+    categories_title: "Noch keine Kategorien",
+    categories_text: "Tippe auf +, um die erste zu erstellen.",
     list_title: "Noch keine Einträge",
     list_text: "Tippe auf +, um den ersten hinzuzufügen.",
     list_text_read_only: "Diese Liste hat keine Einträge.",

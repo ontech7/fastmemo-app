@@ -510,7 +510,6 @@ const ja = {
   },
   organizecategory: {
     title: "整理",
-    empty: "カテゴリーがまだありません。\n+ ボタンを押して作成しましょう。",
   },
   trashednotes: {
     title: "削除されたノート",
@@ -1485,6 +1484,8 @@ const ja = {
     trash_title: "ゴミ箱は空です",
     trash_text: "削除したノートはここに {{days}} 日間残ります。",
     trash_text_unlimited: "削除したノートは、削除するまでここに残ります。",
+    categories_title: "まだカテゴリーがありません",
+    categories_text: "+ をタップして最初のカテゴリーを作成してください。",
     list_title: "まだ項目がありません",
     list_text: "+ をタップして最初の項目を追加してください。",
     list_text_read_only: "このリストには項目がありません。",

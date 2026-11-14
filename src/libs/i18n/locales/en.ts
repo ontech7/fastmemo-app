@@ -510,7 +510,6 @@ const en = {
   },
   organizecategory: {
     title: "Organize",
-    empty: "No categories yet.\nTap the + button to create one.",
   },
   trashednotes: {
     title: "Trashed Notes",
@@ -1484,6 +1483,8 @@ const en = {
     trash_title: "The trash is empty",
     trash_text: "Deleted notes stay here for {{days}} days.",
     trash_text_unlimited: "Deleted notes stay here until you remove them.",
+    categories_title: "No categories yet",
+    categories_text: "Tap + to create the first one.",
     list_title: "No items yet",
     list_text: "Tap + to add the first one.",
     list_text_read_only: "This list has no items.",

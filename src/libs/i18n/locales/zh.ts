@@ -499,7 +499,6 @@ const zh = {
   },
   organizecategory: {
     title: "组织",
-    empty: "还没有类别。\n点击 + 按钮创建一个。",
   },
   trashednotes: {
     title: "垃圾笔记",
@@ -1448,6 +1447,8 @@ const zh = {
     trash_title: "回收站是空的",
     trash_text: "删除的笔记会在这里保留 {{days}} 天。",
     trash_text_unlimited: "删除的笔记会一直保留在这里，直到你将其移除。",
+    categories_title: "还没有类别",
+    categories_text: "点按 + 创建第一个类别。",
     list_title: "还没有项目",
     list_text: "点按 + 添加第一项。",
     list_text_read_only: "此列表没有项目。",
