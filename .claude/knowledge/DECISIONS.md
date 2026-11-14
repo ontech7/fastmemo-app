@@ -2110,6 +2110,22 @@ sanitizer, LL-060).
   screens if Gboard misbehaves (checked at Stop B).
 - WebKit joins a line to the bullet above with a font-size span (released versions too): kept as is.
 
+**Added at Stop B (2026-11-14, the user's hand run):**
+
+- **Inline styles:** inline code (`<code>` outside a code block) and highlight (`<mark>`, `HIGHLIGHT` in `constants/styles`:
+  a pastel yellow with dark text, the PDF the same) from the bar's ···, which also holds the code block now. Aa's first entry
+  is **Normal**: the lines it touches become text lines and lose every inline style (links, note links, pictures, boxes and
+  lists stay); one page change.
+- **Markdown typed inline:** `**b**`, `*i*` / `_i_`, `__u__` (underline: the user's choice; standard Markdown reads it as
+  bold), `~~s~~`, `==mark==`, `` `code` ``: the closing marker makes the style, one undo gives the markers back. A web address
+  (http, https) becomes a link to itself on space or Enter.
+- **Markdown pasted:** when a line starts with a marker, or the text holds a mark or a web address, the page builds the lines
+  itself (`mdBlocks`, `inlineMd`) as one page change; plain text and code blocks keep the library's plain paste.
+- **A zero-width space** holds the caret outside inline code made at a line's end and, on WebKit, past a new checkbox; the app
+  drops every U+200B from the saved note (`NoteTextEditor.onEditorChange`), the plain-text readers and the search too.
+- **The library's deferred line wrap** (pell's `setTimeout(0)` `formatBlock`) is dropped once the caret's line has become a
+  block meanwhile (LL-094). A note link goes with one Backspace, past the empty text nodes Android's WebView leaves.
+
 ---
 
 ## ADR-042: Version History
