@@ -1693,6 +1693,13 @@ export async function runCases(driver, page, url) {
     );
     await press("undo");
     check("...and undo brings both back", (await state()).html === `<div>alpha${NOTE_A}&nbsp;</div>`, (await state()).html);
+    // Android's WebView leaves empty text nodes beside the link after a pick: they don't count.
+    await open(`<div>alpha${NOTE_A}&nbsp;</div>`);
+    await evaluate(
+      `(() => { const c = document.querySelector(".pell-content"), d = c.firstChild, a = d.querySelector("a"); d.insertBefore(document.createTextNode(""), a.nextSibling); d.appendChild(document.createTextNode("")); c.focus(); const r = document.createRange(); r.setStart(d.childNodes[3], 1); getSelection().removeAllRanges(); getSelection().addRange(r); })()`
+    );
+    await key("Backspace");
+    check("...with empty text nodes beside it too", (await state()).html === "<div>alpha</div>", (await state()).html);
     await open(`<div>a${NOTE_A}bc</div>`);
     await select({ text: "bc", from: 0, to: 0 });
     await key("Backspace");

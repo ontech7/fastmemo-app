@@ -1541,19 +1541,39 @@ export const RICH_TEXT_SCRIPT = String.raw`
   // nothing follows that space) and Delete right before it take it whole, as a page change. WebKit wouldn't delete it.
   var isPill = function (n) { return !!n && n.nodeType === 1 && n.nodeName === "A" && isNoteLink(n); };
   var isSpace = function (n) { return !!n && n.nodeType === 3 && n.length === 1 && /[ \u00a0]/.test(n.data); };
+  // Siblings, past the empty text nodes Android's WebView leaves beside a link after a pick.
+  var prevOf = function (n) {
+    n = n && n.previousSibling;
+    while (n && n.nodeType === 3 && !n.length) n = n.previousSibling;
+    return n;
+  };
+  var nextOf = function (n) {
+    n = n && n.nextSibling;
+    while (n && n.nodeType === 3 && !n.length) n = n.nextSibling;
+    return n;
+  };
   var noteLinkBefore = function (node, offset) {
     var prev = null, space = null;
     if (node.nodeType === 3) {
-      if (offset === 0) prev = node.previousSibling;
-      else if (offset === 1 && isSpace(node)) { space = node; prev = node.previousSibling; }
+      if (offset === 0) prev = prevOf(node);
+      else if (offset === 1 && isSpace(node) && !(nextOf(node) && nextOf(node).nodeType === 3)) {
+        space = node;
+        prev = prevOf(node);
+      }
     } else if (offset > 0) {
       prev = node.childNodes[offset - 1];
-      if (isSpace(prev)) { space = prev; prev = prev.previousSibling; }
+      while (prev && prev.nodeType === 3 && !prev.length) prev = prev.previousSibling;
+      if (isSpace(prev)) { space = prev; prev = prevOf(prev); }
     }
     return isPill(prev) ? { from: prev, to: space || prev } : null;
   };
   var noteLinkAfter = function (node, offset) {
-    var next = node.nodeType === 3 ? (offset === node.length ? node.nextSibling : null) : node.childNodes[offset];
+    var next = null;
+    if (node.nodeType === 3) next = offset === node.length ? nextOf(node) : null;
+    else {
+      next = node.childNodes[offset];
+      while (next && next.nodeType === 3 && !next.length) next = next.nextSibling;
+    }
     return isPill(next) ? { from: next, to: next } : null;
   };
   var dropNoteLink = function (span) {
