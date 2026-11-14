@@ -25,6 +25,7 @@ export function stripHtml(html: string): string {
     .replace(/<\/?(p|div|li|h[1-6]|blockquote)[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
+    .replace(/\u200b/g, "")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")

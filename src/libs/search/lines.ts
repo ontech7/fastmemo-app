@@ -94,7 +94,11 @@ export function htmlLines(html: string): string[] {
   let line = "";
   let insidePre = 0;
   const endLine = () => {
-    const clean = line.replace(/\s+/g, " ").trim();
+    // the editor's zero-width space after inline code isn't a character of the line
+    const clean = line
+      .replace(/\u200b/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
     if (clean) lines.push(clean);
     line = "";
   };

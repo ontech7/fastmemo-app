@@ -236,6 +236,7 @@ const es = {
       link: "Enlace",
       note_link: "Enlace a una nota",
       rule: "Línea",
+      inline_code: "Código en línea",
       strike: "Tachado",
       align_left: "Alinear a la izquierda",
       center: "Centrar",

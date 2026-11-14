@@ -8,12 +8,15 @@ export const convertToMB = (sizeInBytes: number): string => {
   return (sizeInBytes / (1024 * 1024)).toFixed(2);
 };
 
+/** The zero-width space the editor leaves after inline code at the end of a line, to keep the caret outside it. */
+const ZERO_WIDTH = /\u200b/g;
+
 export const formatToPlainText = (htmlString: string): string => {
-  return htmlToFormattedText(htmlString);
+  return htmlToFormattedText(htmlString).replace(ZERO_WIDTH, "");
 };
 
 export const getTextLength = (htmlString: string): number => {
-  return htmlToFormattedText(htmlString).replace(/\n/g, "").length;
+  return htmlToFormattedText(htmlString).replace(/\n/g, "").replace(ZERO_WIDTH, "").length;
 };
 
 export const getTextSize = (htmlString: string): number => {

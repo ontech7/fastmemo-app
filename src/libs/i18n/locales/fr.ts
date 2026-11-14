@@ -236,6 +236,7 @@ const fr = {
       link: "Lien",
       note_link: "Lien vers une note",
       rule: "Ligne",
+      inline_code: "Code en ligne",
       strike: "Barré",
       align_left: "Aligner à gauche",
       center: "Centrer",

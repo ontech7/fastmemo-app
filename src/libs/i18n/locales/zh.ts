@@ -235,6 +235,7 @@ const zh = {
       link: "链接",
       note_link: "链接到笔记",
       rule: "分隔线",
+      inline_code: "行内代码",
       strike: "删除线",
       align_left: "左对齐",
       center: "居中",

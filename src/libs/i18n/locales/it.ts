@@ -237,6 +237,7 @@ const it = {
       link: "Link",
       note_link: "Link a una nota",
       rule: "Linea",
+      inline_code: "Codice in linea",
       strike: "Barrato",
       align_left: "Allinea a sinistra",
       center: "Centra",

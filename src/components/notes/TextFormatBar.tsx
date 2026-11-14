@@ -2,7 +2,7 @@ import type { ReactNode, Ref } from "react";
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
 
 import {
@@ -12,6 +12,7 @@ import {
   CameraIcon,
   CheckListIcon,
   CodeBlockIcon,
+  InlineCodeIcon,
   ImageIcon,
   LinkIcon,
   MoreIcon,
@@ -70,6 +71,7 @@ export const TEXT_FORMAT_BAR_HEIGHT = 44 + 2 * PADDING_MARGIN.sm + 1;
 
 const ICON = 20;
 const MENU_WIDTH = 216;
+const ROOMY_WIDTH = 600;
 const BLOCK_LINES: readonly LineType[] = ["h1", "h2", "quote", "code"];
 const LIST_LINES: readonly LineType[] = ["ul", "ol", "todo"];
 
@@ -86,6 +88,9 @@ export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, 
   const menu = open?.menu ?? null;
   const openerXRef = useRef<Record<MenuName, number>>({ style: 0, lists: 0, insert: 0, more: 0 });
   const barWidthRef = useRef(0);
+  // A window wide enough (a desktop's): the controls get room between them; a narrow one keeps them packed.
+  const { width: windowWidth } = useWindowDimensions();
+  const roomy = docked && windowWidth >= ROOMY_WIDTH;
   const scrollXRef = useRef(0);
   const closeMenu = useCallback(() => setOpen(null), []);
   // Over its opener, inside the bar.
@@ -222,6 +227,13 @@ export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, 
     }
     return [
       {
+        key: "code",
+        label: t("note.format.inline_code"),
+        icon: <InlineCodeIcon size={ICON} color={iconColor} />,
+        checked: state.code,
+        onPress: format("code"),
+      },
+      {
         key: "strike",
         label: t("note.format.strike"),
         icon: <StrikeIcon size={ICON} color={iconColor} />,
@@ -349,7 +361,7 @@ export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, 
           keyboardShouldPersistTaps="always"
           onScroll={onScroll}
           scrollEventThrottle={32}
-          contentContainerStyle={[styles.row, docked && styles.rowDocked]}
+          contentContainerStyle={[styles.row, docked && styles.rowDocked, roomy && styles.rowRoomy]}
         >
           {button("undo", t("note.format.undo"), () => onFormat("undo"), <UndoIcon size={ICON} color={COLOR.softWhite} />)}
           {button("redo", t("note.format.redo"), () => onFormat("redo"), <RedoIcon size={ICON} color={COLOR.softWhite} />)}
@@ -412,7 +424,7 @@ const styles = StyleSheet.create({
   },
   // The phone: the room above the bar while a menu is open, the menu in it; a touch in it closes the menu.
   band: {
-    paddingBottom: PADDING_MARGIN.xs,
+    paddingBottom: PADDING_MARGIN.sm,
   },
   row: {
     flexGrow: 1,
@@ -422,6 +434,9 @@ const styles = StyleSheet.create({
   },
   rowDocked: {
     justifyContent: "center",
+  },
+  rowRoomy: {
+    gap: PADDING_MARGIN.xs + 3,
   },
   control: {
     minWidth: 40,
@@ -468,7 +483,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: "100%",
-    marginBottom: PADDING_MARGIN.xs,
+    marginBottom: PADDING_MARGIN.sm,
   },
   menu: {
     width: MENU_WIDTH,

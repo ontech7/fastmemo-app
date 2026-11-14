@@ -236,6 +236,7 @@ const ja = {
       link: "リンク",
       note_link: "ノートへのリンク",
       rule: "区切り線",
+      inline_code: "インラインコード",
       strike: "取り消し線",
       align_left: "左揃え",
       center: "中央揃え",

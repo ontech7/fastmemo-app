@@ -109,6 +109,9 @@ export function htmlToMarkdown(html: string): string {
   // Strip remaining HTML tags
   md = md.replace(/<[^>]+>/g, "");
 
+  // The editor's zero-width space after inline code
+  md = md.replace(/\u200b/g, "");
+
   // Decode HTML entities
   md = md.replace(/&nbsp;/g, " ");
   md = md.replace(/&amp;/g, "&");

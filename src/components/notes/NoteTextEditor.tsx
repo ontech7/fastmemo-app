@@ -182,6 +182,7 @@ const PLAIN_STATE: EditorState = {
   sub: false,
   sup: false,
   center: false,
+  code: false,
   link: false,
 };
 
@@ -380,7 +381,8 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
     (html: string) => {
       // Typed over the content a reload has replaced since (see reloadsSentRef).
       if (reloadsShownRef.current !== reloadsSentRef.current) return;
-      setText(html);
+      // The page keeps a zero-width space after inline code it made, for the caret: never part of the note.
+      setText(html.includes("\u200b") ? html.replace(/\u200b/g, "") : html);
     },
     [setText]
   );

@@ -112,6 +112,7 @@ export async function runCases(driver, page, url) {
     ArrowDown: { key: "ArrowDown", code: "ArrowDown", windowsVirtualKeyCode: 40, commands: ["moveDown"] },
     ArrowLeft: { key: "ArrowLeft", code: "ArrowLeft", windowsVirtualKeyCode: 37, commands: ["moveLeft"] },
     Escape: { key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 },
+    Delete: { key: "Delete", code: "Delete", windowsVirtualKeyCode: 46, commands: ["deleteForward"] },
   };
   const key = async (name) => {
     await driver.key(KEYS[name]);
@@ -1338,6 +1339,7 @@ export async function runCases(driver, page, url) {
             sub: false,
             sup: false,
             center: false,
+            code: false,
             link: false,
           }),
       JSON.stringify(got)
@@ -1669,14 +1671,51 @@ export async function runCases(driver, page, url) {
       `(() => { const c = document.querySelector(".pell-content"); c.focus(); const r = document.createRange(); r.setStart(c.firstChild.lastChild, 1); getSelection().removeAllRanges(); getSelection().addRange(r); })()`
     );
     await key("Backspace");
-    await key("Backspace");
     const afterBack = (await state()).html;
     check(
-      "Backspace twice after it (the space, then the link): no link, no stray text",
+      "Backspace once after it and its space: no link, no stray text",
       !afterBack.includes("<a") &&
         !afterBack.includes("Spesa") &&
         afterBack.replace(/&nbsp;| |<br>/g, "") === "<div>alpha</div>",
       afterBack
+    );
+
+    // A note link is one thing: one Backspace right after it takes it, with the space put after it when picked.
+    await open(`<div>alpha${NOTE_A}&nbsp;</div>`);
+    await evaluate(
+      `(() => { const c = document.querySelector(".pell-content"); c.focus(); const r = document.createRange(); r.setStart(c.firstChild.lastChild, 1); getSelection().removeAllRanges(); getSelection().addRange(r); })()`
+    );
+    await key("Backspace");
+    check(
+      "Backspace right after a note link just picked removes it and its space",
+      (await state()).html === "<div>alpha</div>",
+      (await state()).html
+    );
+    await press("undo");
+    check("...and undo brings both back", (await state()).html === `<div>alpha${NOTE_A}&nbsp;</div>`, (await state()).html);
+    await open(`<div>a${NOTE_A}bc</div>`);
+    await select({ text: "bc", from: 0, to: 0 });
+    await key("Backspace");
+    check(
+      "Backspace with the caret right after a note link removes it",
+      (await state()).html === "<div>abc</div>",
+      (await state()).html
+    );
+    await open(`<div>a${NOTE_A}bc</div>`);
+    await select({ text: "a", from: 1, to: 1 });
+    await key("Delete");
+    check(
+      "Delete with the caret right before a note link removes it",
+      (await state()).html === "<div>abc</div>",
+      (await state()).html
+    );
+    await open(`<div>a${NOTE_A}&nbsp;bc</div>`);
+    await select({ text: "\u00a0bc", from: 1, to: 1 });
+    await key("Backspace");
+    check(
+      "Backspace after the space of a note link followed by text takes only the space",
+      (await state()).html === `<div>a${NOTE_A}bc</div>`,
+      (await state()).html
     );
 
     await open("<div>alpha</div>");
@@ -1927,6 +1966,162 @@ export async function runCases(driver, page, url) {
       const html = (await state()).html;
       check(`"${marker} " first in an empty note, pell's line wrap late: ${expected}`, html === expected, html);
     }
+
+    // A web address typed, then a space or Enter: it becomes a link to itself (trailing punctuation stays text).
+    const links = () =>
+      evaluate(
+        `JSON.stringify([...document.querySelectorAll(".pell-content a[href]")].map((a) => [a.getAttribute("href"), a.textContent]))`
+      );
+    for (const [typed, end, href, rest] of [
+      ["vedi https://example.com/a?b=1", " ", "https://example.com/a?b=1", "vedi https://example.com/a?b=1 x"],
+      ["vedi http://example.com.", " ", "http://example.com", "vedi http://example.com. x"],
+      ["vedi https://example.com", "Enter", "https://example.com", "vedi https://example.comx"],
+    ]) {
+      await emptyLine();
+      await type(typed);
+      if (end === "Enter") await key("Enter");
+      else await type(end);
+      await type("x");
+      const got = JSON.parse(await links());
+      const text = (await state()).text.replace(/\u00a0/g, " ");
+      check(
+        `"${typed}" then ${end === " " ? "a space" : end}: a link to ${href}, and what follows is outside it`,
+        got.length === 1 && got[0][0] === href && got[0][1] === href && text === rest,
+        JSON.stringify(got) + " " + text
+      );
+    }
+    await press("undo");
+    await press("undo");
+    check("undo gives the address back as text", JSON.parse(await links()).length === 0, await links());
+    for (const [name, html, typed] of [
+      ["in a code block", "<pre>x</pre>", "https://example.com "],
+      ["the scheme alone", "<div><br></div>", "https://  "],
+      ["inside a link", '<div><a href="https://a.it">see</a></div>', ""],
+    ]) {
+      await emptyLine(html);
+      if (typed) await type(typed);
+      else {
+        await select(end("see"));
+        await type(" https://b.it ");
+      }
+      const got = JSON.parse(await links());
+      check(
+        `no link made ${name}`,
+        got.every((l) => l[0] !== "https://example.com" && l[0] !== "https://" && l[0] !== "https://b.it"),
+        JSON.stringify(got)
+      );
+    }
+
+    // Inline Markdown typed: the closing marker makes the text between bold, italic, struck or code. What is typed after
+    // goes outside it (a zero-width space holds the caret there at the end of a line).
+    const plain = (h) => h.replace(/​/g, "");
+    for (const [typed, tag, inner] of [
+      ["a **forte**", "b", "forte"],
+      ["a *corsivo*", "i", "corsivo"],
+      ["a _corsivo_", "i", "corsivo"],
+      ["a ~~via~~", "strike", "via"],
+      ["a `x = 1`", "code", "x = 1"],
+    ]) {
+      await emptyLine();
+      await type(typed);
+      await type("z");
+      const html = plain((await state()).html);
+      check(
+        `"${typed}" typed: ${tag}, and what follows is outside it`,
+        html === `<div>a <${tag}>${inner}</${tag}>z</div>`,
+        html
+      );
+    }
+    await emptyLine();
+    await type("a **forte**");
+    await press("undo");
+    check(
+      "undo gives the markers back",
+      plain((await state()).html).replace(/&nbsp;/g, " ") === "<div>a **forte**</div>",
+      (await state()).html
+    );
+    for (const [name, html, typed] of [
+      ["a product", "<div><br></div>", "2*3*4 "],
+      ["a name with underscores", "<div><br></div>", "snake_case_name "],
+      ["a lone backtick", "<div><br></div>", "a ` b "],
+      ["in a code block", "<pre>x</pre>", "`y` "],
+    ]) {
+      await emptyLine(html);
+      await type(typed);
+      const now = (await state()).html;
+      check(`no inline style from ${name}`, !/<(b|i|strike|code)>/.test(now), now);
+    }
+
+    // Inline code from the bar's menu: the selection becomes code; with the caret in code, the code goes back to text.
+    const command = (script) => post({ type: "content", name: "command", data: script });
+    await open("<div>one two</div>");
+    await select({ text: "two" });
+    await command(formatCommand("code"));
+    check(
+      "the menu's inline code wraps the selection",
+      plain((await state()).html) === "<div>one <code>two</code></div>",
+      (await state()).html
+    );
+    await select({ text: "two", from: 1, to: 1 });
+    await command(formatCommand("code"));
+    check(
+      "...and again, with the caret in it, takes it off",
+      plain((await state()).html) === "<div>one two</div>",
+      (await state()).html
+    );
+
+    // Markdown pasted into a text note: its lines become the note's lines, its inline marks and links too, in one undo.
+    const paste = async (text) => {
+      await evaluate(
+        `(() => { const dt = new DataTransfer(); dt.setData("text/plain", ${JSON.stringify(text)}); document.querySelector(".pell-content").dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true })); })()`
+      );
+      await sleep(150);
+    };
+    await emptyLine();
+    await paste("# Test titolo\n## Test sottotitolo\n[] uno\n[] due\n[x] tre\n---\n1. uno\n2. due\n3. tre\n**quattro**");
+    const md = plain((await state()).html);
+    check(
+      "pasted Markdown becomes the note's lines",
+      md ===
+        `<h1>Test titolo</h1><h2>Test sottotitolo</h2><ol class="x-todo"><li>${BOX}uno</li><li>${BOX}due</li><li>${DONE}tre</li></ol><hr><ol><li>uno</li><li>due</li><li>tre</li></ol><div><b>quattro</b></div>`,
+      md
+    );
+    check("...that the sanitizer keeps", (await evaluate(`window.__fmSanitize(${JSON.stringify(md)})`)) === md, "changed");
+    await press("undo");
+    check("...and one undo takes the paste away", plain((await state()).html) === "<div><br></div>", (await state()).html);
+    await emptyLine();
+    await paste("- a\n* b\n> citazione\n```\nlet x = 1;\nx++;\n```\nvedi [qui](https://a.it) e https://b.it, `c`, _d_ ~~e~~");
+    const md2 = plain((await state()).html);
+    check(
+      "lists, a quote, a code block, links and inline marks",
+      md2 ===
+        '<ul><li>a</li><li>b</li></ul><blockquote>citazione</blockquote><pre>let x = 1;<br>x++;</pre><div>vedi <a href="https://a.it">qui</a> e <a href="https://b.it">https://b.it</a>, <code>c</code>, <i>d</i> <strike>e</strike></div>',
+      md2
+    );
+    await open("<div>abcd</div>");
+    await select({ text: "abcd", from: 2, to: 2 });
+    await paste("# T\n- x");
+    const mid = plain((await state()).html);
+    check(
+      "pasted in the middle of a line: the line is split around it",
+      mid === "<div>ab</div><h1>T</h1><ul><li>x</li></ul><div>cd</div>",
+      mid
+    );
+    await open("<div>ab</div>");
+    await select(end("ab"));
+    await paste("**c** d");
+    check(
+      "Markdown of one line joins the line it is pasted in",
+      plain((await state()).html) === "<div>ab<b>c</b> d</div>",
+      (await state()).html
+    );
+    await emptyLine();
+    await paste("just text\nand more");
+    const pl = (await state()).html;
+    check("text with no Markdown is pasted as it was", !/<(h1|h2|ul|ol|b|i|code|a)\b/.test(pl) && pl.includes("just text"), pl);
+    await emptyLine("<pre>x</pre>");
+    await paste("# not a heading");
+    check("nothing is converted in a code block", !(await state()).html.includes("<h1>"), (await state()).html);
 
     await emptyLine();
     await type("a #");

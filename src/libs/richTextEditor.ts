@@ -19,6 +19,7 @@ export type FormatCommand =
   | "superscript"
   | "justifyLeft"
   | "justifyCenter"
+  | "code"
   | "undo"
   | "redo";
 /** Where the caret is, for the bar: its line's kind and the styles on at the caret. */
@@ -31,6 +32,8 @@ export interface EditorState {
   sub: boolean;
   sup: boolean;
   center: boolean;
+  /** The caret is in inline code (not a code block). */
+  code: boolean;
   /** The caret is in a web link (Task 13). */
   link: boolean;
 }
@@ -110,6 +113,10 @@ export const RICH_TEXT_STYLE = {
     pre pre { margin: 0; padding: 0; background: none; }
     h1:empty, pre:empty { display: none; }
     pre span { font-family: inherit !important; background-color: transparent !important; white-space: inherit !important; }
+    :not(pre) > code {
+      font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9em;
+      padding: 1px 5px; border-radius: 5px; background-color: ${COLOR.surfaceMuted};
+    }
     ${noteBlockCss({ text: COLOR.softWhite, muted: COLOR.textSecondary, accent: COLOR.accentMuted, line: GLASS.border, boxFill: "transparent", link: COLOR.accentSoft, pill: COLOR.accentMuted + "47", pillBorder: COLOR.accentMuted + "99", pillText: COLOR.textPrimary })}
     ${SCROLLBAR_CSS}
   `,
@@ -778,7 +785,11 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (!s.rangeCount || !s.isCollapsed) return;
     var node = s.focusNode, offset = s.focusOffset;
     if (e.inputType === "deleteContentBackward") {
-      if (unbulletAt(node, offset)) e.preventDefault();
+      if (unbulletAt(node, offset) || dropNoteLink(noteLinkBefore(node, offset))) e.preventDefault();
+      return;
+    }
+    if (e.inputType === "deleteContentForward") {
+      if (dropNoteLink(noteLinkAfter(node, offset))) e.preventDefault();
       return;
     }
     // Enter, also from a keyboard that sends it as text: a new line of the code block, or out of it on an empty last line.
@@ -1234,6 +1245,331 @@ export const RICH_TEXT_SCRIPT = String.raw`
     var a = closest(s.anchorNode, 'a[contenteditable="false"]');
     if (a && isNoteLink(a)) caretAfter(a);
   };
+  // Inline code (spec: the bar's "Inline code", and code typed or pasted): a <code> outside a code block. What follows
+  // an inline element made here is typed outside it: the next text node takes the caret, and at the end of a line a
+  // zero-width space is that node (the plain-text readers drop it).
+  var afterInline = function (el) {
+    var next = el.nextSibling;
+    if (!next || next.nodeType !== 3 || !next.length) {
+      next = $.createTextNode("​");
+      el.parentNode.insertBefore(next, el.nextSibling);
+      return caretAt(next, 1);
+    }
+    caretAt(next, 0);
+  };
+  // With a selection on one line: it becomes code. With the caret in code: at its end, the caret leaves it; elsewhere
+  // the code goes back to text. With the caret elsewhere: an empty code to type in.
+  var toggleCode = function () {
+    var s = selection();
+    if (!s.rangeCount || !content().contains(s.anchorNode)) return;
+    var range = s.getRangeAt(0);
+    if (closest(range.startContainer, "pre") || closest(range.endContainer, "pre")) return;
+    var code = closest(range.startContainer, "code");
+    if (code) {
+      var tail = $.createRange();
+      tail.selectNodeContents(code);
+      tail.setStart(range.endContainer, range.endOffset);
+      if (range.collapsed && !tail.toString().replace(/​/g, "")) return afterInline(code);
+      return pageChange(function () {
+        while (code.firstChild) code.parentNode.insertBefore(code.firstChild, code);
+        code.remove();
+      }, true);
+    }
+    if (closest(range.startContainer, LINE) !== closest(range.endContainer, LINE)) return;
+    pageChange(function () {
+      var el = $.createElement("code");
+      if (range.collapsed) el.appendChild($.createTextNode("​"));
+      else el.appendChild(range.extractContents());
+      range.insertNode(el);
+      if (range.collapsed && el.firstChild.data === "​") caretAt(el.firstChild, 1);
+      else afterInline(el);
+    });
+  };
+
+  // Inline Markdown typed: **bold**, *italic* or _italic_, ~~struck~~, code. The closing marker, typed as finished text
+  // in the same run of text as its opening one (which starts a word), makes the text between that style, as a page change:
+  // one undo gives the markers back. Never in a code block, inline code or a link, nor inside a composition.
+  var INLINE = [
+    { re: /(^|[^\w*])\*\*([^\s*](?:[^*]*[^\s*])?)\*\*$/, tag: "b" },
+    { re: /(^|[^\w*])\*([^\s*](?:[^*]*[^\s*])?)\*$/, tag: "i" },
+    { re: /(^|[^\w_])_([^\s_](?:[^_]*[^\s_])?)_$/, tag: "i" },
+    { re: /(^|[^\w~])~~([^\s~](?:[^~]*[^\s~])?)~~$/, tag: "strike" },
+    { re: /(^|[^\x60])\x60([^\x60]+)\x60$/, tag: "code" },
+  ];
+  var inlineMark = function () {
+    var s = selection();
+    if (!s.rangeCount || !s.isCollapsed || !content().isContentEditable) return false;
+    var node = s.anchorNode, offset = s.anchorOffset;
+    if (!node || node.nodeType !== 3 || !content().contains(node) || closest(node, "pre,code,a")) return false;
+    var before = node.data.slice(0, offset).replace(/ /g, " ");
+    var found = null;
+    for (var i = 0; i < INLINE.length && !found; i++) {
+      var m = INLINE[i].re.exec(before);
+      if (m) found = { start: m.index + m[1].length, inner: m[2], tag: INLINE[i].tag };
+    }
+    if (!found) return false;
+    pageChange(function () {
+      var r = $.createRange(), el = $.createElement(found.tag);
+      r.setStart(node, found.start);
+      r.setEnd(node, offset);
+      r.deleteContents();
+      el.textContent = found.inner;
+      r.insertNode(el);
+      afterInline(el);
+    });
+    return true;
+  };
+  $.addEventListener("input", function (e) {
+    if (e.inputType !== "insertText" || !e.data || !/[*_~\x60]$/.test(e.data) || e.isComposing || composing) return;
+    if (!content().contains(e.target) && e.target !== content()) return;
+    if (inlineMark()) refreshToolbar();
+  }, true);
+
+  // Markdown pasted into a text note (spec: paste): when a line starts with a Markdown marker, or the text holds a
+  // Markdown mark or a web address, its lines become the note's lines (headings, lists, checkboxes, quotes, rules, code
+  // blocks) and its marks bold, italic, struck, code and links, as one page change. Nothing else changes a paste: plain
+  // text, a code block, a read-only note keep the library's plain paste.
+  var MD_LINE = /^(#{1,6}\s+\S|\s*[-*+]\s+\S|\s*\d+[.)]\s+\S|\s*(?:[-*+]\s+)?\[[ xX]?\]\s+\S|>\s?\S|(?:-{3,}|\*{3,}|_{3,})\s*$|\x60\x60\x60)/m;
+  var MD_MARK = /\*\*[^*\s][^*\n]*\*\*|~~[^~\s][^~\n]*~~|\x60[^\x60\n]+\x60|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\)|https?:\/\/[^\s/?#.]/;
+  var INLINE_MD = /\x60([^\x60\n]+)\x60|\*\*([^*\s](?:[^*\n]*[^*\s])?)\*\*|~~([^~\s](?:[^~\n]*[^~\s])?)~~|(^|[^\w*])\*([^*\s](?:[^*\n]*[^*\s])?)\*|(^|[^\w_])_([^_\s](?:[^_\n]*[^_\s])?)_|\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)|(https?:\/\/[^\s<>"]+)/;
+  var inlineMd = function (text, into) {
+    var m;
+    while (text && (m = INLINE_MD.exec(text))) {
+      var lead = m[4] !== undefined ? m[4] : m[6] !== undefined ? m[6] : "";
+      var at = m.index + lead.length, whole = m[0].length - lead.length, el = null;
+      if (at) into.appendChild($.createTextNode(text.slice(0, at)));
+      if (m[1] !== undefined) (el = $.createElement("code")).textContent = m[1];
+      else if (m[2] !== undefined) inlineMd(m[2], (el = $.createElement("b")));
+      else if (m[3] !== undefined) inlineMd(m[3], (el = $.createElement("strike")));
+      else if (m[5] !== undefined) inlineMd(m[5], (el = $.createElement("i")));
+      else if (m[7] !== undefined) inlineMd(m[7], (el = $.createElement("i")));
+      else if (m[8] !== undefined) {
+        el = $.createElement("a");
+        el.setAttribute("href", m[9]);
+        inlineMd(m[8], el);
+      } else {
+        var href = m[10].replace(/[.,;:!?)\]}'"»]+$/, "");
+        whole = href.length;
+        el = $.createElement("a");
+        el.setAttribute("href", href);
+        el.textContent = href;
+      }
+      into.appendChild(el);
+      text = text.slice(at + whole);
+    }
+    if (text) into.appendChild($.createTextNode(text));
+    return into;
+  };
+  var mdBlocks = function (text) {
+    var lines = text.replace(/\r\n?/g, "\n").replace(/^\n+|\n+$/g, "").split("\n");
+    var out = [], list = null, code = null, m;
+    var line = function (tag, inner) {
+      var e = inlineMd(inner, $.createElement(tag));
+      fill(e);
+      return e;
+    };
+    var item = function (kind, inner, checked) {
+      var tag = kind === "ul" ? "ul" : "ol";
+      if (!list || list.kind !== kind) {
+        list = { kind: kind, el: $.createElement(tag) };
+        if (kind === "todo") list.el.className = "x-todo";
+        out.push(list.el);
+      }
+      var li = $.createElement("li");
+      if (kind === "todo") {
+        var box = newBox();
+        if (checked) box.querySelector("input").setAttribute("checked", "");
+        li.appendChild(box);
+      }
+      inlineMd(inner, li);
+      fill(li);
+      list.el.appendChild(li);
+    };
+    lines.forEach(function (l) {
+      if (code) {
+        if (/^\x60\x60\x60/.test(l)) code = null;
+        else {
+          if (code.childNodes.length) code.appendChild($.createElement("br"));
+          if (l) code.appendChild($.createTextNode(l));
+        }
+        return;
+      }
+      if (/^\x60\x60\x60/.test(l)) {
+        list = null;
+        out.push((code = $.createElement("pre")));
+        return;
+      }
+      if ((m = /^\s*(?:[-*+]\s+)?\[([ xX]?)\]\s+(.*)$/.exec(l))) return item("todo", m[2], /x/i.test(m[1]));
+      if (/^(?:-{3,}|\*{3,}|_{3,})\s*$/.test(l)) {
+        list = null;
+        return out.push($.createElement("hr"));
+      }
+      if ((m = /^\s*[-*+]\s+(.*)$/.exec(l))) return item("ul", m[1]);
+      if ((m = /^\s*\d+[.)]\s+(.*)$/.exec(l))) return item("ol", m[1]);
+      list = null;
+      if ((m = /^(#{1,6})\s+(.*)$/.exec(l))) return out.push(line(m[1].length === 1 ? "h1" : "h2", m[2]));
+      if ((m = /^>\s?(.*)$/.exec(l))) return out.push(line("blockquote", m[1]));
+      out.push(line("div", l));
+    });
+    out.forEach(function (e) { if (e.nodeName === "PRE") fill(e); });
+    return out;
+  };
+  // The note's own block that holds the caret: a line of text right in the note is made one first.
+  var topBlock = function (node) {
+    var c = content(), n = node;
+    while (n && n.parentNode !== c) n = n.parentNode;
+    if (!n || n.nodeType === 1 && /^(DIV|P|UL|OL|H1|H2|BLOCKQUOTE|PRE|HR)$/.test(n.nodeName)) return n;
+    var first = n, last = n;
+    var inline = function (e) { return e && (e.nodeType === 3 || !/^(DIV|P|UL|OL|H1|H2|BLOCKQUOTE|PRE|HR)$/.test(e.nodeName)); };
+    while (inline(first.previousSibling)) first = first.previousSibling;
+    while (inline(last.nextSibling)) last = last.nextSibling;
+    var div = $.createElement("div"), stop = last.nextSibling;
+    c.insertBefore(div, first);
+    while (div.nextSibling !== stop) div.appendChild(div.nextSibling);
+    return div;
+  };
+  var pasteMarkdown = function (text) {
+    var s = selection();
+    if (!s.rangeCount || !content().isContentEditable || !content().contains(s.anchorNode)) return false;
+    var range = s.getRangeAt(0);
+    if (closest(range.startContainer, "pre") || closest(range.endContainer, "pre")) return false;
+    if (!MD_LINE.test(text) && !MD_MARK.test(text)) return false;
+    var blocks = mdBlocks(text);
+    if (!blocks.length) return false;
+    pageChange(function () {
+      if (!range.collapsed) range.deleteContents();
+      // One line of text: its content goes in at the caret.
+      if (blocks.length === 1 && blocks[0].nodeName === "DIV") {
+        var frag = $.createDocumentFragment(), last = null;
+        while (blocks[0].firstChild) frag.appendChild((last = blocks[0].firstChild));
+        if (last && last.nodeName === "BR") frag.removeChild(last), (last = frag.lastChild);
+        range.insertNode(frag);
+        if (last) last.nodeType === 1 ? afterInline(last) : caretAt(last, last.length);
+        return;
+      }
+      var top = topBlock(range.startContainer), line = top;
+      var plainLine = top && (top.nodeName === "DIV" || top.nodeName === "P");
+      var tail = null;
+      if (plainLine) {
+        var r = $.createRange();
+        r.setStart(range.startContainer, range.startOffset);
+        r.setEnd(top, top.childNodes.length);
+        tail = r.extractContents();
+        if (blocks[0].nodeName === "DIV" && !blank(blocks[0])) {
+          while (blocks[0].firstChild) top.appendChild(blocks[0].firstChild);
+          blocks.shift();
+        }
+      }
+      var after = top ? top.nextSibling : null;
+      blocks.forEach(function (b) { content().insertBefore(b, after); });
+      var lastBlock = blocks.length ? blocks[blocks.length - 1] : top;
+      var end = $.createRange();
+      end.selectNodeContents(lastBlock.nodeName === "UL" || lastBlock.nodeName === "OL" ? lastBlock.lastChild : lastBlock);
+      end.collapse(false);
+      if (tail && (tail.textContent || tail.querySelector && tail.querySelector("img,a,input"))) {
+        if (lastBlock.nodeName === "DIV") {
+          var br = lastBlock.lastChild;
+          if (br && br.nodeName === "BR") lastBlock.removeChild(br);
+          end.selectNodeContents(lastBlock);
+          end.collapse(false);
+          lastBlock.appendChild(tail);
+        } else {
+          var rest = $.createElement("div");
+          rest.appendChild(tail);
+          content().insertBefore(rest, lastBlock.nextSibling);
+        }
+      }
+      if (plainLine && blank(top)) top.remove();
+      else if (top) fill(top);
+      select(end);
+    });
+    refreshToolbar();
+    return true;
+  };
+  $.addEventListener("paste", function (e) {
+    var data = e.clipboardData || window.clipboardData;
+    var text = data && data.getData("text/plain");
+    if (!text || !content().contains(e.target) && e.target !== content()) return;
+    if (!pasteMarkdown(text)) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+
+  // A web address typed, then a space or Enter: a link to itself (spec: links in text notes). Only http and https, on a
+  // text line outside a link and a code block, never inside a composition; punctuation at its end stays text. The space
+  // goes in after the link (a no-break one at the end of a line, which the browser keeps); one undo gives the text back.
+  var ADDRESS_BEFORE = /(^|[\s\u00a0])(https?:\/\/[^\s\u00a0<>"]+)$/;
+  var autoLink = function (space) {
+    var s = selection();
+    if (!s.rangeCount || !s.isCollapsed || !content().isContentEditable) return false;
+    var node = s.anchorNode, offset = s.anchorOffset;
+    if (!node || node.nodeType !== 3 || !content().contains(node) || closest(node, "pre,a")) return false;
+    var m = ADDRESS_BEFORE.exec(node.data.slice(0, offset));
+    if (!m) return false;
+    var href = m[2].replace(/[.,;:!?)\]}'"\u00bb]+$/, "");
+    if (!/^https?:\/\/[^\/?#.]/.test(href)) return false;
+    var start = offset - m[2].length;
+    pageChange(function () {
+      var r = $.createRange(), a = $.createElement("a");
+      r.setStart(node, start);
+      r.setEnd(node, start + href.length);
+      a.setAttribute("href", href);
+      r.surroundContents(a);
+      var rest = a.nextSibling, at = offset - start - href.length;
+      if (!space) {
+        if (rest && rest.nodeType === 3) caretAt(rest, at);
+        else caretAfter(a);
+        return;
+      }
+      if (!rest || rest.nodeType !== 3) {
+        rest = $.createTextNode("");
+        a.parentNode.insertBefore(rest, a.nextSibling);
+      }
+      rest.insertData(at, at === rest.length ? "\u00a0" : " ");
+      caretAt(rest, at + 1);
+    });
+    return true;
+  };
+  $.addEventListener("beforeinput", function (e) {
+    if (e.isComposing || composing || !content().contains(e.target)) return;
+    var space = e.inputType === "insertText" && (e.data === " " || e.data === "\u00a0");
+    if (!space && e.inputType !== "insertParagraph" && e.inputType !== "insertLineBreak") return;
+    if (autoLink(space) && space) e.preventDefault();
+  }, true);
+
+  // A note link is one character: Backspace right after it (or after it and the space its pick put after it, while
+  // nothing follows that space) and Delete right before it take it whole, as a page change. WebKit wouldn't delete it.
+  var isPill = function (n) { return !!n && n.nodeType === 1 && n.nodeName === "A" && isNoteLink(n); };
+  var isSpace = function (n) { return !!n && n.nodeType === 3 && n.length === 1 && /[ \u00a0]/.test(n.data); };
+  var noteLinkBefore = function (node, offset) {
+    var prev = null, space = null;
+    if (node.nodeType === 3) {
+      if (offset === 0) prev = node.previousSibling;
+      else if (offset === 1 && isSpace(node)) { space = node; prev = node.previousSibling; }
+    } else if (offset > 0) {
+      prev = node.childNodes[offset - 1];
+      if (isSpace(prev)) { space = prev; prev = prev.previousSibling; }
+    }
+    return isPill(prev) ? { from: prev, to: space || prev } : null;
+  };
+  var noteLinkAfter = function (node, offset) {
+    var next = node.nodeType === 3 ? (offset === node.length ? node.nextSibling : null) : node.childNodes[offset];
+    return isPill(next) ? { from: next, to: next } : null;
+  };
+  var dropNoteLink = function (span) {
+    if (!span || !content().isContentEditable) return false;
+    pageChange(function () {
+      var r = $.createRange();
+      r.setStartBefore(span.from);
+      r.setEndAfter(span.to);
+      r.deleteContents();
+      var line = closest(r.startContainer, LINE);
+      if (line) fill(line);
+      select(r);
+    });
+    checkPicker();
+    return true;
+  };
   var pickerShown = function (shown) { pickerRows = !!shown && pickerPosted !== CLOSED; };
   var pickStart = function () {
     var s = selection();
@@ -1274,11 +1610,12 @@ export const RICH_TEXT_SCRIPT = String.raw`
   };
 
   // The bar's commands by name (FormatCommand): nothing else, and nothing in a read-only note.
-  var COMMANDS = ["bold", "italic", "underline", "strikeThrough", "subscript", "superscript", "justifyLeft", "justifyCenter", "undo", "redo"];
+  var COMMANDS = ["bold", "italic", "underline", "strikeThrough", "subscript", "superscript", "justifyLeft", "justifyCenter", "code", "undo", "redo"];
   var run = function (command) {
     if (COMMANDS.indexOf(command) < 0 || !content().isContentEditable) return;
     if (command === "undo") undo();
     else if (command === "redo") redo();
+    else if (command === "code") toggleCode();
     else exec(command);
     refreshToolbar();
   };
@@ -1300,6 +1637,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
       sub: queryState("subscript"),
       sup: queryState("superscript"),
       center: getComputedStyle(line).textAlign === "center",
+      code: !!closest(node, "code") && !closest(node, "pre"),
       link: !!link && link.getAttribute("href").indexOf("#fm-note-") !== 0,
     };
   };

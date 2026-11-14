@@ -236,6 +236,7 @@ const en = {
       link: "Link",
       note_link: "Link to a note",
       rule: "Line",
+      inline_code: "Inline code",
       strike: "Strikethrough",
       align_left: "Align left",
       center: "Center",

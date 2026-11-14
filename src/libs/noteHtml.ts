@@ -48,7 +48,8 @@ const ARROW =
  * The CSS of the kinds of line added in 4.1.0 (heading 2, quote, checkbox list, rule, links, links to another note), for the
  * editor and for print. A checkbox list is the editor library's own markup (`ol.x-todo`, each item starting with
  * `span.x-todo-box` around an `input`): its rules, which push the box out of the line, are overridden here. A ticked line
- * is told by its box alone (`li:has(input:checked)`): an engine without `:has` shows the tick and no dimming.
+ * is told by its box alone (`li:has(input:checked)`): an engine without `:has` shows the tick and no dimming. The space
+ * after the box is its padding, not a margin: a caret right after the box is drawn past it, where the text will go.
  */
 export function noteBlockCss(colors: BlockColors): string {
   return `
@@ -59,13 +60,14 @@ export function noteBlockCss(colors: BlockColors): string {
     hr { height: 0; border: 0; border-top: 1px solid ${colors.line}; margin: 12px 0; }
     ol.x-todo { padding-left: 0; }
     .x-todo li { list-style: none; }
-    .x-todo-box { position: static; left: auto; display: inline-block; vertical-align: -3px; margin-right: 8px; }
+    .x-todo li + li { margin-top: 4px; }
+    .x-todo-box { position: static; left: auto; display: inline-block; vertical-align: -6px; margin-right: 0; padding-right: 8px; }
     .x-todo-box input {
       position: static; -webkit-appearance: none; appearance: none; box-sizing: border-box; display: block;
-      width: 18px; height: 18px; margin: 0; border: 1.5px solid ${colors.muted}; border-radius: 5px;
+      width: 22px; height: 22px; margin: 0; border: 1.5px solid ${colors.muted}; border-radius: 6px;
       background: ${colors.boxFill}; cursor: pointer;
     }
-    .x-todo-box input:checked { background: ${colors.accent} ${TICK} center / 12px no-repeat; border-color: ${colors.accent}; }
+    .x-todo-box input:checked { background: ${colors.accent} ${TICK} center / 15px no-repeat; border-color: ${colors.accent}; }
     .x-todo li:has(input:checked) { color: ${colors.muted}; text-decoration-line: line-through; }
     a[href] { color: ${colors.link}; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
     a[href^="#fm-note-"] {

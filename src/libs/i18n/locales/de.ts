@@ -236,6 +236,7 @@ const de = {
       link: "Link",
       note_link: "Link zu einer Notiz",
       rule: "Linie",
+      inline_code: "Code im Text",
       strike: "Durchgestrichen",
       align_left: "Linksbündig",
       center: "Zentrieren",
