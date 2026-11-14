@@ -289,6 +289,7 @@ const es = {
       made_offline: "La nota ahora está sin conexión",
       synced_as_duplicate: "Sincronizada en la nube como copia",
       duplicate: "Duplicar",
+      history: "Historial",
       changecategory: "Cambiar categoría",
       share: "Compartir",
       export: "Exportar",
@@ -1427,6 +1428,28 @@ const es = {
     sent: "Informe enviado",
     failed: "No se pudo enviar. Comprueba la conexión e inténtalo de nuevo.",
     code: "Código: {{code}}",
+  },
+
+  history: {
+    current: "Versión actual",
+    today: "Hoy",
+    yesterday: "Ayer",
+    reason: {
+      ai: "Antes del asistente de IA",
+      agent: "Antes de un agente de IA",
+      sync: "Antes de la sincronización",
+      edit: "Antes de tus cambios",
+      replace: "Antes de «Reemplazar todo»",
+      cleanup: "Antes de eliminar las completadas",
+      restore: "Antes de una restauración",
+    },
+    footer: "Versiones guardadas: {{count}}. Se quedan en este dispositivo.",
+    empty_title: "No hay versiones anteriores",
+    empty_text:
+      "Fast Memo guarda una antes de que la IA, un agente, una sincronización o un cambio importante reescriban esta nota.",
+    restore: "Restaurar",
+    close: "Cerrar",
+    restored: "Versión restaurada",
   },
 
   empty: {

@@ -30,7 +30,8 @@ const getTitleSource = (n: TodoNote) =>
 
 const newItem = (text = ""): TodoItem => ({ id: uuid(), text, checked: false });
 
-export function useTodoList(initialNote: TodoNote) {
+/** `preview`: a kept version on screen (spec B.9), see `useNoteEditor`. */
+export function useTodoList(initialNote: TodoNote, { preview = false }: { preview?: boolean } = {}) {
   const memoInitialNote = useMemo<TodoNote>(
     () => ({
       ...initialNote,
@@ -49,6 +50,7 @@ export function useTodoList(initialNote: TodoNote) {
       isEmpty: isTodoNoteEmpty,
       buildPayloadExtras,
       getTitleSource,
+      preview,
     }
   );
 

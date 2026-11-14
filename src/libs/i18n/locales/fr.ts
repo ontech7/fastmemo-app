@@ -289,6 +289,7 @@ const fr = {
       made_offline: "La note est maintenant hors ligne",
       synced_as_duplicate: "Synchronisée dans le cloud en tant que copie",
       duplicate: "Dupliquer",
+      history: "Historique",
       changecategory: "Changer de catégorie",
       share: "Partager",
       export: "Exporter",
@@ -1436,6 +1437,28 @@ const fr = {
     sent: "Signalement envoyé",
     failed: "Impossible de l'envoyer. Vérifiez la connexion et réessayez.",
     code: "Code : {{code}}",
+  },
+
+  history: {
+    current: "Version actuelle",
+    today: "Aujourd'hui",
+    yesterday: "Hier",
+    reason: {
+      ai: "Avant l'assistant IA",
+      agent: "Avant un agent IA",
+      sync: "Avant la synchronisation",
+      edit: "Avant vos modifications",
+      replace: "Avant « Tout remplacer »",
+      cleanup: "Avant de supprimer les terminées",
+      restore: "Avant une restauration",
+    },
+    footer: "Versions conservées : {{count}}. Elles restent sur cet appareil.",
+    empty_title: "Aucune version précédente",
+    empty_text:
+      "Fast Memo en garde une avant que l'IA, un agent, une synchronisation ou une modification importante ne réécrive cette note.",
+    restore: "Restaurer",
+    close: "Fermer",
+    restored: "Version restaurée",
   },
 
   empty: {

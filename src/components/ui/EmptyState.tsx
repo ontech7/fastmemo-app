@@ -11,7 +11,7 @@ import EmptyTrashIllustration from "@/components/ui/illustrations/EmptyTrashIllu
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
-  variant: "notes" | "category" | "search" | "trash";
+  variant: "notes" | "category" | "search" | "trash" | "history";
   /** `category`: the icon of the category being shown. */
   categoryIcon?: string;
   /** `notes`: whether the quick note bar is on (the text mentions it only then). */
@@ -59,6 +59,12 @@ export default function EmptyState({ variant, categoryIcon, quickNote = true, da
       drawing = <EmptyTrashIllustration />;
       title = t("empty.trash_title");
       text = days === undefined ? t("empty.trash_text_unlimited") : t("empty.trash_text", { days });
+      break;
+    case "history":
+      // plan 1's drawing of an empty list: no drawing of its own (spec B.9)
+      drawing = <EmptyNotesIllustration />;
+      title = t("history.empty_title");
+      text = t("history.empty_text");
       break;
   }
 

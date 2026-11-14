@@ -25,6 +25,7 @@ await build({
       export * from "@/libs/links";
       export { htmlToMarkdown, wrapHtmlForPdf } from "@/utils/html";
       export { formatToPlainText } from "@/utils/string";
+      export { daysAgo } from "@/utils/dateParse";
     `,
     resolveDir: src,
     loader: "ts",
@@ -267,6 +268,16 @@ console.log("\nexports of a text note with every kind of line");
     "the PDF page styles the new lines",
     ["blockquote", ".x-todo", "hr", "h2"].every((sel) => pdfPage.includes(sel))
   );
+}
+
+console.log("\ndaysAgo: calendar days, not 24-hour spans (the history's Today / Yesterday)");
+{
+  const at = (y, m, d, h = 12, min = 0) => new Date(y, m - 1, d, h, min).getTime();
+  ok("the same day", M.daysAgo(at(2026, 11, 14, 0, 1), at(2026, 11, 14, 23, 59)) === 0);
+  ok("one minute before midnight is yesterday", M.daysAgo(at(2026, 11, 13, 23, 59), at(2026, 11, 14, 0, 0)) === 1);
+  ok("two days", M.daysAgo(at(2026, 11, 12, 18), at(2026, 11, 14, 9)) === 2);
+  ok("across a month", M.daysAgo(at(2026, 10, 31, 22), at(2026, 11, 1, 1)) === 1);
+  ok("across the clock change (29 March)", M.daysAgo(at(2026, 3, 28, 12), at(2026, 3, 30, 12)) === 2);
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

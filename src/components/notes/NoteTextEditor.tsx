@@ -7,6 +7,7 @@ import NoteImageMenu from "@/components/notes/NoteImageMenu";
 import NoteLinkMenu from "@/components/notes/NoteLinkMenu";
 import NoteLinkPicker from "@/components/notes/NoteLinkPicker";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import VersionBand, { type VersionPreview } from "@/components/notes/VersionBand";
 import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
@@ -100,6 +101,8 @@ import { useSelector } from "react-redux";
 
 interface Props {
   initialNote: TextNote;
+  /** A kept version on screen (spec B.9): read only, no menu, nothing reaches the store. */
+  preview?: VersionPreview;
 }
 
 // DOMPurify in the editor's page, before any note is loaded (LL-060). What guarantees it is `injectedJavaScript`: the
@@ -203,7 +206,7 @@ function runInEditor(editorRef: React.RefObject<any>, script: string) {
   else editorRef.current.command?.(script);
 }
 
-export default function NoteTextEditor({ initialNote }: Props) {
+export default function NoteTextEditor({ initialNote, preview }: Props) {
   const { t } = useTranslation();
 
   const devMode = useSelector(selectorDeveloperMode);
@@ -243,6 +246,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
       isEmpty,
       buildPayloadExtras,
       getTitleSource: (n) => stripHtml(n.text),
+      preview: !!preview,
       // Changed on another device while open here: the WebView editor holds its own copy of the content (a page still
       // loading gets it once it's up).
       onRemoteChange: (remote, previous) => {
@@ -632,9 +636,13 @@ export default function NoteTextEditor({ initialNote }: Props) {
               </IconChip>
             </TouchableOpacity>
 
-            <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
+            {preview ? (
+              <View style={styles.menuSpacer} />
+            ) : (
+              <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
+            )}
           </View>
-          <NotePresenceBanner noteId={note.id} />
+          {preview ? <VersionBand preview={preview} /> : <NotePresenceBanner noteId={note.id} />}
 
           <View style={styles.subtitleWrapper}>
             <Text style={[styles.subtitle, { flexGrow: 1 }]}>
@@ -814,7 +822,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
         />
       )}
 
-      <EditorTourTip />
+      {!preview && <EditorTourTip />}
     </View>
   );
 }
@@ -827,6 +835,10 @@ function openLink(href: string) {
 }
 
 const styles = StyleSheet.create({
+  // where the note menu sits, so the title stays centred while a version is shown
+  menuSpacer: {
+    width: 42,
+  },
   root: {
     flex: 1,
   },

@@ -19,9 +19,10 @@ interface LiveNoteHandlers {
  * other devices that it's open here (while the app is in the foreground).
  *
  * The sync engine commits the editor's pending edits before merging, so what `onRemote` gets already accounts for them
- * (as the note itself, or as a conflict copy when both sides changed it).
+ * (as the note itself, or as a conflict copy when both sides changed it). `null`: nothing is followed or shown (a kept
+ * version on screen, spec B.9).
  */
-export function useLiveNote(noteId: string, handlers: LiveNoteHandlers): void {
+export function useLiveNote(noteId: string | null, handlers: LiveNoteHandlers): void {
   const store = useStore<RootState>();
 
   const handlersRef = useRef(handlers);
@@ -29,19 +30,19 @@ export function useLiveNote(noteId: string, handlers: LiveNoteHandlers): void {
     handlersRef.current = handlers;
   });
 
-  useEffect(
-    () =>
-      onSyncEvent((event) => {
-        if (event.type !== "applied" || !event.changed.includes(noteId)) return;
-        const { items, temporaryItems } = store.getState().notes;
-        const stored = items.find((n) => n.id === noteId);
-        if (stored) handlersRef.current.onRemote(stored);
-        else if (temporaryItems.some((n) => n.id === noteId)) handlersRef.current.onDeleted();
-      }),
-    [noteId, store]
-  );
+  useEffect(() => {
+    if (noteId === null) return;
+    return onSyncEvent((event) => {
+      if (event.type !== "applied" || !event.changed.includes(noteId)) return;
+      const { items, temporaryItems } = store.getState().notes;
+      const stored = items.find((n) => n.id === noteId);
+      if (stored) handlersRef.current.onRemote(stored);
+      else if (temporaryItems.some((n) => n.id === noteId)) handlersRef.current.onDeleted();
+    });
+  }, [noteId, store]);
 
   useEffect(() => {
+    if (noteId === null) return;
     let engine: SyncEngine | null = null;
     let mounted = true;
     // Only a note the others have: not a device-only one (theirs, with the same id, is another note), nor one not saved yet.

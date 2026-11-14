@@ -70,6 +70,8 @@ interface UseNoteEditorOptions<T extends Note> {
    * copy of the content (a WebView) load it from here; `previous` is the version they were showing.
    */
   onRemoteChange?: (note: T, previous: T) => void;
+  /** Showing a kept version (spec B.9): nothing reaches the store, the webhooks or the sync engine. */
+  preview?: boolean;
 }
 
 interface UseNoteEditorResult<T extends Note> {
@@ -124,6 +126,7 @@ export function useNoteEditor<T extends Note>({
   buildPayloadExtras,
   getTitleSource,
   onRemoteChange,
+  preview = false,
 }: UseNoteEditorOptions<T>): UseNoteEditorResult<T> {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -184,7 +187,7 @@ export function useNoteEditor<T extends Note>({
   const isNewlyCreated = note.createdAt === note.updatedAt;
 
   useEffect(() => {
-    if (!isNewlyCreated) return;
+    if (!isNewlyCreated || preview) return;
 
     webhook(webhook_add, {
       action: addAction,
@@ -209,6 +212,7 @@ export function useNoteEditor<T extends Note>({
 
   const commitNote = useCallback(
     (currNote: T) => {
+      if (preview) return;
       // The sitting's first change of a saved note (emptying it too): the note as it opened is kept as a version, when
       // idle (spec B.9).
       if (existedRef.current && !editKeptRef.current) {
@@ -254,7 +258,7 @@ export function useNoteEditor<T extends Note>({
         } as Note)
       );
     },
-    [dispatch, isEmpty, defaultType, store, initialNote]
+    [dispatch, isEmpty, defaultType, store, initialNote, preview]
   );
 
   const commitNoteRef = useRef(commitNote);
@@ -287,7 +291,7 @@ export function useNoteEditor<T extends Note>({
 
       // Nothing changed (e.g. an editor reporting back the content it was just reloaded with): nothing to commit, or two
       // devices with the note open would bounce it between them.
-      if (isSameNote(prev, currNote)) return;
+      if (preview || isSameNote(prev, currNote)) return;
 
       const now = Date.now();
       if (!pendingNoteRef.current) pendingSinceRef.current = now;
@@ -304,7 +308,7 @@ export function useNoteEditor<T extends Note>({
       const untilMaxWait = pendingSinceRef.current + COMMIT_MAX_WAIT_MS - now;
       commitTimerRef.current = setTimeout(flushNote, Math.max(0, Math.min(COMMIT_DEBOUNCE_MS, untilMaxWait)));
     },
-    [flushNote]
+    [flushNote, preview]
   );
 
   const updateNoteAsync = useCallback((update: (current: T) => T) => setNoteAsync(update(currentRef.current)), [setNoteAsync]);
@@ -321,11 +325,11 @@ export function useNoteEditor<T extends Note>({
     []
   );
 
-  useEffect(() => registerPendingFlush(flushNote), [flushNote]);
+  useEffect(() => (preview ? undefined : registerPendingFlush(flushNote)), [flushNote, preview]);
 
   /* --- Changes from other devices --- */
 
-  useLiveNote(note.id, {
+  useLiveNote(preview ? null : note.id, {
     onRemote: (stored) => {
       // The sync engine committed the pending batch before merging: nothing local is lost by reloading.
       if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
@@ -349,6 +353,7 @@ export function useNoteEditor<T extends Note>({
   /* --- Back/webhook handler --- */
 
   const updateNoteWebhook = useCallback(async () => {
+    if (preview) return;
     // Commit before leaving, so the list is already up to date as it comes back into view.
     flushNote();
 
@@ -370,7 +375,16 @@ export function useNoteEditor<T extends Note>({
       action: "note/updateNote",
       ...buildWebhookPayload(note),
     });
-  }, [note, flushNote, webhook_updateNote, webhook_deleteNote, webhook_temporaryDeleteNote, isEmpty, buildWebhookPayload]);
+  }, [
+    note,
+    flushNote,
+    webhook_updateNote,
+    webhook_deleteNote,
+    webhook_temporaryDeleteNote,
+    isEmpty,
+    buildWebhookPayload,
+    preview,
+  ]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -396,8 +410,10 @@ export function useNoteEditor<T extends Note>({
   );
 
   const keepVersion = useCallback(
-    (reason: VersionReason) => keepNoteVersion(currentRef.current as unknown as Note, reason),
-    []
+    (reason: VersionReason) => {
+      if (!preview) keepNoteVersion(currentRef.current as unknown as Note, reason);
+    },
+    [preview]
   );
 
   return { note, setNote, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle, keepVersion };

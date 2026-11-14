@@ -18,7 +18,13 @@ const STUBS = {
   // The app's note store, which the wipe thunk uses (ADR-018).
   "@/libs/storage/notes": `export const noteStore = null; export const notesNeedSorting = () => false;`,
   // The history of versions (the wipe thunk wipes it; the store keeps them on a device).
-  "@/libs/history": `export const wipeHistory = async () => {}; export const keepVersion = () => {};`,
+  "@/libs/history": `export const wipeHistory = async () => {}; export const keepVersion = (note, reason) => { globalThis.__kept?.push({ note: JSON.parse(JSON.stringify(note)), reason }); }; export const readVersion = async (noteId, versionId) => globalThis.__versions?.[noteId + ":" + versionId] ?? null;`,
+  // What a restore tells the open editor, the user's webhook and the error trail (recorded by the restore's cases).
+  "@/libs/cloud/sync": `export const notifyNoteChanged = (id) => { globalThis.__notified?.push(id); };`,
+  "@/utils/webhook": `export const webhook = (config, body) => { globalThis.__webhooks?.push(body); };`,
+  "@/libs/diagnostics": `export const addTrail = () => {};`,
+  "@/slicers/settingsSlice": `export const selectorWebhook_updateNote = () => ({ url: "" });`,
+  "@/utils/date": `export const formatDateTime = () => "D";`,
   // A test locks the vault with globalThis.__vaultLocked.
   "@/libs/vaultSession": `export const isVaultUnlocked = () => globalThis.__vaultLocked !== true; export const getDEK = () => "k1";`,
   // Counts what the slice encrypts (the upload queue holds markers: nothing, ADR-036).
@@ -51,6 +57,7 @@ await build({
       export { contentToken } from "@/libs/cloud/token";
       export { SyncEngine } from "@/libs/cloud/syncEngine";
       export { copyOfNote } from "@/libs/noteCopy";
+      export { restoreVersion } from "@/slicers/thunks/restoreVersion";
     `,
     resolveDir: src,
     loader: "ts",
@@ -1913,6 +1920,91 @@ console.log("\nduplicate: the copy goes through addNote (spec A.4)");
     byId("o1").rev === 100 && byId("o1").syncedRev === 100 && !queued.includes("o1") && !queued.includes("o2"),
     byId("o1")
   );
+}
+
+console.log("\nrestore: a kept version comes back as an ordinary edit (spec B.9)");
+{
+  const work = { order: 1, name: "Work", icon: "work", index: false, selected: false };
+  const live = note("r1", 100, { syncedRev: 100, title: "now", text: "new text", important: true, category: work });
+  const readOnly = note("r2", 100, { syncedRev: 100, readOnly: true });
+  const trashed = note("r3", 100, { syncedRev: 100 });
+  globalThis.__versions = {
+    "r1:v1": { type: "text", title: "before", text: "old text" },
+    "r2:v1": { type: "text", title: "before", text: "old text" },
+    "r3:v1": { type: "text", title: "before", text: "old text" },
+    "r1:list": { type: "todo", title: "a list", list: [], mode: "free" },
+  };
+  const make = () => {
+    const base = M.notesReducer(undefined, { type: "@@init" });
+    return M.configureStore({
+      reducer: { notes: M.notesReducer },
+      preloadedState: { notes: { ...base, items: [clone(live), clone(readOnly)], temporaryItems: [clone(trashed)] } },
+    });
+  };
+  const restore = (store, noteId, versionId) => store.dispatch(M.restoreVersion({ noteId, versionId })).unwrap();
+  const record = () => {
+    globalThis.__kept = [];
+    globalThis.__notified = [];
+    globalThis.__webhooks = [];
+  };
+
+  record();
+  const store = make();
+  const done = await restore(store, "r1", "v1");
+  const state = store.getState().notes;
+  const restored = state.items.find((x) => x.id === "r1");
+  ok("it answers true", done === true);
+  ok("the note has the old title and content", restored?.title === "before" && restored?.text === "old text", restored);
+  ok(
+    "...with today's flags and category",
+    restored?.important === true && restored?.readOnly === false && restored?.category?.icon === "work",
+    restored
+  );
+  ok("...a newer revision and updatedAt", restored?.rev > 100 && restored?.updatedAt > 100, restored);
+  ok(
+    "...and is queued for upload once",
+    Object.keys(state.cloud.items.add).filter((id) => id === "r1").length === 1,
+    Object.keys(state.cloud.items.add)
+  );
+  ok(
+    "the version kept first holds the content from before the restore",
+    globalThis.__kept.length === 1 &&
+      globalThis.__kept[0].reason === "restore" &&
+      globalThis.__kept[0].note.title === "now" &&
+      globalThis.__kept[0].note.text === "new text",
+    globalThis.__kept
+  );
+  ok("an open editor is told", globalThis.__notified.join() === "r1", globalThis.__notified);
+  ok(
+    "the user's webhook gets the edit",
+    globalThis.__webhooks.length === 1 &&
+      globalThis.__webhooks[0].action === "note/updateNote" &&
+      globalThis.__webhooks[0].text === "old text",
+    globalThis.__webhooks
+  );
+
+  for (const [name, noteId, versionId] of [
+    ["a read-only note", "r2", "v1"],
+    ["a note in the trash", "r3", "v1"],
+    ["a missing note", "zz", "v1"],
+    ["a missing version", "r1", "nope"],
+    ["a version of another type", "r1", "list"],
+  ]) {
+    record();
+    const s = make();
+    const before = s.getState().notes;
+    const answer = await restore(s, noteId, versionId);
+    ok(
+      `${name}: false, and nothing changes`,
+      answer === false &&
+        s.getState().notes === before &&
+        !globalThis.__kept.length &&
+        !globalThis.__notified.length &&
+        !globalThis.__webhooks.length,
+      { answer, kept: globalThis.__kept }
+    );
+  }
+  globalThis.__kept = globalThis.__notified = globalThis.__webhooks = undefined;
 }
 
 console.log("\ncategories: a drop reorders, renumbers, and queues only what changed");

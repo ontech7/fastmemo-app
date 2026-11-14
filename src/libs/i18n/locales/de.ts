@@ -289,6 +289,7 @@ const de = {
       made_offline: "Notiz ist jetzt offline",
       synced_as_duplicate: "Als Kopie in die Cloud synchronisiert",
       duplicate: "Duplizieren",
+      history: "Verlauf",
       changecategory: "Kategorie ändern",
       share: "Teilen",
       export: "Exportieren",
@@ -1438,6 +1439,28 @@ const de = {
     sent: "Meldung gesendet",
     failed: "Sie konnte nicht gesendet werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
     code: "Code: {{code}}",
+  },
+
+  history: {
+    current: "Aktuelle Version",
+    today: "Heute",
+    yesterday: "Gestern",
+    reason: {
+      ai: "Vor dem KI-Assistenten",
+      agent: "Vor einem KI-Agenten",
+      sync: "Vor der Synchronisierung",
+      edit: "Vor deinen Änderungen",
+      replace: "Vor „Alle ersetzen“",
+      cleanup: "Vor dem Löschen erledigter Einträge",
+      restore: "Vor einer Wiederherstellung",
+    },
+    footer: "Gespeicherte Versionen: {{count}}. Sie bleiben auf diesem Gerät.",
+    empty_title: "Keine früheren Versionen",
+    empty_text:
+      "Fast Memo behält eine, bevor die KI, ein Agent, eine Synchronisierung oder eine große Änderung diese Notiz überschreibt.",
+    restore: "Wiederherstellen",
+    close: "Schließen",
+    restored: "Version wiederhergestellt",
   },
 
   empty: {

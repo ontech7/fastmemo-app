@@ -2,6 +2,7 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import VersionBand, { type VersionPreview } from "@/components/notes/VersionBand";
 import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.web";
 import SafeAreaView from "@/components/SafeAreaView";
@@ -24,9 +25,11 @@ import type { TodoItem as TodoItemType, TodoNote } from "@/types";
 
 interface Props {
   initialNote: TodoNote;
+  /** A kept version on screen (spec B.9): read only, no menu, nothing reaches the store. */
+  preview?: VersionPreview;
 }
 
-export default function NoteTodoEditor({ initialNote }: Props) {
+export default function NoteTodoEditor({ initialNote, preview }: Props) {
   const { t } = useTranslation();
 
   const {
@@ -60,7 +63,7 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     insertVoiceLines,
     setTitleFromAI,
     setCategoryFromAI,
-  } = useTodoList(initialNote);
+  } = useTodoList(initialNote, { preview: !!preview });
 
   const currentMode = stepMode ? "steps" : "free";
 
@@ -130,9 +133,13 @@ export default function NoteTodoEditor({ initialNote }: Props) {
             maxLength={96}
           />
 
-          <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
+          {preview ? (
+            <View style={styles.menuSpacer} />
+          ) : (
+            <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
+          )}
         </View>
-        <NotePresenceBanner noteId={note.id} />
+        {preview ? <VersionBand preview={preview} /> : <NotePresenceBanner noteId={note.id} />}
 
         <View style={styles.subtitleWrapper}>
           <Text style={[styles.subtitle, { flexGrow: 1 }]}>
@@ -217,12 +224,16 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         </EditorActionDock>
       )}
 
-      <EditorTourTip />
+      {!preview && <EditorTourTip />}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  // where the note menu sits, so the title stays centred while a version is shown
+  menuSpacer: {
+    width: 42,
+  },
   container: {
     height: SIZE.full,
     paddingVertical: PADDING_MARGIN.lg,

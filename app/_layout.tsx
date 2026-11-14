@@ -146,6 +146,7 @@ export default Sentry.wrap(function RootLayout() {
                         <Stack.Screen name="changelog" options={{ headerShown: false, animation: "fade_from_bottom" }} />
                         <Stack.Screen name="secret-code" options={{ headerShown: false, animation: "fade_from_bottom" }} />
                         <Stack.Screen name="notes/[noteId]" options={{ headerShown: false, animation: "fade_from_bottom" }} />
+                        <Stack.Screen name="notes/history" options={{ headerShown: false, animation: "ios_from_left" }} />
                         <Stack.Screen
                           name="categories/organize"
                           options={{ headerShown: false, animation: "fade_from_bottom" }}

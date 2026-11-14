@@ -289,6 +289,7 @@ const ja = {
       made_offline: "ノートはオフラインになりました",
       synced_as_duplicate: "コピーとしてクラウドに同期しました",
       duplicate: "複製",
+      history: "履歴",
       changecategory: "カテゴリを変更",
       share: "共有",
       export: "エクスポート",
@@ -1407,6 +1408,27 @@ const ja = {
     sent: "報告を送信しました",
     failed: "送信できませんでした。接続を確認して、もう一度お試しください。",
     code: "コード：{{code}}",
+  },
+
+  history: {
+    current: "現在のバージョン",
+    today: "今日",
+    yesterday: "昨日",
+    reason: {
+      ai: "AIアシスタントの前",
+      agent: "AIエージェントの前",
+      sync: "同期の前",
+      edit: "編集の前",
+      replace: "「すべて置換」の前",
+      cleanup: "完了した項目を削除する前",
+      restore: "復元の前",
+    },
+    footer: "保存されたバージョン: {{count}}。この端末にのみ保存されます。",
+    empty_title: "以前のバージョンはありません",
+    empty_text: "AI、エージェント、同期、または大きな変更でこのメモが書き換えられる前に、Fast Memo がバージョンを保存します。",
+    restore: "復元",
+    close: "閉じる",
+    restored: "バージョンを復元しました",
   },
 
   empty: {

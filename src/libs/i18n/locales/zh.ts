@@ -288,6 +288,7 @@ const zh = {
       made_offline: "笔记现已离线",
       synced_as_duplicate: "已作为副本同步到云端",
       duplicate: "复制",
+      history: "历史记录",
       changecategory: "更改类别",
       share: "分享",
       export: "导出",
@@ -1372,6 +1373,27 @@ const zh = {
     sent: "报告已发送",
     failed: "无法发送。请检查网络连接后重试。",
     code: "代码：{{code}}",
+  },
+
+  history: {
+    current: "当前版本",
+    today: "今天",
+    yesterday: "昨天",
+    reason: {
+      ai: "AI 助手修改前",
+      agent: "AI 代理修改前",
+      sync: "同步前",
+      edit: "编辑前",
+      replace: "“全部替换”前",
+      cleanup: "删除已完成项前",
+      restore: "恢复前",
+    },
+    footer: "已保留的版本：{{count}}。仅保存在此设备上。",
+    empty_title: "没有更早的版本",
+    empty_text: "在 AI、代理、同步或重大修改改写这条笔记之前，Fast Memo 会保留一个版本。",
+    restore: "恢复",
+    close: "关闭",
+    restored: "已恢复版本",
   },
 
   empty: {

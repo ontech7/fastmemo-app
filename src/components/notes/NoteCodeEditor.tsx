@@ -2,6 +2,7 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import VersionBand, { type VersionPreview } from "@/components/notes/VersionBand";
 import EditorTourTip from "@/components/notes/EditorTourTip";
 import CodeDraggableTab from "@/components/notes/CodeDraggableTab";
 import CodeEditorWebView, { type CodeEditorWebViewRef } from "@/components/notes/CodeEditorWebView";
@@ -50,6 +51,8 @@ export const TAB_WIDTH_ESTIMATE = 110;
 
 interface Props {
   initialNote: CodeNote;
+  /** A kept version on screen (spec B.9): read only, no menu, nothing reaches the store. */
+  preview?: VersionPreview;
 }
 
 const isCodeNoteEmpty = (n: CodeNote) => {
@@ -66,7 +69,7 @@ function codeFindTarget(editorRef: React.RefObject<CodeEditorWebViewRef | null>)
   return createCodeFindTarget((request) => editorRef.current?.find(request));
 }
 
-export default function NoteCodeEditor({ initialNote }: Props) {
+export default function NoteCodeEditor({ initialNote, preview }: Props) {
   const { t } = useTranslation();
 
   const aiSettings = useSelector(selectorAIAssistant);
@@ -141,6 +144,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
       defaultType: "code",
       addWebhookSelector: selectorWebhook_addCodeNote,
       addAction: "note/addCodeNote",
+      preview: !!preview,
       isEmpty: isCodeNoteEmpty,
       buildPayloadExtras,
       getTitleSource: (n) =>
@@ -359,9 +363,13 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   <MagnifyingGlassIcon size={20} color={showFindReplace ? COLOR.accentSoft : COLOR.softWhite} />
                 </IconChip>
               </TouchableOpacity>
-              <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
+              {preview ? (
+                <View style={styles.menuSpacer} />
+              ) : (
+                <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
+              )}
             </View>
-            <NotePresenceBanner noteId={note.id} />
+            {preview ? <VersionBand preview={preview} /> : <NotePresenceBanner noteId={note.id} />}
             <FindReplaceBar
               visible={showFindReplace}
               onClose={() => {
@@ -483,7 +491,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
         </SafeAreaView>
       </KeyboardAvoidingView>
 
-      <EditorTourTip />
+      {!preview && <EditorTourTip />}
     </View>
   );
 }
@@ -491,6 +499,10 @@ export default function NoteCodeEditor({ initialNote }: Props) {
 /* STYLES */
 
 const styles = StyleSheet.create({
+  // where the note menu sits, so the title stays centred while a version is shown
+  menuSpacer: {
+    width: 42,
+  },
   searchToggle: {
     marginRight: PADDING_MARGIN.sm,
   },

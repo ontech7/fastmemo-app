@@ -2,6 +2,7 @@ import AIEditorActions from "@/components/ai/AIEditorActions";
 import BackButton from "@/components/buttons/BackButton";
 import NoteSettingsButton from "@/components/buttons/NoteSettingsButton";
 import NotePresenceBanner from "@/components/notes/NotePresenceBanner";
+import VersionBand, { type VersionPreview } from "@/components/notes/VersionBand";
 import EditorTourTip from "@/components/notes/EditorTourTip";
 import KanbanBoard from "@/components/kanban/KanbanBoard";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
@@ -28,9 +29,11 @@ const COLUMN_PEEK = 40;
 
 interface Props {
   initialNote: KanbanNote;
+  /** A kept version on screen (spec B.9): read only, no menu, nothing reaches the store. */
+  preview?: VersionPreview;
 }
 
-export default function NoteKanbanEditor({ initialNote }: Props) {
+export default function NoteKanbanEditor({ initialNote, preview }: Props) {
   const { t } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
 
@@ -70,6 +73,7 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
     defaultType: "kanban",
     addWebhookSelector: selectorWebhook_addKanbanNote,
     addAction: "note/addKanbanNote",
+    preview: !!preview,
     isEmpty: isKanbanNoteEmpty,
     buildPayloadExtras,
     getTitleSource: (n) =>
@@ -137,9 +141,13 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
                 maxLength={96}
               />
 
-              <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
+              {preview ? (
+                <View style={styles.menuSpacer} />
+              ) : (
+                <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
+              )}
             </View>
-            <NotePresenceBanner noteId={note.id} />
+            {preview ? <VersionBand preview={preview} /> : <NotePresenceBanner noteId={note.id} />}
           </View>
 
           <View style={styles.boardContainer}>
@@ -189,12 +197,16 @@ export default function NoteKanbanEditor({ initialNote }: Props) {
         </SafeAreaView>
       </KeyboardAvoidingView>
 
-      <EditorTourTip />
+      {!preview && <EditorTourTip />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // where the note menu sits, so the title stays centred while a version is shown
+  menuSpacer: {
+    width: 42,
+  },
   container: {
     height: SIZE.full,
     paddingVertical: PADDING_MARGIN.lg,

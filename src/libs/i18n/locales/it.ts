@@ -290,6 +290,7 @@ const it = {
       made_offline: "La nota è ora offline",
       synced_as_duplicate: "Sincronizzata nel cloud come copia",
       duplicate: "Duplica",
+      history: "Cronologia",
       changecategory: "Cambia Categoria",
       share: "Condividi",
       export: "Esporta",
@@ -1421,6 +1422,28 @@ const it = {
     sent: "Segnalazione inviata",
     failed: "Non è stato possibile inviarla. Controlla la connessione e riprova.",
     code: "Codice: {{code}}",
+  },
+
+  history: {
+    current: "Versione attuale",
+    today: "Oggi",
+    yesterday: "Ieri",
+    reason: {
+      ai: "Prima dell'assistente AI",
+      agent: "Prima di un agente AI",
+      sync: "Prima della sincronizzazione",
+      edit: "Prima delle tue modifiche",
+      replace: "Prima di «Sostituisci tutto»",
+      cleanup: "Prima di eliminare le completate",
+      restore: "Prima di un ripristino",
+    },
+    footer: "Versioni conservate: {{count}}. Restano su questo dispositivo.",
+    empty_title: "Nessuna versione precedente",
+    empty_text:
+      "Fast Memo ne conserva una prima che l'AI, un agente, una sincronizzazione o una modifica importante riscrivano questa nota.",
+    restore: "Ripristina",
+    close: "Chiudi",
+    restored: "Versione ripristinata",
   },
 
   empty: {

@@ -289,6 +289,7 @@ const en = {
       made_offline: "Note is now offline",
       synced_as_duplicate: "Synced to cloud as a copy",
       duplicate: "Duplicate",
+      history: "History",
       changecategory: "Change Category",
       share: "Share",
       export: "Export",
@@ -1407,6 +1408,27 @@ const en = {
     sent: "Report sent",
     failed: "It couldn't be sent. Check the connection and try again.",
     code: "Code: {{code}}",
+  },
+
+  history: {
+    current: "Current version",
+    today: "Today",
+    yesterday: "Yesterday",
+    reason: {
+      ai: "Before the AI assistant",
+      agent: "Before an AI agent",
+      sync: "Before sync",
+      edit: "Before your edits",
+      replace: 'Before "Replace all"',
+      cleanup: "Before deleting completed items",
+      restore: "Before a restore",
+    },
+    footer: "Versions kept: {{count}}. They stay on this device.",
+    empty_title: "No earlier versions",
+    empty_text: "Fast Memo keeps one before the AI, an agent, a sync or a big change rewrites this note.",
+    restore: "Restore",
+    close: "Close",
+    restored: "Version restored",
   },
 
   empty: {

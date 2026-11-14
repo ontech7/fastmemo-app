@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import ArrowUpTrayIcon from "react-native-heroicons/outline/ArrowUpTrayIcon";
 import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
+import ClockIcon from "react-native-heroicons/outline/ClockIcon";
 import DocumentDuplicateIcon from "react-native-heroicons/outline/DocumentDuplicateIcon";
 import EllipsisVerticalIcon from "react-native-heroicons/outline/EllipsisVerticalIcon";
 import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
@@ -21,6 +22,8 @@ import IconChip from "@/components/ui/IconChip";
 import PopupMenu, { PopupMenuDivider, PopupMenuOption, PopupMenuToggle, PopupMenuToggleRow } from "@/components/ui/PopupMenu";
 import { useRouter } from "@/hooks/useRouter";
 import { stripHtml } from "@/libs/ai";
+import { addTrail } from "@/libs/diagnostics";
+import { storeUnlockedNote } from "@/libs/registry";
 import { exportAsPdf, exportAsTextFile, htmlToMarkdown } from "@/utils/export";
 import { toast } from "@/utils/toast";
 import { webhook } from "@/utils/webhook";
@@ -181,6 +184,14 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
     toast(copyId ? t("note.duplicated") : t("ai.editor.no_content"));
   };
 
+  // The note's kept versions (spec B.9). A protected note's history is reached only from inside it: the pass is left here.
+  const openHistory = () => {
+    flushNote();
+    if (locked) storeUnlockedNote(id);
+    addTrail("history.open");
+    router.push({ pathname: "/notes/history", params: { noteId: id } });
+  };
+
   const changeCategory = () => {
     // A brand-new note only enters the Redux store on its first committed edit, so
     // commit the pending batch first. Empty notes are dropped instead of saved, so
@@ -264,6 +275,14 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
           trailing={<SignalSlashIcon size={16} color={COLOR.textSecondary} />}
           onSelect={local ? syncNoteToCloud : makeNoteOffline}
         />
+
+        {saved && (
+          <PopupMenuOption
+            label={t("note.settings.history")}
+            trailing={<ClockIcon size={16} color={COLOR.textSecondary} />}
+            onSelect={openHistory}
+          />
+        )}
 
         {type === "text" && (
           <PopupMenuOption
