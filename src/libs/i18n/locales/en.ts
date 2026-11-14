@@ -331,6 +331,7 @@ const en = {
       save: "Save",
       delete: "Delete",
       failed: "This image can't be changed or shared",
+      not_added: "Couldn't add the picture",
     },
   },
   kanban: {

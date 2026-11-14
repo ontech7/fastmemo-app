@@ -332,6 +332,7 @@ const it = {
       save: "Salva",
       delete: "Cancella",
       failed: "Questa immagine non si può modificare né condividere",
+      not_added: "Non è stato possibile aggiungere l'immagine",
     },
   },
   kanban: {

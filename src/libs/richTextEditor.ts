@@ -138,6 +138,8 @@ export const RICH_TEXT_STYLE = {
 
 /** The page's message that an image was tapped: its data is an `EditorImage`. */
 export const IMAGE_MESSAGE = "FASTMEMO_IMAGE";
+/** The page's message that image files were pasted or dropped: `data` is `{ images: string[] }` (data URLs, in order). */
+export const IMAGE_IN_MESSAGE = "FASTMEMO_IMAGE_IN";
 /** The page's message that a change couldn't be made to an image. */
 export const IMAGE_FAILED_MESSAGE = "FASTMEMO_IMAGE_FAILED";
 /**
@@ -1577,6 +1579,77 @@ export const RICH_TEXT_SCRIPT = String.raw`
     refreshToolbar();
     return true;
   };
+  // Pictures pasted or dropped (spec C.3): read as data URLs and posted to the app in one IMAGE_IN_MESSAGE, in order; the
+  // app reduces them as the picker's and puts them at the caret. Text on the clipboard wins: it pastes as before. Files
+  // dropped never open in the page; files that aren't pictures, and a read-only note, take nothing. On the window, so
+  // before the document's listeners (the Markdown paste, the sanitizer's drop). A drag inside the note carries no files.
+  var PICTURE = /^image\/(jpeg|png|webp|gif)$/;
+  var picturesIn = function (data) {
+    return [].filter.call((data && data.files) || [], function (file) { return PICTURE.test(file.type); });
+  };
+  var carriesFiles = function (data) { return !!data && [].indexOf.call(data.types || [], "Files") >= 0; };
+  var postPictures = function (files) {
+    Promise.all(files.map(function (file) {
+      return new Promise(function (resolve) {
+        var reader = new FileReader();
+        reader.onload = function () { resolve(reader.result); };
+        reader.onerror = function () { resolve(null); };
+        reader.readAsDataURL(file);
+      });
+    })).then(function (images) {
+      images = images.filter(Boolean);
+      if (images.length) post("${IMAGE_IN_MESSAGE}", { images: images });
+    });
+  };
+  // A picture never goes inside a code block: after it. pell keeps the caret it restores when the app puts the picture
+  // in (focusContentEditor): a touchend has it read this one.
+  var caretForPictures = function () {
+    var s = selection();
+    var pre = s.rangeCount && closest(s.getRangeAt(0).startContainer, "pre");
+    if (pre && content().contains(pre)) caretAfter(pre);
+    refreshToolbar();
+  };
+  var pointRange = function (x, y) {
+    if ($.caretRangeFromPoint) return $.caretRangeFromPoint(x, y);
+    var p = $.caretPositionFromPoint && $.caretPositionFromPoint(x, y);
+    if (!p) return null;
+    var r = $.createRange();
+    r.setStart(p.offsetNode, p.offset);
+    r.collapse(true);
+    return r;
+  };
+  window.addEventListener("paste", function (e) {
+    var data = e.clipboardData;
+    if (!content().isContentEditable || !content().contains(e.target) && e.target !== content()) return;
+    var pictures = picturesIn(data);
+    if (!pictures.length || data.getData("text/plain")) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    caretForPictures();
+    postPictures(pictures);
+  }, true);
+  window.addEventListener("dragover", function (e) {
+    if (!carriesFiles(e.dataTransfer)) return;
+    e.preventDefault();
+    var pictures = [].some.call(e.dataTransfer.items || [], function (item) {
+      return item.kind === "file" && PICTURE.test(item.type);
+    });
+    e.dataTransfer.dropEffect = pictures && content().isContentEditable ? "copy" : "none";
+  }, true);
+  window.addEventListener("drop", function (e) {
+    if (!carriesFiles(e.dataTransfer)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    var pictures = picturesIn(e.dataTransfer);
+    if (!pictures.length || !content().isContentEditable) return;
+    var at = pointRange(e.clientX, e.clientY);
+    if (at && content().contains(at.startContainer)) {
+      content().focus();
+      select(at);
+    }
+    caretForPictures();
+    postPictures(pictures);
+  }, true);
   $.addEventListener("paste", function (e) {
     var data = e.clipboardData || window.clipboardData;
     var text = data && data.getData("text/plain");

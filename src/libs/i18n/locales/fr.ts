@@ -331,6 +331,7 @@ const fr = {
       save: "Enregistrer",
       delete: "Supprimer",
       failed: "Cette image ne peut être ni modifiée ni partagée",
+      not_added: "Impossible d'ajouter l'image",
     },
   },
   kanban: {

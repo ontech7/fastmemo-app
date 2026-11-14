@@ -54,6 +54,7 @@ import {
   COUNT_MESSAGE,
   formatCommand,
   IMAGE_FAILED_MESSAGE,
+  IMAGE_IN_MESSAGE,
   IMAGE_MESSAGE,
   imageCommand,
   lineCommand,
@@ -334,19 +335,48 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
     devModeRef.current = devMode;
   }, [devMode]);
 
+  // What pictures put in since the page last sent the note: setText hasn't counted them yet.
+  const incomingSizeRef = useRef(0);
+  /**
+   * Every way a picture comes in (the picker, a paste, a drop): reduced to 1600 px on its long side as JPEG, as a phone
+   * photo would otherwise weigh megabytes in the note (LL-083); then put at the caret. false when it didn't fit the note,
+   * or couldn't be read. `width` / `height` are the picker's, when it knows them.
+   */
+  const insertImageFrom = useCallback(
+    async (uri: string, width?: number, height?: number): Promise<boolean> => {
+      let base64 = "";
+      try {
+        base64 = await reducePhoto(uri, width, height);
+      } catch {}
+      if (!base64) {
+        toast(t("note.image.not_added"));
+        return false;
+      }
+      const html = `<div><img src="data:image/jpeg;base64,${base64}"></div>`;
+      const size = getTextSize(html);
+      const dm = devModeRef.current;
+      const total = getTextSize(noteRef.current.text) + incomingSizeRef.current + size;
+      if (!(dm.enabled && dm.unlimitedTextSpace) && total > noteTextLimit(noteRef.current.local)) {
+        toast(t("noteLimitReached"));
+        return false;
+      }
+      incomingSizeRef.current += size;
+      const src = `data:image/jpeg;base64,${base64}`;
+      richTextEditor.current?.focusContentEditor();
+      richTextEditor.current?.command(`window.__fm && window.__fm.insertImage(${JSON.stringify(src)})`);
+      return true;
+    },
+    [t]
+  );
+
   const pickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true });
 
     if (result.canceled || !result.assets?.length) return;
 
     const image = result.assets[0];
-    // Brought to 1600 px on its long side as JPEG: a phone photo would otherwise weigh megabytes in the note (LL-083).
-    const base64 = await reducePhoto(image.uri, image.width, image.height);
-
-    const src = `data:image/jpeg;base64,${base64}`;
-    richTextEditor.current?.focusContentEditor();
-    richTextEditor.current?.command(`window.__fm && window.__fm.insertImage(${JSON.stringify(src)})`);
-  }, []);
+    await insertImageFrom(image.uri, image.width, image.height);
+  }, [insertImageFrom]);
 
   const setTitle = useCallback(
     (titleVal: string) => {
@@ -371,6 +401,7 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
         return;
       }
 
+      incomingSizeRef.current = 0;
       setNoteTextSize(textSize);
 
       setNoteAsync({ ...noteRef.current, text: textVal });
@@ -401,31 +432,42 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
     follow: (_: string) => {},
   });
 
-  const onEditorMessage = useCallback((message: { type?: string; data?: unknown }) => {
-    if (message?.type === RELOAD_SHOWN) reloadsShownRef.current = message.data as number;
-    if (message?.type === STATE_MESSAGE) setFormatState(message.data as EditorState);
-    // A touch on the text closes the bar's menu.
-    if (message?.type === TOUCH_MESSAGE) formatBarRef.current?.closeMenu();
-    // The page counts what it shows after every change (typing, a reload, an undo): the app doesn't parse the note.
-    if (message?.type === COUNT_MESSAGE && typeof message.data === "number") setNoteTextLength(message.data);
-    if (message?.type === IMAGE_MESSAGE) {
-      const image = message.data as EditorImage;
-      // The page gives the point in itself: the editor's box is where the page is on screen.
-      editorBoxRef.current?.measureInWindow((x, y) => setTappedImage({ image, at: { x: x + image.x, y: y + image.y } }));
-    }
-    if (message?.type === LINK_MESSAGE) {
-      const link = message.data as EditorLink;
-      // Read-only, or a Cmd/Ctrl click: the link opens at once. Only the system ever opens it, never the page.
-      if (link.direct) openLink(link.href);
-      else editorBoxRef.current?.measureInWindow((x, y) => setTappedLink({ link, at: { x: x + link.x, y: y + link.y } }));
-    }
-    if (message?.type === LINK_START_MESSAGE) setLinkDialog({ ...(message.data as EditorLinkStart), key: Date.now() });
-    if (message?.type === PICKER_MESSAGE) noteLinkEventsRef.current.trigger(message.data as EditorPicker);
-    if (message?.type === PICKER_KEY_MESSAGE) noteLinkEventsRef.current.key(message.data as PickerKey);
-    if (message?.type === NOTE_LINK_MESSAGE && typeof message.data === "string") noteLinkEventsRef.current.follow(message.data);
-    if (message?.type === IMAGE_FAILED_MESSAGE) toast(i18n.t("note.image.failed"));
-    if (message?.type === PAGE_ERROR_MESSAGE) reportPageError("richtext", message.data);
-  }, []);
+  const onEditorMessage = useCallback(
+    (message: { type?: string; data?: unknown }) => {
+      if (message?.type === RELOAD_SHOWN) reloadsShownRef.current = message.data as number;
+      if (message?.type === STATE_MESSAGE) setFormatState(message.data as EditorState);
+      // A touch on the text closes the bar's menu.
+      if (message?.type === TOUCH_MESSAGE) formatBarRef.current?.closeMenu();
+      // The page counts what it shows after every change (typing, a reload, an undo): the app doesn't parse the note.
+      if (message?.type === COUNT_MESSAGE && typeof message.data === "number") setNoteTextLength(message.data);
+      if (message?.type === IMAGE_MESSAGE) {
+        const image = message.data as EditorImage;
+        // The page gives the point in itself: the editor's box is where the page is on screen.
+        editorBoxRef.current?.measureInWindow((x, y) => setTappedImage({ image, at: { x: x + image.x, y: y + image.y } }));
+      }
+      if (message?.type === LINK_MESSAGE) {
+        const link = message.data as EditorLink;
+        // Read-only, or a Cmd/Ctrl click: the link opens at once. Only the system ever opens it, never the page.
+        if (link.direct) openLink(link.href);
+        else editorBoxRef.current?.measureInWindow((x, y) => setTappedLink({ link, at: { x: x + link.x, y: y + link.y } }));
+      }
+      if (message?.type === LINK_START_MESSAGE) setLinkDialog({ ...(message.data as EditorLinkStart), key: Date.now() });
+      if (message?.type === PICKER_MESSAGE) noteLinkEventsRef.current.trigger(message.data as EditorPicker);
+      if (message?.type === PICKER_KEY_MESSAGE) noteLinkEventsRef.current.key(message.data as PickerKey);
+      if (message?.type === NOTE_LINK_MESSAGE && typeof message.data === "string")
+        noteLinkEventsRef.current.follow(message.data);
+      if (message?.type === IMAGE_FAILED_MESSAGE) toast(i18n.t("note.image.failed"));
+      if (message?.type === PAGE_ERROR_MESSAGE) reportPageError("richtext", message.data);
+      // Pictures pasted or dropped: one after the other, in order; what doesn't fit is left out, with the ones after it.
+      if (message?.type === IMAGE_IN_MESSAGE) {
+        const images = (message.data as { images?: string[] } | null)?.images ?? [];
+        void (async () => {
+          for (const uri of images) if (!(await insertImageFrom(uri))) break;
+        })();
+      }
+    },
+    [insertImageFrom]
+  );
 
   const changeImage = useCallback((image: EditorImage, change: ImageChange, value?: string) => {
     richTextEditor.current?.command(imageCommand(image, change, value));

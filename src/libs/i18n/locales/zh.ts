@@ -330,6 +330,7 @@ const zh = {
       save: "保存",
       delete: "删除",
       failed: "无法修改或分享此图片",
+      not_added: "无法添加图片",
     },
   },
   kanban: {

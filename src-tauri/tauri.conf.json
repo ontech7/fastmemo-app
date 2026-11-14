@@ -65,7 +65,8 @@
         "backgroundColor": "#05091A",
         "theme": "Dark",
         "titleBarStyle": "Transparent",
-        "useHttpsScheme": true
+        "useHttpsScheme": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {

@@ -27,6 +27,7 @@ await build({
       export { formatToPlainText } from "@/utils/string";
       export { daysAgo } from "@/utils/dateParse";
       export { stepCursor, rangeBetween } from "@/libs/listCursor";
+      export { installDropGuard } from "@/libs/dropGuard.web";
     `,
     resolveDir: src,
     loader: "ts",
@@ -315,6 +316,24 @@ console.log("\nlistCursor: the desktop list's keyboard mark (Task 25)");
   );
   ok("no anchor: the one clicked", rangeBetween(ids, null, "b").join() === "b" && rangeBetween(ids, "zz", "b").join() === "b");
   ok("an id that isn't listed: nothing", rangeBetween(ids, "a", "zz").length === 0);
+}
+
+console.log("\nfiles dropped on the app's window");
+{
+  const { installDropGuard } = M;
+  const target = new EventTarget();
+  installDropGuard(target);
+  const fire = (type, types) => {
+    const e = new Event(type, { cancelable: true });
+    const dataTransfer = { types, dropEffect: "copy" };
+    Object.defineProperty(e, "dataTransfer", { value: dataTransfer });
+    target.dispatchEvent(e);
+    return { cancelled: e.defaultPrevented, dropEffect: dataTransfer.dropEffect };
+  };
+  ok("a file dropped never opens in the window", fire("drop", ["Files"]).cancelled);
+  const over = fire("dragover", ["Files"]);
+  ok("a file dragged over shows it can't be dropped there", over.cancelled && over.dropEffect === "none", over);
+  ok("text dragged is left alone", !fire("drop", ["text/plain"]).cancelled && !fire("dragover", ["text/plain"]).cancelled);
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

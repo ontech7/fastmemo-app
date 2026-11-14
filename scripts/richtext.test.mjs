@@ -2282,6 +2282,92 @@ export async function runCases(driver, page, url) {
     check("a pasted marker changes nothing", !(await state()).html.includes("<h1>"), (await state()).html);
   }
 
+  // 13. Pictures pasted or dropped (spec C.3): the page posts them to the app (FASTMEMO_IMAGE_IN, data URLs in order), which
+  // reduces and inserts them. Text on the clipboard wins; other files, and a read-only note, take nothing.
+  {
+    // A paste or a drop of `files` ({ name, type, data: a data URL } or { name, type, text }), plus plain `text`; a drop at
+    // (x, y). Answers whether the event was cancelled.
+    const fileEvent = (kind, files, { text, x = 0, y = 0 } = {}) =>
+      evaluate(`(() => {
+      const bytes = (d) => { const b = atob(d.split(",")[1]); const a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; };
+      const dt = new DataTransfer();
+      for (const f of ${JSON.stringify(files)}) dt.items.add(new File([f.data ? bytes(f.data) : f.text], f.name, { type: f.type }));
+      ${text === undefined ? "" : `dt.setData("text/plain", ${JSON.stringify(text)});`}
+      const c = document.querySelector(".pell-content");
+      const e = ${JSON.stringify(kind)} === "paste"
+        ? new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true })
+        : new DragEvent("drop", { dataTransfer: dt, bubbles: true, cancelable: true, clientX: ${x}, clientY: ${y} });
+      (${JSON.stringify(kind)} === "paste" ? c : document.elementFromPoint(${x}, ${y}) || c).dispatchEvent(e);
+      return e.defaultPrevented;
+    })()`);
+    const IMAGE_IN = "FASTMEMO_IMAGE_IN";
+    const png = { name: "a.png", type: "image/png", data: PNG };
+    const jpeg = { name: "b.jpg", type: "image/jpeg", data: JPEG };
+
+    await open("<div>first line</div><div>second line</div>");
+    await listenToPage();
+    await select({ caret: "first", at: 5 });
+    const before = (await state()).html;
+    const pasteTaken = await fileEvent("paste", [png]);
+    let sent = await posted(IMAGE_IN);
+    check(
+      "a picture pasted is posted to the app as a data URL",
+      sent.length === 1 && sent[0].data.images.length === 1 && sent[0].data.images[0].startsWith("data:image/png;base64,"),
+      JSON.stringify(sent).slice(0, 200)
+    );
+    check(
+      "...the paste is cancelled and the note is unchanged",
+      pasteTaken && (await state()).html === before,
+      (await state()).html
+    );
+
+    await fileEvent("paste", [png], { text: "**b**" });
+    sent = await posted(IMAGE_IN);
+    check("with text on the clipboard the text is pasted", (await state()).html.includes("<b>b</b>"), (await state()).html);
+    check("...and no picture is posted", !sent.length, JSON.stringify(sent).slice(0, 200));
+
+    await open("<div>first line</div><div>second line</div>");
+    await listenToPage();
+    // The left edge of "line" in the second line, one pixel in: the caret goes before it.
+    const [dx, dy] = await evaluate(`(() => {
+      const t = document.querySelectorAll(".pell-content div")[1].firstChild, r = document.createRange();
+      r.setStart(t, 7); r.setEnd(t, 8);
+      const b = r.getBoundingClientRect();
+      return [b.left + 1, b.top + b.height / 2];
+    })()`);
+    await fileEvent("drop", [png, jpeg], { x: dx, y: dy });
+    sent = await posted(IMAGE_IN);
+    check(
+      "two pictures dropped are posted in order",
+      sent.length === 1 &&
+        sent[0].data.images.length === 2 &&
+        sent[0].data.images[0].startsWith("data:image/png;") &&
+        sent[0].data.images[1].startsWith("data:image/jpeg;"),
+      JSON.stringify(sent).slice(0, 200)
+    );
+    const caret = await evaluate(
+      `(() => { const s = getSelection(); return [s.anchorNode && s.anchorNode.data, s.anchorOffset]; })()`
+    );
+    check("...and the caret is where they were dropped", caret[0] === "second line" && caret[1] === 7, JSON.stringify(caret));
+    // What the app does next (insertImageFrom): focusContentEditor, which puts back the caret pell kept, then the picture.
+    await sleep(100);
+    await insertImage(PNG);
+    const placed = (await state()).html.replace(/src="[^"]*"/g, "src");
+    check("...and the app puts the pictures there", /second <img src[ >]/.test(placed.replace(/&nbsp;/g, " ")), placed);
+
+    const unchanged = (await state()).html;
+    const pdfTaken = await fileEvent("drop", [{ name: "c.pdf", type: "application/pdf", text: "%PDF-1.4" }], { x: dx, y: dy });
+    sent = await posted(IMAGE_IN);
+    check("a PDF dropped posts nothing", !sent.length, JSON.stringify(sent).slice(0, 200));
+    check("...changes nothing, and nothing opens it", pdfTaken && (await state()).html === unchanged, (await state()).html);
+
+    await post({ type: "content", name: "setDisable", data: true });
+    await fileEvent("paste", [png]);
+    await fileEvent("drop", [png], { x: dx, y: dy });
+    sent = await posted(IMAGE_IN);
+    check("a read-only note takes no picture", !sent.length, JSON.stringify(sent).slice(0, 200));
+  }
+
   check(
     "the note sanitizer keeps every new line",
     (await evaluate(`window.__fmSanitize(${JSON.stringify(EVERY_LINE)})`)) === EVERY_LINE

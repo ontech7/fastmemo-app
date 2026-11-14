@@ -331,6 +331,7 @@ const ja = {
       save: "保存",
       delete: "削除",
       failed: "この画像は変更も共有もできません",
+      not_added: "画像を追加できませんでした",
     },
   },
   kanban: {

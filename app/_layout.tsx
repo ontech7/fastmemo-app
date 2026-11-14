@@ -12,6 +12,7 @@ import { useAppFonts } from "@/hooks/useAppFonts";
 import { useModelDownloadResume } from "@/hooks/useModelDownloadResume";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { installDesktopMenu } from "@/libs/desktopMenu";
+import { installDropGuard } from "@/libs/dropGuard";
 import { initDiagnostics } from "@/libs/diagnostics";
 import { installFlushOnExit } from "@/libs/flushOnExit";
 import i18n from "@/libs/i18n";
@@ -41,6 +42,7 @@ installMessageGuard();
 installFlushOnExit();
 installMcpBridge();
 installDesktopMenu();
+installDropGuard();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
