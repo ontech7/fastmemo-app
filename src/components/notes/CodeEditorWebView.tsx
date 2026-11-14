@@ -1,5 +1,6 @@
 import { buildCodeEditorHtml } from "@/libs/codeEditorPage";
 import { reportPageError } from "@/libs/diagnostics";
+import type { FindReply, FindRequest } from "@/libs/findTarget";
 import { PAGE_ERROR_MESSAGE } from "@/libs/pageErrors";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { Platform, StyleSheet, TextInput, type TextInputInstance } from "react-native";
@@ -31,6 +32,8 @@ export interface CodeEditorWebViewRef {
    * On the web the text is handed to `onChange` before this returns.
    */
   flush: () => void;
+  /** A request of the find bar (`libs/findTarget`); the page answers on `onFound`. */
+  find: (request: FindRequest) => void;
 }
 
 interface Props {
@@ -46,10 +49,12 @@ interface Props {
   initialTag?: string;
   /** Fires once the editor's WebView has built and painted its content. */
   onReady?: () => void;
+  /** The page's answer to each `find` request. */
+  onFound?: (reply: FindReply) => void;
 }
 
 const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
-  ({ initialCode, language, readOnly, onChange, onReady, initialTag }, ref) => {
+  ({ initialCode, language, readOnly, onChange, onReady, onFound, initialTag }, ref) => {
     // `WebView<object>`, not bare `WebView`: v14 defaults the props generic to
     // `undefined`, which collapses the props type to `undefined` under strict: false.
     const webViewRef = useRef<WebView<object>>(null);
@@ -67,6 +72,8 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
 
     const onReadyRef = useRef(onReady);
     onReadyRef.current = onReady;
+    const onFoundRef = useRef(onFound);
+    onFoundRef.current = onFound;
 
     // Platform-aware transport: injectJavaScript on native, postMessage on web/Tauri
     const sendToEditor = useCallback((msg: string) => {
@@ -133,6 +140,7 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
         const data = JSON.parse(change);
         if ((data.doc ?? 0) === docRef.current) onChangeRef.current(data.code);
       },
+      find: (request: FindRequest) => sendMessage(JSON.stringify(request)),
     }));
 
     const handleMessage = useCallback(
@@ -146,6 +154,8 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
             }
             pendingMessages.current = [];
             onReadyRef.current?.();
+          } else if (data.type === "found") {
+            onFoundRef.current?.(data as FindReply);
           } else if (data.type === PAGE_ERROR_MESSAGE) {
             reportPageError("codemirror", data.data);
           } else if (data.type === "change" && (data.doc ?? 0) === docRef.current) {

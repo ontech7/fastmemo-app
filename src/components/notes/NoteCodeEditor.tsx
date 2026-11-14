@@ -6,6 +6,11 @@ import EditorTourTip from "@/components/notes/EditorTourTip";
 import CodeDraggableTab from "@/components/notes/CodeDraggableTab";
 import CodeEditorWebView, { type CodeEditorWebViewRef } from "@/components/notes/CodeEditorWebView";
 import CodeLanguagePickerModal from "@/components/notes/CodeLanguagePickerModal";
+import FindReplaceBar from "@/components/notes/FindReplaceBar";
+import IconChip from "@/components/ui/IconChip";
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
+import { createCodeFindTarget } from "@/libs/findTarget";
+import { type FindOnOpen, takeFindOnOpen } from "@/libs/search/findOnOpen";
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
@@ -34,6 +39,7 @@ import {
   View,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
 import PlusIcon from "react-native-heroicons/outline/PlusIcon";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSelector } from "react-redux";
@@ -54,6 +60,11 @@ const isCodeNoteEmpty = (n: CodeNote) => {
 
 /** The id of the tab on screen in `n`: the one shown, or the first if it no longer exists. */
 const shownTabIn = (n: CodeNote, shownId: string) => (n.tabs.some((tab) => tab.id === shownId) ? shownId : n.tabs[0]?.id || "");
+
+/** The find bar's target for the code page in `editorRef`. */
+function codeFindTarget(editorRef: React.RefObject<CodeEditorWebViewRef | null>) {
+  return createCodeFindTarget((request) => editorRef.current?.find(request));
+}
 
 export default function NoteCodeEditor({ initialNote }: Props) {
   const { t } = useTranslation();
@@ -221,6 +232,29 @@ export default function NoteCodeEditor({ initialNote }: Props) {
     [note.tabs, setShownTabId]
   );
 
+  // Find and replace (spec B.8): the text note's bar, searching the tab on screen through the code page.
+  const [showFindReplace, setShowFindReplace] = useState(false);
+  // Opened from a search result: its word, shown in the find bar once the page is ready, on the result's tab.
+  const [findWord, setFindWord] = useState<string | undefined>(undefined);
+  const pendingFindRef = useRef<FindOnOpen | null>(null);
+  // The target reads the editor's ref only when the bar searches, never while rendering.
+  // eslint-disable-next-line react-hooks/refs
+  const [findTarget] = useState(() => codeFindTarget(editorRef));
+  useEffect(() => {
+    pendingFindRef.current = takeFindOnOpen(initialNote.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // The page is up: the result's tab is shown as a tap shows it, then the bar opens on its word.
+  const onEditorReady = useCallback(() => {
+    setEditorPainted(true);
+    const found = pendingFindRef.current;
+    pendingFindRef.current = null;
+    if (!found) return;
+    if (found.tabId) setActiveTab(found.tabId);
+    setFindWord(found.word);
+    setShowFindReplace(true);
+  }, [setActiveTab]);
+
   // The editor's text goes to the tab it was typed in (`tabId`: the one on screen, or one a tab switch just left, whose
   // last text the page sends at the switch); a tab removed meanwhile takes nothing.
   const updateTabCode = useCallback(
@@ -308,9 +342,36 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                   maxLength={96}
                 />
               </View>
+              <TouchableOpacity
+                style={styles.searchToggle}
+                onPress={() => {
+                  setShowFindReplace((prev) => !prev);
+                  setFindWord(undefined);
+                }}
+                testID={showFindReplace ? undefined : SHORTCUT_TARGET.find}
+                accessibilityRole="button"
+                accessibilityLabel={t("a11y.search_in_note")}
+                aria-expanded={showFindReplace}
+              >
+                <IconChip>
+                  <MagnifyingGlassIcon size={20} color={showFindReplace ? COLOR.accentSoft : COLOR.softWhite} />
+                </IconChip>
+              </TouchableOpacity>
               <NoteSettingsButton note={note} setNote={setNoteAsync} flushNote={flushNote} />
             </View>
             <NotePresenceBanner noteId={note.id} />
+            <FindReplaceBar
+              visible={showFindReplace}
+              onClose={() => {
+                setShowFindReplace(false);
+                setFindWord(undefined);
+              }}
+              target={findTarget}
+              readOnly={note.readOnly}
+              initialQuery={findWord}
+              scope={activeTab?.id}
+              style={styles.findBar}
+            />
           </View>
 
           <View style={styles.tabBarContainer}>
@@ -375,7 +436,8 @@ export default function NoteCodeEditor({ initialNote }: Props) {
               readOnly={note.readOnly}
               onChange={updateTabCode}
               initialTag={activeTab?.id}
-              onReady={() => setEditorPainted(true)}
+              onReady={onEditorReady}
+              onFound={findTarget.handle}
             />
 
             {/* Raw-code placeholder kept over the WebView until CodeMirror has
@@ -426,6 +488,12 @@ export default function NoteCodeEditor({ initialNote }: Props) {
 /* STYLES */
 
 const styles = StyleSheet.create({
+  searchToggle: {
+    marginRight: PADDING_MARGIN.sm,
+  },
+  findBar: {
+    marginTop: PADDING_MARGIN.md,
+  },
   container: {
     height: SIZE.full,
     paddingVertical: PADDING_MARGIN.lg,

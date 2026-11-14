@@ -1,9 +1,10 @@
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { DURATION } from "@/constants/motion";
+import type { FindCount, FindTarget } from "@/libs/findTarget";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View, ViewStyle } from "react-native";
+import { StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View, ViewStyle } from "react-native";
 import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
 import ChevronUpIcon from "react-native-heroicons/outline/ChevronUpIcon";
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
@@ -12,42 +13,44 @@ import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
 const BAR_ENTERING = FadeInDown.duration(DURATION.base);
 const BAR_EXITING = FadeOutUp.duration(DURATION.fast);
 
-/**
- * Inject JS into the pell-rich-editor WebView.
- * On native: uses injectJavascript (WebView.injectJavaScript).
- * On web: uses command() which goes through postMessage -> iframe eval.
- */
-function runInEditor(editorRef: React.RefObject<any>, script: string) {
-  if (!editorRef.current) return;
-  if (Platform.OS !== "web") {
-    editorRef.current.injectJavascript?.(script);
-  } else {
-    editorRef.current.command?.(script);
-  }
-}
-
 interface Props {
   visible: boolean;
   onClose: () => void;
-  editorRef: React.RefObject<any>;
-  plainText: string;
+  /** What is searched: the note's page, through its editor (`libs/findTarget`). */
+  target: FindTarget;
   /** A read-only note: find only. Its text can't change, so replace would only make the count go down. */
   readOnly?: boolean;
   /** Opened by a search result: the field starts with this text, the search runs, the field doesn't take the focus. */
   initialQuery?: string;
+  /** When this changes while the bar is open, the search runs again (a code note's open tab). */
+  scope?: string;
+  /** Called just before a replace all is sent. */
+  onBeforeReplaceAll?: () => void;
   style?: ViewStyle;
 }
 
-export default function FindReplaceBar({ visible, onClose, editorRef, plainText, readOnly, initialQuery, style }: Props) {
+export default function FindReplaceBar({
+  visible,
+  onClose,
+  target,
+  readOnly,
+  initialQuery,
+  scope,
+  onBeforeReplaceAll,
+  style,
+}: Props) {
   const { t } = useTranslation();
 
   const [searchText, setSearchText] = useState("");
   const [replaceText, setReplaceText] = useState("");
-  const [matchCount, setMatchCount] = useState(0);
-  const [currentMatch, setCurrentMatch] = useState(0);
+  const [count, setCount] = useState<FindCount>({ total: 0, current: 0 });
   const [showReplace, setShowReplace] = useState(false);
+  const matchCount = count.total;
+  const currentMatch = count.current;
 
   const searchInputRef = useRef<TextInputInstance>(null);
+
+  useEffect(() => target.subscribe(setCount), [target]);
 
   // Opened by a search result: its word goes in the field once (searched by the effect below), and again only after the
   // parent has cleared it.
@@ -69,167 +72,38 @@ export default function FindReplaceBar({ visible, onClose, editorRef, plainText,
       wasVisibleRef.current = false;
       setSearchText("");
       setReplaceText("");
-      setMatchCount(0);
-      setCurrentMatch(0);
-      runInEditor(editorRef, `window.getSelection && window.getSelection().removeAllRanges(); true;`);
+      target.clear();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const countMatches = useCallback(
-    (text: string): number => {
-      if (!text) return 0;
-      const sLower = text.toLowerCase();
-      const tLower = plainText.toLowerCase();
-      let count = 0;
-      let idx = 0;
-      while ((idx = tLower.indexOf(sLower, idx)) !== -1) {
-        count++;
-        idx += sLower.length;
-      }
-      return count;
-    },
-    [plainText]
-  );
-
-  const findInEditor = useCallback(
-    (text: string, backwards = false) => {
-      if (!editorRef.current || !text) return;
-      const quoted = JSON.stringify(text);
-      const script = `
-        (function(){
-          var found = window.find(${quoted}, false, ${backwards}, true, false, false, false);
-          if (!found) {
-            var editor = document.querySelector('[contenteditable]');
-            if (editor) {
-              var sel = window.getSelection();
-              var range = document.createRange();
-              range.selectNodeContents(editor);
-              range.collapse(${backwards});
-              sel.removeAllRanges();
-              sel.addRange(range);
-              window.find(${quoted}, false, ${backwards}, true, false, false, false);
-            }
-          }
-        })();
-        true;
-      `;
-      runInEditor(editorRef, script);
-    },
-    [editorRef]
-  );
-
-  /** `keepKeyboardDown`: selecting the match focuses the note's page, which raises the phone's keyboard; it is let go. */
-  const performSearch = useCallback(
-    (text: string, keepKeyboardDown = false) => {
-      const count = countMatches(text);
-      setMatchCount(count);
-      if (!text || count === 0) {
-        setCurrentMatch(0);
-        runInEditor(editorRef, `window.getSelection && window.getSelection().removeAllRanges(); true;`);
-        return;
-      }
-      setCurrentMatch(1);
-      const quoted = JSON.stringify(text);
-      const script = `
-        (function(){
-          var editor = document.querySelector('[contenteditable]');
-          if (editor) {
-            var sel = window.getSelection();
-            var range = document.createRange();
-            range.selectNodeContents(editor);
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
-            window.find(${quoted}, false, false, true, false, false, false);
-            ${keepKeyboardDown ? "if (document.activeElement && document.activeElement.blur) document.activeElement.blur();" : ""}
-          }
-        })();
-        true;
-      `;
-      runInEditor(editorRef, script);
-    },
-    [editorRef, countMatches]
-  );
-
   const navigateMatch = useCallback(
     (direction: "next" | "prev") => {
       if (matchCount === 0) return;
-      let n = direction === "next" ? currentMatch + 1 : currentMatch - 1;
-      if (n > matchCount) n = 1;
-      if (n < 1) n = matchCount;
-      setCurrentMatch(n);
-      findInEditor(searchText, direction === "prev");
+      target.step(direction);
     },
-    [matchCount, currentMatch, searchText, findInEditor]
+    [matchCount, target]
   );
 
   const replaceCurrentMatch = useCallback(() => {
-    if (matchCount === 0 || !editorRef.current || !searchText) return;
-    const quoted = JSON.stringify(replaceText);
-    const script = `
-      (function(){
-        var sel = window.getSelection();
-        if (sel && sel.rangeCount > 0 && sel.toString().length > 0) {
-          document.execCommand('insertText', false, ${quoted});
-        }
-      })();
-      true;
-    `;
-    runInEditor(editorRef, script);
-    setTimeout(() => {
-      setMatchCount((prev) => Math.max(0, prev - 1));
-      setCurrentMatch((prev) => Math.min(prev, Math.max(0, matchCount - 1)));
-      if (matchCount - 1 > 0) findInEditor(searchText, false);
-    }, 150);
-  }, [editorRef, matchCount, replaceText, searchText, findInEditor]);
+    if (matchCount === 0 || !searchText) return;
+    target.replace(searchText, replaceText);
+  }, [matchCount, searchText, replaceText, target]);
 
   const replaceAll = useCallback(() => {
-    if (matchCount === 0 || !editorRef.current || !searchText) return;
-    const quotedS = JSON.stringify(searchText);
-    const quotedR = JSON.stringify(replaceText);
-    const script = `
-      (function(){
-        var editor = document.querySelector('[contenteditable]');
-        if (!editor) return;
-        var sel = window.getSelection();
-        var range = document.createRange();
-        range.selectNodeContents(editor);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        var n = 0;
-        while (window.find(${quotedS}, false, false, false, false, false, false)) {
-          document.execCommand('insertText', false, ${quotedR});
-          n++;
-          if (n > 1000) break;
-        }
-      })();
-      true;
-    `;
-    runInEditor(editorRef, script);
-    setMatchCount(0);
-    setCurrentMatch(0);
-  }, [editorRef, matchCount, searchText, replaceText]);
+    if (matchCount === 0 || !searchText) return;
+    onBeforeReplaceAll?.();
+    target.replaceAll(searchText, replaceText);
+  }, [matchCount, searchText, replaceText, target, onBeforeReplaceAll]);
 
+  // The search runs as the field changes (after a pause), and again when the scope (a code note's tab) changes.
   useEffect(() => {
     if (!visible) return;
     // The word a search result opened the note on: shown, with the keyboard down (the person came to read it).
-    const fromResult = !!initialQuery && searchText === initialQuery;
-    const timer = setTimeout(() => performSearch(searchText, fromResult), 300);
+    const keepKeyboardDown = !!initialQuery && searchText === initialQuery;
+    const timer = setTimeout(() => target.search(searchText, { keepKeyboardDown }), 300);
     return () => clearTimeout(timer);
-  }, [visible, searchText, performSearch, initialQuery]);
-
-  useEffect(() => {
-    if (!visible) return;
-    if (searchText) {
-      const count = countMatches(searchText);
-      setMatchCount(count);
-      if (count === 0) setCurrentMatch(0);
-      else if (currentMatch > count) setCurrentMatch(count);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, plainText]);
+  }, [visible, searchText, initialQuery, target, scope]);
 
   if (!visible) return null;
 
@@ -336,6 +210,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 6, marginVertical: 2 },
   input: {
     flex: 1,
+    // a web field keeps the width of its 20 characters otherwise, and pushed the close button off a phone's screen
+    minWidth: 0,
     backgroundColor: COLOR.bg,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: GLASS.border,

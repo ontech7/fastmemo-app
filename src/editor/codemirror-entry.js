@@ -1,9 +1,9 @@
-import { EditorView, lineNumbers, highlightActiveLine, highlightActiveLineGutter, keymap } from "@codemirror/view";
-import { Compartment, EditorState, Transaction } from "@codemirror/state";
+import { Decoration, EditorView, lineNumbers, highlightActiveLine, highlightActiveLineGutter, keymap } from "@codemirror/view";
+import { Compartment, EditorSelection, EditorState, StateEffect, StateField, Transaction } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { syntaxHighlighting, defaultHighlightStyle, indentOnInput, bracketMatching, foldGutter } from "@codemirror/language";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
-import { highlightSelectionMatches } from "@codemirror/search";
+import { highlightSelectionMatches, SearchCursor } from "@codemirror/search";
 import { oneDark } from "@codemirror/theme-one-dark";
 
 // Grammars load on demand: esbuild bundles each dynamically imported language as a module that is
@@ -144,6 +144,99 @@ const changeListener = EditorView.updateListener.of((update) => {
   if (update.docChanged && !suppressChange) scheduleChange();
 });
 
+// Find and replace (spec B.8): the app's bar sends find, findStep, findReplace, findReplaceAll and findClear, and every
+// request is answered with one `found` ({ total, current }, current from 1, 0 when the selection isn't a match). The
+// text typed is taken literally and compared without case. The matches are marked (the theme's search colours, the
+// selected one brighter), which shows without the editor's focus: on a phone the keyboard stays down.
+const setFindQuery = StateEffect.define();
+
+function matchesOf(state, query) {
+  if (!query) return [];
+  const found = [];
+  const cursor = new SearchCursor(state.doc, query.toLowerCase(), 0, state.doc.length, (x) => x.toLowerCase());
+  while (!cursor.next().done) found.push({ from: cursor.value.from, to: cursor.value.to });
+  return found;
+}
+
+const MATCH = Decoration.mark({ class: "cm-searchMatch" });
+const MATCH_SELECTED = Decoration.mark({ class: "cm-searchMatch cm-searchMatch-selected" });
+
+const findField = StateField.define({
+  create: () => ({ query: "", matches: [], marks: Decoration.none }),
+  update(value, tr) {
+    let query = value.query;
+    for (const effect of tr.effects) if (effect.is(setFindQuery)) query = effect.value;
+    if (query === value.query && !tr.docChanged && !tr.selection) return value;
+    const matches = query === value.query && !tr.docChanged ? value.matches : matchesOf(tr.state, query);
+    const main = tr.state.selection.main;
+    const marks = Decoration.set(
+      matches.map((m) => (m.from === main.from && m.to === main.to ? MATCH_SELECTED : MATCH).range(m.from, m.to))
+    );
+    return { query, matches, marks };
+  },
+  provide: (field) => EditorView.decorations.from(field, (value) => value.marks),
+});
+
+function findReply() {
+  const { matches } = view.state.field(findField);
+  const main = view.state.selection.main;
+  const at = matches.findIndex((m) => m.from === main.from && m.to === main.to);
+  sendToReact(JSON.stringify({ type: "found", total: matches.length, current: at + 1 }));
+}
+
+// The match `direction` of the selection, around the ends of the document; from the top when there is no selection.
+function nextMatch(matches, direction) {
+  const main = view.state.selection.main;
+  if (direction === "prev") {
+    for (let i = matches.length - 1; i >= 0; i--)
+      if (matches[i].to <= main.from && matches[i].from < main.from) return matches[i];
+    return matches[matches.length - 1];
+  }
+  return matches.find((m) => m.from >= main.to && m.to > main.from) || matches[0];
+}
+
+function selectMatch(match, extra) {
+  view.dispatch({
+    ...extra,
+    selection: match ? EditorSelection.single(match.from, match.to) : EditorSelection.cursor(view.state.selection.main.head),
+    scrollIntoView: !!match,
+  });
+}
+
+function find(msg) {
+  if (msg.type === "findClear") {
+    view.dispatch({ effects: setFindQuery.of(""), selection: EditorSelection.cursor(view.state.selection.main.head) });
+    return findReply();
+  }
+  // a step goes on with the query searched last
+  if (msg.type !== "findStep") view.dispatch({ effects: setFindQuery.of(msg.query || "") });
+  const matches = view.state.field(findField).matches;
+  if (msg.type === "find") selectMatch(matches[0]);
+  else if (msg.type === "findStep") {
+    if (matches.length) selectMatch(nextMatch(matches, msg.direction));
+  } else if (!currentReadOnly && matches.length) {
+    if (msg.type === "findReplaceAll") {
+      view.dispatch({
+        changes: matches.map((m) => ({ from: m.from, to: m.to, insert: msg.replacement })),
+        userEvent: "input.replace.all",
+      });
+    } else {
+      const main = view.state.selection.main;
+      const selected = matches.find((m) => m.from === main.from && m.to === main.to);
+      if (selected) {
+        const end = selected.from + msg.replacement.length;
+        view.dispatch({
+          changes: { from: selected.from, to: selected.to, insert: msg.replacement },
+          selection: EditorSelection.cursor(end),
+          userEvent: "input.replace",
+        });
+      }
+      selectMatch(nextMatch(view.state.field(findField).matches, "next"));
+    }
+  }
+  findReply();
+}
+
 // A fresh state per document (initial content, tab switch), so undo never crosses into another tab.
 function createState(doc) {
   return EditorState.create({
@@ -153,6 +246,7 @@ function createState(doc) {
       readOnlyConf.of(EditorState.readOnly.of(currentReadOnly)),
       languageConf.of(loadedLanguages[currentLang] || []),
       changeListener,
+      findField,
     ],
   });
 }
@@ -225,6 +319,8 @@ window.handleMessage = function (msgStr) {
       view.focus();
     } else if (msg.type === "setLanguage" && msg.language !== currentLang) {
       setLanguage(msg.language);
+    } else if (/^find(Step|Replace|ReplaceAll|Clear)?$/.test(msg.type)) {
+      find(msg);
     } else if (msg.type === "setReadOnly") {
       currentReadOnly = msg.readOnly;
       view.dispatch({ effects: readOnlyConf.reconfigure(EditorState.readOnly.of(currentReadOnly)) });

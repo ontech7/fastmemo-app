@@ -14,6 +14,7 @@ import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import TextFormatBar, { TEXT_FORMAT_BAR_HEIGHT } from "@/components/notes/TextFormatBar";
 import type { InsertKind, TextFormatBarRef } from "@/components/notes/TextFormatBar";
 import { takeFindOnOpen } from "@/libs/search/findOnOpen";
+import { createTextFindTarget } from "@/libs/findTarget";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
@@ -185,6 +186,21 @@ const selectLinkableNotes = getNotesFilteredPerCategory(
   { order: 0, name: "All", icon: "", index: true, selected: false },
   true
 );
+
+/** The find bar's target for the note's page in `editorRef`, whose text is `textRef`'s. */
+function textFindTarget(editorRef: React.RefObject<any>, textRef: React.RefObject<string>) {
+  return createTextFindTarget(
+    (script) => runInEditor(editorRef, script),
+    () => textRef.current
+  );
+}
+
+/** A script run in the note's page: injectJavascript on native, the editor's command (postMessage, then eval) on web. */
+function runInEditor(editorRef: React.RefObject<any>, script: string) {
+  if (!editorRef.current) return;
+  if (Platform.OS !== "web") editorRef.current.injectJavascript?.(script);
+  else editorRef.current.command?.(script);
+}
 
 export default function NoteTextEditor({ initialNote }: Props) {
   const { t } = useTranslation();
@@ -565,6 +581,15 @@ export default function NoteTextEditor({ initialNote }: Props) {
 
   // Built only while the find bar is open: stripping a long note at every pause costs for nothing otherwise.
   const plainNoteText = useMemo(() => (showFindReplace ? stripHtml(note.text) : ""), [showFindReplace, note.text]);
+  // What the find bar searches: the note's page. Its count follows the text as it changes.
+  const plainTextRef = useRef("");
+  // The target reads the two refs only when the bar searches, never while rendering.
+  // eslint-disable-next-line react-hooks/refs
+  const [findTarget] = useState(() => textFindTarget(richTextEditor, plainTextRef));
+  useEffect(() => {
+    plainTextRef.current = plainNoteText;
+    findTarget.refresh();
+  }, [plainNoteText, findTarget]);
 
   return (
     <View style={styles.root}>
@@ -639,8 +664,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
               setShowFindReplace(false);
               setFindWord(undefined);
             }}
-            editorRef={richTextEditor}
-            plainText={plainNoteText}
+            target={findTarget}
             readOnly={note.readOnly}
             initialQuery={findWord}
             style={{ marginTop: PADDING_MARGIN.md }}

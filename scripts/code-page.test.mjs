@@ -235,6 +235,16 @@ const openCode = async (code, language = "javascript") => {
 /** The editor's text as it shows it. */
 const shownText = () => evaluate(`[...document.querySelectorAll(".cm-line")].map((l) => l.textContent).join("\\n")`);
 
+/** The page's messages of a type, oldest first. */
+const messages = async (type) =>
+  JSON.parse(await evaluate(`JSON.stringify(window.__messages)`))
+    .map((m) => JSON.parse(m))
+    .filter((m) => m.type === type);
+/** The `change` messages the page sent, oldest first. */
+const changes = () => messages("change");
+/** A message from the app, as CodeEditorWebView sends it. */
+const handle = (msg) => evaluate(`window.handleMessage(${JSON.stringify(JSON.stringify(msg))})`);
+
 {
   const code = 'const page = "</script><b id=fromTheTab>hello</b>";\nconst cost = "$\'" + "$&";';
   const ready = await openCode(code);
@@ -250,11 +260,6 @@ const shownText = () => evaluate(`[...document.querySelectorAll(".cm-line")].map
 // When the page sends the text: once typing pauses (50 ms), at the latest 250 ms after the first change not yet sent,
 // and at once when the editor is left, the page is hidden or the app asks for it (a flush).
 {
-  /** The `change` messages the page sent, oldest first. */
-  const changes = async () =>
-    JSON.parse(await evaluate(`JSON.stringify(window.__messages)`))
-      .map((m) => JSON.parse(m))
-      .filter((m) => m.type === "change");
   /** Real key events on the editor, one character at a time. */
   const typeKeys = async (text, { gapMs = 0 } = {}) => {
     await evaluate(`document.querySelector(".cm-content").focus()`);
@@ -269,8 +274,6 @@ const shownText = () => evaluate(`[...document.querySelectorAll(".cm-line")].map
     await sleep(400);
     await evaluate(`window.__messages = []`);
   };
-  const handle = (msg) => evaluate(`window.handleMessage(${JSON.stringify(JSON.stringify(msg))})`);
-
   await send("Emulation.setFocusEmulationEnabled", { enabled: true });
   await openCode("");
   await reset();
@@ -352,6 +355,82 @@ const shownText = () => evaluate(`[...document.querySelectorAll(".cm-line")].map
     JSON.stringify(merged)
   );
   ok("no exception while typing", pageErrors.length === 0, pageErrors.join("\n"));
+}
+
+// Find and replace (spec B.8): the bar's requests, answered with CodeMirror's own search; the text typed is taken
+// literally and compared without case.
+{
+  // the editor's state, read through CodeMirror's own handle on its content element
+  const editorState = `document.querySelector(".cm-content").cmTile.root.view.state`;
+  let docNumber = 100;
+  const setDoc = (code) => handle({ type: "setCode", code, doc: ++docNumber });
+  const request = (r) => handle(r);
+  const readOnly = (on) => handle({ type: "setReadOnly", readOnly: on });
+  const found = async () => (await messages("found")).at(-1);
+  const doc = () => evaluate(`${editorState}.doc.toString()`);
+  const selected = () =>
+    evaluate(`(() => { const s = ${editorState}; const r = s.selection.main; return s.sliceDoc(r.from, r.to); })()`);
+  const undoKey = async () => {
+    const mac = await evaluate(`/Mac/.test(navigator.platform)`);
+    await evaluate(`document.querySelector(".cm-content").focus()`);
+    const modifiers = mac ? 4 : 2;
+    await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "z", code: "KeyZ", windowsVirtualKeyCode: 90, modifiers });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "z", code: "KeyZ", windowsVirtualKeyCode: 90, modifiers });
+  };
+
+  await openCode("");
+  await setDoc("Alpha beta\nalpha (x*2)\nALPHA");
+  await request({ type: "find", query: "alpha" });
+  ok(
+    "count, case ignored, the first match selected",
+    (await found())?.total === 3 && (await found()).current === 1 && (await selected()) === "Alpha",
+    JSON.stringify(await found())
+  );
+  await request({ type: "findStep", direction: "next" });
+  await request({ type: "findStep", direction: "next" });
+  ok("next, twice", (await found())?.current === 3 && (await selected()) === "ALPHA", JSON.stringify(await found()));
+  await request({ type: "findStep", direction: "next" });
+  ok("next wraps to the first", (await found())?.current === 1, JSON.stringify(await found()));
+  await request({ type: "findStep", direction: "prev" });
+  ok("previous wraps to the last", (await found())?.current === 3, JSON.stringify(await found()));
+  await request({ type: "find", query: "(x*2)" });
+  ok(
+    "( and * are plain characters",
+    (await found())?.total === 1 && (await selected()) === "(x*2)",
+    JSON.stringify(await found())
+  );
+  await request({ type: "find", query: "alpha" });
+  await request({ type: "findReplace", query: "alpha", replacement: "$1\\n" });
+  ok(
+    "replace: the selected one, literally, then the next is selected",
+    (await doc()) === "$1\\n beta\nalpha (x*2)\nALPHA" && (await found())?.total === 2 && (await selected()) === "alpha",
+    `${JSON.stringify(await doc())} ${JSON.stringify(await found())} ${await selected()}`
+  );
+  await request({ type: "findReplaceAll", query: "alpha", replacement: "z" });
+  ok(
+    "replace all",
+    (await doc()) === "$1\\n beta\nz (x*2)\nz" && (await found())?.total === 0,
+    `${JSON.stringify(await doc())} ${JSON.stringify(await found())}`
+  );
+  await undoKey();
+  ok("one undo brings both back", (await doc()) === "$1\\n beta\nalpha (x*2)\nALPHA", JSON.stringify(await doc()));
+  await sleep(300);
+  ok(
+    "the app is told the new text",
+    (await changes()).at(-1)?.code === (await doc()),
+    JSON.stringify((await changes()).at(-1))
+  );
+  await readOnly(true);
+  await request({ type: "find", query: "alpha" });
+  await request({ type: "findReplaceAll", query: "alpha", replacement: "q" });
+  ok(
+    "a read-only note finds and doesn't replace",
+    (await doc()).includes("alpha") && (await found())?.total === 2,
+    `${JSON.stringify(await doc())} ${JSON.stringify(await found())}`
+  );
+  await request({ type: "find", query: "" });
+  ok("nothing typed, nothing found", (await found())?.total === 0, JSON.stringify(await found()));
+  ok("no exception while finding", pageErrors.length === 0, pageErrors.join("\n"));
 }
 
 ws.close();
