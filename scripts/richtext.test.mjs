@@ -2199,6 +2199,23 @@ export async function runCases(driver, page, url) {
     await paste("# not a heading");
     check("nothing is converted in a code block", !(await state()).html.includes("<h1>"), (await state()).html);
 
+    // Gboard's clipboard chip puts the copied text in as typing: one insertText holding every line, no paste event.
+    const insertLines = (text) =>
+      evaluate(
+        `(() => { const e = new InputEvent("beforeinput", { inputType: "insertText", data: ${JSON.stringify(text)}, bubbles: true, cancelable: true }); document.querySelector(".pell-content").dispatchEvent(e); return e.defaultPrevented; })()`
+      );
+    await emptyLine();
+    const chipTaken = await insertLines("# T\n- x");
+    check(
+      "Markdown put in by the keyboard's clipboard is converted like a paste",
+      chipTaken && plain((await state()).html) === "<h1>T</h1><ul><li>x</li></ul>",
+      (await state()).html
+    );
+    await emptyLine();
+    check("...lines with no Markdown are left to the browser", !(await insertLines("just text\nand more")));
+    await emptyLine();
+    check("...and one line typed is never taken for a paste", !(await insertLines("# T")));
+
     await emptyLine();
     await type("a #");
     await type(" ");

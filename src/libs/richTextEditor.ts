@@ -1585,6 +1585,15 @@ export const RICH_TEXT_SCRIPT = String.raw`
     e.preventDefault();
     e.stopPropagation();
   }, true);
+  // Gboard's clipboard chip gives the copied text as typing: one insertText holding several lines, never a paste event.
+  // Typing never puts in more than one line at once, so that is a paste too.
+  $.addEventListener("beforeinput", function (e) {
+    if (e.inputType !== "insertText" || e.isComposing || !e.cancelable || !e.data || e.data.indexOf("\n") < 0) return;
+    if (!content().contains(e.target) && e.target !== content()) return;
+    if (!pasteMarkdown(e.data)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
 
   // A web address typed, then a space or Enter: a link to itself (spec: links in text notes). Only http and https, on a
   // text line outside a link and a code block, never inside a composition; punctuation at its end stays text. The space
