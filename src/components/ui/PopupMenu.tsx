@@ -317,10 +317,12 @@ const styles = StyleSheet.create({
   optionTextDestructive: {
     color: COLOR.dangerSoft,
   },
+  // its sides on the divider's under it
   toggleRow: {
     flexDirection: "row",
-    gap: PADDING_MARGIN.xs + 1,
-    padding: PADDING_MARGIN.xs - 1,
+    gap: PADDING_MARGIN.xs + 3,
+    paddingHorizontal: PADDING_MARGIN.sm,
+    paddingVertical: PADDING_MARGIN.xs,
   },
   // An icon switch: an equal share of the row, 44 high on the phone (a finger), 36 with a mouse.
   toggle: {

@@ -301,13 +301,16 @@ function TodoItem({
           </View>
         </TouchableOpacity>
 
-        <View style={[styles.stepLine, isLast && styles.stepLineHidden]} />
-
+        {/* in the column's flow: the ongoing step's row grows to hold it, so it never reaches the next circle */}
         {isOngoing && (
           <Animated.View entering={ONGOING_ENTERING} exiting={ONGOING_EXITING} style={styles.stepOngoingLabelWrap}>
-            <Text style={styles.stepOngoingLabel}>{t("note.ongoing")}</Text>
+            <Text style={styles.stepOngoingLabel} numberOfLines={1}>
+              {t("note.ongoing")}
+            </Text>
           </Animated.View>
         )}
+
+        <View style={[styles.stepLine, isLast && styles.stepLineHidden]} />
       </View>
 
       {/* main text */}
@@ -530,20 +533,18 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.medium,
     fontFamily: FONT.semiBold,
   },
+  // wider than the column (the label is): it spills evenly over both sides
   stepOngoingLabelWrap: {
     pointerEvents: "none",
-    position: "absolute",
-    top: STEP_CIRCLE_SIZE + 6 + 4,
-    left: -8,
-    right: -8,
+    alignSelf: "stretch",
+    marginHorizontal: -PADDING_MARGIN.md,
+    paddingVertical: PADDING_MARGIN.xs,
     alignItems: "center",
   },
   stepOngoingLabel: {
     color: COLOR.accentSoft,
     fontSize: FONTSIZE.small,
     fontFamily: FONT.semiBold,
-    backgroundColor: COLOR.bg,
-    paddingHorizontal: 4,
   },
   stepTextWrap: {
     flex: 1,

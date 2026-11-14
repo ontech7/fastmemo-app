@@ -105,8 +105,8 @@ export default function NoteLinkPicker({ notes, query, selected, onPick, search 
 /* STYLES */
 
 const styles = StyleSheet.create({
+  // as wide as the bar under it
   picker: {
-    marginHorizontal: PADDING_MARGIN.sm,
     padding: PADDING_MARGIN.xs + 3,
     borderRadius: BORDER.big,
     backgroundColor: COLOR.surface,
