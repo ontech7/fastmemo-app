@@ -30,6 +30,7 @@ await build({
       export { installDropGuard } from "@/libs/dropGuard.web";
       export { ZOOM_STEPS, nextZoom, zoomKeyOf } from "@/libs/zoomSteps";
       export { printCss } from "@/libs/printCss";
+      export { createTextFindTarget, createCodeFindTarget, FIND_PAGE } from "@/libs/findTarget";
     `,
     resolveDir: src,
     loader: "ts",
@@ -378,6 +379,64 @@ console.log("\nthe printed copy's style sheet");
   ok("the checkbox list's and the quote's rules", css.includes(".x-todo-box input") && css.includes("blockquote"));
   ok("printed colours, never the app's dark background", css.includes("#111") && !/#05091A|#131A3C|#1A2248/i.test(css));
   ok("a link shows no address after it", !/attr\(href\)/.test(css));
+}
+
+console.log("\nEsc closes a note's find bar");
+{
+  const { createTextFindTarget, createCodeFindTarget, FIND_PAGE } = M;
+  const runs = [];
+  let focused = 0;
+  const text = createTextFindTarget(
+    (s) => runs.push(s),
+    () => "uno due tre",
+    () => focused++
+  );
+  text.clear();
+  ok("a clear before any search leaves the note's caret alone", runs.length === 0);
+  text.search("due");
+  runs.length = 0;
+  text.clear({ backToNote: true });
+  ok(
+    "back to the note: the marks go, the note takes the focus, the page puts the caret back",
+    runs.length === 2 && runs[0].includes("removeAllRanges") && focused === 1 && runs[1].includes(`${FIND_PAGE}.back()`),
+    `${JSON.stringify(runs)} ${focused}`
+  );
+  text.clear();
+  ok("the bar's own clear after it changes nothing", runs.length === 2 && focused === 1);
+  text.clear({ backToNote: true });
+  ok(
+    "back to the note with nothing searched: only the caret",
+    runs.length === 3 && runs[2].includes(`${FIND_PAGE}.back()`) && focused === 2
+  );
+  text.setOpen(true);
+  ok("open: the page is told", runs.at(-1).includes(`${FIND_PAGE}.open(true)`), runs.at(-1));
+  text.setOpen(false);
+  ok("closed: the page is told", runs.at(-1).includes(`${FIND_PAGE}.open(false)`), runs.at(-1));
+  let escapes = 0;
+  const off = text.onEscape(() => escapes++);
+  text.escaped();
+  off();
+  text.escaped();
+  ok("the page's Esc reaches the bar while it listens", escapes === 1);
+
+  const posts = [];
+  const code = createCodeFindTarget((r) => posts.push(r));
+  code.clear();
+  ok("code: a clear before any search sends nothing", posts.length === 0);
+  code.search("x");
+  code.clear({ backToNote: true });
+  ok(
+    "code: back to the note asks the page to restore the caret",
+    JSON.stringify(posts.at(-1)) === '{"type":"findClear","restore":true}'
+  );
+  code.clear();
+  ok("code: the bar's clear after it sends nothing", posts.length === 2);
+  code.setOpen(true);
+  ok("code: open is sent", JSON.stringify(posts.at(-1)) === '{"type":"findOpen","open":true}');
+  let codeEscapes = 0;
+  code.onEscape(() => codeEscapes++);
+  code.handle({ type: "findEscape" });
+  ok("code: the page's Esc reaches the bar", codeEscapes === 1);
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

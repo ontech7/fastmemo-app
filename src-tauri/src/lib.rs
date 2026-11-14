@@ -593,6 +593,7 @@ pub fn run() {
             window_ready,
             set_menu_labels,
             system::print_window,
+            system::system_version,
             tray::set_tray_labels,
             net::net_request,
             net::net_cancel,

@@ -23,7 +23,8 @@ import { isTauri } from "@/utils/platform";
  * current screen, so it is swallowed there.
  *
  * Desktop (Tauri) only, where the app is the whole window:
- * - Esc: in a text field it only leaves the field; otherwise it presses the screen's back button.
+ * - Esc: in a text field it only leaves the field; otherwise it presses the screen's back button. While a note's find bar
+ *   is open, Esc closes it (`FindReplaceBar`: its fields, and the note's page, which takes the key before this layer).
  * - The home's list (`@/libs/desktopList`): the arrows move a mark over the notes, Enter opens the marked one, Delete (Cmd+
  *   Backspace on a Mac) trashes it, when no field has the focus and nothing (a menu, a dialog) lies over the home; ↓ in
  *   the search field marks the first note. The mark hides at the first mouse move or press, or typing in a field.
@@ -31,6 +32,7 @@ import { isTauri } from "@/utils/platform";
  *   or find in a text note. The same commands as the macOS menu (`@/libs/desktopCommands`).
  * - Cmd/Ctrl with + (or =, the numpad's plus), - and 0: the window's zoom (`@/libs/desktopZoom`), from any screen.
  * - Cmd/Ctrl+P: the text note on screen, printed (`@/libs/print`); anywhere else nothing.
+ * - Cmd/Ctrl+K: the home's search field, from any screen (going back to the home first, as Cmd/Ctrl+N).
  * - F5 and Cmd/Ctrl+R would reload the page, dropping the edits not yet saved: blocked outside development.
  * - Alt+arrows (Windows, Linux) and the keyboard's back/forward keys would leave the screen through the history, without
  *   its back button: blocked.
@@ -53,7 +55,7 @@ function letterOf(e: KeyboardEvent): string {
   return e.code.startsWith("Key") ? e.code.slice(3).toLowerCase() : "";
 }
 
-const COMMAND_KEYS: Record<string, DesktopCommand> = { n: "newNote", f: "find" };
+const COMMAND_KEYS: Record<string, DesktopCommand> = { n: "newNote", f: "find", k: "search" };
 
 /** A key that reloads the page. AltGr (Ctrl+Alt on Windows) types characters: AltGr+R isn't one. */
 function isReload(e: KeyboardEvent, mod: boolean): boolean {

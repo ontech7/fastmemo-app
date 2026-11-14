@@ -161,21 +161,45 @@ function matchesOf(state, query) {
 const MATCH = Decoration.mark({ class: "cm-searchMatch" });
 const MATCH_SELECTED = Decoration.mark({ class: "cm-searchMatch cm-searchMatch-selected" });
 
+// `origin`: the selection as it was when the search began, carried through the edits made since (replace): an Esc that
+// closes the bar puts it back (`findClear` with `restore`).
 const findField = StateField.define({
-  create: () => ({ query: "", matches: [], marks: Decoration.none }),
+  create: () => ({ query: "", matches: [], marks: Decoration.none, origin: null }),
   update(value, tr) {
     let query = value.query;
     for (const effect of tr.effects) if (effect.is(setFindQuery)) query = effect.value;
     if (query === value.query && !tr.docChanged && !tr.selection) return value;
+    let origin = value.origin;
+    if (!query) origin = null;
+    else if (!origin) origin = tr.startState.selection;
+    else if (tr.docChanged) origin = origin.map(tr.changes);
     const matches = query === value.query && !tr.docChanged ? value.matches : matchesOf(tr.state, query);
     const main = tr.state.selection.main;
     const marks = Decoration.set(
       matches.map((m) => (m.from === main.from && m.to === main.to ? MATCH_SELECTED : MATCH).range(m.from, m.to))
     );
-    return { query, matches, marks };
+    return { query, matches, marks, origin };
   },
   provide: (field) => EditorView.decorations.from(field, (value) => value.marks),
 });
+
+// While the app's bar is open (`findOpen`), Esc in the editor is the bar's: it goes to the app, which closes the bar.
+// Taken before CodeMirror's keymap and before the app's own keys on this page. The caret then is where the person put
+// it since the search began: it goes back there (`escapeSelection`), not to the search's start.
+let findOpen = false;
+let escapeSelection = null;
+window.addEventListener(
+  "keydown",
+  function (e) {
+    if (e.key !== "Escape" || !findOpen || e.isComposing || e.keyCode === 229) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    // a caret at the selection's end, as the X leaves it: a match still selected isn't overwritten by the next key
+    escapeSelection = view.hasFocus ? EditorSelection.cursor(view.state.selection.main.head) : null;
+    sendToReact(JSON.stringify({ type: "findEscape" }));
+  },
+  true
+);
 
 function findReply() {
   const { matches } = view.state.field(findField);
@@ -204,8 +228,19 @@ function selectMatch(match, extra) {
 }
 
 function find(msg) {
+  if (msg.type === "findOpen") {
+    findOpen = !!msg.open;
+    return;
+  }
   if (msg.type === "findClear") {
-    view.dispatch({ effects: setFindQuery.of(""), selection: EditorSelection.cursor(view.state.selection.main.head) });
+    const origin = msg.restore ? escapeSelection || view.state.field(findField).origin : null;
+    escapeSelection = null;
+    view.dispatch({
+      effects: setFindQuery.of(""),
+      selection: origin || EditorSelection.cursor(view.state.selection.main.head),
+      scrollIntoView: !!origin,
+    });
+    if (msg.restore) view.focus();
     return findReply();
   }
   // a step goes on with the query searched last
@@ -319,7 +354,7 @@ window.handleMessage = function (msgStr) {
       view.focus();
     } else if (msg.type === "setLanguage" && msg.language !== currentLang) {
       setLanguage(msg.language);
-    } else if (/^find(Step|Replace|ReplaceAll|Clear)?$/.test(msg.type)) {
+    } else if (/^find(Step|Replace|ReplaceAll|Clear|Open)?$/.test(msg.type)) {
       find(msg);
     } else if (msg.type === "setReadOnly") {
       currentReadOnly = msg.readOnly;

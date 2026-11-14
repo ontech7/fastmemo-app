@@ -1,3 +1,4 @@
+import { readSystemVersion } from "@/libs/diagnostics/facts";
 import { applyStoredZoom } from "@/libs/desktopZoom";
 import { isTauri } from "@/utils/platform";
 
@@ -18,5 +19,7 @@ export function windowReady(): void {
     .then(() => applyStoredZoom())
     .then(() => import("@tauri-apps/api/core"))
     .then(({ invoke }) => invoke("window_ready"))
-    .catch(() => {});
+    .catch(() => {})
+    // The system's version for a report, once the window is up.
+    .then(readSystemVersion);
 }

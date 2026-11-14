@@ -1,4 +1,5 @@
 import { BORDER, COLOR, GLASS, HIGHLIGHT, PADDING_MARGIN } from "@/constants/styles";
+import { FIND_PAGE } from "@/libs/findTarget";
 import { noteBlockCss } from "@/libs/noteHtml";
 import { SCROLLBAR_CSS } from "@/styles/scrollbar";
 
@@ -86,6 +87,10 @@ export const PICKER_KEY_MESSAGE = "FASTMEMO_NOTE_PICKER_KEY";
 export type PickerKey = "up" | "down" | "enter" | "escape";
 /** A note link was tapped or clicked: `data` is the note's id. */
 export const NOTE_LINK_MESSAGE = "FASTMEMO_NOTE_LINK";
+/** The page's find functions (on `window`): the bar opened or closed, and back to the note (`@/libs/findTarget`). */
+export { FIND_PAGE };
+/** Esc in the note while the find bar is open: the app closes the bar. */
+export const FIND_ESCAPE_MESSAGE = "FASTMEMO_FIND_ESCAPE";
 /** A link to the note `noteId` labelled `label`: in place of `[[` and its query, or where the caret was (`pickStart`). */
 export const noteLinkCommand = (noteId: string, label: string) =>
   `window.__fm && window.__fm.noteLink(${JSON.stringify(noteId)}, ${JSON.stringify(label)})`;
@@ -1261,6 +1266,51 @@ export const RICH_TEXT_SCRIPT = String.raw`
     e.stopImmediatePropagation();
     post("${PICKER_KEY_MESSAGE}", name);
     if (name === "escape") closePicker();
+  }, true);
+  // The app's find bar. While it is open, Esc is the bar's (it closes it), after the picker's and before the app's keys.
+  // The caret it opened on is kept (or, for an Esc in the note, the one there then): the search moves the selection and
+  // clears it, which pell saves as no caret at all. Back to the note, the caret goes there (the end when that text is
+  // gone), and pell is told.
+  var findOpen = false;
+  var findCaret = null;
+  window.${FIND_PAGE} = {
+    open: function (open) {
+      findOpen = open;
+      if (!open) return;
+      var s = selection();
+      findCaret = s.rangeCount && content().contains(s.anchorNode) ? s.getRangeAt(0).cloneRange() : null;
+    },
+    back: function () {
+      var range = findCaret;
+      findCaret = null;
+      content().focus();
+      // a range follows the edits; when the text it was in is replaced it falls back onto the note's box itself
+      if (!range || !content().contains(range.startContainer) || range.startContainer === content()) {
+        var last = content();
+        while (last.lastChild) last = last.lastChild;
+        range = $.createRange();
+        if (last.nodeType === 3) range.setStart(last, last.length);
+        else {
+          range.selectNodeContents(content());
+          range.collapse(false);
+        }
+      }
+      select(range);
+      refreshToolbar();
+    },
+  };
+  window.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape" || !findOpen || e.isComposing || composing || e.keyCode === 229) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    // Esc in the note: the caret is where the person put it since, and goes back there; at the end of a selection, as
+    // the X leaves it (a match still selected isn't overwritten by the next key).
+    var s = selection();
+    if (s.rangeCount && content().contains(s.anchorNode)) {
+      findCaret = s.getRangeAt(0).cloneRange();
+      findCaret.collapse(false);
+    }
+    post("${FIND_ESCAPE_MESSAGE}", null);
   }, true);
   // The caret never stays inside a note link (an engine that lets it in): it goes after it.
   var keepOutOfNoteLinks = function () {

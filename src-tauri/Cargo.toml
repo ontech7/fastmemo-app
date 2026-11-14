@@ -67,6 +67,8 @@ windows-sys = { version = "0.61", features = [
 ] }
 webview2-com = "0.39"
 windows-core = "0.62"
+# The system's version for a report (`src/system.rs`): already locked through Tauri's crates, no new package.
+windows-version = "0.1.7"
 
 [profile.dev]
 incremental = true

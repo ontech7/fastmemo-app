@@ -1167,6 +1167,8 @@ const en = {
       text_3_0: "• Ctrl/⌘+F — search your notes, or find text in an open text note.",
       text_4_0: "• Esc — go back; in a text field, the first Esc only leaves the field.",
       text_5_0: "• Ctrl/⌘+Enter — save the Quick note.",
+      text_8_0:
+        "Move through the notes with the arrow keys, open one with Enter, right-click a note for its menu, Ctrl/⌘ + click to select several. Ctrl/⌘ + K searches from any screen, Ctrl/⌘ + P prints a text note, Ctrl/⌘ with + and - changes the zoom. You can paste and drop pictures into a text note.",
       text_6_0:
         "On a Mac the same commands are in the menu bar, together with the other note types and Export/Import Data. Closing the window keeps Fast Memo running: click its icon in the Dock to bring it back, or quit it with ⌘Q.",
       text_7_0: "On Windows and Linux, closing the window quits Fast Memo.",

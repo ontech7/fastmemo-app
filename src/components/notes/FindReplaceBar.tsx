@@ -4,7 +4,16 @@ import { DURATION } from "@/constants/motion";
 import type { FindCount, FindTarget } from "@/libs/findTarget";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TextInput, type TextInputInstance, TouchableOpacity, View, ViewStyle } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  type TextInputInstance,
+  type TextInputKeyPressEvent,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from "react-native";
 import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
 import ChevronUpIcon from "react-native-heroicons/outline/ChevronUpIcon";
 import XMarkIcon from "react-native-heroicons/outline/XMarkIcon";
@@ -52,6 +61,26 @@ export default function FindReplaceBar({
 
   useEffect(() => target.subscribe(setCount), [target]);
 
+  // Esc, in the bar's fields or in the note (its page tells the target): the bar closes as with its X, and the caret
+  // goes back into the note where it was. The clear the closing would do is then already done.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+  const closedByKeyRef = useRef(false);
+  const closeByKey = useCallback(() => {
+    target.clear({ backToNote: true });
+    closedByKeyRef.current = true;
+    onCloseRef.current();
+  }, [target]);
+  useEffect(() => (visible ? target.onEscape(closeByKey) : undefined), [visible, target, closeByKey]);
+  const onFieldKey = useCallback(
+    (e: TextInputKeyPressEvent) => {
+      if (e.nativeEvent.key === "Escape") closeByKey();
+    },
+    [closeByKey]
+  );
+
   // Opened by a search result: its word goes in the field once (searched by the effect below), and again only after the
   // parent has cleared it.
   const [appliedQuery, setAppliedQuery] = useState<string | undefined>(undefined);
@@ -66,13 +95,16 @@ export default function FindReplaceBar({
   useEffect(() => {
     if (visible) {
       wasVisibleRef.current = true;
+      target.setOpen(true);
       // From a search result the keyboard stays down: the person came to read the match.
       if (!initialQuery) setTimeout(() => searchInputRef.current?.focus(), 200);
     } else if (wasVisibleRef.current) {
       wasVisibleRef.current = false;
       setSearchText("");
       setReplaceText("");
-      target.clear();
+      target.setOpen(false);
+      if (!closedByKeyRef.current) target.clear();
+      closedByKeyRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -121,6 +153,7 @@ export default function FindReplaceBar({
           returnKeyType="search"
           testID={SHORTCUT_TARGET.find}
           onSubmitEditing={() => navigateMatch("next")}
+          onKeyPress={onFieldKey}
         />
         <Text style={styles.matchCount}>{matchCount > 0 ? `${currentMatch}/${matchCount}` : "0/0"}</Text>
         <TouchableOpacity
@@ -175,6 +208,7 @@ export default function FindReplaceBar({
             placeholder={t("note.find_replace.replace_placeholder")}
             placeholderTextColor={COLOR.textSecondary}
             cursorColor={COLOR.softWhite}
+            onKeyPress={onFieldKey}
           />
           <TouchableOpacity
             activeOpacity={0.7}

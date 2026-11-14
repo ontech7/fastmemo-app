@@ -69,6 +69,7 @@ import {
   PICK_START_COMMAND,
   PICKER_CLOSE_COMMAND,
   PICKER_KEY_MESSAGE,
+  FIND_ESCAPE_MESSAGE,
   PICKER_MESSAGE,
   pickerShownCommand,
   RICH_TEXT_SCRIPT,
@@ -199,7 +200,8 @@ const selectLinkableNotes = getNotesFilteredPerCategory(
 function textFindTarget(editorRef: React.RefObject<any>, textRef: React.RefObject<string>) {
   return createTextFindTarget(
     (script) => runInEditor(editorRef, script),
-    () => textRef.current
+    () => textRef.current,
+    () => editorRef.current?.focusContentEditor()
   );
 }
 
@@ -433,8 +435,15 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
     follow: (_: string) => {},
   });
 
+  // What the find bar searches: the note's page. Its count follows the text as it changes.
+  const plainTextRef = useRef("");
+  // The target reads the two refs only when the bar searches, never while rendering.
+  // eslint-disable-next-line react-hooks/refs
+  const [findTarget] = useState(() => textFindTarget(richTextEditor, plainTextRef));
+
   const onEditorMessage = useCallback(
     (message: { type?: string; data?: unknown }) => {
+      if (message?.type === FIND_ESCAPE_MESSAGE) findTarget.escaped();
       if (message?.type === RELOAD_SHOWN) reloadsShownRef.current = message.data as number;
       if (message?.type === STATE_MESSAGE) setFormatState(message.data as EditorState);
       // A touch on the text closes the bar's menu.
@@ -467,7 +476,7 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
         })();
       }
     },
-    [insertImageFrom]
+    [insertImageFrom, findTarget]
   );
 
   const changeImage = useCallback((image: EditorImage, change: ImageChange, value?: string) => {
@@ -643,11 +652,6 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
 
   // Built only while the find bar is open: stripping a long note at every pause costs for nothing otherwise.
   const plainNoteText = useMemo(() => (showFindReplace ? stripHtml(note.text) : ""), [showFindReplace, note.text]);
-  // What the find bar searches: the note's page. Its count follows the text as it changes.
-  const plainTextRef = useRef("");
-  // The target reads the two refs only when the bar searches, never while rendering.
-  // eslint-disable-next-line react-hooks/refs
-  const [findTarget] = useState(() => textFindTarget(richTextEditor, plainTextRef));
   useEffect(() => {
     plainTextRef.current = plainNoteText;
     findTarget.refresh();

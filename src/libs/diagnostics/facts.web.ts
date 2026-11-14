@@ -24,8 +24,30 @@ export function getPlatformKind(): PlatformKind {
   return "desktop-macos";
 }
 
+/** The system and its version as the Rust shell reads them ("macOS 15.6"): null until asked, "" while it answers. */
+let systemLabel: string | null = null;
+
+/** Desktop: asks the Rust shell once for the system's version (spec C.7), after the home has drawn (`windowReady`). */
+export function readSystemVersion(): void {
+  if (systemLabel !== null || !isTauri()) return;
+  systemLabel = "";
+  import("@tauri-apps/api/core")
+    .then(({ invoke }) => invoke<string>("system_version"))
+    .then((label) => {
+      systemLabel = label;
+    })
+    .catch(() => {});
+}
+
+/**
+ * The system's name (from the user agent), and on the desktop its version as the Rust shell read it: "15.6",
+ * "11, build 26100", "Ubuntu 24.04.1 LTS"; none when it only knew the bare name.
+ */
 export function getOs(): { os: string; osVersion?: string } {
-  return { os: systemName() ?? "Web" };
+  const os = systemName() ?? "Web";
+  if (!isTauri() || !systemLabel?.startsWith(os)) return { os };
+  const osVersion = systemLabel.slice(os.length).replace(/^[\s,]+/, "");
+  return osVersion ? { os, osVersion } : { os };
 }
 
 export function getDeviceBasics(): { brand: string; modelName: string; deviceType: string } {

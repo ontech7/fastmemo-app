@@ -36,6 +36,8 @@ export async function runCases(driver, page, url) {
     UNLINK_COMMAND,
     PICKER_MESSAGE,
     PICKER_KEY_MESSAGE,
+    FIND_ESCAPE_MESSAGE,
+    FIND_PAGE,
     NOTE_LINK_MESSAGE,
     noteLinkCommand,
     PICKER_CLOSE_COMMAND,
@@ -2366,6 +2368,73 @@ export async function runCases(driver, page, url) {
     await fileEvent("drop", [png], { x: dx, y: dy });
     sent = await posted(IMAGE_IN);
     check("a read-only note takes no picture", !sent.length, JSON.stringify(sent).slice(0, 200));
+  }
+
+  // Esc closes the app's find bar (Task 30): while the bar is open the page posts Esc to the app and keeps it from the
+  // page's other keys; with the bar closed Esc is the page's. Back to the note, the caret is where it was when the bar
+  // opened, whatever the search did to the selection.
+  {
+    const find = (call) => evaluate(`window[${JSON.stringify(FIND_PAGE)}].${call}`);
+    await open("<div>uno due tre</div>");
+    await evaluate(`(() => {
+      window.__escapes = 0;
+      window.addEventListener("message", (e) => {
+        try { if (JSON.parse(e.data).type === ${JSON.stringify(FIND_ESCAPE_MESSAGE)}) window.__escapes++; } catch (error) {}
+      });
+    })()`);
+    await select({ caret: "due", at: 1 });
+    await key("Escape");
+    check("Esc with the find bar closed posts nothing", (await evaluate("window.__escapes")) === 0);
+    await find("open(true)");
+    await key("Escape");
+    await sleep(60);
+    check("Esc with the find bar open goes to the app", (await evaluate("window.__escapes")) === 1);
+    // the search: the selection on a match, then cleared, the page left
+    await select({ text: "tre" });
+    await evaluate(`(() => { getSelection().removeAllRanges(); document.querySelector(".pell-content").blur(); })()`);
+    await find("back()");
+    await sleep(120);
+    const back = await evaluate(
+      `(() => { const s = getSelection(); return (document.activeElement === document.querySelector(".pell-content")) + " " + (s.anchorNode && s.anchorNode.nodeType === 3 ? s.anchorNode.data.slice(0, s.anchorOffset) : "none") + " " + s.isCollapsed; })()`
+    );
+    check("back to the note: focused, the caret where it was", back === "true uno d true", back);
+    await type("X");
+    check("typing goes on there", (await state()).html === "<div>uno dXue tre</div>", (await state()).html);
+    // the caret moved in the note while the bar was open: Esc there keeps it where it now is
+    await find("open(true)");
+    await select({ caret: "tre", at: 2 });
+    await key("Escape");
+    await evaluate(`getSelection().removeAllRanges()`);
+    await find("back()");
+    await sleep(120);
+    const moved = await evaluate(
+      `(() => { const s = getSelection(); return s.anchorNode && s.anchorNode.nodeType === 3 ? s.anchorNode.data.slice(0, s.anchorOffset) : "none"; })()`
+    );
+    check("Esc in the note: the caret stays where it was put", moved === "uno dXue tr", moved);
+    // in the note with a match still selected (a first click that only gave it the focus): a caret at its end
+    await select({ text: "dXue" });
+    await key("Escape");
+    await evaluate(`getSelection().removeAllRanges()`);
+    await find("back()");
+    await sleep(120);
+    const matchEnd = await evaluate(
+      `(() => { const s = getSelection(); return s.isCollapsed + " " + (s.anchorNode && s.anchorNode.nodeType === 3 ? s.anchorNode.data.slice(0, s.anchorOffset) : "none"); })()`
+    );
+    check("Esc on a selected match: the caret at its end", matchEnd === "true uno dXue", matchEnd);
+    await find("open(false)");
+    await select({ caret: "dXue", at: 1 });
+    await key("Escape");
+    await sleep(60);
+    check("Esc after the bar closed posts nothing again", (await evaluate("window.__escapes")) === 3);
+    await find("open(true)");
+    await evaluate(`(() => { getSelection().removeAllRanges(); document.querySelector(".pell-content").blur(); })()`);
+    await post({ type: "content", name: "setHtml", data: "<div>altro</div>" });
+    await find("back()");
+    await sleep(120);
+    const end = await evaluate(
+      `(() => { const s = getSelection(); return s.anchorNode && s.anchorNode.nodeType === 3 ? s.anchorNode.data.slice(0, s.anchorOffset) : "none " + (s.anchorNode && s.anchorNode.nodeName) + s.anchorOffset + " " + document.querySelector(".pell-content").innerHTML; })()`
+    );
+    check("the text it was in is gone: the caret at the end", end === "altro", end);
   }
 
   check(

@@ -430,6 +430,59 @@ const handle = (msg) => evaluate(`window.handleMessage(${JSON.stringify(JSON.str
   );
   await request({ type: "find", query: "" });
   ok("nothing typed, nothing found", (await found())?.total === 0, JSON.stringify(await found()));
+
+  // Esc closes the app's find bar (Task 30): while the bar is open an Esc in the editor goes to the app, and the clear
+  // that follows puts the caret back where it was before the search, in the editor.
+  const view = `document.querySelector(".cm-content").cmTile.root.view`;
+  const escape = async () => {
+    await evaluate(`document.querySelector(".cm-content").focus()`);
+    await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await sleep(50);
+  };
+  const caret = () => evaluate(`(() => { const r = ${editorState}.selection.main; return r.from + ":" + r.to; })()`);
+  await readOnly(false);
+  await setDoc("one two one two");
+  await evaluate(`${view}.dispatch({ selection: { anchor: 5 } })`);
+  await evaluate(`window.__messages = []`);
+  await escape();
+  ok("Esc with the bar closed is the editor's", (await messages("findEscape")).length === 0);
+  await request({ type: "findOpen", open: true });
+  await request({ type: "find", query: "two" });
+  await request({ type: "findStep", direction: "next" });
+  await escape();
+  ok("Esc with the bar open goes to the app", (await messages("findEscape")).length === 1);
+  await request({ type: "findClear", restore: true });
+  // Esc in the bar's field: the editor didn't have the focus during the search
+  await evaluate(`${view}.dispatch({ selection: { anchor: 5 } })`);
+  await evaluate(`document.querySelector(".cm-content").blur()`);
+  await request({ type: "find", query: "two" });
+  await request({ type: "findStep", direction: "next" });
+  await request({ type: "findClear", restore: true });
+  ok("the clear puts the caret back where it was", (await caret()) === "5:5", await caret());
+  ok(
+    "and in the editor",
+    await evaluate(`document.querySelector(".cm-content").contains(document.activeElement)`),
+    await evaluate(`document.activeElement?.className`)
+  );
+  // the caret moved in the editor while the bar was open: Esc there keeps it where it now is
+  await request({ type: "find", query: "two" });
+  await evaluate(`${view}.dispatch({ selection: { anchor: 9 } })`);
+  await escape();
+  await request({ type: "findClear", restore: true });
+  ok("Esc in the editor: the caret stays where it was put", (await caret()) === "9:9", await caret());
+  // in the editor with a match still selected (a first click that only gave it the focus): a caret at its end
+  await request({ type: "find", query: "two" });
+  await escape();
+  await request({ type: "findClear", restore: true });
+  ok("Esc on a selected match: the caret at its end, as with the X", (await caret()) === "7:7", await caret());
+  await request({ type: "find", query: "one" });
+  await request({ type: "findClear" });
+  ok("a clear alone leaves the caret at the match's end", (await caret()) === "3:3", await caret());
+  await request({ type: "findOpen", open: false });
+  await evaluate(`window.__messages = []`);
+  await escape();
+  ok("Esc after the bar closed is the editor's again", (await messages("findEscape")).length === 0);
   ok("no exception while finding", pageErrors.length === 0, pageErrors.join("\n"));
 }
 

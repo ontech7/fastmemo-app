@@ -11,6 +11,9 @@ export function getPlatformKind(): PlatformKind {
 }
 
 /** The system and its version, as a report always carries them ("Android", "16"). */
+/** The phone's version comes from expo-device: nothing to ask (`facts.web.ts` asks the desktop's Rust shell). */
+export function readSystemVersion(): void {}
+
 export function getOs(): { os: string; osVersion?: string } {
   const os = Device.osName ?? (Platform.OS === "ios" ? "iOS" : "Android");
   return Device.osVersion ? { os, osVersion: Device.osVersion } : { os };

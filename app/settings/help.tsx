@@ -553,6 +553,7 @@ export default function HelpScreen() {
                         "text_3_0",
                         "text_4_0",
                         "text_5_0",
+                        "text_8_0",
                         "text_6_0",
                         "text_7_0",
                       ])}

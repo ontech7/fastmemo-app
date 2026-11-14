@@ -1,6 +1,6 @@
 import { buildCodeEditorHtml } from "@/libs/codeEditorPage";
 import { reportPageError } from "@/libs/diagnostics";
-import type { FindReply, FindRequest } from "@/libs/findTarget";
+import type { FindEscape, FindReply, FindRequest } from "@/libs/findTarget";
 import { PAGE_ERROR_MESSAGE } from "@/libs/pageErrors";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { Platform, StyleSheet, TextInput, type TextInputInstance } from "react-native";
@@ -49,8 +49,8 @@ interface Props {
   initialTag?: string;
   /** Fires once the editor's WebView has built and painted its content. */
   onReady?: () => void;
-  /** The page's answer to each `find` request. */
-  onFound?: (reply: FindReply) => void;
+  /** The page's answer to each `find` request, and its Esc while the find bar is open. */
+  onFound?: (reply: FindReply | FindEscape) => void;
 }
 
 const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
@@ -154,8 +154,8 @@ const CodeEditorWebView = forwardRef<CodeEditorWebViewRef, Props>(
             }
             pendingMessages.current = [];
             onReadyRef.current?.();
-          } else if (data.type === "found") {
-            onFoundRef.current?.(data as FindReply);
+          } else if (data.type === "found" || data.type === "findEscape") {
+            onFoundRef.current?.(data as FindReply | FindEscape);
           } else if (data.type === PAGE_ERROR_MESSAGE) {
             reportPageError("codemirror", data.data);
           } else if (data.type === "change" && (data.doc ?? 0) === docRef.current) {
