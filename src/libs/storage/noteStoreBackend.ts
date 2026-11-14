@@ -19,7 +19,7 @@ const SUFFIX = ".json";
 const SPARE = `${SUFFIX}.tmp`;
 const ASIDE = `${SUFFIX}.corrupt-`;
 /** Starts a file name made from a hash (escaping never makes an `@`). */
-const HASHED = "@";
+export const HASHED = "@";
 /** The longest escaped name used as is: with the suffixes, well under the 255 bytes a file name can take. */
 const MAX_ESCAPED = 160;
 
@@ -43,7 +43,7 @@ const escape = (name: string): string | null => {
     return null; // a lone surrogate
   }
 };
-const unescape = (escaped: string) => {
+export const unescape = (escaped: string) => {
   try {
     return decodeURIComponent(escaped.replace(/_/g, "%"));
   } catch {
@@ -52,10 +52,10 @@ const unescape = (escaped: string) => {
 };
 
 /** The file name a value is stored under, without its suffix. */
-const baseOf = (name: string) => escape(name) ?? `${HASHED}${hashText(name)}`;
+export const baseOf = (name: string) => escape(name) ?? `${HASHED}${hashText(name)}`;
 
 /** The value a hashed file holds for `name` (after its first line, which must be that name). */
-const unwrap = (name: string, text: string) => {
+export const unwrap = (name: string, text: string) => {
   const end = text.indexOf("\n");
   return end !== -1 && text.slice(0, end) === JSON.stringify(name) ? text.slice(end + 1) : undefined;
 };
