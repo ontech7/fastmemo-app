@@ -17,6 +17,7 @@ import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW, SIZE } fr
 import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/notes/EditorActionDock";
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import TodoItem from "@/components/todo/TodoItem";
+import HiddenDoneRow from "@/components/todo/HiddenDoneRow";
 import TodoList, { type RowDrag } from "@/components/todo/TodoList";
 
 import type { TodoItem as TodoItemType, TodoNote } from "@/types";
@@ -35,15 +36,24 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     updateNoteWebhook,
     autoTitle,
     focusId,
+    focusSeq,
     stepMode,
-    firstUncheckedIndex,
+    firstUncheckedId,
+    positionOf,
     total,
     done,
+    hideDone,
+    visible,
+    hiddenCount,
     setTitle,
     setItemText,
     checkItem,
     deleteItem,
     addItem,
+    addItemAfter,
+    removeEmptyItem,
+    setHideDone,
+    deleteDone,
     setMode,
     moveItemTo,
     addSuggestedItems,
@@ -59,9 +69,10 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     (item: TodoItemType, index: number, drag: RowDrag) => {
       const stepStatus: "done" | "ongoing" | "future" = item.checked
         ? "done"
-        : index === firstUncheckedIndex
+        : item.id === firstUncheckedId
           ? "ongoing"
           : "future";
+      const focused = item.id === focusId;
 
       return (
         <TodoItem
@@ -73,15 +84,31 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           disabled={note.readOnly}
           folded={drag.folded}
           slotHeight={drag.slotHeight}
-          autoFocus={item.id === focusId}
+          autoFocus={focused}
           stepMode={stepMode}
           stepStatus={stepStatus}
-          stepNumber={stepMode ? index + 1 : undefined}
-          isLast={index === total - 1}
+          stepNumber={stepMode ? (positionOf.get(item.id) ?? index) + 1 : undefined}
+          isLast={index === visible.length - 1}
+          addAfter={addItemAfter}
+          removeEmpty={removeEmptyItem}
+          focusSeq={focused ? focusSeq : 0}
         />
       );
     },
-    [firstUncheckedIndex, focusId, stepMode, total, note.readOnly, setItemText, checkItem, deleteItem]
+    [
+      firstUncheckedId,
+      positionOf,
+      focusId,
+      focusSeq,
+      stepMode,
+      visible.length,
+      note.readOnly,
+      setItemText,
+      checkItem,
+      deleteItem,
+      addItemAfter,
+      removeEmptyItem,
+    ]
   );
 
   return (
@@ -131,7 +158,12 @@ export default function NoteTodoEditor({ initialNote }: Props) {
         }}
       >
         {note.list.length > 0 ? (
-          <TodoList list={note.list} renderRow={renderRow} moveItemTo={moveItemTo} />
+          <TodoList
+            list={visible}
+            renderRow={renderRow}
+            moveItemTo={moveItemTo}
+            footer={hiddenCount > 0 ? <HiddenDoneRow count={hiddenCount} onShow={() => setHideDone(false)} /> : null}
+          />
         ) : (
           <Text style={styles.noItems}>{t("note.no_items")}</Text>
         )}
@@ -143,6 +175,10 @@ export default function NoteTodoEditor({ initialNote }: Props) {
             <TodoModeMenuButton
               currentMode={currentMode}
               onSelectMode={setMode}
+              hideDone={hideDone}
+              onToggleHideDone={() => setHideDone(!hideDone)}
+              doneCount={done}
+              onDeleteDone={deleteDone}
               disabled={note.readOnly}
               style={dockButtonStyle}
               menuBottomOffset={110}

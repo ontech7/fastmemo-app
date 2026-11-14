@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import uuid from "react-uuid";
 
 import { useAutofocusNewNote } from "@/hooks/useAutofocusNewNote";
 import { useNoteEditor } from "@/hooks/useNoteEditor";
 import { findCategoryByName } from "@/libs/ai";
-import { moveById } from "@/libs/reorderDrop";
+import { doneCount, freshAfter, insertAfter, moveVisibleTo, removeItem, visibleItems, withoutDone } from "@/libs/listOps";
 import { selectorWebhook_addTodoNote } from "@/slicers/settingsSlice";
 import { isTodoNoteEmpty } from "@/utils/noteEmpty";
 import { capitalize } from "@/utils/string";
@@ -53,13 +53,27 @@ export function useTodoList(initialNote: TodoNote) {
   // Autofocus is per-row: only the row whose id matches `focusId` grabs focus. A brand-new note focuses its first row;
   // opening an existing note focuses nothing so the user can just read. `focusId` is seeded synchronously so the target
   // row mounts with autoFocus already set: setting it after mount is a no-op, the input reads `autoFocus` only once.
+  // `focusSeq` changes with every request, so a row already focused once (the one above an emptied row) takes it again.
   const autofocus = useAutofocusNewNote(initialNote);
-  const [focusId, setFocusId] = useState<string | null>(autofocus ? (memoInitialNote.list[0]?.id ?? null) : null);
+  const focusSeqRef = useRef(0);
+  const [focus, setFocus] = useState<{ id: string; seq: number } | null>(() =>
+    autofocus && memoInitialNote.list[0] ? { id: memoInitialNote.list[0].id, seq: 0 } : null
+  );
+  const focusRow = useCallback((id: string | null) => setFocus(id ? { id, seq: ++focusSeqRef.current } : null), []);
+  const focusId = focus?.id ?? null;
+  const focusSeq = focus?.seq ?? 0;
 
   const stepMode = note.mode === "steps";
-  const firstUncheckedIndex = useMemo(() => note.list.findIndex((item) => !item.checked), [note.list]);
+  // A read-only list draws everything: its "Show" couldn't change the note, and none of the list's tools apply to it.
+  const hideDone = !!note.hideDone && !note.readOnly;
+  // What the editor draws: the done items left out while they are hidden. The counter still counts them all.
+  const visible = useMemo(() => visibleItems(note.list, hideDone), [note.list, hideDone]);
+  const firstUncheckedId = useMemo(() => note.list.find((item) => !item.checked)?.id ?? null, [note.list]);
+  // A step's number is its place in the whole list, hidden steps counted.
+  const positionOf = useMemo(() => new Map(note.list.map((item, index) => [item.id, index])), [note.list]);
   const total = note.list.length;
-  const done = useMemo(() => note.list.filter((item) => item.checked).length, [note.list]);
+  const done = useMemo(() => doneCount(note.list), [note.list]);
+  const hiddenCount = hideDone ? done : 0;
 
   const setTitle = useCallback(
     (title: string) => updateNoteAsync((current) => (current.title === title ? current : { ...current, title })),
@@ -123,8 +137,68 @@ export function useTodoList(initialNote: TodoNote) {
       return { ...current, list: [...current.list, item] };
     });
     // Focus the freshly added row so the user can type without tapping it.
-    if (added) setFocusId(item.id);
-  }, [updateNoteAsync]);
+    if (added) focusRow(item.id);
+  }, [updateNoteAsync, focusRow]);
+
+  // Enter in an item: a new empty item right under it, which takes the focus (the text is never split).
+  const lastAddedRef = useRef<{ after: string; id: string } | null>(null);
+  const addItemAfter = useCallback(
+    (id: string) => {
+      const item = newItem();
+      let focusTo: string | null = null;
+      updateNoteAsync((current) => {
+        if (current.readOnly) return current;
+        const last = lastAddedRef.current;
+        // The same Enter a second time (Android's hardware key submits on down and on up): the item it made takes the caret.
+        if (last?.after === id && freshAfter(current.list, id, last.id)) {
+          focusTo = last.id;
+          return current;
+        }
+        focusTo = item.id;
+        return { ...current, list: insertAfter(current.list, id, item) };
+      });
+      if (focusTo === item.id) lastAddedRef.current = { after: id, id: item.id };
+      if (focusTo) focusRow(focusTo);
+    },
+    [updateNoteAsync, focusRow]
+  );
+
+  // Backspace in an empty item: it goes, the caret to the end of the nearest visible item above (below for the first).
+  // The only item of a list stays.
+  const removeEmptyItem = useCallback(
+    (id: string) => {
+      let focusTo: string | null = null;
+      updateNoteAsync((current) => {
+        if (current.readOnly || current.list.find((item) => item.id === id)?.text !== "") return current;
+        const removed = removeItem(current.list, id, !!current.hideDone);
+        if (removed.list.length === current.list.length) return current;
+        focusTo = removed.focusId;
+        return { ...current, list: removed.list };
+      });
+      if (focusTo) focusRow(focusTo);
+    },
+    [updateNoteAsync, focusRow]
+  );
+
+  // A field of the note, like the mode: it gets a revision and syncs.
+  const setHideDone = useCallback(
+    (hide: boolean) =>
+      updateNoteAsync((current) =>
+        current.readOnly || !!current.hideDone === hide ? current : { ...current, hideDone: hide }
+      ),
+    [updateNoteAsync]
+  );
+
+  // The done items removed in one edit (the editor asks first).
+  const deleteDone = useCallback(
+    () =>
+      updateNoteAsync((current) => {
+        if (current.readOnly) return current;
+        const list = withoutDone(current.list);
+        return list.length === current.list.length ? current : { ...current, list };
+      }),
+    [updateNoteAsync]
+  );
 
   const setMode = useCallback(
     (mode: TodoNote["mode"]) => {
@@ -135,18 +209,19 @@ export function useTodoList(initialNote: TodoNote) {
         return { ...current, mode };
       });
       // Switching mode remounts the rows; don't let their inputs grab focus.
-      if (changed) setFocusId(null);
+      if (changed) focusRow(null);
     },
-    [updateNoteAsync]
+    [updateNoteAsync, focusRow]
   );
 
   // A drop or a keyboard move, applied to the list as it is now (by id: a row deleted meanwhile, here or on another
-  // device, moves nothing). `toIndex` counts the row where it still is (moveById).
+  // device, moves nothing). `toIndex` counts the row where it still is (moveById), among the rows drawn: with the done
+  // ones hidden, they keep their places.
   const moveItemTo = useCallback(
     (itemId: string, toIndex: number) =>
       updateNoteAsync((current) => {
         if (current.readOnly) return current;
-        const list = moveById(current.list, itemId, toIndex) as TodoItem[];
+        const list = moveVisibleTo(current.list, itemId, toIndex, !!current.hideDone);
         return list === current.list ? current : { ...current, list };
       }),
     [updateNoteAsync]
@@ -201,15 +276,24 @@ export function useTodoList(initialNote: TodoNote) {
     autoTitle,
     autofocus,
     focusId,
+    focusSeq,
     stepMode,
-    firstUncheckedIndex,
+    firstUncheckedId,
+    positionOf,
     total,
     done,
+    hideDone,
+    visible,
+    hiddenCount,
     setTitle,
     setItemText,
     checkItem,
     deleteItem,
     addItem,
+    addItemAfter,
+    removeEmptyItem,
+    setHideDone,
+    deleteDone,
     setMode,
     moveItemTo,
     addSuggestedItems,

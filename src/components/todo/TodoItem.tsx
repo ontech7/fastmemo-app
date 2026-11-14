@@ -6,6 +6,7 @@ import {
   Text,
   TextInput,
   type TextInputInstance,
+  type TextInputKeyPressEvent,
   TouchableOpacity,
   View,
   type ViewInstance,
@@ -60,6 +61,12 @@ interface Props {
   stepNumber?: number;
   isLast?: boolean;
   animationsReady?: boolean;
+  /** Enter: a new item under this one. */
+  addAfter?: (id: string) => void;
+  /** Backspace in this item while it's empty. */
+  removeEmpty?: (id: string) => void;
+  /** Changes with each request for this row's focus (with `autoFocus`): the caret then goes to the end of its text. */
+  focusSeq?: number;
 }
 
 /** The list's only container in the reorder engine. */
@@ -97,6 +104,9 @@ function TodoItem({
   stepNumber,
   isLast = false,
   animationsReady = false,
+  addAfter,
+  removeEmpty,
+  focusSeq = 0,
 }: Props) {
   const { t } = useTranslation();
 
@@ -133,6 +143,37 @@ function TodoItem({
     setWebHeight(fits);
   }, [item.text, stepMode]);
   const fieldRef = isWeb ? webInputRef : inputRef;
+
+  // A row asked for again (the one above an item removed with Backspace): the focus, and the caret at the end.
+  useEffect(() => {
+    if (!autoFocus || !focusSeq) return;
+    const field = fieldRef?.current as (TextInputInstance & Partial<HTMLTextAreaElement>) | null | undefined;
+    if (!field) return;
+    field.focus();
+    const end = item.text.length;
+    if (isWeb) field.setSelectionRange?.(end, end);
+    else field.setSelection?.(end, end);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSeq]);
+
+  // Enter makes the next item (the text is never split): on the phone a submit, with no line break; on the web Enter
+  // without Shift and outside a composition (Shift + Enter is a line break). Backspace in an empty item removes it.
+  const onKeyPress = (e: TextInputKeyPressEvent) => {
+    const key = e.nativeEvent as unknown as { key: string; shiftKey?: boolean; isComposing?: boolean; keyCode?: number };
+    const cancel = () => (e as unknown as { preventDefault?: () => void }).preventDefault?.();
+    if (key.key === "Backspace" && item.text === "" && removeEmpty) {
+      cancel();
+      removeEmpty(item.id);
+    } else if (isWeb && key.key === "Enter" && !key.shiftKey && !key.isComposing && key.keyCode !== 229 && addAfter) {
+      cancel();
+      addAfter(item.id);
+    }
+  };
+  const keyProps = disabled
+    ? {}
+    : isWeb
+      ? { onKeyPress }
+      : { onKeyPress, submitBehavior: "submit" as const, onSubmitEditing: () => addAfter?.(item.id) };
   const webHeightStyle = webHeight !== undefined ? { height: webHeight } : undefined;
   const rowRef = useRef<ViewInstance>(null);
   useEffect(() => (stepMode ? undefined : registerItem(LIST_CONTAINER, item.id, rowRef)), [registerItem, item.id, stepMode]);
@@ -208,6 +249,7 @@ function TodoItem({
               editable={!disabled}
               cursorColor={COLOR.softWhite}
               autoFocus={autoFocus}
+              {...keyProps}
             />
 
             <ReorderHandle item={item} containerId={LIST_CONTAINER} disabled={disabled} style={styles.drag} />
@@ -289,6 +331,7 @@ function TodoItem({
           editable={!disabled}
           cursorColor={COLOR.softWhite}
           autoFocus={autoFocus}
+          {...keyProps}
         />
       </View>
 

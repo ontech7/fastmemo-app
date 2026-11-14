@@ -27,6 +27,8 @@ interface Props {
   renderRow: (item: TodoItem, index: number, drag: RowDrag) => ReactElement;
   /** Moves a row (a drop or a keyboard move): `toIndex` counts it where it still is (moveById). */
   moveItemTo: (itemId: string, toIndex: number) => void;
+  /** Under the last row (the line of the hidden completed items). */
+  footer?: ReactElement | null;
 }
 
 export type { Props as TodoListProps };
@@ -42,7 +44,7 @@ const keyExtractor = (item: TodoItem) => item.id;
  * A list's rows, reordered by the shared engine (ADR-038): one container. The rows stay in a FlatList (a long list opens
  * as fast as before); rows mounted when a row is lifted are measured then, and are the possible targets.
  */
-export default function TodoList({ list, renderRow, moveItemTo }: Props) {
+export default function TodoList({ list, renderRow, moveItemTo, footer }: Props) {
   // The list as it is now, read by the drag at lift: a ref, so a keystroke doesn't render the engine.
   const containersRef = useRef([{ id: LIST_CONTAINER, items: list }]);
   useLayoutEffect(() => {
@@ -56,12 +58,12 @@ export default function TodoList({ list, renderRow, moveItemTo }: Props) {
 
   return (
     <ReorderProvider containersRef={containersRef} onDrop={onDrop}>
-      <TodoListRows list={list} renderRow={renderRow} />
+      <TodoListRows list={list} renderRow={renderRow} footer={footer} />
     </ReorderProvider>
   );
 }
 
-function TodoListRows({ list, renderRow }: Pick<Props, "list" | "renderRow">) {
+function TodoListRows({ list, renderRow, footer }: Pick<Props, "list" | "renderRow" | "footer">) {
   const preview = useReorderPreview();
   const { registerFrame } = useReorder();
 
@@ -112,7 +114,14 @@ function TodoListRows({ list, renderRow }: Pick<Props, "list" | "renderRow">) {
         removeClippedSubviews={false}
         // A tap on a checkbox or a button acts at once with the keyboard up; a tap on empty space still closes it.
         keyboardShouldPersistTaps="handled"
-        ListFooterComponent={trailingSlot ? <ReorderSlot height={trailingSlot} /> : null}
+        ListFooterComponent={
+          trailingSlot || footer ? (
+            <>
+              {trailingSlot ? <ReorderSlot height={trailingSlot} /> : null}
+              {footer}
+            </>
+          ) : null
+        }
       />
       <ReorderOverlay renderLifted={renderLiftedRow} />
     </View>

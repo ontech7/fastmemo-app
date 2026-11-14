@@ -3,11 +3,15 @@ import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
 import ArrowsRightLeftIcon from "react-native-heroicons/outline/ArrowsRightLeftIcon";
 import ArrowsUpDownIcon from "react-native-heroicons/outline/ArrowsUpDownIcon";
+import EyeIcon from "react-native-heroicons/outline/EyeIcon";
+import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
 import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
+import TrashIcon from "react-native-heroicons/outline/TrashIcon";
 import Animated, { runOnJS, type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BORDER, COLOR, FONT, FONTSIZE, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
+import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import MenuItemPop from "@/components/ui/MenuItemPop";
 import { DURATION, EASING } from "@/constants/motion";
 import type { TodoNote } from "@/types";
@@ -22,11 +26,16 @@ const TODO_MODES = [
   { mode: "steps", labelKey: "note.mode_steps", icon: ListBulletIcon },
 ] as const;
 
-type TodoMode = (typeof TODO_MODES)[number];
-
 interface Props {
   currentMode: "free" | "steps";
   onSelectMode: (mode: TodoNote["mode"]) => void;
+  /** The completed items are hidden: the entry reads "Show completed". */
+  hideDone: boolean;
+  onToggleHideDone: () => void;
+  /** How many items are done: "Delete completed" is disabled with none. */
+  doneCount: number;
+  /** After the confirmation. */
+  onDeleteDone: () => void;
   disabled?: boolean;
   /** Override the trigger position. Defaults to a bottom-left floating FAB. */
   style?: ViewStyle;
@@ -35,21 +44,40 @@ interface Props {
 }
 
 interface MenuItemProps {
-  option: TodoMode;
+  icon: typeof ArrowsUpDownIcon;
   index: number;
   totalItems: number;
   menuProgress: SharedValue<number>;
   label: string;
   onPress: () => void;
+  /** A mode: the current one has a ring. */
+  checked?: boolean;
+  destructive?: boolean;
+  disabled?: boolean;
 }
 
-function AnimatedMenuItem({ option, index, totalItems, menuProgress, label, onPress }: MenuItemProps) {
-  const Icon = option.icon;
-
+function AnimatedMenuItem({
+  icon: Icon,
+  index,
+  totalItems,
+  menuProgress,
+  label,
+  onPress,
+  checked,
+  destructive,
+  disabled,
+}: MenuItemProps) {
   return (
     <MenuItemPop index={index} total={totalItems} progress={menuProgress}>
-      <TouchableOpacity style={styles.optionButton} activeOpacity={0.7} onPress={onPress} accessibilityRole="button">
-        <View style={styles.optionIconContainer}>
+      <TouchableOpacity
+        style={[styles.optionButton, disabled && styles.optionDisabled]}
+        activeOpacity={0.7}
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityRole={checked === undefined ? "button" : "radio"}
+        aria-checked={checked}
+      >
+        <View style={[styles.optionIconContainer, checked && styles.optionIconChecked, destructive && styles.optionIconDanger]}>
           <Icon size={24} color={COLOR.softWhite} />
         </View>
         <Text style={styles.optionLabel}>{label}</Text>
@@ -59,10 +87,20 @@ function AnimatedMenuItem({ option, index, totalItems, menuProgress, label, onPr
 }
 
 /**
- * Bottom-left FAB that opens a dimmed overlay with the todo modes you can switch
- * to (the current one is filtered out) — same interaction as AddNoteOverlayButton.
+ * Bottom-left FAB that opens the list's menu in a dimmed overlay (same interaction as AddNoteOverlayButton): the two
+ * modes, the current one ringed, then hide or show the completed items, and delete them (asked first).
  */
-export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled = false, style, menuBottomOffset }: Props) {
+export default function TodoModeMenuButton({
+  currentMode,
+  onSelectMode,
+  hideDone,
+  onToggleHideDone,
+  doneCount,
+  onDeleteDone,
+  disabled = false,
+  style,
+  menuBottomOffset,
+}: Props) {
   const { t } = useTranslation();
 
   const insets = useSafeAreaInsets();
@@ -75,7 +113,7 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
   const menuProgress = useSharedValue(0);
   const triggerRef = useRef<ElementRef<typeof TouchableOpacity>>(null);
 
-  const options = TODO_MODES.filter((m) => m.mode !== currentMode);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     menuProgress.value = withTiming(
@@ -103,8 +141,18 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
 
   const selectMode = (mode: TodoNote["mode"]) => {
     setIsOpen(false);
-    onSelectMode(mode);
+    if (mode !== currentMode) onSelectMode(mode);
   };
+  const toggleHideDone = () => {
+    setIsOpen(false);
+    onToggleHideDone();
+  };
+  const askDelete = () => {
+    setIsOpen(false);
+    setConfirmDelete(true);
+  };
+  // The modes, the divider, the two entries for the completed items: staggered in this order.
+  const TOTAL = TODO_MODES.length + 3;
 
   return (
     <>
@@ -124,17 +172,39 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
           onPress={() => setIsOpen(false)}
         >
           <View style={styles.overlayContainer}>
-            {options.map((option, index) => (
+            {TODO_MODES.map((option, index) => (
               <AnimatedMenuItem
                 key={option.mode}
-                option={option}
+                icon={option.icon}
                 index={index}
-                totalItems={options.length}
+                totalItems={TOTAL}
                 menuProgress={menuProgress}
                 label={t(option.labelKey)}
+                checked={option.mode === currentMode}
                 onPress={() => selectMode(option.mode)}
               />
             ))}
+            <MenuItemPop index={TODO_MODES.length} total={TOTAL} progress={menuProgress}>
+              <View style={styles.divider} />
+            </MenuItemPop>
+            <AnimatedMenuItem
+              icon={hideDone ? EyeIcon : EyeSlashIcon}
+              index={TODO_MODES.length + 1}
+              totalItems={TOTAL}
+              menuProgress={menuProgress}
+              label={t(hideDone ? "note.show_done" : "note.hide_done")}
+              onPress={toggleHideDone}
+            />
+            <AnimatedMenuItem
+              icon={TrashIcon}
+              index={TODO_MODES.length + 2}
+              totalItems={TOTAL}
+              menuProgress={menuProgress}
+              label={t("note.delete_done")}
+              destructive
+              disabled={doneCount === 0}
+              onPress={askDelete}
+            />
           </View>
         </AnimatedPressable>
       </Modal>
@@ -146,12 +216,24 @@ export default function TodoModeMenuButton({ currentMode, onSelectMode, disabled
           activeOpacity={0.7}
           onPress={toggleOverlay}
           accessibilityRole="button"
-          accessibilityLabel={t("a11y.list_mode")}
+          accessibilityLabel={t("a11y.list_menu")}
           aria-expanded={isOpen}
         >
           <ArrowsRightLeftIcon size={24} color={COLOR.softWhite} />
         </TouchableOpacity>
       </View>
+
+      <ConfirmOrCancelDialog
+        open={confirmDelete}
+        title={t("note.delete_done_title")}
+        description={t("note.delete_done_text")}
+        destructive
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          setConfirmDelete(false);
+          onDeleteDone();
+        }}
+      />
     </>
   );
 }
@@ -191,10 +273,27 @@ const styles = StyleSheet.create({
     gap: PADDING_MARGIN.lg,
   },
   optionIconContainer: {
-    padding: PADDING_MARGIN.sm,
+    padding: PADDING_MARGIN.sm - 2,
     borderRadius: BORDER.normal,
+    borderWidth: 2,
+    borderColor: "transparent",
     backgroundColor: COLOR.accentMuted,
     ...SHADOW.fab,
+  },
+  optionIconChecked: {
+    borderColor: COLOR.accentSoft,
+  },
+  optionIconDanger: {
+    backgroundColor: COLOR.important,
+  },
+  optionDisabled: {
+    opacity: 0.4,
+  },
+  divider: {
+    width: 200,
+    height: 1,
+    marginVertical: PADDING_MARGIN.xs,
+    backgroundColor: GLASS.border,
   },
   optionLabel: {
     color: COLOR.softWhite,

@@ -25,6 +25,7 @@ import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/
 import TodoModeMenuButton from "@/components/notes/TodoModeMenuButton";
 import SafeAreaView from "@/components/SafeAreaView";
 import TodoItem from "@/components/todo/TodoItem";
+import HiddenDoneRow from "@/components/todo/HiddenDoneRow";
 import TodoList, { type RowDrag } from "@/components/todo/TodoList";
 import AppBackground from "@/components/ui/AppBackground";
 import { useScreenTransitionEnd } from "@/hooks/useScreenTransitionEnd";
@@ -49,15 +50,24 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     autoTitle,
     autofocus,
     focusId,
+    focusSeq,
     stepMode,
-    firstUncheckedIndex,
+    firstUncheckedId,
+    positionOf,
     total,
     done,
+    hideDone,
+    visible,
+    hiddenCount,
     setTitle,
     setItemText,
     checkItem,
     deleteItem,
     addItem,
+    addItemAfter,
+    removeEmptyItem,
+    setHideDone,
+    deleteDone,
     setMode,
     moveItemTo,
     addSuggestedItems,
@@ -100,9 +110,10 @@ export default function NoteTodoEditor({ initialNote }: Props) {
     (item: TodoItemType, index: number, drag: RowDrag) => {
       const stepStatus: "done" | "ongoing" | "future" = item.checked
         ? "done"
-        : index === firstUncheckedIndex
+        : item.id === firstUncheckedId
           ? "ongoing"
           : "future";
+      const focused = item.id === focusId;
 
       return (
         <TodoItem
@@ -113,17 +124,34 @@ export default function NoteTodoEditor({ initialNote }: Props) {
           disabled={readOnly}
           folded={drag.folded}
           slotHeight={drag.slotHeight}
-          autoFocus={item.id === focusId}
-          inputRef={item.id === focusId ? focusInputRef : undefined}
+          autoFocus={focused}
+          inputRef={focused ? focusInputRef : undefined}
           stepMode={stepMode}
           stepStatus={stepStatus}
-          stepNumber={stepMode ? index + 1 : undefined}
-          isLast={index === total - 1}
+          stepNumber={stepMode ? (positionOf.get(item.id) ?? index) + 1 : undefined}
+          isLast={index === visible.length - 1}
+          addAfter={addItemAfter}
+          removeEmpty={removeEmptyItem}
+          focusSeq={focused ? focusSeq : 0}
           animationsReady={animationsReady}
         />
       );
     },
-    [focusId, stepMode, firstUncheckedIndex, total, readOnly, animationsReady, setItemText, checkItem, deleteItem]
+    [
+      focusId,
+      focusSeq,
+      stepMode,
+      firstUncheckedId,
+      positionOf,
+      visible.length,
+      readOnly,
+      animationsReady,
+      setItemText,
+      checkItem,
+      deleteItem,
+      addItemAfter,
+      removeEmptyItem,
+    ]
   );
 
   return (
@@ -173,7 +201,12 @@ export default function NoteTodoEditor({ initialNote }: Props) {
               <View style={{ flex: 1 }}>
                 <GestureHandlerRootView style={styles.draggableList}>
                   {note.list.length > 0 ? (
-                    <TodoList list={note.list} renderRow={renderTodoItem} moveItemTo={moveItemTo} />
+                    <TodoList
+                      list={visible}
+                      renderRow={renderTodoItem}
+                      moveItemTo={moveItemTo}
+                      footer={hiddenCount > 0 ? <HiddenDoneRow count={hiddenCount} onShow={() => setHideDone(false)} /> : null}
+                    />
                   ) : (
                     <Text style={styles.noItems}>{t("note.no_items")}</Text>
                   )}
@@ -188,6 +221,10 @@ export default function NoteTodoEditor({ initialNote }: Props) {
                 <TodoModeMenuButton
                   currentMode={currentMode}
                   onSelectMode={setMode}
+                  hideDone={hideDone}
+                  onToggleHideDone={() => setHideDone(!hideDone)}
+                  doneCount={done}
+                  onDeleteDone={deleteDone}
                   disabled={note.readOnly}
                   style={dockButtonStyle}
                   menuBottomOffset={110}

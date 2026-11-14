@@ -45,7 +45,7 @@ await build({
       export * as categories from "@/slicers/categoriesSlice";
       export { default as categoriesReducer } from "@/slicers/categoriesSlice";
       export { createPlanner, reconcileCategories } from "@/libs/cloud/merge";
-      export { noteRev, nextRev, adoptLegacySyncState, fromOlderVersion } from "@/libs/cloud/revision";
+      export { noteRev, nextRev, adoptLegacySyncState, fromOlderVersion, forUpload } from "@/libs/cloud/revision";
       export { contentToken } from "@/libs/cloud/token";
       export { SyncEngine } from "@/libs/cloud/syncEngine";
       export { copyOfNote } from "@/libs/noteCopy";
@@ -1912,6 +1912,25 @@ console.log("\ncategories: a drop reorders, renumbers, and queues only what chan
     counts.byIcon.a === 2 && counts.byIcon.b === 1 && counts.total === 3,
     counts
   );
+}
+
+console.log("\na list's hideDone (spec B.7)");
+{
+  const list = (rev, extra = {}) =>
+    note("l", rev, { type: "todo", text: undefined, list: [{ id: "i", text: "x", checked: true }], mode: "free", ...extra });
+  ok("hideDone goes up with the note", M.forUpload(list(100, { hideDone: true, syncedRev: 100 })).hideDone === true);
+  const p = M.createPlanner(local([list(100, { syncedRev: 100 })]), "(c)");
+  p.add(list(200, { hideDone: true }));
+  const plan = p.plan();
+  ok(
+    "a newer copy that only turned hideDone on replaces the note, with it",
+    plan.put.length === 1 && plan.put[0].hideDone === true,
+    plan.put
+  );
+  const q = M.createPlanner(local([list(300, { hideDone: true, syncedRev: 200 })], [], { pendingUploads: { l: {} } }), "(c)");
+  q.add(list(200));
+  const older = q.plan();
+  ok("an older copy without it doesn't undo the local change", older.put.length === 0 && older.conflicts.length === 0, older);
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

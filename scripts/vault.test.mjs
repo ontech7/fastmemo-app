@@ -221,6 +221,11 @@ import("react-native-crypto-js").then((m) => {
   // Right key reads the note (no false negative that would hide data)
   ok("right key -> decrypts text note", Crypt.tryDecryptNote(textNote, key)?.text === "contenuto segreto");
   ok("right key -> decrypts todo item", Crypt.tryDecryptNote(todoNote, key)?.list?.[0]?.text === "compito");
+  const hiding = Crypt.CryptNote.encrypt(
+    { id: "n3", type: "todo", hideDone: true, list: [{ id: "a", text: "fatto", checked: true }] },
+    key
+  );
+  ok("a list's hideDone survives encrypting and decrypting", Crypt.tryDecryptNote(hiding, key)?.hideDone === true);
 
   // With the auth marker, a wrong/empty key is RELIABLY rejected (null) — so the
   // migration always skips (never overwrites) notes it didn't encrypt, and sync

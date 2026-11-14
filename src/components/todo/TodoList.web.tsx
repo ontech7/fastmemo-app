@@ -21,7 +21,7 @@ const renderLiftedRow = (item: TodoItem, height: number | undefined) => <TodoIte
  * A list's rows, reordered by the shared engine (ADR-038): one container, in a scroll view (the web keeps every row
  * mounted, as before).
  */
-export default function TodoList({ list, renderRow, moveItemTo }: TodoListProps) {
+export default function TodoList({ list, renderRow, moveItemTo, footer }: TodoListProps) {
   // The list as it is now, read by the drag at lift: a ref, so a keystroke doesn't render the engine.
   const containersRef = useRef([{ id: LIST_CONTAINER, items: list }]);
   useLayoutEffect(() => {
@@ -35,12 +35,12 @@ export default function TodoList({ list, renderRow, moveItemTo }: TodoListProps)
 
   return (
     <ReorderProvider containersRef={containersRef} onDrop={onDrop}>
-      <TodoListRows list={list} renderRow={renderRow} />
+      <TodoListRows list={list} renderRow={renderRow} footer={footer} />
     </ReorderProvider>
   );
 }
 
-function TodoListRows({ list, renderRow }: Pick<TodoListProps, "list" | "renderRow">) {
+function TodoListRows({ list, renderRow, footer }: Pick<TodoListProps, "list" | "renderRow" | "footer">) {
   const preview = useReorderPreview();
   const { registerFrame } = useReorder();
 
@@ -77,6 +77,7 @@ function TodoListRows({ list, renderRow }: Pick<TodoListProps, "list" | "renderR
       >
         {rows}
         {trailingSlot ? <ReorderSlot height={trailingSlot} /> : null}
+        {footer}
       </Animated.ScrollView>
       <ReorderOverlay renderLifted={renderLiftedRow} />
     </View>

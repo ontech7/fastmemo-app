@@ -71,6 +71,8 @@ export interface TodoNote extends NoteBase {
   type: "todo";
   list: TodoItem[];
   mode?: TodoMode;
+  /** The done items out of sight in the editor (spec B.7): a field of the note, so it syncs. */
+  hideDone?: boolean;
 }
 
 export interface KanbanNote extends NoteBase {

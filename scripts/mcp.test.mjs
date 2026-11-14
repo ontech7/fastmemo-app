@@ -1198,6 +1198,22 @@ console.log("\na text note with every kind of line, through the tools");
   ok("the search finds a ticked line's word", ids(await search("fatto")).includes(note.id));
 }
 
+console.log("\na list's hideDone through the edit tool (spec B.7)");
+
+{
+  const { made, stored } = editor();
+  const { note } = await made({ type: "todo", title: "List", items: [{ text: "milk" }, { text: "eggs", checked: true }] });
+  // the same list in a store of its own, hideDone on as the app sets it
+  const withHide = { ...stored(note.id), hideDone: true };
+  const h2 = editor([withHide]);
+  const added = await h2.editNow(note.id, { addItems: [{ text: "bread" }] });
+  ok(
+    "an item added by the tool keeps the list's hideDone",
+    !added.isError && h2.stored(note.id).hideDone === true && h2.stored(note.id).list.length === 3,
+    added
+  );
+}
+
 console.log("\nedit_note: text");
 
 {
