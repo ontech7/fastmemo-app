@@ -256,7 +256,6 @@ const ja = {
     duplicated: "ノートを複製しました",
     title_placeholder: "タイトル",
     description_placeholder: "ここに何かを書いてください...",
-    no_items: "アイテムはありません。\n右下のボタンを押して1つ追加してください。",
     characters: "文字",
     progress: "<hl>{{done}}</hl>/{{total}} 完了",
     mode_free: "リスト",
@@ -1463,6 +1462,9 @@ const ja = {
     trash_title: "ゴミ箱は空です",
     trash_text: "削除したノートはここに {{days}} 日間残ります。",
     trash_text_unlimited: "削除したノートは、削除するまでここに残ります。",
+    list_title: "まだ項目がありません",
+    list_text: "+ をタップして最初の項目を追加してください。",
+    list_text_read_only: "このリストには項目がありません。",
   },
 
   empty_title: "(タイトルなし)",

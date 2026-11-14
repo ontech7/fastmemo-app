@@ -5,19 +5,22 @@ import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import EmptyCategoryIllustration from "@/components/ui/illustrations/EmptyCategoryIllustration";
+import EmptyListIllustration from "@/components/ui/illustrations/EmptyListIllustration";
 import EmptyNotesIllustration from "@/components/ui/illustrations/EmptyNotesIllustration";
 import EmptySearchIllustration from "@/components/ui/illustrations/EmptySearchIllustration";
 import EmptyTrashIllustration from "@/components/ui/illustrations/EmptyTrashIllustration";
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 
 interface Props {
-  variant: "notes" | "category" | "search" | "trash" | "history";
+  variant: "notes" | "category" | "search" | "trash" | "history" | "list";
   /** `category`: the icon of the category being shown. */
   categoryIcon?: string;
   /** `notes`: whether the quick note bar is on (the text mentions it only then). */
   quickNote?: boolean;
   /** `trash`: the days notes stay there; undefined when they stay until removed (the developer option). */
   days?: number;
+  /** `list`: the list can't be changed (no + to point at). */
+  readOnly?: boolean;
 }
 
 /*
@@ -26,7 +29,7 @@ interface Props {
  * keyboard up (a search typed) the list keeps its height under the keyboard, and the add button rides above the keyboard:
  * the block rises by half the part the keyboard covers, centred in what is still visible, clear of the button.
  */
-export default function EmptyState({ variant, categoryIcon, quickNote = true, days }: Props) {
+export default function EmptyState({ variant, categoryIcon, quickNote = true, days, readOnly = false }: Props) {
   const { t } = useTranslation();
 
   // `height` is the keyboard's, negative while it is up; the bottom inset is already below the list.
@@ -65,6 +68,11 @@ export default function EmptyState({ variant, categoryIcon, quickNote = true, da
       drawing = <EmptyNotesIllustration />;
       title = t("history.empty_title");
       text = t("history.empty_text");
+      break;
+    case "list":
+      drawing = <EmptyListIllustration />;
+      title = t("empty.list_title");
+      text = readOnly ? t("empty.list_text_read_only") : t("empty.list_text");
       break;
   }
 

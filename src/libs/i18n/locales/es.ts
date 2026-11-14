@@ -256,7 +256,6 @@ const es = {
     duplicated: "Nota duplicada",
     title_placeholder: "Título",
     description_placeholder: "Escribe algo aquí...",
-    no_items: "No hay elementos.\nAgrega uno pulsando el botón inferior derecho.",
     characters: "caracteres",
     progress: "<hl>{{done}}</hl> de {{total}} completados",
     mode_free: "Lista",
@@ -1483,6 +1482,9 @@ const es = {
     trash_title: "La papelera está vacía",
     trash_text: "Las notas eliminadas se quedan aquí {{days}} días.",
     trash_text_unlimited: "Las notas eliminadas se quedan aquí hasta que las quites.",
+    list_title: "Aún no hay elementos",
+    list_text: "Toca + para añadir el primero.",
+    list_text_read_only: "Esta lista no tiene elementos.",
   },
 
   empty_title: "(Sin título)",

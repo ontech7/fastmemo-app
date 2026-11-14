@@ -7,6 +7,7 @@ import EditorTourTip from "@/components/notes/EditorTourTip";
 import VoiceRecognitionButton from "@/components/buttons/VoiceRecognitionButton.web";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import EmptyState from "@/components/ui/EmptyState";
 import { useTodoList } from "@/hooks/useTodoList";
 import { useCallback } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -172,7 +173,7 @@ export default function NoteTodoEditor({ initialNote, preview }: Props) {
             footer={hiddenCount > 0 ? <HiddenDoneRow count={hiddenCount} onShow={() => setHideDone(false)} /> : null}
           />
         ) : (
-          <Text style={styles.noItems}>{t("note.no_items")}</Text>
+          <EmptyState variant="list" readOnly={note.readOnly} />
         )}
       </View>
 
@@ -276,13 +277,5 @@ const styles = StyleSheet.create({
     borderRadius: BORDER.big,
     backgroundColor: COLOR.accentMuted,
     ...SHADOW.fab,
-  },
-  noItems: {
-    color: COLOR.textSecondary,
-    fontSize: FONTSIZE.cardTitle,
-    textAlign: "center",
-    marginTop: PADDING_MARGIN.xl,
-    opacity: 0.7,
-    lineHeight: 25,
   },
 });

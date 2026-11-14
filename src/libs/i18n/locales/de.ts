@@ -256,7 +256,6 @@ const de = {
     duplicated: "Notiz dupliziert",
     title_placeholder: "Titel",
     description_placeholder: "Schreiben Sie hier etwas…",
-    no_items: "Es sind keine Elemente vorhanden.\nFügen Sie eines hinzu, indem Sie auf die Schaltfläche unten rechts klicken.",
     characters: "Textzeichen",
     progress: "<hl>{{done}}</hl> von {{total}} erledigt",
     mode_free: "Liste",
@@ -1495,6 +1494,9 @@ const de = {
     trash_title: "Der Papierkorb ist leer",
     trash_text: "Gelöschte Notizen bleiben {{days}} Tage hier.",
     trash_text_unlimited: "Gelöschte Notizen bleiben hier, bis du sie entfernst.",
+    list_title: "Noch keine Einträge",
+    list_text: "Tippe auf +, um den ersten hinzuzufügen.",
+    list_text_read_only: "Diese Liste hat keine Einträge.",
   },
 
   empty_title: "(Kein Titel)",

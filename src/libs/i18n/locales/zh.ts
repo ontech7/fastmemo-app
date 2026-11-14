@@ -255,7 +255,6 @@ const zh = {
     duplicated: "笔记已复制",
     title_placeholder: "标题",
     description_placeholder: "在这里写点东西...",
-    no_items: "没有项目。\n按右下角的按钮添加一个。",
     characters: "文本字符",
     progress: "已完成 <hl>{{done}}</hl>/{{total}}",
     mode_free: "列表",
@@ -1425,6 +1424,9 @@ const zh = {
     trash_title: "回收站是空的",
     trash_text: "删除的笔记会在这里保留 {{days}} 天。",
     trash_text_unlimited: "删除的笔记会一直保留在这里，直到你将其移除。",
+    list_title: "还没有项目",
+    list_text: "点按 + 添加第一项。",
+    list_text_read_only: "此列表没有项目。",
   },
 
   empty_title: "（无题）",

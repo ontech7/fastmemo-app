@@ -256,7 +256,6 @@ const en = {
     duplicated: "Note duplicated",
     title_placeholder: "Title",
     description_placeholder: "Write something here...",
-    no_items: "There are no items.\nAdd one by pressing the bottom right button.",
     characters: "characters",
     progress: "<hl>{{done}}</hl> of {{total}} completed",
     mode_free: "List",
@@ -1462,6 +1461,9 @@ const en = {
     trash_title: "The trash is empty",
     trash_text: "Deleted notes stay here for {{days}} days.",
     trash_text_unlimited: "Deleted notes stay here until you remove them.",
+    list_title: "No items yet",
+    list_text: "Tap + to add the first one.",
+    list_text_read_only: "This list has no items.",
   },
 
   empty_title: "(No title)",

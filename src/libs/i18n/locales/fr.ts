@@ -256,7 +256,6 @@ const fr = {
     duplicated: "Note dupliquée",
     title_placeholder: "Titre",
     description_placeholder: "Écrivez quelque chose ici...",
-    no_items: "Il n'y a aucun élément.\nAjoutez-en un en appuyant sur le bouton en bas à droite.",
     characters: "caractères",
     progress: "<hl>{{done}}</hl> sur {{total}} terminés",
     mode_free: "Liste",
@@ -1493,6 +1492,9 @@ const fr = {
     trash_title: "La corbeille est vide",
     trash_text: "Les notes supprimées restent ici {{days}} jours.",
     trash_text_unlimited: "Les notes supprimées restent ici jusqu'à ce que vous les retiriez.",
+    list_title: "Pas encore d'éléments",
+    list_text: "Touchez + pour ajouter le premier.",
+    list_text_read_only: "Cette liste n'a aucun élément.",
   },
 
   empty_title: "(Pas de titre)",
