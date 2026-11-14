@@ -6,6 +6,7 @@ import type { EditChanges } from "@/libs/mcp/noteEdit";
 import { booleanFlag, buildNote } from "@/libs/mcp/noteInput";
 import { noteForAgent, noteSearchText, noteSummary } from "@/libs/mcp/noteView";
 import { findVisibleNote, isVisibleToAgent, NOT_FOUND } from "@/libs/mcp/policy";
+import type { VersionReason } from "@/libs/history/limits";
 import type { McpReply, McpRequest, UpdateCheck } from "@/libs/mcp/types";
 import {
   addNote,
@@ -54,6 +55,8 @@ export interface McpDeps {
   helpBody(base: string): Record<string, string> | null;
   /** The string at an i18n key: a topic's `help.<topic>.title`, or a category's `help.cat_*`. */
   helpTitle(key: string): string;
+  /** Keeps a note as it is before an agent's edit rewrites it (spec B.9). Returns at once; a failure stops nothing. */
+  keepVersion?: (note: Note, reason: VersionReason) => void;
 }
 
 const STILL_STARTING = "Fast Memo is still starting: try again in a moment.";
@@ -320,6 +323,12 @@ async function editNote(req: McpRequest, deps: McpDeps): Promise<McpReply> {
 
   const edit = applyEdit(found, args as EditChanges, deps);
   if ("error" in edit) return refused(edit.error);
+
+  try {
+    deps.keepVersion?.(found, "agent");
+  } catch {
+    // a version not kept never stops the edit
+  }
 
   // The edited copy is the payload of a change to the stored note: the reducer stamps its revision and queues the upload.
   deps.dispatch(addNote({ ...edit.note, updatedAt: Math.max(deps.now(), (Number(found.updatedAt) || 0) + 1) }));

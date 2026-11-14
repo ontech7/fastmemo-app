@@ -152,6 +152,31 @@ console.log("\na note left empty (not kept when its editor closes)");
   ok("board: no title, three empty cards", isKanbanNoteEmpty(board("", [["", ""], [""]])));
   ok("board: no title, one card typed", !isKanbanNoteEmpty(board("", [["", "uno"], []])));
   ok("board: a title, empty cards", !isKanbanNoteEmpty(board("Lavori", [[""]])));
+  const { isTextNoteEmpty } = M;
+  const text = (title, html) => ({ title, text: html });
+  ok("text: nothing at all", isTextNoteEmpty(text("", "")));
+  ok(
+    "text: what the editor leaves when everything is deleted",
+    [
+      "<div><br></div>",
+      "<br>",
+      "<p></p>",
+      "<div>&nbsp; </div><div><br></div>",
+      "<h1><br></h1>",
+      "<ul><li><br></li></ul>",
+    ].every((html) => isTextNoteEmpty(text("", html)))
+  );
+  ok("text: a word", !isTextNoteEmpty(text("", "<div>ciao</div>")));
+  ok(
+    "text: a picture, a rule, a checkbox or a link to a note is something",
+    [
+      '<div><img src="data:x"></div>',
+      "<hr>",
+      '<ol class="x-todo"><li><span class="x-todo-box"><input type="checkbox"></span></li></ol>',
+      '<a href="#fm-note-a" contenteditable="false">A</a>',
+    ].every((html) => !isTextNoteEmpty(text("", html)))
+  );
+  ok("text: a title alone", !isTextNoteEmpty(text("Idea", "<div><br></div>")));
 }
 
 console.log("\nisKnownNoteType");

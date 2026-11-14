@@ -17,6 +17,8 @@ const STUBS = {
   "@/libs/cloud": `export const only_if_cloudConnected = (cb) => cb(); export const isCloudConnected = () => true; export const cloud = null;`,
   // The app's note store, which the wipe thunk uses (ADR-018).
   "@/libs/storage/notes": `export const noteStore = null; export const notesNeedSorting = () => false;`,
+  // The history of versions (the wipe thunk wipes it; the store keeps them on a device).
+  "@/libs/history": `export const wipeHistory = async () => {}; export const keepVersion = () => {};`,
   // A test locks the vault with globalThis.__vaultLocked.
   "@/libs/vaultSession": `export const isVaultUnlocked = () => globalThis.__vaultLocked !== true; export const getDEK = () => "k1";`,
   // Counts what the slice encrypts (the upload queue holds markers: nothing, ADR-036).
@@ -776,6 +778,7 @@ const makeDevice = async (cloud, name, opts = {}) => {
     },
     flushEditors: () => {},
     conflictSuffix: () => "(conflict)",
+    ...(opts.keepVersion && { keepVersion: (note, reason) => opts.keepVersion(device, note, reason) }),
     timing: { pushMinInterval: 0, ackQuiet: 30, ackMaxWait: 150, ...opts.timing },
     events: {
       onApplied: (e) => {
@@ -1059,6 +1062,73 @@ await scenario("push based on an outdated version: merged, not overwritten", asy
   ]);
   ok("B's (newer) edit keeps the note", a.get("n1")?.text === "B's v2");
 });
+
+// Before another device's version replaces a note here, the note as it was is kept (spec B.9): by the engine's
+// dependency, before the store changes, on each of the three ways a version arrives.
+{
+  const kept = [];
+  const spy = (device, note, reason) =>
+    kept.push({ on: device.name, id: note.id, text: note.text, reason, storedThen: device.get(note.id)?.text });
+  await scenario("a version is kept before another device's replaces a note", async ({ cloud, add, settle }) => {
+    const a = await add("A");
+    const b = await add("B", { keepVersion: spy });
+    a.engine.start();
+    b.engine.start();
+    a.dispatch(N.addNote(newNote("n1", "v1")));
+    await settle();
+    ok("a note that only exists remotely keeps nothing", kept.length === 0, kept);
+
+    edit(a, "n1", "v2");
+    await settle();
+    ok(
+      "another device's queue: the local note, once, as 'sync', before the store changed",
+      kept.length === 1 &&
+        kept[0].on === "B" &&
+        kept[0].text === "v1" &&
+        kept[0].reason === "sync" &&
+        kept[0].storedThen === "v1" &&
+        b.get("n1")?.text === "v2",
+      kept
+    );
+
+    kept.length = 0;
+    a.dispatch(N.addNote({ ...a.get("n1"), important: true, updatedAt: Date.now() }));
+    await settle();
+    ok("only the flags or the revision differ: nothing kept", kept.length === 0 && b.get("n1")?.important === true, kept);
+
+    // A full sync: B hears nothing, then syncs everything.
+    const listener = b.backend.listener;
+    b.backend.listener = null;
+    edit(a, "n1", "v3");
+    await settle();
+    cloud.devices.get("B").addNotes = {};
+    kept.length = 0;
+    ok("full sync completes", await b.engine.fullSync());
+    ok(
+      "a full sync keeps the note it replaces",
+      kept.length === 1 && kept[0].text === "v2" && kept[0].reason === "sync" && b.get("n1")?.text === "v3",
+      kept
+    );
+    b.backend.listener = listener;
+    await settle();
+
+    // A refused push: B edits offline first, A edits later; B's push is refused and A's newer version replaces B's.
+    goOffline(b);
+    edit(b, "n1", "B, offline");
+    await sleep(5);
+    edit(a, "n1", "A, later");
+    await settle();
+    cloud.devices.get("B").addNotes = {};
+    kept.length = 0;
+    await goOnline(b);
+    await settle();
+    ok(
+      "a refused push keeps the note it replaces",
+      kept.some((k) => k.id === "n1" && k.text === "B, offline" && k.reason === "sync") && b.get("n1")?.text === "A, later",
+      [kept, b.get("n1")?.text]
+    );
+  });
+}
 
 await scenario("full sync merges, never drops", async ({ cloud, add, settle }) => {
   const a = await add("A");

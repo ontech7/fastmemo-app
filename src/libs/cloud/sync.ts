@@ -16,6 +16,7 @@ import { dekMatchesVault } from "@/utils/vault";
 import { cloud, getDeviceUuid } from "./index";
 import { type CloudReachability, SyncEngine, type SyncEvents, type SyncStore } from "./syncEngine";
 import type { CloudDevice } from "./types";
+import { keepVersion } from "@/libs/history";
 
 /** What the sync engine reports to the app (UI, editors, presence). */
 export type SyncEvent =
@@ -141,6 +142,7 @@ export const getSyncEngine = async (): Promise<SyncEngine | null> => {
     },
     flushEditors: flushPending,
     conflictSuffix: () => t("cloudsync.conflict_suffix"),
+    keepVersion,
     events: {
       onApplied: (result) => emit({ type: "applied", ...result, openNote: engine?.openNote ?? null }),
       onDevices: (devices) => emit({ type: "devices", devices }),

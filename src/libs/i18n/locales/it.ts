@@ -268,6 +268,7 @@ const it = {
     delete_done_title: "Eliminare le voci completate?",
     delete_done_text: "Le voci completate di questa lista saranno eliminate.",
     hidden_done: "Completate nascoste: {{count}}",
+    emptied_to_trash: "La nota vuota è stata spostata nel cestino",
     show: "Mostra",
     ongoing: "In corso",
     created: "Creato: ",

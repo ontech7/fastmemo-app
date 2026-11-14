@@ -24,6 +24,8 @@ const STUBS = {
   "@/constants/icons": `export const CATEGORY_MAP = {};`,
   // The app's note store (the wipe thunk's): each launch here makes its own.
   "@/libs/storage/notes": `export const noteStore = null; export const notesNeedSorting = () => false;`,
+  // The history of versions (the wipe thunk wipes it; the store keeps them on a device).
+  "@/libs/history": `export const wipeHistory = async () => {}; export const keepVersion = () => {};`,
   // The web backend's IndexedDB (localforage): the test's in-memory one.
   "@/libs/storage/fsStorage": `export default () => globalThis.__fakeIdb;`,
 };

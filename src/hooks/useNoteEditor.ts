@@ -1,4 +1,5 @@
 import { flushNow } from "@/libs/flushOnExit";
+import { keepVersion as keepNoteVersion, type VersionReason } from "@/libs/history";
 import { registerPendingFlush, storeDirtyNoteId } from "@/libs/registry";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
@@ -16,7 +17,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppState, BackHandler, Keyboard } from "react-native";
 import { KeyboardController } from "react-native-keyboard-controller";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector, useStore } from "react-redux";
 
 import type { Note, NoteType, RootState, WebhookPayload } from "@/types";
 
@@ -92,6 +93,8 @@ interface UseNoteEditorResult<T extends Note> {
    * persisted/shown in the list. Empty string once the note has a title or isn't new.
    */
   autoTitle: string;
+  /** Keeps the note as the editor holds it now (typed but not yet saved edits included). */
+  keepVersion: (reason: VersionReason) => void;
 }
 
 /**
@@ -146,6 +149,12 @@ export function useNoteEditor<T extends Note>({
     getTitleSourceRef.current = getTitleSource;
   }, [getTitleSource]);
   const wasNewRef = useRef(initialNote.createdAt === initialNote.updatedAt);
+  // A note that was saved before this sitting (not one created now): its first change keeps the version it opened with,
+  // and emptying it sends it to the trash instead of deleting it.
+  const existedRef = useRef(initialNote.createdAt !== initialNote.updatedAt);
+  const editKeptRef = useRef(false);
+  const emptiedRef = useRef(false);
+  const store = useStore<RootState>();
   const autoTitle = wasNewRef.current && !note.title.trim() && getTitleSource ? deriveNoteTitle(getTitleSource(note)) : "";
 
   /* --- Common webhook payload composer --- */
@@ -200,9 +209,24 @@ export function useNoteEditor<T extends Note>({
 
   const commitNote = useCallback(
     (currNote: T) => {
+      // The sitting's first change of a saved note (emptying it too): the note as it opened is kept as a version, when
+      // idle (spec B.9).
+      if (existedRef.current && !editKeptRef.current) {
+        editKeptRef.current = true;
+        keepNoteVersion(initialNote as unknown as Note, "edit");
+      }
+
       if (isEmpty(currNote)) {
-        dispatch(temporaryDeleteNote(currNote.id));
-        dispatch(deleteNote(currNote.id));
+        if (!existedRef.current) {
+          dispatch(temporaryDeleteNote(currNote.id));
+          dispatch(deleteNote(currNote.id));
+          return;
+        }
+        // Emptied: to the trash as it was last saved (typing again brings it back, addNote takes a trashed id back).
+        if (store.getState().notes.items.some((n) => n.id === currNote.id)) {
+          dispatch(temporaryDeleteNote(currNote.id));
+          emptiedRef.current = true;
+        }
         return;
       }
 
@@ -230,7 +254,7 @@ export function useNoteEditor<T extends Note>({
         } as Note)
       );
     },
-    [dispatch, isEmpty, defaultType]
+    [dispatch, isEmpty, defaultType, store, initialNote]
   );
 
   const commitNoteRef = useRef(commitNote);
@@ -288,6 +312,15 @@ export function useNoteEditor<T extends Note>({
   // Never leave a batch behind: the editor goes away, or the app may be killed once in background.
   useEffect(() => () => flushNote(), [flushNote]);
 
+  // Closed on a saved note left empty: it went to the trash, and the person is told so.
+  useEffect(
+    () => () => {
+      if (emptiedRef.current && isEmpty(currentRef.current)) toast(t("note.emptied_to_trash"));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
   useEffect(() => registerPendingFlush(flushNote), [flushNote]);
 
   /* --- Changes from other devices --- */
@@ -324,6 +357,8 @@ export function useNoteEditor<T extends Note>({
         action: "note/temporaryDeleteNote",
         id: note.id,
       });
+      // a saved note emptied stays in the trash
+      if (existedRef.current) return;
       await webhook(webhook_deleteNote, {
         action: "note/deleteNote",
         id: note.id,
@@ -360,5 +395,10 @@ export function useNoteEditor<T extends Note>({
     }, [flushNote])
   );
 
-  return { note, setNote, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle };
+  const keepVersion = useCallback(
+    (reason: VersionReason) => keepNoteVersion(currentRef.current as unknown as Note, reason),
+    []
+  );
+
+  return { note, setNote, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle, keepVersion };
 }

@@ -1,6 +1,7 @@
 import type { UnknownAction } from "@reduxjs/toolkit";
 
 import type { Category, Note, RootState, UploadMarker } from "@/types";
+import { replacedByPlan, type VersionReason } from "@/libs/history/limits";
 import type { VaultDoc } from "@/utils/vault";
 
 import { createPlanner, isEmptyPlan, reconcileCategories, type LocalNotes, type SyncPlan } from "./merge";
@@ -132,6 +133,11 @@ export interface SyncEngineOptions {
   /** Appended to the title of a conflict copy. */
   conflictSuffix(): string;
   events: SyncEvents;
+  /**
+   * Keeps a note as it is before another device's version replaces it (spec B.9). Called before the store changes; it
+   * returns at once, and a failure of it never stops a sync.
+   */
+  keepVersion?: (note: Note, reason: VersionReason) => void;
   /** Overrides the waits (tests). */
   timing?: Partial<Pacing>;
 }
@@ -641,7 +647,7 @@ export class SyncEngine {
     deletes.forEach(planner.remove);
     detaches.forEach(planner.detach);
     const plan = planner.plan();
-    if (!isEmptyPlan(plan)) this.o.store.dispatch(this.o.actions.applyNotesPlan(plan));
+    this.applyPlan(plan);
 
     const categories = Object.keys(categoryAdds).length > 0 || Object.keys(categoryDeletes).length > 0;
     if (Object.keys(categoryAdds).length > 0) this.o.store.dispatch(this.o.actions.addLocalCategories(categoryAdds));
@@ -652,6 +658,22 @@ export class SyncEngine {
       this.o.events.onApplied({ changed: plan.changed, conflicts: plan.conflicts, categories, full: false });
     }
     return this.persisted();
+  }
+
+  /** A merge's plan into the store: first, the live notes it gives another title or content are kept as versions. */
+  private applyPlan(plan: SyncPlan): void {
+    if (isEmptyPlan(plan)) return;
+    const keep = this.o.keepVersion;
+    if (keep && plan.put.length > 0) {
+      for (const note of replacedByPlan(this.o.store.getState().notes.items, plan.put)) {
+        try {
+          keep(note, "sync");
+        } catch {
+          // a version not kept never stops a sync
+        }
+      }
+    }
+    this.o.store.dispatch(this.o.actions.applyNotesPlan(plan));
   }
 
   /** Whether what was just merged is on disk: until it is, nothing gets acknowledged (the sender keeps it queued). */
@@ -692,7 +714,7 @@ export class SyncEngine {
     const planner = createPlanner(localNotes(state), this.o.conflictSuffix());
     planner.reconcile(versions, cloudRevs, tombstones);
     const plan = planner.plan();
-    if (!isEmptyPlan(plan)) store.dispatch(this.o.actions.applyNotesPlan(plan));
+    this.applyPlan(plan);
 
     const categoryPlan = reconcileCategories(state.categories.items, state.categories.cloud.items, cloudCategories);
     store.dispatch(this.o.actions.applyCategoriesPlan(categoryPlan));
@@ -722,7 +744,7 @@ export class SyncEngine {
     const plan = planner.plan();
     // A version this key never sealed is garbage: the next push overwrites it.
     unreadable.forEach((note) => (plan.synced[note.id] = Math.max(plan.synced[note.id] ?? 0, noteRev(note))));
-    if (!isEmptyPlan(plan)) this.o.store.dispatch(this.o.actions.applyNotesPlan(plan));
+    this.applyPlan(plan);
     if (plan.changed.length > 0) {
       this.o.events.onApplied({ changed: plan.changed, conflicts: plan.conflicts, categories: false, full: false });
     }

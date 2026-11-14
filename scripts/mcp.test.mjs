@@ -19,6 +19,8 @@ const out = join(os.tmpdir(), "mcp.bundle.mjs");
 const STUBS = {
   "@/libs/cloud": `export const only_if_cloudConnected = (cb) => cb(); export const isCloudConnected = () => false; export const cloud = null; export const noteTextLimit = () => 1000;`,
   "@/libs/storage/notes": `export const noteStore = null; export const notesNeedSorting = () => false;`,
+  // The history of versions (the wipe thunk wipes it; the store keeps them on a device).
+  "@/libs/history": `export const wipeHistory = async () => {}; export const keepVersion = () => {};`,
   "@/libs/vaultSession": `export const isVaultUnlocked = () => true; export const getDEK = () => "k1";`,
   "@/utils/crypt": `export const CryptNote = { encrypt: (note) => ({ ...note, sealed: "outbox" }) };`,
   "@/configs/default": `export const defaultCategory = { order: 0, name: "All", icon: "none", index: true, selected: true };`,
@@ -1045,6 +1047,46 @@ const editor = (notes = SEED, overrides = {}) => {
   const inTrash = (id) => c.store.getState().notes.temporaryItems.some((note) => note.id === id);
   return { ...c, edit, editNow, trash, inItems, inTrash };
 };
+
+// Before an agent's edit, the note as it was is kept as a version (spec B.9): only an edit that goes through.
+{
+  const kept = [];
+  let h;
+  h = editor(SEED, {
+    keepVersion: (note, reason) => kept.push({ note, reason, storedThen: h.stored(note.id) }),
+  });
+  const before = h.stored("open");
+  const reply = await h.editNow("open", { replaceHtml: "<p>changed by an agent</p>" });
+  ok(
+    "an agent's edit keeps the note as it was, once, as 'agent', before the store changes",
+    !reply.isError &&
+      kept.length === 1 &&
+      kept[0].note === before &&
+      kept[0].reason === "agent" &&
+      kept[0].storedThen === before &&
+      h.stored("open") !== before,
+    kept.map((k) => k.reason)
+  );
+  kept.length = 0;
+  await h.editNow("ro", { title: "x" });
+  await h.edit("open", 0, { title: "stale" });
+  await h.editNow("lockedNote", { title: "x" });
+  ok("a refused edit keeps nothing (read-only, an old revision, out of reach)", kept.length === 0, kept.length);
+  await h.call("fastmemo_set_note_flags", { id: "open", important: true });
+  await h.trash("open");
+  ok("the flags and the trash tools keep nothing", kept.length === 0, kept.length);
+  const throwing = editor(SEED, {
+    keepVersion: () => {
+      throw new Error("history is broken");
+    },
+  });
+  const anyway = await throwing.editNow("open", { title: "Edited anyway" });
+  ok(
+    "the edit works when keeping a version throws",
+    !anyway.isError && throwing.stored("open").title === "Edited anyway",
+    anyway.text
+  );
+}
 
 {
   const { edit, editNow, stored, log, seen } = editor();

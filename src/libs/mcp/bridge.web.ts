@@ -19,6 +19,7 @@ import type { RootState } from "@/types";
 import { formatDateTime } from "@/utils/date";
 import { isTauri } from "@/utils/platform";
 import { webhook } from "@/utils/webhook";
+import { keepVersion } from "@/libs/history";
 
 /*
  * The page's end of the local MCP server: Rust relays each tool call here as an event, since the notes live in the page, and
@@ -93,6 +94,7 @@ const deps: McpDeps = {
   checkUpdate,
   helpBody,
   helpTitle: (key) => String(i18n.t(key)),
+  keepVersion,
 };
 
 /** Always an answer, even for a page error: without one, Rust would wait for its timeout. */

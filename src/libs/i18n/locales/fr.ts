@@ -267,6 +267,7 @@ const fr = {
     delete_done_title: "Supprimer les éléments terminés ?",
     delete_done_text: "Les éléments terminés de cette liste seront supprimés.",
     hidden_done: "Terminées masquées : {{count}}",
+    emptied_to_trash: "La note vide a été placée dans la corbeille",
     show: "Afficher",
     ongoing: "En cours",
     created: "Créé: ",

@@ -14,6 +14,7 @@ import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import TextFormatBar, { TEXT_FORMAT_BAR_HEIGHT } from "@/components/notes/TextFormatBar";
 import type { InsertKind, TextFormatBarRef } from "@/components/notes/TextFormatBar";
 import { takeFindOnOpen } from "@/libs/search/findOnOpen";
+import { isTextNoteEmpty } from "@/utils/noteEmpty";
 import { createTextFindTarget } from "@/libs/findTarget";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
@@ -213,7 +214,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
   const showVoiceButton = voiceRecognition.enabled;
 
   const memoInitialNote = useMemo<TextNote>(() => ({ ...initialNote, type: initialNote.type || "text" }), [initialNote]);
-  const isEmpty = useCallback((n: TextNote) => isStringEmpty(n.title) && isStringEmpty(n.text), []);
+  const isEmpty = useCallback((n: TextNote) => isTextNoteEmpty(n), []);
   const buildPayloadExtras = useCallback((n: TextNote) => ({ text: n.text }), []);
 
   const [noteTextLength, setNoteTextLength] = useState(() => getTextLength(memoInitialNote.text));
@@ -233,23 +234,25 @@ export default function NoteTextEditor({ initialNote }: Props) {
     richTextEditor.current?.command(restoreCaret(reload));
   }, []);
 
-  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TextNote>({
-    initialNote: memoInitialNote,
-    defaultType: "text",
-    addWebhookSelector: selectorWebhook_addTextNote,
-    addAction: "note/addTextNote",
-    isEmpty,
-    buildPayloadExtras,
-    getTitleSource: (n) => stripHtml(n.text),
-    // Changed on another device while open here: the WebView editor holds its own copy of the content (a page still
-    // loading gets it once it's up).
-    onRemoteChange: (remote, previous) => {
-      if (remote.text === previous.text) return;
-      if (editorReadyRef.current) showRemote(remote.text);
-      // The character count follows from the page (COUNT_MESSAGE) once it shows the new text.
-      setNoteTextSize(getTextSize(remote.text));
-    },
-  });
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle, keepVersion } = useNoteEditor<TextNote>(
+    {
+      initialNote: memoInitialNote,
+      defaultType: "text",
+      addWebhookSelector: selectorWebhook_addTextNote,
+      addAction: "note/addTextNote",
+      isEmpty,
+      buildPayloadExtras,
+      getTitleSource: (n) => stripHtml(n.text),
+      // Changed on another device while open here: the WebView editor holds its own copy of the content (a page still
+      // loading gets it once it's up).
+      onRemoteChange: (remote, previous) => {
+        if (remote.text === previous.text) return;
+        if (editorReadyRef.current) showRemote(remote.text);
+        // The character count follows from the page (COUNT_MESSAGE) once it shows the new text.
+        setNoteTextSize(getTextSize(remote.text));
+      },
+    }
+  );
 
   const [showFindReplace, setShowFindReplace] = useState(false);
   // Opened from a search result: its word, shown in the find bar once the page is ready.
@@ -665,6 +668,7 @@ export default function NoteTextEditor({ initialNote }: Props) {
               setFindWord(undefined);
             }}
             target={findTarget}
+            onBeforeReplaceAll={() => keepVersion("replace")}
             readOnly={note.readOnly}
             initialQuery={findWord}
             style={{ marginTop: PADDING_MARGIN.md }}
@@ -715,6 +719,8 @@ export default function NoteTextEditor({ initialNote }: Props) {
                       if (cat) updateNoteAsync((current) => ({ ...current, category: cat }));
                     }}
                     onHtmlChanged={(html) => {
+                      // the note before the AI's rewrite is kept as a version (spec B.9)
+                      keepVersion("ai");
                       richTextEditor.current?.setContentHTML(html);
                       setText(html);
                     }}

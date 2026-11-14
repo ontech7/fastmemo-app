@@ -40,15 +40,17 @@ export function useTodoList(initialNote: TodoNote) {
     [initialNote]
   );
 
-  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<TodoNote>({
-    initialNote: memoInitialNote,
-    defaultType: "todo",
-    addWebhookSelector: selectorWebhook_addTodoNote,
-    addAction: "note/addTodoNote",
-    isEmpty: isTodoNoteEmpty,
-    buildPayloadExtras,
-    getTitleSource,
-  });
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle, keepVersion } = useNoteEditor<TodoNote>(
+    {
+      initialNote: memoInitialNote,
+      defaultType: "todo",
+      addWebhookSelector: selectorWebhook_addTodoNote,
+      addAction: "note/addTodoNote",
+      isEmpty: isTodoNoteEmpty,
+      buildPayloadExtras,
+      getTitleSource,
+    }
+  );
 
   // Autofocus is per-row: only the row whose id matches `focusId` grabs focus. A brand-new note focuses its first row;
   // opening an existing note focuses nothing so the user can just read. `focusId` is seeded synchronously so the target
@@ -190,15 +192,15 @@ export function useTodoList(initialNote: TodoNote) {
   );
 
   // The done items removed in one edit (the editor asks first).
-  const deleteDone = useCallback(
-    () =>
-      updateNoteAsync((current) => {
-        if (current.readOnly) return current;
-        const list = withoutDone(current.list);
-        return list.length === current.list.length ? current : { ...current, list };
-      }),
-    [updateNoteAsync]
-  );
+  const deleteDone = useCallback(() => {
+    // the list before it is kept as a version (spec B.9)
+    keepVersion("cleanup");
+    updateNoteAsync((current) => {
+      if (current.readOnly) return current;
+      const list = withoutDone(current.list);
+      return list.length === current.list.length ? current : { ...current, list };
+    });
+  }, [updateNoteAsync, keepVersion]);
 
   const setMode = useCallback(
     (mode: TodoNote["mode"]) => {
@@ -231,9 +233,11 @@ export function useTodoList(initialNote: TodoNote) {
     (texts: string[]) => {
       if (texts.length === 0) return;
       const items = texts.map((text) => newItem(capitalize(text)));
+      // the list before the AI's items is kept as a version (spec B.9)
+      keepVersion("ai");
       updateNoteAsync((current) => ({ ...current, list: [...current.list, ...items] }));
     },
-    [updateNoteAsync]
+    [updateNoteAsync, keepVersion]
   );
 
   const insertVoiceLines = useCallback(

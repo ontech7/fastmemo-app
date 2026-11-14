@@ -267,6 +267,7 @@ const de = {
     delete_done_title: "Erledigte Einträge löschen?",
     delete_done_text: "Die erledigten Einträge dieser Liste werden gelöscht.",
     hidden_done: "Erledigte ausgeblendet: {{count}}",
+    emptied_to_trash: "Die leere Notiz wurde in den Papierkorb verschoben",
     show: "Anzeigen",
     ongoing: "Laufend",
     created: "Erstellt: ",

@@ -267,6 +267,7 @@ const ja = {
     delete_done_title: "完了した項目を削除しますか？",
     delete_done_text: "このリストの完了した項目が削除されます。",
     hidden_done: "非表示の完了項目：{{count}}",
+    emptied_to_trash: "空のメモをゴミ箱に移動しました",
     show: "表示",
     ongoing: "進行中",
     created: "作成: ",

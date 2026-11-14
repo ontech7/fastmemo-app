@@ -267,6 +267,7 @@ const en = {
     delete_done_title: "Delete the completed items?",
     delete_done_text: "The completed items of this list will be deleted.",
     hidden_done: "Completed hidden: {{count}}",
+    emptied_to_trash: "The empty note was moved to the trash",
     show: "Show",
     ongoing: "Ongoing",
     created: "Created: ",

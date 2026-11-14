@@ -266,6 +266,7 @@ const zh = {
     delete_done_title: "删除已完成的项目？",
     delete_done_text: "此列表中已完成的项目将被删除。",
     hidden_done: "已隐藏的已完成项：{{count}}",
+    emptied_to_trash: "空笔记已移到回收站",
     show: "显示",
     ongoing: "进行中",
     created: "创建: ",

@@ -27,6 +27,8 @@ const STUBS = {
   "@/libs/cloud": `export const only_if_cloudConnected = (cb) => cb(); export const isCloudConnected = () => true; export const cloud = null;`,
   // The app's note store, which the wipe thunk uses (ADR-018).
   "@/libs/storage/notes": `export const noteStore = null; export const notesNeedSorting = () => false;`,
+  // The history of versions (the wipe thunk wipes it; the store keeps them on a device).
+  "@/libs/history": `export const wipeHistory = async () => {}; export const keepVersion = () => {};`,
   "@/libs/vaultSession": `export const isVaultUnlocked = () => true; export const getDEK = () => "k1";`,
   "@/utils/crypt": `export const CryptNote = { encrypt: (note) => ({ ...note, sealed: "outbox" }) };`,
   "@/configs/default": `export const defaultCategory = { order: 0, name: "All", icon: "none", index: true, selected: true };`,

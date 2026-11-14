@@ -2455,6 +2455,27 @@ real error objects the backends throw.
 **Tracking issue:** (not filed; captured here) **Status:** Resolved  
 **Resolved:** 2026-11-12 **Resolved in:** plan-1/fixes-performance-polish
 
+### LL-093: An existing note edited down to nothing was deleted for good
+
+**Date:** 2026-11-14  
+**Severity:** High (a saved note, title and text, gone without the trash and without an undo)  
+**Category:** Bug / Data loss  
+**What happened:** the editors' commit treated any note that had become empty as a note never written: temporary delete,
+then delete for good. That is right for a new note left empty, but a saved note whose title and text were cleared (select
+all, delete) and then left was purged too. A text note's empty body is not an empty string: the page leaves
+`<div><br></div>`, so the emptiness check also had to read the markup.  
+**Root cause:** "empty" was the only question; "did this note exist before this sitting?" was never asked.  
+**Fix:** `useNoteEditor` (both files) remembers whether the note existed when it opened (`createdAt !== updatedAt`): an
+existing note that is emptied goes to the trash (`temporaryDeleteNote`) with its last saved text, the toast
+`note.emptied_to_trash` says so when the editor closes, and an "edit" version of it is kept first; typing again before
+leaving brings it back. Only a new note left empty is still removed. `isTextNoteEmpty` (`utils/noteEmpty`) reads a text
+note's markup: no title, no picture, rule, checkbox or note link, and no text once tags and `&nbsp;` are gone.  
+**Rule:** never delete for good what the person wrote and saved, except through the trash; an editor's "empty" check
+asks whether the note existed before, and a text note's emptiness is read from its markup.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-14 **Resolved in:** plan-2/new-features
+
 ---
 
 ## Template for New Entries

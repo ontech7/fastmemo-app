@@ -1,4 +1,4 @@
-import type { KanbanNote, TodoNote } from "@/types";
+import type { KanbanNote, TextNote, TodoNote } from "@/types";
 import { isStringEmpty } from "@/utils/string";
 
 /*
@@ -20,4 +20,22 @@ export const isKanbanNoteEmpty = (n: Pick<KanbanNote, "title" | "columns">) => {
   // typed into still trashes itself on exit.
   const noCards = n.columns?.every((col) => (col.items ?? []).every((item) => isStringEmpty(item.text)));
   return noTitle && (noColumns || noCards);
+};
+
+/** What a text note's HTML shows besides words: a picture, a rule, a checkbox, a link to another note. */
+const SHOWS_SOMETHING = /<(img|hr|input)\b|href="#fm-note-/i;
+
+/**
+ * No title, and the HTML shows nothing: what the editor leaves when everything was deleted (`<div><br></div>`, an empty
+ * heading or bullet, spaces) counts as nothing typed.
+ */
+export const isTextNoteEmpty = (n: Pick<TextNote, "title" | "text">) => {
+  if (!isStringEmpty(n.title)) return false;
+  const html = n.text ?? "";
+  if (SHOWS_SOMETHING.test(html)) return false;
+  const words = html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;|&#160;|\u00a0|\u200b/gi, "")
+    .trim();
+  return words === "";
 };

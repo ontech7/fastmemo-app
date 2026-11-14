@@ -25,6 +25,7 @@ import { useVaultPrompt } from "@/hooks/useVaultPrompt";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import { addTrail } from "@/libs/diagnostics";
 import Haptics from "@/libs/haptics";
+import { type AppStore as HistoryStore, startHistory } from "@/libs/history";
 import type { SearchHit } from "@/libs/search/search";
 import type { TagCount } from "@/libs/search/tags";
 import { windowReady } from "@/libs/windowReady";
@@ -91,6 +92,9 @@ export default function HomeScreen() {
   const [changelogChecked, setChangelogChecked] = useState(false);
 
   const store = useStore();
+
+  // After the first draw: the versions of a note deleted for good go with it, and the history is swept once (spec B.9).
+  useEffect(() => startHistory(store as unknown as HistoryStore), [store]);
 
   const currentCategory = useSelector(getCurrentCategory);
   const showHidden = useSelector(selectorShowHidden);

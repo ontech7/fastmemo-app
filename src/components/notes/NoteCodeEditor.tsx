@@ -135,20 +135,22 @@ export default function NoteCodeEditor({ initialNote }: Props) {
     [setShownTabId]
   );
 
-  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle } = useNoteEditor<CodeNote>({
-    initialNote: memoInitialNote,
-    defaultType: "code",
-    addWebhookSelector: selectorWebhook_addCodeNote,
-    addAction: "note/addCodeNote",
-    isEmpty: isCodeNoteEmpty,
-    buildPayloadExtras,
-    getTitleSource: (n) =>
-      n.tabs
-        .map((tab) => tab.code)
-        .filter(Boolean)
-        .join(" "),
-    onRemoteChange,
-  });
+  const { note, setNoteAsync, updateNoteAsync, flushNote, updateNoteWebhook, autoTitle, keepVersion } = useNoteEditor<CodeNote>(
+    {
+      initialNote: memoInitialNote,
+      defaultType: "code",
+      addWebhookSelector: selectorWebhook_addCodeNote,
+      addAction: "note/addCodeNote",
+      isEmpty: isCodeNoteEmpty,
+      buildPayloadExtras,
+      getTitleSource: (n) =>
+        n.tabs
+          .map((tab) => tab.code)
+          .filter(Boolean)
+          .join(" "),
+      onRemoteChange,
+    }
+  );
 
   // The page sends its text when typing pauses: the app going to the background or the tab closing asks for it now. On
   // the web it is handed over before flush() returns and committed here; on a phone it arrives while the app isn't
@@ -367,6 +369,7 @@ export default function NoteCodeEditor({ initialNote }: Props) {
                 setFindWord(undefined);
               }}
               target={findTarget}
+              onBeforeReplaceAll={() => keepVersion("replace")}
               readOnly={note.readOnly}
               initialQuery={findWord}
               scope={activeTab?.id}

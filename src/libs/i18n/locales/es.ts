@@ -267,6 +267,7 @@ const es = {
     delete_done_title: "¿Eliminar los elementos completados?",
     delete_done_text: "Se eliminarán los elementos completados de esta lista.",
     hidden_done: "Completadas ocultas: {{count}}",
+    emptied_to_trash: "La nota vacía se movió a la papelera",
     show: "Mostrar",
     ongoing: "En curso",
     created: "Creado: ",
