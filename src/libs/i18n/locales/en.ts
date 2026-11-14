@@ -280,6 +280,8 @@ const en = {
       code: "Code",
     },
     settings: {
+      open: "Open",
+      move_to_trash: "Move to trash",
       delete: "Delete",
       important: "Important",
       protect: "Protect",

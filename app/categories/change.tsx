@@ -22,7 +22,8 @@ import { COLOR, FONT, FONTSIZE, PADDING_MARGIN, SIZE } from "@/constants/styles"
 export default function ChangeCategoryScreen() {
   const { t } = useTranslation();
 
-  const { noteId } = useLocalSearchParams<{ noteId: string }>();
+  // `from: "home"`: reached from the desktop's right-click menu on a card, not from inside the note.
+  const { noteId, from } = useLocalSearchParams<{ noteId: string; from?: string }>();
   const currentNote = useSelector(getNote(noteId));
 
   const [selectedCategory, setSelectedCategory] = useState(currentNote?.category || defaultCategory);
@@ -50,6 +51,13 @@ export default function ChangeCategoryScreen() {
         nameTo: selectedCategory.name,
       })
     );
+
+    // From the home: back there. The note wasn't open, so no pass is left for it (a protected note's category changes
+    // without the code: nothing of it is shown here).
+    if (from === "home") {
+      router.back();
+      return;
+    }
 
     router.dismiss();
     // The note was open, so already unlocked: reopening it doesn't ask again (LL-085).

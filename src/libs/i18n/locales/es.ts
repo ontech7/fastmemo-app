@@ -280,6 +280,8 @@ const es = {
       code: "Código",
     },
     settings: {
+      open: "Abrir",
+      move_to_trash: "Mover a la papelera",
       delete: "Borrar",
       important: "Importante",
       protect: "Proteger",

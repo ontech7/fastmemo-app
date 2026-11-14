@@ -281,6 +281,8 @@ const it = {
       code: "Codice",
     },
     settings: {
+      open: "Apri",
+      move_to_trash: "Sposta nel cestino",
       delete: "Cancella",
       important: "Importante",
       protect: "Proteggi",

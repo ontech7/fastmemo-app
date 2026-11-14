@@ -280,6 +280,8 @@ const fr = {
       code: "Code",
     },
     settings: {
+      open: "Ouvrir",
+      move_to_trash: "Mettre à la corbeille",
       delete: "Supprimer",
       important: "Important",
       protect: "Protéger",

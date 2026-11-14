@@ -2,6 +2,7 @@ import AddNoteOverlayButton from "@/components/buttons/AddNoteOverlayButton";
 import DeleteNotesButton from "@/components/buttons/DeleteNotesButton";
 import NoteFiltersButton from "@/components/buttons/NoteFiltersButton";
 import NoteCard from "@/components/cards/NoteCard";
+import NoteContextMenu from "@/components/cards/NoteContextMenu";
 import TagRow from "@/components/cards/TagRow";
 import CloudUnreachableLine from "@/components/cloud/CloudUnreachableLine";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
@@ -24,6 +25,9 @@ import { useSecret } from "@/hooks/useSecret";
 import { useVaultPrompt } from "@/hooks/useVaultPrompt";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import { setListHost } from "@/libs/desktopList";
+import { rangeBetween } from "@/libs/listCursor";
+import { storeUnlockedNote } from "@/libs/registry";
+import { setFindOnOpen } from "@/libs/search/findOnOpen";
 import { addTrail } from "@/libs/diagnostics";
 import Haptics from "@/libs/haptics";
 import { type AppStore as HistoryStore, startHistory } from "@/libs/history";
@@ -52,6 +56,9 @@ import {
   setTourStep,
 } from "@/slicers/settingsSlice";
 import type { Category, Note, RootState } from "@/types";
+import { duplicateNote } from "@/slicers/thunks/duplicateNote";
+import type { AppDispatch } from "@/slicers/store";
+import { toast } from "@/utils/toast";
 import { webhook } from "@/utils/webhook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
@@ -63,6 +70,7 @@ import { KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector, useStore } from "react-redux";
+import type { UnknownAction } from "@reduxjs/toolkit";
 
 /** What the home's list holds: notes, and while searching the groups' headings and the tags. */
 type HomeRow =
@@ -158,54 +166,26 @@ export default function HomeScreen() {
     }
   };
 
-  const toggleImportantNotesFromItems = () => {
-    dispatch(toggleImportantNotes(selectedNotes));
-    webhook(webhook_updateNote, {
-      action: "note/updateNote",
-      extra: "multiple",
-      ids: selectedNotes.map((noteId: string) => noteId.split("|")[0]),
-      property: "important",
-    });
-    setSelectedNotes([]);
-    setIsDeleteMode(false);
-  };
-
-  const toggleReadOnlyNotesFromItems = () => {
-    dispatch(toggleReadOnlyNotes(selectedNotes));
-    webhook(webhook_updateNote, {
-      action: "note/updateNote",
-      extra: "multiple",
-      ids: selectedNotes.map((noteId: string) => noteId.split("|")[0]),
-      property: "readOnly",
-    });
-    setSelectedNotes([]);
-    setIsDeleteMode(false);
-  };
-
-  const toggleHiddenNotesFromItems = () => {
-    dispatch(toggleHiddenNotes(selectedNotes));
-    webhook(webhook_updateNote, {
-      action: "note/updateNote",
-      extra: "multiple",
-      ids: selectedNotes.map((noteId: string) => noteId.split("|")[0]),
-      property: "hidden",
-    });
-    setSelectedNotes([]);
-    setIsDeleteMode(false);
-  };
-
-  const toggleProtectedNotesFromItems = () => {
-    unlockWithSecret(() => {
-      dispatch(toggleProtectedNotes(selectedNotes));
+  // The selection bar's flags, on "id|locked" ids: the selection, or one note from the desktop's right-click menu.
+  const toggleNotesFlag = (flag: NoteFlag, ids: string[], after: () => void) => {
+    const { action, property } = FLAG_ACTIONS[flag];
+    const run = () => {
+      dispatch(action(ids));
       webhook(webhook_updateNote, {
         action: "note/updateNote",
         extra: "multiple",
-        ids: selectedNotes.map((noteId: string) => noteId.split("|")[0]),
-        property: "locked",
+        ids: ids.map((noteId: string) => noteId.split("|")[0]),
+        property,
       });
-      setSelectedNotes([]);
-      setIsDeleteMode(false);
-    });
+      after();
+    };
+    // Protect asks the secret code, as it does from the note's menu.
+    if (flag === "protect") unlockWithSecret(run);
+    else run();
+  };
+  const endSelection = () => {
+    setSelectedNotes([]);
+    setIsDeleteMode(false);
   };
 
   const toggleDeleteMode = useCallback(() => {
@@ -267,36 +247,6 @@ export default function HomeScreen() {
 
   const searchTag = useCallback((tag: TagCount) => setFilterText("#" + tag.label), []);
 
-  // Stable across unrelated re-renders (focus changes, quick-note bar height, ...), so FlashList
-  // only re-renders its cells when the selection or delete mode actually change (LL-019).
-  const renderRow = useCallback(
-    ({ item, index }: { item: HomeRow; index: number }) => {
-      if (item.kind === "header") {
-        return (
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle} numberOfLines={1}>
-              {item.title}
-            </Text>
-            {item.count !== undefined && <Text style={styles.sectionTitle}>{item.count}</Text>}
-          </View>
-        );
-      }
-      if (item.kind === "tag") return <TagRow tag={item.tag} onPress={searchTag} />;
-      return (
-        <NoteCard
-          content={item.note}
-          hit={item.hit}
-          isSelected={selectedNotes.includes(`${item.note.id}|${item.note.locked}`)}
-          selectNote={selectNote}
-          isDeleteMode={isDeleteMode}
-          toggleDeleteMode={toggleDeleteMode}
-          // The tour's last step points at the first note.
-          tourTarget={tourStep === "explore" && index === 0 ? "firstNote" : undefined}
-        />
-      );
-    },
-    [selectedNotes, selectNote, isDeleteMode, toggleDeleteMode, tourStep, searchTag]
-  );
   // Desktop (spec C.1): while the home has the focus, the keyboard's list is the notes on screen. The list is handed over
   // when the home gains the focus and kept up to date while it has it, never dropped in between (dropping it is how the
   // list knows the home went away and came back).
@@ -327,6 +277,107 @@ export default function HomeScreen() {
     return () => setListHost(null);
   }, [isFocused]);
 
+  // Desktop (spec C.2): Ctrl/Cmd + click toggles a card (starting select mode), Shift + click adds the cards from the last
+  // one clicked or toggled. A plain click only moves that anchor.
+  const clickAnchorRef = useRef<string | null>(null);
+  const noteIdsRef = useRef(noteIds);
+  const rowsRef = useRef(rows);
+  useEffect(() => {
+    noteIdsRef.current = noteIds;
+    rowsRef.current = rows;
+  }, [noteIds, rows]);
+  const onDesktopClick = useCallback((note: Note, intent: "toggle" | "range" | null) => {
+    const anchor = clickAnchorRef.current;
+    clickAnchorRef.current = note.id;
+    if (intent === null) return false;
+    const locked = new Map(
+      rowsRef.current.flatMap((row) => (row.kind === "note" ? [[row.note.id, row.note.locked] as const] : []))
+    );
+    const ids = intent === "toggle" ? [note.id] : rangeBetween(noteIdsRef.current, anchor, note.id);
+    const keys = ids.map((id) => `${id}|${locked.get(id)}`);
+    setSelectedNotes((prev) => {
+      if (intent === "range") return [...prev, ...keys.filter((key) => !prev.includes(key))];
+      return prev.includes(keys[0]) ? prev.filter((key) => key !== keys[0]) : [...prev, keys[0]];
+    });
+    setIsDeleteMode(true);
+    return true;
+  }, []);
+
+  // Desktop (spec C.2): a note's menu at the pointer.
+  const [menu, setMenu] = useState<{ id: string; at: { x: number; y: number } } | null>(null);
+  const openMenu = useCallback((note: Note, at: { x: number; y: number }) => setMenu({ id: note.id, at }), []);
+  const menuRow = menu ? rows.find((row) => row.kind === "note" && row.note.id === menu.id) : undefined;
+  const menuNote = menuRow?.kind === "note" ? menuRow.note : null;
+  const menuKey = menuNote ? `${menuNote.id}|${menuNote.locked}` : "";
+  // A right click on a note of a selection of several acts on the selection; on any other note, on that note alone.
+  const menuOnSelection = !!menuNote && selectedNotes.length > 1 && selectedNotes.includes(menuKey);
+  const menuIds = menuOnSelection ? selectedNotes : [menuKey];
+  const menuAfter = menuOnSelection ? endSelection : () => {};
+
+  // Open: what a click on the card does.
+  const openFromMenu = () => {
+    if (!menuNote) return;
+    const { id, locked } = menuNote;
+    if (menuRow?.kind === "note" && menuRow.hit?.line) {
+      setFindOnOpen(id, { word: menuRow.hit.line.word, tabId: menuRow.hit.line.tabId });
+    }
+    if (!locked) {
+      router.push(`/notes/${id}`);
+      return;
+    }
+    unlockWithSecret((router, isFingerprint) => {
+      // Unlocked here: the note's screen opens it without asking again (LL-085).
+      storeUnlockedNote(id);
+      if (isFingerprint) router.push(`/notes/${id}`);
+      else router.replace(`/notes/${id}`);
+    }, "none");
+  };
+  const duplicateFromMenu = async () => {
+    if (!menuNote) return;
+    const copyId = await (dispatch as AppDispatch)(duplicateNote(menuNote.id)).unwrap();
+    toast(copyId ? t("note.duplicated") : t("ai.editor.no_content"));
+  };
+  // The note's own screen for it; from the home, saving comes back here (no pass: the note wasn't open, LL-085).
+  const changeCategoryFromMenu = () => {
+    if (menuNote) router.push({ pathname: "/categories/change", params: { noteId: menuNote.id, from: "home" } });
+  };
+  const trashFromMenu = () => {
+    if (menuOnSelection) setShowDeleteNotesDialog(true);
+    else setTrashOne(menuKey);
+  };
+
+  // Stable across unrelated re-renders (focus changes, quick-note bar height, ...), so FlashList
+  // only re-renders its cells when the selection or delete mode actually change (LL-019).
+  const renderRow = useCallback(
+    ({ item, index }: { item: HomeRow; index: number }) => {
+      if (item.kind === "header") {
+        return (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
+            {item.count !== undefined && <Text style={styles.sectionTitle}>{item.count}</Text>}
+          </View>
+        );
+      }
+      if (item.kind === "tag") return <TagRow tag={item.tag} onPress={searchTag} />;
+      return (
+        <NoteCard
+          content={item.note}
+          hit={item.hit}
+          isSelected={selectedNotes.includes(`${item.note.id}|${item.note.locked}`)}
+          selectNote={selectNote}
+          isDeleteMode={isDeleteMode}
+          toggleDeleteMode={toggleDeleteMode}
+          onDesktopClick={onDesktopClick}
+          openMenu={openMenu}
+          // The tour's last step points at the first note.
+          tourTarget={tourStep === "explore" && index === 0 ? "firstNote" : undefined}
+        />
+      );
+    },
+    [selectedNotes, selectNote, isDeleteMode, toggleDeleteMode, tourStep, searchTag, onDesktopClick, openMenu]
+  );
   const listExtraData = useMemo(() => ({ isDeleteMode, selectedNotes, tourStep }), [isDeleteMode, selectedNotes, tourStep]);
 
   // hardware back for resetting deleteMode
@@ -484,6 +535,18 @@ export default function HomeScreen() {
         }}
       />
 
+      <NoteContextMenu
+        note={menuNote}
+        at={menu?.at ?? null}
+        selectionCount={menuOnSelection ? selectedNotes.length : 1}
+        onOpen={openFromMenu}
+        onToggle={(flag) => toggleNotesFlag(flag, menuIds, menuAfter)}
+        onDuplicate={duplicateFromMenu}
+        onChangeCategory={changeCategoryFromMenu}
+        onTrash={trashFromMenu}
+        onClose={() => setMenu(null)}
+      />
+
       <VaultPromptDialog
         open={vaultPromptNeeded && !vaultUnlocked && isFocused && changelogChecked}
         onClose={() => setVaultPromptNeeded(false)}
@@ -572,10 +635,10 @@ export default function HomeScreen() {
               <SelectionBar
                 hidden={!isDeleteMode}
                 onHeightChange={setSelectionBarHeight}
-                onImportant={toggleImportantNotesFromItems}
-                onProtect={toggleProtectedNotesFromItems}
-                onHide={toggleHiddenNotesFromItems}
-                onReadOnly={toggleReadOnlyNotesFromItems}
+                onImportant={() => toggleNotesFlag("important", selectedNotes, endSelection)}
+                onProtect={() => toggleNotesFlag("protect", selectedNotes, endSelection)}
+                onHide={() => toggleNotesFlag("hide", selectedNotes, endSelection)}
+                onReadOnly={() => toggleNotesFlag("readOnly", selectedNotes, endSelection)}
               />
             </View>
           </View>
@@ -618,6 +681,16 @@ export default function HomeScreen() {
     </>
   );
 }
+
+type NoteFlag = "important" | "protect" | "readOnly" | "hide";
+
+/** Each flag's reducer and the property its webhook names. */
+const FLAG_ACTIONS: Record<NoteFlag, { action: (ids: string[]) => UnknownAction; property: string }> = {
+  important: { action: toggleImportantNotes, property: "important" },
+  protect: { action: toggleProtectedNotes, property: "locked" },
+  readOnly: { action: toggleReadOnlyNotes, property: "readOnly" },
+  hide: { action: toggleHiddenNotes, property: "hidden" },
+};
 
 const keyExtractor = (row: HomeRow) =>
   row.kind === "note" ? "note:" + row.note.id : row.kind === "tag" ? "tag:" + row.tag.key : "header:" + row.id;

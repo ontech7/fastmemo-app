@@ -26,8 +26,10 @@ export const usePopupMenu = () => useContext(PopupMenuContext);
 interface PopupMenuProps {
   /** The pressable content that opens the menu (usually an icon). */
   trigger?: ReactNode;
-  /** Without a trigger: the menu is open, centered under this point of the screen, while it is set. */
+  /** Without a trigger: the menu is open at this point of the screen while it is set (see `anchor`). */
   at?: { x: number; y: number } | null;
+  /** With `at`: "center" (centred under the point) or "corner" (its top-left corner at the point, as a right-click menu). */
+  anchor?: "center" | "corner";
   /** Called once the menu has closed. */
   onClose?: () => void;
   children: ReactNode;
@@ -44,6 +46,7 @@ interface PopupMenuProps {
 export default function PopupMenu({
   trigger,
   at,
+  anchor: atAnchor = "center",
   onClose,
   children,
   width = DEFAULT_WIDTH,
@@ -79,6 +82,19 @@ export default function PopupMenu({
           ? above
           : Math.max(insets.top + SCREEN_MARGIN, top - (top + ch - (screen.height - insets.bottom - SCREEN_MARGIN)));
     }
+    return { left, top };
+  };
+
+  // A right-click menu's place: its top-left corner at the point, to the left of it near the right edge and above it near
+  // the bottom; always whole inside the window.
+  const placeCorner = (x: number, y: number, ch: number): Anchor => {
+    const screen = Dimensions.get("window");
+    const right = screen.width - SCREEN_MARGIN;
+    const bottom = screen.height - insets.bottom - SCREEN_MARGIN;
+    let left = x + width > right ? x - width : x;
+    left = Math.max(SCREEN_MARGIN, Math.min(left, right - width));
+    let top = ch > 0 && y + ch > bottom ? y - ch : y;
+    top = Math.max(insets.top + SCREEN_MARGIN, Math.min(top, bottom - ch));
     return { left, top };
   };
 
@@ -121,7 +137,11 @@ export default function PopupMenu({
   const cardStyle = useAnimatedStyle(() => ({ height: progress.value * contentHeight.value }));
 
   const shown = at ? true : visible;
-  const position = at ? place(at.x, at.y, 0, 0, measuredHeight, "center") : anchor;
+  const position = at
+    ? atAnchor === "corner"
+      ? placeCorner(at.x, at.y, measuredHeight)
+      : place(at.x, at.y, 0, 0, measuredHeight, "center")
+    : anchor;
 
   return (
     <>

@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from "react";
 
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
-import { press } from "@/libs/desktopCommands";
+import { IS_MAC, press } from "@/libs/desktopCommands";
 import { stepCursor } from "@/libs/listCursor";
+import { isTauri } from "@/utils/platform";
 
 /*
  * The home's list from the keyboard (desktop, spec C.1): a mark over one note, moved with the arrows, opened with Enter,
@@ -133,4 +134,28 @@ export function leaveKeyboardMode(): void {
   if (!visible) return;
   visible = false;
   emit();
+}
+
+/**
+ * The props a card spreads on its root for the right button (spec C.2): the app's menu at the pointer, in the Tauri window
+ * only (a browser keeps its own menu). On a Mac, Ctrl + click is the right button too.
+ */
+export function contextMenuProps(open: (at: { x: number; y: number }) => void): object {
+  if (!isTauri()) return {};
+  return {
+    onContextMenu: (e: MouseEvent) => {
+      e.preventDefault();
+      open({ x: e.clientX, y: e.clientY });
+    },
+  };
+}
+
+/** What a click means with its modifiers: "toggle" (Ctrl, or Cmd on the Mac), "range" (Shift), or null. */
+export function clickIntent(event: unknown): "toggle" | "range" | null {
+  if (!isTauri()) return null;
+  const e = ((event as { nativeEvent?: unknown } | null)?.nativeEvent ?? event) as Partial<MouseEvent> | null;
+  if (!e) return null;
+  if (e.shiftKey) return "range";
+  if (IS_MAC ? e.metaKey : e.ctrlKey) return "toggle";
+  return null;
 }

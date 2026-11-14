@@ -280,6 +280,8 @@ const ja = {
       code: "コード",
     },
     settings: {
+      open: "開く",
+      move_to_trash: "ゴミ箱に移動",
       delete: "削除",
       important: "重要",
       protect: "保護",

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import type { GestureResponderEvent } from "react-native";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ArrowUpIcon from "react-native-heroicons/outline/ArrowUpIcon";
@@ -15,7 +16,7 @@ import { useSelector } from "react-redux";
 import { useRouter } from "@/hooks/useRouter";
 import { useTourTarget } from "@/hooks/useTourTarget";
 import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
-import { useIsCursor } from "@/libs/desktopList";
+import { clickIntent, contextMenuProps, useIsCursor } from "@/libs/desktopList";
 import { storeUnlockedNote } from "@/libs/registry";
 import { setFindOnOpen } from "@/libs/search/findOnOpen";
 import { formatDateTime, reverseDate } from "@/utils/date";
@@ -46,6 +47,10 @@ interface Props {
   tourTarget?: string;
   /** In a search's results: the title's marked words, and the line that matched (outside a search a card has no line). */
   hit?: SearchHit;
+  /** Desktop: every click, with what its modifiers mean (Ctrl/Cmd: toggle, Shift: range). True when the home handled it. */
+  onDesktopClick?: (note: Note, intent: "toggle" | "range" | null) => boolean;
+  /** Desktop: the right button over the card. */
+  openMenu?: (note: Note, at: { x: number; y: number }) => void;
 }
 
 /** A selected card's check mark zooms in (one builder for every card). */
@@ -67,7 +72,17 @@ function getCardAccent(type: Note["type"], important: boolean): string {
   }
 }
 
-function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteMode, tourTarget, hit }: Props) {
+function NoteCard({
+  content,
+  isSelected,
+  selectNote,
+  isDeleteMode,
+  toggleDeleteMode,
+  tourTarget,
+  hit,
+  onDesktopClick,
+  openMenu,
+}: Props) {
   const { t } = useTranslation();
 
   const router = useRouter();
@@ -97,11 +112,12 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
     toggleDeleteMode();
   };
 
-  const onPressHandler = () => {
+  const onPressHandler = (e?: GestureResponderEvent) => {
     if (!known) {
       if (!isDeleteMode) toast(t("note.update_to_open"));
       return;
     }
+    if (onDesktopClick?.(content, clickIntent(e))) return;
     if (isDeleteMode) {
       selectNote(id, locked);
       return;
@@ -140,7 +156,10 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
     : Number(createdAt) || Number(new Date(reverseDate(date)));
   const metaDate = formatDateTime(metaTimestamp);
 
-  return (
+  // The desktop's right button (none on the phone or in a browser, and none for a type this version can't open). The
+  // touchable's own context-menu handler would override one given to it: a plain view around it takes the event.
+  const menuProps = known && openMenu ? contextMenuProps((at) => openMenu(content, at)) : null;
+  const card = (
     <TouchableOpacity
       ref={targetRef}
       activeOpacity={0.7}
@@ -261,6 +280,8 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
       </View>
     </TouchableOpacity>
   );
+
+  return menuProps && Object.keys(menuProps).length ? <View {...menuProps}>{card}</View> : card;
 }
 
 /* STYLES */

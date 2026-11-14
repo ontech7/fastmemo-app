@@ -22,3 +22,11 @@ export function listKey(_key: "up" | "down" | "enter" | "delete"): boolean {
 }
 
 export function leaveKeyboardMode(): void {}
+
+export function contextMenuProps(_open: (at: { x: number; y: number }) => void): object {
+  return {};
+}
+
+export function clickIntent(_event: unknown): "toggle" | "range" | null {
+  return null;
+}

@@ -280,6 +280,8 @@ const de = {
       code: "Code",
     },
     settings: {
+      open: "Öffnen",
+      move_to_trash: "In den Papierkorb",
       delete: "Löschen",
       important: "Wichtig",
       protect: "Schützen",

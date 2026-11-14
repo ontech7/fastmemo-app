@@ -279,6 +279,8 @@ const zh = {
       code: "代码",
     },
     settings: {
+      open: "打开",
+      move_to_trash: "移到回收站",
       delete: "删除",
       important: "重要的",
       protect: "保护",
