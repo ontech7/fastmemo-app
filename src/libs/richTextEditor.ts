@@ -480,9 +480,13 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (typeAt(range().startContainer) !== type) on(type);
   };
 
-  var listCommand = function (type) { return type === "ol" ? "insertOrderedList" : "insertUnorderedList"; };
   var off = function (type) {
-    if (isList(type)) return exec(listCommand(type));
+    if (isList(type)) {
+      var items = linesIn(selection().getRangeAt(0)).filter(function (e) {
+        return e.nodeName === "LI" && listKind(e.parentNode) === type;
+      });
+      return listChange(items, "p");
+    }
     var range = selection().getRangeAt(0);
     touched(range, BLOCK[type]).forEach(function (block) {
       if (!block.isConnected) return;
@@ -493,26 +497,37 @@ export const RICH_TEXT_SCRIPT = String.raw`
       exec("formatBlock", "<div>");
     });
   };
-  // Chrome makes the list of an empty line inside the line's <div>: the list takes the line's place.
-  var liftList = function () {
-    var s = selection();
-    if (!s.rangeCount) return;
-    var li = closest(s.anchorNode, "li"), list = li && li.parentNode, line = list && list.parentNode;
-    if (!line || line.parentNode !== content() || !(line.nodeName === "DIV" || line.nodeName === "P")) return;
-    var alone = [].every.call(line.childNodes, function (n) {
-      return n === list || n.nodeName === "BR" || (n.nodeType === 3 && !n.data.trim());
+  // A text line holding line breaks (a code block made text, Shift + Enter): a line per part, as the browser's list does.
+  var splitAtBreaks = function (line) {
+    if (line.nodeName !== "DIV" && line.nodeName !== "P") return [line];
+    var parts = [line], part = line;
+    [].slice.call(line.childNodes).forEach(function (n) {
+      if (n.nodeName !== "BR" || !n.nextSibling) return;
+      var next = line.cloneNode(false);
+      while (n.nextSibling) next.appendChild(n.nextSibling);
+      n.remove();
+      part.parentNode.insertBefore(next, part.nextSibling);
+      parts.push((part = next));
     });
-    if (!alone) return;
-    var node = s.anchorNode, offset = s.anchorOffset;
-    pageChange(function () {
-      line.parentNode.replaceChild(list, line);
-      caretAt(node, offset);
-    });
+    return parts;
   };
+  // Lines to text or to bullet / numbered items, as the page's change. split: a line with breaks is a line per part.
+  var listChange = function (lines, kind, split) {
+    var made = [];
+    pageChange(function () {
+      if (split) lines = [].concat.apply([], lines.map(splitAtBreaks));
+      made = convert(lines, kind);
+    }, true);
+    // An empty line has no character to put the caret back by: it stays in that line.
+    if (made.length === 1 && blank(made[0]) && made[0].isConnected) caretAt(made[0], 0);
+  };
+  // A bullet or numbered list is the page's own change, as a checkbox list is: the browser's list commands put the list
+  // inside the line's block (WebKit always, Chrome on an empty line), and moving it out after them broke WebKit's undo.
   var on = function (type) {
     if (isList(type)) {
-      exec(listCommand(type));
-      return liftList();
+      // A line of the note's own (text right in it) becomes a block first.
+      if (!linesIn(selection().getRangeAt(0)).length) exec("formatBlock", "<div>");
+      return listChange(linesIn(selection().getRangeAt(0)), type, true);
     }
     exec("formatBlock", "<" + BLOCK[type] + ">");
   };
@@ -601,22 +616,31 @@ export const RICH_TEXT_SCRIPT = String.raw`
     after.selectNodeContents(pre);
     after.setStart(s.focusNode, s.focusOffset);
     if (linesOf(after.cloneContents()).replace(/\n/g, "")) return false;
+    // The page's change, one undo: WebKit's undo took the browser's insertHTML back together with the Enters and the
+    // code block before it.
+    var line = $.createElement("div");
+    line.appendChild($.createElement("br"));
     if (!lastOf(pre, isContent)) {
-      selectContents(pre);
-      exec("formatBlock", "<div>");
+      pageChange(function () {
+        pre.parentNode.replaceChild(line, pre);
+        caretAt(line, 0);
+      });
       return true;
     }
     var before = $.createRange();
     before.selectNodeContents(pre);
     before.setEnd(s.focusNode, s.focusOffset);
     if (linesOf(before.cloneContents()).slice(-1) !== "\n") return false;
-    flattenCode(pre);
-    var keep = lastOf(pre, isContent), r = $.createRange();
-    if (keep.nodeType === 3) r.setStart(keep, keep.data.replace(/\n+$/, "").length);
-    else r.setStartAfter(keep);
-    r.setEnd(pre, pre.childNodes.length);
-    select(r);
-    exec("insertHTML", "<div><br></div>");
+    pageChange(function () {
+      flattenCode(pre);
+      var keep = lastOf(pre, isContent), r = $.createRange();
+      if (keep.nodeType === 3) r.setStart(keep, keep.data.replace(/\n+$/, "").length);
+      else r.setStartAfter(keep);
+      r.setEnd(pre, pre.childNodes.length);
+      r.deleteContents();
+      pre.parentNode.insertBefore(line, pre.nextSibling);
+      caretAt(line, 0);
+    });
     return true;
   };
 
@@ -700,6 +724,27 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (enter()) e.preventDefault();
   }, true);
 
+  // Backspace at the start of a list item takes its bullet off, like the list button: the item becomes text (a checkbox
+  // line without its box), the items around it stay lists of their kind. From the key itself too: WebKit sends no
+  // beforeinput when there is nothing before the caret to delete (the note's first item).
+  var unbulletAt = function (node, offset) {
+    var li = closest(node, "li");
+    if (!li) return false;
+    var r = $.createRange();
+    r.selectNodeContents(li);
+    r.setEnd(node, offset);
+    if (r.toString().length || r.cloneContents().querySelector("img")) return false;
+    listChange([li], "p");
+    refreshToolbar();
+    return true;
+  };
+  $.addEventListener("keydown", function (e) {
+    if (e.key !== "Backspace" || e.isComposing || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
+    var s = selection();
+    if (!s.rangeCount || !s.isCollapsed || !content().isContentEditable || !content().contains(s.focusNode)) return;
+    if (unbulletAt(s.focusNode, s.focusOffset)) e.preventDefault();
+  }, true);
+
   // Cmd+B, Cmd+I and Cmd+U on a Mac, Ctrl elsewhere: bold, italic and underline, as the toolbar's buttons. WebKit on macOS
   // leaves them to an app's Format menu, which the desktop app doesn't have; Chromium does them itself. So the page does
   // them everywhere, once. Ctrl on a Mac moves the caret (Ctrl+B: one character back). The letter, or the physical key on
@@ -732,19 +777,8 @@ export const RICH_TEXT_SCRIPT = String.raw`
     var s = selection();
     if (!s.rangeCount || !s.isCollapsed) return;
     var node = s.focusNode, offset = s.focusOffset;
-    // Backspace at the start of a list item takes its bullet off, like the list button.
     if (e.inputType === "deleteContentBackward") {
-      var li = closest(node, "li");
-      if (!li) return;
-      var r = $.createRange();
-      r.selectNodeContents(li);
-      r.setEnd(node, offset);
-      if (r.toString().length || r.cloneContents().querySelector("img")) return;
-      e.preventDefault();
-      // a checkbox line: its box goes and it becomes text; the items around it stay checkbox lists
-      if (isTodoItem(li)) pageChange(function () { convert([li], "p"); }, true);
-      else exec(listCommand(li.parentNode.nodeName === "OL" ? "ol" : "ul"));
-      refreshToolbar();
+      if (unbulletAt(node, offset)) e.preventDefault();
       return;
     }
     // Enter, also from a keyboard that sends it as text: a new line of the code block, or out of it on an empty last line.
@@ -762,7 +796,8 @@ export const RICH_TEXT_SCRIPT = String.raw`
 
   // Shortcuts while typing (spec B.5): on a text line, a marker at its very start (#, ##, -, *, 1., [], >) followed by a
   // space typed as finished text makes the line that kind; "---" alone on a line, then Enter, makes it a rule. The space
-  // goes in first, then the marker and the space are deleted and the line changes: undo gives the typed characters back.
+  // goes in first, then the marker and the space are deleted and the line changes (the page's change): undo gives the typed
+  // characters back.
   // Never in another kind of line, from a paste, or inside a composition. SHORTCUTS_ON_TOUCH false: only without touch.
   var SHORTCUTS_ON_TOUCH = true;
   var SHORTCUTS = { "#": "h1", "##": "h2", "-": "ul", "*": "ul", "1.": "ol", "[]": "todo", ">": "quote" };
@@ -801,11 +836,29 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (!r || r.toString().replace(/\u00a0/g, " ") !== p.marker + " ") return;
     e.stopImmediatePropagation();
     quietly(function () {
-      select(r);
-      exec("delete");
-      toggle(p.kind);
+      // A line of the note's own (text right in it) becomes a block first, by the browser.
+      if (!closest(r.endContainer, "div,p")) {
+        exec("formatBlock", "<div>");
+        r = lineBefore();
+        if (!r) return;
+      }
+      var line = closest(r.endContainer, "div,p"), kind = p.kind;
+      // The marker goes and the line changes in one change of the page's: one undo gives the marker back, and the
+      // browser's commands (WebKit's left a stray line break and an undo that skipped the marker) aren't in it.
+      pageChange(function () {
+        r.deleteContents();
+        var made;
+        if (isList(kind) || kind === "todo") made = convert([line], kind)[0];
+        else {
+          made = $.createElement(BLOCK[kind]);
+          while (line.firstChild) made.appendChild(line.firstChild);
+          line.parentNode.replaceChild(made, line);
+          fill(made);
+        }
+        caretAt(made, kind === "todo" ? 1 : 0);
+      });
     });
-    contentChanged();
+    refreshToolbar();
   }, true);
   // "---" then Enter, before the other Enter handling.
   content().addEventListener("beforeinput", function (e) {
@@ -922,12 +975,12 @@ export const RICH_TEXT_SCRIPT = String.raw`
   // What a new size or a turn replaces with a changed copy: the image, or the link it is in, which an insertHTML of the image
   // alone would drop.
   var replacedBy = function (img) { return closest(img, "a") || img; };
-  // Through insertHTML, so undo brings the image back as it was.
+  // The page's change, so undo brings the image back as it was, one change at a time (WebKit's undo took two insertHTML of
+  // images back at once).
   var replaceImage = function (img, change) {
     var node = replacedBy(img), copy = node.cloneNode(true);
     change(node === img ? copy : copy.querySelectorAll("img")[[].indexOf.call(node.querySelectorAll("img"), img)]);
-    selectNode(node);
-    exec("insertHTML", copy.outerHTML);
+    pageChange(function () { node.parentNode.replaceChild(copy, node); });
   };
   // A change works on the image selected; then the selection goes back where it was (LL-065), not next to the image, or on
   // it where a key would replace it. A range follows the nodes around it. A note that had none is left without one.
@@ -937,8 +990,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
       ? function () { if (content().contains(caret.startContainer) && content().contains(caret.endContainer)) select(caret); }
       : function () { s.removeAllRanges(); };
     if (caret && caret.collapsed && replacing) {
-      // Right after what is replaced the range ends up before the copy (and insertHTML leaves the caret in a link's copy):
-      // after the copy, then.
+      // Right after what is replaced the range ends up before the copy: after the copy, then.
       if (caret.startContainer === node.parentNode && caret.startOffset === childIndex(node) + 1) {
         put = function () {
           if (caret.startContainer.childNodes[caret.startOffset]) s.collapse(caret.startContainer, caret.startOffset + 1);
@@ -953,8 +1005,11 @@ export const RICH_TEXT_SCRIPT = String.raw`
         };
       }
     }
+    // WebKit's commands focus the note: one that wasn't being edited stays so (on a phone, no keyboard).
+    var focused = $.activeElement === content();
     change();
     put();
+    if (!focused && $.activeElement === content()) content().blur();
   };
   var JUSTIFY = { left: "justifyLeft", center: "justifyCenter", right: "justifyRight" };
   var image = function (index, key, change, value) {
