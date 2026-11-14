@@ -223,11 +223,11 @@ const de = {
       lists: "Listen",
       insert: "Einfügen",
       more: "Mehr",
-      text: "Text",
+      normal: "Normal",
       h1: "Überschrift 1",
       h2: "Überschrift 2",
       quote: "Zitat",
-      code: "Code",
+      code_block: "Codeblock",
       bullets: "Aufzählung",
       numbers: "Nummerierte Liste",
       checks: "Kontrollkästchen",
@@ -237,6 +237,7 @@ const de = {
       note_link: "Link zu einer Notiz",
       rule: "Linie",
       inline_code: "Code im Text",
+      highlight: "Hervorgehoben",
       strike: "Durchgestrichen",
       align_left: "Linksbündig",
       center: "Zentrieren",
@@ -914,8 +915,19 @@ const de = {
     what_text_notes: {
       title: "Textnotizen",
       text_1_0:
-        "Die Leiste bietet Zeilenstile (Überschriften, Zitat, Code), Listen mit Kontrollkästchen und ein Menü zum Einfügen von Bildern, Links, Links zu anderen Notizen und Linien.",
-      text_2_0: "Am Zeilenanfang können Sie auch #, ##, -, 1., [] oder > und ein Leerzeichen eingeben.",
+        "Die Leiste bietet Zeilenstile (Normal, Überschriften, Zitat), Listen mit Kontrollkästchen, ein Menü zum Einfügen von Bildern, Links, Links zu anderen Notizen und Linien, und unter ··· Codeblöcke, Code im Text, Hervorhebung und mehr. Normal entfernt jeden Stil.",
+      text_2_0: "Sie können auch in Markdown schreiben: siehe Markdown weiter unten.",
+    },
+    what_markdown: {
+      title: "Markdown",
+      text_1_0:
+        "Am Zeilenanfang: # Überschrift, ## Unterüberschrift, - oder * Aufzählung, 1. nummerierte Liste, [] Kontrollkästchen, > Zitat, dann ein Leerzeichen; --- und Eingabe ziehen eine Linie.",
+      text_2_0:
+        "Im Text: **fett**, *kursiv* oder _kursiv_, __unterstrichen__, ~~durchgestrichen~~, ==hervorgehoben==, `Code`. Der Stil greift, sobald Sie die schließenden Zeichen tippen; Rückgängig bringt die Zeichen zurück.",
+      text_3_0:
+        "Eine Adresse, die mit http:// oder https:// beginnt, wird zum Link, sobald Sie ein Leerzeichen tippen oder die Eingabetaste drücken.",
+      text_4_0:
+        "Wenn Sie Markdown einfügen, werden Überschriften, Listen, Kästchen, Zitate, Linien, Codeblöcke zwischen ``` und Links [Text](Adresse) zu Zeilen der Notiz. Ein einziges Rückgängig entfernt alles.",
     },
     what_note_links: {
       title: "Notiz verlinken",

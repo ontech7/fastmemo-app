@@ -263,6 +263,16 @@ console.log("\nexports of a text note with every kind of line");
     plain.includes("Altra nota") && !plain.includes("fm-note") && !plain.includes("checkbox"),
     plain
   );
+  const inline = htmlToMarkdown("<div>a <u>sotto</u> <mark>evid</mark> <code>c</code> <b>b</b>\u200b</div>");
+  ok(
+    "markdown: underline as __x__, highlight as ==x==, inline code, no zero-width space",
+    inline.includes("__sotto__") &&
+      inline.includes("==evid==") &&
+      inline.includes("`c`") &&
+      !inline.includes("\u200b") &&
+      !inline.includes("<u>"),
+    inline
+  );
   const pdfPage = wrapHtmlForPdf("T", "<div>x</div>");
   ok(
     "the PDF page styles the new lines",

@@ -223,11 +223,11 @@ const en = {
       lists: "Lists",
       insert: "Insert",
       more: "More",
-      text: "Text",
+      normal: "Normal",
       h1: "Heading 1",
       h2: "Heading 2",
       quote: "Quote",
-      code: "Code",
+      code_block: "Code block",
       bullets: "Bulleted list",
       numbers: "Numbered list",
       checks: "Checkboxes",
@@ -237,6 +237,7 @@ const en = {
       note_link: "Link to a note",
       rule: "Line",
       inline_code: "Inline code",
+      highlight: "Highlight",
       strike: "Strikethrough",
       align_left: "Align left",
       center: "Center",
@@ -903,8 +904,18 @@ const en = {
     what_text_notes: {
       title: "Text notes",
       text_1_0:
-        "The bar has line styles (headings, quote, code), lists with checkboxes, and a menu to insert images, links, links to other notes and lines.",
-      text_2_0: "At the start of a line you can also type #, ##, -, 1., [] or > and a space.",
+        "The bar has line styles (Normal, headings, quote), lists with checkboxes, a menu to insert images, links, links to other notes and lines, and under ··· code blocks, inline code, highlight and more. Normal takes every style off.",
+      text_2_0: "You can also write in Markdown: see Markdown below.",
+    },
+    what_markdown: {
+      title: "Markdown",
+      text_1_0:
+        "At the start of a line: # heading, ## subheading, - or * bullets, 1. numbers, [] checkbox, > quote, then a space; --- then Enter draws a line.",
+      text_2_0:
+        "In the text: **bold**, *italic* or _italic_, __underline__, ~~strikethrough~~, ==highlight==, `code`. The style takes effect when you type the closing marks; Undo brings the marks back.",
+      text_3_0: "A web address starting with http:// or https:// becomes a link when you type a space or press Enter.",
+      text_4_0:
+        "Paste Markdown and its headings, lists, checkboxes, quotes, lines, ``` code blocks and [text](address) links become the note's own. One Undo takes it all away.",
     },
     what_note_links: {
       title: "Link a note",

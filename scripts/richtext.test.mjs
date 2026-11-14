@@ -1340,6 +1340,7 @@ export async function runCases(driver, page, url) {
             sup: false,
             center: false,
             code: false,
+            highlight: false,
             link: false,
           }),
       JSON.stringify(got)
@@ -2037,6 +2038,8 @@ export async function runCases(driver, page, url) {
       ["a *corsivo*", "i", "corsivo"],
       ["a _corsivo_", "i", "corsivo"],
       ["a ~~via~~", "strike", "via"],
+      ["a __sotto__", "u", "sotto"],
+      ["a ==evidenza==", "mark", "evidenza"],
       ["a `x = 1`", "code", "x = 1"],
     ]) {
       await emptyLine();
@@ -2087,6 +2090,60 @@ export async function runCases(driver, page, url) {
       (await state()).html
     );
 
+    // Highlight from the bar's menu, as inline code.
+    await open("<div>one two</div>");
+    await select({ text: "two" });
+    await command(formatCommand("highlight"));
+    check(
+      "the menu's highlight wraps the selection",
+      plain((await state()).html) === "<div>one <mark>two</mark></div>",
+      (await state()).html
+    );
+    await select({ text: "two", from: 1, to: 1 });
+    await command(formatCommand("highlight"));
+    check(
+      "...and again, with the caret in it, takes it off",
+      plain((await state()).html) === "<div>one two</div>",
+      (await state()).html
+    );
+
+    // "Normal": headings, quotes and code blocks become text lines and every inline style goes; links and boxes stay.
+    await open(
+      '<h1>T <b>b</b></h1><div>x <i>i</i> <code>c</code> <mark>m</mark> <u>u</u> <strike>s</strike> <a href="https://a.it">l</a></div><pre>p1<br>p2</pre>'
+    );
+    await evaluate(
+      `(() => { const c = document.querySelector(".pell-content"); c.focus(); const r = document.createRange(); r.selectNodeContents(c); getSelection().removeAllRanges(); getSelection().addRange(r); })()`
+    );
+    await command(formatCommand("normal"));
+    const normal = plain((await state()).html);
+    check(
+      '"Normal" on every line: text lines, no styles, the link kept',
+      normal === '<div>T b</div><div>x i c m u s <a href="https://a.it">l</a></div><div>p1</div><div>p2</div>',
+      normal
+    );
+    await press("undo");
+    check(
+      "...and one undo gives it all back",
+      plain((await state()).html).startsWith("<h1>T <b>b</b></h1>"),
+      (await state()).html
+    );
+    await open("<div><b>abcd</b></div><h2>keep <i>this</i></h2>");
+    await select({ text: "abcd", from: 1, to: 3 });
+    await command(formatCommand("normal"));
+    check(
+      '"Normal" on part of a line: only that part',
+      plain((await state()).html) === "<div><b>a</b>bc<b>d</b></div><h2>keep <i>this</i></h2>",
+      (await state()).html
+    );
+    await open(`<h2>a <i>b</i></h2><ol class="x-todo"><li>${BOX}<b>c</b></li></ol>`);
+    await select({ text: "b", from: 0, to: 0 });
+    await command(formatCommand("normal"));
+    check(
+      '"Normal" with the caret in a line: the whole line, and only it',
+      plain((await state()).html) === `<div>a b</div><ol class="x-todo"><li>${BOX}<b>c</b></li></ol>`,
+      (await state()).html
+    );
+
     // Markdown pasted into a text note: its lines become the note's lines, its inline marks and links too, in one undo.
     const paste = async (text) => {
       await evaluate(
@@ -2107,12 +2164,14 @@ export async function runCases(driver, page, url) {
     await press("undo");
     check("...and one undo takes the paste away", plain((await state()).html) === "<div><br></div>", (await state()).html);
     await emptyLine();
-    await paste("- a\n* b\n> citazione\n```\nlet x = 1;\nx++;\n```\nvedi [qui](https://a.it) e https://b.it, `c`, _d_ ~~e~~");
+    await paste(
+      "- a\n* b\n> citazione\n```\nlet x = 1;\nx++;\n```\nvedi [qui](https://a.it) e https://b.it, `c`, _d_ ~~e~~ __f__ ==g=="
+    );
     const md2 = plain((await state()).html);
     check(
       "lists, a quote, a code block, links and inline marks",
       md2 ===
-        '<ul><li>a</li><li>b</li></ul><blockquote>citazione</blockquote><pre>let x = 1;<br>x++;</pre><div>vedi <a href="https://a.it">qui</a> e <a href="https://b.it">https://b.it</a>, <code>c</code>, <i>d</i> <strike>e</strike></div>',
+        '<ul><li>a</li><li>b</li></ul><blockquote>citazione</blockquote><pre>let x = 1;<br>x++;</pre><div>vedi <a href="https://a.it">qui</a> e <a href="https://b.it">https://b.it</a>, <code>c</code>, <i>d</i> <strike>e</strike> <u>f</u> <mark>g</mark></div>',
       md2
     );
     await open("<div>abcd</div>");

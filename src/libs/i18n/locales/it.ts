@@ -224,11 +224,11 @@ const it = {
       lists: "Elenchi",
       insert: "Inserisci",
       more: "Altro",
-      text: "Testo",
+      normal: "Normale",
       h1: "Titolo 1",
       h2: "Titolo 2",
       quote: "Citazione",
-      code: "Codice",
+      code_block: "Blocco di codice",
       bullets: "Elenco puntato",
       numbers: "Elenco numerato",
       checks: "Caselle di spunta",
@@ -238,6 +238,7 @@ const it = {
       note_link: "Link a una nota",
       rule: "Linea",
       inline_code: "Codice in linea",
+      highlight: "Evidenziato",
       strike: "Barrato",
       align_left: "Allinea a sinistra",
       center: "Centra",
@@ -910,8 +911,18 @@ const it = {
     what_text_notes: {
       title: "Note di testo",
       text_1_0:
-        "La barra ha gli stili di riga (titoli, citazione, codice), gli elenchi con caselle di spunta e un menu per inserire immagini, link, link ad altre note e linee.",
-      text_2_0: "A inizio riga puoi anche scrivere #, ##, -, 1., [] oppure > e uno spazio.",
+        "La barra ha gli stili di riga (Normale, titoli, citazione), gli elenchi con caselle di spunta, un menu per inserire immagini, link, link ad altre note e linee, e sotto ··· blocchi di codice, codice in linea, evidenziato e altro. Normale toglie ogni stile.",
+      text_2_0: "Puoi anche scrivere in Markdown: vedi Markdown più sotto.",
+    },
+    what_markdown: {
+      title: "Markdown",
+      text_1_0:
+        "A inizio riga: # titolo, ## sottotitolo, - o * elenco puntato, 1. elenco numerato, [] casella di spunta, > citazione, poi uno spazio; --- e Invio disegnano una linea.",
+      text_2_0:
+        "Nel testo: **grassetto**, *corsivo* o _corsivo_, __sottolineato__, ~~barrato~~, ==evidenziato==, `codice`. Lo stile si applica quando scrivi i segni di chiusura; Annulla rimette i segni.",
+      text_3_0: "Un indirizzo che inizia con http:// o https:// diventa un link quando scrivi uno spazio o vai a capo.",
+      text_4_0:
+        "Se incolli del Markdown, titoli, elenchi, caselle, citazioni, linee, blocchi di codice tra ``` e link [testo](indirizzo) diventano righe della nota. Un solo Annulla toglie tutto.",
     },
     what_note_links: {
       title: "Collega una nota",

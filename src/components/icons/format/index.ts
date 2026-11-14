@@ -5,6 +5,7 @@ export { default as ParagraphIcon } from "./ParagraphIcon";
 export { default as QuoteIcon } from "./QuoteIcon";
 export { default as CodeBlockIcon } from "./CodeBlockIcon";
 export { default as InlineCodeIcon } from "./InlineCodeIcon";
+export { default as HighlightIcon } from "./HighlightIcon";
 export { default as BulletListIcon } from "./BulletListIcon";
 export { default as NumberedListIcon } from "./NumberedListIcon";
 export { default as CheckListIcon } from "./CheckListIcon";

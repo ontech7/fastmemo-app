@@ -6,6 +6,15 @@ export const MONOSPACE_FONT = Platform.select({
   default: "monospace",
 });
 
+/**
+ * Highlighted text (==text==): a light pastel yellow, as a highlighter pen, with dark text on it (15:1). The printed page
+ * (`utils/html.ts`) uses the same two values.
+ */
+export const HIGHLIGHT = {
+  fill: "#FFF0A6",
+  text: "#1C1A12",
+} as const;
+
 export const COLOR = {
   black: "#000",
   softWhite: "#f4f6fa",

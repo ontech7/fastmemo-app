@@ -28,8 +28,9 @@ export function htmlToMarkdown(html: string): string {
   // Italic
   md = md.replace(/<(i|em)[^>]*>(.*?)<\/(i|em)>/gi, "*$2*");
 
-  // Underline (no standard markdown, use HTML)
-  md = md.replace(/<u[^>]*>(.*?)<\/u>/gi, "<u>$1</u>");
+  // Underline and highlight: Markdown as the editor reads it typed or pasted (__x__, ==x==)
+  md = md.replace(/<u[^>]*>(.*?)<\/u>/gi, "__$1__");
+  md = md.replace(/<mark[^>]*>(.*?)<\/mark>/gi, "==$1==");
 
   // Strikethrough
   md = md.replace(/<(s|strike|del)[^>]*>(.*?)<\/(s|strike|del)>/gi, "~~$2~~");
@@ -172,6 +173,13 @@ export function wrapHtmlForPdf(title: string, htmlContent: string): string {
       border-radius: 6px;
       overflow-x: auto;
       font-size: 13px;
+    }
+    mark {
+      /* the editor's highlight (constants/styles HIGHLIGHT) */
+      background: #fff0a6;
+      color: #1c1a12;
+      padding: 0 2px;
+      border-radius: 3px;
     }
     code {
       background: #f4f4f4;

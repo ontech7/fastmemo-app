@@ -1,4 +1,4 @@
-import { BORDER, COLOR, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { BORDER, COLOR, GLASS, HIGHLIGHT, PADDING_MARGIN } from "@/constants/styles";
 import { noteBlockCss } from "@/libs/noteHtml";
 import { SCROLLBAR_CSS } from "@/styles/scrollbar";
 
@@ -20,6 +20,8 @@ export type FormatCommand =
   | "justifyLeft"
   | "justifyCenter"
   | "code"
+  | "highlight"
+  | "normal"
   | "undo"
   | "redo";
 /** Where the caret is, for the bar: its line's kind and the styles on at the caret. */
@@ -34,6 +36,8 @@ export interface EditorState {
   center: boolean;
   /** The caret is in inline code (not a code block). */
   code: boolean;
+  /** The caret is in highlighted text. */
+  highlight: boolean;
   /** The caret is in a web link (Task 13). */
   link: boolean;
 }
@@ -113,6 +117,7 @@ export const RICH_TEXT_STYLE = {
     pre pre { margin: 0; padding: 0; background: none; }
     h1:empty, pre:empty { display: none; }
     pre span { font-family: inherit !important; background-color: transparent !important; white-space: inherit !important; }
+    mark { background-color: ${HIGHLIGHT.fill}; color: ${HIGHLIGHT.text}; border-radius: 3px; padding: 0 2px; }
     :not(pre) > code {
       font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9em;
       padding: 1px 5px; border-radius: 5px; background-color: ${COLOR.surfaceMuted};
@@ -1274,14 +1279,79 @@ export const RICH_TEXT_SCRIPT = String.raw`
     }
     caretAt(next, 0);
   };
-  // With a selection on one line: it becomes code. With the caret in code: at its end, the caret leaves it; elsewhere
-  // the code goes back to text. With the caret elsewhere: an empty code to type in.
-  var toggleCode = function () {
+  // "Normal" (the bar's Aa): headings, quotes and code blocks become text lines, a centred line goes left, and every inline
+  // style goes (bold, italic, underline, struck, sub and superscript, code, highlight); links, note links, pictures and
+  // boxes stay, lists stay lists. A selection on one line: only it; else the whole lines it touches. One page change.
+  var PLAIN_OFF = "b,strong,i,em,u,strike,s,del,sub,sup,code,mark,font,span:not(.x-todo-box)";
+  var unwrapEl = function (el) {
+    while (el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+    el.remove();
+  };
+  var stripStyles = function (root) {
+    [].slice.call(root.querySelectorAll(PLAIN_OFF)).reverse().forEach(unwrapEl);
+  };
+  var normalize = function () {
+    var s = selection();
+    if (!s.rangeCount || !content().isContentEditable) return;
+    var range = s.getRangeAt(0);
+    if (!content().contains(range.startContainer)) return;
+    pageChange(function () {
+      var lines = linesIn(range);
+      if (!lines.length) lines = [topBlock(range.startContainer)].filter(Boolean);
+      var part = !range.collapsed && lines.length === 1 && lines[0].nodeName !== "PRE";
+      if (part) {
+        var frag = range.extractContents();
+        stripStyles(frag);
+        var first = frag.firstChild, last = frag.lastChild;
+        // the styles around the place it came from are split there, so it goes back outside them
+        var node = range.startContainer, offset = range.startOffset, el;
+        while ((el = closest(node, PLAIN_OFF)) && lines[0].contains(el)) {
+          var tail = $.createRange();
+          tail.setStart(node, offset);
+          tail.setEnd(el, el.childNodes.length);
+          var after = el.cloneNode(false);
+          after.appendChild(tail.extractContents());
+          el.parentNode.insertBefore(after, el.nextSibling);
+          node = el.parentNode;
+          offset = [].indexOf.call(node.childNodes, el) + 1;
+        }
+        range.setStart(node, offset);
+        range.collapse(true);
+        range.insertNode(frag);
+        [].slice.call(lines[0].querySelectorAll(PLAIN_OFF)).forEach(function (el) { if (!el.textContent && !el.querySelector("img")) el.remove(); });
+        if (first && last && first.isConnected && last.isConnected) {
+          var r = $.createRange();
+          r.setStartBefore(first);
+          r.setEndAfter(last);
+          select(r);
+        }
+      } else lines.forEach(stripStyles);
+      lines.forEach(function (line) {
+        if (/^(H1|H2|BLOCKQUOTE|PRE)$/.test(line.nodeName)) {
+          var div = $.createElement("div");
+          while (line.firstChild) div.appendChild(line.firstChild);
+          line.parentNode.replaceChild(div, line);
+          fill(div);
+          splitAtBreaks(div);
+          line = div;
+        }
+        if (line.style && line.style.textAlign) {
+          line.style.removeProperty("text-align");
+          if (!line.getAttribute("style")) line.removeAttribute("style");
+        }
+      });
+    }, range.collapsed);
+    refreshToolbar();
+  };
+  // Inline code and highlight (the bar's menu). With a selection on one line: it takes the style. With the caret in the
+  // style: at its end, the caret leaves it; elsewhere it goes back to text. With the caret elsewhere: an empty one to type
+  // in.
+  var toggleInline = function (tag) {
     var s = selection();
     if (!s.rangeCount || !content().contains(s.anchorNode)) return;
     var range = s.getRangeAt(0);
     if (closest(range.startContainer, "pre") || closest(range.endContainer, "pre")) return;
-    var code = closest(range.startContainer, "code");
+    var code = closest(range.startContainer, tag);
     if (code) {
       var tail = $.createRange();
       tail.selectNodeContents(code);
@@ -1294,7 +1364,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
     }
     if (closest(range.startContainer, LINE) !== closest(range.endContainer, LINE)) return;
     pageChange(function () {
-      var el = $.createElement("code");
+      var el = $.createElement(tag);
       if (range.collapsed) el.appendChild($.createTextNode("\u200b"));
       else el.appendChild(range.extractContents());
       range.insertNode(el);
@@ -1308,6 +1378,8 @@ export const RICH_TEXT_SCRIPT = String.raw`
   // one undo gives the markers back. Never in a code block, inline code or a link, nor inside a composition.
   var INLINE = [
     { re: /(^|[^\w*])\*\*([^\s*](?:[^*]*[^\s*])?)\*\*$/, tag: "b" },
+    { re: /(^|[^\w_])__([^\s_](?:[^_]*[^\s_])?)__$/, tag: "u" },
+    { re: /(^|[^=])==([^\s=](?:[^=]*[^\s=])?)==$/, tag: "mark" },
     { re: /(^|[^\w*])\*([^\s*](?:[^*]*[^\s*])?)\*$/, tag: "i" },
     { re: /(^|[^\w_])_([^\s_](?:[^_]*[^\s_])?)_$/, tag: "i" },
     { re: /(^|[^\w~])~~([^\s~](?:[^~]*[^\s~])?)~~$/, tag: "strike" },
@@ -1337,7 +1409,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
     return true;
   };
   $.addEventListener("input", function (e) {
-    if (e.inputType !== "insertText" || !e.data || !/[*_~\x60]$/.test(e.data) || e.isComposing || composing) return;
+    if (e.inputType !== "insertText" || !e.data || !/[*_~=\x60]$/.test(e.data) || e.isComposing || composing) return;
     if (!content().contains(e.target) && e.target !== content()) return;
     if (inlineMark()) refreshToolbar();
   }, true);
@@ -1347,25 +1419,27 @@ export const RICH_TEXT_SCRIPT = String.raw`
   // blocks) and its marks bold, italic, struck, code and links, as one page change. Nothing else changes a paste: plain
   // text, a code block, a read-only note keep the library's plain paste.
   var MD_LINE = /^(#{1,6}\s+\S|\s*[-*+]\s+\S|\s*\d+[.)]\s+\S|\s*(?:[-*+]\s+)?\[[ xX]?\]\s+\S|>\s?\S|(?:-{3,}|\*{3,}|_{3,})\s*$|\x60\x60\x60)/m;
-  var MD_MARK = /\*\*[^*\s][^*\n]*\*\*|~~[^~\s][^~\n]*~~|\x60[^\x60\n]+\x60|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\)|https?:\/\/[^\s/?#.]/;
-  var INLINE_MD = /\x60([^\x60\n]+)\x60|\*\*([^*\s](?:[^*\n]*[^*\s])?)\*\*|~~([^~\s](?:[^~\n]*[^~\s])?)~~|(^|[^\w*])\*([^*\s](?:[^*\n]*[^*\s])?)\*|(^|[^\w_])_([^_\s](?:[^_\n]*[^_\s])?)_|\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)|(https?:\/\/[^\s<>"]+)/;
+  var MD_MARK = /\*\*[^*\s][^*\n]*\*\*|__[^_\s][^_\n]*__|~~[^~\s][^~\n]*~~|==[^=\s][^=\n]*==|\x60[^\x60\n]+\x60|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\)|https?:\/\/[^\s/?#.]/;
+  // Groups: 1 code, 2 bold, 3 struck, 4 highlight, 5-6 underline, 7-8 and 9-10 italic (each after the character before
+  // its marker), 11-12 a link's text and address, 13 a bare web address.
+  var INLINE_MD = /\x60([^\x60\n]+)\x60|\*\*([^*\s](?:[^*\n]*[^*\s])?)\*\*|~~([^~\s](?:[^~\n]*[^~\s])?)~~|==([^=\s](?:[^=\n]*[^=\s])?)==|(^|[^\w_])__([^_\s](?:[^_\n]*[^_\s])?)__|(^|[^\w*])\*([^*\s](?:[^*\n]*[^*\s])?)\*|(^|[^\w_])_([^_\s](?:[^_\n]*[^_\s])?)_|\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)|(https?:\/\/[^\s<>"]+)/;
+  var STYLED = { 2: "b", 3: "strike", 4: "mark", 6: "u", 8: "i", 10: "i" };
   var inlineMd = function (text, into) {
     var m;
     while (text && (m = INLINE_MD.exec(text))) {
-      var lead = m[4] !== undefined ? m[4] : m[6] !== undefined ? m[6] : "";
+      var lead = [m[5], m[7], m[9]].filter(function (g) { return g !== undefined; })[0] || "";
       var at = m.index + lead.length, whole = m[0].length - lead.length, el = null;
       if (at) into.appendChild($.createTextNode(text.slice(0, at)));
+      var styled = null;
+      for (var g in STYLED) if (m[g] !== undefined) styled = g;
       if (m[1] !== undefined) (el = $.createElement("code")).textContent = m[1];
-      else if (m[2] !== undefined) inlineMd(m[2], (el = $.createElement("b")));
-      else if (m[3] !== undefined) inlineMd(m[3], (el = $.createElement("strike")));
-      else if (m[5] !== undefined) inlineMd(m[5], (el = $.createElement("i")));
-      else if (m[7] !== undefined) inlineMd(m[7], (el = $.createElement("i")));
-      else if (m[8] !== undefined) {
+      else if (styled) inlineMd(m[styled], (el = $.createElement(STYLED[styled])));
+      else if (m[11] !== undefined) {
         el = $.createElement("a");
-        el.setAttribute("href", m[9]);
-        inlineMd(m[8], el);
+        el.setAttribute("href", m[12]);
+        inlineMd(m[11], el);
       } else {
-        var href = m[10].replace(/[.,;:!?)\]}'"»]+$/, "");
+        var href = m[13].replace(/[.,;:!?)\]}'"»]+$/, "");
         whole = href.length;
         el = $.createElement("a");
         el.setAttribute("href", href);
@@ -1653,12 +1727,14 @@ export const RICH_TEXT_SCRIPT = String.raw`
   };
 
   // The bar's commands by name (FormatCommand): nothing else, and nothing in a read-only note.
-  var COMMANDS = ["bold", "italic", "underline", "strikeThrough", "subscript", "superscript", "justifyLeft", "justifyCenter", "code", "undo", "redo"];
+  var COMMANDS = ["bold", "italic", "underline", "strikeThrough", "subscript", "superscript", "justifyLeft", "justifyCenter", "code", "highlight", "normal", "undo", "redo"];
   var run = function (command) {
     if (COMMANDS.indexOf(command) < 0 || !content().isContentEditable) return;
     if (command === "undo") undo();
     else if (command === "redo") redo();
-    else if (command === "code") toggleCode();
+    else if (command === "code") toggleInline("code");
+    else if (command === "highlight") toggleInline("mark");
+    else if (command === "normal") normalize();
     else exec(command);
     refreshToolbar();
   };
@@ -1681,6 +1757,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
       sup: queryState("superscript"),
       center: getComputedStyle(line).textAlign === "center",
       code: !!closest(node, "code") && !closest(node, "pre"),
+      highlight: !!closest(node, "mark"),
       link: !!link && link.getAttribute("href").indexOf("#fm-note-") !== 0,
     };
   };

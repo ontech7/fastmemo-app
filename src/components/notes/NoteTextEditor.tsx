@@ -183,6 +183,7 @@ const PLAIN_STATE: EditorState = {
   sup: false,
   center: false,
   code: false,
+  highlight: false,
   link: false,
 };
 

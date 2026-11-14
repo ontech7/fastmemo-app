@@ -282,6 +282,10 @@ export default function HelpScreen() {
             body: <>{lines("help.what_text_notes", ["text_1_0", "text_2_0"])}</>,
           },
           {
+            base: "help.what_markdown",
+            body: <>{lines("help.what_markdown", ["text_1_0", "text_2_0", "text_3_0", "text_4_0"])}</>,
+          },
+          {
             base: "help.what_note_links",
             body: <>{lines("help.what_note_links", ["text_1_0"])}</>,
           },

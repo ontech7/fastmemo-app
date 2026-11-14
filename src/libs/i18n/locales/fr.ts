@@ -223,11 +223,11 @@ const fr = {
       lists: "Listes",
       insert: "Insérer",
       more: "Plus",
-      text: "Texte",
+      normal: "Normal",
       h1: "Titre 1",
       h2: "Titre 2",
       quote: "Citation",
-      code: "Code",
+      code_block: "Bloc de code",
       bullets: "Liste à puces",
       numbers: "Liste numérotée",
       checks: "Cases à cocher",
@@ -237,6 +237,7 @@ const fr = {
       note_link: "Lien vers une note",
       rule: "Ligne",
       inline_code: "Code en ligne",
+      highlight: "Surligné",
       strike: "Barré",
       align_left: "Aligner à gauche",
       center: "Centrer",
@@ -914,8 +915,19 @@ const fr = {
     what_text_notes: {
       title: "Notes texte",
       text_1_0:
-        "La barre propose des styles de ligne (titres, citation, code), des listes avec cases à cocher et un menu pour insérer des images, des liens, des liens vers d'autres notes et des lignes.",
-      text_2_0: "En début de ligne, vous pouvez aussi taper #, ##, -, 1., [] ou > suivi d'une espace.",
+        "La barre propose les styles de ligne (Normal, titres, citation), les listes avec cases à cocher, un menu pour insérer images, liens, liens vers d'autres notes et lignes, et sous ··· blocs de code, code en ligne, surligné et plus. Normal retire tous les styles.",
+      text_2_0: "Vous pouvez aussi écrire en Markdown : voir Markdown plus bas.",
+    },
+    what_markdown: {
+      title: "Markdown",
+      text_1_0:
+        "En début de ligne : # titre, ## sous-titre, - ou * puces, 1. liste numérotée, [] case à cocher, > citation, puis une espace ; --- puis Entrée trace une ligne.",
+      text_2_0:
+        "Dans le texte : **gras**, *italique* ou _italique_, __souligné__, ~~barré~~, ==surligné==, `code`. Le style s'applique quand vous tapez les signes de fermeture ; Annuler remet les signes.",
+      text_3_0:
+        "Une adresse qui commence par http:// ou https:// devient un lien quand vous tapez une espace ou appuyez sur Entrée.",
+      text_4_0:
+        "Si vous collez du Markdown, ses titres, listes, cases, citations, lignes, blocs de code entre ``` et liens [texte](adresse) deviennent des lignes de la note. Un seul Annuler retire tout.",
     },
     what_note_links: {
       title: "Lier une note",

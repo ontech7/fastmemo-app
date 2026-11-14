@@ -223,11 +223,11 @@ const es = {
       lists: "Listas",
       insert: "Insertar",
       more: "Más",
-      text: "Texto",
+      normal: "Normal",
       h1: "Título 1",
       h2: "Título 2",
       quote: "Cita",
-      code: "Código",
+      code_block: "Bloque de código",
       bullets: "Lista con viñetas",
       numbers: "Lista numerada",
       checks: "Casillas de verificación",
@@ -237,6 +237,7 @@ const es = {
       note_link: "Enlace a una nota",
       rule: "Línea",
       inline_code: "Código en línea",
+      highlight: "Resaltado",
       strike: "Tachado",
       align_left: "Alinear a la izquierda",
       center: "Centrar",
@@ -909,8 +910,19 @@ const es = {
     what_text_notes: {
       title: "Notas de texto",
       text_1_0:
-        "La barra tiene estilos de línea (títulos, cita, código), listas con casillas y un menú para insertar imágenes, enlaces, enlaces a otras notas y líneas.",
-      text_2_0: "Al principio de una línea también puedes escribir #, ##, -, 1., [] o > y un espacio.",
+        "La barra tiene estilos de línea (Normal, títulos, cita), listas con casillas, un menú para insertar imágenes, enlaces, enlaces a otras notas y líneas, y en ··· bloques de código, código en línea, resaltado y más. Normal quita todos los estilos.",
+      text_2_0: "También puedes escribir en Markdown: consulta Markdown más abajo.",
+    },
+    what_markdown: {
+      title: "Markdown",
+      text_1_0:
+        "Al principio de una línea: # título, ## subtítulo, - o * viñetas, 1. lista numerada, [] casilla, > cita, y luego un espacio; --- e Intro dibujan una línea.",
+      text_2_0:
+        "En el texto: **negrita**, *cursiva* o _cursiva_, __subrayado__, ~~tachado~~, ==resaltado==, `código`. El estilo se aplica al escribir los signos de cierre; Deshacer devuelve los signos.",
+      text_3_0:
+        "Una dirección que empieza por http:// o https:// se convierte en enlace al escribir un espacio o pulsar Intro.",
+      text_4_0:
+        "Si pegas Markdown, sus títulos, listas, casillas, citas, líneas, bloques de código entre ``` y enlaces [texto](dirección) pasan a ser líneas de la nota. Un solo Deshacer lo quita todo.",
     },
     what_note_links: {
       title: "Enlazar una nota",

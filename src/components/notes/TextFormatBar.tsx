@@ -12,6 +12,7 @@ import {
   CameraIcon,
   CheckListIcon,
   CodeBlockIcon,
+  HighlightIcon,
   InlineCodeIcon,
   ImageIcon,
   LinkIcon,
@@ -72,7 +73,7 @@ export const TEXT_FORMAT_BAR_HEIGHT = 44 + 2 * PADDING_MARGIN.sm + 1;
 const ICON = 20;
 const MENU_WIDTH = 216;
 const ROOMY_WIDTH = 600;
-const BLOCK_LINES: readonly LineType[] = ["h1", "h2", "quote", "code"];
+const BLOCK_LINES: readonly LineType[] = ["h1", "h2", "quote"];
 const LIST_LINES: readonly LineType[] = ["ul", "ol", "todo"];
 
 /**
@@ -138,11 +139,12 @@ export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, 
     if (name === "style")
       return [
         {
+          // the line back to text, and every style off: the line's, or the selection's
           key: "p",
-          label: t("note.format.text"),
+          label: t("note.format.normal"),
           icon: <ParagraphIcon size={ICON} color={iconColor} />,
-          checked: state.line === "p",
-          onPress: line("p"),
+          checked: state.line === "p" && !state.bold && !state.italic && !state.underline && !state.code && !state.highlight,
+          onPress: format("normal"),
         },
         { key: "h1", label: t("note.format.h1"), icon: glyph("H1"), checked: state.line === "h1", onPress: line("h1") },
         { key: "h2", label: t("note.format.h2"), icon: glyph("H2"), checked: state.line === "h2", onPress: line("h2") },
@@ -152,13 +154,6 @@ export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, 
           icon: <QuoteIcon size={ICON} color={iconColor} />,
           checked: state.line === "quote",
           onPress: line("quote"),
-        },
-        {
-          key: "code",
-          label: t("note.format.code"),
-          icon: <CodeBlockIcon size={ICON} color={iconColor} />,
-          checked: state.line === "code",
-          onPress: line("code"),
         },
       ];
     if (name === "lists")
@@ -227,11 +222,25 @@ export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, 
     }
     return [
       {
+        key: "codeBlock",
+        label: t("note.format.code_block"),
+        icon: <CodeBlockIcon size={ICON} color={iconColor} />,
+        checked: state.line === "code",
+        onPress: line("code"),
+      },
+      {
         key: "code",
         label: t("note.format.inline_code"),
         icon: <InlineCodeIcon size={ICON} color={iconColor} />,
         checked: state.code,
         onPress: format("code"),
+      },
+      {
+        key: "highlight",
+        label: t("note.format.highlight"),
+        icon: <HighlightIcon size={ICON} color={iconColor} />,
+        checked: state.highlight,
+        onPress: format("highlight"),
       },
       {
         key: "strike",
@@ -391,7 +400,12 @@ export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, 
           <View style={styles.separator} />
           {opener("lists", t("note.format.lists"), listsOn, <BulletListIcon size={18} color={lit(listsOn)} />)}
           {opener("insert", t("note.format.insert"), false, <PlusIcon size={18} strokeWidth={2} color={COLOR.softWhite} />)}
-          {opener("more", t("note.format.more"), false, <MoreIcon size={ICON} strokeWidth={2} color={COLOR.softWhite} />)}
+          {opener(
+            "more",
+            t("note.format.more"),
+            state.line === "code",
+            <MoreIcon size={ICON} strokeWidth={2} color={COLOR.softWhite} />
+          )}
         </ScrollView>
       </View>
       {/* After the controls: Tab reaches a menu's entries from them. */}

@@ -25,6 +25,7 @@ export const HELP_TOPICS: { catKey: string; bases: string[] }[] = [
     bases: [
       "help.what_toolbar_below",
       "help.what_text_notes",
+      "help.what_markdown",
       "help.what_note_links",
       "help.what_lists",
       "help.what_find_replace",
