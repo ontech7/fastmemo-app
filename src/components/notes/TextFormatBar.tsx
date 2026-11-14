@@ -441,11 +441,12 @@ const styles = StyleSheet.create({
   band: {
     paddingBottom: PADDING_MARGIN.sm,
   },
+  // The first and last controls clear the screen's edges.
   row: {
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 2,
+    paddingHorizontal: PADDING_MARGIN.sm,
   },
   rowDocked: {
     justifyContent: "center",
