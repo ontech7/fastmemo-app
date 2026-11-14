@@ -71,7 +71,8 @@ const WIRED_INSERTS: readonly InsertKind[] = ["image", "photo", "link", "noteLin
 export const TEXT_FORMAT_BAR_HEIGHT = 44 + 2 * PADDING_MARGIN.sm + 1;
 
 const ICON = 20;
-const MENU_WIDTH = 216;
+// the longest label (es "Casillas de verificación") and a tick fit in one line
+const MENU_WIDTH = 248;
 const ROOMY_WIDTH = 600;
 const BLOCK_LINES: readonly LineType[] = ["h1", "h2", "quote"];
 const LIST_LINES: readonly LineType[] = ["ul", "ol", "todo"];
