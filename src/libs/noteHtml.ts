@@ -18,6 +18,22 @@ export interface BlockColors {
   pillText: string;
 }
 
+/**
+ * A printed page's colours (the phone's PDF): dark text on white. The accent is the editor's (`COLOR.accentMuted`),
+ * written here because this file is read where the app's style constants (which load React Native) can't be.
+ */
+export const PRINT_BLOCK_COLORS: BlockColors = {
+  text: "#111",
+  muted: "#555",
+  accent: "#475AA6",
+  line: "#bbb",
+  boxFill: "#fff",
+  link: "#475AA6",
+  pill: "#475AA61f",
+  pillBorder: "#475AA666",
+  pillText: "#111",
+};
+
 /** The tick of a ticked box: white, on the accent. */
 const TICK =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' " +

@@ -1,4 +1,5 @@
 import { stripHtml } from "@/libs/ai";
+import { noteBlockCss, PRINT_BLOCK_COLORS } from "@/libs/noteHtml";
 
 /**
  * Pure, platform-agnostic helpers for converting note HTML into export
@@ -53,6 +54,9 @@ export function htmlToMarkdown(html: string): string {
   md = md.replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*\/?>/gi, "![$2]($1)");
   md = md.replace(/<img[^>]*src="([^"]*)"[^>]*\/?>/gi, "![]($1)");
 
+  // A link to another note: its label alone (its address means nothing outside the app)
+  md = md.replace(/<a[^>]*href="#fm-note-[^"]*"[^>]*>(.*?)<\/a>/gi, "$1");
+
   // Links
   md = md.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)");
 
@@ -64,6 +68,16 @@ export function htmlToMarkdown(html: string): string {
     return (
       content.replace(/<li[^>]*>(.*?)<\/li>/gis, (__, item) => {
         return `- ${stripHtml(item).trim()}\n`;
+      }) + "\n"
+    );
+  });
+
+  // Checkbox lists, before the numbered ones they are written as
+  md = md.replace(/<ol[^>]*class="[^"]*\bx-todo\b[^"]*"[^>]*>(.*?)<\/ol>/gis, (_, content) => {
+    return (
+      content.replace(/<li[^>]*>(.*?)<\/li>/gis, (__, item) => {
+        const box = /<input[^>]*\bchecked\b/i.test(item) ? "[x]" : "[ ]";
+        return `- ${box} ${stripHtml(item).trim()}\n`;
       }) + "\n"
     );
   });
@@ -179,6 +193,7 @@ export function wrapHtmlForPdf(title: string, htmlContent: string): string {
       border: 1px solid #ddd;
       padding: 8px;
     }
+    ${noteBlockCss(PRINT_BLOCK_COLORS)}
   </style>
 </head>
 <body>

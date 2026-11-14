@@ -9,6 +9,8 @@ import { dirname, join } from "node:path";
 import { readFileSync } from "node:fs";
 import os from "node:os";
 
+import { EVERY_LINE } from "./lib/everyLine.mjs";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const src = join(__dirname, "..", "src");
 const out = join(os.tmpdir(), "mcp.bundle.mjs");
@@ -1174,6 +1176,26 @@ console.log("\nedit_note: the session rule");
     otherSession.isError && otherSession.text.includes("session"),
     otherSession
   );
+}
+
+console.log("\na text note with every kind of line, through the tools");
+
+{
+  const { made, editNow, stored, read, search } = editor();
+  const { note } = await made({ type: "text", title: "every line", text: EVERY_LINE });
+  ok("created as it was sent", stored(note.id).text === EVERY_LINE, stored(note.id).text);
+  const content = JSON.parse((await read(note.id)).text).content;
+  ok("read gives it back as it is", content === EVERY_LINE, content);
+  const back = await editNow(note.id, { replaceHtml: content });
+  // the tool refuses an edit that changes nothing: the HTML sent back is the note itself
+  ok(
+    "its HTML sent back whole: nothing to change, the same note",
+    back.isError && /Nothing to change/.test(back.text) && stored(note.id).text === EVERY_LINE,
+    back
+  );
+  const more = await editNow(note.id, { appendHtml: "<div>fine</div>" });
+  ok("a line added at the end", !more.isError && stored(note.id).text === EVERY_LINE + "<div>fine</div>", stored(note.id).text);
+  ok("the search finds a ticked line's word", ids(await search("fatto")).includes(note.id));
 }
 
 console.log("\nedit_note: text");

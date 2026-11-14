@@ -10,6 +10,8 @@ import { dirname, join } from "node:path";
 import { writeFileSync } from "node:fs";
 import os from "node:os";
 
+import { EVERY_LINE, TODO_BOX, TODO_BOX_DONE } from "./lib/everyLine.mjs";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const src = join(__dirname, "..", "src");
 const entry = join(os.tmpdir(), "ai.entry.ts");
@@ -852,6 +854,33 @@ const run = async (fn) => {
   ok(
     "estimate: grows with the note",
     L.estimateSeconds("fix_grammar", note) > L.estimateSeconds("fix_grammar", "<div>Breve.</div>")
+  );
+}
+
+console.log("\nA rewrite of a text note with every kind of line");
+{
+  const segments = B.splitNoteBlocks(EVERY_LINE);
+  ok("split and joined, the note is the same", B.joinNoteBlocks(segments) === EVERY_LINE);
+  const shouted = B.joinNoteBlocks(
+    segments,
+    new Map(segments.map((s, i) => [i, s.kind === "unit" ? s.text.toUpperCase() : ""]).filter(([, t]) => t))
+  );
+  ok(
+    "a rewrite keeps both boxes and the tick",
+    shouted.includes(`<li>${TODO_BOX}da fare</li><li>${TODO_BOX_DONE}fatto</li>`),
+    shouted
+  );
+  ok(
+    "a rewrite keeps the rule and the line with links",
+    shouted.includes("<hr>") &&
+      shouted.includes('<a href="https://example.com/a?b=1">link</a>') &&
+      shouted.includes('<a href="#fm-note-abc123" contenteditable="false">Altra nota</a>'),
+    shouted
+  );
+  ok(
+    "a rewrite keeps heading 2 and quote as they are",
+    shouted.includes("<h2>TITOLO DUE</h2>") && shouted.includes("<blockquote>UNA CITAZIONE</blockquote>"),
+    shouted
   );
 }
 

@@ -2015,6 +2015,10 @@ await post({ type: "content", name: "setDisable", data: false });
   check("a pasted marker changes nothing", !(await state()).html.includes("<h1>"), (await state()).html);
 }
 
+check(
+  "the note sanitizer keeps every new line",
+  (await evaluate(`window.__fmSanitize(${JSON.stringify(EVERY_LINE)})`)) === EVERY_LINE
+);
 check("the note sanitizer was in the page", await evaluate("typeof window.__fmSanitize === 'function'"), "missing");
 check("no page errors", !pageErrors.length, pageErrors.join("\n"));
 

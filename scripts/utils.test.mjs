@@ -8,6 +8,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import os from "node:os";
 
+import { EVERY_LINE, EVERY_LINE_TEXT } from "./lib/everyLine.mjs";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const src = join(__dirname, "..", "src");
 const out = join(os.tmpdir(), "utils.bundle.mjs");
@@ -21,6 +23,8 @@ await build({
       export * from "@/utils/noteEmpty";
       export * from "@/utils/noteType";
       export * from "@/libs/links";
+      export { htmlToMarkdown, wrapHtmlForPdf } from "@/utils/html";
+      export { formatToPlainText } from "@/utils/string";
     `,
     resolveDir: src,
     loader: "ts",
@@ -34,6 +38,17 @@ await build({
     "@": src,
     "@react-native-async-storage/async-storage": join(__dirname, "_async-storage-stub.js"),
   },
+  // html.ts takes stripHtml from the AI's barrel: only its helpers, the store they read stubbed.
+  plugins: [
+    {
+      name: "ai-helpers",
+      setup(b) {
+        b.onResolve({ filter: /^@\/libs\/ai$/ }, () => ({ path: join(src, "libs/ai/helpers.ts") }));
+        b.onResolve({ filter: /^@\/slicers\/store$/ }, () => ({ path: "store", namespace: "stub" }));
+        b.onLoad({ filter: /.*/, namespace: "stub" }, () => ({ contents: "export const store = {};", loader: "js" }));
+      },
+    },
+  ],
 });
 
 const M = await import(pathToFileURL(out).href);
@@ -195,5 +210,39 @@ console.log("\nlinks a text note may hold");
 }
 
 void storage;
+
+console.log("\nexports of a text note with every kind of line");
+{
+  const { htmlToMarkdown, formatToPlainText, wrapHtmlForPdf } = M;
+  const md = htmlToMarkdown(EVERY_LINE);
+  ok(
+    "markdown: heading 2, quote, rule",
+    md.includes("## Titolo due") && md.includes("> Una citazione") && /\n---\n/.test(md),
+    md
+  );
+  ok("markdown: checkboxes", md.includes("- [ ] da fare\n- [x] fatto") && !md.includes("1. da fare"), md);
+  ok(
+    "markdown: a link, and a note link by its label",
+    md.includes("[link](https://example.com/a?b=1)") && md.includes("una nota Altra nota") && !md.includes("fm-note"),
+    md
+  );
+  const plain = formatToPlainText(EVERY_LINE);
+  ok(
+    "plain text has every line's words, in order",
+    EVERY_LINE_TEXT.slice(0, -1).reduce((at, line) => (at < 0 ? at : plain.indexOf(line, at)), 0) >= 0,
+    plain
+  );
+  ok(
+    "plain text: a note link is its label, a box is nothing",
+    plain.includes("Altra nota") && !plain.includes("fm-note") && !plain.includes("checkbox"),
+    plain
+  );
+  const pdfPage = wrapHtmlForPdf("T", "<div>x</div>");
+  ok(
+    "the PDF page styles the new lines",
+    ["blockquote", ".x-todo", "hr", "h2"].every((sel) => pdfPage.includes(sel))
+  );
+}
+
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);

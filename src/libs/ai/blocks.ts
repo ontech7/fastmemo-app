@@ -53,8 +53,8 @@ const BLOCK = new Set([
 /** Blocks kept whole: code, tables, figures, rules and forms are not prose. */
 const OPAQUE = new Set(["details", "dl", "fieldset", "figure", "form", "hr", "pre", "table"]);
 
-/** Content a rewrite would lose (the text is put back without markup): a unit holding any of it is kept. */
-const EMBEDDED = /<(img|video|audio|iframe|svg|canvas|object|embed|input|picture)\b/i;
+/** Content a rewrite would lose (the text is put back without markup), a link's address too: a unit holding any of it is kept. */
+const EMBEDDED = /<(img|video|audio|iframe|svg|canvas|object|embed|input|picture|a)\b/i;
 
 /** What ends a line inside a block: a line break, or an image or a checkbox between two runs of text (kept apart). */
 const LINE_CUT = new Set(["br", "embed", "img", "input"]);
