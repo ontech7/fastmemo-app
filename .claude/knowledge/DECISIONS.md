@@ -2064,3 +2064,98 @@ the confusion with categories the user feared).
 
 - Each note's lines stay in memory while its object lives (roughly its text once more), freed with it.
 - Accents are folded only for Latin, Greek and Cyrillic marks: kana with a voicing mark and Hangul stay as written.
+
+---
+
+## ADR-041: The Text Note's Lines and Links
+
+**Status:** Accepted (2026-11-14), plan 2 of 4.1.0 (spec B.1–B.6)  
+**Context:** the text note's bar was the library's `RichToolbar`, fifteen stock buttons in a scrolling row. People asked for
+headings below the first, quotes, checkboxes inside a text, a rule, links (to the web and to other notes) and the Markdown
+shortcuts other editors have. Every note written with them is also opened by 4.0.0 devices, by the PDF and Markdown exports,
+by the AI and by the agents' tools, and passes the released sanitizer (DOMPurify in the page, LL-060).  
+**Decision:**
+
+- **A line is one kind** (`LineType` in `libs/richTextEditor.ts`: `p`, `h1`, `h2`, `quote`, `code`, `ul`, `ol`, `todo`). The
+  bar's Aa and Lists menus, the typed shortcuts and Enter/Backspace all change a line's kind through the page's `toggle`.
+- **The checkbox list is the library's own markup** (pell's `x-todo`: a `contenteditable="false"` span holding an
+  `input[type=checkbox]`): the released sanitizer and the released page already keep it, so a 4.0.0 device shows both boxes and
+  their ticks. `h2`, `blockquote`, `hr` and `a` are plain HTML the released sanitizer keeps too.
+- **A note link is a fragment address** (`#fm-note-<id>`, `libs/links.ts`), not editable (`contenteditable="false"`), drawn as
+  a pill: the sanitizer removes the app's own scheme, so `fastmemoapp://` could never survive a save. A tap opens the note; a
+  web link (`https`, `mailto`, `tel` only, `normalizeLink`) opens through the system, never inside the page.
+- **The page owns its structural changes**: lists, checkboxes, the rule, shortcuts, links, image size/turn and leaving a code
+  block are `pageChange`s recorded with a MutationObserver and undone by putting the same nodes back. Mixing `execCommand` with
+  page DOM fixes broke WebKit's undo; one undo per change in both engines. Ticking a box is outside undo (it is a state, not an
+  edit).
+- **The bar is the app's** (`components/notes/TextFormatBar.tsx`): nine controls (undo, redo · Aa, bold, italic, underline ·
+  lists, +, ···), menus drawn above it as part of the screen (the keyboard stays open). It takes its whole state from one page
+  message (`STATE_MESSAGE`: the line's kind, the marks, align) and sends commands (`lineCommand`, `formatCommand`,
+  `RULE_COMMAND`, the link and picker commands). Icons are `components/icons/format` (`FormatSvg`), heroicons only for +, ···
+  and the tick.
+- **[[ opens the note picker** (`NoteLinkPicker`, `PICKER_MESSAGE` / `PICKER_KEY_MESSAGE`; the page hands over the arrows,
+  Enter and Esc only while rows are shown).
+- **Every reader knows the new lines**: PDF and Markdown/TXT exports (`libs/noteHtml.ts` `noteBlockCss`, `PRINT_BLOCK_COLORS`;
+  `utils/html.ts`), the AI's text (`libs/ai/helpers.ts`), the agents' tools (MCP read/edit), the search.
+- **Tested against the released pages and WebKit**: `scripts/richtext.test.mjs` (Chrome), `richtext-released.test.mjs` (the
+  new lines in the 4.0.0 page and sanitizer), `richtext-webkit.test.mjs` (Safari through safaridriver).
+
+**Rejected:** another editor engine (the released pages must still read every note); a class or data attribute for a box's
+state (the released sanitizer would drop it, and 4.0.0 would lose the ticks); the app's scheme for note links (removed by the
+sanitizer, LL-060).
+
+**Trade-offs:**
+
+- A typed shortcut on a phone keyboard runs during the IME's own handling; `SHORTCUTS_ON_TOUCH` turns them off on touch
+  screens if Gboard misbehaves (checked at Stop B).
+- WebKit joins a line to the bullet above with a font-size span (released versions too): kept as is.
+
+---
+
+## ADR-042: Version History
+
+**Status:** Accepted (2026-11-14), plan 2 of 4.1.0 (spec B.9)  
+**Context:** the AI can rewrite a note, an MCP agent can edit it, another device's version can replace one with no unsent
+change (`merge.ts`), and a note edited down to nothing was deleted for good (LL-093). Nothing kept what was there before.  
+**Decision:**
+
+- **What is kept, before** (`keepVersion(note, reason)`, `libs/history`):
+
+  | Reason    | Where                                                                                          |
+  | --------- | ---------------------------------------------------------------------------------------------- |
+  | `ai`      | an AI action that changes the content (text rewrite/summary, suggested list items)              |
+  | `agent`   | an MCP agent's edit (`handlers.ts` `editNote`, after the edit is valid, before the dispatch)    |
+  | `sync`    | another device's version replacing this one (`SyncEngine.applyPlan`, `replacedByPlan`)         |
+  | `edit`    | the first commit of a sitting on a note that existed when it was opened                         |
+  | `replace` | replace all (text and code notes)                                                              |
+  | `cleanup` | delete completed items                                                                         |
+  | `restore` | a restore (the version being replaced)                                                         |
+
+  Not kept: flag and category changes, a backup import.
+- **The 10-minute rule, per reason**: while the newest version kept for a reason is under 10 minutes old, another for that
+  reason isn't stored ("edit" waits for the newest of any reason). A version equal to the newest isn't stored.
+- **Limits** (`libs/history/limits.ts`, pure, `scripts/history.test.mjs`): 20 per note, 5 MB per note, 200 MB in all, the
+  oldest first.
+- **A store of its own**: on a device, files in `fastmemo-history/` next to the notes' folder; on the web and desktop, the
+  IndexedDB database `fastmemo-history` (IndexedDB only: without it nothing is kept). Values `i:<noteId>` (the index, newest
+  first) and `v:<noteId>:<versionId>` (one body: title and content only). One queue for every call; an unreadable index is
+  never written back (LL-039). Never synced, never in a backup, never reachable by an agent; not encrypted, like the notes on
+  the device. Writes run when idle (`runWhenIdle`), never on the typing path.
+- **When it goes**: with the note when it is deleted for good (`purged`), all of it with "wipe data", and a sweep once per start
+  (5 s after) of versions whose note is gone. A note in the trash keeps its history.
+- **An emptied note** that existed goes to the trash with its last saved content (and its "edit" version), with a toast; a new
+  note left empty is still dropped.
+- **The screens**: History (`app/notes/history.tsx`, from the note's menu), a version in the type's own editor read only with
+  `VersionBand` (`preview`: nothing reaches the store, the webhooks or the sync engine). **Restore**
+  (`slicers/thunks/restoreVersion.ts`) keeps the current version, then puts the old title and content back through `addNote`
+  as an ordinary edit (a revision, the upload queue, the "note updated" webhook); flags and category stay.
+
+**Rejected:** versions inside the notes' store (its save path must not change, and every version would be read at start);
+a version at every save (hundreds per sitting, none of them the one worth having); syncing them (Firestore budget, and
+another device's history isn't this one's).
+
+**Trade-offs:**
+
+- A note created and never edited since (seeded, imported) counts as new: its first sitting keeps no "edit" version, and
+  emptied it is dropped as before.
+- History survives a sign-out of the cloud; only "wipe data" clears it.

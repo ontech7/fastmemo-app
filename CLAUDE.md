@@ -134,6 +134,8 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
     newer revision; `syncedRev` is written only by the sync engine's reducers (ADR-016, LL-040)
 14. **Always take durations, easings and springs from `@/constants/motion`** (`DURATION`, `EASING`, `SPRING`, `LOOP`): no
     literal duration or spring in a component
+15. **Always call `keepVersion` before anything that isn't the person typing rewrites a note** (the AI, an agent, a sync,
+    replace all, delete completed, a restore): it keeps the note as it was, on this device only, when idle (ADR-042)
 
 ## Tech Stack (Quick Reference)
 
@@ -164,7 +166,7 @@ src/
   slicers/      -> Redux slices (notesSlice, categoriesSlice, settingsSlice) + thunks/
   types/        -> TypeScript type definitions (barrel export via index.ts)
   hooks/        -> Custom hooks (useCloudSync, useLiveNote, useTodoList, useRouter, useSecret, useNetInfo (.web: libs/netStatus), useCloudStatus, useVaultUnlocked, useVaultPrompt, useVaultProgress, useNoteSearch)
-  libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), diagnostics/ (Sentry, the installation code, the report payload: ADR-035), haptics/, i18n/, mcp/ (local MCP server, page side), search/ (one search: ADR-040), storage/, registry, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, netStatus, desktopCommands, desktopMenu, codeEditorPage, pageErrors, kanbanOps, quickNoteDraft, reducePhoto, reloadApp, noteCopy)
+  libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), diagnostics/ (Sentry, the installation code, the report payload: ADR-035), haptics/, history/ (versions: ADR-042), i18n/, mcp/ (local MCP server, page side), search/ (one search: ADR-040), storage/, registry, links, noteHtml, listOps, findTarget, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, netStatus, desktopCommands, desktopMenu, codeEditorPage, pageErrors, kanbanOps, quickNoteDraft, reducePhoto, reloadApp, noteCopy)
   utils/        -> Pure utility functions (sort, noteEmpty, noteType, imageSize, string, date, crypt, vault, secureRandom, ui, toast, webhook, export, platform, openUrl)
   providers/    -> React context providers (ReorderProvider, SyncOnProvider, DiagnosticsProvider, AppUpdateProvider)
   constants/    -> Static constants (styles, motion, layout, icons, code-languages, note-types)

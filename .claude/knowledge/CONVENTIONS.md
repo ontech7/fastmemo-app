@@ -1046,3 +1046,7 @@ What an error and a report carry is decided in ADR-035; the code is `src/libs/di
 | 24  | Always keep the children's order still while something is dragged          | Host a placeholder in an existing child: a moved node ends its web gesture (ADR-037) |
 | 25  | Always portal a web overlay with `position: fixed` to `document.body`      | RN-web's ScrollView has a transform: fixed would be relative to it (ADR-037)         |
 | 26  | Always reorder by drag through `ReorderProvider` and its components        | Never a drag library: one engine for boards, lists, categories (ADR-038, LL-090)     |
+| 27  | Always add a new kind of line in a text note with all its readers          | The page script and its test, the bar, the sanitizer case, the released-pages test, the exports, the AI, the agents' tools, the search (ADR-041) |
+| 28  | Always `keepVersion` before anything that isn't the person typing rewrites a note | AI, agent, sync, replace all, delete completed, restore (ADR-042)              |
+| 29  | Always drive the find bar through a `FindTarget`                           | `createTextFindTarget` / `createCodeFindTarget`, never a page directly (`libs/findTarget`) |
+| 30  | Always draw the text bar's icons with `components/icons/format`            | `FormatSvg` (24 box, stroke 1.6, round); heroicons only for +, ··· and the tick      |

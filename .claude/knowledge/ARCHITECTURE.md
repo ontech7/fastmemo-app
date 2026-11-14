@@ -31,7 +31,8 @@ src/
     secret-code.tsx    # Secret code entry
     temporary-trash.tsx # Trashed notes list
     notes/
-      [noteId].tsx     # Dynamic route: note editor (handles create + edit)
+      [noteId].tsx     # Dynamic route: note editor (handles create + edit); ?version=<id>: a kept version, read only (ADR-042)
+      history.tsx      # A note's kept versions by day (ADR-042); a protected note's only from inside it (a pass, LL-085)
     categories/
       create.tsx       # Create/update category (dual-purpose)
       change.tsx       # Change a note's category
@@ -55,7 +56,9 @@ src/
     buttons/           # 18 button components (each a single-purpose TouchableOpacity)
     cards/             # NoteCard (in a search: the title's marked words and the line that matched), TrashedNoteCard,
                        #   OrganizeCategoryCard, OrderedCategoryCard, TagRow (a tag and its count, the search's tag list)
-    notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor; NoteImageMenu (ADR-024)
+    notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor; NoteImageMenu (ADR-024);
+                       #   TextFormatBar (the text note's bar, ADR-041), NoteLinkPicker ([[), FindReplaceBar (talks to a FindTarget),
+                       #   VersionBand (a kept version on screen, ADR-042)
                        # QuickNoteBar (the home's capture bar); SelectionBar (select mode's actions in its place: words, or
                        #   icons alone where the column is narrow; LL-091)
     kanban/            # KanbanBoard, KanbanColumn, KanbanCard
@@ -95,6 +98,7 @@ src/
     thunks/
       notes.ts         # wipeNotes (+ the cloud collection)
       duplicateNote.ts # A copy of a live note (libs/noteCopy) through addNote, with the type's "note added" webhook
+      restoreVersion.ts # A kept version's title and content back in the note as an ordinary edit (ADR-042)
       categories.ts    # wipeCategories (+ the cloud collection)
 
   types/               # TypeScript type definitions
@@ -204,6 +208,13 @@ src/
                        #   a protected note's title alone), tags (words with #), search (matching, groups, the line), cache
                        #   (docOf, kept against the note object; warmUp while idle), findOnOpen (the word a result hands its note)
     noteCopy.ts        # copyOfNote: a copy sharing nothing with the original (new ids inside), the flags spec A.4 gives
+    history/           # Version history (ADR-042): limits (pure: what a version holds, shouldKeep, the limits, replacedByPlan),
+                       #   store (the queue over a backend of named values), backend (files in fastmemo-history/) / .web
+                       #   (IndexedDB fastmemo-history), labels (Today/Yesterday), index (keepVersion when idle, startHistory)
+    links.ts           # normalizeLink (https, mailto, tel only), note links as #fm-note-<id> (ADR-041)
+    noteHtml.ts        # The 4.1.0 lines' CSS for the editor and for print (BlockColors, PRINT_BLOCK_COLORS)
+    listOps.ts         # A list note's item operations, pure (insertAfter, removeItem, visibleItems, withoutDone, ...)
+    findTarget.ts      # What the find bar talks to: createTextFindTarget (the text page), createCodeFindTarget (CodeMirror)
     diagnostics/       # What an error and a report carry (ADR-035)
       index.ts         # initDiagnostics (Sentry init, tags, user id), setDiagnosticsContext, reportHandled, reportPageError,
                        #   addTrail, collectAlwaysFacts
@@ -227,7 +238,11 @@ src/
                        # scripts/code-page.test.mjs)
     pageErrors.ts      # The script an editor page runs to forward its errors (FASTMEMO_PAGE_ERROR, ADR-035)
     richTextEditor.ts  # The text editor's page script (line types, code exit, bullets, images, the image menu's messages) and style
-                       # (ADR-023, ADR-024, scripts/richtext.test.mjs)
+                       # (ADR-023, ADR-024, scripts/richtext.test.mjs). ADR-041: messages to the app STATE_MESSAGE (the bar's
+                       # state), LINK_MESSAGE / LINK_START_MESSAGE, PICKER_MESSAGE / PICKER_KEY_MESSAGE / NOTE_LINK_MESSAGE,
+                       # IMAGE_MESSAGE, COUNT_MESSAGE; commands lineCommand, formatCommand, RULE_COMMAND, the link commands
+                       # (linkCommand, LINK_START/CANCEL, UNLINK), the picker's (noteLinkCommand, PICKER_CLOSE, pickerShown,
+                       # PICK_START), imageCommand. Structural changes are pageChanges (recorded, one undo each)
 
   utils/               # Pure utility functions
     sort.ts            # Sort comparators for Timestamped/Ordered items; importantFirst (LL-080)
