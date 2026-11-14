@@ -2478,6 +2478,29 @@ asks whether the note existed before, and a text note's emptiness is read from i
 
 ---
 
+### LL-094: A shortcut typed first in an empty note turned back into text on a phone just started
+
+**Date:** 2026-11-14  
+**Severity:** Medium (the heading, list or quote is lost, the words stay; a checkbox line left a second, empty list)  
+**Category:** Bug  
+**What happened:** on the Pixel, right after a cold start, "# Titolo" typed first in a new note gave a plain line in 4 of
+5 tries (none on the web, none once the page had run a while). The page's events showed why: the first character of an
+empty note is bare text in the editable root, and pell puts it in a line of its own with a `formatBlock('<div>')` it runs
+from `setTimeout(0)`. On a page just started the browser runs input before timers, so the space (the shortcut: the line
+became an `<h1>`) and the next letter came first, and the late wrap made the `<h1>` a `<div>` again.  
+**Root cause:** a library change deferred to a timer, applied without looking at what the line had become meanwhile.  
+**Fix:** the page script counts a pending wrap after the library's `input` and `compositionend` handlers (a line typed
+right in the root) until a timer queued after the library's own, and its `document.execCommand` drops a `formatBlock` to
+a plain line while one is pending and the caret is already on a line. Test: `richtext.test.mjs` "first in an empty note,
+pell's line wrap late" holds the page's `setTimeout(0)` while typing, for every shortcut (red before, green after).  
+**Rule:** anything the page changes can meet a deferred change of the library's: test with its timers held, and check a
+phone after a cold start, where timers come late.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-14 **Resolved in:** plan-2/new-features
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

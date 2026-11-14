@@ -1061,10 +1061,28 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (isRedo) redo();
     else undo();
   }, true);
+  // A line typed right in the note (the first characters of an empty note) is put in a line of its own by the library,
+  // from a setTimeout(0) its input and compositionend handlers start. On a page just started (a phone after a cold
+  // start) that timer can fire after the next keys, once a shortcut has made the line a heading, a list or a quote: the
+  // late wrap would turn it back into text. Counted here, after the library's handlers, until a timer queued after its
+  // own; while one is pending, its formatBlock to a plain line is dropped when the caret is already on a line.
+  var wrapsPending = 0;
+  var bareLine = function () {
+    var s = selection();
+    return !!s.rangeCount && content().contains(s.anchorNode) && !closest(s.anchorNode, LINE);
+  };
+  var wrapAhead = function () {
+    if (!bareLine()) return;
+    wrapsPending++;
+    setTimeout(function () { wrapsPending--; }, 0);
+  };
+  content().addEventListener("input", wrapAhead);
+  content().addEventListener("compositionend", wrapAhead);
   // The library's bar sends undo and redo as execCommand: through the page's history too.
   $.execCommand = function (command, ui, value) {
     if (command === "undo") return undo();
     if (command === "redo") return redo();
+    if (command === "formatBlock" && wrapsPending && /^<?(div|p)>?$/i.test(String(value)) && !bareLine()) return false;
     return nativeExec(command, ui, value);
   };
 

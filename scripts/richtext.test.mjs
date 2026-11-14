@@ -1909,6 +1909,25 @@ export async function runCases(driver, page, url) {
       );
     }
 
+    // An empty note: the first character typed is bare text, and pell wraps it in a line with a setTimeout(0). On a page
+    // just started (the Pixel after a cold start) that timer can fire after the marker's space and the next letter: held
+    // here until then, and run in their order.
+    for (const [marker, expected] of SHORT) {
+      await open("");
+      await evaluate(
+        `(() => { const c = document.querySelector(".pell-content"); c.focus(); const r = document.createRange(); r.setStart(c, 0); r.collapse(true); getSelection().removeAllRanges(); getSelection().addRange(r); c.dispatchEvent(new Event("touchend", { bubbles: true })); window.__held = []; window.__setTimeout = window.setTimeout; window.setTimeout = function (fn, ms) { if (ms) return window.__setTimeout.apply(window, arguments); var args = [].slice.call(arguments, 2); window.__held.push(function () { fn.apply(null, args); }); return 0; }; })()`
+      );
+      await type(marker);
+      await type(" ");
+      await type("x");
+      await evaluate(
+        `(() => { window.setTimeout = window.__setTimeout; const held = window.__held; window.__held = []; held.forEach((f) => f()); })()`
+      );
+      await sleep(90);
+      const html = (await state()).html;
+      check(`"${marker} " first in an empty note, pell's line wrap late: ${expected}`, html === expected, html);
+    }
+
     await emptyLine();
     await type("a #");
     await type(" ");
