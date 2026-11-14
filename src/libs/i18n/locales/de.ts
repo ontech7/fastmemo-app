@@ -911,9 +911,30 @@ const de = {
       text_11_0: "• Nummerierte Liste — beginnen Sie eine nummerierte Liste.",
       text_12_0: "• Code — fassen Sie den Text in einem formatierten Codeblock zusammen.",
     },
+    what_text_notes: {
+      title: "Textnotizen",
+      text_1_0:
+        "Die Leiste bietet Zeilenstile (Überschriften, Zitat, Code), Listen mit Kontrollkästchen und ein Menü zum Einfügen von Bildern, Links, Links zu anderen Notizen und Linien.",
+      text_2_0: "Am Zeilenanfang können Sie auch #, ##, -, 1., [] oder > und ein Leerzeichen eingeben.",
+    },
+    what_note_links: {
+      title: "Notiz verlinken",
+      text_1_0: "Geben Sie in einer Textnotiz [[ ein und wählen Sie eine Notiz. Ein Tippen auf den Link öffnet sie.",
+    },
+    what_lists: {
+      title: "Listen",
+      text_1_0:
+        "Enter fügt den nächsten Eintrag hinzu. Die Schaltfläche unten links blendet die erledigten aus oder löscht sie.",
+    },
+    what_history: {
+      title: "Verlauf",
+      text_1_0: "Im Menü einer Notiz können Sie ihre früheren Versionen ansehen und wiederherstellen.",
+      text_2_0:
+        "Fast Memo behält eine, bevor die KI, ein Agent, eine Synchronisierung oder eine große Änderung die Notiz überschreibt. Sie bleiben auf diesem Gerät.",
+    },
     what_find_replace: {
       title: "Wie suche und ersetze ich Text?",
-      text_1_0: "Tippen Sie beim Bearbeiten einer Textnotiz oben rechts auf das Suchsymbol.",
+      text_1_0: "Tippen Sie beim Bearbeiten einer Text- oder Codenotiz oben rechts auf das Suchsymbol.",
       text_2_0: "Geben Sie ein, wonach Sie suchen: Die Pfeile springen zwischen den Treffern und zeigen an, wie viele es gibt.",
       text_3_0: "Aktivieren Sie 'Ersetzen', um den aktuellen Treffer auszutauschen, oder ersetzen Sie alle Treffer auf einmal.",
     },
@@ -1449,7 +1470,7 @@ const de = {
       ai: "Vor dem KI-Assistenten",
       agent: "Vor einem KI-Agenten",
       sync: "Vor der Synchronisierung",
-      edit: "Vor deinen Änderungen",
+      edit: "Vor Ihren Änderungen",
       replace: "Vor „Alle ersetzen“",
       cleanup: "Vor dem Löschen erledigter Einträge",
       restore: "Vor einer Wiederherstellung",

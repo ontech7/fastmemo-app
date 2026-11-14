@@ -906,9 +906,29 @@ const es = {
       text_11_0: "• Lista numerada: inicia una lista numerada.",
       text_12_0: "• Código: envuelve el texto en un bloque de código con formato.",
     },
+    what_text_notes: {
+      title: "Notas de texto",
+      text_1_0:
+        "La barra tiene estilos de línea (títulos, cita, código), listas con casillas y un menú para insertar imágenes, enlaces, enlaces a otras notas y líneas.",
+      text_2_0: "Al principio de una línea también puedes escribir #, ##, -, 1., [] o > y un espacio.",
+    },
+    what_note_links: {
+      title: "Enlazar una nota",
+      text_1_0: "Escribe [[ en una nota de texto y elige una nota. Al tocar el enlace, se abre.",
+    },
+    what_lists: {
+      title: "Listas",
+      text_1_0: "Intro añade el siguiente elemento. El botón de abajo a la izquierda oculta o elimina los completados.",
+    },
+    what_history: {
+      title: "Historial",
+      text_1_0: "Desde el menú de una nota puedes ver y restaurar sus versiones anteriores.",
+      text_2_0:
+        "Fast Memo guarda una antes de que la IA, un agente, una sincronización o un cambio importante reescriban la nota. Se quedan en este dispositivo.",
+    },
     what_find_replace: {
       title: "¿Cómo busco y reemplazo texto?",
-      text_1_0: "Mientras editas una nota de texto, toca el icono de búsqueda en la esquina superior derecha.",
+      text_1_0: "Mientras editas una nota de texto o de código, toca el icono de búsqueda en la esquina superior derecha.",
       text_2_0: "Escribe lo que buscas: las flechas saltan entre las coincidencias y muestran cuántas hay.",
       text_3_0: "Activa 'Reemplazar' para cambiar la coincidencia actual, o reemplaza todas las coincidencias a la vez.",
     },

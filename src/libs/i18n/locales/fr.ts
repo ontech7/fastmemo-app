@@ -911,9 +911,30 @@ const fr = {
       text_11_0: "• Liste numérotée — démarrer une liste numérotée.",
       text_12_0: "• Code — entourer le texte d'un bloc de code formaté.",
     },
+    what_text_notes: {
+      title: "Notes texte",
+      text_1_0:
+        "La barre propose des styles de ligne (titres, citation, code), des listes avec cases à cocher et un menu pour insérer des images, des liens, des liens vers d'autres notes et des lignes.",
+      text_2_0: "En début de ligne, vous pouvez aussi taper #, ##, -, 1., [] ou > suivi d'une espace.",
+    },
+    what_note_links: {
+      title: "Lier une note",
+      text_1_0: "Tapez [[ dans une note texte et choisissez une note. Un appui sur le lien l'ouvre.",
+    },
+    what_lists: {
+      title: "Listes",
+      text_1_0: "Entrée ajoute l'élément suivant. Le bouton en bas à gauche masque ou supprime les éléments terminés.",
+    },
+    what_history: {
+      title: "Historique",
+      text_1_0: "Depuis le menu d'une note, vous pouvez voir et restaurer ses versions précédentes.",
+      text_2_0:
+        "Fast Memo en garde une avant que l'IA, un agent, une synchronisation ou une modification importante ne réécrive la note. Elles restent sur cet appareil.",
+    },
     what_find_replace: {
       title: "Comment rechercher et remplacer du texte ?",
-      text_1_0: "Pendant que vous modifiez une note texte, appuyez sur l'icône de recherche en haut à droite.",
+      text_1_0:
+        "Pendant que vous modifiez une note texte ou une note de code, appuyez sur l'icône de recherche en haut à droite.",
       text_2_0: "Saisissez ce que vous cherchez : les flèches passent d'une occurrence à l'autre et indiquent leur nombre.",
       text_3_0: "Activez 'Remplacer' pour remplacer l'occurrence actuelle, ou remplacez toutes les occurrences d'un coup.",
     },

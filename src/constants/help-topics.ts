@@ -22,7 +22,15 @@ export const HELP_TOPICS: { catKey: string; bases: string[] }[] = [
   },
   {
     catKey: "help.cat_editor",
-    bases: ["help.what_toolbar_below", "help.what_find_replace", "help.what_are_settings_note"],
+    bases: [
+      "help.what_toolbar_below",
+      "help.what_text_notes",
+      "help.what_note_links",
+      "help.what_lists",
+      "help.what_find_replace",
+      "help.what_are_settings_note",
+      "help.what_history",
+    ],
   },
   {
     catKey: "help.cat_categories",

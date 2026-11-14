@@ -278,6 +278,18 @@ export default function HelpScreen() {
             ),
           },
           {
+            base: "help.what_text_notes",
+            body: <>{lines("help.what_text_notes", ["text_1_0", "text_2_0"])}</>,
+          },
+          {
+            base: "help.what_note_links",
+            body: <>{lines("help.what_note_links", ["text_1_0"])}</>,
+          },
+          {
+            base: "help.what_lists",
+            body: <>{lines("help.what_lists", ["text_1_0"])}</>,
+          },
+          {
             base: "help.what_find_replace",
             body: <>{lines("help.what_find_replace", ["text_1_0", "text_2_0", "text_3_0"])}</>,
           },
@@ -308,6 +320,10 @@ export default function HelpScreen() {
                 ])}
               </>
             ),
+          },
+          {
+            base: "help.what_history",
+            body: <>{lines("help.what_history", ["text_1_0", "text_2_0"])}</>,
           },
         ],
       },

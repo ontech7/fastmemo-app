@@ -900,9 +900,29 @@ const en = {
       text_11_0: "• Numbered list — start a numbered list.",
       text_12_0: "• Code — wrap the text in a formatted code block.",
     },
+    what_text_notes: {
+      title: "Text notes",
+      text_1_0:
+        "The bar has line styles (headings, quote, code), lists with checkboxes, and a menu to insert images, links, links to other notes and lines.",
+      text_2_0: "At the start of a line you can also type #, ##, -, 1., [] or > and a space.",
+    },
+    what_note_links: {
+      title: "Link a note",
+      text_1_0: "Type [[ in a text note and choose a note. A tap on the link opens it.",
+    },
+    what_lists: {
+      title: "Lists",
+      text_1_0: "Enter adds the next item. The button at the bottom left hides or deletes the completed ones.",
+    },
+    what_history: {
+      title: "History",
+      text_1_0: "From a note's menu you can see and restore its earlier versions.",
+      text_2_0:
+        "Fast Memo keeps one before the AI, an agent, a sync or a big change rewrites the note. They stay on this device.",
+    },
     what_find_replace: {
       title: "How do I find and replace text?",
-      text_1_0: "While editing a text note, tap the search icon in the top-right corner.",
+      text_1_0: "While editing a text or code note, tap the search icon in the top-right corner.",
       text_2_0: "Type what you're looking for: the arrows jump between matches and show how many there are.",
       text_3_0: "Turn on 'Replace' to swap the current match, or replace every match at once.",
     },

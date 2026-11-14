@@ -907,9 +907,29 @@ const it = {
       text_11_0: "• Elenco numerato — crea un elenco numerato.",
       text_12_0: "• Codice — racchiude il testo in un blocco di codice formattato.",
     },
+    what_text_notes: {
+      title: "Note di testo",
+      text_1_0:
+        "La barra ha gli stili di riga (titoli, citazione, codice), gli elenchi con caselle di spunta e un menu per inserire immagini, link, link ad altre note e linee.",
+      text_2_0: "A inizio riga puoi anche scrivere #, ##, -, 1., [] oppure > e uno spazio.",
+    },
+    what_note_links: {
+      title: "Collega una nota",
+      text_1_0: "Scrivi [[ in una nota di testo e scegli una nota. Un tocco sul link la apre.",
+    },
+    what_lists: {
+      title: "Liste",
+      text_1_0: "Invio aggiunge la voce successiva. Il pulsante in basso a sinistra nasconde o elimina quelle completate.",
+    },
+    what_history: {
+      title: "Cronologia",
+      text_1_0: "Dal menu di una nota puoi vedere e ripristinare le versioni precedenti.",
+      text_2_0:
+        "Fast Memo ne conserva una prima che l'AI, un agente, una sincronizzazione o una modifica importante riscrivano la nota. Restano su questo dispositivo.",
+    },
     what_find_replace: {
       title: "Come trovo e sostituisco il testo?",
-      text_1_0: "Mentre modifichi una nota di testo, tocca l'icona di ricerca in alto a destra.",
+      text_1_0: "Mentre modifichi una nota di testo o di codice, tocca l'icona di ricerca in alto a destra.",
       text_2_0: "Scrivi cosa cerchi: le frecce ti spostano tra i risultati e ti mostrano quanti sono.",
       text_3_0: "Attiva 'Sostituisci' per cambiare il risultato corrente, oppure sostituiscili tutti in una volta.",
     },
