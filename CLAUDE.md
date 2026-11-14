@@ -166,12 +166,12 @@ src/
   slicers/      -> Redux slices (notesSlice, categoriesSlice, settingsSlice) + thunks/
   types/        -> TypeScript type definitions (barrel export via index.ts)
   hooks/        -> Custom hooks (useCloudSync, useLiveNote, useTodoList, useRouter, useSecret, useNetInfo (.web: libs/netStatus), useCloudStatus, useVaultUnlocked, useVaultPrompt, useVaultProgress, useNoteSearch)
-  libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), diagnostics/ (Sentry, the installation code, the report payload: ADR-035), haptics/, history/ (versions: ADR-042), i18n/, mcp/ (local MCP server, page side), search/ (one search: ADR-040), storage/, registry, links, noteHtml, listOps, findTarget, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, netStatus, desktopCommands, desktopMenu, codeEditorPage, pageErrors, kanbanOps, quickNoteDraft, reducePhoto, reloadApp, noteCopy)
+  libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), diagnostics/ (Sentry, the installation code, the report payload: ADR-035), haptics/, history/ (versions: ADR-042), i18n/, mcp/ (local MCP server, page side), search/ (one search: ADR-040), storage/, registry, links, noteHtml, listOps, findTarget, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, netStatus, desktopCommands, desktopMenu, desktopList, listCursor, desktopZoom, zoomSteps, print, printCss, dropGuard, codeEditorPage, pageErrors, kanbanOps, quickNoteDraft, reducePhoto, reloadApp, noteCopy)
   utils/        -> Pure utility functions (sort, noteEmpty, noteType, imageSize, string, date, crypt, vault, secureRandom, ui, toast, webhook, export, platform, openUrl)
   providers/    -> React context providers (ReorderProvider, SyncOnProvider, DiagnosticsProvider, AppUpdateProvider)
   constants/    -> Static constants (styles, motion, layout, icons, code-languages, note-types)
   configs/      -> App configuration (environment, defaults, business rules)
-src-tauri/      -> Desktop shell (Rust): window, menu, tray.rs, net.rs; src/mcp/: local MCP server (bridge, socket, protocol, tools, switches; ADR-032);
+src-tauri/      -> Desktop shell (Rust): window, menu, tray.rs, net.rs, system.rs (print_window, system_version: ADR-046); src/mcp/: local MCP server (bridge, socket, protocol, tools, switches; ADR-032);
                    src/ai/: the AI commands, engine loading, model download (ADR-034)
 src-tauri/ai-engine/ -> The desktop AI engine: its own crate (cdylib `fastmemo_ai`, llama.cpp), built by scripts/build-ai-engine.mjs and opened at run time, never linked (ADR-034)
 ```

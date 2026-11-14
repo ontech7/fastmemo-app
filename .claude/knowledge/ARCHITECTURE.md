@@ -55,7 +55,8 @@ src/
     cloud/             # CloudUnreachableLine (the home's line when the cloud can't be reached), CloudStatusDot (ADR-029)
     buttons/           # 18 button components (each a single-purpose TouchableOpacity)
     cards/             # NoteCard (in a search: the title's marked words and the line that matched), TrashedNoteCard,
-                       #   OrganizeCategoryCard, OrderedCategoryCard, TagRow (a tag and its count, the search's tag list)
+                       #   OrganizeCategoryCard, OrderedCategoryCard, TagRow (a tag and its count, the search's tag list),
+                       #   NoteContextMenu (desktop: a note's right-click menu, PopupMenu at the pointer; ADR-046)
     notes/             # Note editors: NoteTextEditor, NoteTodoEditor, NoteKanbanEditor, NoteCodeEditor; NoteImageMenu (ADR-024);
                        #   TextFormatBar (the text note's bar, ADR-041), NoteLinkPicker ([[), FindReplaceBar (talks to a FindTarget),
                        #   VersionBand (a kept version on screen, ADR-042)
@@ -190,7 +191,17 @@ src/
     vaultProgress.ts   # Ephemeral pub/sub signal {done,total} for the re-upload determinate progress bar
     appIcon.ts         # Alternate app icon (expo-alternate-app-icons, ADR-020); .android.ts confirms and closes the app, .web.ts: none
     net.ts             # Calls to the user's servers (FastMemo server, webhooks); .web.ts: through Rust on desktop (src-tauri/src/net.rs, ADR-017)
-    desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only
+    desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only;
+                       #   search (Ctrl/Cmd+K: home, then its field), the zoom commands (ADR-046)
+    desktopList.ts     # Desktop: the home list's keyboard mark and selection clicks (Ctrl/Cmd, Shift), the card's right click;
+                       #   .ts no-op. listCursor.ts: its pure steps (stepCursor, rangeBetween; scripts/utils.test.mjs)
+    desktopZoom.ts     # Desktop: the window's zoom (setZoom), kept in settings.desktopZoom, applied before the window shows;
+                       #   .ts no-op. zoomSteps.ts: ZOOM_STEPS, nextZoom, zoomKeyOf (pure)
+    print.ts           # Print or save as PDF (ADR-046): .web.ts lays the note out in #fm-print and opens the system's dialog
+                       #   (print_window in Tauri, window.print in a browser); setPrintable / printCurrent for Ctrl/Cmd+P;
+                       #   .ts: canPrint false (the phone's PDF is expo-print). printCss.ts: the copy's print style (pure)
+    dropGuard.ts       # .web.ts: the window takes no dropped file (a PDF would replace the app); pictures go into a text
+                       #   note through its page (IMAGE_IN_MESSAGE); .ts no-op
     desktopMenu.ts     # macOS menu labels (i18n menu.*) and its items' commands, the tray's labels; .ts no-op, .web.ts on Tauri
     mcp/               # The local MCP server's page side (ADR-032, see "Local MCP Server" below), tested by scripts/mcp.test.mjs
       bridge.web.ts    # Listens for Rust's requests, fills McpDeps with the real app, answers through `mcp_reply`; bridge.ts no-op
@@ -214,12 +225,14 @@ src/
     links.ts           # normalizeLink (https, mailto, tel only), note links as #fm-note-<id> (ADR-041)
     noteHtml.ts        # The 4.1.0 lines' CSS for the editor and for print (BlockColors, PRINT_BLOCK_COLORS)
     listOps.ts         # A list note's item operations, pure (insertAfter, removeItem, visibleItems, withoutDone, ...)
-    findTarget.ts      # What the find bar talks to: createTextFindTarget (the text page), createCodeFindTarget (CodeMirror)
+    findTarget.ts      # What the find bar talks to: createTextFindTarget (the text page), createCodeFindTarget (CodeMirror);
+                       #   setOpen / onEscape / clear({ backToNote }): Esc closes the bar, the caret goes back into the note
     diagnostics/       # What an error and a report carry (ADR-035)
       index.ts         # initDiagnostics (Sentry init, tags, user id), setDiagnosticsContext, reportHandled, reportPageError,
                        #   addTrail, collectAlwaysFacts
       installId.ts     # The installation code FM-XXXX-XXXX (random, @installId, kept by "wipe data"), getInstallId / peek
-      facts.ts         # The system, the platform kind, the version with its update; .web.ts: the system's name only
+      facts.ts         # The system, the platform kind, the version with its update; .web.ts: the system's name, and on the
+                       #   desktop its version (system_version, asked once after window_ready; ADR-046)
       report.ts        # The report payload (pure, shared with the crash screen), the three-a-day log, sendReport (never throws)
       scrub.ts         # The trail's allow-list (beforeBreadcrumb), routePattern, hostKind, scrubEvent, isTransientNetworkError
                        #   (scripts/diagnostics.test.mjs)
@@ -451,9 +464,11 @@ engine does.
 
 **An app window, not a browser (ADR-033):** the dark theme is the window's config (`theme`, Windows and macOS);
 `window_chrome.rs` paints Windows 11's title bar `#05091A`, trims WebView2's text-field menu to cut/copy/paste and tells a
-minimised page it is hidden. `useKeyboardShortcuts.web.ts` blocks the browser's keys and its right-click menu outside text
-fields and selections; `RICH_TEXT_SCRIPT` does Cmd/Ctrl+B/I/U itself (WebKit on macOS leaves them to a Format menu the app
-doesn't have).
+minimised page it is hidden. `system.rs` (the shell's, not the AI's): `print_window` (the system's print dialog on the window)
+and `system_version` ("macOS 26.6", "Windows 11, build 26100", "Linux, <PRETTY_NAME>"); the zoom needs the capability
+`core:webview:allow-set-webview-zoom`, and the main window has `dragDropEnabled: false` so the page gets dropped pictures
+(ADR-046). `useKeyboardShortcuts.web.ts` blocks the browser's keys and its right-click menu outside text fields and selections;
+`RICH_TEXT_SCRIPT` does Cmd/Ctrl+B/I/U itself (WebKit on macOS leaves them to a Format menu the app doesn't have).
 
 ### Desktop AI Engine (ADR-034)
 

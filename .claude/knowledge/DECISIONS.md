@@ -1807,7 +1807,8 @@ render error left a blank screen.
 
 **Trade-offs:**
 
-- the desktop and the web report "macOS", not "macOS 15.2", until plan 2 reads it from Rust;
+- the web reports "macOS", not "macOS 15.2" (a browser doesn't say); the desktop sends the version since plan 2 of 4.1.0
+  (ADR-046, `system_version`);
 - a failure reported once per session hides how often it happens within one; Sentry counts sessions instead;
 - the installation code is a pseudonymous id: wiping data keeps it, uninstalling loses it.
 
@@ -2175,3 +2176,54 @@ another device's history isn't this one's).
 - A note created and never edited since (seeded, imported) counts as new: its first sitting keeps no "edit" version, and
   emptied it is dropped as before.
 - History survives a sign-out of the cloud; only "wipe data" clears it.
+
+## ADR-046: The Desktop Prints Through the System's Dialog; Zoom Is the Webview's
+
+**Status:** Accepted (2026-11-15), plan 2 of 4.1.0 (spec C.1–C.7)  
+**Context:** on the web and the desktop the PDF of a text note was a picture (`html2canvas` then `jsPDF` in
+`utils/export.web.ts`): its text could be neither selected nor searched. Tauri can't write a PDF by itself (still open
+upstream). Ctrl/Cmd with `+`, `-`, `0` and `P` were swallowed, and a report from the desktop said only "macOS".  
+**Decision:**
+
+- **Print** (`libs/print.web.ts`, `libs/printCss.ts`): the note is laid out in a print-only copy in the top document
+  (`#fm-print`, from the sanitized nodes the export builds: `appendNoteNodes`), shown only in print (`printCss`: white page,
+  dark text in Geist, A4 margins 18/16 mm, pictures never wider than the page nor cut by a page break, code wrapped, the
+  4.1.0 kinds of line in print colours). Pictures decoded and fonts loaded first, then the system's dialog: in Tauri the
+  `print_window` command (`src-tauri/src/system.rs`, `WebviewWindow::print`), in a browser `window.print()`. Its "Save as
+  PDF" writes text. A frame is never printed (the Mac prints it blank). The copy is replaced at the next print and removed
+  when the note's editor leaves (`setPrintable(null)`), not when the dialog closes: the engines tell that differently.
+- **Where:** the export dialog's PDF button reads "Print or save as PDF" on the web and the desktop (`canPrint`); **Ctrl/Cmd
+  + P** prints the text note on screen (`printCurrent`, set by `NoteTextEditor`), elsewhere nothing. The phone keeps
+  `expo-print` (already text).
+- **Proved:** Mac, Fast Memo Test.app — 7 A4 pages, text selectable and searchable, Geist, the margins, pictures whole (a
+  tall one alone on its page, scaled), no blank page; headless Chrome's print of the web export — 6 pages, text searchable.
+  Windows waits for the user's run (Microsoft Print to PDF). **Unproven:** Linux (never tried by hand in this project) and a
+  real browser's dialog.
+- **Zoom** (`libs/zoomSteps.ts`, `libs/desktopZoom.web.ts`): the webview's own zoom, set by the app (`setZoom`, permission
+  `core:webview:allow-set-webview-zoom`), stepping through 80, 90, 100, 110, 125, 150, 175, 200; 0 goes back to 100, a toast
+  says the value. A setting of this device (`settings.desktopZoom`), applied at start before `window_ready`, after the page's
+  resize (at most 300 ms: `setZoom` answers before the redraw). The page takes the keys itself (`zoomKeyOf`: `+`, `=`, the
+  numpad's; Shift+0 is no reset); the Mac's View menu has Zoom In (`CmdOrCtrl+NumpadAdd`: Tauri drops `Plus` silently),
+  Zoom Out, Actual Size. Tauri's `zoomHotkeysEnabled` stays off: it keeps a value of its own that would drift from ours.
+- **The system's version** (`system_version`, `system.rs`): macOS `kern.osproductversion` (`sysctlbyname`), Windows
+  `windows-version` (already in the lockfile, now direct, Windows only: 10 with build ≥ 22000 is 11), Linux `PRETTY_NAME` of
+  `/etc/os-release`. Asked once after the home shows; `getOs()` sends the name and the rest as `osVersion`. Nothing else is
+  read: no host or user name.
+- **Keys and mouse** (spec C.1–C.3, C.6): the home list's mark (`libs/desktopList`, `libs/listCursor`), the note's
+  right-click menu (`cards/NoteContextMenu`), Ctrl/Cmd + click and Shift + click, pictures pasted and dropped into a text
+  note (the window takes no other file: `libs/dropGuard`), Ctrl/Cmd + K to the home's search from any screen, Esc closing a
+  note's find bar (the bar's fields, and the note's page, which posts the key while the bar is open). A key presses the
+  control carrying its test id or calls a handler the screen registers (CONVENTIONS).
+
+**Rejected:** keeping the picture PDF (no text, heavy); printing the editor's frame (blank on the Mac); a
+system-information crate (`sysinfo` and alike: a dependency for three lines per system).
+
+**Trade-offs:**
+
+- The PDF's title metadata, and the save dialog's default name, are the window's ("Fast Memo"), not the note's.
+- `desktopZoom` travels in the settings export like every setting: an import on another computer brings the zoom along.
+- At 200% with the smallest window some controls fall off the edges (the home's FABs over the one note shown, a note's ⋮,
+  the kanban's add card); nothing is reflowed for it.
+- `html2canvas` and `jspdf` leave only after Windows passes; until then the picture PDF's code stays, unused where
+  `canPrint` is true.
+
