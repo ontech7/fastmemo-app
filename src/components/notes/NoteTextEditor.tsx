@@ -49,6 +49,7 @@ import { useSecret } from "@/hooks/useSecret";
 import { getNotesFilteredPerCategory } from "@/slicers/notesSlice";
 import { reportPageError } from "@/libs/diagnostics";
 import { PAGE_ERROR_MESSAGE, PAGE_ERROR_SCRIPT } from "@/libs/pageErrors";
+import { printNote, setPrintable } from "@/libs/print";
 import { reducePhoto } from "@/libs/reducePhoto";
 import {
   COUNT_MESSAGE,
@@ -506,6 +507,15 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
         richTextEditor.current?.dismissKeyboard();
       };
     }, [])
+  );
+
+  // Ctrl/Cmd + P prints this note while it is on screen (spec C.5); a version's preview isn't the note.
+  useFocusEffect(
+    useCallback(() => {
+      if (preview) return;
+      setPrintable(() => void printNote(noteRef.current.title, noteRef.current.text).catch(() => {}));
+      return () => setPrintable(null);
+    }, [preview])
   );
 
   // The bar's choices go to the page, focused first only if it lost the focus: on Android focusContentEditor moves the

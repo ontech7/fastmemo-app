@@ -298,6 +298,7 @@ const it = {
       share: "Condividi",
       export: "Esporta",
       export_description: "Scegli il formato di esportazione",
+      export_print: "Stampa o salva come PDF",
       export_txt: "Testo semplice (.txt)",
       info: "Informazioni",
     },

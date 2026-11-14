@@ -297,6 +297,7 @@ const ja = {
       share: "共有",
       export: "エクスポート",
       export_description: "エクスポート形式を選択してください",
+      export_print: "プリントまたはPDFとして保存",
       export_txt: "プレーンテキスト (.txt)",
       info: "情報",
     },

@@ -11,6 +11,7 @@ use tauri_plugin_window_state::StateFlags;
 mod ai;
 pub mod mcp;
 mod net;
+mod system;
 mod tray;
 mod window_chrome;
 
@@ -591,6 +592,7 @@ pub fn run() {
             exit_after_flush,
             window_ready,
             set_menu_labels,
+            system::print_window,
             tray::set_tray_labels,
             net::net_request,
             net::net_cancel,

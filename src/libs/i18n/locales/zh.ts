@@ -296,6 +296,7 @@ const zh = {
       share: "分享",
       export: "导出",
       export_description: "选择导出格式",
+      export_print: "打印或存储为 PDF",
       export_txt: "纯文本 (.txt)",
       info: "信息",
     },

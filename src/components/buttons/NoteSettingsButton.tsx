@@ -23,6 +23,7 @@ import PopupMenu, { PopupMenuDivider, PopupMenuOption, PopupMenuToggle, PopupMen
 import { useRouter } from "@/hooks/useRouter";
 import { stripHtml } from "@/libs/ai";
 import { addTrail } from "@/libs/diagnostics";
+import { canPrint, printNote } from "@/libs/print";
 import { storeUnlockedNote } from "@/libs/registry";
 import { exportAsPdf, exportAsTextFile, htmlToMarkdown } from "@/utils/export";
 import { toast } from "@/utils/toast";
@@ -81,6 +82,8 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
     try {
       if (type !== "text") return;
       const textNote = note as TextNote;
+      // Desktop and web: the system's print dialog, whose PDF is text (spec C.5).
+      if (canPrint) return await printNote(title, textNote.text);
       const result = await exportAsPdf(title, textNote.text);
       if (result?.uri) {
         const { shareFile } = await import("@/utils/export");
@@ -314,7 +317,7 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
         open={showExportDialog}
         title={t("note.settings.export")}
         description={t("note.settings.export_description")}
-        confirm={{ label: "PDF", handler: handleExportPdf }}
+        confirm={{ label: canPrint ? t("note.settings.export_print") : "PDF", handler: handleExportPdf }}
         alternative={{ label: "Markdown", handler: handleExportMarkdown }}
         cancel={{ label: t("note.settings.export_txt"), handler: handleExportTxt }}
         actionsColumn

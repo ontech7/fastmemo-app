@@ -297,6 +297,7 @@ const fr = {
       share: "Partager",
       export: "Exporter",
       export_description: "Choisissez le format d'exportation",
+      export_print: "Imprimer ou enregistrer en PDF",
       export_txt: "Texte brut (.txt)",
       info: "Informations",
     },

@@ -29,6 +29,7 @@ await build({
       export { stepCursor, rangeBetween } from "@/libs/listCursor";
       export { installDropGuard } from "@/libs/dropGuard.web";
       export { ZOOM_STEPS, nextZoom, zoomKeyOf } from "@/libs/zoomSteps";
+      export { printCss } from "@/libs/printCss";
     `,
     resolveDir: src,
     loader: "ts",
@@ -363,6 +364,20 @@ console.log("\nthe desktop's zoom steps");
     "without Cmd/Ctrl, or with Alt, nothing",
     zoomKeyOf(k("+", "BracketRight"), false) === null && zoomKeyOf(k("-", "Slash", false, true), true) === null
   );
+}
+
+console.log("\nthe printed copy's style sheet");
+{
+  const css = M.printCss();
+  ok("only in print, and only the copy", css.includes("@media print") && css.includes("#fm-print"));
+  ok("the page's margins", /@page\s*\{[^}]*margin:\s*18mm 16mm/.test(css), css.match(/@page[^}]*}/)?.[0]);
+  ok(
+    "pictures and code blocks don't break across pages",
+    css.includes("break-inside: avoid") && css.includes("break-after: avoid")
+  );
+  ok("the checkbox list's and the quote's rules", css.includes(".x-todo-box input") && css.includes("blockquote"));
+  ok("printed colours, never the app's dark background", css.includes("#111") && !/#05091A|#131A3C|#1A2248/i.test(css));
+  ok("a link shows no address after it", !/attr\(href\)/.test(css));
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

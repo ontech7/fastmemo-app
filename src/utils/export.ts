@@ -7,6 +7,9 @@ import { wrapHtmlForPdf } from "@/utils/html";
 
 export { htmlToMarkdown, wrapHtmlForPdf } from "@/utils/html";
 
+/** Web only (the picture PDF, the printed copy: `export.web.ts`): the phone prints its own HTML through expo-print. */
+export function appendNoteNodes(_container: HTMLElement, _title: string, _htmlContent: string): void {}
+
 export async function exportAsPdf(title: string, htmlContent: string): Promise<{ uri: string } | null> {
   const fullHtml = wrapHtmlForPdf(title, htmlContent);
   const result = await Print.printToFileAsync({ html: fullHtml });

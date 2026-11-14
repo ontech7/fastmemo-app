@@ -65,12 +65,12 @@ function notePurifier(): DOMPurifyInstance {
   return purifier;
 }
 
-export async function exportAsPdf(title: string, htmlContent: string): Promise<{ uri: string } | null> {
-  // Render the note in a temporary off-screen container: the body of `wrapHtmlForPdf`, built as nodes. It is the app's
-  // own page: whatever ran in the note's HTML would run as the app (LL-060), so it comes as DOMPurify's nodes, never
-  // parsed again.
-  const container = document.createElement("div");
-  container.style.cssText = "position:fixed;left:-9999px;top:0;width:800px;background:#fff;padding:40px;";
+/**
+ * The note laid out in `container`, in the app's own page (the picture PDF, the printed copy): its title as a heading,
+ * then its text. Whatever ran in the note's HTML would run as the app (LL-060), so it comes as DOMPurify's nodes, never
+ * parsed again.
+ */
+export function appendNoteNodes(container: HTMLElement, title: string, htmlContent: string): void {
   if (title) {
     const heading = document.createElement("h1");
     heading.className = "note-title";
@@ -78,6 +78,13 @@ export async function exportAsPdf(title: string, htmlContent: string): Promise<{
     container.appendChild(heading);
   }
   container.appendChild(notePurifier().sanitize(htmlContent, { ...NOTE_HTML_CONFIG, RETURN_DOM_FRAGMENT: true }));
+}
+
+export async function exportAsPdf(title: string, htmlContent: string): Promise<{ uri: string } | null> {
+  // Render the note in a temporary off-screen container: the body of `wrapHtmlForPdf`, built as nodes.
+  const container = document.createElement("div");
+  container.style.cssText = "position:fixed;left:-9999px;top:0;width:800px;background:#fff;padding:40px;";
+  appendNoteNodes(container, title, htmlContent);
   document.body.appendChild(container);
 
   const canvas = await html2canvas(container, { scale: 2, useCORS: true });

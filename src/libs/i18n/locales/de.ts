@@ -297,6 +297,7 @@ const de = {
       share: "Teilen",
       export: "Exportieren",
       export_description: "Wählen Sie das Exportformat",
+      export_print: "Drucken oder als PDF sichern",
       export_txt: "Klartext (.txt)",
       info: "Informationen",
     },
