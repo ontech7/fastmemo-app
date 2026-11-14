@@ -591,6 +591,7 @@ const es = {
     load_failed: "No se pudieron leer los ajustes: {{error}}",
   },
   generalsettings: {
+    zoom_value: "Zoom: {{percent}}%",
     title: "Ajustes",
     basic: "Básico",
     cloudsync: "Cloud Sync",
@@ -1320,6 +1321,9 @@ const es = {
     select_all: "Seleccionar todo",
     find: "Buscar…",
     view: "Visualización",
+    zoom_in: "Ampliar",
+    zoom_out: "Reducir",
+    actual_size: "Tamaño real",
     fullscreen: "Usar pantalla completa",
     window: "Ventana",
     minimize: "Minimizar",

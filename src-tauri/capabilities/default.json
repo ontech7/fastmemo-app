@@ -8,6 +8,7 @@
     "core:event:allow-unlisten",
     "core:resources:allow-close",
     "core:app:allow-bundle-type",
+    "core:webview:allow-set-webview-zoom",
     "dialog:allow-open",
     "dialog:allow-save",
     "fs:allow-read-text-file",

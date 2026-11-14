@@ -587,6 +587,7 @@ const ja = {
     load_failed: "設定を読み込めませんでした：{{error}}",
   },
   generalsettings: {
+    zoom_value: "ズーム：{{percent}}%",
     title: "設定",
     basic: "基本",
     cloudsync: "クラウド同期",
@@ -1299,6 +1300,9 @@ const ja = {
     select_all: "すべてを選択",
     find: "検索…",
     view: "表示",
+    zoom_in: "拡大",
+    zoom_out: "縮小",
+    actual_size: "実際のサイズ",
     fullscreen: "フルスクリーンにする",
     window: "ウインドウ",
     minimize: "しまう",

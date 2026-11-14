@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import type { Href } from "expo-router";
 
 import { noteTypeTarget, SHORTCUT_TARGET } from "@/constants/shortcuts";
+import { zoom } from "@/libs/desktopZoom";
 
 /*
  * What the desktop keyboard shortcuts and the macOS menu do. Web only (it reads the DOM): imported by `.web.ts` files.
@@ -16,7 +17,22 @@ import { noteTypeTarget, SHORTCUT_TARGET } from "@/constants/shortcuts";
  * first one opened), and none while a native open/save panel is up (`withNativeDialog`): the page can't see it.
  */
 
-export type DesktopCommand = "newNote" | "newText" | "newTodo" | "newKanban" | "newCode" | "find" | "settings" | "help";
+export type DesktopCommand =
+  | "newNote"
+  | "newText"
+  | "newTodo"
+  | "newKanban"
+  | "newCode"
+  | "find"
+  | "settings"
+  | "help"
+  | ZoomCommand;
+
+type ZoomCommand = "zoomIn" | "zoomOut" | "zoomReset";
+
+/** The zoom commands: they act on the window, from any screen, whatever lies over it (spec C.4). */
+const ZOOM_OF: Record<ZoomCommand, "in" | "out" | "reset"> = { zoomIn: "in", zoomOut: "out", zoomReset: "reset" };
+const isZoom = (command: DesktopCommand): command is ZoomCommand => command in ZOOM_OF;
 
 export const IS_MAC = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -117,7 +133,7 @@ async function goHome(): Promise<boolean> {
 }
 
 /** The screen a command opens from the home screen, and the home control a click would go through. */
-const DESTINATIONS: Record<Exclude<DesktopCommand, "find">, { path: string | null; target: string }> = {
+const DESTINATIONS: Record<Exclude<DesktopCommand, "find" | ZoomCommand>, { path: string | null; target: string }> = {
   newNote: { path: null, target: SHORTCUT_TARGET.newNote },
   newText: { path: null, target: SHORTCUT_TARGET.noteTypes },
   newTodo: { path: null, target: SHORTCUT_TARGET.noteTypes },
@@ -140,6 +156,7 @@ const isAt = (path: string | null) => !!path && window.location.pathname === pat
 
 /** Whether `command` can do anything now: its control is reachable, or the home screen is (directly or going back). */
 export function canRun(command: DesktopCommand): boolean {
+  if (isZoom(command)) return true;
   if (!commandsIdle()) return false;
   if (command === "find") return !!reachableTarget(SHORTCUT_TARGET.find);
   if (isAt(DESTINATIONS[command].path)) return false;
@@ -149,6 +166,7 @@ export function canRun(command: DesktopCommand): boolean {
 }
 
 export async function runCommand(command: DesktopCommand): Promise<void> {
+  if (isZoom(command)) return zoom(ZOOM_OF[command]);
   if (!commandsIdle()) return;
   // Find acts where there's something to search; it doesn't leave the screen.
   if (command === "find") {

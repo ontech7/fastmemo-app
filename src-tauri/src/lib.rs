@@ -323,7 +323,7 @@ const MENU_EVENT: &str = "fastmemo://menu";
 
 /// The menu items the frontend acts on.
 #[cfg(target_os = "macos")]
-const MENU_COMMANDS: [&str; 9] = [
+const MENU_COMMANDS: [&str; 12] = [
     "new-note",
     "new-text",
     "new-todo",
@@ -333,6 +333,9 @@ const MENU_COMMANDS: [&str; 9] = [
     "settings",
     "export-import",
     "help",
+    "zoom-in",
+    "zoom-out",
+    "actual-size",
 ];
 
 /// The menu's labels, in the app's language (`set_menu_labels`); `{name}` stands for the app's name.
@@ -364,6 +367,9 @@ struct MenuLabels {
     select_all: String,
     find: String,
     view: String,
+    zoom_in: String,
+    zoom_out: String,
+    actual_size: String,
     fullscreen: String,
     window: String,
     minimize: String,
@@ -401,6 +407,9 @@ impl Default for MenuLabels {
             select_all: s("Select All"),
             find: s("Find…"),
             view: s("View"),
+            zoom_in: s("Zoom In"),
+            zoom_out: s("Zoom Out"),
+            actual_size: s("Actual Size"),
             fullscreen: s("Enter Full Screen"),
             window: s("Window"),
             minimize: s("Minimize"),
@@ -490,7 +499,16 @@ fn macos_menu(app: &AppHandle, labels: &MenuLabels) -> tauri::Result<tauri::menu
                 app,
                 &labels.view,
                 true,
-                &[&PredefinedMenuItem::fullscreen(app, Some(&labels.fullscreen))?],
+                &[
+                    // Tauri reads an accelerator as a physical key: "+" isn't one, and "=" shows where that key is on
+                    // the layout (⌘* on an Italian Mac). The numpad's plus shows ⌘+; the page takes + and = itself
+                    // (`useKeyboardShortcuts.web.ts`), on any layout.
+                    &item("zoom-in", &labels.zoom_in, Some("CmdOrCtrl+NumpadAdd"))?,
+                    &item("zoom-out", &labels.zoom_out, Some("CmdOrCtrl+-"))?,
+                    &item("actual-size", &labels.actual_size, Some("CmdOrCtrl+0"))?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::fullscreen(app, Some(&labels.fullscreen))?,
+                ],
             )?,
             &Submenu::with_id_and_items(
                 app,

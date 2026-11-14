@@ -22,6 +22,9 @@ const MENU_COMMANDS: Record<string, DesktopCommand> = {
   // Export and import live in the settings, behind the secret code: the menu only leads there.
   "export-import": "settings",
   help: "help",
+  "zoom-in": "zoomIn",
+  "zoom-out": "zoomOut",
+  "actual-size": "zoomReset",
 };
 
 /** The tray icon's menu (Windows and Linux, while the local MCP server keeps the app running with the window closed). */
@@ -57,6 +60,9 @@ function menuLabels() {
     selectAll: t("select_all"),
     find: t("find"),
     view: t("view"),
+    zoomIn: t("zoom_in"),
+    zoomOut: t("zoom_out"),
+    actualSize: t("actual_size"),
     fullscreen: t("fullscreen"),
     window: t("window"),
     minimize: t("minimize"),

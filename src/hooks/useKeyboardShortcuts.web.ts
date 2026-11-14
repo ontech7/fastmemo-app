@@ -12,6 +12,7 @@ import {
   runCommand,
 } from "@/libs/desktopCommands";
 import { leaveKeyboardMode, listKey, setCursor } from "@/libs/desktopList";
+import { zoomKeyOf } from "@/libs/zoomSteps";
 import { isTauri } from "@/utils/platform";
 
 /*
@@ -27,11 +28,12 @@ import { isTauri } from "@/utils/platform";
  *   the search field marks the first note. The mark hides at the first mouse move or press, or typing in a field.
  * - Cmd/Ctrl+N: a new note (from another screen, going back to the home screen first); Cmd/Ctrl+F: the search field,
  *   or find in a text note. The same commands as the macOS menu (`@/libs/desktopCommands`).
+ * - Cmd/Ctrl with + (or =, the numpad's plus), - and 0: the window's zoom (`@/libs/desktopZoom`), from any screen.
  * - F5 and Cmd/Ctrl+R would reload the page, dropping the edits not yet saved: blocked outside development.
  * - Alt+arrows (Windows, Linux) and the keyboard's back/forward keys would leave the screen through the history, without
  *   its back button: blocked.
  * - The browser's own keys, which make no sense in an app window: print, find (F3, Cmd/Ctrl+G, and Cmd/Ctrl+F where the
- *   app has nothing to find), save, open, view source, zoom and caret browsing (F7). WebView2 acts on most of them.
+ *   app has nothing to find), save, open, view source and caret browsing (F7). WebView2 acts on most of them.
  * - A right click opens the browser's menu (back, reload, print…) only where it edits or copies text: in a text field,
  *   or over selected text. On Windows that menu keeps only cut, copy and paste (`src-tauri/src/window_chrome.rs`).
  *
@@ -66,7 +68,6 @@ function isHistoryKey(e: KeyboardEvent): boolean {
 const BROWSER_KEYS = new Set(["F3", "F7"]);
 /** With Cmd/Ctrl: print, find next, save, open. */
 const BROWSER_LETTERS = new Set(["p", "g", "s", "o"]);
-const ZOOM_KEYS = new Set(["+", "-", "=", "0"]);
 
 /**
  * A browser's key. Cmd on a Mac, where Ctrl+letters move the caret in text fields. Cmd/Ctrl+U is view source only outside
@@ -75,10 +76,11 @@ const ZOOM_KEYS = new Set(["+", "-", "=", "0"]);
 function isBrowserKey(e: KeyboardEvent, mod: boolean): boolean {
   if (BROWSER_KEYS.has(e.key)) return true;
   if (!mod || e.altKey) return false;
-  if (ZOOM_KEYS.has(e.key) || e.code === "NumpadAdd" || e.code === "NumpadSubtract") return true;
   const letter = letterOf(e);
   return BROWSER_LETTERS.has(letter) || (letter === "u" && !isEditable(e.target));
 }
+
+const ZOOM_COMMANDS: Record<"in" | "out" | "reset", DesktopCommand> = { in: "zoomIn", out: "zoomOut", reset: "zoomReset" };
 
 const isFindField = (target: EventTarget | null) => (target as HTMLElement | null)?.dataset?.testid === SHORTCUT_TARGET.find;
 
@@ -124,6 +126,14 @@ function onDesktopKeyDown(e: KeyboardEvent) {
 
   const mod = IS_MAC ? e.metaKey : e.ctrlKey;
   const otherMod = IS_MAC ? e.ctrlKey : e.metaKey;
+
+  // Taken here (the page's, not the macOS menu's, which would run it again): a held key steps on.
+  const zoomKey = otherMod ? null : zoomKeyOf(e, mod);
+  if (zoomKey) {
+    e.preventDefault();
+    void runCommand(ZOOM_COMMANDS[zoomKey]);
+    return;
+  }
 
   if ((!__DEV__ && isReload(e, mod)) || isHistoryKey(e) || isBrowserKey(e, mod)) {
     e.preventDefault();

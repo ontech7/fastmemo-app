@@ -133,6 +133,9 @@ const settingsSlice = createSlice({
     setTourStep: (state, action: PayloadAction<TourStep>) => {
       state.tour = action.payload;
     },
+    setDesktopZoom: (state, action: PayloadAction<number>) => {
+      state.desktopZoom = action.payload;
+    },
   },
 });
 
@@ -153,6 +156,7 @@ export const {
   setDeveloperMode,
   setNoteCreation,
   setTourStep,
+  setDesktopZoom,
 } = settingsSlice.actions;
 
 export const getAllSettings = (state: RootState): SettingsState => state.settings;
@@ -162,6 +166,7 @@ export const selectorCurrentSecretCode = (state: RootState): string => state.set
 export const selectorIsFingerprintEnabled = (state: RootState): boolean => state.settings.isFingerprintEnabled;
 export const selectorShowHidden = (state: RootState): boolean => state.settings.showHidden;
 export const selectorTourStep = (state: RootState): TourStep | undefined => state.settings.tour;
+export const selectorDesktopZoom = (state: RootState): number => state.settings.desktopZoom ?? 100;
 export const selectorReportDate = (state: RootState): string | null => state.settings.reportDate;
 /** The reports sent in the last 24 hours (a state saved before the key existed has none). */
 export const selectorReportLog = (state: RootState): string[] => state.settings.reportLog ?? EMPTY_LOG;

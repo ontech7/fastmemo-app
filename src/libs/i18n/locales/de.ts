@@ -594,6 +594,7 @@ const de = {
     load_failed: "Die Einstellungen konnten nicht gelesen werden: {{error}}",
   },
   generalsettings: {
+    zoom_value: "Zoom: {{percent}} %",
     title: "Einstellungen",
     basic: "Grundeinstellungen",
     cloudsync: "Cloud Sync",
@@ -1331,6 +1332,9 @@ const de = {
     select_all: "Alles auswählen",
     find: "Suchen\u00a0…",
     view: "Darstellung",
+    zoom_in: "Vergrößern",
+    zoom_out: "Verkleinern",
+    actual_size: "Originalgröße",
     fullscreen: "Vollbildmodus",
     window: "Fenster",
     minimize: "Minimieren",

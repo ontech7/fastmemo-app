@@ -28,6 +28,7 @@ await build({
       export { daysAgo } from "@/utils/dateParse";
       export { stepCursor, rangeBetween } from "@/libs/listCursor";
       export { installDropGuard } from "@/libs/dropGuard.web";
+      export { ZOOM_STEPS, nextZoom, zoomKeyOf } from "@/libs/zoomSteps";
     `,
     resolveDir: src,
     loader: "ts",
@@ -334,6 +335,34 @@ console.log("\nfiles dropped on the app's window");
   const over = fire("dragover", ["Files"]);
   ok("a file dragged over shows it can't be dropped there", over.cancelled && over.dropEffect === "none", over);
   ok("text dragged is left alone", !fire("drop", ["text/plain"]).cancelled && !fire("dragover", ["text/plain"]).cancelled);
+}
+
+console.log("\nthe desktop's zoom steps");
+{
+  const { nextZoom } = M;
+  ok("up and down the steps", nextZoom(100, "in") === 110 && nextZoom(110, "in") === 125 && nextZoom(100, "out") === 90);
+  ok("the ends hold", nextZoom(200, "in") === 200 && nextZoom(80, "out") === 80);
+  ok("a value between steps goes to the next one that way", nextZoom(120, "in") === 125 && nextZoom(120, "out") === 110);
+  ok("nonsense starts from 100", nextZoom(NaN, "in") === 110 && nextZoom(-5, "out") === 90);
+  const { zoomKeyOf } = M;
+  const k = (key, code, shiftKey = false, altKey = false) => ({ key, code, shiftKey, altKey });
+  ok(
+    "+ (Italian key, US Shift+=), = and the numpad's plus zoom in",
+    zoomKeyOf(k("+", "BracketRight"), true) === "in" &&
+      zoomKeyOf(k("+", "Equal", true), true) === "in" &&
+      zoomKeyOf(k("=", "Equal"), true) === "in" &&
+      zoomKeyOf(k("+", "NumpadAdd"), true) === "in"
+  );
+  ok(
+    "- and the numpad's minus zoom out",
+    zoomKeyOf(k("-", "Slash"), true) === "out" && zoomKeyOf(k("-", "NumpadSubtract"), true) === "out"
+  );
+  ok("0 goes back to 100", zoomKeyOf(k("0", "Digit0"), true) === "reset");
+  ok("Shift+0 (= on an Italian Mac, reported as 0) isn't a reset", zoomKeyOf(k("0", "Digit0", true), true) === null);
+  ok(
+    "without Cmd/Ctrl, or with Alt, nothing",
+    zoomKeyOf(k("+", "BracketRight"), false) === null && zoomKeyOf(k("-", "Slash", false, true), true) === null
+  );
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

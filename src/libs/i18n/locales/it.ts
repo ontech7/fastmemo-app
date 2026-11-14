@@ -591,6 +591,7 @@ const it = {
     load_failed: "Impossibile leggere le impostazioni: {{error}}",
   },
   generalsettings: {
+    zoom_value: "Zoom: {{percent}}%",
     title: "Impostazioni",
     basic: "Base",
     cloudsync: "Sincronizzazione Cloud",
@@ -1314,6 +1315,9 @@ const it = {
     select_all: "Seleziona tutto",
     find: "Trova…",
     view: "Vista",
+    zoom_in: "Ingrandisci",
+    zoom_out: "Riduci",
+    actual_size: "Dimensioni reali",
     fullscreen: "Attiva modalità a tutto schermo",
     window: "Finestra",
     minimize: "Contrai",

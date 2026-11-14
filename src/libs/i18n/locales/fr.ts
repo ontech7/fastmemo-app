@@ -596,6 +596,7 @@ const fr = {
     load_failed: "Impossible de lire les réglages : {{error}}",
   },
   generalsettings: {
+    zoom_value: "Zoom : {{percent}} %",
     title: "Paramètres",
     basic: "Basique",
     cloudsync: "Cloud Sync",
@@ -1330,6 +1331,9 @@ const fr = {
     select_all: "Tout sélectionner",
     find: "Rechercher…",
     view: "Présentation",
+    zoom_in: "Zoom avant",
+    zoom_out: "Zoom arrière",
+    actual_size: "Taille réelle",
     fullscreen: "Activer le mode plein écran",
     window: "Fenêtre",
     minimize: "Minimiser",

@@ -575,6 +575,7 @@ const zh = {
     load_failed: "无法读取设置：{{error}}",
   },
   generalsettings: {
+    zoom_value: "缩放：{{percent}}%",
     title: "设置",
     basic: "基本",
     cloudsync: "云同步",
@@ -1264,6 +1265,9 @@ const zh = {
     select_all: "全选",
     find: "查找…",
     view: "显示",
+    zoom_in: "放大",
+    zoom_out: "缩小",
+    actual_size: "实际大小",
     fullscreen: "进入全屏幕",
     window: "窗口",
     minimize: "最小化",

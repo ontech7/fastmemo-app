@@ -96,4 +96,6 @@ export interface SettingsState {
    * removed key: the settings are stored twice, and a key missing from one copy doesn't remove it from the other.
    */
   tour?: TourStep;
+  /** The desktop window's zoom on this device, in percent (spec C.4); absent means 100. */
+  desktopZoom?: number;
 }
