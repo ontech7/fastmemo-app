@@ -2370,6 +2370,32 @@ export async function runCases(driver, page, url) {
     check("a read-only note takes no picture", !sent.length, JSON.stringify(sent).slice(0, 200));
   }
 
+  // A note link's pill (Stop C, the user): never wider than its maximum, a long title cut with …, the arrow always shown.
+  {
+    const LONG = "Un titolo di nota lunghissimo che non ci starebbe mai in una riga sola dell'editor di testo";
+    await open(
+      `<div>prima <a href="#fm-note-abc" contenteditable="false">${LONG}</a> dopo</div><div><a href="#fm-note-def" contenteditable="false">Spesa</a></div>`
+    );
+    const pills = JSON.parse(
+      await evaluate(`JSON.stringify([...document.querySelectorAll('a[href^="#fm-note-"]')].map((a) => {
+        const r = a.getBoundingClientRect(), cs = getComputedStyle(a), after = getComputedStyle(a, "::after");
+        const em = parseFloat(cs.fontSize);
+        return { width: r.width, em, cut: a.scrollWidth > a.clientWidth, overflow: cs.textOverflow,
+          afterPosition: after.position, afterRight: parseFloat(after.right), afterWidth: parseFloat(after.width),
+          room: parseFloat(cs.paddingRight) };
+      }))`)
+    );
+    const [long, short] = pills;
+    check("a long note link stops at its maximum width", long.width <= 16 * long.em + 1, JSON.stringify(long));
+    check("...its title is cut with …", long.cut && long.overflow === "ellipsis", JSON.stringify(long));
+    check(
+      "...and its arrow stays, in the room kept for it at the right",
+      long.afterPosition === "absolute" && long.afterRight >= 0 && long.room >= long.afterRight + long.afterWidth,
+      JSON.stringify(long)
+    );
+    check("a short note link keeps its own width", short.width < 8 * short.em && !short.cut, JSON.stringify(short));
+  }
+
   // Esc closes the app's find bar (Task 30): while the bar is open the page posts Esc to the app and keeps it from the
   // page's other keys; with the bar closed Esc is the page's. Back to the note, the caret is where it was when the bar
   // opened, whatever the search did to the selection.

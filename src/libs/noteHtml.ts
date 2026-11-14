@@ -71,13 +71,14 @@ export function noteBlockCss(colors: BlockColors): string {
     .x-todo li:has(input:checked) { color: ${colors.muted}; text-decoration-line: line-through; }
     a[href] { color: ${colors.link}; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
     a[href^="#fm-note-"] {
-      display: inline-block; padding: 0 6px 0 7px; border: 1px solid ${colors.pillBorder}; border-radius: 8px;
-      background: ${colors.pill}; color: ${colors.pillText}; text-decoration: none; line-height: 1.35; font-weight: 500;
-      -webkit-user-select: none; user-select: none; white-space: nowrap; max-width: 100%; overflow: hidden;
-      text-overflow: ellipsis; vertical-align: bottom;
+      position: relative; display: inline-block; padding: 0 calc(10px + 0.7em) 0 7px; border: 1px solid ${colors.pillBorder};
+      border-radius: 8px; background: ${colors.pill}; color: ${colors.pillText}; text-decoration: none; line-height: 1.35;
+      font-weight: 500; -webkit-user-select: none; user-select: none; white-space: nowrap; max-width: min(100%, 16em);
+      box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom;
     }
+    /* The arrow sits in the room kept at the right, out of the text's flow: a long title is cut with … before it. */
     a[href^="#fm-note-"]::after {
-      content: ""; display: inline-block; width: 0.7em; height: 0.7em; margin-left: 4px; vertical-align: 0;
+      content: ""; position: absolute; right: 6px; top: 50%; width: 0.7em; height: 0.7em; margin-top: -0.35em;
       background-color: currentColor; -webkit-mask: ${ARROW} center / contain no-repeat; mask: ${ARROW} center / contain no-repeat;
     }
   `;
