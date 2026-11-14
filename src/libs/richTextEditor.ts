@@ -520,13 +520,29 @@ export const RICH_TEXT_SCRIPT = String.raw`
   };
   // Lines to text or to bullet / numbered items, as the page's change. split: a line with breaks is a line per part.
   var listChange = function (lines, kind, split) {
-    var made = [];
+    // An empty line has no character to put the caret back by: it stays in that line, past a checkbox.
+    var empty = lines.length === 1 && blank(lines[0]);
     pageChange(function () {
       if (split) lines = [].concat.apply([], lines.map(splitAtBreaks));
-      made = convert(lines, kind);
-    }, true);
-    // An empty line has no character to put the caret back by: it stays in that line.
-    if (made.length === 1 && blank(made[0]) && made[0].isConnected) caretAt(made[0], 0);
+      var made = convert(lines, kind);
+      if (!empty || made.length !== 1 || !made[0].isConnected) return;
+      if (made[0].nodeName === "LI" && isTodoItem(made[0])) caretAfterBox(made[0]);
+      else caretAt(made[0], 0);
+    }, !empty);
+  };
+  // The caret right after a checkbox. WebKit draws a caret at the line's start while nothing editable follows the box: a
+  // zero-width space there gives it its place (the app drops it from the saved note).
+  var WEBKIT = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Android|Edg/.test(navigator.userAgent);
+  var caretAfterBox = function (li) {
+    var box = boxOf(li);
+    if (!box) return caretAt(li, 0);
+    var next = box.nextSibling;
+    if (WEBKIT && !(next && next.nodeType === 3 && next.length)) {
+      next = $.createTextNode("\u200b");
+      li.insertBefore(next, box.nextSibling);
+      return caretAt(next, 1);
+    }
+    caretAt(li, [].indexOf.call(li.childNodes, box) + 1);
   };
   // A bullet or numbered list is the page's own change, as a checkbox list is: the browser's list commands put the list
   // inside the line's block (WebKit always, Chrome on an empty line), and moving it out after them broke WebKit's undo.
@@ -678,7 +694,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
       fill(next);
       fill(item);
       item.parentNode.insertBefore(next, item.nextSibling);
-      caretAt(next, 1);
+      caretAfterBox(next);
     });
   };
   // Enter in a quote line: the quote goes on in a new line; on an empty quote line, the line becomes text.
@@ -740,7 +756,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
     var r = $.createRange();
     r.selectNodeContents(li);
     r.setEnd(node, offset);
-    if (r.toString().length || r.cloneContents().querySelector("img")) return false;
+    if (r.toString().replace(/\u200b/g, "").length || r.cloneContents().querySelector("img")) return false;
     listChange([li], "p");
     refreshToolbar();
     return true;
@@ -866,7 +882,8 @@ export const RICH_TEXT_SCRIPT = String.raw`
           line.parentNode.replaceChild(made, line);
           fill(made);
         }
-        caretAt(made, kind === "todo" ? 1 : 0);
+        if (kind === "todo") caretAfterBox(made);
+        else caretAt(made, 0);
       });
     });
     refreshToolbar();
@@ -1251,7 +1268,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
   var afterInline = function (el) {
     var next = el.nextSibling;
     if (!next || next.nodeType !== 3 || !next.length) {
-      next = $.createTextNode("​");
+      next = $.createTextNode("\u200b");
       el.parentNode.insertBefore(next, el.nextSibling);
       return caretAt(next, 1);
     }
@@ -1269,7 +1286,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
       var tail = $.createRange();
       tail.selectNodeContents(code);
       tail.setStart(range.endContainer, range.endOffset);
-      if (range.collapsed && !tail.toString().replace(/​/g, "")) return afterInline(code);
+      if (range.collapsed && !tail.toString().replace(/\u200b/g, "")) return afterInline(code);
       return pageChange(function () {
         while (code.firstChild) code.parentNode.insertBefore(code.firstChild, code);
         code.remove();
@@ -1278,10 +1295,10 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (closest(range.startContainer, LINE) !== closest(range.endContainer, LINE)) return;
     pageChange(function () {
       var el = $.createElement("code");
-      if (range.collapsed) el.appendChild($.createTextNode("​"));
+      if (range.collapsed) el.appendChild($.createTextNode("\u200b"));
       else el.appendChild(range.extractContents());
       range.insertNode(el);
-      if (range.collapsed && el.firstChild.data === "​") caretAt(el.firstChild, 1);
+      if (range.collapsed && el.firstChild.data === "\u200b") caretAt(el.firstChild, 1);
       else afterInline(el);
     });
   };
@@ -1553,17 +1570,23 @@ export const RICH_TEXT_SCRIPT = String.raw`
     return n;
   };
   var noteLinkBefore = function (node, offset) {
-    var prev = null, space = null;
+    var prev, next;
     if (node.nodeType === 3) {
       if (offset === 0) prev = prevOf(node);
-      else if (offset === 1 && isSpace(node) && !(nextOf(node) && nextOf(node).nodeType === 3)) {
-        space = node;
-        prev = prevOf(node);
-      }
-    } else if (offset > 0) {
-      prev = node.childNodes[offset - 1];
+      else if (offset === 1 && isSpace(node)) prev = node;
+      else return null;
+      next = offset < node.length ? node : nextOf(node);
+    } else {
+      prev = offset > 0 ? node.childNodes[offset - 1] : null;
       while (prev && prev.nodeType === 3 && !prev.length) prev = prev.previousSibling;
-      if (isSpace(prev)) { space = prev; prev = prevOf(prev); }
+      next = node.childNodes[offset];
+      while (next && next.nodeType === 3 && !next.length) next = next.nextSibling;
+    }
+    // the space its pick put after it goes too, while no text follows it
+    var space = null;
+    if (isSpace(prev) && !(next && next.nodeType === 3)) {
+      space = prev;
+      prev = prevOf(prev);
     }
     return isPill(prev) ? { from: prev, to: space || prev } : null;
   };

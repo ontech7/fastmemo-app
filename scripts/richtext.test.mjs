@@ -1700,6 +1700,16 @@ export async function runCases(driver, page, url) {
     );
     await key("Backspace");
     check("...with empty text nodes beside it too", (await state()).html === "<div>alpha</div>", (await state()).html);
+    await open(`<div>alpha${NOTE_A}&nbsp;</div>`);
+    await evaluate(
+      `(() => { const c = document.querySelector(".pell-content"), d = c.firstChild, t = document.createTextNode(""); d.appendChild(t); c.focus(); const r = document.createRange(); r.setStart(t, 0); getSelection().removeAllRanges(); getSelection().addRange(r); })()`
+    );
+    await key("Backspace");
+    check(
+      "...and with the caret in an empty text node after its space (WebKit)",
+      (await state()).html === "<div>alpha</div>",
+      (await state()).html
+    );
     await open(`<div>a${NOTE_A}bc</div>`);
     await select({ text: "bc", from: 0, to: 0 });
     await key("Backspace");
