@@ -1291,6 +1291,7 @@ const de = {
     restore_single_note: "Möchten Sie diese Notiz wiederherstellen?",
     restore_notes: "Möchten Sie diese Notizen wiederherstellen?",
     delete_notes: "Möchten Sie diese Notizen löschen?",
+    delete_note: "Möchten Sie diese Notiz löschen?",
     delete_notes_perma: "Möchten Sie diese Notizen dauerhaft löschen?",
     restore_all_notes: "Möchten Sie ALLE Notizen wiederherstellen?",
     delete_all_notes_perma: "Möchten Sie ALLE Notizen dauerhaft löschen?",

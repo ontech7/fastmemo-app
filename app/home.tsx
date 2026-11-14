@@ -23,6 +23,7 @@ import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
 import { useVaultPrompt } from "@/hooks/useVaultPrompt";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
+import { setListHost } from "@/libs/desktopList";
 import { addTrail } from "@/libs/diagnostics";
 import Haptics from "@/libs/haptics";
 import { type AppStore as HistoryStore, startHistory } from "@/libs/history";
@@ -53,9 +54,9 @@ import {
 import type { Category, Note, RootState } from "@/types";
 import { webhook } from "@/utils/webhook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useFocusEffect, useIsFocused, useNavigation } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BackHandler, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
@@ -130,25 +131,27 @@ export default function HomeScreen() {
   const [filterText, setFilterText] = useState("");
 
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
-  const isNoteProtected = selectedNotes.some((id: string) => id.split("|")[1] == "true");
 
   const [showDeleteNotesDialog, setShowDeleteNotesDialog] = useState(false);
+  // Desktop: the note Delete asks about ("id|locked").
+  const [trashOne, setTrashOne] = useState<string | null>(null);
 
   const { unlockWithSecret } = useSecret();
 
-  const temporaryDeleteSelectedNotesFromItems = () => {
+  // `ids` are "id|locked", as the selection holds them: the selection, or the one note the desktop's Delete marked.
+  const temporaryDeleteSelectedNotesFromItems = (ids: string[] = selectedNotes) => {
     const deleteNotes = () => {
-      dispatch(temporaryDeleteSelectedNotes(selectedNotes));
+      dispatch(temporaryDeleteSelectedNotes(ids));
       webhook(webhook_temporaryDeleteNote, {
         action: "note/temporaryDeleteNote",
         extra: "multiple",
-        ids: selectedNotes.map((noteId: string) => noteId.split("|")[0]),
+        ids: ids.map((noteId: string) => noteId.split("|")[0]),
       });
       setSelectedNotes([]);
       setIsDeleteMode(false);
     };
 
-    if (isNoteProtected) {
+    if (ids.some((id: string) => id.split("|")[1] === "true")) {
       unlockWithSecret(deleteNotes);
     } else {
       deleteNotes();
@@ -294,6 +297,36 @@ export default function HomeScreen() {
     },
     [selectedNotes, selectNote, isDeleteMode, toggleDeleteMode, tourStep, searchTag]
   );
+  // Desktop (spec C.1): while the home has the focus, the keyboard's list is the notes on screen. The list is handed over
+  // when the home gains the focus and kept up to date while it has it, never dropped in between (dropping it is how the
+  // list knows the home went away and came back).
+  const listRef = useRef<FlashListRef<HomeRow>>(null);
+  const noteIds = useMemo(() => rows.flatMap((row) => (row.kind === "note" ? [row.note.id] : [])), [rows]);
+  const listHost = useMemo(
+    () => ({
+      ids: noteIds,
+      trash: (noteId: string) => {
+        const row = rows.find((r) => r.kind === "note" && r.note.id === noteId);
+        if (row?.kind === "note") setTrashOne(`${noteId}|${row.note.locked}`);
+      },
+      scrollTo: (noteId: string) => {
+        const index = rows.findIndex((r) => r.kind === "note" && r.note.id === noteId);
+        if (index >= 0) void listRef.current?.scrollToIndex({ index, animated: false });
+      },
+    }),
+    [noteIds, rows]
+  );
+  const listHostRef = useRef(listHost);
+  useEffect(() => {
+    listHostRef.current = listHost;
+    if (isFocused) setListHost(listHost);
+  }, [listHost, isFocused]);
+  useEffect(() => {
+    if (!isFocused) return;
+    setListHost(listHostRef.current);
+    return () => setListHost(null);
+  }, [isFocused]);
+
   const listExtraData = useMemo(() => ({ isDeleteMode, selectedNotes, tourStep }), [isDeleteMode, selectedNotes, tourStep]);
 
   // hardware back for resetting deleteMode
@@ -440,6 +473,17 @@ export default function HomeScreen() {
         }}
       />
 
+      <ConfirmOrCancelDialog
+        open={trashOne !== null}
+        destructive
+        description={t("popup.delete_note")}
+        onCancel={() => setTrashOne(null)}
+        onConfirm={() => {
+          if (trashOne) temporaryDeleteSelectedNotesFromItems([trashOne]);
+          setTrashOne(null);
+        }}
+      />
+
       <VaultPromptDialog
         open={vaultPromptNeeded && !vaultUnlocked && isFocused && changelogChecked}
         onClose={() => setVaultPromptNeeded(false)}
@@ -495,6 +539,7 @@ export default function HomeScreen() {
 
               <View style={styles.listWrapper}>
                 <FlashList
+                  ref={listRef}
                   maintainVisibleContentPosition={{
                     disabled: true,
                   }}

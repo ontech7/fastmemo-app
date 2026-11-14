@@ -1260,6 +1260,7 @@ const ja = {
     restore_single_note: "このノートを復元しますか？",
     restore_notes: "これらのノートを復元しますか？",
     delete_notes: "これらのノートを削除しますか？",
+    delete_note: "このノートを削除しますか？",
     delete_notes_perma: "これらのノートを完全に削除しますか？",
     restore_all_notes: "すべてのノートを復元しますか？",
     delete_all_notes_perma: "すべてのノートを完全に削除しますか？",

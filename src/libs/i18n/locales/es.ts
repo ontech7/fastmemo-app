@@ -1281,6 +1281,7 @@ const es = {
     restore_single_note: "¿Quieres restaurar este Note?",
     restore_notes: "¿Quieres restaurar esas Notas?",
     delete_notes: "¿Quieres eliminar esas Notas?",
+    delete_note: "¿Quieres eliminar esta nota?",
     delete_notes_perma: "¿Quieres eliminar esas notas de forma permanente?",
     restore_all_notes: "¿Quieres restaurar TODAS las notas?",
     delete_all_notes_perma: "¿Quieres eliminar TODAS las notas de forma permanente?",

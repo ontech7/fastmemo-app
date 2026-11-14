@@ -1,7 +1,17 @@
 import { useEffect } from "react";
 
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
-import { canRun, commandsIdle, type DesktopCommand, IS_MAC, isEditable, press, runCommand } from "@/libs/desktopCommands";
+import {
+  canRun,
+  commandsIdle,
+  type DesktopCommand,
+  IS_MAC,
+  isEditable,
+  isTargetReachable,
+  press,
+  runCommand,
+} from "@/libs/desktopCommands";
+import { leaveKeyboardMode, listKey, setCursor } from "@/libs/desktopList";
 import { isTauri } from "@/utils/platform";
 
 /*
@@ -12,6 +22,9 @@ import { isTauri } from "@/utils/platform";
  *
  * Desktop (Tauri) only, where the app is the whole window:
  * - Esc: in a text field it only leaves the field; otherwise it presses the screen's back button.
+ * - The home's list (`@/libs/desktopList`): the arrows move a mark over the notes, Enter opens the marked one, Delete (Cmd+
+ *   Backspace on a Mac) trashes it, when no field has the focus and nothing (a menu, a dialog) lies over the home; ↓ in
+ *   the search field marks the first note. The mark hides at the first mouse move or press, or typing in a field.
  * - Cmd/Ctrl+N: a new note (from another screen, going back to the home screen first); Cmd/Ctrl+F: the search field,
  *   or find in a text note. The same commands as the macOS menu (`@/libs/desktopCommands`).
  * - F5 and Cmd/Ctrl+R would reload the page, dropping the edits not yet saved: blocked outside development.
@@ -67,6 +80,44 @@ function isBrowserKey(e: KeyboardEvent, mod: boolean): boolean {
   return BROWSER_LETTERS.has(letter) || (letter === "u" && !isEditable(e.target));
 }
 
+const isFindField = (target: EventTarget | null) => (target as HTMLElement | null)?.dataset?.testid === SHORTCUT_TARGET.find;
+
+/** The home list's keys. Answers true when the list used the key. Arrows may repeat (a held arrow walks the list). */
+function onListKey(e: KeyboardEvent, mod: boolean): boolean {
+  if (isEditable(e.target)) {
+    // ↓ in the search field: out of the field, onto the first note.
+    if (e.key === "ArrowDown" && !mod && !e.altKey && !e.shiftKey && isFindField(e.target) && commandsIdle()) {
+      setCursor(null);
+      if (listKey("down")) {
+        (e.target as HTMLElement).blur();
+        e.preventDefault();
+        return true;
+      }
+    }
+    leaveKeyboardMode();
+    return false;
+  }
+  if (e.altKey || e.shiftKey || !commandsIdle() || !isTargetReachable(SHORTCUT_TARGET.find)) return false;
+  let key: "up" | "down" | "enter" | "delete" | null = null;
+  if (!mod && e.key === "ArrowUp") key = "up";
+  else if (!mod && e.key === "ArrowDown") key = "down";
+  else if (e.repeat) return false;
+  else if (!mod && e.key === "Enter") key = "enter";
+  else if (IS_MAC ? mod && e.key === "Backspace" : !mod && e.key === "Delete") key = "delete";
+  if (!key || !listKey(key)) return false;
+  e.preventDefault();
+  return true;
+}
+
+/**
+ * A real move of the mouse. The engine also sends a move when what lies under a still pointer changes (a screen opening,
+ * the list scrolling to the mark): those don't move it, and must not hide the mark.
+ */
+function onPointerMove(e: MouseEvent) {
+  if (!e.movementX && !e.movementY) return;
+  leaveKeyboardMode();
+}
+
 function onDesktopKeyDown(e: KeyboardEvent) {
   // keyCode 229: WebKit reports the key that ends a composition that way, with isComposing already false.
   if (e.defaultPrevented || e.isComposing || e.keyCode === 229) return;
@@ -78,6 +129,8 @@ function onDesktopKeyDown(e: KeyboardEvent) {
     e.preventDefault();
     return;
   }
+
+  if (!otherMod && onListKey(e, mod)) return;
 
   if (e.altKey || e.shiftKey || otherMod) return;
   const command = mod ? COMMAND_KEYS[letterOf(e)] : undefined;
@@ -204,6 +257,8 @@ export function useKeyboardShortcuts(): void {
     window.addEventListener("keydown", onDesktopKeyDown, true);
     window.addEventListener("mousedown", onMouseDown, true);
     window.addEventListener("contextmenu", onContextMenu);
+    window.addEventListener("mousemove", onPointerMove, true);
+    window.addEventListener("mousedown", leaveKeyboardMode, true);
     document.addEventListener("load", onLoadCapture, true);
     document.querySelectorAll("iframe").forEach(listenToFrame);
 
@@ -212,6 +267,8 @@ export function useKeyboardShortcuts(): void {
       window.removeEventListener("keydown", onDesktopKeyDown, true);
       window.removeEventListener("mousedown", onMouseDown, true);
       window.removeEventListener("contextmenu", onContextMenu);
+      window.removeEventListener("mousemove", onPointerMove, true);
+      window.removeEventListener("mousedown", leaveKeyboardMode, true);
       document.removeEventListener("load", onLoadCapture, true);
     };
   }, []);

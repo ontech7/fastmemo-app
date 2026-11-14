@@ -70,6 +70,11 @@ function reachableTarget(name: string): HTMLElement | null {
   return null;
 }
 
+/** Whether a click on the control marked `name` would reach it: on screen, with nothing over it. */
+export function isTargetReachable(name: string): boolean {
+  return !!reachableTarget(name);
+}
+
 /** Presses the control marked `name` (a field is focused instead), if it's reachable. */
 export function press(name: string): boolean {
   const node = reachableTarget(name);

@@ -26,6 +26,7 @@ await build({
       export { htmlToMarkdown, wrapHtmlForPdf } from "@/utils/html";
       export { formatToPlainText } from "@/utils/string";
       export { daysAgo } from "@/utils/dateParse";
+      export { stepCursor, rangeBetween } from "@/libs/listCursor";
     `,
     resolveDir: src,
     loader: "ts",
@@ -288,6 +289,32 @@ console.log("\ndaysAgo: calendar days, not 24-hour spans (the history's Today / 
   ok("two days", M.daysAgo(at(2026, 11, 12, 18), at(2026, 11, 14, 9)) === 2);
   ok("across a month", M.daysAgo(at(2026, 10, 31, 22), at(2026, 11, 1, 1)) === 1);
   ok("across the clock change (29 March)", M.daysAgo(at(2026, 3, 28, 12), at(2026, 3, 30, 12)) === 2);
+}
+
+console.log("\nlistCursor: the desktop list's keyboard mark (Task 25)");
+{
+  const { stepCursor, rangeBetween } = M;
+  const ids = ["a", "b", "c"];
+  ok(
+    "down from nothing marks the first, up does nothing",
+    stepCursor(ids, null, "down") === "a" && stepCursor(ids, null, "up") === null
+  );
+  ok("down and up", stepCursor(ids, "a", "down") === "b" && stepCursor(ids, "c", "up") === "b");
+  ok("down on the last stays", stepCursor(ids, "c", "down") === "c");
+  ok("up on the first goes to the field", stepCursor(ids, "a", "up") === "field");
+  ok(
+    "a mark on a note that is gone starts again from the top",
+    stepCursor(ids, "zz", "down") === "a" && stepCursor(ids, "zz", "up") === "field"
+  );
+  ok("an empty list", stepCursor([], null, "down") === null && stepCursor([], "a", "up") === "field");
+  ok(
+    "a range, in the list's order either way",
+    rangeBetween(ids, "a", "c").join() === "a,b,c" &&
+      rangeBetween(ids, "c", "a").join() === "a,b,c" &&
+      rangeBetween(ids, "b", "b").join() === "b"
+  );
+  ok("no anchor: the one clicked", rangeBetween(ids, null, "b").join() === "b" && rangeBetween(ids, "zz", "b").join() === "b");
+  ok("an id that isn't listed: nothing", rangeBetween(ids, "a", "zz").length === 0);
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

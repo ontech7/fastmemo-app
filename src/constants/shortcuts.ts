@@ -14,6 +14,8 @@ export const SHORTCUT_TARGET = {
   settings: "shortcut-settings",
   /** The home screen's button that opens the note-type menu (the menu bar's New Text Note, New List...). */
   noteTypes: "shortcut-note-types",
+  /** Enter on the home: the card the keyboard's mark is on (`@/libs/desktopList`). */
+  cursorNote: "shortcut-cursor-note",
 } as const;
 
 /** An item of the note-type menu, by note type (`NOTE_TYPES`' keys). */

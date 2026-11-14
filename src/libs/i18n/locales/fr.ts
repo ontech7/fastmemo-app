@@ -1291,6 +1291,7 @@ const fr = {
     restore_single_note: "Voulez-vous restaurer cette note?",
     restore_notes: "Voulez-vous restaurer ces notes?",
     delete_notes: "Voulez-vous supprimer ces notes?",
+    delete_note: "Voulez-vous supprimer cette note ?",
     delete_notes_perma: "Voulez-vous supprimer définitivement ces notes?",
     restore_all_notes: "Voulez-vous restaurer TOUTES les notes?",
     delete_all_notes_perma: "Voulez-vous supprimer TOUTES les notes définitivement?",

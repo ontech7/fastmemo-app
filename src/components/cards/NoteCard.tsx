@@ -15,6 +15,7 @@ import { useSelector } from "react-redux";
 import { useRouter } from "@/hooks/useRouter";
 import { useTourTarget } from "@/hooks/useTourTarget";
 import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
+import { useIsCursor } from "@/libs/desktopList";
 import { storeUnlockedNote } from "@/libs/registry";
 import { setFindOnOpen } from "@/libs/search/findOnOpen";
 import { formatDateTime, reverseDate } from "@/utils/date";
@@ -23,6 +24,7 @@ import { isStringEmpty } from "@/utils/string";
 import { toast } from "@/utils/toast";
 
 import { DURATION } from "@/constants/motion";
+import { SHORTCUT_TARGET } from "@/constants/shortcuts";
 import { NOTE_TYPES } from "@/constants/note-types";
 import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, MONOSPACE_FONT, PADDING_MARGIN, SHADOW } from "@/constants/styles";
 
@@ -76,6 +78,9 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
   const { id, type, title, date, createdAt, updatedAt, category, important, readOnly, hidden, locked, local } = content;
 
   const targetRef = useTourTarget(tourTarget);
+
+  // The desktop keyboard's mark (spec C.1): drawn on the card's edge, it takes no room.
+  const isCursor = useIsCursor(id);
 
   // Another synced device has it open right now.
   const openElsewhere = useNoteOpenElsewhere(id);
@@ -145,7 +150,9 @@ function NoteCard({ content, isSelected, selectNote, isDeleteMode, toggleDeleteM
         isSelected && (isImportant ? styles.containerImportantSelected : styles.containerSelected),
         { borderLeftColor: accent },
         hidden && styles.hiddenContainer,
+        isCursor && styles.cursorGlow,
       ]}
+      testID={isCursor ? SHORTCUT_TARGET.cursorNote : undefined}
       onPress={onPressHandler}
       onLongPress={onLongPressHandler}
       accessibilityRole={isDeleteMode && known ? "checkbox" : "button"}
@@ -337,6 +344,9 @@ const styles = StyleSheet.create({
   avatarUpdate: { backgroundColor: COLOR.accentFaint },
   presenceRow: { flexDirection: "row", alignItems: "center", gap: PADDING_MARGIN.xs + 1 },
   presence: { flexShrink: 1, fontSize: FONTSIZE.small, fontFamily: FONT.medium, opacity: 0.75 },
+  // The keyboard's mark: a ring flush with the card's edge (an outline drawn inward by its width: it takes no room, and a
+  // child over the left border would be cut by the card's overflow), and the main button's glow.
+  cursorGlow: { ...SHADOW.fab, outlineWidth: 2, outlineStyle: "solid", outlineColor: COLOR.accent, outlineOffset: -2 },
 });
 
 export default memo(NoteCard);

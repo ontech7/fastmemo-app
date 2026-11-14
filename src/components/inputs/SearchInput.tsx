@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Keyboard, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import type { ReactNode } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
 import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
@@ -22,6 +22,12 @@ interface Props {
   containerStyle?: StyleProp<ViewStyle>;
 }
 
+/**
+ * Web and desktop: no completion or correction under the field. macOS draws its completion bubble there, which takes the
+ * arrow keys the desktop's list needs (↓ out of the field, spec C.1).
+ */
+const WEB_SEARCH_FIELD = Platform.OS === "web" ? { autoCorrect: false, autoComplete: "off" as const, spellCheck: false } : {};
+
 export default function SearchInput({ value, onChangeText, placeholder, icon, onClear, onSubmit, containerStyle }: Props) {
   const { t } = useTranslation();
 
@@ -42,6 +48,7 @@ export default function SearchInput({ value, onChangeText, placeholder, icon, on
         style={styles.searchInput}
         returnKeyType="search"
         testID={SHORTCUT_TARGET.find}
+        {...WEB_SEARCH_FIELD}
         onSubmitEditing={() => {
           Keyboard.dismiss();
           onSubmit?.();

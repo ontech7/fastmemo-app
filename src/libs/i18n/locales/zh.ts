@@ -1225,6 +1225,7 @@ const zh = {
     restore_single_note: "你想恢复这个笔记吗？",
     restore_notes: "你想恢复那些笔记吗？",
     delete_notes: "你想删除那些笔记吗",
+    delete_note: "你想删除这条笔记吗？",
     delete_notes_perma: "你想永久删除那些笔记吗？",
     restore_all_notes: "你想恢复所有的笔记吗？",
     delete_all_notes_perma: "你想永久删除所有笔记吗？",
