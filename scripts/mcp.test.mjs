@@ -1256,6 +1256,20 @@ console.log("\na list's hideDone through the edit tool (spec B.7)");
   );
 }
 
+console.log("\na reminder through the edit tool (spec D.5)");
+
+{
+  const { made, stored } = editor();
+  const { note } = await made({ type: "text", title: "Promemoria", text: "<p>prima</p>" });
+  const h2 = editor([{ ...stored(note.id), remindAt: 9_000_000_000_000 }]);
+  const edited = await h2.editNow(note.id, { appendHtml: "<p>dopo</p>" });
+  ok(
+    "the text changed by the tool, the note keeps its reminder",
+    !edited.isError && h2.stored(note.id).text.includes("dopo") && h2.stored(note.id).remindAt === 9_000_000_000_000,
+    edited
+  );
+}
+
 console.log("\nedit_note: text");
 
 {

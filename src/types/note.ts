@@ -58,6 +58,11 @@ export interface NoteBase {
   syncedRev?: number;
   /** When the note was moved to the trash (the revision of that move). */
   deletedAt?: number;
+  /**
+   * A reminder (spec D.5, ADR-044): when the phone should ring for this note, epoch milliseconds. Synced like the title
+   * (never encrypted); a time that has passed is ignored, never cleared. Absent when there is none.
+   */
+  remindAt?: number;
 }
 
 export interface TextNote extends NoteBase {

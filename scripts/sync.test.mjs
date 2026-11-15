@@ -56,6 +56,7 @@ await build({
       export { noteRev, nextRev, adoptLegacySyncState, fromOlderVersion, forUpload } from "@/libs/cloud/revision";
       export { contentToken } from "@/libs/cloud/token";
       export { SyncEngine } from "@/libs/cloud/syncEngine";
+      export { withReminder } from "@/libs/reminders/plan";
       export { copyOfNote } from "@/libs/noteCopy";
       export { restoreVersion } from "@/slicers/thunks/restoreVersion";
     `,
@@ -2093,6 +2094,46 @@ console.log("\na list's hideDone (spec B.7)");
   q.add(list(200));
   const older = q.plan();
   ok("an older copy without it doesn't undo the local change", older.put.length === 0 && older.conflicts.length === 0, older);
+}
+
+console.log("\na reminder travels with the note (spec D.5)");
+{
+  const at = 9_000_000_000_000;
+  ok("remindAt goes up with the note", M.forUpload(note("r", 100, { remindAt: at, syncedRev: 100 })).remindAt === at);
+  ok(
+    "removed, the upload has no remindAt key",
+    !("remindAt" in M.forUpload(M.withReminder(note("r", 100, { remindAt: at }), null)))
+  );
+  const p = M.createPlanner(local([note("r", 100, { syncedRev: 100 })]), "(c)");
+  p.add(note("r", 200, { remindAt: at }));
+  const plan = p.plan();
+  ok(
+    "a newer copy that only set a reminder replaces the note, with it",
+    plan.put.length === 1 && plan.put[0].remindAt === at,
+    plan.put
+  );
+  const base = M.notesReducer(undefined, { type: "@@init" });
+  const store = M.configureStore({
+    reducer: { notes: M.notesReducer },
+    preloadedState: { notes: { ...base, items: [note("r", 100, { syncedRev: 100 })] } },
+  });
+  store.dispatch(M.notes.applyNotesPlan(plan));
+  ok(
+    "the remote copy with it lands in the store",
+    store.getState().notes.items.find((x) => x.id === "r")?.remindAt === at,
+    store.getState().notes.items
+  );
+  const editStore = M.configureStore({
+    reducer: { notes: M.notesReducer },
+    preloadedState: { notes: { ...base, items: [note("e", 100, { syncedRev: 100 })] } },
+  });
+  editStore.dispatch(M.notes.addNote(M.withReminder(editStore.getState().notes.items[0], at)));
+  const edited = editStore.getState().notes;
+  ok(
+    "setting only a reminder is a change: a new revision, queued for upload",
+    edited.items[0].remindAt === at && edited.items[0].rev > 100 && Object.keys(edited.cloud.items.add).includes("e"),
+    edited.items[0]
+  );
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
