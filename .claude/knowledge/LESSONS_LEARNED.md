@@ -2075,7 +2075,12 @@ scheme, and the app has none.
 `FASTMEMO_OTA_RUNTIME` (`app.config.ts`, `publish-ota.yml`, `ota-guard.sh`'s outputs), then mark this resolved. A release
 pipeline that has never run end to end isn't verified: its first real run is the test.
 
-**Tracking issue:** (not filed; captured here) **Status:** Open (workaround in place)
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-15  
+**Resolved in:** plan 2 of 4.1.0, Task 32 (`chore(build): the scheme is lowercase…`): `scheme` is `appSlug.toLowerCase()` in
+every build (`fastmemoapp`, `fastmemoapptest`), `runtimeVersion` the fingerprint policy alone; `FASTMEMO_OTA_RUNTIME`, the
+guard's fingerprint outputs and the workflow's lines that passed them are gone. The manifest's activity and its four icon
+aliases carry the lowercase scheme; the permissions equal 4.0.0's. The first update after 4.1.0 is the workflow's proof.
 
 ---
 
