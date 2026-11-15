@@ -16,7 +16,7 @@ const ja = {
     updated_to: "{{version}} に更新しました",
     whats_new: "新機能",
     new_in: "{{version}} の新機能",
-    new_in_hint: "重要なものから順に",
+    new_in_hint: "Fast Memo をご利用いただきありがとうございます",
     show_more: "もっと見る",
     show_less: "閉じる",
     more_count: "ほか{{count}}件",

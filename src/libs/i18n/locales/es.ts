@@ -16,7 +16,7 @@ const es = {
     updated_to: "Actualizada a la {{version}}",
     whats_new: "Novedades",
     new_in: "Novedades de la {{version}}",
-    new_in_hint: "Las más importantes primero",
+    new_in_hint: "Gracias por usar Fast Memo",
     show_more: "Mostrar más",
     show_less: "Mostrar menos",
     more_count: "{{count}} más",

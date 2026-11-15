@@ -16,7 +16,7 @@ const zh = {
     updated_to: "已更新到 {{version}}",
     whats_new: "新功能",
     new_in: "{{version}} 新功能",
-    new_in_hint: "最重要的排在前面",
+    new_in_hint: "感谢使用 Fast Memo",
     show_more: "显示更多",
     show_less: "收起",
     more_count: "还有 {{count}} 项",
