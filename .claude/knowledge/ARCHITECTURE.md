@@ -192,7 +192,7 @@ src/
     appIcon.ts         # Alternate app icon (expo-alternate-app-icons, ADR-020); .android.ts confirms and closes the app, .web.ts: none
     net.ts             # Calls to the user's servers (FastMemo server, webhooks); .web.ts: through Rust on desktop (src-tauri/src/net.rs, ADR-017)
     desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only;
-                       #   search (Ctrl/Cmd+K: home, then its field), the zoom commands (ADR-046)
+                       #   the zoom commands (ADR-046)
     desktopList.ts     # Desktop: the home list's keyboard mark and selection clicks (Ctrl/Cmd, Shift), the card's right click;
                        #   .ts no-op. listCursor.ts: its pure steps (stepCursor, rangeBetween; scripts/utils.test.mjs)
     desktopZoom.ts     # Desktop: the window's zoom (setZoom), kept in settings.desktopZoom, applied before the window shows;

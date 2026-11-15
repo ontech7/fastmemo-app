@@ -24,7 +24,6 @@ export type DesktopCommand =
   | "newKanban"
   | "newCode"
   | "find"
-  | "search"
   | "settings"
   | "help"
   | ZoomCommand;
@@ -46,12 +45,6 @@ const MENU_TIMEOUT_MS = 1000;
 
 /** The pause after a command that changed screen (as `useRouter`'s guard on pushes). */
 const COMMAND_PAUSE_MS = 1000;
-/**
- * How long the search field is watched after Search pressed it: the note screen left on the way dismisses the keyboard
- * when it loses the focus (`useNoteEditor`), which on the web blurs whatever field has the focus, and a code note's does
- * so after the home's field took it.
- */
-const FIELD_SETTLE_MS = 500;
 
 let running = false;
 let pausedUntil = 0;
@@ -140,10 +133,7 @@ async function goHome(): Promise<boolean> {
 }
 
 /** The screen a command opens from the home screen, and the home control a click would go through. */
-const DESTINATIONS: Record<
-  Exclude<DesktopCommand, "find" | "search" | ZoomCommand>,
-  { path: string | null; target: string }
-> = {
+const DESTINATIONS: Record<Exclude<DesktopCommand, "find" | ZoomCommand>, { path: string | null; target: string }> = {
   newNote: { path: null, target: SHORTCUT_TARGET.newNote },
   newText: { path: null, target: SHORTCUT_TARGET.noteTypes },
   newTodo: { path: null, target: SHORTCUT_TARGET.noteTypes },
@@ -169,7 +159,6 @@ export function canRun(command: DesktopCommand): boolean {
   if (isZoom(command)) return true;
   if (!commandsIdle()) return false;
   if (command === "find") return !!reachableTarget(SHORTCUT_TARGET.find);
-  if (command === "search") return isHome() ? !!reachableTarget(SHORTCUT_TARGET.find) : !!reachableTarget(SHORTCUT_TARGET.back);
   if (isAt(DESTINATIONS[command].path)) return false;
   if (NOTE_TYPE_OF[command] && reachableTarget(noteTypeTarget(NOTE_TYPE_OF[command]))) return true;
   if (reachableTarget(DESTINATIONS[command].target)) return true;
@@ -182,25 +171,6 @@ export async function runCommand(command: DesktopCommand): Promise<void> {
   // Find acts where there's something to search; it doesn't leave the screen.
   if (command === "find") {
     press(SHORTCUT_TARGET.find);
-    return;
-  }
-  // Search (spec C.6): the home's search field, from any screen, going back the way New Note does (the open note is
-  // committed by the same steps).
-  if (command === "search") {
-    running = true;
-    try {
-      if ((isHome() || (await goHome())) && press(SHORTCUT_TARGET.find)) {
-        // Blurred by the screen that left (nothing else took the focus): the field takes it back.
-        await until(() => {
-          // focus only: what was typed in the meantime isn't selected (the next key would replace it)
-          if (document.activeElement === document.body) reachableTarget(SHORTCUT_TARGET.find)?.focus();
-          return false;
-        }, FIELD_SETTLE_MS);
-      }
-    } finally {
-      running = false;
-      pausedUntil = Date.now() + COMMAND_PAUSE_MS;
-    }
     return;
   }
   const { path, target } = DESTINATIONS[command];

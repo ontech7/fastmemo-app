@@ -32,7 +32,6 @@ import { isTauri } from "@/utils/platform";
  *   or find in a text note. The same commands as the macOS menu (`@/libs/desktopCommands`).
  * - Cmd/Ctrl with + (or =, the numpad's plus), - and 0: the window's zoom (`@/libs/desktopZoom`), from any screen.
  * - Cmd/Ctrl+P: the text note on screen, printed (`@/libs/print`); anywhere else nothing.
- * - Cmd/Ctrl+K: the home's search field, from any screen (going back to the home first, as Cmd/Ctrl+N).
  * - F5 and Cmd/Ctrl+R would reload the page, dropping the edits not yet saved: blocked outside development.
  * - Alt+arrows (Windows, Linux) and the keyboard's back/forward keys would leave the screen through the history, without
  *   its back button: blocked.
@@ -55,7 +54,7 @@ function letterOf(e: KeyboardEvent): string {
   return e.code.startsWith("Key") ? e.code.slice(3).toLowerCase() : "";
 }
 
-const COMMAND_KEYS: Record<string, DesktopCommand> = { n: "newNote", f: "find", k: "search" };
+const COMMAND_KEYS: Record<string, DesktopCommand> = { n: "newNote", f: "find" };
 
 /** A key that reloads the page. AltGr (Ctrl+Alt on Windows) types characters: AltGr+R isn't one. */
 function isReload(e: KeyboardEvent, mod: boolean): boolean {

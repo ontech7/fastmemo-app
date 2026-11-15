@@ -1180,7 +1180,7 @@ const it = {
       text_4_0: "• Esc — torna indietro; in un campo di testo il primo Esc esce solo dal campo.",
       text_5_0: "• Ctrl/⌘+Invio — salva la nota rapida.",
       text_8_0:
-        "Scorri le note con le frecce, aprine una con Invio, tasto destro su una nota per il suo menu, Ctrl/⌘ + clic per selezionarne più di una. Ctrl/⌘ + K cerca da qualsiasi schermata, Ctrl/⌘ + P stampa una nota di testo, Ctrl/⌘ con + e - cambia lo zoom. Puoi incollare e trascinare immagini in una nota di testo.",
+        "Scorri le note con le frecce, aprine una con Invio, tasto destro su una nota per il suo menu, Ctrl/⌘ + clic per selezionarne più di una. Ctrl/⌘ + P stampa una nota di testo, Ctrl/⌘ con + e - cambia lo zoom. Puoi incollare e trascinare immagini in una nota di testo.",
       text_6_0:
         "Su Mac gli stessi comandi sono nella barra dei menu, insieme agli altri tipi di nota e a Esporta/Importa dati. Chiudere la finestra lascia Fast Memo aperto: fai clic sulla sua icona nel Dock per riaprirlo, o esci con ⌘Q.",
       text_7_0: "Su Windows e Linux, chiudere la finestra chiude Fast Memo.",

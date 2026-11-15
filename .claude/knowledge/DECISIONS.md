@@ -2209,14 +2209,16 @@ upstream). Ctrl/Cmd with `+`, `-`, `0` and `P` were swallowed, and a report from
   `windows-version` (already in the lockfile, now direct, Windows only: 10 with build ≥ 22000 is 11), Linux `PRETTY_NAME` of
   `/etc/os-release`. Asked once after the home shows; `getOs()` sends the name and the rest as `osVersion`. Nothing else is
   read: no host or user name.
-- **Keys and mouse** (spec C.1–C.3, C.6): the home list's mark (`libs/desktopList`, `libs/listCursor`), the note's
+- **Keys and mouse** (spec C.1–C.3): the home list's mark (`libs/desktopList`, `libs/listCursor`), the note's
   right-click menu (`cards/NoteContextMenu`), Ctrl/Cmd + click and Shift + click, pictures pasted and dropped into a text
-  note (the window takes no other file: `libs/dropGuard`), Ctrl/Cmd + K to the home's search from any screen, Esc closing a
+  note (the window takes no other file: `libs/dropGuard`), Esc closing a
   note's find bar (the bar's fields, and the note's page, which posts the key while the bar is open). A key presses the
   control carrying its test id or calls a handler the screen registers (CONVENTIONS).
 
 **Rejected:** keeping the picture PDF (no text, heavy); printing the editor's frame (blank on the Mac); a
-system-information crate (`sysinfo` and alike: a dependency for three lines per system).
+system-information crate (`sysinfo` and alike: a dependency for three lines per system); Ctrl/Cmd + K to the home's search
+from any screen (spec C.6: built in Task 30, removed at Stop C by the user, who saw no use for it beside Esc and Cmd/Ctrl +
+N).
 
 **Trade-offs:**
 

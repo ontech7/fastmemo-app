@@ -652,9 +652,8 @@ form this way drops what was typed there, as clicking back would; the note edito
 - **The keyboard's mark never shows for the mouse** (`libs/desktopList`): the first real mouse move or press hides it, the next
   arrow shows it where it was. A move the engine sends without the pointer moving (a screen opening, the list scrolling) isn't
   one.
-- Ctrl/Cmd+K (`search`) goes home like Cmd/Ctrl+N and focuses the home's search field. Ctrl/Cmd with `+`/`-`/`0` (the
-  window's zoom) and Ctrl/Cmd+P (the text note's print, ADR-046) run whatever lies over the screen: they act on the window,
-  not on a control.
+- Ctrl/Cmd with `+`/`-`/`0` (the window's zoom) and Ctrl/Cmd+P (the text note's print, ADR-046) run whatever lies over the
+  screen: they act on the window, not on a control.
 
 ### Never Import with Explicit Platform Suffix
 
