@@ -13,6 +13,14 @@ const ja = {
   },
   changelog: {
     title: "新着情報",
+    updated_to: "{{version}} に更新しました",
+    whats_new: "新機能",
+    new_in: "{{version}} の新機能",
+    new_in_hint: "重要なものから順に",
+    show_more: "もっと見る",
+    show_less: "閉じる",
+    more_count: "ほか{{count}}件",
+    previous: "以前のバージョン",
 
     web: {
       description_2_1_0: `• AI アシスタントがパソコンでも：校正、短縮、翻訳、要約をすべてデバイス上で。
@@ -1332,6 +1340,7 @@ const ja = {
   },
 
   a11y: {
+    whats_new: "このバージョンの新機能",
     prev_month: "前の月",
     next_month: "次の月",
     back: "戻る",

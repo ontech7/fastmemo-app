@@ -13,6 +13,14 @@ const zh = {
   },
   changelog: {
     title: "什么是新的？",
+    updated_to: "已更新到 {{version}}",
+    whats_new: "新功能",
+    new_in: "{{version}} 新功能",
+    new_in_hint: "最重要的排在前面",
+    show_more: "显示更多",
+    show_less: "收起",
+    more_count: "还有 {{count}} 项",
+    previous: "早期版本",
 
     web: {
       description_2_1_0: `• AI 助手也来到电脑上：纠正、缩短、翻译和总结，全部在你的设备上完成。
@@ -1297,6 +1305,7 @@ const zh = {
   },
 
   a11y: {
+    whats_new: "此版本的新功能",
     prev_month: "上个月",
     next_month: "下个月",
     back: "返回",

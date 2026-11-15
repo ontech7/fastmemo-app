@@ -13,6 +13,14 @@ const es = {
   },
   changelog: {
     title: "¿Qué hay de nuevo?",
+    updated_to: "Actualizada a la {{version}}",
+    whats_new: "Novedades",
+    new_in: "Novedades de la {{version}}",
+    new_in_hint: "Las más importantes primero",
+    show_more: "Mostrar más",
+    show_less: "Mostrar menos",
+    more_count: "{{count}} más",
+    previous: "Versiones anteriores",
 
     web: {
       description_2_1_0: `• El asistente de IA también en el ordenador: corrige, acorta, traduce y resume, todo en tu dispositivo.
@@ -1353,6 +1361,7 @@ const es = {
   },
 
   a11y: {
+    whats_new: "Novedades de esta versión",
     prev_month: "Mes anterior",
     next_month: "Mes siguiente",
     back: "Atrás",

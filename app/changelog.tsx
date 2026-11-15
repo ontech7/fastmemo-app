@@ -1,10 +1,10 @@
-import aiLottieJson from "~/assets/lottie/AI_Loader.json";
 import lottieJson from "~/assets/lottie/Logo.json";
 import CloseButton from "@/components/buttons/CloseButton";
 import ChangelogItem from "@/components/changelog/ChangelogItem";
 import LottieView from "@/components/lottie/LottieAnimation";
 import SafeAreaView from "@/components/SafeAreaView";
 import AppBackground from "@/components/ui/AppBackground";
+import { seenWhatsNew } from "@/libs/whatsNew";
 import { CONTENT_COLUMN } from "@/constants/layout";
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN } from "@/constants/styles";
 import { useEffect, useMemo, useRef } from "react";
@@ -47,14 +47,14 @@ function getVersionChangelogs(t: (key: string) => string) {
 export default function ChangelogScreen() {
   const { t } = useTranslation();
 
-  const changelogs = useMemo(() => getVersionChangelogs(t), [t]);
+  const [current, ...previous] = useMemo(() => getVersionChangelogs(t), [t]);
 
   const logoAnimRef = useRef<any>(null);
-  const aiAnimRef = useRef<any>(null);
 
+  // Opened (from the sidebar's icon, the home's message or the settings): the news of this version has been seen.
   useEffect(() => {
+    seenWhatsNew();
     logoAnimRef.current?.play();
-    aiAnimRef.current?.play();
   }, []);
 
   return (
@@ -63,28 +63,31 @@ export default function ChangelogScreen() {
 
       <View style={styles.header}>
         <View style={styles.headerSpacer} />
-        <Text style={styles.headerTitle}>{t("changelog.title")}</Text>
+        <Text style={styles.headerTitle}>{t("generalsettings.changelog")}</Text>
         <CloseButton chip />
       </View>
 
-      <ScrollView contentContainerStyle={CONTENT_COLUMN}>
-        <View style={styles.iconWrapper}>
-          <LottieView ref={logoAnimRef} style={styles.icon} source={lottieJson} loop={false} />
-          {Platform.OS !== "web" && (
-            <>
-              <Text style={styles.plusSign}>+</Text>
-              <LottieView ref={aiAnimRef} style={styles.icon} source={aiLottieJson} loop />
-            </>
-          )}
+      <ScrollView contentContainerStyle={[CONTENT_COLUMN, styles.content]}>
+        <View style={styles.hero}>
+          <LottieView ref={logoAnimRef} style={styles.logo} source={lottieJson} loop={false} />
+          <Text style={styles.heroTitle} accessibilityRole="header">
+            {t("changelog.new_in", { version: current.version.replace(/^v/, "") })}
+          </Text>
+          <Text style={styles.heroHint}>{t("changelog.new_in_hint")}</Text>
         </View>
 
-        {changelogs.map((changelog, index) => (
+        <ChangelogItem current version={current.version} text={current.text} />
+
+        <Text style={styles.section} accessibilityRole="header">
+          {t("changelog.previous")}
+        </Text>
+
+        {previous.map((changelog, index) => (
           <ChangelogItem
             key={`changelog-${changelog.version}`}
             version={changelog.version}
             text={changelog.text}
-            isFirst={index === 0}
-            isLast={index === changelogs.length - 1}
+            isLast={index === previous.length - 1}
           />
         ))}
       </ScrollView>
@@ -104,33 +107,54 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.sm,
-    marginBottom: PADDING_MARGIN.xl,
+    marginBottom: PADDING_MARGIN.sm,
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
-    fontSize: FONTSIZE.subtitle,
+    fontSize: FONTSIZE.inputTitle,
     fontFamily: FONT.semiBold,
-    color: COLOR.textPrimary,
+    color: COLOR.textSecondary,
     letterSpacing: -0.3,
   },
   headerSpacer: {
     width: 42,
   },
-  iconWrapper: {
-    flexDirection: "row",
+  content: {
+    paddingHorizontal: PADDING_MARGIN.md,
+    paddingBottom: PADDING_MARGIN.xxl,
+  },
+  hero: {
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: PADDING_MARGIN.xl,
+    marginBottom: PADDING_MARGIN.lg,
   },
-  icon: {
-    height: 75,
-    width: 75,
+  logo: {
+    width: 96,
+    height: 96,
   },
-  plusSign: {
-    fontSize: FONTSIZE.intro,
-    fontFamily: FONT.semiBold,
+  heroTitle: {
+    marginTop: PADDING_MARGIN.sm,
+    textAlign: "center",
+    fontSize: FONTSIZE.subtitle,
+    fontFamily: FONT.bold,
     color: COLOR.textPrimary,
-    marginHorizontal: PADDING_MARGIN.sm,
+    letterSpacing: -0.4,
+  },
+  heroHint: {
+    marginTop: PADDING_MARGIN.xs,
+    textAlign: "center",
+    fontSize: FONTSIZE.medium,
+    fontFamily: FONT.regular,
+    color: COLOR.textMuted,
+  },
+  section: {
+    marginTop: PADDING_MARGIN.xl,
+    marginBottom: PADDING_MARGIN.md,
+    marginLeft: PADDING_MARGIN.xs,
+    fontSize: FONTSIZE.small,
+    fontFamily: FONT.semiBold,
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+    color: COLOR.textMuted,
   },
 });

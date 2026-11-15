@@ -9,6 +9,7 @@ import GeneralSettingsButton from "./buttons/GeneralSettingsButton";
 import ReorganizeButton from "./buttons/ReorganizeButton";
 import TemporaryTrashButton from "./buttons/TemporaryTrashButton";
 import UpdateAppButton from "./buttons/UpdateAppButton";
+import WhatsNewButton from "./buttons/WhatsNewButton";
 import FavoriteCategoryList from "./lists/FavoriteCategoryList";
 import GlassSurface from "./ui/GlassSurface";
 
@@ -30,6 +31,8 @@ export default function Sidebar() {
         <View style={styles.body}>
           <FavoriteCategoryList categories={categories} />
         </View>
+
+        <WhatsNewButton />
 
         <UpdateAppButton />
 

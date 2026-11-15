@@ -1,9 +1,10 @@
-import AddNoteOverlayButton from "@/components/buttons/AddNoteOverlayButton";
+import AddNoteOverlayButton, { FAB_BOTTOM, FAB_SIZE } from "@/components/buttons/AddNoteOverlayButton";
 import DeleteNotesButton from "@/components/buttons/DeleteNotesButton";
 import NoteFiltersButton from "@/components/buttons/NoteFiltersButton";
 import NoteCard from "@/components/cards/NoteCard";
 import NoteContextMenu from "@/components/cards/NoteContextMenu";
 import TagRow from "@/components/cards/TagRow";
+import WhatsNewMessage from "@/components/changelog/WhatsNewMessage";
 import CloudUnreachableLine from "@/components/cloud/CloudUnreachableLine";
 import ConfirmOrCancelDialog from "@/components/dialogs/ConfirmOrCancelDialog";
 import VaultPromptDialog from "@/components/dialogs/VaultPromptDialog";
@@ -37,6 +38,7 @@ import { startWidget } from "@/libs/widget";
 import type { SearchHit } from "@/libs/search/search";
 import type { TagCount } from "@/libs/search/tags";
 import { windowReady } from "@/libs/windowReady";
+import { checkWhatsNew } from "@/libs/whatsNew";
 import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import {
@@ -65,7 +67,6 @@ import { duplicateNote } from "@/slicers/thunks/duplicateNote";
 import type { AppDispatch } from "@/slicers/store";
 import { toast } from "@/utils/toast";
 import { webhook } from "@/utils/webhook";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useFocusEffect, useIsFocused, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -100,8 +101,7 @@ export default function HomeScreen() {
   // What a link, a shortcut, a widget or a notification asked for (spec D.1): carried out here, with the home in front.
   useLaunchAction();
   const vaultUnlocked = useVaultUnlocked();
-  // Gate the vault prompt until the version/changelog check has settled, so it
-  // never overlaps the changelog screen that opens on a version bump.
+  // The vault prompt and the tour wait for the version check (libs/whatsNew), a moment at startup.
   const [changelogChecked, setChangelogChecked] = useState(false);
 
   const store = useStore();
@@ -443,30 +443,11 @@ export default function HomeScreen() {
 
   const chipStyle = useAnimatedStyle(() => ({ opacity: chipShown.value }));
 
-  // changelog for new version
+  // A new version: a message at the bottom that flies into the sidebar, never a screen over the home (libs/whatsNew).
   useEffect(() => {
-    const checkVersion = async () => {
-      const lastAppVersion = await AsyncStorage.getItem("@appVersion");
-
-      const currentAppVersion = Platform.OS === "web" ? configs.app.version.web : configs.app.version.mobile;
-
-      if (lastAppVersion != null && lastAppVersion == currentAppVersion) {
-        // no changelog to show -> the vault prompt may appear right away
-        setChangelogChecked(true);
-        return;
-      }
-
-      setTimeout(() => {
-        router.push("/changelog");
-        AsyncStorage.setItem("@appVersion", currentAppVersion);
-        // mark settled at push time: home is now unfocused (changelog on top), so
-        // the vault prompt stays hidden until the user returns from the changelog
-        setChangelogChecked(true);
-      }, 750);
-    };
-
-    checkVersion();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    checkWhatsNew(Platform.OS === "web" ? configs.app.version.web : configs.app.version.mobile).finally(() =>
+      setChangelogChecked(true)
+    );
   }, []);
 
   // Lift the FAB to sit just above the quick-note bar (which grows with its text):
@@ -505,6 +486,13 @@ export default function HomeScreen() {
   // The first-note tour's steps on this screen (once the changelog check has settled; not over the note-type menu).
   const [typeMenuOpen, setTypeMenuOpen] = useState(false);
   const showTour = isFocused && changelogChecked && !isDeleteMode && !typeMenuOpen;
+  const vaultPromptOpen = vaultPromptNeeded && !vaultUnlocked && isFocused && changelogChecked;
+
+  // The new version's message: centered in the list's column, just above the add button (in the row's coordinates,
+  // which end above the bottom inset), and only while the home is free.
+  const [mainBox, setMainBox] = useState({ x: 0, width: 0 });
+  const whatsNewBottom = (quickNoteEnabled ? fabBottom : FAB_BOTTOM) - insets.bottom + FAB_SIZE + PADDING_MARGIN.md;
+  const whatsNewActive = isFocused && !vaultPromptOpen && !isDeleteMode && !typeMenuOpen && menu === null;
 
   // A tour left on its editor step (the app closed in the editor) goes on here, with the list's step.
   useFocusEffect(
@@ -554,7 +542,7 @@ export default function HomeScreen() {
       />
 
       <VaultPromptDialog
-        open={vaultPromptNeeded && !vaultUnlocked && isFocused && changelogChecked}
+        open={vaultPromptOpen}
         onClose={() => setVaultPromptNeeded(false)}
         onGo={() => {
           setVaultPromptNeeded(false);
@@ -566,7 +554,10 @@ export default function HomeScreen() {
         <SafeAreaView style={styles.safe}>
           <View style={styles.row}>
             <Sidebar />
-            <View style={styles.main}>
+            <View
+              style={styles.main}
+              onLayout={(e) => setMainBox({ x: e.nativeEvent.layout.x, width: e.nativeEvent.layout.width })}
+            >
               <View style={styles.header}>
                 <View style={styles.titleBlock}>
                   <Text style={styles.headerTitle}>{t("home.notes")}</Text>
@@ -647,6 +638,11 @@ export default function HomeScreen() {
                 onReadOnly={() => toggleNotesFlag("readOnly", selectedNotes, endSelection)}
               />
             </View>
+
+            {/* Over the row, not in the column (which clips): it flies out of it into the sidebar. */}
+            {mainBox.width > 0 && (
+              <WhatsNewMessage active={whatsNewActive} left={mainBox.x} width={mainBox.width} bottom={whatsNewBottom} />
+            )}
           </View>
         </SafeAreaView>
 

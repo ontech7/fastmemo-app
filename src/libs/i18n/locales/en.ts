@@ -13,6 +13,14 @@ const en = {
   },
   changelog: {
     title: "What's new?",
+    updated_to: "Updated to {{version}}",
+    whats_new: "What's new",
+    new_in: "What's new in {{version}}",
+    new_in_hint: "The biggest changes first",
+    show_more: "Show more",
+    show_less: "Show less",
+    more_count: "{{count}} more",
+    previous: "Earlier versions",
 
     web: {
       description_2_1_0: `• The AI assistant on the computer too: fix, shorten, translate and summarize, all on your device.
@@ -1333,6 +1341,7 @@ const en = {
   },
 
   a11y: {
+    whats_new: "What's new in this version",
     prev_month: "Previous month",
     next_month: "Next month",
     back: "Back",

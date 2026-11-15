@@ -32,7 +32,11 @@ import type { NoteCreationType } from "@/types";
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const FAB_RIGHT = 40;
-const FAB_BOTTOM = 60;
+/** Where the add button rests without the quick note bar, and how tall it is (its icon and padding): the home places
+ * what floats above it from these. */
+export const FAB_BOTTOM = 60;
+const FAB_ICON = 28;
+export const FAB_SIZE = FAB_ICON + 2 * PADDING_MARGIN.md;
 
 const ANIMATION_DURATION_OPEN = DURATION.slow;
 const ANIMATION_DURATION_CLOSE = DURATION.fast;
@@ -323,7 +327,7 @@ export default function AddNoteOverlayButton({
             accessibilityLabel={isDeleteMode ? t("a11y.exit_selection") : t("a11y.new_note")}
           >
             <Animated.View style={closeIconAnimatedStyle}>
-              <PlusIcon size={28} color={COLOR.softWhite} />
+              <PlusIcon size={FAB_ICON} color={COLOR.softWhite} />
             </Animated.View>
 
             {showTypeHint && (

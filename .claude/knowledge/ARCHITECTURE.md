@@ -28,7 +28,8 @@ src/
     +native-intent.ts  # Every link from outside (ADR-043): its action kept for the home (libs/launch), the answer always "/"
     intro.tsx          # Onboarding carousel (platform-split: intro.web.tsx)
     home.tsx           # Main screen (note list + sidebar)
-    changelog.tsx      # Version changelog modal
+    changelog.tsx      # The changelog: this version in a card, older ones in a timeline (opened from the sidebar's
+                       #   icon, the home's message or the settings; never on its own: libs/whatsNew)
     secret-code.tsx    # Secret code entry
     temporary-trash.tsx # Trashed notes list
     notes/
@@ -127,6 +128,7 @@ src/
     useVaultUnlocked.ts # useSyncExternalStore over vaultSession (is the DEK loaded?)
     useVaultPrompt.ts  # useSyncExternalStore over vaultPrompt (does encryption need attention?)
     useVaultProgress.ts # useSyncExternalStore over vaultProgress (re-upload progress bar)
+    useWhatsNew.ts     # useSyncExternalStore over whatsNew (none / the home's message / the sidebar's icon)
     useEngineSupport.ts # Desktop: whether the AI engine library loads here (ai_info), once; null elsewhere (ADR-034)
     useAppFonts.ts     # The Geist fonts: built into the apps (expo-font plugin, ADR-025), loaded on the web (.web.ts)
 
@@ -191,6 +193,9 @@ src/
     vaultManager.ts    # Vault orchestration: probe/initialize/migrate/unlock/recover/changePassphrase/recreate
     vaultPrompt.ts     # Ephemeral pub/sub signal: "encryption needs attention" (drives VaultPromptDialog)
     vaultProgress.ts   # Ephemeral pub/sub signal {done,total} for the re-upload determinate progress bar
+    whatsNew.ts        # A new version's news, checked once per launch (@appVersion, @whatsNewPending): the home's
+                       #   message (WhatsNewMessage) flies into the sidebar's icon (WhatsNewButton) until the changelog
+                       #   is opened; a failed read writes nothing (scripts/whats-new.test.mjs)
     appIcon.ts         # Alternate app icon (expo-alternate-app-icons, ADR-020); .android.ts confirms and closes the app, .web.ts: none
     net.ts             # Calls to the user's servers (FastMemo server, webhooks); .web.ts: through Rust on desktop (src-tauri/src/net.rs, ADR-017)
     desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only;
@@ -286,6 +291,7 @@ src/
     vault.ts           # Envelope-encryption primitives (createVault/unlock/recover/rewrap, canary, PBKDF2 via crypto-js)
     secureRandom.ts    # OS CSPRNG bytes (WebCrypto getRandomValues, expo-crypto fallback)
     ui.ts              # yieldToUI() — let the spinner paint a frame before a synchronous freeze
+    changelog.ts       # changelogLines: a version's text as lines, a short "Lead:" read first (ChangelogBullets)
     toast.ts           # Platform-split toast notifications
     webhook.ts         # Webhook dispatcher (sends through @/libs/net)
     export.ts          # PDF/text export, file sharing, an image's share (phone) / save (web, desktop)
@@ -580,7 +586,7 @@ home
   |-- push --> settings/general      --> settings/* (drill-down hierarchy)
   |-- push --> categories/organize   --> categories/create
   |-- push --> temporary-trash
-  |-- push --> changelog             (auto-triggered on version update)
+  |-- push --> changelog             (from the sidebar's icon or the message after an update, never on its own)
 
 notes/[noteId]
   |-- push --> categories/change     (pick category, then back)
