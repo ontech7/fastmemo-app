@@ -5,6 +5,7 @@ import { COLOR } from "@/constants/styles";
 import { useRouter } from "@/hooks/useRouter";
 import { cloud } from "@/libs/cloud";
 import { takePendingLaunch } from "@/libs/launch/pending";
+import { clearShare } from "@/libs/launch/receiveShare";
 import { isObjectEmpty } from "@/utils/string";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
@@ -48,8 +49,9 @@ export default function LoadingScreen() {
         SplashScreen.hideAsync().catch(() => {});
 
         if (!firstScreen) {
-          // first launch: a link that opened the app before the intro opens nothing after it (spec D.1)
+          // first launch: a link or a share that opened the app before the intro does nothing after it (spec D.1, D.3)
           takePendingLaunch();
+          clearShare();
           setShowLottie(true);
         } else {
           // already configured

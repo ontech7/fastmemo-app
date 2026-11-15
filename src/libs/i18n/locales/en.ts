@@ -1475,6 +1475,9 @@ const en = {
   launch: {
     dictation_off: "Voice recognition is off: turn it on in the settings",
   },
+  share: {
+    nothing: "Fast Memo can keep text, links and pictures",
+  },
   empty: {
     notes_title: "No notes yet",
     notes_text: "Tap + to write your first one, or use the quick note below.",

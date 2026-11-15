@@ -1476,6 +1476,9 @@ const ja = {
   launch: {
     dictation_off: "音声認識がオフです。設定でオンにしてください",
   },
+  share: {
+    nothing: "Fast Memo に保存できるのはテキスト、リンク、画像です",
+  },
   empty: {
     notes_title: "まだノートがありません",
     notes_text: "+ をタップして最初のノートを書くか、下のクイックノートを使ってください。",

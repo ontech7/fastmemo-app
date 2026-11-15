@@ -1509,6 +1509,9 @@ const de = {
   launch: {
     dictation_off: "Die Spracherkennung ist aus: Schalte sie in den Einstellungen ein",
   },
+  share: {
+    nothing: "Fast Memo kann Text, Links und Bilder aufbewahren",
+  },
   empty: {
     notes_title: "Noch keine Notizen",
     notes_text: "Tippe auf +, um die erste zu schreiben, oder nutze die Schnellnotiz unten.",

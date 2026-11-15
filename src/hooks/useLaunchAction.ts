@@ -4,15 +4,80 @@ import { useTranslation } from "react-i18next";
 
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
+import { noteTextLimit } from "@/libs/cloud";
 import { addTrail } from "@/libs/diagnostics";
 import { onPendingLaunch, planLaunch, setDictateOnOpen, setHomeShown, takePendingLaunch } from "@/libs/launch";
+import { clearShare, receiveShare } from "@/libs/launch/receiveShare";
 import { flushPending, storeUnlockedNote } from "@/libs/registry";
-import { getNote } from "@/slicers/notesSlice";
-import { selectorShowHidden } from "@/slicers/settingsSlice";
+import { getCurrentCategory } from "@/slicers/categoriesSlice";
+import { addNote, getNote } from "@/slicers/notesSlice";
+import { selectorDeveloperMode, selectorShowHidden, selectorWebhook_addTextNote } from "@/slicers/settingsSlice";
 import { store } from "@/slicers/store";
+import { formatDateTime } from "@/utils/date";
 import { toast } from "@/utils/toast";
+import { webhook } from "@/utils/webhook";
+import uuid from "react-uuid";
 
-import type { RootState } from "@/types";
+import type { RootState, TextNote } from "@/types";
+import type { TFunction } from "i18next";
+
+/**
+ * A share to the app becomes a new text note, made as the quick note makes one (the home's category, `updatedAt` one past
+ * `createdAt`: it opens as an existing note), then opened. The share is forgotten as soon as the note is in the store, so
+ * that nothing makes it twice; one with nothing to keep is forgotten too.
+ */
+async function noteFromIncomingShare(t: TFunction, open: (route: Href) => void): Promise<void> {
+  const state = store.getState() as RootState;
+  const devMode = selectorDeveloperMode(state);
+  const received = await receiveShare(devMode.enabled && devMode.unlimitedTextSpace ? null : noteTextLimit(false));
+  if (!received) {
+    clearShare();
+    toast(t("share.nothing"));
+    return;
+  }
+  if (received.unreadable) toast(t("note.image.not_added"));
+  if (received.overLimit) toast(t("noteLimitReached"));
+  if (!received.html) {
+    clearShare();
+    return;
+  }
+
+  const id = uuid();
+  const now = Date.now();
+  const category = getCurrentCategory(store.getState() as RootState);
+  const note: TextNote = {
+    id,
+    type: "text",
+    title: received.title,
+    category,
+    date: formatDateTime(),
+    createdAt: now,
+    updatedAt: now + 1,
+    important: false,
+    locked: false,
+    readOnly: false,
+    hidden: false,
+    deleteDate: null,
+    text: received.html,
+  };
+  store.dispatch(addNote(note));
+  clearShare();
+  webhook(selectorWebhook_addTextNote(store.getState() as RootState), {
+    action: "note/addTextNote",
+    id,
+    type: "text",
+    title: received.title,
+    createdAt: now,
+    updatedAt: now + 1,
+    important: false,
+    readOnly: false,
+    hidden: false,
+    locked: false,
+    category: category ? { iconId: category.icon, name: category.name } : undefined,
+    text: received.html,
+  });
+  open(`/notes/${id}` as Href);
+}
 
 /**
  * The home carries out a launch action (a link, a shortcut, a widget, a notification: `@/libs/launch`) when it has the
@@ -59,8 +124,12 @@ export function useLaunchAction(): void {
         }, "none");
         return;
       }
-      // "nothing" (the intro isn't finished); "share" comes with the sharing (Task 35)
+      case "share":
+        noteFromIncomingShare(t, (route) => router.push(route)).catch(() => clearShare());
+        return;
+      // "nothing": the intro isn't finished (a share is forgotten then)
       default:
+        if (action.kind === "share") clearShare();
         return;
     }
   }, [router, t, unlockWithSecret]);

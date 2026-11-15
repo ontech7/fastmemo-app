@@ -17,6 +17,8 @@ await build({
       export { parseLaunch, launchUrl } from "@/libs/launch/parse";
       export { planLaunch } from "@/libs/launch/plan";
       export { setPendingLaunch, takePendingLaunch, onPendingLaunch } from "@/libs/launch/pending";
+      export { noteFromShare } from "@/libs/launch/share";
+      export { deriveNoteTitle } from "@/utils/string";
     `,
     resolveDir: src,
     loader: "ts",
@@ -29,9 +31,16 @@ await build({
   alias: { "@": src },
 });
 
-const { parseLaunch, launchUrl, planLaunch, setPendingLaunch, takePendingLaunch, onPendingLaunch } = await import(
-  pathToFileURL(out).href
-);
+const {
+  parseLaunch,
+  launchUrl,
+  planLaunch,
+  setPendingLaunch,
+  takePendingLaunch,
+  onPendingLaunch,
+  noteFromShare,
+  deriveNoteTitle,
+} = await import(pathToFileURL(out).href);
 
 let passed = 0;
 let failed = 0;
@@ -164,6 +173,69 @@ ok(
 );
 ok("an id that isn't a live note", planLaunch({ kind: "note", id: "gone" }, ctx()).do === "notFound");
 ok("a share", planLaunch({ kind: "share" }, ctx()).do === "share");
+
+console.log("\nwhat a share becomes");
+const sh = (...p) => noteFromShare(p);
+ok(
+  "text becomes paragraphs, escaped",
+  sh({ value: "Prima riga <b>\n\nTerza & ultima", shareType: "text" }).html ===
+    "<div>Prima riga &lt;b&gt;</div><div><br></div><div>Terza &amp; ultima</div>"
+);
+ok(
+  "the title is the first line",
+  sh({ value: "Prima riga\nseconda", shareType: "text" }).title === deriveNoteTitle("Prima riga")
+);
+ok(
+  "an address becomes a link",
+  sh({ value: "https://example.com/a?b=1", shareType: "url" }).html ===
+    '<div><a href="https://example.com/a?b=1">https://example.com/a?b=1</a></div>'
+);
+ok(
+  "an address the app wouldn't link stays text",
+  sh({ value: "javascript:alert(1)", shareType: "url" }).html === "<div>javascript:alert(1)</div>"
+);
+ok(
+  "images, in order",
+  sh({ value: "content://a", shareType: "image" }, { value: "content://b", shareType: "image" }).images.join() ===
+    "content://a,content://b"
+);
+ok(
+  "text and images together",
+  (() => {
+    const n = sh({ value: "Guarda", shareType: "text" }, { value: "content://a", shareType: "image", mimeType: "image/png" });
+    return n.html === "<div>Guarda</div>" && n.images.length === 1;
+  })()
+);
+ok(
+  "only images: no text, no title",
+  (() => {
+    const n = sh({ value: "content://a", shareType: "image" });
+    return n.html === "" && n.title === "";
+  })()
+);
+ok(
+  "what the app can't keep",
+  sh({ value: "content://v", shareType: "video" }, { value: "content://f", shareType: "file" }) === null &&
+    sh() === null &&
+    sh({ value: "   ", shareType: "text" }) === null
+);
+ok(
+  "blank lines at the ends are dropped",
+  sh({ value: "\n\n  \nUno\n\nDue\n \n", shareType: "text" }).html === "<div>Uno</div><div><br></div><div>Due</div>"
+);
+ok(
+  "a link's text is the address as shared, its href the normalised one; the title from the address",
+  (() => {
+    const n = sh({ value: "example.com/x", shareType: "url" });
+    return (
+      n.html === '<div><a href="https://example.com/x">example.com/x</a></div>' && n.title === deriveNoteTitle("example.com/x")
+    );
+  })()
+);
+ok(
+  "a quote in an address is escaped in the href",
+  sh({ value: 'https://e.com/"a', shareType: "url" }).html === '<div><a href="https://e.com/&quot;a">https://e.com/"a</a></div>'
+);
 
 console.log("\nthe pending action");
 let heard = 0;

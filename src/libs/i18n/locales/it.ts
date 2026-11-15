@@ -1490,6 +1490,9 @@ const it = {
   launch: {
     dictation_off: "Il riconoscimento vocale è disattivato: attivalo nelle impostazioni",
   },
+  share: {
+    nothing: "Fast Memo può conservare testo, link e immagini",
+  },
   empty: {
     notes_title: "Ancora nessuna nota",
     notes_text: "Tocca + per scrivere la prima, o usa la nota rapida qui sotto.",

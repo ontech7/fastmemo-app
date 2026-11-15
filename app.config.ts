@@ -4,6 +4,7 @@ import {
   type ConfigPlugin,
   withAndroidManifest,
   withDangerousMod,
+  withMainActivity,
   withMainApplication,
 } from "expo/config-plugins";
 import fs from "node:fs";
@@ -251,6 +252,30 @@ const withKotlinReflectWarmup: ConfigPlugin = (config) =>
     return modConfig;
   });
 
+// Android keeps the intent that started the app: when the system closed the app in the background and it is opened again
+// (the recent apps), the activity is created again with that same intent (a share, a link, a shortcut), and React Native,
+// expo-sharing and the router read it as new: a share made a second note. An activity created again (a saved state), or
+// started again from the recent apps, starts as from the icon.
+const RECENTS_START_PLAIN = "// FastMemo: created again or opened from the recent apps, as from the icon (app.config.ts)";
+
+const withRecentsStartPlain: ConfigPlugin = (config) =>
+  withMainActivity(config, (modConfig) => {
+    const { contents, language } = modConfig.modResults;
+    if (language !== "kt" || contents.includes(RECENTS_START_PLAIN)) return modConfig;
+    modConfig.modResults.contents = contents.replace(
+      /^([ \t]*)super\.onCreate\((null|savedInstanceState)\)\n/m,
+      (line, indent: string) =>
+        `${indent}${RECENTS_START_PLAIN}\n` +
+        `${indent}if (savedInstanceState != null || (intent.flags and android.content.Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {\n` +
+        `${indent}  intent = android.content.Intent(android.content.Intent.ACTION_MAIN)\n` +
+        `${indent}    .addCategory(android.content.Intent.CATEGORY_LAUNCHER)\n` +
+        `${indent}    .setPackage(packageName)\n` +
+        `${indent}}\n` +
+        line
+    );
+    return modConfig;
+  });
+
 // The Geist weights, built into the apps (no font to load at launch). On Android the file name is the family name, as
 // FONT in src/constants/styles.ts uses it. The web loads them (src/hooks/useAppFonts.web.ts).
 const GEIST_FONTS = ["Regular", "Medium", "SemiBold", "Bold"].map((weight) => `./assets/fonts/Geist-${weight}.ttf`);
@@ -286,94 +311,106 @@ const EAS_PROJECT_ID = "44c5f162-d9f8-40db-ae28-269fe48982ca";
 export default ({ config }: ConfigContext): ExpoConfig =>
   withLauncherShortcuts(
     withAlternateIconIntentFilters(
-      withKotlinReflectWarmup(
-        withCleartextTraffic(
-          withLlamaProguardRules({
-            ...config,
-            owner: "dontrok1",
-            name: appName,
-            slug: appSlug,
-            version: "4.0.0",
-            runtimeVersion: { policy: "fingerprint" },
-            updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
-            orientation: "portrait",
-            icon: appIcon,
-            // Lowercase: EAS Update refuses a manifest with "FastMemoApp" (LL-076). Builds since 4.1.0 have it too.
-            scheme: appSlug.toLowerCase(),
-            userInterfaceStyle: "automatic",
-            backgroundColor,
-            ios: {
-              supportsTablet: true,
-              bundleIdentifier: appBundle,
-            },
-            android: {
-              adaptiveIcon: {
-                foregroundImage: adaptiveIcon,
-                backgroundImage: "./assets/images/adaptive-icon-bg.png",
-                backgroundColor,
+      withRecentsStartPlain(
+        withKotlinReflectWarmup(
+          withCleartextTraffic(
+            withLlamaProguardRules({
+              ...config,
+              owner: "dontrok1",
+              name: appName,
+              slug: appSlug,
+              version: "4.0.0",
+              runtimeVersion: { policy: "fingerprint" },
+              updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
+              orientation: "portrait",
+              icon: appIcon,
+              // Lowercase: EAS Update refuses a manifest with "FastMemoApp" (LL-076). Builds since 4.1.0 have it too.
+              scheme: appSlug.toLowerCase(),
+              userInterfaceStyle: "automatic",
+              backgroundColor,
+              ios: {
+                supportsTablet: true,
+                bundleIdentifier: appBundle,
               },
-              package: appBundle,
-              blockedPermissions: [
-                "android.permission.READ_MEDIA_IMAGES",
-                "android.permission.READ_MEDIA_VIDEO",
-                "android.permission.READ_MEDIA_AUDIO",
-              ],
-            },
-            web: {
-              bundler: "metro",
-              output: "single",
-              favicon,
-            },
-            plugins: [
-              // Every screen in the main bundle on web, as up to SDK 57: SDK 58 loads each route's code on first visit by default,
-              // and the desktop app showed an empty screen before every screen it opened.
-              ["expo-router", { asyncRoutes: { web: false } }],
-              "expo-status-bar",
-              ["expo-font", { fonts: GEIST_FONTS }],
-              "expo-image",
-              "expo-image-picker",
-              "expo-localization",
-              "expo-secure-store",
-              "expo-sharing",
-              [
-                "expo-speech-recognition",
-                {
-                  microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
-                  speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
-                  androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
-                },
-              ],
-              [
-                "expo-splash-screen",
-                {
-                  image: "./assets/images/splash-logo.png",
-                  imageWidth: 150,
+              android: {
+                adaptiveIcon: {
+                  foregroundImage: adaptiveIcon,
+                  backgroundImage: "./assets/images/adaptive-icon-bg.png",
                   backgroundColor,
                 },
-              ],
-              // Its iOS memory entitlements are added only when EAS_BUILD_PROFILE or NODE_ENV says production, so the config
-              // (and the fingerprint) differed between EAS and this machine: OTAs would never match the build. iOS isn't shipped.
-              ["llama.rn", { enableEntitlements: false }],
-              ["expo-alternate-app-icons", alternateAppIcons],
-              [
-                "@sentry/react-native",
-                {
-                  url: "https://sentry.io/",
-                  note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
-                  project: "fastmemo-app",
-                  organization: "andrea-losavio",
-                },
-              ],
-            ],
-            experiments: {
-              typedRoutes: true,
-            },
-            extra: {
-              eas: {
-                projectId: EAS_PROJECT_ID,
+                package: appBundle,
+                blockedPermissions: [
+                  "android.permission.READ_MEDIA_IMAGES",
+                  "android.permission.READ_MEDIA_VIDEO",
+                  "android.permission.READ_MEDIA_AUDIO",
+                ],
               },
-            },
-          })
+              web: {
+                bundler: "metro",
+                output: "single",
+                favicon,
+              },
+              plugins: [
+                // Every screen in the main bundle on web, as up to SDK 57: SDK 58 loads each route's code on first visit by default,
+                // and the desktop app showed an empty screen before every screen it opened.
+                ["expo-router", { asyncRoutes: { web: false } }],
+                "expo-status-bar",
+                ["expo-font", { fonts: GEIST_FONTS }],
+                "expo-image",
+                "expo-image-picker",
+                "expo-localization",
+                "expo-secure-store",
+                // Sharing to the app (spec D.3): text, an address, pictures. Nothing it can't keep, so it isn't offered for them.
+                [
+                  "expo-sharing",
+                  {
+                    android: {
+                      enabled: true,
+                      singleShareMimeTypes: ["text/plain", "image/*"],
+                      multipleShareMimeTypes: ["image/*"],
+                    },
+                  },
+                ],
+                [
+                  "expo-speech-recognition",
+                  {
+                    microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
+                    speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
+                    androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
+                  },
+                ],
+                [
+                  "expo-splash-screen",
+                  {
+                    image: "./assets/images/splash-logo.png",
+                    imageWidth: 150,
+                    backgroundColor,
+                  },
+                ],
+                // Its iOS memory entitlements are added only when EAS_BUILD_PROFILE or NODE_ENV says production, so the config
+                // (and the fingerprint) differed between EAS and this machine: OTAs would never match the build. iOS isn't shipped.
+                ["llama.rn", { enableEntitlements: false }],
+                ["expo-alternate-app-icons", alternateAppIcons],
+                [
+                  "@sentry/react-native",
+                  {
+                    url: "https://sentry.io/",
+                    note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
+                    project: "fastmemo-app",
+                    organization: "andrea-losavio",
+                  },
+                ],
+              ],
+              experiments: {
+                typedRoutes: true,
+              },
+              extra: {
+                eas: {
+                  projectId: EAS_PROJECT_ID,
+                },
+              },
+            })
+          )
         )
       )
     )
