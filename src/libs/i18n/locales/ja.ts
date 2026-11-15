@@ -1483,6 +1483,8 @@ const ja = {
     dictation_off: "音声認識がオフです。設定でオンにしてください",
   },
   widget: {
+    new_list: "新しいリスト",
+    dictate: "音声入力",
     set: "このメモをウィジェットに表示しました",
     removed: "ウィジェットから外しました",
     new_note: "新しいメモ…",

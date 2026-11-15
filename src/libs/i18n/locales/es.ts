@@ -1504,6 +1504,8 @@ const es = {
     dictation_off: "El reconocimiento de voz está desactivado: actívalo en los ajustes",
   },
   widget: {
+    new_list: "Nueva lista",
+    dictate: "Dictar",
     set: "Esta nota ya está en el widget",
     removed: "Quitada del widget",
     new_note: "Nueva nota…",

@@ -194,6 +194,8 @@ ok(
   JSON.stringify(state.labels) ===
     JSON.stringify({
       newNote: "[widget.new_note]",
+      newList: "[widget.new_list]",
+      dictate: "[widget.dictate]",
       emptyTitle: "[widget.empty_title]",
       emptyText: "[widget.empty_text]",
       noTitle: "[empty_title]",
@@ -246,6 +248,8 @@ console.log("\nwhat the app writes for the widgets");
         /^@react-native-async-storage\/async-storage$/,
         "const m = (globalThis.__kv = new Map()); export default { getItem: async (k) => m.get(k) ?? null, setItem: async (k, v) => { m.set(k, v); globalThis.__writes = (globalThis.__writes ?? 0) + 1; } };"
       ),
+      // the widgets themselves draw with the app's styles (react-native): a registry the test fills
+      stub(/widgets\/registry$/, "export const WIDGETS = {};"),
       stub(
         /^react-native-android-widget$/,
         "export const requestWidgetUpdate = async ({ widgetName, renderWidget }) => { (globalThis.__drawn ??= []).push([widgetName, renderWidget()]); };"

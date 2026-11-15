@@ -1516,6 +1516,8 @@ const de = {
     dictation_off: "Die Spracherkennung ist aus: Schalte sie in den Einstellungen ein",
   },
   widget: {
+    new_list: "Neue Liste",
+    dictate: "Diktieren",
     set: "Diese Notiz ist jetzt im Widget",
     removed: "Aus dem Widget entfernt",
     new_note: "Neue Notiz…",

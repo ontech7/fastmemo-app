@@ -27,7 +27,7 @@ export interface WidgetSnapshot {
 /** Everything a widget draws: the snapshot and the texts in the app's language. */
 export interface WidgetState {
   featured: WidgetSnapshot | null;
-  labels: { newNote: string; emptyTitle: string; emptyText: string; noTitle: string };
+  labels: { newNote: string; newList: string; dictate: string; emptyTitle: string; emptyText: string; noTitle: string };
   links: { newText: string; newList: string; dictate: string; note: string | null; app: string };
 }
 
@@ -115,6 +115,8 @@ export function widgetState(note: Note | undefined, t: (key: string) => string, 
     featured,
     labels: {
       newNote: t("widget.new_note"),
+      newList: t("widget.new_list"),
+      dictate: t("widget.dictate"),
       emptyTitle: t("widget.empty_title"),
       emptyText: t("widget.empty_text"),
       noTitle: t("empty_title"),

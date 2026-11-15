@@ -1482,6 +1482,8 @@ const en = {
     dictation_off: "Voice recognition is off: turn it on in the settings",
   },
   widget: {
+    new_list: "New list",
+    dictate: "Dictate",
     set: "This note is now in the widget",
     removed: "Removed from the widget",
     new_note: "New note…",

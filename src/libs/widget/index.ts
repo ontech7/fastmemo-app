@@ -39,7 +39,7 @@ export async function readWidgetState(): Promise<WidgetState> {
 const redraw = (state: WidgetState) =>
   Promise.all(
     Object.entries(WIDGETS).map(([widgetName, draw]) =>
-      requestWidgetUpdate({ widgetName, renderWidget: () => draw(state) }).catch(() => {})
+      requestWidgetUpdate({ widgetName, renderWidget: (info) => draw(state, info) }).catch(() => {})
     )
   );
 

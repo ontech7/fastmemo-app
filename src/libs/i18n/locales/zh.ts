@@ -1446,6 +1446,8 @@ const zh = {
     dictation_off: "语音识别已关闭：请在设置中开启",
   },
   widget: {
+    new_list: "新建清单",
+    dictate: "语音输入",
     set: "此笔记已显示在小组件中",
     removed: "已从小组件中移除",
     new_note: "新建笔记…",
