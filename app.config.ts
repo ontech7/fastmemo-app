@@ -3,6 +3,7 @@ import {
   type AndroidConfig,
   type ConfigPlugin,
   withAndroidManifest,
+  withAppBuildGradle,
   withDangerousMod,
   withMainActivity,
   withMainApplication,
@@ -325,6 +326,69 @@ const withKotlinReflectWarmup: ConfigPlugin = (config) =>
     return modConfig;
   });
 
+// WorkManager comes with react-native-android-widget, and androidx.startup started it with the process: its database and
+// its check of the scheduled work cost every cold start ~10 ms (measured on the Pixel, Stop D), for an app that uses it
+// only when a widget asks for the app's code. Started on demand instead (WorkManager's own documented way): the start-up
+// entry is removed and MainApplication gives the configuration the first time the library asks for WorkManager. The
+// app declares work-runtime at the version the library already brings, only to compile against Configuration.Provider.
+const WORK_RUNTIME = "androidx.work:work-runtime:2.12.0";
+const WORK_ON_DEMAND = "// FastMemo: WorkManager on demand (app.config.ts)";
+
+const withWorkManagerOnDemand: ConfigPlugin = (config) =>
+  withAppBuildGradle(
+    withMainApplication(
+      withAndroidManifest(config, (modConfig) => {
+        const manifest = modConfig.modResults.manifest;
+        manifest.$["xmlns:tools"] = "http://schemas.android.com/tools";
+        const application = manifest.application?.[0];
+        if (!application) return modConfig;
+        const providers = (application.provider ??= []);
+        if (!providers.some((provider) => provider.$["android:name"] === "androidx.startup.InitializationProvider")) {
+          providers.push({
+            $: {
+              "android:name": "androidx.startup.InitializationProvider",
+              "android:authorities": "${applicationId}.androidx-startup",
+              "android:exported": "false",
+              "tools:node": "merge",
+            } as AndroidConfig.Manifest.ManifestProvider["$"],
+            "meta-data": [
+              {
+                $: {
+                  "android:name": "androidx.work.WorkManagerInitializer",
+                  "android:value": "androidx.startup",
+                  "tools:node": "remove",
+                } as AndroidConfig.Manifest.ManifestMetaData["$"],
+              },
+            ],
+          });
+        }
+        return modConfig;
+      }),
+      (modConfig) => {
+        const { contents, language } = modConfig.modResults;
+        if (language !== "kt" || contents.includes(WORK_ON_DEMAND)) return modConfig;
+        modConfig.modResults.contents = contents.replace(
+          /^class MainApplication : Application\(\), ReactApplication \{\n/m,
+          () =>
+            "class MainApplication : Application(), ReactApplication, androidx.work.Configuration.Provider {\n" +
+            `  ${WORK_ON_DEMAND}\n` +
+            "  override val workManagerConfiguration: androidx.work.Configuration\n" +
+            "    get() = androidx.work.Configuration.Builder().build()\n\n"
+        );
+        return modConfig;
+      }
+    ),
+    (modConfig) => {
+      const { contents } = modConfig.modResults;
+      if (contents.includes(WORK_RUNTIME)) return modConfig;
+      modConfig.modResults.contents = contents.replace(
+        /^dependencies \{\n/m,
+        (line) => `${line}    implementation("${WORK_RUNTIME}") // WorkManager on demand (app.config.ts)\n`
+      );
+      return modConfig;
+    }
+  );
+
 // Android keeps the intent that started the app: when the system closed the app in the background and it is opened again
 // (the recent apps), the activity is created again with that same intent (a share, a link, a shortcut), and React Native,
 // expo-sharing and the router read it as new: a share made a second note. An activity created again (a saved state), or
@@ -393,149 +457,151 @@ const alternateAppIcons = ["Halloween", "Christmas", "Easter", "Summer"].map((na
 const EAS_PROJECT_ID = "44c5f162-d9f8-40db-ae28-269fe48982ca";
 
 export default ({ config }: ConfigContext): ExpoConfig =>
-  withWidgetPickerLabels(
-    withLauncherShortcuts(
-      withAlternateIconIntentFilters(
-        withRecentsStartPlain(
-          withKotlinReflectWarmup(
-            withCleartextTraffic(
-              withLlamaProguardRules({
-                ...config,
-                owner: "dontrok1",
-                name: appName,
-                slug: appSlug,
-                version: "4.0.0",
-                runtimeVersion: { policy: "fingerprint" },
-                updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
-                orientation: "portrait",
-                icon: appIcon,
-                // Lowercase: EAS Update refuses a manifest with "FastMemoApp" (LL-076). Builds since 4.1.0 have it too.
-                scheme: appSlug.toLowerCase(),
-                userInterfaceStyle: "automatic",
-                backgroundColor,
-                ios: {
-                  supportsTablet: true,
-                  bundleIdentifier: appBundle,
-                },
-                android: {
-                  adaptiveIcon: {
-                    foregroundImage: adaptiveIcon,
-                    backgroundImage: "./assets/images/adaptive-icon-bg.png",
-                    backgroundColor,
+  withWorkManagerOnDemand(
+    withWidgetPickerLabels(
+      withLauncherShortcuts(
+        withAlternateIconIntentFilters(
+          withRecentsStartPlain(
+            withKotlinReflectWarmup(
+              withCleartextTraffic(
+                withLlamaProguardRules({
+                  ...config,
+                  owner: "dontrok1",
+                  name: appName,
+                  slug: appSlug,
+                  version: "4.0.0",
+                  runtimeVersion: { policy: "fingerprint" },
+                  updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
+                  orientation: "portrait",
+                  icon: appIcon,
+                  // Lowercase: EAS Update refuses a manifest with "FastMemoApp" (LL-076). Builds since 4.1.0 have it too.
+                  scheme: appSlug.toLowerCase(),
+                  userInterfaceStyle: "automatic",
+                  backgroundColor,
+                  ios: {
+                    supportsTablet: true,
+                    bundleIdentifier: appBundle,
                   },
-                  package: appBundle,
-                  // A reminder rings at its minute (spec D.5): the user grants it in "Alarms and reminders".
-                  permissions: ["android.permission.SCHEDULE_EXACT_ALARM"],
-                  blockedPermissions: [
-                    "android.permission.READ_MEDIA_IMAGES",
-                    "android.permission.READ_MEDIA_VIDEO",
-                    "android.permission.READ_MEDIA_AUDIO",
-                    // expo-notifications brings these: no badge, no push, no install referrer (spec D.5).
-                    "android.permission.READ_APP_BADGE",
-                    "com.google.android.c2dm.permission.RECEIVE",
-                    "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE",
-                    "com.anddoes.launcher.permission.UPDATE_COUNT",
-                    "com.htc.launcher.permission.READ_SETTINGS",
-                    "com.htc.launcher.permission.UPDATE_SHORTCUT",
-                    "com.huawei.android.launcher.permission.CHANGE_BADGE",
-                    "com.huawei.android.launcher.permission.READ_SETTINGS",
-                    "com.huawei.android.launcher.permission.WRITE_SETTINGS",
-                    "com.majeur.launcher.permission.UPDATE_BADGE",
-                    "com.oppo.launcher.permission.READ_SETTINGS",
-                    "com.oppo.launcher.permission.WRITE_SETTINGS",
-                    "com.sec.android.provider.badge.permission.READ",
-                    "com.sec.android.provider.badge.permission.WRITE",
-                    "com.sonyericsson.home.permission.BROADCAST_BADGE",
-                    "com.sonymobile.home.permission.PROVIDER_INSERT_BADGE",
-                    "me.everything.badger.permission.BADGE_COUNT_READ",
-                    "me.everything.badger.permission.BADGE_COUNT_WRITE",
-                    // WorkManager's (react-native-android-widget): its work is a job, never a foreground service.
-                    "android.permission.FOREGROUND_SERVICE",
-                  ],
-                },
-                web: {
-                  bundler: "metro",
-                  output: "single",
-                  favicon,
-                },
-                plugins: [
-                  // Every screen in the main bundle on web, as up to SDK 57: SDK 58 loads each route's code on first visit by default,
-                  // and the desktop app showed an empty screen before every screen it opened.
-                  ["expo-router", { asyncRoutes: { web: false } }],
-                  "expo-status-bar",
-                  ["expo-font", { fonts: GEIST_FONTS }],
-                  "expo-image",
-                  "expo-image-picker",
-                  "expo-localization",
-                  "expo-secure-store",
-                  // Sharing to the app (spec D.3): text, an address, pictures. Nothing it can't keep, so it isn't offered for them.
-                  [
-                    "expo-sharing",
-                    {
-                      android: {
-                        enabled: true,
-                        singleShareMimeTypes: ["text/plain", "image/*"],
-                        multipleShareMimeTypes: ["image/*"],
-                      },
-                    },
-                  ],
-                  [
-                    "expo-speech-recognition",
-                    {
-                      microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
-                      speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
-                      androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
-                    },
-                  ],
-                  [
-                    "expo-splash-screen",
-                    {
-                      image: "./assets/images/splash-logo.png",
-                      imageWidth: 150,
+                  android: {
+                    adaptiveIcon: {
+                      foregroundImage: adaptiveIcon,
+                      backgroundImage: "./assets/images/adaptive-icon-bg.png",
                       backgroundColor,
                     },
-                  ],
-                  // Its iOS memory entitlements are added only when EAS_BUILD_PROFILE or NODE_ENV says production, so the config
-                  // (and the fingerprint) differed between EAS and this machine: OTAs would never match the build. iOS isn't shipped.
-                  ["llama.rn", { enableEntitlements: false }],
-                  ["expo-alternate-app-icons", alternateAppIcons],
-                  // Reminders, scheduled and shown on the phone only: no push token, no Firebase file (spec D.5).
-                  ["expo-notifications", { icon: "./assets/images/notification-icon.png", color: "#4F6BFF" }],
-                  [
-                    "react-native-android-widget",
-                    {
-                      // Geist, and JetBrains Mono (SIL OFL 1.1) for a code note's lines: the widget finds fonts only here.
-                      fonts: [
-                        ...["Regular", "Medium", "SemiBold"].map((weight) => `./assets/fonts/Geist-${weight}.ttf`),
-                        "./assets/fonts/JetBrainsMono-Regular.ttf",
-                      ],
-                      widgets: WIDGETS.map((widget) => ({
-                        ...widget,
-                        label: `@string/${widgetLabelName(widget.name)}`,
-                        description: WIDGET_PICKER_LABELS.values[widget.name][1],
-                        updatePeriodMillis: 0,
-                      })),
-                    },
-                  ],
-                  [
-                    "@sentry/react-native",
-                    {
-                      url: "https://sentry.io/",
-                      note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
-                      project: "fastmemo-app",
-                      organization: "andrea-losavio",
-                    },
-                  ],
-                ],
-                experiments: {
-                  typedRoutes: true,
-                },
-                extra: {
-                  eas: {
-                    projectId: EAS_PROJECT_ID,
+                    package: appBundle,
+                    // A reminder rings at its minute (spec D.5): the user grants it in "Alarms and reminders".
+                    permissions: ["android.permission.SCHEDULE_EXACT_ALARM"],
+                    blockedPermissions: [
+                      "android.permission.READ_MEDIA_IMAGES",
+                      "android.permission.READ_MEDIA_VIDEO",
+                      "android.permission.READ_MEDIA_AUDIO",
+                      // expo-notifications brings these: no badge, no push, no install referrer (spec D.5).
+                      "android.permission.READ_APP_BADGE",
+                      "com.google.android.c2dm.permission.RECEIVE",
+                      "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE",
+                      "com.anddoes.launcher.permission.UPDATE_COUNT",
+                      "com.htc.launcher.permission.READ_SETTINGS",
+                      "com.htc.launcher.permission.UPDATE_SHORTCUT",
+                      "com.huawei.android.launcher.permission.CHANGE_BADGE",
+                      "com.huawei.android.launcher.permission.READ_SETTINGS",
+                      "com.huawei.android.launcher.permission.WRITE_SETTINGS",
+                      "com.majeur.launcher.permission.UPDATE_BADGE",
+                      "com.oppo.launcher.permission.READ_SETTINGS",
+                      "com.oppo.launcher.permission.WRITE_SETTINGS",
+                      "com.sec.android.provider.badge.permission.READ",
+                      "com.sec.android.provider.badge.permission.WRITE",
+                      "com.sonyericsson.home.permission.BROADCAST_BADGE",
+                      "com.sonymobile.home.permission.PROVIDER_INSERT_BADGE",
+                      "me.everything.badger.permission.BADGE_COUNT_READ",
+                      "me.everything.badger.permission.BADGE_COUNT_WRITE",
+                      // WorkManager's (react-native-android-widget): its work is a job, never a foreground service.
+                      "android.permission.FOREGROUND_SERVICE",
+                    ],
                   },
-                },
-              })
+                  web: {
+                    bundler: "metro",
+                    output: "single",
+                    favicon,
+                  },
+                  plugins: [
+                    // Every screen in the main bundle on web, as up to SDK 57: SDK 58 loads each route's code on first visit by default,
+                    // and the desktop app showed an empty screen before every screen it opened.
+                    ["expo-router", { asyncRoutes: { web: false } }],
+                    "expo-status-bar",
+                    ["expo-font", { fonts: GEIST_FONTS }],
+                    "expo-image",
+                    "expo-image-picker",
+                    "expo-localization",
+                    "expo-secure-store",
+                    // Sharing to the app (spec D.3): text, an address, pictures. Nothing it can't keep, so it isn't offered for them.
+                    [
+                      "expo-sharing",
+                      {
+                        android: {
+                          enabled: true,
+                          singleShareMimeTypes: ["text/plain", "image/*"],
+                          multipleShareMimeTypes: ["image/*"],
+                        },
+                      },
+                    ],
+                    [
+                      "expo-speech-recognition",
+                      {
+                        microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
+                        speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
+                        androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
+                      },
+                    ],
+                    [
+                      "expo-splash-screen",
+                      {
+                        image: "./assets/images/splash-logo.png",
+                        imageWidth: 150,
+                        backgroundColor,
+                      },
+                    ],
+                    // Its iOS memory entitlements are added only when EAS_BUILD_PROFILE or NODE_ENV says production, so the config
+                    // (and the fingerprint) differed between EAS and this machine: OTAs would never match the build. iOS isn't shipped.
+                    ["llama.rn", { enableEntitlements: false }],
+                    ["expo-alternate-app-icons", alternateAppIcons],
+                    // Reminders, scheduled and shown on the phone only: no push token, no Firebase file (spec D.5).
+                    ["expo-notifications", { icon: "./assets/images/notification-icon.png", color: "#4F6BFF" }],
+                    [
+                      "react-native-android-widget",
+                      {
+                        // Geist, and JetBrains Mono (SIL OFL 1.1) for a code note's lines: the widget finds fonts only here.
+                        fonts: [
+                          ...["Regular", "Medium", "SemiBold"].map((weight) => `./assets/fonts/Geist-${weight}.ttf`),
+                          "./assets/fonts/JetBrainsMono-Regular.ttf",
+                        ],
+                        widgets: WIDGETS.map((widget) => ({
+                          ...widget,
+                          label: `@string/${widgetLabelName(widget.name)}`,
+                          description: WIDGET_PICKER_LABELS.values[widget.name][1],
+                          updatePeriodMillis: 0,
+                        })),
+                      },
+                    ],
+                    [
+                      "@sentry/react-native",
+                      {
+                        url: "https://sentry.io/",
+                        note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
+                        project: "fastmemo-app",
+                        organization: "andrea-losavio",
+                      },
+                    ],
+                  ],
+                  experiments: {
+                    typedRoutes: true,
+                  },
+                  extra: {
+                    eas: {
+                      projectId: EAS_PROJECT_ID,
+                    },
+                  },
+                })
+              )
             )
           )
         )

@@ -1,4 +1,3 @@
-import * as Notifications from "expo-notifications";
 import i18n, { t as translate } from "i18next";
 import { AppState } from "react-native";
 
@@ -7,6 +6,7 @@ import { notifyStateOf, planReminders } from "@/libs/reminders/plan";
 import { setReminderSettings } from "@/slicers/settingsSlice";
 
 import type { NotifyState, Scheduled } from "@/libs/reminders/plan";
+import type { NotificationRequest, NotificationResponse } from "expo-notifications";
 import type { RootState } from "@/types";
 import type { Store } from "@reduxjs/toolkit";
 
@@ -14,7 +14,10 @@ import type { Store } from "@reduxjs/toolkit";
  * The phone rings at a note's reminder (spec D.5, ADR-044). Local only: the library schedules and shows, no push token is
  * ever asked. One notification per note (`fm-reminder-<id>`, scheduling again replaces it); what to schedule and cancel is
  * `planReminders`, this file only carries it out. A protected or hidden note's title is put nowhere in its notification.
+ * The library is loaded at the first call, after the home has drawn: loaded with the app it cost every cold start.
  */
+
+const notifications = () => import("expo-notifications");
 
 const PREFIX = "fm-reminder-";
 const CHANNEL = "reminders";
@@ -29,17 +32,18 @@ const t = (key: string) => translate(key);
 
 const displayTitle = (title: string) => (title.trim() ? title : t("empty_title"));
 
-const ensureChannel = () =>
-  Notifications.setNotificationChannelAsync(CHANNEL, {
+const ensureChannel = async () => {
+  const Notifications = await notifications();
+  await Notifications.setNotificationChannelAsync(CHANNEL, {
     name: t("reminder.channel"),
-    // eslint-disable-next-line import/namespace -- re-exported through `export *`, which the rule doesn't follow
     importance: Notifications.AndroidImportance.HIGH,
     lightColor: COLOR,
   });
+};
 
 const bodyOf = (isPrivate: boolean) => (isPrivate ? t("reminder.notification_private") : t("reminder.notification_body"));
 
-const toScheduled = (request: Notifications.NotificationRequest): Scheduled | null => {
+const toScheduled = (request: NotificationRequest): Scheduled | null => {
   if (!request.identifier.startsWith(PREFIX)) return null;
   const data = (request.content.data ?? {}) as { at?: unknown; private?: unknown };
   const isPrivate = data.private === true;
@@ -51,8 +55,9 @@ const toScheduled = (request: Notifications.NotificationRequest): Scheduled | nu
   };
 };
 
-const schedule = (item: Scheduled) =>
-  Notifications.scheduleNotificationAsync({
+const schedule = async (item: Scheduled) => {
+  const Notifications = await notifications();
+  await Notifications.scheduleNotificationAsync({
     identifier: PREFIX + item.noteId,
     content: {
       title: item.private ? t("reminder.notification_title") : item.title,
@@ -62,9 +67,11 @@ const schedule = (item: Scheduled) =>
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: item.at, channelId: CHANNEL },
   });
+};
 
 async function reconcileNow(force: boolean): Promise<void> {
   if (!store) return;
+  const Notifications = await notifications();
   const state = store.getState();
   const live = state.notes.items.map((note) => ({
     id: note.id,
@@ -97,7 +104,7 @@ export function reconcileReminders(force = false): Promise<void> {
 
 /** A notification tapped: its note, the way a link to it opens (a protected one asks its code). */
 const handled = new Set<string>();
-const openFrom = (response: Notifications.NotificationResponse | null) => {
+const openFrom = (response: NotificationResponse | null) => {
   if (!response) return;
   const { request, date } = response.notification;
   const key = `${request.identifier}:${date}`;
@@ -113,25 +120,30 @@ const openFrom = (response: Notifications.NotificationResponse | null) => {
  */
 export function startReminders(appStore: Store<RootState>): () => void {
   store = appStore;
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
-  ensureChannel().catch(() => {});
-
-  const tapped = Notifications.addNotificationResponseReceivedListener(openFrom);
-  // The tap that started the app: read once, then forgotten.
-  const launching = Notifications.getLastNotificationResponse();
-  if (launching) {
-    openFrom(launching);
-    Notifications.clearLastNotificationResponse();
-  }
-
-  reconcileReminders();
+  let stopped = false;
+  let tapped: { remove: () => void } | null = null;
+  void notifications()
+    .then((Notifications) => {
+      if (stopped) return;
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
+      ensureChannel().catch(() => {});
+      tapped = Notifications.addNotificationResponseReceivedListener(openFrom);
+      // The tap that started the app: read once, then forgotten.
+      const launching = Notifications.getLastNotificationResponse();
+      if (launching) {
+        openFrom(launching);
+        Notifications.clearLastNotificationResponse();
+      }
+      reconcileReminders();
+    })
+    .catch(() => {});
 
   let notes = appStore.getState().notes.items;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -152,7 +164,8 @@ export function startReminders(appStore: Store<RootState>): () => void {
   i18n.on("languageChanged", onLanguage);
 
   return () => {
-    tapped.remove();
+    stopped = true;
+    tapped?.remove();
     unsubscribe();
     front.remove();
     i18n.off("languageChanged", onLanguage);
@@ -162,18 +175,18 @@ export function startReminders(appStore: Store<RootState>): () => void {
 }
 
 export async function notifyState(): Promise<NotifyState> {
-  return notifyStateOf(await Notifications.getPermissionsAsync());
+  return notifyStateOf(await (await notifications()).getPermissionsAsync());
 }
 
 /** The system's question (the channel exists first, as Android wants). */
 export async function askToNotify(): Promise<boolean> {
   await ensureChannel().catch(() => {});
-  return (await Notifications.requestPermissionsAsync()).granted;
+  return (await (await notifications()).requestPermissionsAsync()).granted;
 }
 
 export async function exactAlarmState(): Promise<"granted" | "denied" | "unneeded"> {
   try {
-    return (await Notifications.getExactAlarmPermissionsAsync()).granted ? "granted" : "denied";
+    return (await (await notifications()).getExactAlarmPermissionsAsync()).granted ? "granted" : "denied";
   } catch {
     return "unneeded";
   }
@@ -182,6 +195,6 @@ export async function exactAlarmState(): Promise<"granted" | "denied" | "unneede
 /** The system's "Alarms and reminders" screen for the app. */
 export async function openExactAlarmSettings(): Promise<void> {
   try {
-    await Notifications.requestExactAlarmPermissionsAsync();
+    await (await notifications()).requestExactAlarmPermissionsAsync();
   } catch {}
 }

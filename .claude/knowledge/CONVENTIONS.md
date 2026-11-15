@@ -1029,6 +1029,7 @@ What an error and a report carry is decided in ADR-035; the code is `src/libs/di
 | 51  | Never reload the page in the desktop app                                                  | A reload while a Tauri command answers can abort the process: `reloadApp()` relaunches after `flushNow()` (LL-089)                    |
 | 52  | Never open a screen from outside except through `libs/launch`                             | Links, shortcuts, shares, notifications' and widgets' taps: the allow-list (`parseLaunch`), then the home carries it out (ADR-043)     |
 | 53  | Never put a protected or hidden note's words in a notification or a widget                | Both are seen without the code (lock screen, home screen): `planReminders`' private, `canFeature` (ADR-044, ADR-045)                  |
+| 54  | Never import at the app's start a native library first used after the home has drawn      | Its modules are evaluated at every cold start: `import()` at the first call (`libs/reminders`, `libs/widget`, LL-098)                 |
 
 ### ALWAYS
 

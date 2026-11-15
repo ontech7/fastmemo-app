@@ -1,10 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import i18n, { t as translate } from "i18next";
-import { requestWidgetUpdate } from "react-native-android-widget";
 
 import { configs } from "@/configs";
 import { widgetState } from "@/libs/widget/snapshot";
-import { WIDGETS } from "@/widgets/registry";
 
 import type { WidgetState } from "@/libs/widget/snapshot";
 import type { RootState } from "@/types";
@@ -36,12 +34,18 @@ export async function readWidgetState(): Promise<WidgetState> {
   return widgetState(undefined, t, SCHEME);
 }
 
-const redraw = (state: WidgetState) =>
-  Promise.all(
+/** Every widget drawn again. The library and the widgets are loaded at the first redraw, never at the app's start. */
+const redraw = async (state: WidgetState) => {
+  const [{ requestWidgetUpdate }, { WIDGETS }] = await Promise.all([
+    import("react-native-android-widget"),
+    import("@/widgets/registry"),
+  ]);
+  await Promise.all(
     Object.entries(WIDGETS).map(([widgetName, draw]) =>
       requestWidgetUpdate({ widgetName, renderWidget: (info) => draw(state, info) }).catch(() => {})
     )
   );
+};
 
 /** After the home has drawn: writes the state now, and again when the featured note, the choice or the language changes. */
 export function startWidget(store: Store<RootState>): () => void {

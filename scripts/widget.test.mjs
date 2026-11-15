@@ -314,7 +314,7 @@ console.log("\nwhat the app writes for the widgets");
   });
   await build({
     stdin: {
-      contents: `export { startWidget, readWidgetState } from "@/libs/widget"; export { WIDGETS } from "@/widgets/registry";`,
+      contents: `export { startWidget, readWidgetState } from "@/libs/widget"; export { WIDGETS } from "@/widgets/registry"; export { widgetTask } from "@/widgets/taskHandler";`,
       resolveDir: src,
       loader: "ts",
     },
@@ -334,11 +334,12 @@ console.log("\nwhat the app writes for the widgets");
       stub(/widgets\/registry$/, "export const WIDGETS = {};"),
       stub(
         /^react-native-android-widget$/,
-        "export const requestWidgetUpdate = async ({ widgetName, renderWidget }) => { (globalThis.__drawn ??= []).push([widgetName, renderWidget()]); };"
+        "export const requestWidgetUpdate = async ({ widgetName, renderWidget }) => { (globalThis.__drawn ??= []).push([widgetName, renderWidget()]); };" +
+          " export const requestWidgetUpdateById = async ({ widgetName, widgetId, renderWidget }) => { (globalThis.__drawnById ??= []).push([widgetName, widgetId, renderWidget({ widgetName, widgetId, width: 200, height: 120 })]); };"
       ),
     ],
   });
-  const { startWidget, readWidgetState, WIDGETS } = await import(pathToFileURL(outLive).href);
+  const { startWidget, readWidgetState, WIDGETS, widgetTask } = await import(pathToFileURL(outLive).href);
   WIDGETS.Test = (state) => state;
 
   let state = { notes: { items: [todo] }, settings: { widgetNoteId: null } };
@@ -386,6 +387,20 @@ console.log("\nwhat the app writes for the widgets");
   set({ ...state, notes: { items: [{ ...state.notes.items[0], locked: false }, state.notes.items[1]] } });
   await settle();
   ok("stopped: nothing more written", globalThis.__writes === before);
+
+  // With the app closed: the launcher's event, as the library hands it to the background task.
+  const event = (widgetAction, widgetName = "Test") => ({ widgetAction, widgetName, widgetId: 7, width: 200, height: 120 });
+  await widgetTask(event("WIDGET_UPDATE"));
+  const drawn = globalThis.__drawnById?.at(-1);
+  ok(
+    "a widget's event with the app closed: that widget redrawn from the stored state",
+    drawn?.[0] === "Test" && drawn[1] === 7 && JSON.stringify(drawn[2]) === globalThis.__kv.get("@widgetState")
+  );
+  const count = globalThis.__drawnById.length;
+  await widgetTask(event("WIDGET_DELETED"));
+  await widgetTask(event("WIDGET_CLICK"));
+  await widgetTask(event("WIDGET_UPDATE", "Unknown"));
+  ok("a removed widget, a click, an unknown widget: nothing drawn", globalThis.__drawnById.length === count);
 }
 
 console.log("\nwhat the widgets draw");
@@ -435,7 +450,11 @@ console.log("\nwhat the widgets draw");
     })),
   };
   const notes = {
-    text: { ...base, type: "text", text: '<div>uno</div><ol class="x-todo"><li><input type="checkbox">due</li></ol><pre>x = 1</pre><div>tre</div>' },
+    text: {
+      ...base,
+      type: "text",
+      text: '<div>uno</div><ol class="x-todo"><li><input type="checkbox">due</li></ol><pre>x = 1</pre><div>tre</div>',
+    },
     todo,
     kanban: board,
     code: { ...base, type: "code", activeTabId: "a", tabs: [{ id: "a", title: "a", code: "a\nb", language: "js" }] },
@@ -456,6 +475,23 @@ console.log("\nwhat the widgets draw");
     }
   }
   ok("every widget builds for every kind of note and size", failures.length === 0, failures.slice(0, 3).join(" | "));
+}
+
+console.log("\nthe key the system wakes the app with");
+{
+  // register.ts names the library's headless task itself (the library stays unloaded at start): the same key as the
+  // library's Android worker, or widgets stop redrawing with the app closed.
+  const { readFileSync } = await import("node:fs");
+  const ours = /WIDGET_TASK = "([^"]+)"/.exec(readFileSync(join(src, "libs/widget/register.ts"), "utf8"))?.[1];
+  const worker = readFileSync(
+    join(
+      __dirname,
+      "..",
+      "node_modules/react-native-android-widget/android/src/main/java/com/reactnativeandroidwidget/RNWidgetBackgroundTaskWorker.java"
+    ),
+    "utf8"
+  );
+  ok("the app registers the key the library's worker starts", !!ours && worker.includes(`"${ours}"`), ours);
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

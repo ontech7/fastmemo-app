@@ -1,5 +1,5 @@
 // Reminders (spec D.5): what should ring (planReminders), the quick choices (presets) and the month (monthGrid).
-// Pure modules, bundled with esbuild. Run: node scripts/reminders.test.mjs
+// Pure modules, bundled with esbuild; the phone's side with the library stood in for. Run: node scripts/reminders.test.mjs
 
 import { build } from "esbuild";
 import os from "node:os";
@@ -209,6 +209,86 @@ ok(
     return first.year === 2026 && first.month === 12 && first.day === 28;
   })()
 );
+
+console.log("\nthe phone's side: started after the home, the library loaded then");
+{
+  // libs/reminders with the library, the app's launch path and the settings stood in for.
+  const outGlue = join(os.tmpdir(), "reminders-glue.bundle.mjs");
+  const stub = (filter, contents) => ({
+    name: `stub-${filter}`,
+    setup(b) {
+      b.onResolve({ filter }, () => ({ path: String(filter), namespace: "stub" }));
+      b.onLoad({ filter: /.*/, namespace: "stub" }, (args) =>
+        args.path === String(filter) ? { contents, loader: "js" } : undefined
+      );
+    },
+  });
+  await build({
+    stdin: { contents: `export { startReminders } from "@/libs/reminders";`, resolveDir: src, loader: "ts" },
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    outfile: outGlue,
+    logLevel: "error",
+    alias: { "@": src },
+    plugins: [
+      stub(
+        /^expo-notifications$/,
+        `const n = (globalThis.__notif ??= { listeners: 0, scheduled: [], launching: null });
+         export const AndroidImportance = { HIGH: 4 };
+         export const SchedulableTriggerInputTypes = { DATE: "date" };
+         export const setNotificationHandler = () => {};
+         export const setNotificationChannelAsync = async () => {};
+         export const addNotificationResponseReceivedListener = () => { n.listeners++; return { remove: () => { n.listeners--; } }; };
+         export const getLastNotificationResponse = () => n.launching;
+         export const clearLastNotificationResponse = () => { n.launching = null; };
+         export const getAllScheduledNotificationsAsync = async () => n.scheduled.slice();
+         export const scheduleNotificationAsync = async (r) => { n.scheduled.push(r); };
+         export const cancelScheduledNotificationAsync = async (id) => { n.scheduled = n.scheduled.filter((r) => r.identifier !== id); };
+         export const getExactAlarmPermissionsAsync = async () => ({ granted: true });`
+      ),
+      stub(/^react-native$/, "export const AppState = { addEventListener: () => ({ remove() {} }) };"),
+      stub(/^i18next$/, "export const t = (k) => k; export default { on() {}, off() {} };"),
+      stub(/libs\/launch$/, "export const requestLaunch = (a) => { (globalThis.__launched ??= []).push(a); };"),
+      stub(
+        /slicers\/settingsSlice$/,
+        "export const setReminderSettings = (p) => ({ type: 'settings/reminders', payload: p });"
+      ),
+    ],
+  });
+  const { startReminders } = await import(pathToFileURL(outGlue).href);
+  const settle = () => new Promise((r) => setTimeout(r, 20));
+  ok("loading the app's side doesn't load the library", globalThis.__notif === undefined);
+  globalThis.__notif = { listeners: 0, scheduled: [], launching: null };
+  const storeOf = (items) => ({
+    getState: () => ({ notes: { items }, settings: { reminders: { exact: true } } }),
+    subscribe: () => () => {},
+    dispatch: () => {},
+  });
+  const note = { id: "n1", title: "Milk", remindAt: Date.now() + 60_000, locked: false, hidden: false };
+
+  globalThis.__notif.launching = {
+    notification: { date: 1, request: { identifier: "fm-reminder-n1", content: { data: { noteId: "n1" } } } },
+  };
+  const stop = startReminders(storeOf([note]));
+  await settle();
+  ok(
+    "the tap that started the app opens its note",
+    JSON.stringify(globalThis.__launched) === JSON.stringify([{ kind: "note", id: "n1" }])
+  );
+  ok("the tap listener is on", globalThis.__notif.listeners === 1);
+  ok(
+    "a note's reminder is scheduled",
+    globalThis.__notif.scheduled.length === 1 && globalThis.__notif.scheduled[0].identifier === "fm-reminder-n1"
+  );
+  stop();
+  ok("stopped: the listener is off", globalThis.__notif.listeners === 0);
+
+  const stopEarly = startReminders(storeOf([]));
+  stopEarly(); // before the library has loaded
+  await settle();
+  ok("stopped before the library loaded: no listener left behind", globalThis.__notif.listeners === 0);
+}
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);

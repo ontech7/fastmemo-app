@@ -219,11 +219,13 @@ src/
                        #   dictate-on-open), share + receiveShare (.web: none; a share as a text note's HTML). The home runs it
                        #   with hooks/useLaunchAction. scripts/launch.test.mjs
     reminders/         # Reminders (ADR-044): plan (planReminders, withReminder, notifyStateOf; pure), presets and month (the
-                       #   sheet's times and grid; pure), index (expo-notifications: schedule/cancel, the tap, the permissions;
-                       #   started by the home), index.web.ts (sets nothing, rings nothing). scripts/reminders.test.mjs
+                       #   sheet's times and grid; pure), index (expo-notifications, loaded at the first call: schedule/cancel,
+                       #   the tap, the permissions; started by the home), index.web.ts (sets nothing, rings nothing).
+                       #   scripts/reminders.test.mjs
     widget/            # Widgets (ADR-045): snapshot (canFeature, widgetSnapshot, widgetState; pure), index (startWidget: writes
-                       #   @widgetState when it changes, asks for a redraw), register (the library's background handler, from the
-                       #   entry file); .web.ts: nothing. scripts/widget.test.mjs
+                       #   @widgetState when it changes, asks for a redraw; the library loaded then), register (the headless
+                       #   task, from the entry file; widgets/taskHandler loaded at the first widget event); .web.ts: nothing.
+                       #   scripts/widget.test.mjs
       types.ts         # What Rust and the page exchange: McpRequest, McpReply; and UpdateCheck
     windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
     search/            # One search (ADR-040), no React: fold (case and accents, same length), lines (noteDoc: what a note says;
@@ -613,6 +615,7 @@ home: useLaunchAction -> takePendingLaunch -> planLaunch (intro not finished: dr
 | `withKotlinReflectWarmup`        | a background warm-up of kotlin-reflect at start (ADR-025)                                            |
 | `withRecentsStartPlain`          | a start from the recent apps or a recreated activity starts as from the icon; `onNewIntent` keeps the |
 |                                  | new intent (`setIntent`, LL-095)                                                                     |
+| `withWorkManagerOnDemand`        | WorkManager (the widget library's) started at its first use, not with the process (LL-098)            |
 
 Permissions the 4.1.0 build adds to 4.0.0's (`aapt2 dump permissions`):
 

@@ -2270,10 +2270,15 @@ title and first lines). A widget is drawn with the app closed and is visible to 
   open. Task 40's spike proved this one on a release build: a tap opens the app closed, in the background, killed with its
   task kept, with an alternate icon; the data reaches the widget in about a second and survives a reboot; the web and
   desktop bundles don't contain it; cold start not slower.
-- **The entry file** `index.ts` (`package.json` `main`): `@/libs/widget/register` (Android: `registerWidgetTaskHandler`;
-  `.web.ts`: nothing), then `expo-router/entry`.
+- **The entry file** `index.ts` (`package.json` `main`): `@/libs/widget/register` (Android: the library's headless task
+  `RNWidgetBackgroundTask`, whose handler `widgets/taskHandler` is loaded at the first widget event; `.web.ts`: nothing),
+  then `expo-router/entry`.
+- **Nothing of it at the app's start** (LL-098): the library, the widgets and `expo-notifications` are loaded with
+  `import()` at their first call, after the home has drawn; WorkManager starts at its first use (`withWorkManagerOnDemand`,
+  `work-runtime` 2.12.0, the version the library brings). Together they keep cold start where it was before them.
 - **The small copy** (`libs/widget/snapshot.ts`, pure, `scripts/widget.test.mjs`): `widgetState` = the featured note's
-  `widgetSnapshot` (title, at most 6 lines of 80 characters, boxes, mono for code, the count of the rest), the labels in the
+  `widgetSnapshot` (title; a list's or code's 6 lines of 80 characters; a text note's 12 paragraphs of 400, wrapped and cut
+  with "…" only where the room ends; a board's first 4 columns with 3 cards each; the count of the rest), the labels in the
   app's language, the links (`launchUrl`). `startWidget` (after the home has drawn) writes it to AsyncStorage
   `@widgetState` only when it differs, and asks for a redraw. The widget never reads the notes.
 - **Never a protected or hidden note** (`canFeature`): not offered in the menu; one that becomes protected, hidden, trashed
@@ -2281,9 +2286,11 @@ title and first lines). A widget is drawn with the app closed and is visible to 
 - **One featured note per phone**, a setting (`settings.widgetNoteId`, null when removed), chosen with "Show in the widget"
   in the note's menu on Android; kept while the note can't be shown, so it comes back.
 - **Taps are launch links** (ADR-043): `clickAction="OPEN_URI"`; the empty state opens the app.
-- **Drawn** in `src/widgets/` (`NewNoteWidget`, `FeaturedNoteWidget`, size-aware lines; tokens in `widgets/theme.ts`;
-  Geist from the plugin's `fonts`, no monospace among the assets: code uses Geist Medium). Picker labels in 7 languages
-  (`withWidgetPickerLabels`, inline).
+- **Drawn** in `src/widgets/` (`NewNoteWidget`, `FeaturedNoteWidget`, sized to the widget; tokens in `widgets/theme.ts`;
+  Geist and JetBrains Mono Regular (SIL OFL 1.1, `assets/fonts`) from the plugin's `fonts`; a board's columns side by side,
+  code on a darker panel). The library can't build a React fragment: a widget returns elements or arrays of them
+  (`scripts/widget.test.mjs` builds every widget through the library's own `buildWidgetTree`). Picker labels in 7
+  languages (`withWidgetPickerLabels`, inline).
 - **`FOREGROUND_SERVICE`** comes with WorkManager and is blocked (`android.blockedPermissions`): the library never runs a
   foreground service.
 

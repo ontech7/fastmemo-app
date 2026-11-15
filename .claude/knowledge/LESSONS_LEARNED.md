@@ -2580,6 +2580,31 @@ grows toward an edge by the room actually there, and redraw what is drawn at a s
 
 ---
 
+### LL-098: The widgets and the reminders made every cold start slower, even with neither in use
+
+**Date:** 2026-11-15  
+**Severity:** Low (about 20 ms more on each cold start of the Pixel, measured back to back on release builds)  
+**Category:** Performance  
+**What happened:** the final 4.1.0 build started at 356 and 362 ms against Stop B's 336 and 345, on a phone with no widget
+placed and no reminder set.  
+**Root cause:** two costs. The entry file registered the widget handler by importing the library, which evaluates its
+native module, every widget and its preview; the home imported `libs/reminders`, which imported `expo-notifications`.
+And androidx.startup started WorkManager (brought by the widget library) with the process. Probes isolated them: each
+alone left 10–16 ms; WorkManager on demand alone gave nothing measurable while the JavaScript cost hid it.  
+**Fix:** the headless task is registered with `AppRegistry` and loads `widgets/taskHandler` at the first widget event; the
+redraw and `expo-notifications` are `import()`ed at their first call, after the home has drawn; `withWorkManagerOnDemand`
+(`app.config.ts`) removes WorkManager's start-up entry and gives its configuration from `MainApplication`. Back to back:
+327 / 333 ms against Stop B's 325 / 330. `scripts/reminders.test.mjs` checks that loading `libs/reminders` doesn't load
+the library, and that a stop before it loaded leaves no listener.  
+**Rule:** a native library first used after the home has drawn is loaded at its first call, never at start; when a
+dependency brings an androidx.startup initializer, measure it. Measure each change with the others in place: one cost can
+hide another's gain.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-15 **Resolved in:** (this commit)
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
