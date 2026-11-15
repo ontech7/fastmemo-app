@@ -7425,6 +7425,11 @@ react-is@^19.1.0:
   resolved "https://registry.npmjs.org/react-is/-/react-is-19.1.1.tgz"
   integrity sha512-tr41fA15Vn8p4X9ntI+yCyeGSf1TlYaY5vlTZfQmeLBrFo3psOPX6HhTDnFNL9uj3EhP0KAQ80cugCl4b4BERA==
 
+react-native-android-widget@^0.26.0:
+  version "0.26.0"
+  resolved "https://registry.yarnpkg.com/react-native-android-widget/-/react-native-android-widget-0.26.0.tgz#e8e0ff505b38fec87b995dc57b5d9fb6b0ca9e6e"
+  integrity sha512-yRRj140jGbhrhuHnahMmLplWJV2BAJCOVpZu5gHHVufJUfD3qyBAosgrmea8VUNfExUquYSBMfCmin1ZVZ3H2Q==
+
 react-native-crypto-js@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/react-native-crypto-js/-/react-native-crypto-js-1.0.0.tgz"

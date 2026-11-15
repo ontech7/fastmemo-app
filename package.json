@@ -1,6 +1,6 @@
 {
   "name": "fastmemo-app-new-arch",
-  "main": "expo-router/entry",
+  "main": "index.ts",
   "version": "4.0.0",
   "scripts": {
     "start": "expo start",
@@ -104,6 +104,7 @@
     "react-hot-toast": "^2.6.0",
     "react-i18next": "^15.6.1",
     "react-native": "0.88.0",
+    "react-native-android-widget": "^0.26.0",
     "react-native-crypto-js": "^1.0.0",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-get-random-values": "~1.11.0",
