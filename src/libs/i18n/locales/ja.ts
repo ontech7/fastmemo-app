@@ -212,6 +212,7 @@ const ja = {
     },
   },
   note: {
+    photo_denied: "Fast Memo はカメラを使用できません：システムの設定で許可してください",
     not_found: "メモが見つかりません",
     format: {
       undo: "元に戻す",

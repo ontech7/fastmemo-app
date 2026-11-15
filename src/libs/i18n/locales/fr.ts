@@ -212,6 +212,7 @@ const fr = {
     },
   },
   note: {
+    photo_denied: "Fast Memo ne peut pas utiliser l'appareil photo : autorisez-le dans les réglages du système",
     not_found: "Note introuvable",
     format: {
       undo: "Annuler",

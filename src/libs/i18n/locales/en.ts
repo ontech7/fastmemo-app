@@ -212,6 +212,7 @@ const en = {
     },
   },
   note: {
+    photo_denied: "Fast Memo can't use the camera: allow it in the system's settings",
     not_found: "Note not found",
     format: {
       undo: "Undo",

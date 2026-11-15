@@ -211,6 +211,7 @@ const zh = {
     },
   },
   note: {
+    photo_denied: "Fast Memo 无法使用相机：请在系统设置中允许",
     not_found: "未找到笔记",
     format: {
       undo: "撤销",

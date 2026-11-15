@@ -392,6 +392,21 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
     await insertImageFrom(image.uri, image.width, image.height);
   }, [insertImageFrom]);
 
+  // A photo from the camera, Android only (spec D.4): the library asks for the camera the first time and rejects when it
+  // is refused; then only the toast.
+  const takePhoto = useCallback(async () => {
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchCameraAsync({ allowsEditing: true });
+    } catch {
+      toast(t("note.photo_denied"));
+      return;
+    }
+    if (result.canceled || !result.assets?.length) return;
+    const image = result.assets[0];
+    await insertImageFrom(image.uri, image.width, image.height);
+  }, [insertImageFrom, t]);
+
   const setTitle = useCallback(
     (titleVal: string) => {
       setNoteAsync({ ...noteRef.current, title: titleVal });
@@ -552,6 +567,7 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
   const onInsert = useCallback(
     (kind: InsertKind) => {
       if (kind === "image") pickImage();
+      else if (kind === "photo") takePhoto();
       else if (kind === "link") sendToPage(LINK_START_COMMAND);
       else if (kind === "noteLink") {
         // The picker's field takes the focus: the page remembers the caret first.
@@ -560,7 +576,7 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
         setPickerSelected(0);
       } else if (kind === "rule") sendToPage(RULE_COMMAND);
     },
-    [pickImage, sendToPage]
+    [pickImage, takePhoto, sendToPage]
   );
 
   // Links to another note (spec B.4): the picker, open from [[ in the text or from the bar's menu, and a tap on a link.
@@ -860,6 +876,7 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
               onLine={onLine}
               onFormat={onFormat}
               onInsert={onInsert}
+              camera={Platform.OS === "android"}
               above={pickerView}
             />
           </View>
