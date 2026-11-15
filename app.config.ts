@@ -308,12 +308,28 @@ const KOTLIN_REFLECT_WARMUP_CLASSES = [
   "MakeDirectoryOptions",
 ].map((name) => `expo.modules.filesystem.legacy.${name}`);
 
+/**
+ * A code mod's edit, or the prebuild stops: a template that no longer has the line it looks for (an SDK bump) must not
+ * build an app with half a change, e.g. WorkManager's start-up entry removed and no configuration given.
+ */
+export function replaceOrFail(
+  contents: string,
+  pattern: RegExp,
+  replacer: (match: string, ...groups: string[]) => string,
+  what: string
+): string {
+  const next = contents.replace(pattern, replacer);
+  if (next === contents) throw new Error(`app.config.ts: "${what}" found no ${pattern} in the native template`);
+  return next;
+}
+
 const withKotlinReflectWarmup: ConfigPlugin = (config) =>
   withMainApplication(config, (modConfig) => {
     const { contents, language } = modConfig.modResults;
     if (language !== "kt" || contents.includes(KOTLIN_REFLECT_WARMUP)) return modConfig;
     const names = KOTLIN_REFLECT_WARMUP_CLASSES.map((name) => `"${name}"`).join(", ");
-    modConfig.modResults.contents = contents.replace(
+    modConfig.modResults.contents = replaceOrFail(
+      contents,
       /^([ \t]*)super\.onCreate\(\)\n/m,
       (line, indent: string) =>
         `${line}${indent}${KOTLIN_REFLECT_WARMUP}\n` +
@@ -321,7 +337,8 @@ const withKotlinReflectWarmup: ConfigPlugin = (config) =>
         `${indent}  for (name in listOf(${names})) {\n` +
         `${indent}    runCatching { Class.forName(name).kotlin.constructors.forEach { it.parameters } }\n` +
         `${indent}  }\n` +
-        `${indent}}, "kotlin-reflect-warmup").start()\n`
+        `${indent}}, "kotlin-reflect-warmup").start()\n`,
+      "kotlin-reflect warm-up"
     );
     return modConfig;
   });
@@ -366,14 +383,17 @@ const withWorkManagerOnDemand: ConfigPlugin = (config) =>
       }),
       (modConfig) => {
         const { contents, language } = modConfig.modResults;
-        if (language !== "kt" || contents.includes(WORK_ON_DEMAND)) return modConfig;
-        modConfig.modResults.contents = contents.replace(
+        if (contents.includes(WORK_ON_DEMAND)) return modConfig;
+        if (language !== "kt") throw new Error("app.config.ts: WorkManager on demand needs a Kotlin MainApplication");
+        modConfig.modResults.contents = replaceOrFail(
+          contents,
           /^class MainApplication : Application\(\), ReactApplication \{\n/m,
           () =>
             "class MainApplication : Application(), ReactApplication, androidx.work.Configuration.Provider {\n" +
             `  ${WORK_ON_DEMAND}\n` +
             "  override val workManagerConfiguration: androidx.work.Configuration\n" +
-            "    get() = androidx.work.Configuration.Builder().build()\n\n"
+            "    get() = androidx.work.Configuration.Builder().build()\n\n",
+          "WorkManager on demand"
         );
         return modConfig;
       }
@@ -381,9 +401,11 @@ const withWorkManagerOnDemand: ConfigPlugin = (config) =>
     (modConfig) => {
       const { contents } = modConfig.modResults;
       if (contents.includes(WORK_RUNTIME)) return modConfig;
-      modConfig.modResults.contents = contents.replace(
+      modConfig.modResults.contents = replaceOrFail(
+        contents,
         /^dependencies \{\n/m,
-        (line) => `${line}    implementation("${WORK_RUNTIME}") // WorkManager on demand (app.config.ts)\n`
+        (line) => `${line}    implementation("${WORK_RUNTIME}") // WorkManager on demand (app.config.ts)\n`,
+        "WorkManager on demand (work-runtime)"
       );
       return modConfig;
     }
@@ -400,8 +422,10 @@ const RECENTS_START_PLAIN = "// FastMemo: created again or opened from the recen
 const withRecentsStartPlain: ConfigPlugin = (config) =>
   withMainActivity(config, (modConfig) => {
     const { contents, language } = modConfig.modResults;
-    if (language !== "kt" || contents.includes(RECENTS_START_PLAIN)) return modConfig;
-    modConfig.modResults.contents = contents.replace(
+    if (contents.includes(RECENTS_START_PLAIN)) return modConfig;
+    if (language !== "kt") throw new Error("app.config.ts: the recents start needs a Kotlin MainActivity");
+    modConfig.modResults.contents = replaceOrFail(
+      contents,
       /^([ \t]*)super\.onCreate\((null|savedInstanceState)\)\n/m,
       (line, indent: string) =>
         `${indent}${RECENTS_START_PLAIN}\n` +
@@ -410,16 +434,19 @@ const withRecentsStartPlain: ConfigPlugin = (config) =>
         `${indent}    .addCategory(android.content.Intent.CATEGORY_LAUNCHER)\n` +
         `${indent}    .setPackage(packageName)\n` +
         `${indent}}\n` +
-        line
+        line,
+      "recents start (onCreate)"
     );
-    modConfig.modResults.contents = modConfig.modResults.contents.replace(
+    modConfig.modResults.contents = replaceOrFail(
+      modConfig.modResults.contents,
       /^([ \t]*)override fun getMainComponentName\(\)/m,
       (line, indent: string) =>
         `${indent}override fun onNewIntent(intent: android.content.Intent) {\n` +
         `${indent}  super.onNewIntent(intent)\n` +
         `${indent}  setIntent(intent)\n` +
         `${indent}}\n\n` +
-        line
+        line,
+      "recents start (onNewIntent)"
     );
     return modConfig;
   });

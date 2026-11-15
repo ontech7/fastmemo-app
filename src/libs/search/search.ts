@@ -2,7 +2,7 @@ import type { Note } from "@/types";
 
 import { fold } from "./fold";
 import type { NoteDoc } from "./lines";
-import { tagCounts } from "./tags";
+import { canBeTag, tagCounts } from "./tags";
 import type { TagCount } from "./tags";
 
 export interface Range {
@@ -114,10 +114,13 @@ export function cutLine(text: string, ranges: Range[], max: number = LINE_MAX): 
   return { text: before + text.slice(start, end) + after, ranges: kept };
 }
 
-/** Whether a note matches every term: a "#" term by its tags, any other in its title or one of its lines. */
+/** A "#" term that can be a tag (`#la`, `#lavoro`): it looks at tags. `#123` or `#fff` can't, and is plain text. */
+const isTagTerm = (term: string) => term.startsWith("#") && canBeTag(term.slice(1));
+
+/** Whether a note matches every term: a tag term by its tags, any other in its title or one of its lines. */
 function matches(doc: NoteDoc, terms: readonly string[]): boolean {
   return terms.every((term) => {
-    if (term.startsWith("#")) {
+    if (isTagTerm(term)) {
       const prefix = term.slice(1);
       return doc.tags.some((tag) => tag.key.startsWith(prefix));
     }
@@ -184,7 +187,7 @@ export function searchNotes(
   const result: SearchResult = { terms, here: [], elsewhere: [], tags: [] };
   const visible = scope.showHidden ? notes : notes.filter((note) => !note.hidden);
 
-  if (terms.length === 1 && terms[0].startsWith("#")) {
+  if (terms.length === 1 && (terms[0] === "#" || isTagTerm(terms[0]))) {
     result.tags = tagCounts(
       (function* () {
         for (const note of visible) yield docOf(note);

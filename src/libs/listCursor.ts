@@ -23,3 +23,12 @@ export function rangeBetween(ids: readonly string[], anchorId: string | null, id
   if (start < 0) return [id];
   return ids.slice(Math.min(start, end), Math.max(start, end) + 1);
 }
+
+/**
+ * What a right click acts on (spec C.2): the selection when the note is in it, however many it holds (acting on one
+ * selected note alone would leave its old key in the selection once a flag changes it); otherwise that note alone.
+ */
+export function menuTargets(selected: string[], key: string): { ids: string[]; onSelection: boolean } {
+  const onSelection = selected.includes(key);
+  return { ids: onSelection ? selected : [key], onSelection };
+}

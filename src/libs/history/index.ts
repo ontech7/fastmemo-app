@@ -3,7 +3,7 @@ import type { Note } from "@/types";
 import { runWhenIdle } from "@/utils/idle";
 
 import { createHistoryBackend } from "./backend";
-import { isKnownType, type VersionBody, type VersionMeta, type VersionReason } from "./limits";
+import { idsToSweep, isKnownType, type VersionBody, type VersionMeta, type VersionReason } from "./limits";
 import { createHistory, type History } from "./store";
 
 export type { VersionBody, VersionMeta, VersionReason } from "./limits";
@@ -41,8 +41,11 @@ export interface AppStore {
 const SWEEP_AFTER_MS = 5000;
 let swept = false;
 
-/** Drops a note's versions when it is deleted for good, and sweeps once. Returns the function that stops it. */
-export function startHistory(store: AppStore): () => void {
+/**
+ * Drops a note's versions when it is deleted for good, and sweeps once, only when the notes were read (`notesRead`).
+ * Returns the function that stops it.
+ */
+export function startHistory(store: AppStore, notesRead: () => boolean): () => void {
   let purged = store.getState().notes.purged;
   const unsubscribe = store.subscribe(() => {
     const next = store.getState().notes.purged;
@@ -55,8 +58,8 @@ export function startHistory(store: AppStore): () => void {
     ? undefined
     : setTimeout(() => {
         swept = true;
-        const { items, temporaryItems } = store.getState().notes;
-        void theHistory().sweep(new Set([...items, ...temporaryItems].map((note) => note.id)));
+        const keep = idsToSweep(store.getState().notes, notesRead());
+        if (keep) void theHistory().sweep(keep);
       }, SWEEP_AFTER_MS);
   return () => {
     unsubscribe();

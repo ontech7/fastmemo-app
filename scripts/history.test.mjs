@@ -22,7 +22,7 @@ await build({
   logLevel: "error",
   alias: { "@": src },
 });
-const { shouldKeep, toDropForNote, toDropForTotal, bodyOf, withBody, replacedByPlan, createHistory } = await import(
+const { idsToSweep, shouldKeep, toDropForNote, toDropForTotal, bodyOf, withBody, replacedByPlan, createHistory } = await import(
   pathToFileURL(out).href
 );
 
@@ -50,6 +50,21 @@ ok(
   ["agent", "sync", "replace", "cleanup", "restore"].every((r) =>
     shouldKeep([meta("a", 0, "ai")], { at: MIN, reason: r, hash: "x" })
   )
+);
+ok(
+  "a second restore, replace-all or delete-completed within 10 minutes: the text since is kept",
+  ["restore", "replace", "cleanup"].every((r) =>
+    shouldKeep([meta("b", 5 * MIN, "edit"), meta("a", 0, r)], { at: 6 * MIN, reason: r, hash: "x" })
+  ) && !shouldKeep([meta("a", 0, "restore", 1, "h")], { at: MIN, reason: "restore", hash: "h" })
+);
+ok(
+  "the sweep: the ids of live and trashed notes",
+  [...idsToSweep({ items: [{ id: "a" }], temporaryItems: [{ id: "t" }] }, true)].join() === "a,t"
+);
+ok(
+  "no sweep after a failed notes read, nor from an empty store (every version would look orphaned)",
+  idsToSweep({ items: [{ id: "a" }], temporaryItems: [] }, false) === null &&
+    idsToSweep({ items: [], temporaryItems: [] }, true) === null
 );
 ok(
   "the reason's own newest counts",

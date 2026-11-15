@@ -21,6 +21,11 @@ const TAG = /(^|\s)#(\p{L}[\p{L}\p{N}_-]{0,39})(?![\p{L}\p{N}_-])/gu;
 /** A colour, not a tag: exactly 3, 6 or 8 hexadecimal digits. */
 const HEX_COLOUR = /^(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
+/** Whether a word (without its "#") can be a tag: what isn't (`123`, a colour) is searched as text. */
+export function canBeTag(word: string): boolean {
+  return /^\p{L}[\p{L}\p{N}_-]{0,39}$/u.test(word) && !HEX_COLOUR.test(word);
+}
+
 /** The tags in a text, distinct by key, in the order they appear. */
 export function tagsIn(text: string): Tag[] {
   const seen = new Set<string>();

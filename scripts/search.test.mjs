@@ -344,6 +344,19 @@ ok(
   "a protected note's tags come from its title only",
   find(tagged, "#segreto").here.length === 0 && ids(find(tagged, "#conti").here) === "p"
 );
+ok(
+  "a # word that can't be a tag is ordinary text: #123, a colour",
+  (() => {
+    const notes = [text("1", "t", "<div>ticket #123 done</div>"), text("2", "t", "<div>color #FFF on dark</div>")];
+    const a = find(notes, "#123");
+    const b = find(notes, "#fff");
+    return ids(a.here) === "1" && a.here[0].line.text.includes("#123") && ids(b.here) === "2" && a.tags.length === 0;
+  })()
+);
+ok(
+  "a # word shaped like a tag still looks at tags only: #include finds no code note",
+  find([code("c", "x", [["main.c", "#include <stdio.h>"]])], "#include").here.length === 0
+);
 // a result's line is worked out when it is shown, not for every result (a list draws a few at a time)
 {
   let reads = 0;

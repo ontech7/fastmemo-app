@@ -1,5 +1,5 @@
 import { normalizeLink } from "@/libs/links";
-import { deriveNoteTitle } from "@/utils/string";
+import { deriveNoteTitle, getTextSize } from "@/utils/string";
 
 /*
  * What a share to the app becomes (spec D.3): pure, the hook reads the payloads and makes the note. Only text, an address
@@ -59,4 +59,21 @@ export function noteFromShare(payloads: readonly SharedPayload[]): SharedNote | 
 
   if (!html.length && !images.length) return null;
   return { html: html.join(""), title: firstLine ? deriveNoteTitle(firstLine) : "", images };
+}
+
+/**
+ * A share's text kept within the note's size limit (spec D.3: what doesn't fit is left out, with the usual message): cut
+ * at the end of the last line that fits. `limit` null: no limit.
+ */
+export function fitShare(html: string, limit: number | null): { html: string; cut: boolean } {
+  if (limit === null || getTextSize(html) <= limit) return { html, cut: false };
+  let kept = "";
+  let size = 0;
+  for (const line of html.split(/(?<=<\/div>)/)) {
+    const next = getTextSize(line);
+    if (size + next > limit) break;
+    kept += line;
+    size += next;
+  }
+  return { html: kept, cut: true };
 }

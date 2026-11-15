@@ -20,7 +20,8 @@ export function printCss(): string {
 @media print {
   @page { margin: 18mm 16mm; }
   html, body { background: #fff !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
-  body > *:not(#${PRINT_ID}) { display: none !important; }
+  /* Only while a note is laid out: once its copy is gone, the browser's own print shows the page again. */
+  body:has(> #${PRINT_ID}) > *:not(#${PRINT_ID}) { display: none !important; }
   #${PRINT_ID} {
     display: block; color: #111; background: #fff; font-family: ${FONT}; font-size: 12pt; line-height: 1.5;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;

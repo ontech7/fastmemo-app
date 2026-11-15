@@ -195,7 +195,8 @@ src/
     desktopCommands.ts # Desktop shortcuts + macOS menu commands: press on-screen controls (SHORTCUT_TARGET), web only;
                        #   the zoom commands (ADR-046)
     desktopList.ts     # Desktop: the home list's keyboard mark and selection clicks (Ctrl/Cmd, Shift), the card's right click;
-                       #   .ts no-op. listCursor.ts: its pure steps (stepCursor, rangeBetween; scripts/utils.test.mjs)
+                       #   the mark lifted above the bars over the list's bottom (scripts/desktop-page.test.mjs, Chrome);
+                       #   .ts no-op. listCursor.ts: its pure steps (stepCursor, rangeBetween, menuTargets; utils.test.mjs)
     desktopZoom.ts     # Desktop: the window's zoom (setZoom), kept in settings.desktopZoom, applied before the window shows;
                        #   .ts no-op. zoomSteps.ts: ZOOM_STEPS, nextZoom, zoomKeyOf (pure)
     print.ts           # Print or save as PDF (ADR-046): .web.ts lays the note out in #fm-print and opens the system's dialog
@@ -251,7 +252,8 @@ src/
       scrub.ts         # The trail's allow-list (beforeBreadcrumb), routePattern, hostKind, scrubEvent, isTransientNetworkError
                        #   (scripts/diagnostics.test.mjs)
     reloadApp.ts       # Reopens the app (expo-updates reload, DevSettings fallback); .web.ts: a page reload
-    reducePhoto.ts     # A picture as it goes into a note or a report: 1600 px long side, JPEG 0.6, base64 (LL-083, LL-088)
+    reducePhoto.ts     # A picture as it goes into a note or a report: 1600 px long side, JPEG 0.6, base64 (LL-083, LL-088);
+                       #   .web.ts: drawn on a white canvas (a transparent picture pasted on the desktop came out black)
     kanbanOps.ts       # moveCard: returns the board unchanged when the move can't complete (LL-078, scripts/kanban.test.mjs)
     reorderDrop.ts     # Where a dragged item lands (boards: N containers; lists, categories: one), from the rectangles
                        #   measured at lift (without it) and the scroll since: findDrop, withoutItem, isOwnPlace,

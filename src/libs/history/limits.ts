@@ -71,11 +71,29 @@ export function withBody(note: Note, body: VersionBody): Note | null {
   return next as unknown as Note;
 }
 
+/** Reasons the person chose: never held back by the 10 minutes (only an identical newest skips them). */
+const PERSON_ASKED: ReadonlySet<VersionReason> = new Set(["restore", "replace", "cleanup"]);
+
+/**
+ * The ids whose versions the start-up sweep keeps, or null for no sweep: after a failed notes read, or with no note at
+ * all, every version would look orphaned and the whole history would go (NEVER 17: doubt keeps).
+ */
+export function idsToSweep(
+  notes: { items: readonly { id: string }[]; temporaryItems: readonly { id: string }[] },
+  notesRead: boolean
+): Set<string> | null {
+  if (!notesRead) return null;
+  const ids = new Set([...notes.items, ...notes.temporaryItems].map((note) => note.id));
+  return ids.size ? ids : null;
+}
+
 /** `kept`: the note's versions, newest first. */
 export function shouldKeep(kept: readonly VersionMeta[], next: { at: number; reason: VersionReason; hash: string }): boolean {
   const newest = kept[0];
   if (!newest) return true;
   if (newest.hash === next.hash) return false;
+  // what the person asked for keeps the text it replaces every time: a restore can't be undone in the editor
+  if (PERSON_ASKED.has(next.reason)) return true;
   // a stretch of editing waits for the newest of any reason; every other reason only for its own
   const last = next.reason === "edit" ? newest : kept.find((v) => v.reason === next.reason);
   return !last || next.at - last.at >= BURST_MS;

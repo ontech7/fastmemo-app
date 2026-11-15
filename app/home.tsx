@@ -27,7 +27,7 @@ import { useReminderSyncQuestion } from "@/hooks/useReminderAsk";
 import { useVaultPrompt } from "@/hooks/useVaultPrompt";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import { setListHost } from "@/libs/desktopList";
-import { rangeBetween } from "@/libs/listCursor";
+import { menuTargets, rangeBetween } from "@/libs/listCursor";
 import { storeUnlockedNote } from "@/libs/registry";
 import { setFindOnOpen } from "@/libs/search/findOnOpen";
 import { addTrail } from "@/libs/diagnostics";
@@ -60,6 +60,7 @@ import {
   setTourStep,
 } from "@/slicers/settingsSlice";
 import type { Category, Note, RootState } from "@/types";
+import { notesLoaded } from "@/slicers/store";
 import { duplicateNote } from "@/slicers/thunks/duplicateNote";
 import type { AppDispatch } from "@/slicers/store";
 import { toast } from "@/utils/toast";
@@ -109,7 +110,7 @@ export default function HomeScreen() {
   const store = useStore();
 
   // After the first draw: the versions of a note deleted for good go with it, and the history is swept once (spec B.9).
-  useEffect(() => startHistory(store as unknown as HistoryStore), [store]);
+  useEffect(() => startHistory(store as unknown as HistoryStore, notesLoaded), [store]);
   // After the first draw too: the phone's reminders (spec D.5); nothing on the web and the desktop.
   useEffect(() => startReminders(store as Store<RootState>), [store]);
   useEffect(() => startWidget(store as Store<RootState>), [store]);
@@ -319,9 +320,8 @@ export default function HomeScreen() {
   const menuRow = menu ? rows.find((row) => row.kind === "note" && row.note.id === menu.id) : undefined;
   const menuNote = menuRow?.kind === "note" ? menuRow.note : null;
   const menuKey = menuNote ? `${menuNote.id}|${menuNote.locked}` : "";
-  // A right click on a note of a selection of several acts on the selection; on any other note, on that note alone.
-  const menuOnSelection = !!menuNote && selectedNotes.length > 1 && selectedNotes.includes(menuKey);
-  const menuIds = menuOnSelection ? selectedNotes : [menuKey];
+  // A right click on a selected note acts on the selection; on any other note, on that note alone.
+  const { ids: menuIds, onSelection: menuOnSelection } = menuTargets(selectedNotes, menuNote ? menuKey : "");
   const menuAfter = menuOnSelection ? endSelection : () => {};
 
   // Open: what a click on the card does.

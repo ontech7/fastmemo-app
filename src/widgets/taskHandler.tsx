@@ -1,3 +1,6 @@
+// With the app closed only this task runs (no root layout): the app's i18n is set up here, or a widget added before the
+// app ever ran gets no labels.
+import "@/libs/i18n";
 import { requestWidgetUpdateById } from "react-native-android-widget";
 
 import { readWidgetState } from "@/libs/widget";

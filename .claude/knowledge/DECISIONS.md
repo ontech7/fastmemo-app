@@ -2052,7 +2052,8 @@ system.
   holds a word, cut around it, words marked, "+N" for the others); a card outside a search never has it.
 - **Tags are words** (`libs/search/tags.ts`): `#`, a letter, up to 40 letters, digits, `_`, `-`, at a line's start or after a
   space; not a colour (3, 6, 8 hex digits), not in code, not in a protected note's content. Nothing is stored. `#` alone lists
-  them by use; `#la` narrows and shows the notes that hold one; the word without `#` finds them too.
+  them by use; `#la` narrows and shows the notes that hold one; the word without `#` finds them too. A `#` word that can't
+  be a tag (`#123`, `#fff`) is searched as ordinary text (`canBeTag`); one that can (`#include`) looks at tags only.
 - **Opening a result** hands the word to the note's find bar through a slot in memory (`libs/search/findOnOpen.ts`), never
   the route (a route can end up in an error report). The keyboard stays down.
 - The trail gets `search` once each time the field goes from empty to not empty; never the text.
@@ -2150,7 +2151,9 @@ change (`merge.ts`), and a note edited down to nothing was deleted for good (LL-
 
   Not kept: flag and category changes, a backup import.
 - **The 10-minute rule, per reason**: while the newest version kept for a reason is under 10 minutes old, another for that
-  reason isn't stored ("edit" waits for the newest of any reason). A version equal to the newest isn't stored.
+  reason isn't stored ("edit" waits for the newest of any reason). A version equal to the newest isn't stored. What the
+  person asks for (restore, replace all, delete completed) is never held back: a second restore within 10 minutes would
+  otherwise lose the text typed since the first (final review; a change of the spec's B.9 rule).
 - **Limits** (`libs/history/limits.ts`, pure, `scripts/history.test.mjs`): 20 per note, 5 MB per note, 200 MB in all, the
   oldest first.
 - **A store of its own**: on a device, files in `fastmemo-history/` next to the notes' folder; on the web and desktop, the
@@ -2159,7 +2162,8 @@ change (`merge.ts`), and a note edited down to nothing was deleted for good (LL-
   never written back (LL-039). Never synced, never in a backup, never reachable by an agent; not encrypted, like the notes on
   the device. Writes run when idle (`runWhenIdle`), never on the typing path.
 - **When it goes**: with the note when it is deleted for good (`purged`), all of it with "wipe data", and a sweep once per start
-  (5 s after) of versions whose note is gone. A note in the trash keeps its history.
+  (5 s after) of versions whose note is gone, skipped after a failed notes read or with no note at all (`idsToSweep`:
+  every version would look orphaned). A note in the trash keeps its history.
 - **An emptied note** that existed goes to the trash with its last saved content (and its "edit" version), with a toast; a new
   note left empty is still dropped.
 - **The screens**: History (`app/notes/history.tsx`, from the note's menu), a version in the type's own editor read only with
@@ -2322,6 +2326,8 @@ upstream). Ctrl/Cmd with `+`, `-`, `0` and `P` were swallowed, and a report from
   `print_window` command (`src-tauri/src/system.rs`, `WebviewWindow::print`), in a browser `window.print()`. Its "Save as
   PDF" writes text. A frame is never printed (the Mac prints it blank). The copy is replaced at the next print and removed
   when the note's editor leaves (`setPrintable(null)`), not when the dialog closes: the engines tell that differently.
+  The rule that hides the page in print applies only while the copy is there (`body:has(> #fm-print)`), so the browser's
+  own print still prints the page once the note is left.
 - **Where:** the export dialog's PDF button reads "Print or save as PDF" on the web and the desktop (`canPrint`); **Ctrl/Cmd
   + P** prints the text note on screen (`printCurrent`, set by `NoteTextEditor`), elsewhere nothing. The phone keeps
   `expo-print` (already text).

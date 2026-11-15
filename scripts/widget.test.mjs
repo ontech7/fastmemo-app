@@ -332,6 +332,9 @@ console.log("\nwhat the app writes for the widgets");
       ),
       // the widgets themselves draw with the app's styles (react-native): a registry the test fills
       stub(/widgets\/registry$/, "export const WIDGETS = {};"),
+      // the phone in Italian; react-i18next's hook-up is the app's, not the widget's
+      stub(/^expo-localization$/, "export const getLocales = () => [{ languageCode: 'it' }];"),
+      stub(/^react-i18next$/, "export const initReactI18next = { type: '3rdParty', init() {} };"),
       stub(
         /^react-native-android-widget$/,
         "export const requestWidgetUpdate = async ({ widgetName, renderWidget }) => { (globalThis.__drawn ??= []).push([widgetName, renderWidget()]); };" +
@@ -401,6 +404,19 @@ console.log("\nwhat the app writes for the widgets");
   await widgetTask(event("WIDGET_CLICK"));
   await widgetTask(event("WIDGET_UPDATE", "Unknown"));
   ok("a removed widget, a click, an unknown widget: nothing drawn", globalThis.__drawnById.length === count);
+
+  // Placed before the app ever reached the home (a fresh install, cleared data): no state stored, and nothing but the
+  // background task has run, so the labels come from the phone's language through the app's own i18n.
+  globalThis.__kv.clear();
+  await widgetTask(event("WIDGET_ADDED"));
+  const first = globalThis.__drawnById.at(-1)?.[2];
+  ok(
+    "added before the app ever ran: its labels in the phone's language",
+    first?.featured === null &&
+      first.labels.newList === "Nuova lista" &&
+      Object.values(first.labels).every((v) => typeof v === "string" && v),
+    JSON.stringify(first?.labels)
+  );
 }
 
 console.log("\nwhat the widgets draw");

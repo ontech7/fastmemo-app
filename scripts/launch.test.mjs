@@ -17,7 +17,7 @@ await build({
       export { parseLaunch, launchUrl } from "@/libs/launch/parse";
       export { planLaunch } from "@/libs/launch/plan";
       export { setPendingLaunch, takePendingLaunch, onPendingLaunch } from "@/libs/launch/pending";
-      export { noteFromShare } from "@/libs/launch/share";
+      export { noteFromShare, fitShare } from "@/libs/launch/share";
       export { deriveNoteTitle } from "@/utils/string";
       export { requestLaunch, setHomeShown } from "@/libs/launch";
     `,
@@ -54,6 +54,7 @@ const {
   takePendingLaunch,
   onPendingLaunch,
   noteFromShare,
+  fitShare,
   deriveNoteTitle,
   requestLaunch,
   setHomeShown,
@@ -192,6 +193,18 @@ ok("an id that isn't a live note", planLaunch({ kind: "note", id: "gone" }, ctx(
 ok("a share", planLaunch({ kind: "share" }, ctx()).do === "share");
 
 console.log("\nwhat a share becomes");
+{
+  const two = "<div>prima</div><div>seconda è</div>";
+  const first = new TextEncoder().encode("<div>prima</div>").length;
+  ok("text within the note's limit, or no limit: whole", fitShare(two, null).html === two && !fitShare(two, 1e6).cut);
+  ok(
+    "text over the limit: cut at a line's end, said",
+    fitShare(two, first).html === "<div>prima</div>" &&
+      fitShare(two, first).cut === true &&
+      fitShare(two, first + 3).html === "<div>prima</div>"
+  );
+  ok("not even its first line fits: nothing", fitShare(two, 4).html === "" && fitShare(two, 4).cut === true);
+}
 const sh = (...p) => noteFromShare(p);
 ok(
   "text becomes paragraphs, escaped",

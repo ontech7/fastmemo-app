@@ -54,6 +54,36 @@ export function setCursor(noteId: string | null): void {
   emit();
 }
 
+/** The nearest ancestor that scrolls. */
+function scrollParent(node: HTMLElement): HTMLElement | null {
+  for (let at = node.parentElement; at; at = at.parentElement) {
+    const { overflowY } = getComputedStyle(at);
+    if ((overflowY === "auto" || overflowY === "scroll") && at.scrollHeight > at.clientHeight) return at;
+  }
+  return null;
+}
+
+/** Room left between the card and what covers it. */
+const CLEAR_GAP = 8;
+
+/**
+ * The card lifted above what lies over the list's bottom (the selection bar, the floating buttons): "nearest" puts it at
+ * the scroll area's edge, under them, where Enter's press can't reach it.
+ */
+function clearOverlays(card: HTMLElement) {
+  const list = scrollParent(card);
+  if (!list) return;
+  for (let tries = 0; tries < 3; tries++) {
+    const rect = card.getBoundingClientRect();
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, Math.min(rect.bottom - 1, innerHeight - 1));
+    if (!hit || card.contains(hit)) return;
+    const coverTop = hit.getBoundingClientRect().top;
+    // Not over its lower part, or over the whole list (a dialog): nothing to lift it above.
+    if (coverTop >= rect.bottom || coverTop <= list.getBoundingClientRect().top) return;
+    list.scrollTop += rect.bottom - coverTop + CLEAR_GAP;
+  }
+}
+
 /** The marked card, once drawn, scrolled into view when it isn't whole on screen; a note not drawn yet, by the list. */
 function revealCursor() {
   const id = cursor;
@@ -61,8 +91,12 @@ function revealCursor() {
   requestAnimationFrame(() => {
     if (cursor !== id) return;
     const card = document.querySelector<HTMLElement>(`[data-testid="${SHORTCUT_TARGET.cursorNote}"]`);
-    if (card) card.scrollIntoView({ block: "nearest" });
-    else host?.scrollTo(id);
+    if (!card) {
+      host?.scrollTo(id);
+      return;
+    }
+    card.scrollIntoView({ block: "nearest" });
+    clearOverlays(card);
   });
 }
 

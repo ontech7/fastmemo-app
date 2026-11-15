@@ -26,7 +26,7 @@ await build({
       export { htmlToMarkdown, wrapHtmlForPdf } from "@/utils/html";
       export { formatToPlainText } from "@/utils/string";
       export { daysAgo } from "@/utils/dateParse";
-      export { stepCursor, rangeBetween } from "@/libs/listCursor";
+      export { stepCursor, rangeBetween, menuTargets } from "@/libs/listCursor";
       export { installDropGuard } from "@/libs/dropGuard.web";
       export { ZOOM_STEPS, nextZoom, zoomKeyOf } from "@/libs/zoomSteps";
       export { printCss } from "@/libs/printCss";
@@ -319,6 +319,19 @@ console.log("\nlistCursor: the desktop list's keyboard mark (Task 25)");
   );
   ok("no anchor: the one clicked", rangeBetween(ids, null, "b").join() === "b" && rangeBetween(ids, "zz", "b").join() === "b");
   ok("an id that isn't listed: nothing", rangeBetween(ids, "a", "zz").length === 0);
+
+  const { menuTargets } = M;
+  ok(
+    "a right click on a selected note acts on the selection, one note selected too (its key then changes)",
+    menuTargets(["a|false"], "a|false").onSelection === true &&
+      menuTargets(["a|false", "b|true"], "b|true").ids.join() === "a|false,b|true"
+  );
+  ok(
+    "a right click on a note outside the selection, or with none: that note alone",
+    menuTargets(["a|false"], "b|false").onSelection === false &&
+      menuTargets(["a|false"], "b|false").ids.join() === "b|false" &&
+      menuTargets([], "b|false").ids.join() === "b|false"
+  );
 }
 
 console.log("\nfiles dropped on the app's window");
