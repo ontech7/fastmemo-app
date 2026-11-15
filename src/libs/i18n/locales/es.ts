@@ -282,6 +282,8 @@ const es = {
     },
     settings: {
       reminder: "Recordatorio",
+      widget_show: "Mostrar en el widget",
+      widget_remove: "Quitar del widget",
       open: "Abrir",
       move_to_trash: "Mover a la papelera",
       delete: "Borrar",
@@ -1500,6 +1502,13 @@ const es = {
 
   launch: {
     dictation_off: "El reconocimiento de voz está desactivado: actívalo en los ajustes",
+  },
+  widget: {
+    set: "Esta nota ya está en el widget",
+    removed: "Quitada del widget",
+    new_note: "Nueva nota…",
+    empty_title: "Ninguna nota elegida",
+    empty_text: "Abre una nota y elige «Mostrar en el widget»",
   },
   reminder: {
     channel: "Recordatorios",

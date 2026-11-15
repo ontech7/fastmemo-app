@@ -12,6 +12,7 @@ import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
 import InformationCircleIcon from "react-native-heroicons/outline/InformationCircleIcon";
 import KeyIcon from "react-native-heroicons/outline/KeyIcon";
 import SignalSlashIcon from "react-native-heroicons/outline/SignalSlashIcon";
+import Squares2X2Icon from "react-native-heroicons/outline/Squares2X2Icon";
 import StarIcon from "react-native-heroicons/outline/StarIcon";
 import TagIcon from "react-native-heroicons/outline/TagIcon";
 import TrashIcon from "react-native-heroicons/outline/TrashIcon";
@@ -31,6 +32,7 @@ import { canPrint, printNote } from "@/libs/print";
 import { exactAlarmState } from "@/libs/reminders";
 import { withReminder } from "@/libs/reminders/plan";
 import { storeUnlockedNote } from "@/libs/registry";
+import { canFeature } from "@/libs/widget/snapshot";
 import { exportAsPdf, exportAsTextFile, htmlToMarkdown } from "@/utils/export";
 import { toast } from "@/utils/toast";
 import { webhook } from "@/utils/webhook";
@@ -40,7 +42,7 @@ import { COLOR } from "@/constants/styles";
 import { useSecret } from "@/hooks/useSecret";
 import { detachNote, reattachNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import { duplicateNote } from "@/slicers/thunks/duplicateNote";
-import { selectorWebhook_temporaryDeleteNote } from "@/slicers/settingsSlice";
+import { selectorWebhook_temporaryDeleteNote, selectorWidgetNoteId, setWidgetNote } from "@/slicers/settingsSlice";
 
 import type { AppDispatch } from "@/slicers/store";
 import type { Note, RootState, TextNote } from "@/types";
@@ -70,6 +72,9 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
+  // The widget (spec D.6): Android only, a note it may show; the choice is this phone's.
+  const widgetNoteId = useSelector(selectorWidgetNoteId);
+  const inWidget = widgetNoteId === id;
   // Android without the exact-alarm access: the sheet says the alert can be late.
   const [lateNote, setLateNote] = useState(false);
   const { ask: askToRing, dialogs: reminderDialogs } = useReminderAsk();
@@ -86,6 +91,12 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
     toast(t("reminder.set_toast"));
     askToRing();
   };
+  const toggleWidget = () => {
+    flushNote();
+    dispatch(setWidgetNote(inWidget ? null : id));
+    toast(t(inWidget ? "widget.removed" : "widget.set"));
+  };
+
   const removeReminder = () => {
     setShowReminder(false);
     setNote(withReminder(note, null));
@@ -288,6 +299,14 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
             label={t("note.settings.reminder")}
             trailing={<BellIcon size={16} color={COLOR.textSecondary} />}
             onSelect={openReminder}
+          />
+        )}
+
+        {saved && Platform.OS === "android" && canFeature(note) && (
+          <PopupMenuOption
+            label={t(inWidget ? "note.settings.widget_remove" : "note.settings.widget_show")}
+            trailing={<Squares2X2Icon size={16} color={COLOR.textSecondary} />}
+            onSelect={toggleWidget}
           />
         )}
 

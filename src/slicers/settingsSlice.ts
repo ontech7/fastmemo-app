@@ -141,6 +141,10 @@ const settingsSlice = createSlice({
     setReminderSettings: (state, action: PayloadAction<ReminderSettings>) => {
       state.reminders = { ...state.reminders, ...action.payload };
     },
+    /** The note the widget shows on this phone; null: none. */
+    setWidgetNote: (state, action: PayloadAction<string | null>) => {
+      state.widgetNoteId = action.payload;
+    },
   },
 });
 
@@ -163,6 +167,7 @@ export const {
   setTourStep,
   setDesktopZoom,
   setReminderSettings,
+  setWidgetNote,
 } = settingsSlice.actions;
 
 export const getAllSettings = (state: RootState): SettingsState => state.settings;
@@ -173,6 +178,7 @@ export const selectorIsFingerprintEnabled = (state: RootState): boolean => state
 export const selectorShowHidden = (state: RootState): boolean => state.settings.showHidden;
 export const selectorTourStep = (state: RootState): TourStep | undefined => state.settings.tour;
 export const selectorReminderSettings = (state: RootState): ReminderSettings => state.settings.reminders ?? {};
+export const selectorWidgetNoteId = (state: RootState): string | null => state.settings.widgetNoteId ?? null;
 export const selectorDesktopZoom = (state: RootState): number => state.settings.desktopZoom ?? 100;
 export const selectorReportDate = (state: RootState): string | null => state.settings.reportDate;
 /** The reports sent in the last 24 hours (a state saved before the key existed has none). */

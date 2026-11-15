@@ -281,6 +281,8 @@ const zh = {
     },
     settings: {
       reminder: "提醒",
+      widget_show: "在小组件中显示",
+      widget_remove: "从小组件中移除",
       open: "打开",
       move_to_trash: "移到回收站",
       delete: "删除",
@@ -1442,6 +1444,13 @@ const zh = {
 
   launch: {
     dictation_off: "语音识别已关闭：请在设置中开启",
+  },
+  widget: {
+    set: "此笔记已显示在小组件中",
+    removed: "已从小组件中移除",
+    new_note: "新建笔记…",
+    empty_title: "未选择笔记",
+    empty_text: "打开一条笔记并选择“在小组件中显示”",
   },
   reminder: {
     channel: "提醒",

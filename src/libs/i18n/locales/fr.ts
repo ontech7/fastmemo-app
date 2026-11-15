@@ -282,6 +282,8 @@ const fr = {
     },
     settings: {
       reminder: "Rappel",
+      widget_show: "Afficher dans le widget",
+      widget_remove: "Retirer du widget",
       open: "Ouvrir",
       move_to_trash: "Mettre à la corbeille",
       delete: "Supprimer",
@@ -1510,6 +1512,13 @@ const fr = {
 
   launch: {
     dictation_off: "La reconnaissance vocale est désactivée : activez-la dans les réglages",
+  },
+  widget: {
+    set: "Cette note est maintenant dans le widget",
+    removed: "Retirée du widget",
+    new_note: "Nouvelle note…",
+    empty_title: "Aucune note choisie",
+    empty_text: "Ouvrez une note et choisissez « Afficher dans le widget »",
   },
   reminder: {
     channel: "Rappels",

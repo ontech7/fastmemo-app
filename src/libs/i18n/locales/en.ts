@@ -282,6 +282,8 @@ const en = {
     },
     settings: {
       reminder: "Reminder",
+      widget_show: "Show in the widget",
+      widget_remove: "Remove from the widget",
       open: "Open",
       move_to_trash: "Move to trash",
       delete: "Delete",
@@ -1478,6 +1480,13 @@ const en = {
 
   launch: {
     dictation_off: "Voice recognition is off: turn it on in the settings",
+  },
+  widget: {
+    set: "This note is now in the widget",
+    removed: "Removed from the widget",
+    new_note: "New note…",
+    empty_title: "No note chosen",
+    empty_text: 'Open a note and choose "Show in the widget"',
   },
   reminder: {
     channel: "Reminders",

@@ -100,6 +100,11 @@ export interface SettingsState {
   desktopZoom?: number;
   /** The phone's reminders (spec D.5), this device only. */
   reminders?: ReminderSettings;
+  /**
+   * The note the widget shows on this phone (spec D.6). Kept when the note can't be shown for a while (protected, hidden,
+   * trashed): it comes back when it can. Removing it writes null, never deletes the key (the settings are stored twice).
+   */
+  widgetNoteId?: string | null;
 }
 
 export interface ReminderSettings {

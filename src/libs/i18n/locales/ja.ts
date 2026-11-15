@@ -282,6 +282,8 @@ const ja = {
     },
     settings: {
       reminder: "リマインダー",
+      widget_show: "ウィジェットに表示",
+      widget_remove: "ウィジェットから外す",
       open: "開く",
       move_to_trash: "ゴミ箱に移動",
       delete: "削除",
@@ -1479,6 +1481,13 @@ const ja = {
 
   launch: {
     dictation_off: "音声認識がオフです。設定でオンにしてください",
+  },
+  widget: {
+    set: "このメモをウィジェットに表示しました",
+    removed: "ウィジェットから外しました",
+    new_note: "新しいメモ…",
+    empty_title: "メモが選ばれていません",
+    empty_text: "メモを開いて「ウィジェットに表示」を選んでください",
   },
   reminder: {
     channel: "リマインダー",

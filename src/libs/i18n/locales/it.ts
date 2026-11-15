@@ -283,6 +283,8 @@ const it = {
     },
     settings: {
       reminder: "Promemoria",
+      widget_show: "Mostra nel widget",
+      widget_remove: "Togli dal widget",
       open: "Apri",
       move_to_trash: "Sposta nel cestino",
       delete: "Cancella",
@@ -1493,6 +1495,13 @@ const it = {
 
   launch: {
     dictation_off: "Il riconoscimento vocale è disattivato: attivalo nelle impostazioni",
+  },
+  widget: {
+    set: "Questa nota è ora nel widget",
+    removed: "Tolta dal widget",
+    new_note: "Nuova nota…",
+    empty_title: "Nessuna nota scelta",
+    empty_text: "Apri una nota e scegli «Mostra nel widget»",
   },
   reminder: {
     channel: "Promemoria",

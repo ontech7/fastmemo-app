@@ -282,6 +282,8 @@ const de = {
     },
     settings: {
       reminder: "Erinnerung",
+      widget_show: "Im Widget zeigen",
+      widget_remove: "Aus dem Widget entfernen",
       open: "Öffnen",
       move_to_trash: "In den Papierkorb",
       delete: "Löschen",
@@ -1512,6 +1514,13 @@ const de = {
 
   launch: {
     dictation_off: "Die Spracherkennung ist aus: Schalte sie in den Einstellungen ein",
+  },
+  widget: {
+    set: "Diese Notiz ist jetzt im Widget",
+    removed: "Aus dem Widget entfernt",
+    new_note: "Neue Notiz…",
+    empty_title: "Keine Notiz gewählt",
+    empty_text: "Öffne eine Notiz und wähle „Im Widget zeigen“",
   },
   reminder: {
     channel: "Erinnerungen",

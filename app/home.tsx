@@ -34,6 +34,7 @@ import { addTrail } from "@/libs/diagnostics";
 import Haptics from "@/libs/haptics";
 import { type AppStore as HistoryStore, startHistory } from "@/libs/history";
 import { startReminders } from "@/libs/reminders";
+import { startWidget } from "@/libs/widget";
 import type { SearchHit } from "@/libs/search/search";
 import type { TagCount } from "@/libs/search/tags";
 import { windowReady } from "@/libs/windowReady";
@@ -111,6 +112,7 @@ export default function HomeScreen() {
   useEffect(() => startHistory(store as unknown as HistoryStore), [store]);
   // After the first draw too: the phone's reminders (spec D.5); nothing on the web and the desktop.
   useEffect(() => startReminders(store as Store<RootState>), [store]);
+  useEffect(() => startWidget(store as Store<RootState>), [store]);
   const reminderQuestion = useReminderSyncQuestion();
 
   const currentCategory = useSelector(getCurrentCategory);

@@ -35,6 +35,7 @@ const {
   tagsIn,
   tagCounts,
   htmlLines,
+  htmlLineParts,
   noteDoc,
   parseQuery,
   searchNotes,
@@ -122,6 +123,29 @@ ok(
 );
 ok("markup is not text", htmlLines('<div class="segreto" title="a>b">x</div>').join("|") === "x");
 ok("code block lines", htmlLines("<pre>a = 1\nb = 2</pre>").join("|") === "a = 1|b = 2");
+{
+  // The widget's lines (spec D.6): which lines are a checkbox's, ticked or not, and which are code; same text as htmlLines.
+  const html =
+    '<h1>Titolo</h1><ol class="x-todo"><li><span contenteditable="false" class="x-todo-box"><input type="checkbox" checked=""></span>fatto</li>' +
+    '<li><span contenteditable="false" class="x-todo-box"><input type="checkbox"></span>da fare</li></ol>' +
+    "<ol><li>numerata</li></ol><pre>a = 1\n  b = 2</pre><div>dopo</div>";
+  const parts = htmlLineParts(html);
+  ok(
+    "a line's box and code, as the widget reads them",
+    JSON.stringify(parts) ===
+      JSON.stringify([
+        { text: "Titolo" },
+        { text: "fatto", box: "done" },
+        { text: "da fare", box: "empty" },
+        { text: "numerata" },
+        { text: "a = 1", mono: true },
+        { text: "b = 2", mono: true },
+        { text: "dopo" },
+      ]),
+    JSON.stringify(parts)
+  );
+  ok("the same lines as htmlLines", parts.map((part) => part.text).join("|") === htmlLines(html).join("|"));
+}
 ok("entities", htmlLines("<div>&#233;t&#xE9; &lt;b&gt;</div>")[0] === "été <b>");
 ok(
   "a checkbox line gives its text",

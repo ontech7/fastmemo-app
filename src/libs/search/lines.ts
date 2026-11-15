@@ -85,22 +85,46 @@ function entityAt(html: string, at: number): { text: string; length: number } | 
   return named === undefined ? null : { text: named, length: end - at + 1 };
 }
 
+/** A text note's line with what the widget draws of it (spec D.6): a checkbox line's box, a code block's line. */
+export interface HtmlLine {
+  text: string;
+  box?: "empty" | "done";
+  mono?: boolean;
+}
+
 /**
  * A text note's lines as they read: no markup, entities decoded, pictures skipped, empty lines dropped. One pass with no
  * regular expression over the whole text: a 300 KB picture inside a tag is stepped over, never copied.
  */
 export function htmlLines(html: string): string[] {
-  const lines: string[] = [];
+  return htmlLineParts(html).map((line) => line.text);
+}
+
+/**
+ * `htmlLines` with each line's kind: an item of a checkbox list (`ol.x-todo`, the editor library's) has its box, ticked
+ * when its `input` has `checked`; a line of a code block (`pre`) is `mono`.
+ */
+export function htmlLineParts(html: string): HtmlLine[] {
+  const lines: HtmlLine[] = [];
   let line = "";
   let insidePre = 0;
+  /** The lists open around the text: true for a checkbox list. */
+  const lists: boolean[] = [];
+  let box: HtmlLine["box"];
   const endLine = () => {
     // the editor's zero-width space after inline code isn't a character of the line
     const clean = line
       .replace(/\u200b/g, "")
       .replace(/\s+/g, " ")
       .trim();
-    if (clean) lines.push(clean);
+    if (clean) {
+      const part: HtmlLine = { text: clean };
+      if (box) part.box = box;
+      if (insidePre) part.mono = true;
+      lines.push(part);
+    }
     line = "";
+    box = undefined;
   };
 
   let i = 0;
@@ -137,6 +161,14 @@ export function htmlLines(html: string): string[] {
       if (!closing && SKIPPED_TAGS.has(name)) after = closingTagEnd(html, name, after);
       if (BLOCK_TAGS.has(name) || BREAK_TAGS.has(name)) endLine();
       if (name === "pre") insidePre = closing ? Math.max(0, insidePre - 1) : insidePre + 1;
+      if (name === "ol" || name === "ul") {
+        if (closing) lists.pop();
+        else lists.push(name === "ol" && /\bclass\s*=\s*["'][^"']*\bx-todo\b/i.test(html.slice(nameEnd, after)));
+      } else if (!closing && name === "li" && lists[lists.length - 1]) {
+        box = "empty";
+      } else if (!closing && name === "input" && box && /\bchecked\b/i.test(html.slice(nameEnd, after))) {
+        box = "done";
+      }
       i = textStart = after;
       continue;
     }
