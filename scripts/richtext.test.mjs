@@ -181,6 +181,9 @@ export async function runCases(driver, page, url) {
     else failures.push(`${name}: ${detail}`);
   };
   const clean = (html) => html.replace(/ style=""/g, "");
+  // The note as the app keeps it: without the zero-width space WebKit's caret needs after a new checkbox (NoteTextEditor
+  // drops it) and without the <br> WebKit leaves after text it typed into an empty line (it shows nothing there).
+  const saved = (html) => html.replace(/\u200b/g, "").replace(/([^>])<br><\/(li|div)>/g, "$1</$2>");
 
   // 1. Every line-type button, in every kind of line, with every kind of selection: pressed, pressed again, undone.
   const A = "alpha one",
@@ -1015,7 +1018,7 @@ export async function runCases(driver, page, url) {
     const sanitized = (html) => evaluate(`window.__fmSanitize(${JSON.stringify(html)})`);
     const three = `<div>${A}</div><div>${B}</div><div>${G}</div>`;
     const CHECKS = CONTEXTS.checks;
-    const html = (s) => clean(s.html);
+    const html = (s) => saved(clean(s.html));
     const CASES = [
       {
         name: "text to checkbox",
@@ -1938,7 +1941,7 @@ export async function runCases(driver, page, url) {
       await type("x");
       check(
         `${how} on an empty line under another: the caret stays on it`,
-        (await state()).html === expected,
+        saved((await state()).html) === expected,
         (await state()).html
       );
     }
@@ -1947,7 +1950,7 @@ export async function runCases(driver, page, url) {
       await type(marker);
       await type(" ");
       await type("x");
-      const html = (await state()).html;
+      const html = saved((await state()).html);
       check(`"${marker} " at the start of a text line: ${expected}`, html === expected, html);
       const clean = await evaluate(`window.__fmSanitize(${JSON.stringify(html)})`);
       check(`"${marker} ": the sanitizer keeps it`, clean === html, clean);
@@ -1983,7 +1986,7 @@ export async function runCases(driver, page, url) {
         `(() => { window.setTimeout = window.__setTimeout; const held = window.__held; window.__held = []; held.forEach((f) => f()); })()`
       );
       await sleep(90);
-      const html = (await state()).html;
+      const html = saved((await state()).html);
       check(`"${marker} " first in an empty note, pell's line wrap late: ${expected}`, html === expected, html);
     }
 
@@ -2025,9 +2028,16 @@ export async function runCases(driver, page, url) {
         await type(" https://b.it ");
       }
       const got = JSON.parse(await links());
+      // WebKit types at a link's end outside it (Chrome inside): there the address is text of the line, and a link of
+      // its own is right, as long as none goes inside the other
+      const outside = typed
+        ? false
+        : await evaluate(
+            `!document.querySelector(".pell-content a a") && document.querySelector(".pell-content a").textContent === "see"`
+          );
       check(
         `no link made ${name}`,
-        got.every((l) => l[0] !== "https://example.com" && l[0] !== "https://" && l[0] !== "https://b.it"),
+        got.every((l) => l[0] !== "https://example.com" && l[0] !== "https://" && (l[0] !== "https://b.it" || outside)),
         JSON.stringify(got)
       );
     }

@@ -255,7 +255,8 @@ export const RICH_TEXT_SCRIPT = String.raw`
   var textOffset = function (node, offset) {
     var r = $.createRange();
     r.selectNodeContents(content());
-    r.setEnd(node, offset);
+    // WebKit can keep a selection past the end of what an undo took away: counted as the node's end
+    r.setEnd(node, Math.min(offset, node.nodeType === 3 ? node.data.length : node.childNodes.length));
     return r.toString().replace(/\n/g, "").length;
   };
   // Where in text its count-th character that isn't a "\n" ends.
@@ -387,6 +388,23 @@ export const RICH_TEXT_SCRIPT = String.raw`
     refreshToolbar();
     return true;
   };
+  // The selection's start as a caret that exists: WebKit can leave it past the end of a line the undo emptied
+  // ("<div><br></div>" at offset 2), where a range made from it throws.
+  var caretRange = function (range) {
+    var n = range.startContainer, at = range.startOffset;
+    if (!content().contains(n)) { n = content(); at = 0; }
+    var length = n.nodeType === 3 ? n.data.length : n.childNodes.length;
+    at = Math.min(at, length);
+    // between the note's lines: in the line there, so an empty one takes the text in place of staying above it
+    if (n === content() && length) {
+      n = content().childNodes[Math.min(at, length - 1)];
+      at = at < length ? 0 : n.lastChild && n.lastChild.nodeName === "BR" ? n.childNodes.length - 1 : n.childNodes.length;
+    }
+    var r = $.createRange();
+    r.setStart(n, at);
+    r.collapse(true);
+    return r;
+  };
   var undo = function () {
     if (!content().isContentEditable) return false;
     var top = history.undo[history.undo.length - 1];
@@ -394,7 +412,7 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (!step(history.undo, history.redo)) return exec("undo");
     // A Markdown paste undone: its text goes back in as it was copied, as a change of its own (spec: paste).
     var s = selection();
-    if (plain && s.rangeCount) pageChange(function () { putBlocks(s.getRangeAt(0), plainBlocks(plain)); });
+    if (plain && s.rangeCount) pageChange(function () { putBlocks(caretRange(s.getRangeAt(0)), plainBlocks(plain)); });
     return true;
   };
   var redo = function () {
@@ -1779,7 +1797,14 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (e.isComposing || composing || !content().contains(e.target)) return;
     var space = e.inputType === "insertText" && (e.data === " " || e.data === "\u00a0");
     if (!space && e.inputType !== "insertParagraph" && e.inputType !== "insertLineBreak") return;
-    if (autoLink(space) && space) e.preventDefault();
+    if (!autoLink(space)) return;
+    if (space) e.preventDefault();
+    // WebKit breaks the line where the caret was before the link went in, so the link went down with the new line: the
+    // page breaks it itself, after the link.
+    else if (WEBKIT) {
+      e.preventDefault();
+      exec(e.inputType);
+    }
   }, true);
 
   // A note link is one character: Backspace right after it (or after it and the space its pick put after it, while
