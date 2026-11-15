@@ -2601,7 +2601,7 @@ dependency brings an androidx.startup initializer, measure it. Measure each chan
 hide another's gain.
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved  
-**Resolved:** 2026-11-15 **Resolved in:** (this commit)
+**Resolved:** 2026-11-15 **Resolved in:** 75f4387
 
 ---
 

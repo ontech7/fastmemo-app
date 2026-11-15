@@ -290,5 +290,69 @@ console.log("\nthe phone's side: started after the home, the library loaded then
   ok("stopped before the library loaded: no listener left behind", globalThis.__notif.listeners === 0);
 }
 
+console.log("\nthe clock the cards read: a reminder goes when its time passes");
+{
+  const outClock = join(os.tmpdir(), "reminders-clock.bundle.mjs");
+  await build({
+    stdin: {
+      contents: `export { nextWake, watchReminder, subscribeClock, clockNow } from "@/libs/reminders/clock";`,
+      resolveDir: src,
+      loader: "ts",
+    },
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    outfile: outClock,
+    logLevel: "error",
+    alias: { "@": src },
+    plugins: [
+      {
+        name: "stub-react-native",
+        setup(b) {
+          b.onResolve({ filter: /^react-native$/ }, () => ({ path: "rn", namespace: "stub" }));
+          b.onLoad({ filter: /.*/, namespace: "stub" }, () => ({
+            contents:
+              "export const AppState = { addEventListener: (_e, f) => { globalThis.__front = f; return { remove() {} }; } };",
+            loader: "js",
+          }));
+        },
+      },
+    ],
+  });
+  const { nextWake, watchReminder, subscribeClock, clockNow } = await import(pathToFileURL(outClock).href);
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  ok("the next wake is the nearest time still to come", nextWake([5, 30, 20], 10) === 20);
+  ok("nothing to come: no wake", nextWake([5, 10], 10) === null && nextWake([], 10) === null);
+
+  let ticks = 0;
+  const unsubscribe = subscribeClock(() => ticks++);
+  const at = Date.now() + 60;
+  const unwatch = watchReminder(at);
+  ok("before its time: the clock is before it", clockNow() < at && ticks === 0);
+  await wait(150);
+  ok("its time passed: the clock moved past it, once", clockNow() >= at && ticks === 1, `ticks ${ticks}`);
+  unwatch();
+
+  await wait(30);
+  const before = ticks;
+  const unwatchPast = watchReminder(Date.now() - 5); // shown by a card the clock hasn't seen pass
+  await wait(30);
+  ok("one already passed when shown: the clock catches up", ticks === before + 1 && clockNow() >= Date.now() - 40);
+  unwatchPast();
+
+  const t0 = ticks;
+  const unwatchGone = watchReminder(Date.now() + 40);
+  unwatchGone(); // the card went before the time
+  await wait(100);
+  ok("no card shows it any more: no wake", ticks === t0, `ticks ${ticks - t0}`);
+
+  await wait(20);
+  const t1 = ticks;
+  globalThis.__front?.("active");
+  ok("back to the front: the clock reads the time again", ticks === t1 + 1);
+  unsubscribe();
+}
+
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);

@@ -11,6 +11,8 @@ import StarIcon from "react-native-heroicons/outline/StarIcon";
 import { KEEP_DIALOG_TOUCHES } from "@/components/dialogs/keepDialogTouches";
 import { NOTE_TYPES } from "@/constants/note-types";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
+import { useReminderUpcoming } from "@/libs/reminders/clock";
+import { formatWhen } from "@/libs/reminders/presets";
 import { formatDateTime, reverseDate } from "@/utils/date";
 
 import type { Note } from "@/types";
@@ -33,7 +35,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function NoteInfoDialog({ open, note, onClose }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const { type, date, createdAt, updatedAt, category, important, locked, readOnly, hidden, local } = note;
 
@@ -45,6 +47,7 @@ export default function NoteInfoDialog({ open, note, onClose }: Props) {
   const updatedTimestamp = Number(updatedAt) || Number(new Date(reverseDate(date)));
 
   const categoryName = category.index ? t("All") : category.name;
+  const reminderSet = useReminderUpcoming(note.remindAt);
 
   const flags = [
     important && { key: "important", label: t("note.settings.important"), Icon: StarIcon },
@@ -75,6 +78,9 @@ export default function NoteInfoDialog({ open, note, onClose }: Props) {
         <InfoRow label={t("note.info.category")} value={categoryName} />
         <InfoRow label={t("note.info.created")} value={formatDateTime(createdTimestamp)} />
         <InfoRow label={t("note.info.updated")} value={formatDateTime(updatedTimestamp)} />
+        {reminderSet && (
+          <InfoRow label={t("note.settings.reminder")} value={formatWhen(note.remindAt as number, i18n.language)} />
+        )}
 
         <View style={styles.flagsBlock}>
           <Text style={styles.label}>{t("note.info.flags")}</Text>

@@ -58,7 +58,7 @@ const customStart = (remindAt: number | undefined, now: number) => {
 
 /**
  * A note's reminder (spec D.5): four quick choices with their day and time, or a day from the month and a time. With a
- * reminder already on the note, it says when and offers to remove it.
+ * reminder already on the note, it says when and offers to remove it first; a choice below replaces it.
  */
 export default function ReminderSheet({ visible, remindAt, onSet, onRemove, onClose, note }: Props) {
   const { t, i18n } = useTranslation();
@@ -110,7 +110,14 @@ export default function ReminderSheet({ visible, remindAt, onSet, onRemove, onCl
                 {t("note.settings.reminder")}
               </Text>
               {hasReminder && (
-                <Text style={styles.current}>{t("reminder.current", { when: formatWhen(remindAt as number, language) })}</Text>
+                <>
+                  <Text style={styles.current}>
+                    {t("reminder.current", { when: formatWhen(remindAt as number, language) })}
+                  </Text>
+                  <Pressable style={[styles.action, styles.removeAction]} onPress={onRemove} accessibilityRole="button">
+                    <Text style={styles.removeLabel}>{t("reminder.remove")}</Text>
+                  </Pressable>
+                </>
               )}
 
               {choices.map((choice) => (
@@ -137,12 +144,6 @@ export default function ReminderSheet({ visible, remindAt, onSet, onRemove, onCl
               </Pressable>
 
               {!!note && <Text style={styles.note}>{note}</Text>}
-
-              {hasReminder && (
-                <Pressable style={[styles.action, styles.removeAction]} onPress={onRemove} accessibilityRole="button">
-                  <Text style={styles.removeLabel}>{t("reminder.remove")}</Text>
-                </Pressable>
-              )}
             </>
           ) : (
             <>
@@ -307,7 +308,8 @@ const styles = StyleSheet.create({
   // Alone in the column: not the footer row's flex, which collapses it to nothing on Android.
   removeAction: {
     flex: 0,
-    marginTop: PADDING_MARGIN.md,
+    marginTop: PADDING_MARGIN.xs,
+    marginBottom: PADDING_MARGIN.md,
     backgroundColor: GLASS.fill,
     borderWidth: 1,
     borderColor: GLASS.border,

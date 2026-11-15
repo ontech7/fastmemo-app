@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo } from "react";
 import type { GestureResponderEvent } from "react-native";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -20,7 +20,7 @@ import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
 import { clickIntent, contextMenuProps, useIsCursor } from "@/libs/desktopList";
 import { storeUnlockedNote } from "@/libs/registry";
 import { setFindOnOpen } from "@/libs/search/findOnOpen";
-import { isUpcoming } from "@/libs/reminders/plan";
+import { useReminderUpcoming } from "@/libs/reminders/clock";
 import { formatWhen } from "@/libs/reminders/presets";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isKnownNoteType } from "@/utils/noteType";
@@ -150,9 +150,9 @@ function NoteCard({
   const fg = isImportant ? COLOR.softWhite : COLOR.darkBlue;
   const chipBg = isImportant ? "rgba(255, 255, 255, 0.18)" : "rgba(2, 14, 53, 0.09)";
   // A reminder still to come (spec D.5): a bell, and its time in place of the date line.
-  // The moment the card was drawn: a reminder that passes while it is on screen goes at its next draw.
-  const [drawnAt] = useState(() => Date.now());
-  const reminder = known && isUpcoming(content, drawnAt) ? (content.remindAt as number) : null;
+  // Judged by the app's one clock: the bell and the time go the moment the reminder passes (a recycled card too).
+  const upcoming = useReminderUpcoming(known ? content.remindAt : undefined);
+  const reminder = upcoming ? (content.remindAt as number) : null;
   const reminderColor = isImportant ? fg : COLOR.accent;
   const hasStatus = important || readOnly || locked || hidden || local || reminder !== null;
   const TypeIcon = type && type !== "text" ? NOTE_TYPES.find((nt) => nt.key === type)?.icon : undefined;

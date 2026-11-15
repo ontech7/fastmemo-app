@@ -2230,6 +2230,10 @@ already hold the notes.
 - **A time on the note**: `remindAt` (epoch ms), synced like the title and the dates, **not encrypted**; a 4.0.0 device
   carries it untouched. Set or removed as an ordinary edit (`withReminder`: removing leaves the key out). A time that has
   passed is ignored, never cleared. A duplicate has none.
+- **Where it shows**: the card (a bell and its time), the note menu's entry ("Reminder: <when>", where it is changed or
+  removed: the sheet puts the current one and "Remove reminder" first), the note's info. All judge "still to come" by one
+  clock (`libs/reminders/clock.ts`, `useReminderUpcoming`): one timer at the nearest reminder on screen, and the app coming
+  back to the front, so a reminder's marks go the moment it passes, on a recycled card too.
 - **Each phone schedules its own** (`libs/reminders/plan.ts`, pure, `scripts/reminders.test.mjs`): `planReminders` compares
   the notes that should ring (time ahead, not in the trash) with what this phone has scheduled and returns what to
   schedule and cancel; `libs/reminders/index.ts` only carries it out with `expo-notifications`, one notification per note

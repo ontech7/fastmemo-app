@@ -30,7 +30,9 @@ import { stripHtml } from "@/libs/ai";
 import { addTrail } from "@/libs/diagnostics";
 import { canPrint, printNote } from "@/libs/print";
 import { exactAlarmState } from "@/libs/reminders";
+import { useReminderUpcoming } from "@/libs/reminders/clock";
 import { withReminder } from "@/libs/reminders/plan";
+import { formatWhen } from "@/libs/reminders/presets";
 import { storeUnlockedNote } from "@/libs/registry";
 import { canFeature } from "@/libs/widget/snapshot";
 import { exportAsPdf, exportAsTextFile, htmlToMarkdown } from "@/utils/export";
@@ -55,7 +57,7 @@ interface Props {
 }
 
 export default function NoteSettingsButton({ note, setNote, flushNote }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const router = useRouter();
 
@@ -72,6 +74,8 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
+  // The menu says when a reminder is set: that's where it is changed or removed.
+  const reminderSet = useReminderUpcoming(note.remindAt);
   // The widget (spec D.6): Android only, a note it may show; the choice is this phone's.
   const widgetNoteId = useSelector(selectorWidgetNoteId);
   const inWidget = widgetNoteId === id;
@@ -296,8 +300,12 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
 
         {saved && (
           <PopupMenuOption
-            label={t("note.settings.reminder")}
-            trailing={<BellIcon size={16} color={COLOR.textSecondary} />}
+            label={
+              reminderSet
+                ? t("reminder.card", { when: formatWhen(note.remindAt as number, i18n.language) })
+                : t("note.settings.reminder")
+            }
+            trailing={<BellIcon size={16} color={reminderSet ? COLOR.accentSoft : COLOR.textSecondary} />}
             onSelect={openReminder}
           />
         )}

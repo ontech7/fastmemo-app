@@ -219,7 +219,8 @@ src/
                        #   dictate-on-open), share + receiveShare (.web: none; a share as a text note's HTML). The home runs it
                        #   with hooks/useLaunchAction. scripts/launch.test.mjs
     reminders/         # Reminders (ADR-044): plan (planReminders, withReminder, notifyStateOf; pure), presets and month (the
-                       #   sheet's times and grid; pure), index (expo-notifications, loaded at the first call: schedule/cancel,
+                       #   sheet's times and grid; pure), clock (useReminderUpcoming: one clock for "still to come", one timer
+                       #   at the nearest shown reminder), index (expo-notifications, loaded at the first call: schedule/cancel,
                        #   the tap, the permissions; started by the home), index.web.ts (sets nothing, rings nothing).
                        #   scripts/reminders.test.mjs
     widget/            # Widgets (ADR-045): snapshot (canFeature, widgetSnapshot, widgetState; pure), index (startWidget: writes
