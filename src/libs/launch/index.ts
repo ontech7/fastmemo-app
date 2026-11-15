@@ -24,22 +24,17 @@ export function setHomeShown(): void {
 /**
  * While the app runs: brings the home to the front, then leaves the action (none: only the home). In this order: the home
  * on top takes it at once, one under another screen when it is back on top; left first, the home on top would open the
- * new screen and the navigation would close it. Before the home was ever shown (the start screen, the intro) nothing:
- * going to the home would skip the intro.
+ * new screen and the navigation would close it. Before the home's first focus (the app starting, as when Android brings
+ * back a killed process in its kept task and hands the link over as a new intent, or the intro) the action only waits:
+ * the home takes it when it appears, and going to the home now would skip the intro (LL-095).
  */
 export function requestLaunch(action: LaunchAction | null): void {
-  if (!homeShown) return;
+  if (!homeShown) {
+    if (action) setPendingLaunch(action);
+    return;
+  }
   router.dismissTo("/home");
   if (action) setPendingLaunch(action);
-}
-
-/**
- * For what only runs once the home exists (a notification's tap, ADR-044): the home may not have had its first focus yet,
- * as on a cold start, when the navigation is still getting ready. Then the action waits for it; after, as `requestLaunch`.
- */
-export function openWhenHome(action: LaunchAction): void {
-  if (homeShown) requestLaunch(action);
-  else setPendingLaunch(action);
 }
 
 let dictateOnOpen = false;

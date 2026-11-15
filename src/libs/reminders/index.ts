@@ -2,7 +2,7 @@ import * as Notifications from "expo-notifications";
 import i18n, { t as translate } from "i18next";
 import { AppState } from "react-native";
 
-import { openWhenHome } from "@/libs/launch";
+import { requestLaunch } from "@/libs/launch";
 import { notifyStateOf, planReminders } from "@/libs/reminders/plan";
 import { setReminderSettings } from "@/slicers/settingsSlice";
 
@@ -104,7 +104,7 @@ const openFrom = (response: Notifications.NotificationResponse | null) => {
   if (handled.has(key)) return;
   handled.add(key);
   const noteId = (request.content.data as { noteId?: unknown })?.noteId;
-  if (typeof noteId === "string") openWhenHome({ kind: "note", id: noteId });
+  if (typeof noteId === "string") requestLaunch({ kind: "note", id: noteId });
 };
 
 /**

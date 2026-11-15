@@ -255,7 +255,9 @@ const withKotlinReflectWarmup: ConfigPlugin = (config) =>
 // Android keeps the intent that started the app: when the system closed the app in the background and it is opened again
 // (the recent apps), the activity is created again with that same intent (a share, a link, a shortcut), and React Native,
 // expo-sharing and the router read it as new: a share made a second note. An activity created again (a saved state), or
-// started again from the recent apps, starts as from the icon.
+// started again from the recent apps, starts as from the icon. And a new intent becomes the activity's own: when Android
+// brings back a killed process in its kept task, a link, a shortcut, a widget's or a notification's tap comes as a new
+// intent before React Native is up, which drops it; kept as the activity's intent, it is the starting link (LL-095).
 const RECENTS_START_PLAIN = "// FastMemo: created again or opened from the recent apps, as from the icon (app.config.ts)";
 
 const withRecentsStartPlain: ConfigPlugin = (config) =>
@@ -271,6 +273,15 @@ const withRecentsStartPlain: ConfigPlugin = (config) =>
         `${indent}    .addCategory(android.content.Intent.CATEGORY_LAUNCHER)\n` +
         `${indent}    .setPackage(packageName)\n` +
         `${indent}}\n` +
+        line
+    );
+    modConfig.modResults.contents = modConfig.modResults.contents.replace(
+      /^([ \t]*)override fun getMainComponentName\(\)/m,
+      (line, indent: string) =>
+        `${indent}override fun onNewIntent(intent: android.content.Intent) {\n` +
+        `${indent}  super.onNewIntent(intent)\n` +
+        `${indent}  setIntent(intent)\n` +
+        `${indent}}\n\n` +
         line
     );
     return modConfig;

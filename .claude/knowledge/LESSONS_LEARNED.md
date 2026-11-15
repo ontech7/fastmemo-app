@@ -2506,21 +2506,30 @@ phone after a cold start, where timers come late.
 
 ---
 
-### LL-095: A reminder's tap on a cold start opened the home, not the note
+### LL-095: A link, a shortcut or a reminder's tap while the app was starting opened the home, not what it asked
 
 **Date:** 2026-11-15  
-**Severity:** Medium (the note had to be found by hand; nothing lost)  
+**Severity:** High (every way in from outside lost its action whenever Android had killed the process but kept the task,
+the common case for an app left in the background; nothing lost, the note or list had to be found by hand)  
 **Category:** Bug  
-**What happened:** on the emulator, with the app's process gone, a reminder's tap started Fast Memo on the home. With the
-app running the same tap opened the note.  
-**Root cause:** the tap went through `requestLaunch`, which does nothing before the home's first focus (so a link can't
-skip the intro). The home starts the reminders in a `useEffect`, and expo-router's `useFocusEffect`, which marks the
-home as shown, waits for the navigation to be ready: on a cold start it ran after, and the tap was dropped.  
-**Fix:** `openWhenHome` in `libs/launch`: before the home's first focus the action waits as a pending one (the home takes
-it when it appears), after it does what `requestLaunch` does. Test: `launch.test.mjs` "before and after the home first
-appears" (red before, green after); on the emulator, the tap after `am kill` opens the note.  
-**Rule:** a hook's order in a component doesn't order its effects against a `useFocusEffect`: what depends on "the
-screen is shown" must hold until it is, not read a flag once.
+**What happened:** on the emulator, a reminder's tap with the process gone started Fast Memo on the home. Then, in the
+widget spike, a tap on the widget did the same, and so did `am start` of a plain link: with the process killed and the
+task kept, the activity is created again from its saved state and the link comes as a new intent, while the app is
+starting.  
+**Root cause:** two drops on the way. Natively, React Native's `onNewIntent` hands a link to JavaScript only once its
+context exists (`ReactHostImpl.onNewIntent`), and the activity's own intent stayed the old one, so `getInitialURL` didn't
+see it either. In JavaScript, a link that is not the starting one (`initial` false) and a notification's tap go through
+`requestLaunch`, which did nothing before the home's first focus (so a link couldn't skip the intro); on a start the
+home's focus comes late, as expo-router's `useFocusEffect` waits for the navigation to be ready.  
+**Fix:** `MainActivity.onNewIntent` calls `setIntent(intent)` (the `withRecentsStartPlain` plugin in `app.config.ts`), so
+a link that came before React Native is the starting one; and before the home's first focus `requestLaunch` keeps the
+action as the pending one and goes nowhere (the home takes it when it appears, after the intro if there is one); after,
+as before. Test: `launch.test.mjs` "before and after the home first appears" (red before, green after); on the emulator
+(red before each fix, green after): the reminder's tap after `am kill` opens the note, the widget's tap and an
+`am start` link with the task kept open the new list.  
+**Rule:** "the app is running" is not "the home is there": anything that arrives from outside before the home's first
+focus must wait for it, not be dropped; test every way in with the process killed and the task kept, not only after a
+swipe.
 
 **Tracking issue:** (not filed; captured here) **Status:** Resolved  
 **Resolved:** 2026-11-15 **Resolved in:** plan-2/new-features

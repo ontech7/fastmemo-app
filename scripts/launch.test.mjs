@@ -19,7 +19,7 @@ await build({
       export { setPendingLaunch, takePendingLaunch, onPendingLaunch } from "@/libs/launch/pending";
       export { noteFromShare } from "@/libs/launch/share";
       export { deriveNoteTitle } from "@/utils/string";
-      export { requestLaunch, setHomeShown, openWhenHome } from "@/libs/launch";
+      export { requestLaunch, setHomeShown } from "@/libs/launch";
     `,
     resolveDir: src,
     loader: "ts",
@@ -57,7 +57,6 @@ const {
   deriveNoteTitle,
   requestLaunch,
   setHomeShown,
-  openWhenHome,
 } = await import(pathToFileURL(out).href);
 
 let passed = 0;
@@ -268,17 +267,17 @@ ok("listeners hear each new action while they listen", heard === 2, heard);
 console.log("\nbefore and after the home first appears");
 takePendingLaunch();
 const routed = globalThis.__routed;
-requestLaunch({ kind: "new", type: "text" });
-ok("a link while the start screen runs does nothing", takePendingLaunch() === null && routed.length === 0, routed);
-openWhenHome({ kind: "note", id: "n1" });
+// A link, a shortcut, a widget or a notification's tap while the app is starting: on a process restarted in a kept task
+// it arrives as a new intent, before the home's first focus.
+requestLaunch({ kind: "new", type: "todo" });
 const early = takePendingLaunch();
 ok(
-  "a notification's tap before the home appears waits for it, going nowhere",
-  early?.id === "n1" && routed.length === 0,
+  "one arriving while the app starts waits for the home, going nowhere",
+  early?.kind === "new" && early.type === "todo" && routed.length === 0,
   routed
 );
 setHomeShown();
-openWhenHome({ kind: "note", id: "n2" });
+requestLaunch({ kind: "note", id: "n2" });
 ok(
   "after, it brings the home to the front and leaves the action",
   takePendingLaunch()?.id === "n2" && routed.join() === "/home",
