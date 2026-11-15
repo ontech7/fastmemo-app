@@ -83,6 +83,142 @@ const withAlternateIconIntentFilters: ConfigPlugin = (config) =>
     return modConfig;
   });
 
+// Three shortcuts on the app's icon (spec D.2): New note, New list, Dictation. Each is one of the app's launch links
+// (src/libs/launch/parse.ts, written here as literals: a config can't import the app's code), opened by package with no
+// class, because MainActivity is disabled while an alternate icon is in use. The meta-data goes on MainActivity and on
+// every alias; it wraps withAlternateIconIntentFilters, so the aliases exist when it runs. The labels are in a strings
+// file of their own, in the app's seven languages; the icons are the app's pencil, list and microphone.
+const LAUNCHER_SHORTCUTS = [
+  { id: "new_note", link: "launch/new/text", icon: "shortcut_note" },
+  { id: "new_list", link: "launch/new/todo", icon: "shortcut_list" },
+  { id: "dictation", link: "launch/dictate", icon: "shortcut_mic" },
+] as const;
+
+type ShortcutLabels = Record<(typeof LAUNCHER_SHORTCUTS)[number]["id"], [short: string, long: string]>;
+
+// "values" is English; the others are res/values-b+<lang>.
+const LAUNCHER_SHORTCUT_LABELS: Record<string, ShortcutLabels> = {
+  values: {
+    new_note: ["New note", "New note"],
+    new_list: ["New list", "New list"],
+    dictation: ["Dictation", "Dictate a note"],
+  },
+  it: {
+    new_note: ["Nuova nota", "Nuova nota"],
+    new_list: ["Lista", "Nuova lista"],
+    dictation: ["Dettatura", "Detta una nota"],
+  },
+  es: { new_note: ["Nota", "Nueva nota"], new_list: ["Lista", "Nueva lista"], dictation: ["Dictado", "Dictar una nota"] },
+  fr: { new_note: ["Note", "Nouvelle note"], new_list: ["Liste", "Nouvelle liste"], dictation: ["Dictée", "Dicter une note"] },
+  de: { new_note: ["Notiz", "Neue Notiz"], new_list: ["Liste", "Neue Liste"], dictation: ["Diktat", "Notiz diktieren"] },
+  zh: { new_note: ["新建笔记", "新建笔记"], new_list: ["列表", "新建列表"], dictation: ["听写", "听写一条笔记"] },
+  ja: {
+    new_note: ["新規ノート", "新しいノート"],
+    new_list: ["リスト", "新しいリスト"],
+    dictation: ["音声入力", "ノートを音声入力"],
+  },
+};
+
+// heroicons outline (react-native-heroicons/outline: PencilIcon, ListBulletIcon, MicrophoneIcon), 24 × 24, stroke 1.5.
+const LAUNCHER_SHORTCUT_PATHS: Record<(typeof LAUNCHER_SHORTCUTS)[number]["icon"], string> = {
+  shortcut_note:
+    "m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125",
+  shortcut_list:
+    "M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z",
+  shortcut_mic:
+    "M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z",
+};
+
+const xmlText = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/'/g, "\\'");
+
+const shortcutsXml = (pkg: string, scheme: string) =>
+  `<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+${LAUNCHER_SHORTCUTS.map(
+  ({ id, link, icon }) => `  <shortcut
+    android:shortcutId="${id}"
+    android:enabled="true"
+    android:icon="@drawable/${icon}"
+    android:shortcutShortLabel="@string/shortcut_${id}_short"
+    android:shortcutLongLabel="@string/shortcut_${id}_long">
+    <intent
+      android:action="android.intent.action.VIEW"
+      android:targetPackage="${pkg}"
+      android:data="${scheme}://${link}" />
+  </shortcut>`
+).join("\n")}
+</shortcuts>
+`;
+
+const shortcutStringsXml = (labels: ShortcutLabels) =>
+  `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+${Object.entries(labels)
+  .map(
+    ([id, [short, long]]) =>
+      `  <string name="shortcut_${id}_short">${xmlText(short)}</string>\n  <string name="shortcut_${id}_long">${xmlText(long)}</string>`
+  )
+  .join("\n")}
+</resources>
+`;
+
+// The glyph edge to edge: the launcher already shrinks the icon into its circle.
+const shortcutIconXml = (pathData: string) =>
+  `<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+  android:width="48dp"
+  android:height="48dp"
+  android:viewportWidth="24"
+  android:viewportHeight="24">
+  <path
+    android:pathData="${pathData}"
+    android:fillColor="#00000000"
+    android:strokeColor="#4F6BFF"
+    android:strokeWidth="1.5"
+    android:strokeLineCap="round"
+    android:strokeLineJoin="round" />
+</vector>
+`;
+
+const withLauncherShortcuts: ConfigPlugin = (config) =>
+  withDangerousMod(
+    withAndroidManifest(config, (modConfig) => {
+      const application = modConfig.modResults.manifest.application?.[0] as
+        | (AndroidConfig.Manifest.ManifestApplication & { "activity-alias"?: AndroidConfig.Manifest.ManifestActivity[] })
+        | undefined;
+      const activities = [
+        ...(application?.activity ?? []).filter((activity) => activity.$["android:name"] === ".MainActivity"),
+        ...(application?.["activity-alias"] ?? []).filter(
+          (alias) => alias.$["android:targetActivity" as keyof typeof alias.$] === ".MainActivity"
+        ),
+      ];
+      for (const activity of activities) {
+        const metaData = (activity["meta-data"] ?? []).filter((item) => item.$["android:name"] !== "android.app.shortcuts");
+        metaData.push({ $: { "android:name": "android.app.shortcuts", "android:resource": "@xml/shortcuts" } });
+        activity["meta-data"] = metaData;
+      }
+      return modConfig;
+    }),
+    [
+      "android",
+      (modConfig) => {
+        const res = path.join(modConfig.modRequest.platformProjectRoot, "app", "src", "main", "res");
+        const write = (dir: string, name: string, contents: string) => {
+          fs.mkdirSync(path.join(res, dir), { recursive: true });
+          fs.writeFileSync(path.join(res, dir, name), contents);
+        };
+        write("xml", "shortcuts.xml", shortcutsXml(appBundle, appSlug.toLowerCase()));
+        for (const [lang, labels] of Object.entries(LAUNCHER_SHORTCUT_LABELS)) {
+          write(lang === "values" ? "values" : `values-b+${lang}`, "shortcuts.xml", shortcutStringsXml(labels));
+        }
+        for (const [name, pathData] of Object.entries(LAUNCHER_SHORTCUT_PATHS)) {
+          write("drawable", `${name}.xml`, shortcutIconXml(pathData));
+        }
+        return modConfig;
+      },
+    ]
+  );
+
 // At launch the stored notes are read with expo-file-system, and expo-modules builds the options object of that first call
 // through kotlin-reflect, whose first use loads its metadata: the rest of the notes and every other Expo call wait behind it
 // (~120 ms on the emulator, more on an older phone). Started on a thread of its own as the app starts, it runs while the JS
@@ -148,95 +284,97 @@ const alternateAppIcons = ["Halloween", "Christmas", "Easter", "Summer"].map((na
 const EAS_PROJECT_ID = "44c5f162-d9f8-40db-ae28-269fe48982ca";
 
 export default ({ config }: ConfigContext): ExpoConfig =>
-  withAlternateIconIntentFilters(
-    withKotlinReflectWarmup(
-      withCleartextTraffic(
-        withLlamaProguardRules({
-          ...config,
-          owner: "dontrok1",
-          name: appName,
-          slug: appSlug,
-          version: "4.0.0",
-          runtimeVersion: { policy: "fingerprint" },
-          updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
-          orientation: "portrait",
-          icon: appIcon,
-          // Lowercase: EAS Update refuses a manifest with "FastMemoApp" (LL-076). Builds since 4.1.0 have it too.
-          scheme: appSlug.toLowerCase(),
-          userInterfaceStyle: "automatic",
-          backgroundColor,
-          ios: {
-            supportsTablet: true,
-            bundleIdentifier: appBundle,
-          },
-          android: {
-            adaptiveIcon: {
-              foregroundImage: adaptiveIcon,
-              backgroundImage: "./assets/images/adaptive-icon-bg.png",
-              backgroundColor,
+  withLauncherShortcuts(
+    withAlternateIconIntentFilters(
+      withKotlinReflectWarmup(
+        withCleartextTraffic(
+          withLlamaProguardRules({
+            ...config,
+            owner: "dontrok1",
+            name: appName,
+            slug: appSlug,
+            version: "4.0.0",
+            runtimeVersion: { policy: "fingerprint" },
+            updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
+            orientation: "portrait",
+            icon: appIcon,
+            // Lowercase: EAS Update refuses a manifest with "FastMemoApp" (LL-076). Builds since 4.1.0 have it too.
+            scheme: appSlug.toLowerCase(),
+            userInterfaceStyle: "automatic",
+            backgroundColor,
+            ios: {
+              supportsTablet: true,
+              bundleIdentifier: appBundle,
             },
-            package: appBundle,
-            blockedPermissions: [
-              "android.permission.READ_MEDIA_IMAGES",
-              "android.permission.READ_MEDIA_VIDEO",
-              "android.permission.READ_MEDIA_AUDIO",
-            ],
-          },
-          web: {
-            bundler: "metro",
-            output: "single",
-            favicon,
-          },
-          plugins: [
-            // Every screen in the main bundle on web, as up to SDK 57: SDK 58 loads each route's code on first visit by default,
-            // and the desktop app showed an empty screen before every screen it opened.
-            ["expo-router", { asyncRoutes: { web: false } }],
-            "expo-status-bar",
-            ["expo-font", { fonts: GEIST_FONTS }],
-            "expo-image",
-            "expo-image-picker",
-            "expo-localization",
-            "expo-secure-store",
-            "expo-sharing",
-            [
-              "expo-speech-recognition",
-              {
-                microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
-                speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
-                androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
-              },
-            ],
-            [
-              "expo-splash-screen",
-              {
-                image: "./assets/images/splash-logo.png",
-                imageWidth: 150,
+            android: {
+              adaptiveIcon: {
+                foregroundImage: adaptiveIcon,
+                backgroundImage: "./assets/images/adaptive-icon-bg.png",
                 backgroundColor,
               },
-            ],
-            // Its iOS memory entitlements are added only when EAS_BUILD_PROFILE or NODE_ENV says production, so the config
-            // (and the fingerprint) differed between EAS and this machine: OTAs would never match the build. iOS isn't shipped.
-            ["llama.rn", { enableEntitlements: false }],
-            ["expo-alternate-app-icons", alternateAppIcons],
-            [
-              "@sentry/react-native",
-              {
-                url: "https://sentry.io/",
-                note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
-                project: "fastmemo-app",
-                organization: "andrea-losavio",
-              },
-            ],
-          ],
-          experiments: {
-            typedRoutes: true,
-          },
-          extra: {
-            eas: {
-              projectId: EAS_PROJECT_ID,
+              package: appBundle,
+              blockedPermissions: [
+                "android.permission.READ_MEDIA_IMAGES",
+                "android.permission.READ_MEDIA_VIDEO",
+                "android.permission.READ_MEDIA_AUDIO",
+              ],
             },
-          },
-        })
+            web: {
+              bundler: "metro",
+              output: "single",
+              favicon,
+            },
+            plugins: [
+              // Every screen in the main bundle on web, as up to SDK 57: SDK 58 loads each route's code on first visit by default,
+              // and the desktop app showed an empty screen before every screen it opened.
+              ["expo-router", { asyncRoutes: { web: false } }],
+              "expo-status-bar",
+              ["expo-font", { fonts: GEIST_FONTS }],
+              "expo-image",
+              "expo-image-picker",
+              "expo-localization",
+              "expo-secure-store",
+              "expo-sharing",
+              [
+                "expo-speech-recognition",
+                {
+                  microphonePermission: "Allow $(PRODUCT_NAME) to use the microphone.",
+                  speechRecognitionPermission: "Allow $(PRODUCT_NAME) to use speech recognition.",
+                  androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"],
+                },
+              ],
+              [
+                "expo-splash-screen",
+                {
+                  image: "./assets/images/splash-logo.png",
+                  imageWidth: 150,
+                  backgroundColor,
+                },
+              ],
+              // Its iOS memory entitlements are added only when EAS_BUILD_PROFILE or NODE_ENV says production, so the config
+              // (and the fingerprint) differed between EAS and this machine: OTAs would never match the build. iOS isn't shipped.
+              ["llama.rn", { enableEntitlements: false }],
+              ["expo-alternate-app-icons", alternateAppIcons],
+              [
+                "@sentry/react-native",
+                {
+                  url: "https://sentry.io/",
+                  note: "Use SENTRY_AUTH_TOKEN env to authenticate with Sentry.",
+                  project: "fastmemo-app",
+                  organization: "andrea-losavio",
+                },
+              ],
+            ],
+            experiments: {
+              typedRoutes: true,
+            },
+            extra: {
+              eas: {
+                projectId: EAS_PROJECT_ID,
+              },
+            },
+          })
+        )
       )
     )
   );
