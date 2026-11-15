@@ -15,12 +15,24 @@ export interface WidgetLine {
   mono?: boolean;
 }
 
+/** A board's column as the widget draws it: its first cards' first lines. */
+export interface WidgetColumn {
+  name: string;
+  /** "#rrggbb", or "" when the note's isn't one. */
+  color: string;
+  count: number;
+  cards: string[];
+}
+
 export interface WidgetSnapshot {
   noteId: string;
   type: NoteType;
   title: string;
+  /** A text note's paragraphs (whole: the widget wraps them), a list's items, code lines. A board has none. */
   lines: WidgetLine[];
-  /** Lines not shown. */
+  /** A board's first columns. */
+  columns?: WidgetColumn[];
+  /** Lines (a board: columns) not shown. */
   more: number;
 }
 
@@ -31,19 +43,28 @@ export interface WidgetState {
   links: { newText: string; newList: string; dictate: string; note: string | null; app: string };
 }
 
+/** A list's items and a code note's lines: one line each, cut. */
 export const WIDGET_LINES = 6;
 export const WIDGET_LINE_MAX = 80;
+/** A text note's paragraphs: the widget wraps them and puts "…" where its room ends. */
+export const WIDGET_TEXT_LINES = 12;
+export const WIDGET_TEXT_MAX = 400;
+export const WIDGET_COLUMNS = 4;
+export const WIDGET_CARDS = 3;
+export const WIDGET_CARD_MAX = 60;
 
 /** Whether a widget may show this note: live, not protected, not hidden, of a type this version knows. */
 export function canFeature(note: Note | undefined): note is Note {
   return !!note && note.deleteDate == null && !note.locked && !note.hidden && isKnownNoteType(note.type);
 }
 
-/** At most `WIDGET_LINE_MAX` characters (code points), "…" after a cut one. */
-const cut = (text: string): string => {
+/** At most `max` characters (code points), "…" after a cut one. */
+const cut = (text: string, max: number): string => {
   const chars = Array.from(text);
-  return chars.length > WIDGET_LINE_MAX ? chars.slice(0, WIDGET_LINE_MAX).join("") + "…" : text;
+  return chars.length > max ? chars.slice(0, max).join("") + "…" : text;
 };
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
 
 /** A plain text's lines, empty ones dropped; trimmed, or only at the end for code (its indentation is kept). */
 const plainLines = (text: unknown, keepIndent = false): string[] =>
@@ -75,15 +96,6 @@ function noteLines(note: Note): WidgetLine[] {
     }
     return lines;
   }
-  if (type === "kanban") {
-    const columns = (note as { columns?: unknown }).columns;
-    if (!Array.isArray(columns)) return [];
-    return columns.map((column) => {
-      const name = typeof column?.name === "string" ? column.name.normalize("NFC").trim() : "";
-      const count = Array.isArray(column?.items) ? column.items.length : 0;
-      return { text: name ? `${name} · ${count}` : String(count) };
-    });
-  }
   if (type === "code") {
     const tabs = (note as { tabs?: unknown }).tabs;
     if (!Array.isArray(tabs) || tabs.length === 0) return [];
@@ -94,18 +106,41 @@ function noteLines(note: Note): WidgetLine[] {
   return [];
 }
 
+/** A board's columns, each with its first cards' first lines (empty cards skipped, counted). */
+function boardColumns(note: Note): WidgetColumn[] {
+  const columns = (note as { columns?: unknown }).columns;
+  if (!Array.isArray(columns)) return [];
+  return columns.map((column) => {
+    const items: unknown[] = Array.isArray(column?.items) ? column.items : [];
+    const cards: string[] = [];
+    for (const item of items) {
+      if (cards.length === WIDGET_CARDS) break;
+      const [first] = plainLines((item as { text?: unknown })?.text);
+      if (first) cards.push(cut(first, WIDGET_CARD_MAX));
+    }
+    return {
+      name: typeof column?.name === "string" ? cut(column.name.normalize("NFC").trim(), WIDGET_CARD_MAX) : "",
+      color: typeof column?.color === "string" && HEX.test(column.color) ? column.color : "",
+      count: items.length,
+      cards,
+    };
+  });
+}
+
 /** null for a note a widget must not show. */
 export function widgetSnapshot(note: Note | undefined): WidgetSnapshot | null {
   if (!canFeature(note)) return null;
+  const type = (note.type || "text") as NoteType;
+  const head = { noteId: note.id, type, title: typeof note.title === "string" ? note.title : "" };
+  if (type === "kanban") {
+    const all = boardColumns(note);
+    return { ...head, lines: [], columns: all.slice(0, WIDGET_COLUMNS), more: Math.max(0, all.length - WIDGET_COLUMNS) };
+  }
+  const isText = type === "text";
+  const [count, max] = isText ? [WIDGET_TEXT_LINES, WIDGET_TEXT_MAX] : [WIDGET_LINES, WIDGET_LINE_MAX];
   const all = noteLines(note);
-  const lines = all.slice(0, WIDGET_LINES).map((line) => ({ ...line, text: cut(line.text) }));
-  return {
-    noteId: note.id,
-    type: (note.type || "text") as NoteType,
-    title: typeof note.title === "string" ? note.title : "",
-    lines,
-    more: all.length - lines.length,
-  };
+  const lines = all.slice(0, count).map((line) => ({ ...line, text: cut(line.text, max) }));
+  return { ...head, lines, more: all.length - lines.length };
 }
 
 /** The whole state for the widgets: the chosen note's copy (or none), the texts, the links (`launchUrl`, this build's scheme). */

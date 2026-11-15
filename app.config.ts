@@ -504,7 +504,11 @@ export default ({ config }: ConfigContext): ExpoConfig =>
                   [
                     "react-native-android-widget",
                     {
-                      fonts: ["Regular", "Medium", "SemiBold"].map((weight) => `./assets/fonts/Geist-${weight}.ttf`),
+                      // Geist, and JetBrains Mono (SIL OFL 1.1) for a code note's lines: the widget finds fonts only here.
+                      fonts: [
+                        ...["Regular", "Medium", "SemiBold"].map((weight) => `./assets/fonts/Geist-${weight}.ttf`),
+                        "./assets/fonts/JetBrainsMono-Regular.ttf",
+                      ],
                       widgets: WIDGETS.map((widget) => ({
                         ...widget,
                         label: `@string/${widgetLabelName(widget.name)}`,

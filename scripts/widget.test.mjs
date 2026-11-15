@@ -25,7 +25,18 @@ await build({
   alias: { "@": src },
 });
 
-const { widgetSnapshot, canFeature, widgetState, WIDGET_LINES, WIDGET_LINE_MAX } = await import(pathToFileURL(out).href);
+const {
+  widgetSnapshot,
+  canFeature,
+  widgetState,
+  WIDGET_LINES,
+  WIDGET_LINE_MAX,
+  WIDGET_TEXT_LINES,
+  WIDGET_TEXT_MAX,
+  WIDGET_COLUMNS,
+  WIDGET_CARDS,
+  WIDGET_CARD_MAX,
+} = await import(pathToFileURL(out).href);
 
 let passed = 0;
 let failed = 0;
@@ -76,15 +87,37 @@ ok(
   })()
 );
 ok(
-  "a long line is cut",
+  "a long list item is cut",
   (() => {
-    const line = widgetSnapshot({ ...base, type: "text", text: "<div>" + "a".repeat(200) + "</div>" }).lines[0].text;
+    const line = widgetSnapshot({ ...todo, list: [{ id: "1", text: "a".repeat(200), checked: false }] }).lines[0].text;
     return WIDGET_LINE_MAX === 80 && line.length === 81 && line.endsWith("…");
   })()
 );
 ok(
-  "a line of 80 characters is whole",
-  widgetSnapshot({ ...base, type: "text", text: "<div>" + "a".repeat(80) + "</div>" }).lines[0].text === "a".repeat(80)
+  "a list item of 80 characters is whole",
+  widgetSnapshot({ ...todo, list: [{ id: "1", text: "a".repeat(80), checked: false }] }).lines[0].text === "a".repeat(80)
+);
+ok(
+  "a text note's paragraph is whole: the widget wraps it",
+  widgetSnapshot({ ...base, type: "text", text: "<div>" + "a".repeat(300) + "</div>" }).lines[0].text === "a".repeat(300)
+);
+ok(
+  "a text note's paragraph is cut only past its own limit",
+  (() => {
+    const line = widgetSnapshot({ ...base, type: "text", text: "<div>" + "a".repeat(900) + "</div>" }).lines[0].text;
+    return WIDGET_TEXT_MAX === 400 && line.length === 401 && line.endsWith("…");
+  })()
+);
+ok(
+  "a text note keeps more paragraphs than a list keeps items",
+  (() => {
+    const s = widgetSnapshot({
+      ...base,
+      type: "text",
+      text: Array.from({ length: 15 }, (_, i) => `<div>riga ${i}</div>`).join(""),
+    });
+    return WIDGET_TEXT_LINES === 12 && s.lines.length === 12 && s.more === 3;
+  })()
 );
 ok(
   "a text note: its lines, a checkbox line with its box",
@@ -102,22 +135,71 @@ ok(
     JSON.stringify([{ text: "prima" }, { text: "x = 1", mono: true }])
 );
 ok(
-  "a board: columns and counts",
-  widgetSnapshot({
-    ...base,
-    type: "kanban",
-    columns: [
-      {
-        id: "c",
-        name: "Da fare",
-        color: "",
-        items: [
-          { id: "k", text: "x" },
-          { id: "j", text: "y" },
-        ],
-      },
-    ],
-  }).lines[0].text === "Da fare · 2"
+  "a board: its columns, each with its colour, count and first cards",
+  (() => {
+    const s = widgetSnapshot({
+      ...base,
+      type: "kanban",
+      columns: [
+        {
+          id: "c",
+          name: "Da fare",
+          color: "#799EDC",
+          items: [
+            { id: "k", text: "x\nsotto" },
+            { id: "j", text: "y" },
+          ],
+        },
+      ],
+    });
+    return (
+      JSON.stringify(s.columns) === JSON.stringify([{ name: "Da fare", color: "#799EDC", count: 2, cards: ["x", "y"] }]) &&
+      s.lines.length === 0 &&
+      s.more === 0
+    );
+  })()
+);
+ok(
+  "a board: at most 4 columns of 3 cards, a card cut at 60, the other columns counted",
+  (() => {
+    const column = (i) => ({
+      id: "c" + i,
+      name: "C" + i,
+      color: "#A7ABB9",
+      items: Array.from({ length: 5 }, (_, j) => ({ id: `${i}-${j}`, text: j === 0 ? "b".repeat(100) : "card " + j })),
+    });
+    const s = widgetSnapshot({ ...base, type: "kanban", columns: Array.from({ length: 6 }, (_, i) => column(i)) });
+    return (
+      WIDGET_COLUMNS === 4 &&
+      WIDGET_CARDS === 3 &&
+      WIDGET_CARD_MAX === 60 &&
+      s.columns.length === 4 &&
+      s.more === 2 &&
+      s.columns[0].count === 5 &&
+      s.columns[0].cards.length === 3 &&
+      s.columns[0].cards[0] === "b".repeat(60) + "…"
+    );
+  })()
+);
+ok(
+  "a board's column with no name, a colour that isn't one, empty cards skipped",
+  JSON.stringify(
+    widgetSnapshot({
+      ...base,
+      type: "kanban",
+      columns: [
+        {
+          id: "c",
+          name: "  ",
+          color: "red; x",
+          items: [
+            { id: "k", text: " " },
+            { id: "j", text: "z" },
+          ],
+        },
+      ],
+    }).columns
+  ) === JSON.stringify([{ name: "", color: "", count: 2, cards: ["z"] }])
 );
 ok(
   "a code note: the open tab, mono",
@@ -304,6 +386,76 @@ console.log("\nwhat the app writes for the widgets");
   set({ ...state, notes: { items: [{ ...state.notes.items[0], locked: false }, state.notes.items[1]] } });
   await settle();
   ok("stopped: nothing more written", globalThis.__writes === before);
+}
+
+console.log("\nwhat the widgets draw");
+{
+  // The widgets built into the tree the library hands to Android (its own buildWidgetTree), for every kind of note and
+  // size: a part it can't draw (a fragment, a component returning several) throws here as it did on the phone.
+  const outDraw = join(os.tmpdir(), "widget-draw.bundle.mjs");
+  await build({
+    stdin: {
+      contents: `export { WIDGETS } from "@/widgets/registry"; export { widgetState } from "@/libs/widget/snapshot";
+        export { buildWidgetTree } from "react-native-android-widget/lib/module/api/build-widget-tree";`,
+      resolveDir: src,
+      loader: "ts",
+    },
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    outfile: outDraw,
+    logLevel: "error",
+    alias: { "@": src },
+    jsx: "automatic",
+    loader: { ".tsx": "tsx" },
+    plugins: [
+      {
+        name: "stub-react-native",
+        setup(b) {
+          b.onResolve({ filter: /^react-native$/ }, () => ({ path: "rn", namespace: "stub" }));
+          b.onLoad({ filter: /.*/, namespace: "stub" }, () => ({
+            contents:
+              "export const Platform = { OS: 'ios', select: (o) => o.android ?? o.default }; export const NativeModules = {}; export const TurboModuleRegistry = { get: () => null }; export const StyleSheet = { create: (x) => x, hairlineWidth: 1 }; export const Image = { resolveAssetSource: () => ({ uri: '' }) }; export const Dimensions = { get: () => ({ width: 400, height: 800 }) };",
+            loader: "js",
+          }));
+        },
+      },
+    ],
+  });
+  const D = await import(pathToFileURL(outDraw).href);
+  const t = (key) => key;
+  const board = {
+    ...base,
+    type: "kanban",
+    columns: [0, 1, 2, 3, 4].map((i) => ({
+      id: "c" + i,
+      name: "C" + i,
+      color: "#799EDC",
+      items: [{ id: "k" + i, text: "card " + i }],
+    })),
+  };
+  const notes = {
+    text: { ...base, type: "text", text: '<div>uno</div><ol class="x-todo"><li><input type="checkbox">due</li></ol><pre>x = 1</pre><div>tre</div>' },
+    todo,
+    kanban: board,
+    code: { ...base, type: "code", activeTabId: "a", tabs: [{ id: "a", title: "a", code: "a\nb", language: "js" }] },
+    none: undefined,
+  };
+  const sizes = [undefined, { width: 180, height: 110 }, { width: 400, height: 400 }, { width: 120, height: 60 }];
+  const failures = [];
+  for (const [kind, note] of Object.entries(notes)) {
+    for (const size of sizes) {
+      for (const name of Object.keys(D.WIDGETS)) {
+        try {
+          const tree = D.buildWidgetTree(D.WIDGETS[name](D.widgetState(note, t, "fastmemoapptest"), size));
+          if (!tree?.type) failures.push(`${name}/${kind}: no tree`);
+        } catch (error) {
+          failures.push(`${name}/${kind}/${size ? size.width : "none"}: ${error.message}`);
+        }
+      }
+    }
+  }
+  ok("every widget builds for every kind of note and size", failures.length === 0, failures.slice(0, 3).join(" | "));
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

@@ -16,5 +16,5 @@ export interface WidgetSize {
  */
 export const WIDGETS: Record<string, (state: WidgetState, size?: WidgetSize) => React.JSX.Element> = {
   NewNote: (state) => <NewNoteWidget state={state} />,
-  FeaturedNote: (state, size) => <FeaturedNoteWidget state={state} height={size?.height} />,
+  FeaturedNote: (state, size) => <FeaturedNoteWidget state={state} width={size?.width} height={size?.height} />,
 };

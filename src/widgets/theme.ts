@@ -22,8 +22,10 @@ export const W = {
   buttonBorder: c(COLOR.accentMutedBorder),
   icon: COLOR.softWhite,
   radius: 24,
-  font: { regular: "Geist-Regular", medium: "Geist-Medium", semiBold: "Geist-SemiBold" },
+  font: { regular: "Geist-Regular", medium: "Geist-Medium", semiBold: "Geist-SemiBold", mono: "JetBrainsMono-Regular" },
   chip: c(GLASS.fillStrong),
+  /** A code panel's ground, darker than the widget. */
+  code: c(COLOR.bg),
 };
 
 export const typeColor = (type: NoteType) => CARD_TYPE_COLOR[type] ?? CARD_TYPE_COLOR.text;
