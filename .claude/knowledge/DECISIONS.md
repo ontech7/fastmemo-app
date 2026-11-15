@@ -2177,6 +2177,125 @@ another device's history isn't this one's).
   emptied it is dropped as before.
 - History survives a sign-out of the cloud; only "wipe data" clears it.
 
+## ADR-043: What May Open the App from Outside
+
+**Status:** Accepted (2026-11-15), plan 2 of 4.1.0 (spec D.1–D.3)  
+**Context:** 4.1.0 opens the app on something from outside: shortcuts on the icon, a share from another app, a reminder's
+notification, a widget. Before it the app had no link handling of its own: a link with the app's scheme was left to the
+router, which would open any screen, settings included.  
+**Decision:**
+
+- **One allow-list** (`libs/launch/parse.ts`, pure, `scripts/launch.test.mjs`): `parseLaunch(link, schemes)` turns a link
+  into a `LaunchAction` or null (the home). Exactly these forms, with the build's own scheme matched with its case
+  (`fastmemoapp`, `fastmemoapptest`) or as a bare path:
+
+  | Link                                          | Action                          |
+  | --------------------------------------------- | ------------------------------- |
+  | `<scheme>://launch/new/<text\|todo\|kanban\|code>` | a new note of that type         |
+  | `<scheme>://launch/dictate`                    | a new text note, dictating      |
+  | `<scheme>://launch/note/<id>`                  | that note (an id's characters only) |
+  | `<scheme>://expo-sharing`                      | what was shared to the app      |
+
+  One trailing slash is accepted; a query, a fragment, an empty or extra segment, another scheme, a route of the app: the
+  home and nothing more. `launchUrl(scheme, action)` makes the links the shortcuts, widgets and notifications use.
+- **One path.** `app/+native-intent.ts` (`redirectSystemPath`) gets every link and always answers the start: the link that
+  starts the app keeps its action (`setPendingLaunch`) and goes to "/"; one that arrives while the app runs goes through
+  `requestLaunch`, as a notification's tap does (`libs/reminders`). `requestLaunch` brings the home to the front, then leaves
+  the action; before the home's first focus the action only waits (LL-095). The home carries it out (`useLaunchAction`,
+  `planLaunch` in `libs/launch/plan.ts`, pure): it commits the note on screen first; a note opens through the same door as a
+  tap on its card (a protected one asks its code, a hidden one not shown asks the secret code, an id that isn't a live note
+  says "Note not found"); before the intro is finished nothing happens and the action is dropped.
+- **Android's side**: `MainActivity.onNewIntent` calls `setIntent` (inline plugin `withRecentsStartPlain`), or React Native
+  drops a link that comes before its context (LL-095). The shortcuts are static (`withLauncherShortcuts`, inline, labels in 7
+  languages as string resources) and declared on the main activity and every icon alias.
+- **Shares** (`libs/launch/receiveShare.ts`, `share.ts`): `expo-sharing`'s plain reading call only, never the one that
+  fetches a shared address; text, links and images become a new text note, saved and opened; the payloads are cleared as
+  soon as the note exists.
+
+**Rejected:** the router's default linking (every route reachable from outside); routes as links (`/notes/<id>` from a
+link skips the secret code and the commit of the open note).
+
+**Trade-offs:**
+
+- An action that comes before the intro is finished is lost, not kept for later.
+- One pending action: a newer one replaces one not yet taken.
+
+## ADR-044: Reminders
+
+**Status:** Accepted (2026-11-15), plan 2 of 4.1.0 (spec D.5)  
+**Context:** people asked to be reminded of a note at a time. The app has no server of its own to push from, and the phones
+already hold the notes.  
+**Decision:**
+
+- **A time on the note**: `remindAt` (epoch ms), synced like the title and the dates, **not encrypted**; a 4.0.0 device
+  carries it untouched. Set or removed as an ordinary edit (`withReminder`: removing leaves the key out). A time that has
+  passed is ignored, never cleared. A duplicate has none.
+- **Each phone schedules its own** (`libs/reminders/plan.ts`, pure, `scripts/reminders.test.mjs`): `planReminders` compares
+  the notes that should ring (time ahead, not in the trash) with what this phone has scheduled and returns what to
+  schedule and cancel; `libs/reminders/index.ts` only carries it out with `expo-notifications`, one notification per note
+  (`fm-reminder-<id>`), one channel "Reminders". It runs after the home has drawn, 2 s after notes change, when the app
+  comes back to the front, and all again on a language change or an exact-alarm change.
+- **Private notes**: a protected or hidden note rings as "Reminder" / "You have a reminder on a protected note": its title
+  is never shown or stored in the notification.
+- **Local only**: no push, no token, no Firebase messaging (`grep PushToken` finds nothing).
+- **Permissions**: notifications asked the first time a reminder is set on this phone (`notifyStateOf`: on Android 13+ the
+  status says "denied" before any question, `canAskAgain` tells, LL-096); refused, the reminder stays and a dialog offers
+  the system's settings. "Alarms and reminders" (`SCHEDULE_EXACT_ALARM`) asked once after the first reminder, with one
+  sentence of why; without it the alert comes late and the sheet says so.
+- **After a sync**: a phone never asked that receives a reminder shows once the home's question "A note has a reminder.
+  Notify on this phone?" (`settings.reminders.syncAsked`, either answer); the system's prompt never appears by itself.
+- **The desktop and the web** set, show and remove reminders and don't ring (`index.web.ts`); the sheet says the alert
+  arrives on the phones that have the note.
+- **The limits said in the app**: a reminder set elsewhere reaches a phone when its app next syncs (help, the sheet); a
+  phone off at that time doesn't notify afterwards.
+
+**Rejected:** a push service (a server and a token for every phone, and a key to keep; nothing in the app needs it
+otherwise); reminders outside the note (a second synced collection, its own merge rules, orphans when the note goes).
+
+**Trade-offs:**
+
+- The time travels in clear in the cloud document, like the title.
+- Without the exact-alarm access Android may deliver up to an hour late; Android drops the alarms of a force-stopped app
+  until the next start.
+
+## ADR-045: Widgets
+
+**Status:** Accepted (2026-11-15), plan 2 of 4.1.0 (spec D.6)  
+**Context:** two widgets were chosen: "New note" (a bar, a list and a dictation button) and "Featured note" (one note's
+title and first lines). A widget is drawn with the app closed and is visible to anyone holding the phone.  
+**Decision:**
+
+- **The library: `react-native-android-widget` 0.26.0.** Expo's `expo-widgets` (58.0.28) can't open a link from a tap on
+  Android (its taps are broadcasts that can't start an activity); expo/expo pull request 51840 and issue 51766 are still
+  open. Task 40's spike proved this one on a release build: a tap opens the app closed, in the background, killed with its
+  task kept, with an alternate icon; the data reaches the widget in about a second and survives a reboot; the web and
+  desktop bundles don't contain it; cold start not slower.
+- **The entry file** `index.ts` (`package.json` `main`): `@/libs/widget/register` (Android: `registerWidgetTaskHandler`;
+  `.web.ts`: nothing), then `expo-router/entry`.
+- **The small copy** (`libs/widget/snapshot.ts`, pure, `scripts/widget.test.mjs`): `widgetState` = the featured note's
+  `widgetSnapshot` (title, at most 6 lines of 80 characters, boxes, mono for code, the count of the rest), the labels in the
+  app's language, the links (`launchUrl`). `startWidget` (after the home has drawn) writes it to AsyncStorage
+  `@widgetState` only when it differs, and asks for a redraw. The widget never reads the notes.
+- **Never a protected or hidden note** (`canFeature`): not offered in the menu; one that becomes protected, hidden, trashed
+  or deleted gives no copy at all (the widget's empty state), none of its words written.
+- **One featured note per phone**, a setting (`settings.widgetNoteId`, null when removed), chosen with "Show in the widget"
+  in the note's menu on Android; kept while the note can't be shown, so it comes back.
+- **Taps are launch links** (ADR-043): `clickAction="OPEN_URI"`; the empty state opens the app.
+- **Drawn** in `src/widgets/` (`NewNoteWidget`, `FeaturedNoteWidget`, size-aware lines; tokens in `widgets/theme.ts`;
+  Geist from the plugin's `fonts`, no monospace among the assets: code uses Geist Medium). Picker labels in 7 languages
+  (`withWidgetPickerLabels`, inline).
+- **`FOREGROUND_SERVICE`** comes with WorkManager and is blocked (`android.blockedPermissions`): the library never runs a
+  foreground service.
+
+**Rejected:** `expo-widgets` (no link on tap yet); the widget reading the notes' store (it would hold every note's words
+where any launcher can redraw them); the featured note as a synced property of the note (a widget is a phone's).
+
+**Trade-offs:**
+
+- A change made on another device shows when this phone's app next syncs.
+- Done items are dimmed, not struck: the library has no text decoration.
+- On Android 15+ a force-stopped app's widget is drawn paused: the first tap wakes it, the second opens.
+
 ## ADR-046: The Desktop Prints Through the System's Dialog; Zoom Is the Webview's
 
 **Status:** Accepted (2026-11-15), plan 2 of 4.1.0 (spec C.1–C.7)  

@@ -25,6 +25,7 @@ src/
   app/                 # Expo Router screens (file-based routing) — physically at repo root since v3.2.0
     _layout.tsx        # Root layout: provider tower + single flat Stack navigator
     index.tsx          # Boot/splash screen (platform-split: index.web.tsx)
+    +native-intent.ts  # Every link from outside (ADR-043): its action kept for the home (libs/launch), the answer always "/"
     intro.tsx          # Onboarding carousel (platform-split: intro.web.tsx)
     home.tsx           # Main screen (note list + sidebar)
     changelog.tsx      # Version changelog modal
@@ -213,6 +214,16 @@ src/
       help.ts          # A help topic's text from its i18n strings
       settingsApi.ts   # The settings page's way to Rust (switches, connection info), MCP_TOOLS
       snippets.ts      # What to paste into each AI client
+    launch/            # What may open the app from outside (ADR-043): parse (the allow-list, launchUrl; pure), plan (planLaunch:
+                       #   what the home does; pure), pending (the one waiting action), index (requestLaunch, setHomeShown,
+                       #   dictate-on-open), share + receiveShare (.web: none; a share as a text note's HTML). The home runs it
+                       #   with hooks/useLaunchAction. scripts/launch.test.mjs
+    reminders/         # Reminders (ADR-044): plan (planReminders, withReminder, notifyStateOf; pure), presets and month (the
+                       #   sheet's times and grid; pure), index (expo-notifications: schedule/cancel, the tap, the permissions;
+                       #   started by the home), index.web.ts (sets nothing, rings nothing). scripts/reminders.test.mjs
+    widget/            # Widgets (ADR-045): snapshot (canFeature, widgetSnapshot, widgetState; pure), index (startWidget: writes
+                       #   @widgetState when it changes, asks for a redraw), register (the library's background handler, from the
+                       #   entry file); .web.ts: nothing. scripts/widget.test.mjs
       types.ts         # What Rust and the page exchange: McpRequest, McpReply; and UpdateCheck
     windowReady.ts     # Desktop: shows the window (hidden at launch) once the first screen is drawn (ADR-022); .ts no-op
     search/            # One search (ADR-040), no React: fold (case and accents, same length), lines (noteDoc: what a note says;
@@ -303,6 +314,15 @@ src/
     sanitize-entry.ts  # DOMPurify + hooks in the rich text editor's page (scripts/build-sanitize.mjs; LL-060, ADR-021)
     sanitizeConfig.ts  # What a note's HTML keeps (the editor's page and the web PDF export)
   generated/           # Those scripts' output, committed (codemirror-html.ts, editor-sanitize.ts): never edit by hand
+  widgets/             # The Android widgets (react-native-android-widget, ADR-045): NewNoteWidget, FeaturedNoteWidget, theme
+                       #   (W tokens, icons as SVG strings), registry (WIDGETS by name), taskHandler (draws from @widgetState
+                       #   with the app closed). Drawn only from the copy the app wrote, never from the notes
+```
+
+The app's entry file is `index.ts` at the root (`package.json` `main`): `@/libs/widget/register` (Android only), then
+`expo-router/entry` (ADR-045).
+
+```
 ```
 
 ## Data Flow
@@ -566,6 +586,47 @@ Animation conventions:
   "fade_from_bottom" -> notes, changelog, secret-code, category create/organize (modal-like)
   "ios_from_left"    -> settings hierarchy, temporary-trash, category change (drill-down)
 ```
+
+### Opening the App from Outside (ADR-043)
+
+```
+link (shortcut, widget, share, a typed address)       notification's tap (libs/reminders)
+  -> app/+native-intent.ts: parseLaunch                   |
+       started by it: setPendingLaunch, answer "/"        |
+       already running: requestLaunch  <------------------+
+         (before the home's first focus: only setPendingLaunch; else dismissTo("/home"), then setPendingLaunch)
+home: useLaunchAction -> takePendingLaunch -> planLaunch (intro not finished: dropped)
+  -> commit the open note -> push notes/new-<type> | notes/<id> (code asked as for a tap) | the share's new note
+```
+
+### Android Build: Inline Plugins and Permissions
+
+`app.config.ts` holds the app's own config plugins (no package of their own):
+
+| Plugin                           | What it writes                                                                                       |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `withLlamaProguardRules`         | R8 keep rules for llama.rn                                                                           |
+| `withCleartextTraffic`           | the network security config (a FastMemo server on the local network, ADR-017)                        |
+| `withAlternateIconIntentFilters` | the main activity's intent filters (links, shares) copied onto every icon alias (ADR-020, ADR-043)   |
+| `withLauncherShortcuts`          | the icon's three shortcuts (New note, New list, Dictation), labels in 7 languages, on every alias    |
+| `withWidgetPickerLabels`         | the widget picker's labels in 7 languages (`values[-b+lang]/widget_picker.xml`)                      |
+| `withKotlinReflectWarmup`        | a background warm-up of kotlin-reflect at start (ADR-025)                                            |
+| `withRecentsStartPlain`          | a start from the recent apps or a recreated activity starts as from the icon; `onNewIntent` keeps the |
+|                                  | new intent (`setIntent`, LL-095)                                                                     |
+
+Permissions the 4.1.0 build adds to 4.0.0's (`aapt2 dump permissions`):
+
+| Permission               | Why                                                                                            |
+| ------------------------ | ---------------------------------------------------------------------------------------------- |
+| `POST_NOTIFICATIONS`     | reminders (expo-notifications), asked the first time one is set on the phone (ADR-044)          |
+| `SCHEDULE_EXACT_ALARM`   | a reminder at its minute; granted by the person in "Alarms and reminders" (ADR-044)            |
+| `RECEIVE_BOOT_COMPLETED` | expo-notifications puts the reminders back after a restart; WorkManager its work (ADR-045)     |
+| `WAKE_LOCK`              | WorkManager (react-native-android-widget) holds the phone awake while it redraws a widget      |
+
+Blocked (`android.blockedPermissions`): the media permissions (the picker needs none), every badge and launcher-setting
+permission and `c2dm.RECEIVE` and the install referrer that expo-notifications brings (no badge, no push), and
+`FOREGROUND_SERVICE` (WorkManager's; the widget library never runs one). The camera (`CAMERA`, expo-image-picker) was
+already there in 4.0.0.
 
 ### Provider Tower (Root Layout)
 

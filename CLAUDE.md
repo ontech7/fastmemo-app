@@ -109,6 +109,10 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 25. **Never build an HTML or script string with a replacement string or unescaped data** -- `str.replace(x, text)` expands `$&`,
     `$'`, `$$` found in `text`, and `JSON.stringify` leaves `</script>` and `<!--` as they are: pass a replacer function
     (`() => text`) and put data inside a `<script>` through `serializeForScript` (`libs/codeEditorPage.ts`). See LL-077
+26. **Never open a screen from outside the app except through `src/libs/launch`** -- a link, a shortcut, a share, a
+    notification's or a widget's tap becomes a `LaunchAction` only if `parseLaunch`'s allow-list knows it (a new note of a type,
+    dictation, a note by id, a share); everything else, a route of the app included, opens the home. The home carries it out
+    (`useLaunchAction`), so a protected or hidden note still asks its code (ADR-043)
 
 ### ALWAYS Do
 
@@ -154,20 +158,24 @@ These are the most important rules. For the full list, see CONVENTIONS.md.
 | Lists      | @shopify/flash-list 2.3                                                                            |
 | Monitoring | Sentry                                                                                             |
 | OTA        | EAS Update (Android, fingerprint runtime, manual `Publish OTA` workflow -- ADR-014)                |
+| Reminders  | expo-notifications, local scheduling only: no push, no token (Android; ADR-044)                    |
+| Widgets    | react-native-android-widget 0.26 (Android; drawn from a small copy the app writes -- ADR-045)      |
 
 ## Directory Map
 
 ```
-app/            -> Screens (expo-router file-based routing, at project root)
+index.ts        -> The entry file (package.json `main`): the widgets' background handler (Android), then expo-router's entry
+app/            -> Screens (expo-router file-based routing, at project root); +native-intent.ts: every link from outside (ADR-043)
 assets/         -> Static assets (images, lottie animations, at project root)
 modules/        -> Local Expo native modules, autolinked (fastmemo-crypto: native PBKDF2, see ADR-012)
 src/
   components/   -> UI components (domain-grouped: buttons/, cards/, notes/, kanban/, settings/, etc.; CrashScreen: the error boundary's fallback)
   slicers/      -> Redux slices (notesSlice, categoriesSlice, settingsSlice) + thunks/
   types/        -> TypeScript type definitions (barrel export via index.ts)
-  hooks/        -> Custom hooks (useCloudSync, useLiveNote, useTodoList, useRouter, useSecret, useNetInfo (.web: libs/netStatus), useCloudStatus, useVaultUnlocked, useVaultPrompt, useVaultProgress, useNoteSearch)
-  libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), diagnostics/ (Sentry, the installation code, the report payload: ADR-035), haptics/, history/ (versions: ADR-042), i18n/, mcp/ (local MCP server, page side), search/ (one search: ADR-040), storage/, registry, links, noteHtml, listOps, findTarget, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, netStatus, desktopCommands, desktopMenu, desktopList, listCursor, desktopZoom, zoomSteps, print, printCss, dropGuard, codeEditorPage, pageErrors, kanbanOps, quickNoteDraft, reducePhoto, reloadApp, noteCopy)
+  hooks/        -> Custom hooks (useCloudSync, useLiveNote, useTodoList, useRouter, useSecret, useNetInfo (.web: libs/netStatus), useCloudStatus, useVaultUnlocked, useVaultPrompt, useVaultProgress, useNoteSearch, useLaunchAction, useReminderAsk)
+  libs/         -> Third-party wrappers (ai/, cloud/ (sync engine + Firestore backend), diagnostics/ (Sentry, the installation code, the report payload: ADR-035), haptics/, history/ (versions: ADR-042), i18n/, launch/ (what may open the app from outside: ADR-043), mcp/ (local MCP server, page side), reminders/ (ADR-044), search/ (one search: ADR-040), widget/ (the widgets' copy of a note: ADR-045), storage/, registry, links, noteHtml, listOps, findTarget, localization, secureStore, vaultSession, vaultManager, vaultPrompt, vaultProgress, net, netStatus, desktopCommands, desktopMenu, desktopList, listCursor, desktopZoom, zoomSteps, print, printCss, dropGuard, codeEditorPage, pageErrors, kanbanOps, quickNoteDraft, reducePhoto, reloadApp, noteCopy)
   utils/        -> Pure utility functions (sort, noteEmpty, noteType, imageSize, string, date, crypt, vault, secureRandom, ui, toast, webhook, export, platform, openUrl)
+  widgets/      -> The Android widgets (react-native-android-widget): NewNote, FeaturedNote, their theme and background handler
   providers/    -> React context providers (ReorderProvider, SyncOnProvider, DiagnosticsProvider, AppUpdateProvider)
   constants/    -> Static constants (styles, motion, layout, icons, code-languages, note-types)
   configs/      -> App configuration (environment, defaults, business rules)

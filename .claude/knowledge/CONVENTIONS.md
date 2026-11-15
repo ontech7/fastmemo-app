@@ -736,6 +736,10 @@ Users have existing data on their devices and in Firestore -- breaking changes m
    receiving the new data format. New fields should be silently ignored by older clients (Firestore does this naturally, but the
    app code must tolerate unknown fields and missing new fields alike).
 
+8. **A note's optional field is removed by leaving its key out**, never by writing `undefined` or `null`: a key that is there
+   travels (backup, cloud, the other devices' merge) and an older device keeps it. `withReminder(note, null)` returns the note
+   without `remindAt` (ADR-044).
+
 ---
 
 ## Cloud Sync & Firestore Budget
@@ -1023,6 +1027,8 @@ What an error and a report carry is decided in ADR-035; the code is `src/libs/di
 | 49  | Never keep what a device is looking at inside the note                                    | The shown tab is view state: storing it alone re-dates, re-sorts and uploads the note (LL-079)                                        |
 | 50  | Never give a polling or global-listening hook one timer or listener per component         | One module store read with `useSyncExternalStore`; poll only while used and visible (LL-082)                                          |
 | 51  | Never reload the page in the desktop app                                                  | A reload while a Tauri command answers can abort the process: `reloadApp()` relaunches after `flushNow()` (LL-089)                    |
+| 52  | Never open a screen from outside except through `libs/launch`                             | Links, shortcuts, shares, notifications' and widgets' taps: the allow-list (`parseLaunch`), then the home carries it out (ADR-043)     |
+| 53  | Never put a protected or hidden note's words in a notification or a widget                | Both are seen without the code (lock screen, home screen): `planReminders`' private, `canFeature` (ADR-044, ADR-045)                  |
 
 ### ALWAYS
 

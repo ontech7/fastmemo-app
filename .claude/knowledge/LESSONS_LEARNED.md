@@ -2557,6 +2557,29 @@ fresh install shows the system's question, a second refusal the app's dialog.
 
 ---
 
+### LL-097: A tablet turns the app whatever the manifest says
+
+**Date:** 2026-11-15  
+**Severity:** Medium (on a tablet held sideways a menu's first entry couldn't be tapped; after turning it, the background
+showed a hard edge across the home)  
+**Category:** Platform  
+**What happened:** the app is `orientation: "portrait"`, yet on the tablet emulator (Android 16) it ran in landscape and
+turned with the device. The text bar's menus, which grow upward from the bar above the keyboard, went under the status
+bar: "Code block" ignored taps. After a turn, `AppBackground`'s svg kept the glows at the first size.  
+**Root cause:** Android 16 ignores an app's orientation and resizability limits on large screens (smallest width 600 dp
+and up) for apps targeting API 36, so every screen must work at any size and survive a change of it. The menu had no
+upper bound; react-native-svg on Android doesn't redraw percentage sizes when the view changes size.  
+**Fix:** `f41c4d6`: the text bar's menu is capped at the room between the bar and the status bar (measured when it
+opens) and scrolls; on Android the background's svg is remounted when the window's size changes. Proved on a tablet
+emulator, before and after, both orientations; the phone unchanged.  
+**Rule:** never rely on the portrait lock: on a tablet the window can be wide, short and change size. Bound anything that
+grows toward an edge by the room actually there, and redraw what is drawn at a size when the window changes.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-15 **Resolved in:** f41c4d6
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
