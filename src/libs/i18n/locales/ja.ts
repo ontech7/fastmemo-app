@@ -281,6 +281,7 @@ const ja = {
       code: "コード",
     },
     settings: {
+      reminder: "リマインダー",
       open: "開く",
       move_to_trash: "ゴミ箱に移動",
       delete: "削除",
@@ -1317,6 +1318,8 @@ const ja = {
   },
 
   a11y: {
+    prev_month: "前の月",
+    next_month: "次の月",
     back: "戻る",
     close: "閉じる",
     save: "保存",
@@ -1476,6 +1479,21 @@ const ja = {
 
   launch: {
     dictation_off: "音声認識がオフです。設定でオンにしてください",
+  },
+  reminder: {
+    in_hour: "1時間後",
+    tonight: "今夜",
+    tomorrow: "明日の朝",
+    monday: "月曜日",
+    choose: "日時を選択…",
+    set: "設定",
+    remove: "リマインダーを削除",
+    current: "{{when}} に設定済み",
+    past: "まだ過ぎていない日時を選んでください",
+    card: "リマインダー：{{when}}",
+    set_toast: "リマインダーを設定しました",
+    removed_toast: "リマインダーを削除しました",
+    desktop_note: "通知はこのノートがあるスマートフォンに届きます。",
   },
   share: {
     nothing: "Fast Memo に保存できるのはテキスト、リンク、画像です",

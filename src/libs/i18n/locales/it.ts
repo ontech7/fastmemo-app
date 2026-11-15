@@ -282,6 +282,7 @@ const it = {
       code: "Codice",
     },
     settings: {
+      reminder: "Promemoria",
       open: "Apri",
       move_to_trash: "Sposta nel cestino",
       delete: "Cancella",
@@ -1332,6 +1333,8 @@ const it = {
   },
 
   a11y: {
+    prev_month: "Mese precedente",
+    next_month: "Mese successivo",
     back: "Indietro",
     close: "Chiudi",
     save: "Salva",
@@ -1490,6 +1493,21 @@ const it = {
 
   launch: {
     dictation_off: "Il riconoscimento vocale è disattivato: attivalo nelle impostazioni",
+  },
+  reminder: {
+    in_hour: "Tra un'ora",
+    tonight: "Stasera",
+    tomorrow: "Domani mattina",
+    monday: "Lunedì",
+    choose: "Scegli giorno e ora…",
+    set: "Imposta",
+    remove: "Rimuovi promemoria",
+    current: "Impostato per {{when}}",
+    past: "Scegli un momento non ancora passato",
+    card: "Promemoria: {{when}}",
+    set_toast: "Promemoria impostato",
+    removed_toast: "Promemoria rimosso",
+    desktop_note: "L'avviso arriva sui telefoni che hanno questa nota.",
   },
   share: {
     nothing: "Fast Memo può conservare testo, link e immagini",

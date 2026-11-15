@@ -281,6 +281,7 @@ const fr = {
       code: "Code",
     },
     settings: {
+      reminder: "Rappel",
       open: "Ouvrir",
       move_to_trash: "Mettre à la corbeille",
       delete: "Supprimer",
@@ -1348,6 +1349,8 @@ const fr = {
   },
 
   a11y: {
+    prev_month: "Mois précédent",
+    next_month: "Mois suivant",
     back: "Retour",
     close: "Fermer",
     save: "Enregistrer",
@@ -1507,6 +1510,21 @@ const fr = {
 
   launch: {
     dictation_off: "La reconnaissance vocale est désactivée : activez-la dans les réglages",
+  },
+  reminder: {
+    in_hour: "Dans une heure",
+    tonight: "Ce soir",
+    tomorrow: "Demain matin",
+    monday: "Lundi",
+    choose: "Choisir le jour et l'heure…",
+    set: "Définir",
+    remove: "Supprimer le rappel",
+    current: "Prévu pour {{when}}",
+    past: "Choisissez un moment qui n'est pas passé",
+    card: "Rappel : {{when}}",
+    set_toast: "Rappel défini",
+    removed_toast: "Rappel supprimé",
+    desktop_note: "L'alerte arrive sur les téléphones qui ont cette note.",
   },
   share: {
     nothing: "Fast Memo peut garder du texte, des liens et des images",

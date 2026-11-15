@@ -281,6 +281,7 @@ const en = {
       code: "Code",
     },
     settings: {
+      reminder: "Reminder",
       open: "Open",
       move_to_trash: "Move to trash",
       delete: "Delete",
@@ -1318,6 +1319,8 @@ const en = {
   },
 
   a11y: {
+    prev_month: "Previous month",
+    next_month: "Next month",
     back: "Back",
     close: "Close",
     save: "Save",
@@ -1475,6 +1478,21 @@ const en = {
 
   launch: {
     dictation_off: "Voice recognition is off: turn it on in the settings",
+  },
+  reminder: {
+    in_hour: "In an hour",
+    tonight: "Tonight",
+    tomorrow: "Tomorrow morning",
+    monday: "Monday",
+    choose: "Choose day and time…",
+    set: "Set",
+    remove: "Remove reminder",
+    current: "Set for {{when}}",
+    past: "Choose a time that hasn't passed",
+    card: "Reminder: {{when}}",
+    set_toast: "Reminder set",
+    removed_toast: "Reminder removed",
+    desktop_note: "The alert arrives on the phones that have this note.",
   },
   share: {
     nothing: "Fast Memo can keep text, links and pictures",

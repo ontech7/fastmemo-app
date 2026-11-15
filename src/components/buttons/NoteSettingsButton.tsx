@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
+import { Platform } from "react-native";
 import { useTranslation } from "react-i18next";
 import ArrowUpTrayIcon from "react-native-heroicons/outline/ArrowUpTrayIcon";
+import BellIcon from "react-native-heroicons/outline/BellIcon";
 import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import ClockIcon from "react-native-heroicons/outline/ClockIcon";
@@ -18,12 +20,14 @@ import uuid from "react-uuid";
 
 import ComplexDialog from "@/components/dialogs/ComplexDialog";
 import NoteInfoDialog from "@/components/dialogs/NoteInfoDialog";
+import ReminderSheet from "@/components/notes/ReminderSheet";
 import IconChip from "@/components/ui/IconChip";
 import PopupMenu, { PopupMenuDivider, PopupMenuOption, PopupMenuToggle, PopupMenuToggleRow } from "@/components/ui/PopupMenu";
 import { useRouter } from "@/hooks/useRouter";
 import { stripHtml } from "@/libs/ai";
 import { addTrail } from "@/libs/diagnostics";
 import { canPrint, printNote } from "@/libs/print";
+import { withReminder } from "@/libs/reminders/plan";
 import { storeUnlockedNote } from "@/libs/registry";
 import { exportAsPdf, exportAsTextFile, htmlToMarkdown } from "@/utils/export";
 import { toast } from "@/utils/toast";
@@ -63,6 +67,19 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
 
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
+
+  // A reminder is an ordinary edit of the note (spec D.5): it syncs like the title.
+  const setReminder = (at: number) => {
+    setShowReminder(false);
+    setNote(withReminder(note, at));
+    toast(t("reminder.set_toast"));
+  };
+  const removeReminder = () => {
+    setShowReminder(false);
+    setNote(withReminder(note, null));
+    toast(t("reminder.removed_toast"));
+  };
 
   const sanitizeFilename = (name: string) => {
     // Strip anything filesystem/share-unsafe, then guarantee a non-empty base name —
@@ -257,6 +274,14 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
 
         {saved && (
           <PopupMenuOption
+            label={t("note.settings.reminder")}
+            trailing={<BellIcon size={16} color={COLOR.textSecondary} />}
+            onSelect={() => setShowReminder(true)}
+          />
+        )}
+
+        {saved && (
+          <PopupMenuOption
             label={t("note.settings.duplicate")}
             trailing={<DocumentDuplicateIcon size={16} color={COLOR.textSecondary} />}
             onSelect={duplicate}
@@ -324,6 +349,17 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
       />
 
       <NoteInfoDialog open={showInfoDialog} note={note} onClose={() => setShowInfoDialog(false)} />
+
+      {showReminder && (
+        <ReminderSheet
+          visible={showReminder}
+          remindAt={note.remindAt}
+          onSet={setReminder}
+          onRemove={removeReminder}
+          onClose={() => setShowReminder(false)}
+          note={Platform.OS === "web" ? t("reminder.desktop_note") : undefined}
+        />
+      )}
     </>
   );
 }

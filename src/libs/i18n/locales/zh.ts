@@ -280,6 +280,7 @@ const zh = {
       code: "代码",
     },
     settings: {
+      reminder: "提醒",
       open: "打开",
       move_to_trash: "移到回收站",
       delete: "删除",
@@ -1282,6 +1283,8 @@ const zh = {
   },
 
   a11y: {
+    prev_month: "上个月",
+    next_month: "下个月",
     back: "返回",
     close: "关闭",
     save: "保存",
@@ -1439,6 +1442,21 @@ const zh = {
 
   launch: {
     dictation_off: "语音识别已关闭：请在设置中开启",
+  },
+  reminder: {
+    in_hour: "一小时后",
+    tonight: "今晚",
+    tomorrow: "明天早上",
+    monday: "周一",
+    choose: "选择日期和时间…",
+    set: "设置",
+    remove: "移除提醒",
+    current: "已设置为 {{when}}",
+    past: "请选择一个尚未过去的时间",
+    card: "提醒：{{when}}",
+    set_toast: "提醒已设置",
+    removed_toast: "提醒已移除",
+    desktop_note: "提醒会发送到拥有此笔记的手机上。",
   },
   share: {
     nothing: "Fast Memo 可以保存文本、链接和图片",

@@ -281,6 +281,7 @@ const es = {
       code: "Código",
     },
     settings: {
+      reminder: "Recordatorio",
       open: "Abrir",
       move_to_trash: "Mover a la papelera",
       delete: "Borrar",
@@ -1338,6 +1339,8 @@ const es = {
   },
 
   a11y: {
+    prev_month: "Mes anterior",
+    next_month: "Mes siguiente",
     back: "Atrás",
     close: "Cerrar",
     save: "Guardar",
@@ -1497,6 +1500,21 @@ const es = {
 
   launch: {
     dictation_off: "El reconocimiento de voz está desactivado: actívalo en los ajustes",
+  },
+  reminder: {
+    in_hour: "En una hora",
+    tonight: "Esta noche",
+    tomorrow: "Mañana por la mañana",
+    monday: "Lunes",
+    choose: "Elegir día y hora…",
+    set: "Establecer",
+    remove: "Quitar recordatorio",
+    current: "Programado para {{when}}",
+    past: "Elige un momento que no haya pasado",
+    card: "Recordatorio: {{when}}",
+    set_toast: "Recordatorio establecido",
+    removed_toast: "Recordatorio quitado",
+    desktop_note: "El aviso llega a los teléfonos que tienen esta nota.",
   },
   share: {
     nothing: "Fast Memo puede guardar texto, enlaces e imágenes",

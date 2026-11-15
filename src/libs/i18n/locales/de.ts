@@ -281,6 +281,7 @@ const de = {
       code: "Code",
     },
     settings: {
+      reminder: "Erinnerung",
       open: "Öffnen",
       move_to_trash: "In den Papierkorb",
       delete: "Löschen",
@@ -1349,6 +1350,8 @@ const de = {
   },
 
   a11y: {
+    prev_month: "Vorheriger Monat",
+    next_month: "Nächster Monat",
     back: "Zurück",
     close: "Schließen",
     save: "Speichern",
@@ -1509,6 +1512,21 @@ const de = {
 
   launch: {
     dictation_off: "Die Spracherkennung ist aus: Schalte sie in den Einstellungen ein",
+  },
+  reminder: {
+    in_hour: "In einer Stunde",
+    tonight: "Heute Abend",
+    tomorrow: "Morgen früh",
+    monday: "Montag",
+    choose: "Tag und Uhrzeit wählen…",
+    set: "Festlegen",
+    remove: "Erinnerung entfernen",
+    current: "Geplant für {{when}}",
+    past: "Wählen Sie einen Zeitpunkt, der noch nicht vergangen ist",
+    card: "Erinnerung: {{when}}",
+    set_toast: "Erinnerung festgelegt",
+    removed_toast: "Erinnerung entfernt",
+    desktop_note: "Die Benachrichtigung kommt auf den Telefonen an, die diese Notiz haben.",
   },
   share: {
     nothing: "Fast Memo kann Text, Links und Bilder aufbewahren",

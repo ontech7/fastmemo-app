@@ -1,8 +1,9 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import type { GestureResponderEvent } from "react-native";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ArrowUpIcon from "react-native-heroicons/outline/ArrowUpIcon";
+import BellIcon from "react-native-heroicons/outline/BellIcon";
 import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
 import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import EyeSlashIcon from "react-native-heroicons/outline/EyeSlashIcon";
@@ -19,6 +20,8 @@ import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
 import { clickIntent, contextMenuProps, useIsCursor } from "@/libs/desktopList";
 import { storeUnlockedNote } from "@/libs/registry";
 import { setFindOnOpen } from "@/libs/search/findOnOpen";
+import { isUpcoming } from "@/libs/reminders/plan";
+import { formatWhen } from "@/libs/reminders/presets";
 import { formatDateTime, reverseDate } from "@/utils/date";
 import { isKnownNoteType } from "@/utils/noteType";
 import { isStringEmpty } from "@/utils/string";
@@ -83,7 +86,7 @@ function NoteCard({
   onDesktopClick,
   openMenu,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const router = useRouter();
   const { unlockWithSecret } = useSecret();
@@ -146,7 +149,12 @@ function NoteCard({
   const accent = known ? getCardAccent(type, isImportant) : COLOR.accent;
   const fg = isImportant ? COLOR.softWhite : COLOR.darkBlue;
   const chipBg = isImportant ? "rgba(255, 255, 255, 0.18)" : "rgba(2, 14, 53, 0.09)";
-  const hasStatus = important || readOnly || locked || hidden || local;
+  // A reminder still to come (spec D.5): a bell, and its time in place of the date line.
+  // The moment the card was drawn: a reminder that passes while it is on screen goes at its next draw.
+  const [drawnAt] = useState(() => Date.now());
+  const reminder = known && isUpcoming(content, drawnAt) ? (content.remindAt as number) : null;
+  const reminderColor = isImportant ? fg : COLOR.accent;
+  const hasStatus = important || readOnly || locked || hidden || local || reminder !== null;
   const TypeIcon = type && type !== "text" ? NOTE_TYPES.find((nt) => nt.key === type)?.icon : undefined;
 
   const sortByUpdated = sortBy === "updatedAt";
@@ -231,6 +239,7 @@ function NoteCard({
               {readOnly && <BookOpenIcon size={14} color={fg} />}
               {hidden && <EyeSlashIcon size={14} color={fg} />}
               {local && <SignalSlashIcon size={14} color={fg} />}
+              {reminder !== null && <BellIcon size={14} color={reminderColor} />}
             </View>
           )}
         </View>
@@ -258,7 +267,11 @@ function NoteCard({
           </View>
         )}
 
-        {known ? (
+        {reminder !== null ? (
+          <Text style={[styles.reminder, { color: reminderColor }]} numberOfLines={1} ellipsizeMode="tail">
+            {t("reminder.card", { when: formatWhen(reminder, i18n.language) })}
+          </Text>
+        ) : known ? (
           <Text style={[styles.date, { color: fg }]} numberOfLines={1} ellipsizeMode="tail">
             {metaLabel}
             <Text style={styles.dateValue}>{metaDate}</Text>
@@ -353,6 +366,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   dateValue: { fontFamily: FONT.semiBold },
+  reminder: { fontSize: FONTSIZE.small, fontFamily: FONT.semiBold },
   // A search result's line: the column's chip, the line with its marked words, "+N" for the other lines that match.
   hitRow: { flexDirection: "row", alignItems: "center", gap: PADDING_MARGIN.xs + 1 },
   hitLine: { flex: 1, minWidth: 0, fontSize: FONTSIZE.small, fontFamily: FONT.regular, opacity: 0.8 },
