@@ -154,6 +154,16 @@ ok(
     presets(new Date(2026, 11, 31, 22, 0)).find((p) => p.key === "monday").at === at(2027, 1, 4, 9)
 );
 
+ok(
+  "formatWhen in the app's language",
+  (() => {
+    const it = formatWhen(at(2026, 11, 12, 9), "it");
+    const en = formatWhen(at(2026, 11, 12, 9), "en");
+    return it.includes("12/11") && it.includes(" 9:00") && en.includes("11/12") && en.includes("9:00");
+  })(),
+  [formatWhen(at(2026, 11, 12, 9), "it"), formatWhen(at(2026, 11, 12, 9), "en")]
+);
+
 console.log("\nthe month");
 const flat = (grid) =>
   grid.map((week) => week.map((d) => (d.inMonth ? "" : "(") + d.day + (d.inMonth ? "" : ")")).join(" ")).join(" | ");
