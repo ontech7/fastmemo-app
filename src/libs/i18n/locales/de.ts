@@ -1506,6 +1506,9 @@ const de = {
     restored: "Version wiederhergestellt",
   },
 
+  launch: {
+    dictation_off: "Die Spracherkennung ist aus: Schalte sie in den Einstellungen ein",
+  },
   empty: {
     notes_title: "Noch keine Notizen",
     notes_text: "Tippe auf +, um die erste zu schreiben, oder nutze die Schnellnotiz unten.",

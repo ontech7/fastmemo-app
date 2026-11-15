@@ -14,6 +14,7 @@ import EditorActionDock, { dockButtonStyle, dockGroupStyle } from "@/components/
 import FindReplaceBar from "@/components/notes/FindReplaceBar";
 import TextFormatBar, { TEXT_FORMAT_BAR_HEIGHT } from "@/components/notes/TextFormatBar";
 import type { InsertKind, TextFormatBarRef } from "@/components/notes/TextFormatBar";
+import { takeDictateOnOpen } from "@/libs/launch";
 import { takeFindOnOpen } from "@/libs/search/findOnOpen";
 import { isTextNoteEmpty } from "@/utils/noteEmpty";
 import { createTextFindTarget } from "@/libs/findTarget";
@@ -308,6 +309,16 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
     didFocusRef.current = true;
     richTextEditor.current?.focusContentEditor();
   }, [editorInitialized, transitionDone, autofocus]);
+
+  // A new text note opened to dictate (a link, a launcher shortcut: `@/libs/launch`): the dictation sheet once the page is
+  // ready and the screen settled, as its button opens it; with voice recognition off, a toast says so.
+  const [dictateAsked] = useState(() => initialNote.createdAt === initialNote.updatedAt && takeDictateOnOpen());
+  const dictateNow = dictateAsked && editorInitialized && transitionDone;
+  useEffect(() => {
+    if (dictateNow && !showVoiceButton) toast(t("launch.dictation_off"), "top");
+    // once, when the page is ready
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dictateNow]);
 
   // Safety net: never leave the loading cover up forever if pell's init callback
   // somehow never fires.
@@ -806,6 +817,7 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
                       setTimeout(() => richTextEditor.current?.insertHTML(html), 50);
                     }}
                     aiCleanup
+                    openNow={dictateNow}
                     style={dockButtonStyle}
                   />
                 )}

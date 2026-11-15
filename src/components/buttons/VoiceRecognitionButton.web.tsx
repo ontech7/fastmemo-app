@@ -20,10 +20,12 @@ interface Props {
   onInsert: (text: string) => void;
   /** Accepted for API parity with native; AI cleanup is not available on web. */
   aiCleanup?: boolean;
+  /** Opens the dictation sheet once, when it turns true (a note opened to dictate: `@/libs/launch`). */
+  openNow?: boolean;
   style?: ViewStyle;
 }
 
-export default function VoiceRecognitionButton({ onInsert, style = {} }: Props) {
+export default function VoiceRecognitionButton({ onInsert, openNow = false, style = {} }: Props) {
   const { t } = useTranslation();
 
   const selectors = useSelector(selectorVoiceRecognition);
@@ -105,6 +107,13 @@ export default function VoiceRecognitionButton({ onInsert, style = {} }: Props) 
     setSheetOpen(true);
     startEngine(lang);
   }, [isSpeechAvailable, resolveLang, startEngine]);
+
+  const openedNowRef = useRef(false);
+  useEffect(() => {
+    if (!openNow || openedNowRef.current) return;
+    openedNowRef.current = true;
+    openDictation();
+  }, [openNow, openDictation]);
 
   const pauseEngine = useCallback(() => {
     // finalText already holds committed + current session text — bank it so the

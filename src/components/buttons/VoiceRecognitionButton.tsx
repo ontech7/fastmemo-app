@@ -27,13 +27,21 @@ interface Props {
   aiCleanup?: boolean;
   /** The AI cleanup splits the dictation into checklist items, one per line (todo notes). */
   asItems?: boolean;
+  /** Opens the dictation sheet once, when it turns true (a note opened to dictate: `@/libs/launch`). */
+  openNow?: boolean;
   style?: ViewStyle;
 }
 
 /** How a checklist item shows in the sheet (`voiceTextToLines` drops the bullet on insert). */
 const itemsToText = (items: string[]) => items.map((item) => `• ${item}`).join("\n");
 
-export default function VoiceRecognitionButton({ onInsert, aiCleanup = false, asItems = false, style = {} }: Props) {
+export default function VoiceRecognitionButton({
+  onInsert,
+  aiCleanup = false,
+  asItems = false,
+  openNow = false,
+  style = {},
+}: Props) {
   const { t } = useTranslation();
 
   const selectors = useSelector(selectorVoiceRecognition);
@@ -155,6 +163,13 @@ export default function VoiceRecognitionButton({ onInsert, aiCleanup = false, as
     if (aiAvailable) prewarmContext(aiSettings.selectedModel);
     await startEngine(true);
   }, [resolveLang, startEngine, aiAvailable, aiSettings.selectedModel]);
+
+  const openedNowRef = useRef(false);
+  useEffect(() => {
+    if (!openNow || openedNowRef.current) return;
+    openedNowRef.current = true;
+    void openDictation();
+  }, [openNow, openDictation]);
 
   const stopEngine = useCallback(() => {
     try {

@@ -1494,6 +1494,9 @@ const es = {
     restored: "Versión restaurada",
   },
 
+  launch: {
+    dictation_off: "El reconocimiento de voz está desactivado: actívalo en los ajustes",
+  },
   empty: {
     notes_title: "Aún no hay notas",
     notes_text: "Toca + para escribir la primera, o usa la nota rápida de abajo.",

@@ -1436,6 +1436,9 @@ const zh = {
     restored: "已恢复版本",
   },
 
+  launch: {
+    dictation_off: "语音识别已关闭：请在设置中开启",
+  },
   empty: {
     notes_title: "还没有笔记",
     notes_text: "点按 + 写下第一条，或使用下方的快速笔记。",

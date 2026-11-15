@@ -19,6 +19,7 @@ import { configs } from "@/configs";
 import { DURATION } from "@/constants/motion";
 import { BORDER, COLOR, FONT, FONTSIZE, FONTWEIGHT, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useCloudStatus } from "@/hooks/useCloudStatus";
+import { useLaunchAction } from "@/hooks/useLaunchAction";
 import { useNoteSearch } from "@/hooks/useNoteSearch";
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
@@ -95,6 +96,8 @@ export default function HomeScreen() {
 
   const isFocused = useIsFocused();
   const vaultPromptNeeded = useVaultPrompt();
+  // What a link, a shortcut, a widget or a notification asked for (spec D.1): carried out here, with the home in front.
+  useLaunchAction();
   const vaultUnlocked = useVaultUnlocked();
   // Gate the vault prompt until the version/changelog check has settled, so it
   // never overlaps the changelog screen that opens on a version bump.

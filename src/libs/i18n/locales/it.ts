@@ -1487,6 +1487,9 @@ const it = {
     restored: "Versione ripristinata",
   },
 
+  launch: {
+    dictation_off: "Il riconoscimento vocale è disattivato: attivalo nelle impostazioni",
+  },
   empty: {
     notes_title: "Ancora nessuna nota",
     notes_text: "Tocca + per scrivere la prima, o usa la nota rapida qui sotto.",

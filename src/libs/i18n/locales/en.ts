@@ -1472,6 +1472,9 @@ const en = {
     restored: "Version restored",
   },
 
+  launch: {
+    dictation_off: "Voice recognition is off: turn it on in the settings",
+  },
   empty: {
     notes_title: "No notes yet",
     notes_text: "Tap + to write your first one, or use the quick note below.",
