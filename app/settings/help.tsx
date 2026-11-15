@@ -227,6 +227,10 @@ export default function HelpScreen() {
               </>
             ),
           },
+          // The icon's shortcuts, the widgets and sharing to the app exist only on Android.
+          ...(Platform.OS === "android"
+            ? [{ base: "help.what_from_outside", body: <>{lines("help.what_from_outside", ["text_1_0"])}</> }]
+            : []),
           { base: "help.how_to_edit_note", body: <>{txt("help.how_to_edit_note.text_1_0")}</> },
           {
             base: "help.how_to_delete_note",
@@ -329,6 +333,7 @@ export default function HelpScreen() {
             base: "help.what_history",
             body: <>{lines("help.what_history", ["text_1_0", "text_2_0"])}</>,
           },
+          { base: "help.what_reminders", body: <>{lines("help.what_reminders", ["text_1_0"])}</> },
         ],
       },
       {

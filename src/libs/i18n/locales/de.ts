@@ -952,6 +952,16 @@ const de = {
       text_2_0:
         "Fast Memo behält eine, bevor die KI, ein Agent, eine Synchronisierung oder eine große Änderung die Notiz überschreibt. Sie bleiben auf diesem Gerät.",
     },
+    what_reminders: {
+      title: "Erinnerungen",
+      text_1_0:
+        "Wählen Sie im Menü einer Notiz einen Tag und eine Uhrzeit. Die Benachrichtigung kommt auf den Handys an, die die Notiz haben; eine auf einem anderen Gerät gesetzte erreicht ein Handy, wenn Fast Memo dort das nächste Mal geöffnet wird.",
+    },
+    what_from_outside: {
+      title: "Von außerhalb der App",
+      text_1_0:
+        "Halten Sie das Symbol von Fast Memo gedrückt für Neue Notiz, Neue Liste und Notiz diktieren; fügen Sie seine Widgets zum Startbildschirm hinzu; teilen Sie Text, Links und Bilder aus anderen Apps mit Fast Memo.",
+    },
     what_find_replace: {
       title: "Wie suche und ersetze ich Text?",
       text_1_0: "Tippen Sie beim Bearbeiten einer Text- oder Codenotiz oben rechts auf das Suchsymbol.",

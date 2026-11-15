@@ -31,6 +31,7 @@ export const HELP_TOPICS: { catKey: string; bases: string[] }[] = [
       "help.what_find_replace",
       "help.what_are_settings_note",
       "help.what_history",
+      "help.what_reminders",
     ],
   },
   {
@@ -74,5 +75,8 @@ export const HELP_TOPICS: { catKey: string; bases: string[] }[] = [
   },
 ];
 
-/** Topics about what only the phone app has (the AI assistant, voice dictation): the desktop app doesn't list them. */
-export const HELP_MOBILE_ONLY: string[] = ["help.what_ai_assistant", "help.what_voice_dictation"];
+/**
+ * Topics about what only the phone app has (the AI assistant, voice dictation, what opens Fast Memo from outside on
+ * Android): the desktop app doesn't list them.
+ */
+export const HELP_MOBILE_ONLY: string[] = ["help.what_ai_assistant", "help.what_voice_dictation", "help.what_from_outside"];

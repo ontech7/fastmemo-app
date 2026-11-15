@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
@@ -25,11 +25,18 @@ export function glowStops(color: string, peak: number) {
  * Static and cheap (no blur, single SVG radial fill).
  */
 export default function AppBackground({ style }: Props) {
+  // A tablet turned keeps the glows at the old size on Android: the svg is drawn again for the window's new size.
+  const { width, height } = useWindowDimensions();
   return (
     <View style={[styles.base, style, { pointerEvents: "none" }]}>
       {/* width/height as props (not just style) — react-native-svg on web sizes
           the <svg> from these, otherwise it collapses to a small top-left box. */}
-      <Svg width="100%" height="100%" style={[StyleSheet.absoluteFill, { pointerEvents: "none" }]}>
+      <Svg
+        key={Platform.OS === "android" ? `${width}x${height}` : undefined}
+        width="100%"
+        height="100%"
+        style={[StyleSheet.absoluteFill, { pointerEvents: "none" }]}
+      >
         <Defs>
           <RadialGradient id="glowTop" cx="88%" cy="-2%" rx="70%" ry="55%">
             {glowStops(COLOR.accent, 0.28)}

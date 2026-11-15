@@ -939,6 +939,16 @@ const en = {
       text_2_0:
         "Fast Memo keeps one before the AI, an agent, a sync or a big change rewrites the note. They stay on this device.",
     },
+    what_reminders: {
+      title: "Reminders",
+      text_1_0:
+        "From a note's menu, choose a day and a time. The alert arrives on the phones that have the note; one set on another device reaches a phone the next time Fast Memo is opened there.",
+    },
+    what_from_outside: {
+      title: "From outside the app",
+      text_1_0:
+        "Hold Fast Memo's icon for New note, New list and Dictation; add its widgets to your home screen; share text, links and pictures to Fast Memo from other apps.",
+    },
     what_find_replace: {
       title: "How do I find and replace text?",
       text_1_0: "While editing a text or code note, tap the search icon in the top-right corner.",

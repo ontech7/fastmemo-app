@@ -946,6 +946,16 @@ const it = {
       text_2_0:
         "Fast Memo ne conserva una prima che l'AI, un agente, una sincronizzazione o una modifica importante riscrivano la nota. Restano su questo dispositivo.",
     },
+    what_reminders: {
+      title: "Promemoria",
+      text_1_0:
+        "Dal menu di una nota scegli un giorno e un'ora. L'avviso arriva sui telefoni che hanno la nota; uno impostato su un altro dispositivo arriva su un telefono alla prossima apertura di Fast Memo.",
+    },
+    what_from_outside: {
+      title: "Da fuori dall'app",
+      text_1_0:
+        "Tieni premuta l'icona di Fast Memo per Nuova nota, Nuova lista e Dettatura; aggiungi i suoi widget alla schermata Home; condividi testo, link e immagini con Fast Memo dalle altre app.",
+    },
     what_find_replace: {
       title: "Come trovo e sostituisco il testo?",
       text_1_0: "Mentre modifichi una nota di testo o di codice, tocca l'icona di ricerca in alto a destra.",

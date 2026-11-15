@@ -951,6 +951,16 @@ const fr = {
       text_2_0:
         "Fast Memo en garde une avant que l'IA, un agent, une synchronisation ou une modification importante ne réécrive la note. Elles restent sur cet appareil.",
     },
+    what_reminders: {
+      title: "Rappels",
+      text_1_0:
+        "Depuis le menu d'une note, choisissez un jour et une heure. L'alerte arrive sur les téléphones qui ont la note ; un rappel réglé sur un autre appareil arrive sur un téléphone à la prochaine ouverture de Fast Memo.",
+    },
+    what_from_outside: {
+      title: "Depuis l'extérieur de l'app",
+      text_1_0:
+        "Appuyez longuement sur l'icône de Fast Memo pour Nouvelle note, Nouvelle liste et Dicter une note ; ajoutez ses widgets à l'écran d'accueil ; partagez du texte, des liens et des images avec Fast Memo depuis d'autres apps.",
+    },
     what_find_replace: {
       title: "Comment rechercher et remplacer du texte ?",
       text_1_0:

@@ -1,9 +1,10 @@
 import type { ReactNode, Ref } from "react";
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent, ViewInstance } from "react-native";
 import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AlignCenterIcon,
@@ -86,10 +87,13 @@ const LIST_LINES: readonly LineType[] = ["ul", "ol", "todo"];
  */
 export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, camera, docked, above }: Props) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState<{ menu: MenuName; left: number } | null>(null);
+  // room: the height between the bar and the status bar (the phone); a menu taller than that scrolls in it.
+  const [open, setOpen] = useState<{ menu: MenuName; left: number; room?: number } | null>(null);
   const menu = open?.menu ?? null;
   const openerXRef = useRef<Record<MenuName, number>>({ style: 0, lists: 0, insert: 0, more: 0 });
   const barWidthRef = useRef(0);
+  const barRef = useRef<ViewInstance>(null);
+  const insets = useSafeAreaInsets();
   // A window wide enough (a desktop's): the controls get room between them; a narrow one keeps them packed.
   const { width: windowWidth } = useWindowDimensions();
   const roomy = docked && windowWidth >= ROOMY_WIDTH;
@@ -99,7 +103,14 @@ export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, 
   const openMenu = (name: MenuName) => {
     const x = openerXRef.current[name] - scrollXRef.current;
     const left = Math.max(PADDING_MARGIN.sm, Math.min(x, barWidthRef.current - MENU_WIDTH - PADDING_MARGIN.sm));
-    setOpen({ menu: name, left });
+    if (docked || !barRef.current) {
+      setOpen({ menu: name, left });
+      return;
+    }
+    // A tablet held sideways leaves little room over the keyboard: the menu stops below the status bar (Task 43).
+    barRef.current.measureInWindow((_x, y) =>
+      setOpen({ menu: name, left, room: Math.max(0, y - insets.top - 2 * PADDING_MARGIN.sm) })
+    );
   };
 
   useImperativeHandle(ref, () => ({ closeMenu }), [closeMenu]);
@@ -332,25 +343,30 @@ export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, 
     above ??
     (menu && (
       <View
-        style={[docked ? styles.menuDocked : styles.menu, docked ? { left: open?.left ?? 0 } : { marginLeft: open?.left ?? 0 }]}
+        style={[
+          docked ? styles.menuDocked : styles.menu,
+          docked ? { left: open?.left ?? 0 } : { marginLeft: open?.left ?? 0, maxHeight: open?.room },
+        ]}
         accessibilityRole="menu"
       >
-        {entries(menu).map((entry) => (
-          <Pressable
-            key={entry.key}
-            onPress={entry.onPress}
-            accessibilityRole="menuitem"
-            accessibilityLabel={entry.label}
-            aria-checked={entry.checked}
-            style={({ pressed }) => [styles.entry, pressed && styles.entryPressed]}
-          >
-            <View style={styles.entryIcon}>{entry.icon}</View>
-            <Text style={[styles.entryLabel, entry.checked && styles.entryLabelOn]} numberOfLines={1}>
-              {entry.label}
-            </Text>
-            {entry.checked && <TickIcon size={16} color={COLOR.accentSoft} />}
-          </Pressable>
-        ))}
+        <ScrollView style={styles.menuScroll} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
+          {entries(menu).map((entry) => (
+            <Pressable
+              key={entry.key}
+              onPress={entry.onPress}
+              accessibilityRole="menuitem"
+              accessibilityLabel={entry.label}
+              aria-checked={entry.checked}
+              style={({ pressed }) => [styles.entry, pressed && styles.entryPressed]}
+            >
+              <View style={styles.entryIcon}>{entry.icon}</View>
+              <Text style={[styles.entryLabel, entry.checked && styles.entryLabelOn]} numberOfLines={1}>
+                {entry.label}
+              </Text>
+              {entry.checked && <TickIcon size={16} color={COLOR.accentSoft} />}
+            </Pressable>
+          ))}
+        </ScrollView>
       </View>
     ));
 
@@ -362,6 +378,7 @@ export default function TextFormatBar({ ref, state, onLine, onFormat, onInsert, 
         </Pressable>
       ) : null}
       <View
+        ref={barRef}
         style={[styles.bar, docked && styles.barDocked]}
         onLayout={(e) => (barWidthRef.current = e.nativeEvent.layout.width)}
       >
@@ -509,6 +526,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: GLASS.border,
     ...SHADOW.card,
+  },
+  menuScroll: {
+    flexGrow: 0,
   },
   menuDocked: {
     position: "absolute",
