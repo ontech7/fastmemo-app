@@ -1,14 +1,12 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 import { changelogLines } from "@/utils/changelog";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
-import { DURATION, EASING } from "@/constants/motion";
 
 interface Props {
   text: string;
@@ -21,13 +19,11 @@ const LIMIT = 5;
 /** How much of the first hidden line shows under the fade. */
 const PEEK = 22;
 const FADE = 56;
-/** Before the lines are measured nothing is cut. */
-const UNMEASURED = 100000;
 
 /**
  * A version's changelog: its lines with their lead in bold (utils/changelog). A long one shows its first lines, the next
  * fading out, and "Show more" opens the rest: the first lines are the ones that matter, the others are there for whoever
- * wants them.
+ * wants them. It opens and closes at once, with no animation, like the help screen's sections.
  */
 export default function ChangelogBullets({ text, small = false }: Props) {
   const { t } = useTranslation();
@@ -39,29 +35,16 @@ export default function ChangelogBullets({ text, small = false }: Props) {
   const [open, setOpen] = useState(false);
   const gradientId = "fade" + useId().replace(/[^a-zA-Z0-9]/g, "");
 
-  const progress = useSharedValue(0);
-  const fullHeight = useSharedValue(0);
-  const foldedHeight = useSharedValue(0);
-
-  useEffect(() => {
-    progress.set(withTiming(open ? 1 : 0, { duration: DURATION.slow, easing: open ? EASING.enter : EASING.exit }));
-  }, [open, progress]);
-
-  const clipStyle = useAnimatedStyle(() => {
-    const folded = foldedHeight.get();
-    const full = Math.max(fullHeight.get(), folded);
-    return { maxHeight: folded > 0 ? interpolate(progress.get(), [0, 1], [folded, full]) : UNMEASURED };
-  });
-  const fadeStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.get() }));
-  const chevronStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${180 * progress.get()}deg` }] }));
+  /** Where the folded list ends: a peek of the first hidden line. Before it is measured nothing is cut. */
+  const [folded, setFolded] = useState(0);
 
   const list = (
-    <View onLayout={foldable ? (e) => fullHeight.set(e.nativeEvent.layout.height) : undefined} style={styles.list}>
+    <View style={styles.list}>
       {lines.map((line, i) => (
         <View
           key={i}
           style={styles.row}
-          onLayout={foldable && i === LIMIT ? (e) => foldedHeight.set(e.nativeEvent.layout.y + PEEK) : undefined}
+          onLayout={foldable && i === LIMIT ? (e) => setFolded(e.nativeEvent.layout.y + PEEK) : undefined}
         >
           {line.bullet && <View style={[styles.dot, small && styles.dotSmall]} />}
           <Text style={[styles.text, small && styles.textSmall]}>
@@ -77,20 +60,22 @@ export default function ChangelogBullets({ text, small = false }: Props) {
 
   return (
     <View>
-      <Animated.View style={[styles.clip, clipStyle]}>
+      <View style={[styles.clip, !open && folded > 0 && { maxHeight: folded }]}>
         {list}
-        <Animated.View style={[styles.fade, fadeStyle, { pointerEvents: "none" }]} aria-hidden>
-          <Svg width="100%" height="100%">
-            <Defs>
-              <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={COLOR.surface} stopOpacity="0" />
-                <Stop offset="0.85" stopColor={COLOR.surface} stopOpacity="1" />
-              </LinearGradient>
-            </Defs>
-            <Rect width="100%" height="100%" fill={`url(#${gradientId})`} />
-          </Svg>
-        </Animated.View>
-      </Animated.View>
+        {!open && (
+          <View style={styles.fade} aria-hidden>
+            <Svg width="100%" height="100%">
+              <Defs>
+                <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={COLOR.surface} stopOpacity="0" />
+                  <Stop offset="0.85" stopColor={COLOR.surface} stopOpacity="1" />
+                </LinearGradient>
+              </Defs>
+              <Rect width="100%" height="100%" fill={`url(#${gradientId})`} />
+            </Svg>
+          </View>
+        )}
+      </View>
 
       <TouchableOpacity
         accessibilityRole="button"
@@ -101,9 +86,9 @@ export default function ChangelogBullets({ text, small = false }: Props) {
       >
         <Text style={styles.moreText}>{open ? t("changelog.show_less") : t("changelog.show_more")}</Text>
         {!open && <Text style={styles.moreCount}>· {t("changelog.more_count", { count: hidden })}</Text>}
-        <Animated.View style={chevronStyle}>
+        <View style={open && styles.chevronOpen}>
           <ChevronDownIcon size={16} color={COLOR.textSecondary} />
-        </Animated.View>
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -155,6 +140,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: FADE,
+    pointerEvents: "none",
+  },
+  chevronOpen: {
+    transform: [{ rotate: "180deg" }],
   },
   more: {
     flexDirection: "row",
