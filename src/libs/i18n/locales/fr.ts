@@ -1512,6 +1512,21 @@ const fr = {
     dictation_off: "La reconnaissance vocale est désactivée : activez-la dans les réglages",
   },
   reminder: {
+    channel: "Rappels",
+    notification_body: "Rappel",
+    notification_title: "Rappel",
+    notification_private: "Vous avez un rappel sur une note protégée",
+    ask_sync_title: "Une note a un rappel",
+    ask_sync_text: "Être averti aussi sur ce téléphone ?",
+    not_now: "Pas maintenant",
+    denied_title: "Ce téléphone n'avertira pas",
+    denied_text:
+      "Les notifications de Fast Memo sont désactivées. Le rappel reste sur la note et peut sonner sur vos autres téléphones.",
+    open_settings: "Ouvrir les réglages",
+    exact_title: "Être à l'heure",
+    exact_text:
+      "Pour sonner à l'heure exacte, Fast Memo a besoin de l'accès « Alarmes et rappels ». Sans lui, Android peut délivrer l'alerte en retard, jusqu'à une heure.",
+    late_note: "Sans l'accès « Alarmes et rappels », l'alerte peut arriver en retard.",
     in_hour: "Dans une heure",
     tonight: "Ce soir",
     tomorrow: "Demain matin",

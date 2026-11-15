@@ -1495,6 +1495,21 @@ const it = {
     dictation_off: "Il riconoscimento vocale è disattivato: attivalo nelle impostazioni",
   },
   reminder: {
+    channel: "Promemoria",
+    notification_body: "Promemoria",
+    notification_title: "Promemoria",
+    notification_private: "Hai un promemoria su una nota protetta",
+    ask_sync_title: "Una nota ha un promemoria",
+    ask_sync_text: "Vuoi l'avviso anche su questo telefono?",
+    not_now: "Non ora",
+    denied_title: "Questo telefono non avviserà",
+    denied_text:
+      "Le notifiche di Fast Memo sono disattivate. Il promemoria resta sulla nota e può suonare sugli altri tuoi telefoni.",
+    open_settings: "Apri impostazioni",
+    exact_title: "Arrivare puntuale",
+    exact_text:
+      "Per suonare all'ora esatta Fast Memo ha bisogno dell'accesso «Sveglie e promemoria». Senza, Android può consegnare l'avviso in ritardo, fino a un'ora.",
+    late_note: "Senza l'accesso «Sveglie e promemoria» l'avviso può arrivare in ritardo.",
     in_hour: "Tra un'ora",
     tonight: "Stasera",
     tomorrow: "Domani mattina",

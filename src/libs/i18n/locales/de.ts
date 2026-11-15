@@ -1514,6 +1514,21 @@ const de = {
     dictation_off: "Die Spracherkennung ist aus: Schalte sie in den Einstellungen ein",
   },
   reminder: {
+    channel: "Erinnerungen",
+    notification_body: "Erinnerung",
+    notification_title: "Erinnerung",
+    notification_private: "Sie haben eine Erinnerung an einer geschützten Notiz",
+    ask_sync_title: "Eine Notiz hat eine Erinnerung",
+    ask_sync_text: "Auch auf diesem Telefon benachrichtigen?",
+    not_now: "Nicht jetzt",
+    denied_title: "Dieses Telefon benachrichtigt nicht",
+    denied_text:
+      "Die Benachrichtigungen von Fast Memo sind ausgeschaltet. Die Erinnerung bleibt an der Notiz und kann auf Ihren anderen Telefonen klingeln.",
+    open_settings: "Einstellungen öffnen",
+    exact_title: "Pünktlich sein",
+    exact_text:
+      "Um zur genauen Uhrzeit zu klingeln, braucht Fast Memo den Zugriff „Wecker und Erinnerungen“. Ohne ihn kann Android die Benachrichtigung verspätet zustellen, bis zu einer Stunde.",
+    late_note: "Ohne den Zugriff „Wecker und Erinnerungen“ kann die Benachrichtigung verspätet ankommen.",
     in_hour: "In einer Stunde",
     tonight: "Heute Abend",
     tomorrow: "Morgen früh",

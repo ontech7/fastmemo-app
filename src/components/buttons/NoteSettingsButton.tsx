@@ -23,10 +23,12 @@ import NoteInfoDialog from "@/components/dialogs/NoteInfoDialog";
 import ReminderSheet from "@/components/notes/ReminderSheet";
 import IconChip from "@/components/ui/IconChip";
 import PopupMenu, { PopupMenuDivider, PopupMenuOption, PopupMenuToggle, PopupMenuToggleRow } from "@/components/ui/PopupMenu";
+import { useReminderAsk } from "@/hooks/useReminderAsk";
 import { useRouter } from "@/hooks/useRouter";
 import { stripHtml } from "@/libs/ai";
 import { addTrail } from "@/libs/diagnostics";
 import { canPrint, printNote } from "@/libs/print";
+import { exactAlarmState } from "@/libs/reminders";
 import { withReminder } from "@/libs/reminders/plan";
 import { storeUnlockedNote } from "@/libs/registry";
 import { exportAsPdf, exportAsTextFile, htmlToMarkdown } from "@/utils/export";
@@ -68,12 +70,21 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
+  // Android without the exact-alarm access: the sheet says the alert can be late.
+  const [lateNote, setLateNote] = useState(false);
+  const { ask: askToRing, dialogs: reminderDialogs } = useReminderAsk();
 
-  // A reminder is an ordinary edit of the note (spec D.5): it syncs like the title.
+  const openReminder = async () => {
+    setLateNote((await exactAlarmState()) === "denied");
+    setShowReminder(true);
+  };
+
+  // A reminder is an ordinary edit of the note (spec D.5): it syncs like the title. Then what the phone needs to ring.
   const setReminder = (at: number) => {
     setShowReminder(false);
     setNote(withReminder(note, at));
     toast(t("reminder.set_toast"));
+    askToRing();
   };
   const removeReminder = () => {
     setShowReminder(false);
@@ -276,7 +287,7 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
           <PopupMenuOption
             label={t("note.settings.reminder")}
             trailing={<BellIcon size={16} color={COLOR.textSecondary} />}
-            onSelect={() => setShowReminder(true)}
+            onSelect={openReminder}
           />
         )}
 
@@ -357,9 +368,10 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
           onSet={setReminder}
           onRemove={removeReminder}
           onClose={() => setShowReminder(false)}
-          note={Platform.OS === "web" ? t("reminder.desktop_note") : undefined}
+          note={Platform.OS === "web" ? t("reminder.desktop_note") : lateNote ? t("reminder.late_note") : undefined}
         />
       )}
+      {reminderDialogs}
     </>
   );
 }

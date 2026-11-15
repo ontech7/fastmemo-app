@@ -2506,6 +2506,48 @@ phone after a cold start, where timers come late.
 
 ---
 
+### LL-095: A reminder's tap on a cold start opened the home, not the note
+
+**Date:** 2026-11-15  
+**Severity:** Medium (the note had to be found by hand; nothing lost)  
+**Category:** Bug  
+**What happened:** on the emulator, with the app's process gone, a reminder's tap started Fast Memo on the home. With the
+app running the same tap opened the note.  
+**Root cause:** the tap went through `requestLaunch`, which does nothing before the home's first focus (so a link can't
+skip the intro). The home starts the reminders in a `useEffect`, and expo-router's `useFocusEffect`, which marks the
+home as shown, waits for the navigation to be ready: on a cold start it ran after, and the tap was dropped.  
+**Fix:** `openWhenHome` in `libs/launch`: before the home's first focus the action waits as a pending one (the home takes
+it when it appears), after it does what `requestLaunch` does. Test: `launch.test.mjs` "before and after the home first
+appears" (red before, green after); on the emulator, the tap after `am kill` opens the note.  
+**Rule:** a hook's order in a component doesn't order its effects against a `useFocusEffect`: what depends on "the
+screen is shown" must hold until it is, not read a flag once.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-15 **Resolved in:** plan-2/new-features
+
+---
+
+### LL-096: On Android 13+ expo answers "denied" for a notification question never asked
+
+**Date:** 2026-11-15  
+**Severity:** High (on a fresh install the system's question never showed: notifications could not be allowed from the
+app)  
+**Category:** Platform  
+**What happened:** after `pm clear`, setting a reminder showed the app's "This phone won't notify" dialog at once; no
+`GrantPermissionsActivity` was started.  
+**Root cause:** expo-notifications' `getPermissionsAsync` on API 33+ returns `status: "denied"` whenever
+`areNotificationsEnabled()` is false, and it is false until the permission is granted, so a question never asked reads
+as refused. `canAskAgain` stays true until Android stops showing the question.  
+**Fix:** `notifyStateOf` (`libs/reminders/plan.ts`): granted → "granted", else `canAskAgain` → "askable" (the system's
+question), else "denied" (the app's dialog). Test: `reminders.test.mjs` "whether the phone may ask"; on the emulator a
+fresh install shows the system's question, a second refusal the app's dialog.  
+**Rule:** for Android runtime permissions through expo, decide from `granted` and `canAskAgain`, never from `status`.
+
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-15 **Resolved in:** plan-2/new-features
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:

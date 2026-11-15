@@ -24,6 +24,7 @@ export type {
   NoteCreationMode,
   NoteCreationType,
   NoteCreationSettings,
+  ReminderSettings,
   TourStep,
   SettingsState,
 } from "./settings";

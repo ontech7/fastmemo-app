@@ -33,6 +33,15 @@ export function requestLaunch(action: LaunchAction | null): void {
   if (action) setPendingLaunch(action);
 }
 
+/**
+ * For what only runs once the home exists (a notification's tap, ADR-044): the home may not have had its first focus yet,
+ * as on a cold start, when the navigation is still getting ready. Then the action waits for it; after, as `requestLaunch`.
+ */
+export function openWhenHome(action: LaunchAction): void {
+  if (homeShown) requestLaunch(action);
+  else setPendingLaunch(action);
+}
+
 let dictateOnOpen = false;
 
 /** One slot, like the find word's: a new text note opened by "dictate" starts the dictation sheet. */

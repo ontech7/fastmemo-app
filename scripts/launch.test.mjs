@@ -19,6 +19,7 @@ await build({
       export { setPendingLaunch, takePendingLaunch, onPendingLaunch } from "@/libs/launch/pending";
       export { noteFromShare } from "@/libs/launch/share";
       export { deriveNoteTitle } from "@/utils/string";
+      export { requestLaunch, setHomeShown, openWhenHome } from "@/libs/launch";
     `,
     resolveDir: src,
     loader: "ts",
@@ -29,7 +30,21 @@ await build({
   outfile: out,
   logLevel: "error",
   alias: { "@": src },
+  // The router is the app's; here it only records where it was sent.
+  plugins: [
+    {
+      name: "router-stub",
+      setup(b) {
+        b.onResolve({ filter: /^expo-router$/ }, () => ({ path: "expo-router", namespace: "stub" }));
+        b.onLoad({ filter: /.*/, namespace: "stub" }, () => ({
+          contents: "export const router = { dismissTo: (to) => globalThis.__routed.push(to) };",
+          loader: "js",
+        }));
+      },
+    },
+  ],
 });
+globalThis.__routed = [];
 
 const {
   parseLaunch,
@@ -40,6 +55,9 @@ const {
   onPendingLaunch,
   noteFromShare,
   deriveNoteTitle,
+  requestLaunch,
+  setHomeShown,
+  openWhenHome,
 } = await import(pathToFileURL(out).href);
 
 let passed = 0;
@@ -246,6 +264,26 @@ off();
 setPendingLaunch({ kind: "new", type: "code" });
 ok("the newest pending action wins, and is taken once", takePendingLaunch()?.kind === "new" && takePendingLaunch() === null);
 ok("listeners hear each new action while they listen", heard === 2, heard);
+
+console.log("\nbefore and after the home first appears");
+takePendingLaunch();
+const routed = globalThis.__routed;
+requestLaunch({ kind: "new", type: "text" });
+ok("a link while the start screen runs does nothing", takePendingLaunch() === null && routed.length === 0, routed);
+openWhenHome({ kind: "note", id: "n1" });
+const early = takePendingLaunch();
+ok(
+  "a notification's tap before the home appears waits for it, going nowhere",
+  early?.id === "n1" && routed.length === 0,
+  routed
+);
+setHomeShown();
+openWhenHome({ kind: "note", id: "n2" });
+ok(
+  "after, it brings the home to the front and leaves the action",
+  takePendingLaunch()?.id === "n2" && routed.join() === "/home",
+  routed
+);
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);

@@ -23,6 +23,7 @@ import { useLaunchAction } from "@/hooks/useLaunchAction";
 import { useNoteSearch } from "@/hooks/useNoteSearch";
 import { useRouter } from "@/hooks/useRouter";
 import { useSecret } from "@/hooks/useSecret";
+import { useReminderSyncQuestion } from "@/hooks/useReminderAsk";
 import { useVaultPrompt } from "@/hooks/useVaultPrompt";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import { setListHost } from "@/libs/desktopList";
@@ -32,6 +33,7 @@ import { setFindOnOpen } from "@/libs/search/findOnOpen";
 import { addTrail } from "@/libs/diagnostics";
 import Haptics from "@/libs/haptics";
 import { type AppStore as HistoryStore, startHistory } from "@/libs/history";
+import { startReminders } from "@/libs/reminders";
 import type { SearchHit } from "@/libs/search/search";
 import type { TagCount } from "@/libs/search/tags";
 import { windowReady } from "@/libs/windowReady";
@@ -71,7 +73,7 @@ import { KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector, useStore } from "react-redux";
-import type { UnknownAction } from "@reduxjs/toolkit";
+import type { Store, UnknownAction } from "@reduxjs/toolkit";
 
 /** What the home's list holds: notes, and while searching the groups' headings and the tags. */
 type HomeRow =
@@ -107,6 +109,9 @@ export default function HomeScreen() {
 
   // After the first draw: the versions of a note deleted for good go with it, and the history is swept once (spec B.9).
   useEffect(() => startHistory(store as unknown as HistoryStore), [store]);
+  // After the first draw too: the phone's reminders (spec D.5); nothing on the web and the desktop.
+  useEffect(() => startReminders(store as Store<RootState>), [store]);
+  const reminderQuestion = useReminderSyncQuestion();
 
   const currentCategory = useSelector(getCurrentCategory);
   const showHidden = useSelector(selectorShowHidden);
@@ -513,6 +518,7 @@ export default function HomeScreen() {
 
   return (
     <>
+      {reminderQuestion}
       <ConfirmOrCancelDialog
         open={showDeleteNotesDialog}
         destructive

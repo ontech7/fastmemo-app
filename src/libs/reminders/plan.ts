@@ -58,3 +58,14 @@ export function withReminder<T extends Note>(note: T, at: number | null): T {
   }
   return { ...note, remindAt: at };
 }
+
+export type NotifyState = "granted" | "askable" | "denied";
+
+/**
+ * Whether this phone may ring, or may still show the system's question. Not the permission's `status`: on Android 13+ it
+ * says "denied" for a question never asked too, since notifications count as off until allowed; `canAskAgain` tells.
+ */
+export function notifyStateOf(permission: { granted: boolean; canAskAgain: boolean }): NotifyState {
+  if (permission.granted) return "granted";
+  return permission.canAskAgain ? "askable" : "denied";
+}

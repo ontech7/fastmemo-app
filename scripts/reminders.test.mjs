@@ -13,7 +13,7 @@ const out = join(os.tmpdir(), "reminders.bundle.mjs");
 await build({
   stdin: {
     contents: `
-      export { planReminders, isUpcoming, withReminder } from "@/libs/reminders/plan";
+      export { planReminders, isUpcoming, withReminder, notifyStateOf } from "@/libs/reminders/plan";
       export { presets, formatWhen } from "@/libs/reminders/presets";
       export { monthGrid } from "@/libs/reminders/month";
     `,
@@ -28,7 +28,9 @@ await build({
   alias: { "@": src },
 });
 
-const { planReminders, isUpcoming, withReminder, presets, formatWhen, monthGrid } = await import(pathToFileURL(out).href);
+const { planReminders, isUpcoming, withReminder, notifyStateOf, presets, formatWhen, monthGrid } = await import(
+  pathToFileURL(out).href
+);
 
 let passed = 0;
 let failed = 0;
@@ -107,6 +109,15 @@ ok(
     !isUpcoming({ remindAt: now }, now) &&
     !isUpcoming({}, now)
 );
+
+console.log("\nwhether the phone may ask");
+// Android 13+: expo answers "denied" for a question never asked too (notifications count as off until allowed).
+ok("allowed: granted", notifyStateOf({ granted: true, canAskAgain: true, status: "granted" }) === "granted");
+ok(
+  "never asked, though the status says denied: the system's question can show",
+  notifyStateOf({ granted: false, canAskAgain: true, status: "denied" }) === "askable"
+);
+ok("refused for good: the app's dialog", notifyStateOf({ granted: false, canAskAgain: false, status: "denied" }) === "denied");
 
 console.log("\nthe presets");
 const at = (y, m, d, h, min = 0) => new Date(y, m - 1, d, h, min).getTime();

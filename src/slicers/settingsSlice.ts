@@ -3,6 +3,7 @@ import type {
   CloudSettings,
   DeveloperModeSettings,
   NoteCreationSettings,
+  ReminderSettings,
   RootState,
   SettingsState,
   TourStep,
@@ -136,6 +137,10 @@ const settingsSlice = createSlice({
     setDesktopZoom: (state, action: PayloadAction<number>) => {
       state.desktopZoom = action.payload;
     },
+    /** Merges into the phone's reminder settings. */
+    setReminderSettings: (state, action: PayloadAction<ReminderSettings>) => {
+      state.reminders = { ...state.reminders, ...action.payload };
+    },
   },
 });
 
@@ -157,6 +162,7 @@ export const {
   setNoteCreation,
   setTourStep,
   setDesktopZoom,
+  setReminderSettings,
 } = settingsSlice.actions;
 
 export const getAllSettings = (state: RootState): SettingsState => state.settings;
@@ -166,6 +172,7 @@ export const selectorCurrentSecretCode = (state: RootState): string => state.set
 export const selectorIsFingerprintEnabled = (state: RootState): boolean => state.settings.isFingerprintEnabled;
 export const selectorShowHidden = (state: RootState): boolean => state.settings.showHidden;
 export const selectorTourStep = (state: RootState): TourStep | undefined => state.settings.tour;
+export const selectorReminderSettings = (state: RootState): ReminderSettings => state.settings.reminders ?? {};
 export const selectorDesktopZoom = (state: RootState): number => state.settings.desktopZoom ?? 100;
 export const selectorReportDate = (state: RootState): string | null => state.settings.reportDate;
 /** The reports sent in the last 24 hours (a state saved before the key existed has none). */

@@ -1502,6 +1502,21 @@ const es = {
     dictation_off: "El reconocimiento de voz está desactivado: actívalo en los ajustes",
   },
   reminder: {
+    channel: "Recordatorios",
+    notification_body: "Recordatorio",
+    notification_title: "Recordatorio",
+    notification_private: "Tienes un recordatorio en una nota protegida",
+    ask_sync_title: "Una nota tiene un recordatorio",
+    ask_sync_text: "¿Avisar también en este teléfono?",
+    not_now: "Ahora no",
+    denied_title: "Este teléfono no avisará",
+    denied_text:
+      "Las notificaciones de Fast Memo están desactivadas. El recordatorio sigue en la nota y puede sonar en tus otros teléfonos.",
+    open_settings: "Abrir ajustes",
+    exact_title: "Llegar a tiempo",
+    exact_text:
+      "Para sonar a la hora exacta, Fast Memo necesita el acceso «Alarmas y recordatorios». Sin él, Android puede entregar el aviso con retraso, hasta una hora.",
+    late_note: "Sin el acceso «Alarmas y recordatorios» el aviso puede llegar con retraso.",
     in_hour: "En una hora",
     tonight: "Esta noche",
     tomorrow: "Mañana por la mañana",

@@ -339,10 +339,31 @@ export default ({ config }: ConfigContext): ExpoConfig =>
                   backgroundColor,
                 },
                 package: appBundle,
+                // A reminder rings at its minute (spec D.5): the user grants it in "Alarms and reminders".
+                permissions: ["android.permission.SCHEDULE_EXACT_ALARM"],
                 blockedPermissions: [
                   "android.permission.READ_MEDIA_IMAGES",
                   "android.permission.READ_MEDIA_VIDEO",
                   "android.permission.READ_MEDIA_AUDIO",
+                  // expo-notifications brings these: no badge, no push, no install referrer (spec D.5).
+                  "android.permission.READ_APP_BADGE",
+                  "com.google.android.c2dm.permission.RECEIVE",
+                  "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE",
+                  "com.anddoes.launcher.permission.UPDATE_COUNT",
+                  "com.htc.launcher.permission.READ_SETTINGS",
+                  "com.htc.launcher.permission.UPDATE_SHORTCUT",
+                  "com.huawei.android.launcher.permission.CHANGE_BADGE",
+                  "com.huawei.android.launcher.permission.READ_SETTINGS",
+                  "com.huawei.android.launcher.permission.WRITE_SETTINGS",
+                  "com.majeur.launcher.permission.UPDATE_BADGE",
+                  "com.oppo.launcher.permission.READ_SETTINGS",
+                  "com.oppo.launcher.permission.WRITE_SETTINGS",
+                  "com.sec.android.provider.badge.permission.READ",
+                  "com.sec.android.provider.badge.permission.WRITE",
+                  "com.sonyericsson.home.permission.BROADCAST_BADGE",
+                  "com.sonymobile.home.permission.PROVIDER_INSERT_BADGE",
+                  "me.everything.badger.permission.BADGE_COUNT_READ",
+                  "me.everything.badger.permission.BADGE_COUNT_WRITE",
                 ],
               },
               web: {
@@ -391,6 +412,8 @@ export default ({ config }: ConfigContext): ExpoConfig =>
                 // (and the fingerprint) differed between EAS and this machine: OTAs would never match the build. iOS isn't shipped.
                 ["llama.rn", { enableEntitlements: false }],
                 ["expo-alternate-app-icons", alternateAppIcons],
+                // Reminders, scheduled and shown on the phone only: no push token, no Firebase file (spec D.5).
+                ["expo-notifications", { icon: "./assets/images/notification-icon.png", color: "#4F6BFF" }],
                 [
                   "@sentry/react-native",
                   {

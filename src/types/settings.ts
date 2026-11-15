@@ -98,4 +98,15 @@ export interface SettingsState {
   tour?: TourStep;
   /** The desktop window's zoom on this device, in percent (spec C.4); absent means 100. */
   desktopZoom?: number;
+  /** The phone's reminders (spec D.5), this device only. */
+  reminders?: ReminderSettings;
+}
+
+export interface ReminderSettings {
+  /** The "be on time" question was shown. */
+  exactAsked?: boolean;
+  /** The home's question after a sync was answered (either way): it is asked once. */
+  syncAsked?: boolean;
+  /** The exact-alarm access at the last reconcile. */
+  exact?: boolean;
 }
