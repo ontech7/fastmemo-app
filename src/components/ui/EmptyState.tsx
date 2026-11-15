@@ -22,6 +22,8 @@ interface Props {
   days?: number;
   /** `list`: the list can't be changed (no + to point at). */
   readOnly?: boolean;
+  /** Room kept free at the bottom (the add button, the tour's tip); 0 centres the block in its area. */
+  bottomRoom?: number;
 }
 
 /*
@@ -30,7 +32,14 @@ interface Props {
  * keyboard up (a search typed) the list keeps its height under the keyboard, and the add button rides above the keyboard:
  * the block rises by half the part the keyboard covers, centred in what is still visible, clear of the button.
  */
-export default function EmptyState({ variant, categoryIcon, quickNote = true, days, readOnly = false }: Props) {
+export default function EmptyState({
+  variant,
+  categoryIcon,
+  quickNote = true,
+  days,
+  readOnly = false,
+  bottomRoom = BOTTOM_ROOM,
+}: Props) {
   const { t } = useTranslation();
 
   // `height` is the keyboard's, negative while it is up; the bottom inset is already below the list.
@@ -83,7 +92,7 @@ export default function EmptyState({ variant, categoryIcon, quickNote = true, da
   }
 
   return (
-    <Animated.View style={[styles.container, keyboardStyle]}>
+    <Animated.View style={[styles.container, { paddingBottom: bottomRoom }, keyboardStyle]}>
       <View style={styles.drawing}>{drawing}</View>
       <Text style={styles.title} accessibilityRole="header">
         {title}
@@ -108,7 +117,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: PADDING_MARGIN.sm,
     paddingHorizontal: PADDING_MARGIN.md,
-    paddingBottom: BOTTOM_ROOM,
   },
   drawing: {
     marginBottom: PADDING_MARGIN.sm,

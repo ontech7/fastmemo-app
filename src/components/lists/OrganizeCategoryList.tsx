@@ -108,14 +108,17 @@ function OrganizeRows({ indexCategory, others }: { indexCategory?: Category; oth
         scrollEventThrottle={16}
         onContentSizeChange={onContentSizeChange}
         scrollEnabled={scrollEnabled}
-        contentContainerStyle={[styles.content, others.length === 0 && styles.contentEmpty]}
+        contentContainerStyle={styles.content}
       >
         {indexCategory && <OrganizeCategoryCard category={indexCategory} locked />}
         {rows}
         {trailingSlot ? <ReorderSlot height={trailingSlot} style={styles.slot} /> : null}
-
-        {others.length === 0 && <EmptyState variant="categories" />}
       </ReorderScrollView>
+      {others.length === 0 && (
+        <View style={styles.empty}>
+          <EmptyState variant="categories" bottomRoom={0} />
+        </View>
+      )}
       <ReorderOverlay renderLifted={renderLiftedCategory} />
     </View>
   );
@@ -132,9 +135,14 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 140,
   },
-  // No category besides "All": the drawing takes the room left under it.
-  contentEmpty: {
-    flexGrow: 1,
+  // No category besides "All": the drawing over the whole page, centred in it, under "All" and the add button's touches.
+  empty: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    pointerEvents: "none",
   },
   slot: {
     marginBottom: PADDING_MARGIN.md,
