@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { t } from "i18next";
 import uuid from "react-uuid";
 
 import { addTrail } from "@/libs/diagnostics";
@@ -37,7 +38,13 @@ export const duplicateNote = createAsyncThunk<string | null, string, { state: Ap
     if (!original) return null;
 
     const now = Date.now();
-    const copy = copyOfNote(original, { id: uuid(), now, date: formatDateTime(), newId: uuid });
+    const copy = copyOfNote(original, {
+      id: uuid(),
+      now,
+      date: formatDateTime(),
+      newId: uuid,
+      untitled: t("empty_title"),
+    });
     if (!copy) return null;
 
     dispatch(addNote(copy));

@@ -213,6 +213,7 @@ const de = {
   },
   note: {
     photo_denied: "Fast Memo kann die Kamera nicht verwenden: Erlauben Sie sie in den Systemeinstellungen",
+    photo_failed: "Die Kamera konnte nicht geöffnet werden",
     not_found: "Notiz nicht gefunden",
     format: {
       undo: "Rückgängig",
@@ -257,6 +258,7 @@ const de = {
     },
     update_to_open: "Aktualisiere Fast Memo, um diese Notiz zu öffnen",
     duplicated: "Notiz dupliziert",
+    duplicate_failed: "Die Notiz konnte nicht dupliziert werden",
     title_placeholder: "Titel",
     description_placeholder: "Schreiben Sie hier etwas…",
     characters: "Textzeichen",
@@ -1555,6 +1557,8 @@ const de = {
     tomorrow: "Morgen früh",
     monday: "Montag",
     choose: "Tag und Uhrzeit wählen…",
+    hours_field: "Stunden",
+    minutes_field: "Minuten",
     set: "Festlegen",
     remove: "Erinnerung entfernen",
     current: "Geplant für {{when}}",
@@ -1566,6 +1570,7 @@ const de = {
   },
   share: {
     nothing: "Fast Memo kann Text, Links und Bilder aufbewahren",
+    saved: "Das Geteilte ist in einer neuen Notiz",
   },
   empty: {
     notes_title: "Noch keine Notizen",

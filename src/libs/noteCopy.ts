@@ -1,12 +1,16 @@
 import type { Note } from "@/types";
 import { isKnownNoteType } from "@/utils/noteType";
 
-/** What a copy is made with: its id, the time and date it is made, and a source of ids for what is inside it. */
+/**
+ * What a copy is made with: its id, the time and date it is made, a source of ids for what is inside it, and the name an
+ * untitled note goes by in the list (its copy is called after it, so the two don't look the same).
+ */
 export interface CopyFresh {
   id: string;
   now: number;
   date: string;
   newId: () => string;
+  untitled: string;
 }
 
 /** The suffix the app already gives a note published again as a new one. */
@@ -14,7 +18,7 @@ const COPY_SUFFIX = " (2)";
 
 /**
  * A copy of a note that shares nothing with the original: new ids for it and for every item, column, card and tab, its
- * title followed by " (2)", made now. It keeps what guards the original and where it lives (protected, hidden, offline, its
+ * title (an untitled one's placeholder) followed by " (2)", made now. It keeps what guards the original and where it lives (protected, hidden, offline, its
  * category, a list's mode and hidden done items), and drops what belonged to the original alone (important, read only,
  * its revisions and its reminder). null for a type this version doesn't know.
  */
@@ -31,9 +35,9 @@ export function copyOfNote(note: Note, fresh: CopyFresh): Note | null {
   // Notes are plain data: a JSON round trip copies every field, nested ones included.
   const copy = JSON.parse(JSON.stringify(kept)) as Note & Record<string, any>;
 
-  const title = typeof note.title === "string" ? note.title : "";
+  const title = typeof note.title === "string" ? note.title.trim() : "";
   copy.id = fresh.id;
-  copy.title = title ? title + COPY_SUFFIX : "";
+  copy.title = (title ? note.title : fresh.untitled) + COPY_SUFFIX;
   copy.createdAt = fresh.now;
   // One more than its creation, as the quick note does: the editors don't take it for a note being created.
   copy.updatedAt = fresh.now + 1;

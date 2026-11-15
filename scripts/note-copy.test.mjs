@@ -35,7 +35,7 @@ const ok = (name, cond, detail) => {
 
 console.log("\n=== The copy of a note ===");
 let n = 0;
-const fresh = { id: "new", now: 5000, date: "D", newId: () => "x" + ++n };
+const fresh = { id: "new", now: 5000, date: "D", newId: () => "x" + ++n, untitled: "Senza titolo" };
 const src = {
   id: "a",
   type: "todo",
@@ -114,7 +114,11 @@ ok(
   "a text note",
   copyOfNote({ ...src, type: "text", list: undefined, text: "<div>ciao</div>" }, fresh).text === "<div>ciao</div>"
 );
-ok("an empty title stays empty", copyOfNote({ ...src, title: "" }, fresh).title === "");
+ok(
+  'an untitled note\'s copy is named after the placeholder: "Senza titolo (2)", not identical to the original in the list',
+  copyOfNote({ ...src, title: "" }, fresh).title === "Senza titolo (2)" &&
+    copyOfNote({ ...src, title: "   " }, fresh).title === "Senza titolo (2)"
+);
 ok("an unknown type is not copied", copyOfNote({ ...src, type: "board" }, fresh) === null);
 ok("the original is untouched", src.list[0].id === "1" && src.title === "Spesa" && src.rev === 9);
 

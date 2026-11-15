@@ -15,7 +15,8 @@ import {
  * The versions of the notes over a backend of named values (spec B.9). Two kinds of value: `i:<noteId>`, the note's
  * versions (`VersionMeta[]`, newest first), and `v:<noteId>:<versionId>`, one version's body, both as JSON. Every call
  * waits its turn behind the ones asked before it: two keeps at the same instant are both stored, and a note dropped
- * while one of its versions is written loses that one too.
+ * while one of its versions is written loses that one too. A note dropped is never kept again (a keep waits for idle, and
+ * can be asked before the purge yet run after it).
  */
 
 export interface HistoryBackend {
@@ -60,6 +61,8 @@ export function createHistory(
   onError: (error: unknown) => void = () => {}
 ): History {
   let queue: Promise<unknown> = Promise.resolve();
+  /** Notes deleted for good while the app runs: ids are never reused. */
+  const dropped = new Set<string>();
   const run = <T>(task: () => Promise<T>): Promise<T> => {
     const next = queue.then(task, task);
     queue = next.catch(() => {});
@@ -105,6 +108,7 @@ export function createHistory(
       run(async () => {
         let kept: VersionMeta[];
         let next: VersionMeta[];
+        if (dropped.has(note.id)) return false;
         try {
           const json = JSON.stringify(bodyOf(note));
           const hash = hashText(json);
@@ -148,18 +152,24 @@ export function createHistory(
         }
       }),
 
-    dropNote: (noteId) =>
-      run(async () => {
+    // The bodies its index names, then the index: no listing of the whole folder per note. A body no index names (a
+    // write cut short) is left to the next start's sweep.
+    dropNote: (noteId) => {
+      dropped.add(noteId);
+      return run(async () => {
         try {
-          await backend.remove(indexName(noteId));
-          for (const name of await backend.list()) {
-            const parsed = parseName(name);
-            if (parsed?.kind === "body" && parsed.noteId === noteId) await backend.remove(name);
-          }
+          const kept = await readIndex(noteId);
+          for (const meta of kept) await backend.remove(bodyName(noteId, meta.id));
         } catch (error) {
           onError(error);
         }
-      }),
+        try {
+          await backend.remove(indexName(noteId));
+        } catch (error) {
+          onError(error);
+        }
+      });
+    },
 
     sweep: (noteIds) =>
       run(async () => {

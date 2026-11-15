@@ -226,8 +226,12 @@ export default function NoteSettingsButton({ note, setNote, flushNote }: Props) 
   // A copy of the note as it is now (the pending edits committed first); the person stays in the original.
   const duplicate = async () => {
     flushNote();
-    const copyId = await (dispatch as AppDispatch)(duplicateNote(id)).unwrap();
-    toast(copyId ? t("note.duplicated") : t("ai.editor.no_content"));
+    try {
+      const copyId = await (dispatch as AppDispatch)(duplicateNote(id)).unwrap();
+      toast(copyId ? t("note.duplicated") : t("ai.editor.no_content"));
+    } catch {
+      toast(t("note.duplicate_failed"));
+    }
   };
 
   // The note's kept versions (spec B.9). A protected note's history is reached only from inside it: the pass is left here.

@@ -24,6 +24,27 @@ export function normalizeLink(input: string): string | null {
   return `https://${link}`;
 }
 
+/**
+ * Schemes a note never opens, whatever kept them: what runs or carries a page, what reaches into the phone (an intent, a
+ * file), this app's own screens. The sanitizer drops the same links (`src/editor/sanitizeConfig.ts`).
+ */
+const NEVER_OPENED =
+  /^(javascript|vbscript|data|blob|about|file|content|intent|android-app|fastmemoapp|fastmemoapptest|exp|exp\+[\w.+-]*):/i;
+/** What a URL parser skips (a tab or a newline anywhere, spaces and controls around): `java&#9;script:` is `javascript:`. */
+const URL_IGNORED = /[\u0000- ]/g;
+
+/**
+ * A link to another app (`obsidian://open?vault=…`) that a note may hold from before links were limited to pages, mail
+ * and phone numbers: opened as 4.0.0 opened it, by the system. null for a page or mail address (`normalizeLink`'s), white
+ * space inside, or a scheme of `NEVER_OPENED`. The link dialog never makes one.
+ */
+export function appLink(href: string): string | null {
+  const link = href.trim();
+  if (!SCHEME.test(link) || ALLOWED.test(link) || HOST_PORT.test(link)) return null;
+  if (/\s/.test(link) || NEVER_OPENED.test(link.replace(URL_IGNORED, ""))) return null;
+  return link;
+}
+
 /** What a link to another note holds as its address. */
 export const NOTE_LINK_PREFIX = "#fm-note-";
 export const noteLinkHref = (noteId: string) => NOTE_LINK_PREFIX + noteId;

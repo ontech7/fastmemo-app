@@ -1,5 +1,5 @@
 /** Combining marks of the Latin, Greek and Cyrillic accents (U+0300 to U+036F): only these are taken off. */
-const ACCENTS = /^[̀-ͯ]+$/;
+const ACCENTS = /^[\u0300-\u036f]+$/;
 
 /**
  * Lower case, accents off, and exactly as long as the text given: position i of the result is position i of the text, so

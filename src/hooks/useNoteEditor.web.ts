@@ -1,4 +1,5 @@
 import { keepVersion as keepNoteVersion, type VersionReason } from "@/libs/history";
+import { editVersionOf, wasSaved } from "@/libs/history/limits";
 import { registerPendingFlush, storeDirtyNoteId } from "@/libs/registry";
 import { addNote, deleteNote, temporaryDeleteNote } from "@/slicers/notesSlice";
 import {
@@ -113,12 +114,13 @@ export function useNoteEditor<T extends Note>({
     getTitleSourceRef.current = getTitleSource;
   }, [getTitleSource]);
   const wasNewRef = useRef(initialNote.createdAt === initialNote.updatedAt);
-  // A note that was saved before this sitting (not one created now): its first change keeps the version it opened with,
-  // and emptying it sends it to the trash instead of deleting it.
-  const existedRef = useRef(initialNote.createdAt !== initialNote.updatedAt);
+  const store = useStore<RootState>();
+  // A note that was saved before this sitting (it is in the store when the editor opens, not one created now): its first
+  // change keeps a version, and emptying it sends it to the trash instead of deleting it.
+  const [savedAtOpen] = useState(() => wasSaved(store.getState().notes.items, initialNote.id));
+  const existedRef = useRef(savedAtOpen);
   const editKeptRef = useRef(false);
   const emptiedRef = useRef(false);
-  const store = useStore<RootState>();
   const autoTitle = wasNewRef.current && !note.title.trim() && getTitleSource ? deriveNoteTitle(getTitleSource(note)) : "";
 
   /* --- Common webhook payload composer --- */
@@ -178,7 +180,7 @@ export function useNoteEditor<T extends Note>({
       // idle (spec B.9).
       if (existedRef.current && !editKeptRef.current) {
         editKeptRef.current = true;
-        keepNoteVersion(initialNote as unknown as Note, "edit");
+        keepNoteVersion(editVersionOf(store.getState().notes.items, initialNote as unknown as Note), "edit");
       }
 
       if (isEmpty(currNote)) {

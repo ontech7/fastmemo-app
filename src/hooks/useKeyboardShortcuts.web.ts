@@ -27,7 +27,7 @@ import { isTauri } from "@/utils/platform";
  *   is open, Esc closes it (`FindReplaceBar`: its fields, and the note's page, which takes the key before this layer).
  * - The home's list (`@/libs/desktopList`): the arrows move a mark over the notes, Enter opens the marked one, Delete (Cmd+
  *   Backspace on a Mac) trashes it, when no field has the focus and nothing (a menu, a dialog) lies over the home; ↓ in
- *   the search field marks the first note. The mark hides at the first mouse move or press, or typing in a field.
+ *   the search field marks the first note. The mark hides at the first mouse move or press, typing in a field, or Tab.
  * - Cmd/Ctrl+N: a new note (from another screen, going back to the home screen first); Cmd/Ctrl+F: the search field,
  *   or find in a text note. The same commands as the macOS menu (`@/libs/desktopCommands`).
  * - Cmd/Ctrl with + (or =, the numpad's plus), - and 0: the window's zoom (`@/libs/desktopZoom`), from any screen.
@@ -89,6 +89,11 @@ const isFindField = (target: EventTarget | null) => (target as HTMLElement | nul
 
 /** The home list's keys. Answers true when the list used the key. Arrows may repeat (a held arrow walks the list). */
 function onListKey(e: KeyboardEvent, mod: boolean): boolean {
+  // Tab moves the focus to a control: Enter is then its own, and the mark goes.
+  if (e.key === "Tab") {
+    leaveKeyboardMode();
+    return false;
+  }
   if (isEditable(e.target)) {
     // ↓ in the search field: out of the field, onto the first note.
     if (e.key === "ArrowDown" && !mod && !e.altKey && !e.shiftKey && isFindField(e.target) && commandsIdle()) {

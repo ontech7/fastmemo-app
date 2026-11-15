@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 import { SHORTCUT_TARGET } from "@/constants/shortcuts";
-import { IS_MAC, press } from "@/libs/desktopCommands";
+import { focusAtEnd, IS_MAC, press } from "@/libs/desktopCommands";
 import { stepCursor } from "@/libs/listCursor";
 import { isTauri } from "@/utils/platform";
 
@@ -101,6 +101,10 @@ function revealCursor() {
 }
 
 function show(noteId: string) {
+  // A control with the focus (a card or a button clicked before) would take Enter: the mark has it now. A field is left
+  // by the keyboard layer first.
+  const focused = document.activeElement;
+  if (focused instanceof HTMLElement && focused !== document.body && !focused.isContentEditable) focused.blur();
   cursor = noteId;
   visible = true;
   emit();
@@ -156,15 +160,21 @@ export function listKey(key: "up" | "down" | "enter" | "delete"): boolean {
     cursor = null;
     visible = false;
     emit();
-    press(SHORTCUT_TARGET.find);
+    // the caret at the end of the search: the next key refines it (Cmd/Ctrl+F selects it, to type a new one)
+    focusAtEnd(SHORTCUT_TARGET.find);
     return true;
   }
   show(next);
   return true;
 }
 
-/** The mouse moved or clicked, or a field was typed in: the mark goes. */
+/**
+ * The mouse moved or clicked, or a field was typed in: the mark goes. On the home itself, an Enter that didn't leave it
+ * (select mode toggles, a card it can't open) is forgotten too, so coming back from a screen reached with the mouse shows
+ * no mark. In the note Enter opened, the home has no host: that Enter is kept.
+ */
 export function leaveKeyboardMode(): void {
+  if (host !== null) opened = null;
   if (!visible) return;
   visible = false;
   emit();

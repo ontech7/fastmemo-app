@@ -32,3 +32,23 @@ export function menuTargets(selected: string[], key: string): { ids: string[]; o
   const onSelection = selected.includes(key);
   return { ids: onSelection ? selected : [key], onSelection };
 }
+
+/**
+ * The selection limited to the notes on screen ("id|locked" keys, ids listed): a search that leaves a selected note out
+ * drops it, since the selection bar acts on what is selected. The same array when nothing is dropped.
+ */
+export function keepOnScreen(selected: string[], ids: readonly string[]): string[] {
+  const shown = new Set(ids);
+  const kept = selected.filter((key) => shown.has(key.split("|")[0]));
+  return kept.length === selected.length ? selected : kept;
+}
+
+/**
+ * The selection once notes are trashed ("id|locked" keys): one note trashed from outside it (Delete on the mark, the
+ * right-click menu) leaves it as it is, one of its own leaves the others; select mode ends once nothing is left selected.
+ */
+export function selectionAfterTrash(selected: string[], trashed: readonly string[]): { selected: string[]; endMode: boolean } {
+  const left = selected.filter((key) => !trashed.includes(key));
+  const kept = left.length === selected.length ? selected : left;
+  return { selected: kept, endMode: selected.length > 0 && kept.length === 0 };
+}

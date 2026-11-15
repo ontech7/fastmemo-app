@@ -91,8 +91,9 @@ async function reconcileNow(force: boolean): Promise<void> {
   const scheduled = requests.map(toScheduled).filter((item): item is Scheduled => item !== null);
   const plan = planReminders(live, stale ? [] : scheduled, Date.now());
   const cancel = stale ? scheduled.map((item) => item.noteId) : plan.cancel;
-  for (const noteId of cancel) await Notifications.cancelScheduledNotificationAsync(PREFIX + noteId);
-  for (const item of plan.schedule) await schedule(item);
+  // One the system refuses (Android's cap of 500 alarms an app) leaves the others to be done; the next pass tries it again.
+  for (const noteId of cancel) await Notifications.cancelScheduledNotificationAsync(PREFIX + noteId).catch(() => {});
+  for (const item of plan.schedule) await schedule(item).catch(() => {});
   if (settings.exact !== exact) store.dispatch(setReminderSettings({ exact }));
 }
 

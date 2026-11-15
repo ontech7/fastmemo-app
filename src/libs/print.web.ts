@@ -26,8 +26,18 @@ function ensureStyle() {
   document.head.appendChild(style);
 }
 
+/** The page's own title while a note's is lent to the print (the PDF is named after it); null when none is lent. */
+let pageTitle: string | null = null;
+
+function giveBackTitle() {
+  if (pageTitle === null) return;
+  document.title = pageTitle;
+  pageTitle = null;
+}
+
 function removeCopy() {
   document.getElementById(PRINT_ID)?.remove();
+  giveBackTitle();
 }
 
 /** Lays the note out in a print-only part of the main page and opens the system's print dialog. */
@@ -41,11 +51,22 @@ export async function printNote(title: string, html: string): Promise<void> {
   // The pictures decoded and the fonts loaded, or the dialog's preview misses them.
   await Promise.all([...copy.querySelectorAll("img")].map((img) => img.decode().catch(() => {})));
   await document.fonts.ready;
+  // The dialog names the PDF after the page: the note's title for it (an untitled note keeps the app's). A browser's
+  // print waits for its dialog, and the title comes back after it; the Tauri window's dialog opens on its own, so there
+  // it comes back with the copy (the next print, or the editor leaving).
+  if (title.trim()) {
+    pageTitle = document.title;
+    document.title = title.trim();
+  }
   if (isTauri()) {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("print_window");
   } else {
-    window.print();
+    try {
+      window.print();
+    } finally {
+      giveBackTitle();
+    }
   }
 }
 

@@ -377,7 +377,11 @@ export default function NoteCodeEditor({ initialNote, preview }: Props) {
                 setFindWord(undefined);
               }}
               target={findTarget}
-              onBeforeReplaceAll={() => keepVersion("replace")}
+              onBeforeReplaceAll={() => {
+                // the page's text not yet sent first (on the web it arrives before flush() returns), then the version
+                editorRef.current?.flush();
+                keepVersion("replace");
+              }}
               readOnly={note.readOnly}
               initialQuery={findWord}
               scope={activeTab?.id}

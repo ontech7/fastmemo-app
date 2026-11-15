@@ -16,6 +16,7 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSlice } from "@reduxjs/toolkit";
 import { Platform } from "react-native";
 import { createSelector } from "reselect";
+import { storedZoom } from "@/libs/zoomSteps";
 
 const EMPTY_LOG: string[] = [];
 
@@ -179,7 +180,7 @@ export const selectorShowHidden = (state: RootState): boolean => state.settings.
 export const selectorTourStep = (state: RootState): TourStep | undefined => state.settings.tour;
 export const selectorReminderSettings = (state: RootState): ReminderSettings => state.settings.reminders ?? {};
 export const selectorWidgetNoteId = (state: RootState): string | null => state.settings.widgetNoteId ?? null;
-export const selectorDesktopZoom = (state: RootState): number => state.settings.desktopZoom ?? 100;
+export const selectorDesktopZoom = (state: RootState): number => storedZoom(state.settings.desktopZoom);
 export const selectorReportDate = (state: RootState): string | null => state.settings.reportDate;
 /** The reports sent in the last 24 hours (a state saved before the key existed has none). */
 export const selectorReportLog = (state: RootState): string[] => state.settings.reportLog ?? EMPTY_LOG;

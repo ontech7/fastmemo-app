@@ -22,9 +22,18 @@ await build({
   logLevel: "error",
   alias: { "@": src },
 });
-const { idsToSweep, shouldKeep, toDropForNote, toDropForTotal, bodyOf, withBody, replacedByPlan, createHistory } = await import(
-  pathToFileURL(out).href
-);
+const {
+  idsToSweep,
+  shouldKeep,
+  toDropForNote,
+  toDropForTotal,
+  bodyOf,
+  withBody,
+  replacedByPlan,
+  createHistory,
+  wasSaved,
+  editVersionOf,
+} = await import(pathToFileURL(out).href);
 
 let passed = 0;
 let failed = 0;
@@ -220,6 +229,26 @@ const racing = h.keep(note("r"), "restore");
 const dropping = h.dropNote("n");
 await Promise.all([racing, dropping]);
 ok("a note deleted while a version is written leaves nothing", be.m.size === 0, [...be.m.keys()]);
+{
+  // a keep asked before a purge but queued after it (keepVersion waits for idle): the dropped note gets nothing back
+  const late = mem();
+  const hl = createHistory(late, () => 0);
+  await hl.keep({ ...note("a"), id: "p" }, "ai");
+  await hl.dropNote("p");
+  const kept = await hl.keep({ ...note("b"), id: "p" }, "restore");
+  ok("a keep queued after its note was deleted for good leaves nothing", kept === false && late.m.size === 0, [
+    ...late.m.keys(),
+  ]);
+  // dropping a note reads its index, not the whole folder (emptying a trash of N notes on Android: N listings)
+  let listed = 0;
+  const counting = { ...mem(), list: async () => (listed++, []) };
+  const counted = mem();
+  Object.assign(counting, { m: counted.m, read: counted.read, write: counted.write, remove: counted.remove });
+  const hc = createHistory(counting, () => 0);
+  await hc.keep({ ...note("a"), id: "q" }, "ai");
+  await hc.dropNote("q");
+  ok("dropping a note doesn't list the folder", listed === 0 && counted.m.size === 0, { listed, left: [...counted.m.keys()] });
+}
 await h.keep({ ...note("a"), id: "gone" }, "ai");
 await h.keep({ ...note("a"), id: "here" }, "ai");
 be.m.set("v:here:stray", "{}");
@@ -230,5 +259,18 @@ ok("the sweep", (await h.list("gone")).length === 0 && (await h.list("here")).le
 await h.wipe();
 ok("wipe", be.m.size === 0);
 
+{
+  // the editor's first change: what it keeps, and whether the note was saved before (seed data, an import: equal times)
+  const opened = { id: "e", title: "as opened", createdAt: 5, updatedAt: 5 };
+  const stored = { ...opened, title: "changed by another device" };
+  ok(
+    "a note in the store when the editor opens was saved, whatever its times; a new one isn't",
+    wasSaved([stored], "e") === true && wasSaved([], "e") === false
+  );
+  ok(
+    "the first change keeps the stored copy (another device's change loaded since it opened), else the note opened",
+    editVersionOf([stored], opened) === stored && editVersionOf([], opened) === opened
+  );
+}
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);

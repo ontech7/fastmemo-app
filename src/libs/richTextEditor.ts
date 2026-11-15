@@ -389,7 +389,13 @@ export const RICH_TEXT_SCRIPT = String.raw`
   };
   var undo = function () {
     if (!content().isContentEditable) return false;
-    return step(history.undo, history.redo) || exec("undo");
+    var top = history.undo[history.undo.length - 1];
+    var plain = isTop(top) ? top.plain : null;
+    if (!step(history.undo, history.redo)) return exec("undo");
+    // A Markdown paste undone: its text goes back in as it was copied, as a change of its own (spec: paste).
+    var s = selection();
+    if (plain && s.rangeCount) pageChange(function () { putBlocks(s.getRangeAt(0), plainBlocks(plain)); });
+    return true;
   };
   var redo = function () {
     if (!content().isContentEditable) return false;
@@ -1571,6 +1577,63 @@ export const RICH_TEXT_SCRIPT = String.raw`
     while (div.nextSibling !== stop) div.appendChild(div.nextSibling);
     return div;
   };
+  // Puts a paste's lines at the range: one line of text joins the line at the caret, more split it around them.
+  var putBlocks = function (range, blocks) {
+    if (!range.collapsed) range.deleteContents();
+    // One line of text: its content goes in at the caret.
+    if (blocks.length === 1 && blocks[0].nodeName === "DIV") {
+      var frag = $.createDocumentFragment(), last = null;
+      while (blocks[0].firstChild) frag.appendChild((last = blocks[0].firstChild));
+      if (last && last.nodeName === "BR") frag.removeChild(last), (last = frag.lastChild);
+      range.insertNode(frag);
+      if (last) last.nodeType === 1 ? afterInline(last) : caretAt(last, last.length);
+      return;
+    }
+    var top = topBlock(range.startContainer), line = top;
+    var plainLine = top && (top.nodeName === "DIV" || top.nodeName === "P");
+    var tail = null;
+    if (plainLine) {
+      var r = $.createRange();
+      r.setStart(range.startContainer, range.startOffset);
+      r.setEnd(top, top.childNodes.length);
+      tail = r.extractContents();
+      if (blocks[0].nodeName === "DIV" && !blank(blocks[0])) {
+        while (blocks[0].firstChild) top.appendChild(blocks[0].firstChild);
+        blocks.shift();
+      }
+    }
+    var after = top ? top.nextSibling : null;
+    blocks.forEach(function (b) { content().insertBefore(b, after); });
+    var lastBlock = blocks.length ? blocks[blocks.length - 1] : top;
+    var end = $.createRange();
+    end.selectNodeContents(lastBlock.nodeName === "UL" || lastBlock.nodeName === "OL" ? lastBlock.lastChild : lastBlock);
+    end.collapse(false);
+    if (tail && (tail.textContent || tail.querySelector && tail.querySelector("img,a,input"))) {
+      if (lastBlock.nodeName === "DIV") {
+        var br = lastBlock.lastChild;
+        if (br && br.nodeName === "BR") lastBlock.removeChild(br);
+        end.selectNodeContents(lastBlock);
+        end.collapse(false);
+        lastBlock.appendChild(tail);
+      } else {
+        var rest = $.createElement("div");
+        rest.appendChild(tail);
+        content().insertBefore(rest, lastBlock.nextSibling);
+      }
+    }
+    if (plainLine && blank(top)) top.remove();
+    else if (top) fill(top);
+    select(end);
+  };
+  // A text's lines as plain lines, nothing taken for Markdown.
+  var plainBlocks = function (text) {
+    return text.split(/\r?\n/).map(function (line) {
+      var div = $.createElement("div");
+      if (line) div.textContent = line;
+      else div.appendChild($.createElement("br"));
+      return div;
+    });
+  };
   var pasteMarkdown = function (text) {
     var s = selection();
     if (!s.rangeCount || !content().isContentEditable || !content().contains(s.anchorNode)) return false;
@@ -1579,53 +1642,12 @@ export const RICH_TEXT_SCRIPT = String.raw`
     if (!MD_LINE.test(text) && !MD_MARK.test(text)) return false;
     var blocks = mdBlocks(text);
     if (!blocks.length) return false;
-    pageChange(function () {
-      if (!range.collapsed) range.deleteContents();
-      // One line of text: its content goes in at the caret.
-      if (blocks.length === 1 && blocks[0].nodeName === "DIV") {
-        var frag = $.createDocumentFragment(), last = null;
-        while (blocks[0].firstChild) frag.appendChild((last = blocks[0].firstChild));
-        if (last && last.nodeName === "BR") frag.removeChild(last), (last = frag.lastChild);
-        range.insertNode(frag);
-        if (last) last.nodeType === 1 ? afterInline(last) : caretAt(last, last.length);
-        return;
-      }
-      var top = topBlock(range.startContainer), line = top;
-      var plainLine = top && (top.nodeName === "DIV" || top.nodeName === "P");
-      var tail = null;
-      if (plainLine) {
-        var r = $.createRange();
-        r.setStart(range.startContainer, range.startOffset);
-        r.setEnd(top, top.childNodes.length);
-        tail = r.extractContents();
-        if (blocks[0].nodeName === "DIV" && !blank(blocks[0])) {
-          while (blocks[0].firstChild) top.appendChild(blocks[0].firstChild);
-          blocks.shift();
-        }
-      }
-      var after = top ? top.nextSibling : null;
-      blocks.forEach(function (b) { content().insertBefore(b, after); });
-      var lastBlock = blocks.length ? blocks[blocks.length - 1] : top;
-      var end = $.createRange();
-      end.selectNodeContents(lastBlock.nodeName === "UL" || lastBlock.nodeName === "OL" ? lastBlock.lastChild : lastBlock);
-      end.collapse(false);
-      if (tail && (tail.textContent || tail.querySelector && tail.querySelector("img,a,input"))) {
-        if (lastBlock.nodeName === "DIV") {
-          var br = lastBlock.lastChild;
-          if (br && br.nodeName === "BR") lastBlock.removeChild(br);
-          end.selectNodeContents(lastBlock);
-          end.collapse(false);
-          lastBlock.appendChild(tail);
-        } else {
-          var rest = $.createElement("div");
-          rest.appendChild(tail);
-          content().insertBefore(rest, lastBlock.nextSibling);
-        }
-      }
-      if (plainLine && blank(top)) top.remove();
-      else if (top) fill(top);
-      select(end);
-    });
+    var undone = history.undo.slice();
+    pageChange(function () { putBlocks(range, blocks); });
+    // An undo right after gives the text back as it was copied, a second one takes the paste away: a paste that wasn't
+    // meant as Markdown ("__init__", "*.txt") is one undo from its literal text.
+    var made = history.undo[history.undo.length - 1];
+    if (made && undone.indexOf(made) < 0) made.plain = text;
     refreshToolbar();
     return true;
   };

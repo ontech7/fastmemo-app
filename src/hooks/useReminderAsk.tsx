@@ -26,6 +26,9 @@ export function useReminderAsk() {
 
   const ask = useCallback(async () => {
     if (Platform.OS !== "android") return;
+    // Asked on this phone: the home's question about a synced reminder is never shown after it (it would be about the
+    // reminder just set, after a refusal of the system's question).
+    if (!store.getState().settings.reminders?.syncAsked) dispatch(setReminderSettings({ syncAsked: true }));
     let state = await notifyState();
     if (state === "askable") state = (await askToNotify()) ? "granted" : "denied";
     if (state === "denied") {
@@ -79,7 +82,7 @@ export function useReminderAsk() {
 /**
  * A reminder that came through sync on a phone never asked (spec D.5): the system's question is never shown on its own;
  * the home asks first, once, whatever the answer. After "Not now" the question comes back when a reminder is set on this
- * phone (`useReminderAsk`). Android only.
+ * phone (`useReminderAsk`), which also ends the home's question. Checked once per start. Android only.
  */
 export function useReminderSyncQuestion() {
   const { t } = useTranslation();
@@ -96,9 +99,10 @@ export function useReminderSyncQuestion() {
     if (!notes.some((note) => isUpcoming(note, now))) return;
     notifyState()
       .then((state) => {
-        if (state !== "askable" || askedRef.current) return;
+        if (askedRef.current) return;
+        // Answered already (granted or turned off): nothing to ask, and nothing to check again at every edit.
         askedRef.current = true;
-        setOpen(true);
+        if (state === "askable") setOpen(true);
       })
       .catch(() => {});
   }, [notes, syncAsked]);

@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MonthGrid from "@/components/ui/MonthGrid";
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { isUpcoming } from "@/libs/reminders/plan";
-import { formatWhen, presets } from "@/libs/reminders/presets";
+import { choiceNow, formatWhen, presets } from "@/libs/reminders/presets";
 
 import type { Preset } from "@/libs/reminders/presets";
 
@@ -68,7 +68,7 @@ export default function ReminderSheet({ visible, remindAt, onSet, onRemove, onCl
 
   // Mounted for one opening (the menu mounts it while it's open): the moment, the choices and the custom start are this
   // opening's.
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const [start] = useState(() => customStart(remindAt, now));
   const [weekStart] = useState(weekStartOfDevice);
   const [custom, setCustom] = useState(false);
@@ -124,7 +124,12 @@ export default function ReminderSheet({ visible, remindAt, onSet, onRemove, onCl
                 <Pressable
                   key={choice.key}
                   style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-                  onPress={() => onSet(choice.at)}
+                  onPress={() => {
+                    // as it is now: the sheet may have stayed open past the time it showed (then the list is redone)
+                    const at = choiceNow(choice.key, new Date());
+                    if (at) onSet(at);
+                    else setNow(Date.now());
+                  }}
                   accessibilityRole="button"
                 >
                   <Text style={styles.rowLabel}>{t(PRESET_LABEL[choice.key])}</Text>
@@ -174,7 +179,7 @@ export default function ReminderSheet({ visible, remindAt, onSet, onRemove, onCl
                   keyboardType="number-pad"
                   maxLength={2}
                   selectTextOnFocus
-                  accessibilityLabel={`${t("reminder.choose")} (h)`}
+                  accessibilityLabel={t("reminder.hours_field")}
                 />
                 <Text style={styles.timeColon}>:</Text>
                 <TextInput
@@ -187,7 +192,7 @@ export default function ReminderSheet({ visible, remindAt, onSet, onRemove, onCl
                   keyboardType="number-pad"
                   maxLength={2}
                   selectTextOnFocus
-                  accessibilityLabel={`${t("reminder.choose")} (min)`}
+                  accessibilityLabel={t("reminder.minutes_field")}
                 />
               </View>
               {past && (

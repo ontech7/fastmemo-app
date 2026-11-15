@@ -125,7 +125,12 @@ export function useLaunchAction(): void {
         return;
       }
       case "share":
-        noteFromIncomingShare(t, (route) => router.push(route)).catch(() => clearShare());
+        // Opened only if the home still has the screen: reading the share's pictures can take seconds, and a note opened
+        // meanwhile (another action, a tap) stays on top; the share's note is then in the list.
+        noteFromIncomingShare(t, (route) => {
+          if (focusedRef.current) router.push(route);
+          else toast(t("share.saved"));
+        }).catch(() => clearShare());
         return;
       // "nothing": the intro isn't finished (a share is forgotten then)
       default:

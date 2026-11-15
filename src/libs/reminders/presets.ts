@@ -25,6 +25,15 @@ export function presets(now: Date): Preset[] {
   return list;
 }
 
+/**
+ * A quick choice as it is when it is pressed (`now`), not when the sheet opened: a sheet left open across 19:00 has no
+ * "tonight" any more (null), and "in an hour" is an hour from the press.
+ */
+export function choiceNow(key: Preset["key"], now: Date): number | null {
+  const choice = presets(now).find((preset) => preset.key === key);
+  return choice && choice.at > now.getTime() ? choice.at : null;
+}
+
 const formatters = new Map<string, { weekday: Intl.DateTimeFormat; date: Intl.DateTimeFormat; time: Intl.DateTimeFormat }>();
 
 const formattersFor = (language: string) => {

@@ -634,6 +634,15 @@ export const getNotesFilteredPerCategory = (currentCategory: Category, showHidde
     )
   );
 
+/**
+ * Every live note, as the home orders them (important first), hidden ones only while shown: what a search looks through.
+ * One module-level selector, so every screen shares its cache.
+ */
+export const getAllNotesShown = createSelector(
+  [getAllNotes, (state: RootState): boolean => state.settings.showHidden],
+  (notes, showHidden): Note[] => importantFirst(notes, (note) => showHidden || !note.hidden)
+);
+
 /** How many notes each category holds, by icon, and in all: one pass over the notes, one selector for every card. */
 export const getNotesCountByCategory = createSelector(
   [getAllNotes],

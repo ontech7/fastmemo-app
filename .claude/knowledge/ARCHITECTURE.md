@@ -120,6 +120,7 @@ src/
                        #   current note (stable handlers), so typing in an item renders that row only (LL-018)
     useRouter.ts       # Expo Router wrapper with push-debounce (1000ms guard)
     useSecret.ts       # Secret code / biometric authentication
+    useOpenNote.ts     # Opening a note from the home (a card's tap, the desktop menu's Open): its search word, its code
     useNetInfo.ts      # Network connectivity state: NetInfo on native; .web.ts reads libs/netStatus (one probe, only with a
                        #   cloud connected and the window visible, LL-082)
     useCloudStatus.ts  # The cloud's state (ok / offline / unreachable) for the home's line and the status dot (ADR-029)
@@ -237,7 +238,7 @@ src/
     history/           # Version history (ADR-042): limits (pure: what a version holds, shouldKeep, the limits, replacedByPlan),
                        #   store (the queue over a backend of named values), backend (files in fastmemo-history/) / .web
                        #   (IndexedDB fastmemo-history), labels (Today/Yesterday), index (keepVersion when idle, startHistory)
-    links.ts           # normalizeLink (https, mailto, tel only), note links as #fm-note-<id> (ADR-041)
+    links.ts           # normalizeLink (https, mailto, tel only), appLink (another app's link an older note kept), note links as #fm-note-<id> (ADR-041)
     noteHtml.ts        # The 4.1.0 lines' CSS for the editor and for print (BlockColors, PRINT_BLOCK_COLORS)
     listOps.ts         # A list note's item operations, pure (insertAfter, removeItem, visibleItems, withoutDone, ...)
     findTarget.ts      # What the find bar talks to: createTextFindTarget (the text page), createCodeFindTarget (CodeMirror);

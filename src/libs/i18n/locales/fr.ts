@@ -213,6 +213,7 @@ const fr = {
   },
   note: {
     photo_denied: "Fast Memo ne peut pas utiliser l'appareil photo : autorisez-le dans les réglages du système",
+    photo_failed: "L'appareil photo n'a pas pu être ouvert",
     not_found: "Note introuvable",
     format: {
       undo: "Annuler",
@@ -257,6 +258,7 @@ const fr = {
     },
     update_to_open: "Mettez à jour Fast Memo pour ouvrir cette note",
     duplicated: "Note dupliquée",
+    duplicate_failed: "La note n'a pas pu être dupliquée",
     title_placeholder: "Titre",
     description_placeholder: "Écrivez quelque chose ici...",
     characters: "caractères",
@@ -1553,6 +1555,8 @@ const fr = {
     tomorrow: "Demain matin",
     monday: "Lundi",
     choose: "Choisir le jour et l'heure…",
+    hours_field: "Heures",
+    minutes_field: "Minutes",
     set: "Définir",
     remove: "Supprimer le rappel",
     current: "Prévu pour {{when}}",
@@ -1564,6 +1568,7 @@ const fr = {
   },
   share: {
     nothing: "Fast Memo peut garder du texte, des liens et des images",
+    saved: "Ce que tu as partagé est dans une nouvelle note",
   },
   empty: {
     notes_title: "Pas encore de notes",

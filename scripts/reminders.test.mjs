@@ -14,7 +14,7 @@ await build({
   stdin: {
     contents: `
       export { planReminders, isUpcoming, withReminder, notifyStateOf } from "@/libs/reminders/plan";
-      export { presets, formatWhen } from "@/libs/reminders/presets";
+      export { presets, formatWhen, choiceNow } from "@/libs/reminders/presets";
       export { monthGrid } from "@/libs/reminders/month";
     `,
     resolveDir: src,
@@ -28,7 +28,7 @@ await build({
   alias: { "@": src },
 });
 
-const { planReminders, isUpcoming, withReminder, notifyStateOf, presets, formatWhen, monthGrid } = await import(
+const { planReminders, isUpcoming, withReminder, notifyStateOf, presets, formatWhen, monthGrid, choiceNow } = await import(
   pathToFileURL(out).href
 );
 
@@ -134,6 +134,12 @@ ok(
     { key: "tomorrow", at: at(2026, 11, 12, 9) },
     { key: "monday", at: at(2026, 11, 16, 9) },
   ])
+);
+ok(
+  "a quick choice pressed later than the sheet opened is the choice of that moment; tonight once past is none",
+  choiceNow("hour", new Date(2026, 10, 11, 21, 10)) === at(2026, 11, 11, 22, 10) &&
+    choiceNow("tonight", new Date(2026, 10, 11, 18, 0)) === at(2026, 11, 11, 20) &&
+    choiceNow("tonight", new Date(2026, 10, 11, 20, 5)) === null
 );
 ok(
   "tonight only before 19:00",
@@ -243,7 +249,7 @@ console.log("\nthe phone's side: started after the home, the library loaded then
          export const getLastNotificationResponse = () => n.launching;
          export const clearLastNotificationResponse = () => { n.launching = null; };
          export const getAllScheduledNotificationsAsync = async () => n.scheduled.slice();
-         export const scheduleNotificationAsync = async (r) => { n.scheduled.push(r); };
+         export const scheduleNotificationAsync = async (r) => { if (n.refuse === r.identifier) throw new Error("500 alarms"); n.scheduled.push(r); };
          export const cancelScheduledNotificationAsync = async (id) => { n.scheduled = n.scheduled.filter((r) => r.identifier !== id); };
          export const getExactAlarmPermissionsAsync = async () => ({ granted: true });`
       ),
@@ -283,6 +289,23 @@ console.log("\nthe phone's side: started after the home, the library loaded then
   );
   stop();
   ok("stopped: the listener is off", globalThis.__notif.listeners === 0);
+
+  // one the system refuses (Android's 500 alarms an app): the others are scheduled all the same
+  // the library is loaded: its stub holds this object
+  Object.assign(globalThis.__notif, { scheduled: [], refuse: "fm-reminder-a" });
+  const later = (id) => ({ ...note, id, remindAt: Date.now() + 120_000 });
+  const stopRefused = startReminders(storeOf([later("a"), later("b"), later("c")]));
+  await settle();
+  ok(
+    "a reminder the system refuses doesn't stop the others",
+    globalThis.__notif.scheduled
+      .map((r) => r.identifier)
+      .sort()
+      .join() === "fm-reminder-b,fm-reminder-c",
+    globalThis.__notif.scheduled.map((r) => r.identifier).join()
+  );
+  stopRefused();
+  Object.assign(globalThis.__notif, { scheduled: [], refuse: undefined });
 
   const stopEarly = startReminders(storeOf([]));
   stopEarly(); // before the library has loaded

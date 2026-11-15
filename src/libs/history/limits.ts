@@ -136,3 +136,20 @@ export function replacedByPlan(live: readonly Note[], put: readonly Note[]): Not
     return !!next && JSON.stringify(bodyOf(note)) !== JSON.stringify(bodyOf(next));
   });
 }
+
+/**
+ * Whether the editor's note was saved before this sitting: it is among the stored notes when the editor opens. Not
+ * `createdAt !== updatedAt`, which a note from a backup or seed data with equal times fails (emptied, it would skip the
+ * trash).
+ */
+export function wasSaved(items: readonly { id: string }[], noteId: string): boolean {
+  return items.some((note) => note.id === noteId);
+}
+
+/**
+ * What the sitting's first change keeps ("edit"): the stored copy, which holds what another device brought into the open
+ * editor since it opened, else the note it opened with.
+ */
+export function editVersionOf<T extends { id: string }>(items: readonly T[], opened: T): T {
+  return items.find((note) => note.id === opened.id) ?? opened;
+}

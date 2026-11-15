@@ -213,6 +213,7 @@ const es = {
   },
   note: {
     photo_denied: "Fast Memo no puede usar la cámara: permítela en los ajustes del sistema",
+    photo_failed: "No se pudo abrir la cámara",
     not_found: "Nota no encontrada",
     format: {
       undo: "Deshacer",
@@ -257,6 +258,7 @@ const es = {
     },
     update_to_open: "Actualiza Fast Memo para abrir esta nota",
     duplicated: "Nota duplicada",
+    duplicate_failed: "No se pudo duplicar la nota",
     title_placeholder: "Título",
     description_placeholder: "Escribe algo aquí...",
     characters: "caracteres",
@@ -1543,6 +1545,8 @@ const es = {
     tomorrow: "Mañana por la mañana",
     monday: "Lunes",
     choose: "Elegir día y hora…",
+    hours_field: "Horas",
+    minutes_field: "Minutos",
     set: "Establecer",
     remove: "Quitar recordatorio",
     current: "Programado para {{when}}",
@@ -1554,6 +1558,7 @@ const es = {
   },
   share: {
     nothing: "Fast Memo puede guardar texto, enlaces e imágenes",
+    saved: "Lo que compartiste está en una nota nueva",
   },
   empty: {
     notes_title: "Aún no hay notas",

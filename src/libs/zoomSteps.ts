@@ -1,6 +1,13 @@
 /** The desktop window's zoom, in percent (spec C.4): Ctrl/Cmd + and - step through these. */
 export const ZOOM_STEPS = [80, 90, 100, 110, 125, 150, 175, 200] as const;
 
+/** A stored zoom as the window may take it: a number from 80 to 200, else 100 (a settings import can bring anything). */
+export function storedZoom(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= ZOOM_STEPS[0] && value <= ZOOM_STEPS.at(-1)!
+    ? value
+    : 100;
+}
+
 /**
  * The next step up or down from `current`; a value between two steps goes to the nearer one in that direction. A
  * `current` that isn't a number from 80 to 200 counts as 100.

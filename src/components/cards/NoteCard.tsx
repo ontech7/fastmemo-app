@@ -14,12 +14,9 @@ import UsersIcon from "react-native-heroicons/outline/UsersIcon";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
-import { useRouter } from "@/hooks/useRouter";
 import { useTourTarget } from "@/hooks/useTourTarget";
 import { useNoteOpenElsewhere } from "@/libs/cloud/presence";
 import { clickIntent, contextMenuProps, useIsCursor } from "@/libs/desktopList";
-import { storeUnlockedNote } from "@/libs/registry";
-import { setFindOnOpen } from "@/libs/search/findOnOpen";
 import { useReminderUpcoming } from "@/libs/reminders/clock";
 import { formatWhen } from "@/libs/reminders/presets";
 import { formatDateTime, reverseDate } from "@/utils/date";
@@ -34,7 +31,7 @@ import { BORDER, CARD_TYPE_COLOR, COLOR, FONT, FONTSIZE, MONOSPACE_FONT, PADDING
 
 import CategoryIcon from "@/components/CategoryIcon";
 import MarkedText from "@/components/ui/MarkedText";
-import { useSecret } from "@/hooks/useSecret";
+import { useOpenNote } from "@/hooks/useOpenNote";
 import { getNoteFilters } from "@/slicers/notesSlice";
 
 import type { SearchHit } from "@/libs/search/search";
@@ -88,8 +85,7 @@ function NoteCard({
 }: Props) {
   const { t, i18n } = useTranslation();
 
-  const router = useRouter();
-  const { unlockWithSecret } = useSecret();
+  const openNote = useOpenNote();
 
   const { sortBy } = useSelector(getNoteFilters);
 
@@ -126,23 +122,7 @@ function NoteCard({
       return;
     }
 
-    // A result whose content matched opens on its word (in memory: never in the route).
-    if (hit?.line) setFindOnOpen(id, { word: hit.line.word, tabId: hit.line.tabId });
-
-    if (!locked) {
-      router.push(`/notes/${id}`);
-      return;
-    }
-
-    unlockWithSecret((router, isFingerprint) => {
-      // Unlocked here: the note's screen opens it without asking again (LL-085).
-      storeUnlockedNote(id);
-      if (isFingerprint) {
-        router.push(`/notes/${id}`);
-      } else {
-        router.replace(`/notes/${id}`);
-      }
-    }, "none");
+    openNote(id, locked, hit?.line);
   };
 
   const isImportant = !!important && known;
@@ -268,7 +248,11 @@ function NoteCard({
         )}
 
         {reminder !== null ? (
-          <Text style={[styles.reminder, { color: reminderColor }]} numberOfLines={1} ellipsizeMode="tail">
+          <Text
+            style={[styles.reminder, isImportant ? styles.reminderOnRed : styles.reminderAccent]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {t("reminder.card", { when: formatWhen(reminder, i18n.language) })}
           </Text>
         ) : known ? (
@@ -367,6 +351,8 @@ const styles = StyleSheet.create({
   },
   dateValue: { fontFamily: FONT.semiBold },
   reminder: { fontSize: FONTSIZE.small, fontFamily: FONT.semiBold },
+  reminderAccent: { color: COLOR.accent },
+  reminderOnRed: { color: COLOR.softWhite },
   // A search result's line: the column's chip, the line with its marked words, "+N" for the other lines that match.
   hitRow: { flexDirection: "row", alignItems: "center", gap: PADDING_MARGIN.xs + 1 },
   hitLine: { flex: 1, minWidth: 0, fontSize: FONTSIZE.small, fontFamily: FONT.regular, opacity: 0.8 },

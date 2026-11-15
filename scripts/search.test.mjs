@@ -145,6 +145,16 @@ ok("code block lines", htmlLines("<pre>a = 1\nb = 2</pre>").join("|") === "a = 1
     JSON.stringify(parts)
   );
   ok("the same lines as htmlLines", parts.map((part) => part.text).join("|") === htmlLines(html).join("|"));
+  const box = (attrs) =>
+    htmlLineParts(`<ol class="x-todo"><li><span class="x-todo-box"><input type="checkbox" ${attrs}></span>x</li></ol>`)[0].box;
+  ok(
+    "only the checked attribute ticks a box, not aria-checked or data-checked",
+    box('aria-checked="false"') === "empty" &&
+      box('data-checked="1"') === "empty" &&
+      box("checked") === "done" &&
+      box('checked=""') === "done" &&
+      box("CHECKED/") === "done"
+  );
 }
 ok("entities", htmlLines("<div>&#233;t&#xE9; &lt;b&gt;</div>")[0] === "été <b>");
 ok(
@@ -214,6 +224,20 @@ ok(
     .map((t) => t.key)
     .join() === "lavoro,lazio"
 );
+{
+  // a tag's count is what a tap on it shows: "#casa" in the field also finds "#casalinga"
+  const homes = [
+    text("1", "A", "<div>#casa</div>"),
+    text("2", "B", "<div>#casalinga</div>"),
+    text("3", "C", "<div>#casa #casalinga</div>"),
+  ];
+  const listed = Object.fromEntries(tagCounts(homes.map(noteDoc), "cas").map((t) => [t.key, t.count]));
+  ok(
+    "a tag's count is the notes its search finds (#casa 3 with #casalinga, #casalinga 2)",
+    listed.casa === 3 && listed.casalinga === 2 && find(homes, "#casa").here.length === 3,
+    listed
+  );
+}
 // search
 ok("nothing typed", find(tagged, "  ") === null);
 ok("case and accents in a search", ids(find([text("1", "Viaggio", "<div>La Città vecchia</div>")], "citta").here) === "1");

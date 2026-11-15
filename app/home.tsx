@@ -22,14 +22,13 @@ import { useCloudStatus } from "@/hooks/useCloudStatus";
 import { useLaunchAction } from "@/hooks/useLaunchAction";
 import { useNoteSearch } from "@/hooks/useNoteSearch";
 import { useRouter } from "@/hooks/useRouter";
+import { useOpenNote } from "@/hooks/useOpenNote";
 import { useSecret } from "@/hooks/useSecret";
 import { useReminderSyncQuestion } from "@/hooks/useReminderAsk";
 import { useVaultPrompt } from "@/hooks/useVaultPrompt";
 import { useVaultUnlocked } from "@/hooks/useVaultUnlocked";
 import { setListHost } from "@/libs/desktopList";
-import { menuTargets, rangeBetween } from "@/libs/listCursor";
-import { storeUnlockedNote } from "@/libs/registry";
-import { setFindOnOpen } from "@/libs/search/findOnOpen";
+import { keepOnScreen, menuTargets, rangeBetween, selectionAfterTrash } from "@/libs/listCursor";
 import { addTrail } from "@/libs/diagnostics";
 import Haptics from "@/libs/haptics";
 import { type AppStore as HistoryStore, startHistory } from "@/libs/history";
@@ -42,6 +41,7 @@ import { setVaultPromptNeeded } from "@/libs/vaultPrompt";
 import { getCurrentCategory } from "@/slicers/categoriesSlice";
 import {
   deleteNote,
+  getAllNotesShown,
   getNotesFilteredPerCategory,
   temporaryDeleteSelectedNotes,
   toggleHiddenNotes,
@@ -59,7 +59,7 @@ import {
   selectorWebhook_updateNote,
   setTourStep,
 } from "@/slicers/settingsSlice";
-import type { Category, Note, RootState } from "@/types";
+import type { Note, RootState } from "@/types";
 import { notesLoaded } from "@/slicers/store";
 import { duplicateNote } from "@/slicers/thunks/duplicateNote";
 import type { AppDispatch } from "@/slicers/store";
@@ -82,9 +82,6 @@ type HomeRow =
   | { kind: "note"; note: Note; hit?: SearchHit }
   | { kind: "header"; id: string; title: string; count?: number }
   | { kind: "tag"; tag: TagCount };
-
-/** The search reads every category: the home's selector, with "All". */
-const ALL_CATEGORIES: Category = { order: 0, name: "All", icon: "", index: true, selected: false };
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -123,8 +120,7 @@ export default function HomeScreen() {
   // fresh array on every render and rebuild the whole list (jank while typing).
   const selectNotes = useMemo(() => getNotesFilteredPerCategory(currentCategory, showHidden), [currentCategory, showHidden]);
   const notes = useSelector(selectNotes);
-  const selectAllNotes = useMemo(() => getNotesFilteredPerCategory(ALL_CATEGORIES, showHidden), [showHidden]);
-  const allNotes = useSelector(selectAllNotes);
+  const allNotes = useSelector(getAllNotesShown);
 
   // @ts-ignore
   const trashedNotes = store.getState().notes.temporaryItems;
@@ -149,16 +145,19 @@ export default function HomeScreen() {
 
   const [filterText, setFilterText] = useState("");
 
-  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
+  // What was picked; `selectedNotes` (below) is the part of it on screen.
+  const [pickedNotes, setSelectedNotes] = useState<string[]>([]);
 
   const [showDeleteNotesDialog, setShowDeleteNotesDialog] = useState(false);
   // Desktop: the note Delete asks about ("id|locked").
   const [trashOne, setTrashOne] = useState<string | null>(null);
 
   const { unlockWithSecret } = useSecret();
+  const openNote = useOpenNote();
 
   // `ids` are "id|locked", as the selection holds them: the selection, or the one note the desktop's Delete marked.
-  const temporaryDeleteSelectedNotesFromItems = (ids: string[] = selectedNotes) => {
+  // `selection` is the selection on screen when it was asked.
+  const temporaryDeleteSelectedNotesFromItems = (ids: string[], selection: string[]) => {
     const deleteNotes = () => {
       dispatch(temporaryDeleteSelectedNotes(ids));
       webhook(webhook_temporaryDeleteNote, {
@@ -166,8 +165,10 @@ export default function HomeScreen() {
         extra: "multiple",
         ids: ids.map((noteId: string) => noteId.split("|")[0]),
       });
-      setSelectedNotes([]);
-      setIsDeleteMode(false);
+      // One note trashed from outside the selection leaves it as it is.
+      const after = selectionAfterTrash(selection, ids);
+      setSelectedNotes(after.selected);
+      if (after.endMode) setIsDeleteMode(false);
     };
 
     if (ids.some((id: string) => id.split("|")[1] === "true")) {
@@ -263,6 +264,9 @@ export default function HomeScreen() {
   // list knows the home went away and came back).
   const listRef = useRef<FlashListRef<HomeRow>>(null);
   const noteIds = useMemo(() => rows.flatMap((row) => (row.kind === "note" ? [row.note.id] : [])), [rows]);
+  // The selection is what was picked among the notes on screen: the bar never acts on a note a search hides (it is
+  // selected again when the search lets it back).
+  const selectedNotes = useMemo(() => keepOnScreen(pickedNotes, noteIds), [pickedNotes, noteIds]);
   const listHost = useMemo(
     () => ({
       ids: noteIds,
@@ -327,25 +331,16 @@ export default function HomeScreen() {
   // Open: what a click on the card does.
   const openFromMenu = () => {
     if (!menuNote) return;
-    const { id, locked } = menuNote;
-    if (menuRow?.kind === "note" && menuRow.hit?.line) {
-      setFindOnOpen(id, { word: menuRow.hit.line.word, tabId: menuRow.hit.line.tabId });
-    }
-    if (!locked) {
-      router.push(`/notes/${id}`);
-      return;
-    }
-    unlockWithSecret((router, isFingerprint) => {
-      // Unlocked here: the note's screen opens it without asking again (LL-085).
-      storeUnlockedNote(id);
-      if (isFingerprint) router.push(`/notes/${id}`);
-      else router.replace(`/notes/${id}`);
-    }, "none");
+    openNote(menuNote.id, menuNote.locked, menuRow?.kind === "note" ? menuRow.hit?.line : undefined);
   };
   const duplicateFromMenu = async () => {
     if (!menuNote) return;
-    const copyId = await (dispatch as AppDispatch)(duplicateNote(menuNote.id)).unwrap();
-    toast(copyId ? t("note.duplicated") : t("ai.editor.no_content"));
+    try {
+      const copyId = await (dispatch as AppDispatch)(duplicateNote(menuNote.id)).unwrap();
+      toast(copyId ? t("note.duplicated") : t("ai.editor.no_content"));
+    } catch {
+      toast(t("note.duplicate_failed"));
+    }
   };
   // The note's own screen for it; from the home, saving comes back here (no pass: the note wasn't open, LL-085).
   const changeCategoryFromMenu = () => {
@@ -362,7 +357,7 @@ export default function HomeScreen() {
     ({ item, index }: { item: HomeRow; index: number }) => {
       if (item.kind === "header") {
         return (
-          <View style={styles.sectionHeader}>
+          <View style={styles.sectionHeader} accessibilityRole="header">
             <Text style={styles.sectionTitle} numberOfLines={1}>
               {item.title}
             </Text>
@@ -530,7 +525,7 @@ export default function HomeScreen() {
           setShowDeleteNotesDialog(false);
         }}
         onConfirm={() => {
-          temporaryDeleteSelectedNotesFromItems();
+          temporaryDeleteSelectedNotesFromItems(selectedNotes, selectedNotes);
           setShowDeleteNotesDialog(false);
         }}
       />
@@ -541,7 +536,7 @@ export default function HomeScreen() {
         description={t("popup.delete_note")}
         onCancel={() => setTrashOne(null)}
         onConfirm={() => {
-          if (trashOne) temporaryDeleteSelectedNotesFromItems([trashOne]);
+          if (trashOne) temporaryDeleteSelectedNotesFromItems([trashOne], selectedNotes);
           setTrashOne(null);
         }}
       />

@@ -42,7 +42,7 @@ import type {
   LineType,
   PickerKey,
 } from "@/libs/richTextEditor";
-import { normalizeLink } from "@/libs/links";
+import { appLink, normalizeLink } from "@/libs/links";
 import { storeUnlockedNote } from "@/libs/registry";
 import { pickNotes } from "@/libs/search/picker";
 import { useRouter } from "@/hooks/useRouter";
@@ -87,7 +87,7 @@ import {
   selectorVoiceRecognition,
   selectorWebhook_addTextNote,
 } from "@/slicers/settingsSlice";
-import type { Note, TextNote } from "@/types";
+import type { Note, RootState, TextNote } from "@/types";
 import { convertToMB, getTextLength, getTextSize, isStringEmpty } from "@/utils/string";
 import { openUrl } from "@/utils/openUrl";
 import { toast } from "@/utils/toast";
@@ -101,7 +101,7 @@ import { Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View
 import MagnifyingGlassIcon from "react-native-heroicons/outline/MagnifyingGlassIcon";
 import { KeyboardAvoidingView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { RichEditor } from "react-native-pell-rich-editor";
-import { useSelector } from "react-redux";
+import { useSelector, useStore } from "react-redux";
 
 interface Props {
   initialNote: TextNote;
@@ -196,6 +196,10 @@ const selectLinkableNotes = getNotesFilteredPerCategory(
   { order: 0, name: "All", icon: "", index: true, selected: false },
   true
 );
+
+/** No notes: what the link picker reads while it is closed. */
+const NO_NOTES: Note[] = [];
+const selectNoNotes = () => NO_NOTES;
 
 /** The find bar's target for the note's page in `editorRef`, whose text is `textRef`'s. */
 function textFindTarget(editorRef: React.RefObject<any>, textRef: React.RefObject<string>) {
@@ -399,7 +403,9 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
     try {
       result = await ImagePicker.launchCameraAsync({ allowsEditing: true });
     } catch {
-      toast(t("note.photo_denied"));
+      // Refused, or no camera app to open: each says what to do.
+      const permission = await ImagePicker.getCameraPermissionsAsync().catch(() => null);
+      toast(t(permission && !permission.granted ? "note.photo_denied" : "note.photo_failed"));
       return;
     }
     if (result.canceled || !result.assets?.length) return;
@@ -583,7 +589,9 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
   const router = useRouter();
   const { unlockWithSecret } = useSecret();
   const showHidden = useSelector(selectorShowHidden);
-  const linkableNotes = useSelector(selectLinkableNotes);
+  // Subscribed only while the picker is open: otherwise every commit of any note (its own too) would draw the editor again.
+  const linkableNotes = useSelector(picker ? selectLinkableNotes : selectNoNotes);
+  const store = useStore<RootState>();
   const picked = useMemo(
     () => (picker ? pickNotes(linkableNotes, picker.query, { excludeId: note.id, showHidden }) : []),
     [picker, linkableNotes, note.id, showHidden]
@@ -624,7 +632,7 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
   const followNoteLink = useCallback(
     (id: string) => {
       flushNote();
-      const target = linkableNotes.find((n) => n.id === id);
+      const target = selectLinkableNotes(store.getState()).find((n) => n.id === id);
       if (!target) return toast(t("note.not_found"));
       if (target.hidden && !showHidden) {
         unlockWithSecret((codeRouter, isFingerprint) => {
@@ -636,7 +644,7 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
       }
       router.push(`/notes/${id}`);
     },
-    [flushNote, linkableNotes, showHidden, unlockWithSecret, router, t]
+    [flushNote, store, showHidden, unlockWithSecret, router, t]
   );
 
   useEffect(() => {
@@ -915,10 +923,13 @@ export default function NoteTextEditor({ initialNote, preview }: Props) {
   );
 }
 
-/** A link's address, opened by the system when it is one a note may hold: the page never opens anything itself. */
+/**
+ * A link's address, opened by the system when it is one a note may hold (a page, mail, a phone number, or another app's
+ * link an older note kept): the page never opens anything itself. One the system can't open says so.
+ */
 function openLink(href: string) {
-  const link = normalizeLink(href);
-  if (link) openUrl(link);
+  const link = normalizeLink(href) ?? appLink(href);
+  if (link) openUrl(link).catch(() => toast(i18n.t("note.link.invalid")));
   else toast(i18n.t("note.link.invalid"));
 }
 

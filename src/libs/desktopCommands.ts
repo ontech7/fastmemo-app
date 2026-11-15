@@ -91,6 +91,17 @@ export function isTargetReachable(name: string): boolean {
   return !!reachableTarget(name);
 }
 
+/** Focuses the field marked `name` with the caret at the end of its text, if it's reachable. */
+export function focusAtEnd(name: string): boolean {
+  const node = reachableTarget(name);
+  if (!node || !isEditable(node)) return false;
+  node.focus();
+  if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
+    node.setSelectionRange(node.value.length, node.value.length);
+  }
+  return true;
+}
+
 /** Presses the control marked `name` (a field is focused instead), if it's reachable. */
 export function press(name: string): boolean {
   const node = reachableTarget(name);

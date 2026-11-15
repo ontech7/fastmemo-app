@@ -19,12 +19,14 @@ const stub = (filter, contents) => ({
   name: `stub-${filter}`,
   setup(b) {
     b.onResolve({ filter }, () => ({ path: String(filter), namespace: "stub" }));
-    b.onLoad({ filter: /.*/, namespace: "stub" }, (args) => (args.path === String(filter) ? { contents, loader: "js" } : undefined));
+    b.onLoad({ filter: /.*/, namespace: "stub" }, (args) =>
+      args.path === String(filter) ? { contents, loader: "js" } : undefined
+    );
   },
 });
 const bundle = await build({
   stdin: {
-    contents: `import * as L from "@/libs/desktopList"; import { printCss } from "@/libs/printCss"; import { reducePhoto } from "@/libs/reducePhoto"; window.L = L; window.printCss = printCss; window.reducePhoto = reducePhoto;`,
+    contents: `import * as L from "@/libs/desktopList"; import { printCss } from "@/libs/printCss"; import { reducePhoto } from "@/libs/reducePhoto"; import { printNote } from "@/libs/print"; window.L = L; window.printCss = printCss; window.reducePhoto = reducePhoto; window.printNote = printNote;`,
     resolveDir: src,
     loader: "ts",
   },
@@ -38,9 +40,14 @@ const bundle = await build({
   plugins: [
     stub(/^expo-router$/, "export const router = { push() {}, navigate() {}, dismissTo() {} };"),
     stub(/libs\/desktopZoom$/, "export const zoom = () => {};"),
+    // the print's copy reaches utils/html, which takes one function from the AI's barrel
+    stub(/libs\/ai$/, "export const stripHtml = (h) => h.replace(/<[^>]*>/g, '');"),
     // only reached by the native reducer; the web one draws on a canvas
     stub(/^expo-image-manipulator$/, "export const ImageManipulator = {}; export const SaveFormat = {};"),
-    stub(/^react-native$/, "export const Image = { getSize: (u, ok, no) => { const i = new window.Image(); i.onload = () => ok(i.naturalWidth, i.naturalHeight); i.onerror = no; i.src = u; } };"),
+    stub(
+      /^react-native$/,
+      "export const Image = { getSize: (u, ok, no) => { const i = new window.Image(); i.onload = () => ok(i.naturalWidth, i.naturalHeight); i.onerror = no; i.src = u; } };"
+    ),
   ],
 });
 
@@ -52,7 +59,7 @@ const html = `<!doctype html><html><head><style>
   .card { height: 60px; box-sizing: border-box; border-bottom: 1px solid #ccc; }
   #bar { position: absolute; left: 0; right: 0; top: 320px; height: 80px; background: #333; }
 </style></head><body>
-<div id="wrap" style="position: relative"><div id="list">${rows}</div><div id="bar"></div></div>
+<div id="wrap" style="position: relative"><div id="list">${rows}</div><div id="bar"></div></div><button id="other" style="position: fixed; top: 404px; left: 0">other</button><input data-testid="shortcut-find" value="casa rossa" style="position: fixed; top: 404px; left: 120px">
 <script>${bundle.outputFiles[0].text}</script>
 <script>
   window.opened = null;
@@ -128,14 +135,72 @@ try {
   await evaluate(`window.opened = null; window.step("enter")`);
   ok("Enter opens it", (await evaluate("window.opened")) === "n10");
 
+  console.log("\nan Enter that didn't leave the home (select mode toggles, a card it can't open), then the mouse");
+  // the home stayed (the click above leaves it), the mouse moves, the person goes to a note and back with it
+  await evaluate(
+    `L.leaveKeyboardMode(); L.setListHost(null); L.setListHost({ ids: [...document.querySelectorAll(".card")].map((c) => c.dataset.id), trash() {}, scrollTo() {} });`
+  );
+  await evaluate(`window.opened = null`);
+  ok(
+    "back on the home: no mark (someone using the mouse never sees it)",
+    (await evaluate(`L.listKey("enter")`)) === false && (await evaluate("window.opened")) === null,
+    await evaluate("String(window.opened)")
+  );
+
+  console.log("\na control with the focus (a card or a button clicked before), then an arrow");
+  await evaluate(`document.getElementById("other").focus(); window.step("down")`);
+  ok(
+    "the arrow takes the focus off it: Enter goes to the marked note, not to the control",
+    (await evaluate(`document.activeElement === document.body`)) === true,
+    await evaluate(`document.activeElement && document.activeElement.id`)
+  );
+
+  console.log("\n↑ from the first note, back to the search field");
+  await evaluate(`L.leaveKeyboardMode(); L.setCursor("n0"); window.step("down"); window.step("up")`);
+  const field = JSON.parse(
+    await evaluate(
+      `(() => { const f = document.activeElement; return JSON.stringify({ testid: f.dataset && f.dataset.testid, start: f.selectionStart, end: f.selectionEnd, length: f.value.length }); })()`
+    )
+  );
+  ok(
+    "the field has the focus with the caret at the end of the search: the next key refines it, doesn't replace it",
+    field.testid === "shortcut-find" && field.start === field.length && field.end === field.length,
+    JSON.stringify(field)
+  );
+
   console.log("\nprinting: the page hidden only while a note is laid out for it");
-  await evaluate(`(() => { const st = document.createElement("style"); st.textContent = printCss(); document.head.appendChild(st); })()`);
+  await evaluate(
+    `(() => { const st = document.createElement("style"); st.textContent = printCss(); document.head.appendChild(st); })()`
+  );
   await driver.send("Emulation.setEmulatedMedia", { media: "print" });
   const shown = () => evaluate(`getComputedStyle(document.getElementById("wrap")).display`);
   ok("no copy (the note left): the browser's own print shows the page", (await shown()) !== "none", await shown());
-  await evaluate(`(() => { const c = document.createElement("div"); c.id = "fm-print"; c.textContent = "the note"; document.body.appendChild(c); })()`);
-  ok("a note laid out: only it is printed", (await shown()) === "none" && (await evaluate(`getComputedStyle(document.getElementById("fm-print")).display`)) === "block");
+  await evaluate(
+    `(() => { const c = document.createElement("div"); c.id = "fm-print"; c.textContent = "the note"; document.body.appendChild(c); })()`
+  );
+  ok(
+    "a note laid out: only it is printed",
+    (await shown()) === "none" && (await evaluate(`getComputedStyle(document.getElementById("fm-print")).display`)) === "block"
+  );
   await driver.send("Emulation.setEmulatedMedia", { media: "" });
+
+  console.log("\nthe PDF's name");
+  const named = JSON.parse(
+    await evaluate(`(async () => {
+      document.title = "Fast Memo";
+      const seen = [];
+      window.print = () => seen.push(document.title);
+      await printNote("Spesa di Natale", "<div>latte</div>");
+      await printNote("", "<div>senza titolo</div>");
+      return JSON.stringify({ seen, after: document.title });
+    })()`)
+  );
+  ok(
+    "printed (and saved as PDF) under the note's title, the page's own title back after; an untitled note keeps the app's",
+    named.seen[0] === "Spesa di Natale" && named.seen[1] === "Fast Memo" && named.after === "Fast Memo",
+    JSON.stringify(named)
+  );
+  await evaluate(`document.getElementById("fm-print")?.remove()`);
 
   console.log("\na pasted picture with transparency (a window's screenshot, a logo)");
   const pixel = JSON.parse(
@@ -149,7 +214,11 @@ try {
       return JSON.stringify({ w: img.width, clear: [...h.getImageData(30, 10, 1, 1).data].slice(0, 3), red: [...h.getImageData(5, 10, 1, 1).data].slice(0, 3) });
     })()`)
   );
-  ok("its transparent part comes out white, not black", pixel.clear.every((v) => v > 240), JSON.stringify(pixel));
+  ok(
+    "its transparent part comes out white, not black",
+    pixel.clear.every((v) => v > 240),
+    JSON.stringify(pixel)
+  );
   ok("its drawn part kept, its size too", pixel.w === 40 && pixel.red[0] > 180 && pixel.red[1] < 90, JSON.stringify(pixel));
   const big = JSON.parse(
     await evaluate(`(async () => {

@@ -166,7 +166,7 @@ export function htmlLineParts(html: string): HtmlLine[] {
         else lists.push(name === "ol" && /\bclass\s*=\s*["'][^"']*\bx-todo\b/i.test(html.slice(nameEnd, after)));
       } else if (!closing && name === "li" && lists[lists.length - 1]) {
         box = "empty";
-      } else if (!closing && name === "input" && box && /\bchecked\b/i.test(html.slice(nameEnd, after))) {
+      } else if (!closing && name === "input" && box && /(?:^|\s)checked(?=[\s=/>]|$)/i.test(html.slice(nameEnd, after))) {
         box = "done";
       }
       i = textStart = after;

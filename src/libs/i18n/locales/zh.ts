@@ -212,6 +212,7 @@ const zh = {
   },
   note: {
     photo_denied: "Fast Memo 无法使用相机：请在系统设置中允许",
+    photo_failed: "无法打开相机",
     not_found: "未找到笔记",
     format: {
       undo: "撤销",
@@ -256,6 +257,7 @@ const zh = {
     },
     update_to_open: "更新 Fast Memo 以打开此笔记",
     duplicated: "笔记已复制",
+    duplicate_failed: "无法复制笔记",
     title_placeholder: "标题",
     description_placeholder: "在这里写点东西...",
     characters: "文本字符",
@@ -1483,6 +1485,8 @@ const zh = {
     tomorrow: "明天早上",
     monday: "周一",
     choose: "选择日期和时间…",
+    hours_field: "小时",
+    minutes_field: "分钟",
     set: "设置",
     remove: "移除提醒",
     current: "已设置为 {{when}}",
@@ -1494,6 +1498,7 @@ const zh = {
   },
   share: {
     nothing: "Fast Memo 可以保存文本、链接和图片",
+    saved: "你分享的内容在一条新笔记中",
   },
   empty: {
     notes_title: "还没有笔记",

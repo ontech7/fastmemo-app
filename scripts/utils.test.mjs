@@ -26,9 +26,9 @@ await build({
       export { htmlToMarkdown, wrapHtmlForPdf } from "@/utils/html";
       export { formatToPlainText } from "@/utils/string";
       export { daysAgo } from "@/utils/dateParse";
-      export { stepCursor, rangeBetween, menuTargets } from "@/libs/listCursor";
+      export { stepCursor, rangeBetween, menuTargets, keepOnScreen, selectionAfterTrash } from "@/libs/listCursor";
       export { installDropGuard } from "@/libs/dropGuard.web";
-      export { ZOOM_STEPS, nextZoom, zoomKeyOf } from "@/libs/zoomSteps";
+      export { ZOOM_STEPS, nextZoom, zoomKeyOf, storedZoom } from "@/libs/zoomSteps";
       export { printCss } from "@/libs/printCss";
       export { createTextFindTarget, createCodeFindTarget, FIND_PAGE } from "@/libs/findTarget";
     `,
@@ -194,7 +194,28 @@ console.log("\nisKnownNoteType");
 
 console.log("\nlinks a text note may hold");
 {
-  const { normalizeLink, noteLinkHref, noteLinkId } = M;
+  const { normalizeLink, noteLinkHref, noteLinkId, appLink } = M;
+  ok(
+    "a link to another app that an older note holds (obsidian:, a password manager's): opened, as 4.0.0 did",
+    appLink("obsidian://open?vault=a&file=b") === "obsidian://open?vault=a&file=b" &&
+      appLink("bitwarden://x") === "bitwarden://x"
+  );
+  ok(
+    "never what runs, reaches into the phone or opens this app's screens; and not a page (normalizeLink's)",
+    [
+      "javascript:alert(1)",
+      "java\tscript:x",
+      "data:text/html,x",
+      "intent://x#Intent;end",
+      "file:///sdcard/a",
+      "content://a",
+      "fastmemoapp://notes/x",
+      "exp+fastmemo://x",
+      "https://a.it",
+      "localhost:3000",
+      "a b:c",
+    ].every((l) => appLink(l) === null)
+  );
   ok(
     "no scheme gets https",
     normalizeLink("  example.com/a ") === "https://example.com/a" &&
@@ -332,6 +353,34 @@ console.log("\nlistCursor: the desktop list's keyboard mark (Task 25)");
       menuTargets(["a|false"], "b|false").ids.join() === "b|false" &&
       menuTargets([], "b|false").ids.join() === "b|false"
   );
+
+  const { keepOnScreen } = M;
+  const selected = ["a|false", "b|true"];
+  ok(
+    "a search that leaves a selected note off screen drops it from the selection (the bar would act on a note not shown)",
+    keepOnScreen(selected, ["b", "c"]).join() === "b|true"
+  );
+  ok(
+    "every selected note still on screen: the same selection, not a copy",
+    keepOnScreen(selected, ["c", "a", "b"]) === selected
+  );
+
+  const { selectionAfterTrash } = M;
+  const many = ["a|false", "b|false", "c|false"];
+  const outside = selectionAfterTrash(many, ["z|false"]);
+  ok(
+    "one note trashed from outside the selection (Delete on the mark, the menu): the selection stays",
+    outside.selected === many && outside.endMode === false
+  );
+  const inside = selectionAfterTrash(many, ["b|false"]);
+  ok(
+    "one selected note trashed alone: the others stay selected",
+    inside.selected.join() === "a|false,c|false" && !inside.endMode
+  );
+  ok(
+    "the selection trashed, or its last note: select mode ends",
+    selectionAfterTrash(many, many).endMode && selectionAfterTrash(["a|false"], ["a|false"]).endMode
+  );
 }
 
 console.log("\nfiles dropped on the app's window");
@@ -357,6 +406,13 @@ console.log("\nthe desktop's zoom steps");
   const { nextZoom } = M;
   ok("up and down the steps", nextZoom(100, "in") === 110 && nextZoom(110, "in") === 125 && nextZoom(100, "out") === 90);
   ok("the ends hold", nextZoom(200, "in") === 200 && nextZoom(80, "out") === 80);
+  const { storedZoom } = M;
+  ok(
+    "a stored zoom out of 80–200 (a settings import), or not a number, is 100 at start; one in range is kept",
+    [5000, 10, NaN, "150", undefined, null].every((v) => storedZoom(v) === 100) &&
+      storedZoom(125) === 125 &&
+      storedZoom(200) === 200
+  );
   ok("a value between steps goes to the next one that way", nextZoom(120, "in") === 125 && nextZoom(120, "out") === 110);
   ok("nonsense starts from 100", nextZoom(NaN, "in") === 110 && nextZoom(-5, "out") === 90);
   const { zoomKeyOf } = M;

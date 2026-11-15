@@ -2164,7 +2164,14 @@ export async function runCases(driver, page, url) {
     );
     check("...that the sanitizer keeps", (await evaluate(`window.__fmSanitize(${JSON.stringify(md)})`)) === md, "changed");
     await press("undo");
-    check("...and one undo takes the paste away", plain((await state()).html) === "<div><br></div>", (await state()).html);
+    const literal = plain((await state()).html);
+    check(
+      "...one undo gives the text back as it was copied (a paste that wasn't meant as Markdown: `__init__`, `*.txt`)",
+      !/<(h1|h2|ol|hr|b)\b/.test(literal) && literal.includes("# Test titolo") && literal.includes("**quattro**"),
+      literal
+    );
+    await press("undo");
+    check("...and a second undo takes the paste away", plain((await state()).html) === "<div><br></div>", (await state()).html);
     await emptyLine();
     await paste(
       "- a\n* b\n> citazione\n```\nlet x = 1;\nx++;\n```\nvedi [qui](https://a.it) e https://b.it, `c`, _d_ ~~e~~ __f__ ==g=="

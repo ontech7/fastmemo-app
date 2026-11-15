@@ -213,6 +213,7 @@ const ja = {
   },
   note: {
     photo_denied: "Fast Memo はカメラを使用できません：システムの設定で許可してください",
+    photo_failed: "カメラを開けませんでした",
     not_found: "メモが見つかりません",
     format: {
       undo: "元に戻す",
@@ -257,6 +258,7 @@ const ja = {
     },
     update_to_open: "このノートを開くには Fast Memo を更新してください",
     duplicated: "ノートを複製しました",
+    duplicate_failed: "ノートを複製できませんでした",
     title_placeholder: "タイトル",
     description_placeholder: "ここに何かを書いてください...",
     characters: "文字",
@@ -1521,6 +1523,8 @@ const ja = {
     tomorrow: "明日の朝",
     monday: "月曜日",
     choose: "日時を選択…",
+    hours_field: "時",
+    minutes_field: "分",
     set: "設定",
     remove: "リマインダーを削除",
     current: "{{when}} に設定済み",
@@ -1532,6 +1536,7 @@ const ja = {
   },
   share: {
     nothing: "Fast Memo に保存できるのはテキスト、リンク、画像です",
+    saved: "共有した内容は新しいノートにあります",
   },
   empty: {
     notes_title: "まだノートがありません",

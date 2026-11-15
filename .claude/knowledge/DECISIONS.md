@@ -2053,9 +2053,11 @@ system.
 - **Tags are words** (`libs/search/tags.ts`): `#`, a letter, up to 40 letters, digits, `_`, `-`, at a line's start or after a
   space; not a colour (3, 6, 8 hex digits), not in code, not in a protected note's content. Nothing is stored. `#` alone lists
   them by use; `#la` narrows and shows the notes that hold one; the word without `#` finds them too. A `#` word that can't
-  be a tag (`#123`, `#fff`) is searched as ordinary text (`canBeTag`); one that can (`#include`) looks at tags only.
-- **Opening a result** hands the word to the note's find bar through a slot in memory (`libs/search/findOnOpen.ts`), never
-  the route (a route can end up in an error report). The keyboard stays down.
+  be a tag (`#123`, `#fff`) is searched as ordinary text (`canBeTag`); one that can (`#include`) looks at tags only. A tag's
+  count is the notes its search finds, so `#casa` counts the notes tagged `#casalinga` too: what a tap on it shows.
+- **Opening a result** hands a word to the note's find bar through a slot in memory (`libs/search/findOnOpen.ts`), never
+  the route (a route can end up in an error report). The keyboard stays down. The word is the first match on the line the
+  card showed, not the first typed word (spec A.1): that word may be only in the title, and then the bar would find nothing.
 - The trail gets `search` once each time the field goes from empty to not empty; never the text.
 
 **Rejected:** an index keyed by note id (it has to be invalidated on every change, and a missed one shows stale results);
@@ -2085,7 +2087,9 @@ by the AI and by the agents' tools, and passes the released sanitizer (DOMPurify
   their ticks. `h2`, `blockquote`, `hr` and `a` are plain HTML the released sanitizer keeps too.
 - **A note link is a fragment address** (`#fm-note-<id>`, `libs/links.ts`), not editable (`contenteditable="false"`), drawn as
   a pill: the sanitizer removes the app's own scheme, so `fastmemoapp://` could never survive a save. A tap opens the note; a
-  web link (`https`, `mailto`, `tel` only, `normalizeLink`) opens through the system, never inside the page.
+  web link (`https`, `mailto`, `tel` only, `normalizeLink`) opens through the system, never inside the page. A link to
+  another app that an older note kept (`obsidian:`, `appLink`) opens through the system too, as 4.0.0 opened it; never a
+  scheme that runs, reaches into the phone or opens this app (`NEVER_OPENED`). The link dialog never makes one.
 - **The page owns its structural changes**: lists, checkboxes, the rule, shortcuts, links, image size/turn and leaving a code
   block are `pageChange`s recorded with a MutationObserver and undone by putting the same nodes back. Mixing `execCommand` with
   page DOM fixes broke WebKit's undo; one undo per change in both engines. Ticking a box is outside undo (it is a state, not an
@@ -2122,7 +2126,8 @@ sanitizer, LL-060).
   bold), `~~s~~`, `==mark==`, `` `code` ``: the closing marker makes the style, one undo gives the markers back. A web address
   (http, https) becomes a link to itself on space or Enter.
 - **Markdown pasted:** when a line starts with a marker, or the text holds a mark or a web address, the page builds the lines
-  itself (`mdBlocks`, `inlineMd`) as one page change; plain text and code blocks keep the library's plain paste.
+  itself (`mdBlocks`, `inlineMd`) as one page change; plain text and code blocks keep the library's plain paste. The first
+  undo after it gives the text back as it was copied (`__init__`, `*.txt` meant literally), the second takes the paste away.
 - **A zero-width space** holds the caret outside inline code made at a line's end and, on WebKit, past a new checkbox; the app
   drops every U+200B from the saved note (`NoteTextEditor.onEditorChange`), the plain-text readers and the search too.
 - **The library's deferred line wrap** (pell's `setTimeout(0)` `formatBlock`) is dropped once the caret's line has become a
@@ -2144,7 +2149,7 @@ change (`merge.ts`), and a note edited down to nothing was deleted for good (LL-
   | `ai`      | an AI action that changes the content (text rewrite/summary, suggested list items)              |
   | `agent`   | an MCP agent's edit (`handlers.ts` `editNote`, after the edit is valid, before the dispatch)    |
   | `sync`    | another device's version replacing this one (`SyncEngine.applyPlan`, `replacedByPlan`)         |
-  | `edit`    | the first commit of a sitting on a note that existed when it was opened                         |
+  | `edit`    | the first commit of a sitting on a note in the store when it was opened: its stored copy         |
   | `replace` | replace all (text and code notes)                                                              |
   | `cleanup` | delete completed items                                                                         |
   | `restore` | a restore (the version being replaced)                                                         |
@@ -2163,8 +2168,10 @@ change (`merge.ts`), and a note edited down to nothing was deleted for good (LL-
   the device. Writes run when idle (`runWhenIdle`), never on the typing path.
 - **When it goes**: with the note when it is deleted for good (`purged`), all of it with "wipe data", and a sweep once per start
   (5 s after) of versions whose note is gone, skipped after a failed notes read or with no note at all (`idsToSweep`:
-  every version would look orphaned). A note in the trash keeps its history.
-- **An emptied note** that existed goes to the trash with its last saved content (and its "edit" version), with a toast; a new
+  every version would look orphaned). A note in the trash keeps its history. A note deleted for good is never kept again
+  while the app runs (a keep waits for idle and can run after the purge); dropping it removes the bodies its index names,
+  never listing the folder per note (a straggler is the sweep's).
+- **An emptied note** that was in the store when its editor opened (`wasSaved`, whatever its times) goes to the trash with its last saved content (and its "edit" version), with a toast; a new
   note left empty is still dropped.
 - **The screens**: History (`app/notes/history.tsx`, from the note's menu), a version in the type's own editor read only with
   `VersionBand` (`preview`: nothing reaches the store, the webhooks or the sync engine). **Restore**
@@ -2177,8 +2184,6 @@ another device's history isn't this one's).
 
 **Trade-offs:**
 
-- A note created and never edited since (seeded, imported) counts as new: its first sitting keeps no "edit" version, and
-  emptied it is dropped as before.
 - History survives a sign-out of the cloud; only "wipe data" clears it.
 
 ## ADR-043: What May Open the App from Outside
@@ -2242,7 +2247,8 @@ already hold the notes.
   the notes that should ring (time ahead, not in the trash) with what this phone has scheduled and returns what to
   schedule and cancel; `libs/reminders/index.ts` only carries it out with `expo-notifications`, one notification per note
   (`fm-reminder-<id>`), one channel "Reminders". It runs after the home has drawn, 2 s after notes change, when the app
-  comes back to the front, and all again on a language change or an exact-alarm change.
+  comes back to the front, and all again on a language change or an exact-alarm change. One the system refuses (Android's
+  cap of 500 alarms an app) leaves the others to be done, and is tried again at the next pass.
 - **Private notes**: a protected or hidden note rings as "Reminder" / "You have a reminder on a protected note": its title
   is never shown or stored in the notification.
 - **Local only**: no push, no token, no Firebase messaging (`grep PushToken` finds nothing).
@@ -2251,7 +2257,10 @@ already hold the notes.
   the system's settings. "Alarms and reminders" (`SCHEDULE_EXACT_ALARM`) asked once after the first reminder, with one
   sentence of why; without it the alert comes late and the sheet says so.
 - **After a sync**: a phone never asked that receives a reminder shows once the home's question "A note has a reminder.
-  Notify on this phone?" (`settings.reminders.syncAsked`, either answer); the system's prompt never appears by itself.
+  Notify on this phone?" (`settings.reminders.syncAsked`, either answer); the system's prompt never appears by itself. A
+  reminder set on this phone (`useReminderAsk`) ends that question too, and the home checks the permission once per start.
+- **The quick choices** are taken as they are when pressed (`choiceNow`): a sheet left open past 19:00 has no "tonight"
+  any more, and the list is drawn again.
 - **The desktop and the web** set, show and remove reminders and don't ring (`index.web.ts`); the sheet says the alert
   arrives on the phones that have the note.
 - **The limits said in the app**: a reminder set elsewhere reaches a phone when its app next syncs (help, the sheet); a
@@ -2327,7 +2336,9 @@ upstream). Ctrl/Cmd with `+`, `-`, `0` and `P` were swallowed, and a report from
   PDF" writes text. A frame is never printed (the Mac prints it blank). The copy is replaced at the next print and removed
   when the note's editor leaves (`setPrintable(null)`), not when the dialog closes: the engines tell that differently.
   The rule that hides the page in print applies only while the copy is there (`body:has(> #fm-print)`), so the browser's
-  own print still prints the page once the note is left.
+  own print still prints the page once the note is left. The page's title is the note's while it prints, so the PDF is
+  named after the note (an untitled one keeps the app's); it comes back after the browser's dialog, or with the copy in
+  Tauri, whose dialog opens on its own.
 - **Where:** the export dialog's PDF button reads "Print or save as PDF" on the web and the desktop (`canPrint`); **Ctrl/Cmd
   + P** prints the text note on screen (`printCurrent`, set by `NoteTextEditor`), elsewhere nothing. The phone keeps
   `expo-print` (already text).
