@@ -196,6 +196,7 @@ export async function chromeDriver() {
 const WD_KEYS = {
   Enter: "",
   Backspace: "",
+  Delete: "\uE017",
   Escape: "",
   ArrowLeft: "",
   ArrowUp: "",
