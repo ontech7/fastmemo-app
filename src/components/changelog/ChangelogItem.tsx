@@ -1,12 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ChevronDownIcon from "react-native-heroicons/outline/ChevronDownIcon";
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import ChangelogBullets from "@/components/changelog/ChangelogBullets";
 
 import { BORDER, COLOR, FONT, FONTSIZE, GLASS, PADDING_MARGIN, SHADOW } from "@/constants/styles";
-import { DURATION, EASING } from "@/constants/motion";
 
 interface Props {
   version: string;
@@ -17,22 +15,12 @@ interface Props {
   isLast?: boolean;
 }
 
-/** One version of the changelog: the current one open in a card, an older one a row on the timeline that opens. */
+/**
+ * One version of the changelog: the current one open in a card, an older one a row on the timeline that opens at once,
+ * with no animation, like the help screen's sections.
+ */
 export default function ChangelogItem({ version, text, current = false, isLast = false }: Props) {
   const [open, setOpen] = useState(false);
-
-  const progress = useSharedValue(0);
-  const bodyHeight = useSharedValue(0);
-
-  useEffect(() => {
-    progress.set(withTiming(open ? 1 : 0, { duration: DURATION.slow, easing: open ? EASING.enter : EASING.exit }));
-  }, [open, progress]);
-
-  const bodyStyle = useAnimatedStyle(() => ({
-    height: interpolate(progress.get(), [0, 1], [0, bodyHeight.get()]),
-    opacity: progress.get(),
-  }));
-  const chevronStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${180 * progress.get()}deg` }] }));
 
   if (current) {
     return (
@@ -58,17 +46,16 @@ export default function ChangelogItem({ version, text, current = false, isLast =
           onPress={() => setOpen((o) => !o)}
         >
           <Text style={styles.version}>{version}</Text>
-          <Animated.View style={chevronStyle}>
+          <View style={open && styles.chevronOpen}>
             <ChevronDownIcon size={16} color={COLOR.textMuted} />
-          </Animated.View>
+          </View>
         </TouchableOpacity>
 
-        {/* Always there, so its height is known before it opens; closed, a screen reader skips it. */}
-        <Animated.View style={[styles.body, bodyStyle]} aria-hidden={!open}>
-          <View style={styles.bodyInner} onLayout={(e) => bodyHeight.set(e.nativeEvent.layout.height)}>
-            <ChangelogBullets text={text} small focusable={open} />
+        {open && (
+          <View style={styles.body}>
+            <ChangelogBullets text={text} small />
           </View>
-        </Animated.View>
+        )}
       </View>
     </View>
   );
@@ -128,10 +115,10 @@ const styles = StyleSheet.create({
     fontSize: FONTSIZE.paragraph,
     color: COLOR.textPrimary,
   },
-  body: {
-    overflow: "hidden",
+  chevronOpen: {
+    transform: [{ rotate: "180deg" }],
   },
-  bodyInner: {
+  body: {
     paddingHorizontal: PADDING_MARGIN.lg,
     paddingBottom: PADDING_MARGIN.md,
   },

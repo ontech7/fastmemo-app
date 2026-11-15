@@ -14,8 +14,6 @@ interface Props {
   text: string;
   /** An older version's list: smaller, with grey dots. */
   small?: boolean;
-  /** False while the list is out of sight (a closed version): its button takes no focus. */
-  focusable?: boolean;
 }
 
 /** Past this many lines the list folds; one hidden line isn't worth a button, so it folds from two. */
@@ -31,7 +29,7 @@ const UNMEASURED = 100000;
  * fading out, and "Show more" opens the rest: the first lines are the ones that matter, the others are there for whoever
  * wants them.
  */
-export default function ChangelogBullets({ text, small = false, focusable = true }: Props) {
+export default function ChangelogBullets({ text, small = false }: Props) {
   const { t } = useTranslation();
 
   const lines = useMemo(() => changelogLines(text), [text]);
@@ -97,7 +95,6 @@ export default function ChangelogBullets({ text, small = false, focusable = true
       <TouchableOpacity
         accessibilityRole="button"
         aria-expanded={open}
-        focusable={focusable}
         activeOpacity={0.7}
         style={styles.more}
         onPress={() => setOpen((o) => !o)}
