@@ -89,8 +89,9 @@ jobs:
           else
             tag="v$mobile"
             name="v$mobile (+ Desktop)"
-            # A re-run of the same release is fine; builds of another desktop version in it are not (see the top).
-            others=$(release "$tag" | versions_in | grep -vxF "$desktop" || true)
+            # A re-run of the same release is fine; builds of another desktop version in it are not (see the top). The
+            # GitHub APK (FastMemo-X.Y.Z.apk, attached by hand) carries the mobile version: it isn't a desktop build.
+            others=$(release "$tag" | grep -v '\.apk$' | versions_in | grep -vxF "$desktop" || true)
             if [ -n "$others" ]; then
               echo "::error::$tag already holds desktop builds of ${others//$'\n'/ }: bump package.json, or run with desktop_only"
               exit 1
@@ -202,6 +203,15 @@ jobs:
 
       - name: install frontend dependencies
         run: yarn install
+
+      # The DMG step's hdiutil can't eject its image while XProtect or Spotlight holds it ("Resource busy": 2.2.0's Intel
+      # build failed twice on it, LL-099; actions/runner-images#7522). Stop both first; never fatal, never endless.
+      - name: free the disk images (macOS)
+        if: startsWith(matrix.platform, 'macos')
+        run: |
+          sudo mdutil -a -i off >/dev/null 2>&1 || true
+          sudo pkill -9 XProtect >/dev/null 2>&1 || true
+          for _ in $(seq 1 20); do pgrep XProtect >/dev/null || break; sleep 3; done
 
       - uses: tauri-apps/tauri-action@v0
         env:

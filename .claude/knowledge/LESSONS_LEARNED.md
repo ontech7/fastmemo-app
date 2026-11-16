@@ -2605,6 +2605,30 @@ hide another's gain.
 
 ---
 
+### LL-099: The 4.1.0 release went out without the Intel Mac build, and its re-dispatch would have been refused
+
+**Date:** 2026-11-16  
+**Severity:** Medium (Intel Macs offered nothing, and the other desktops offered 2.2.0 with the whole release body as
+update notes, until a new run)  
+**Category:** Platform  
+**What happened:** the `publish` run of v4.1.0 failed on `macos-15-intel` twice (run, then "Re-run failed jobs"), each
+time at the DMG: `hdiutil: couldn't eject "disk2" - Resource busy`. The other three builds were uploaded, the release was
+already GitHub's latest, and `reconstruct-latest-json` was skipped, so the latest `latest.json` was tauri-action's: no
+`darwin-x86_64`, notes = the release body. The same workflow had built 2.1.0's Intel DMG eight days before.  
+**Root cause:** on the macOS runners XProtect (or Spotlight) can still hold the image the DMG script mounts when it
+ejects it (actions/runner-images#7522). A re-run reuses the run's workflow file, so no fix could reach it; and the
+guard of a new dispatch reads versions from every asset name, so the GitHub APK attached after the run
+(`FastMemo-4.1.0.apk`) read as "desktop builds of 4.1.0" and would have refused it.  
+**Fix:** `publish.yml` turns Spotlight indexing off and stops XProtect on the macOS runners before tauri-action
+(bounded, never fatal), and the guard skips `.apk` assets. Then a new dispatch from `main` rebuilt the four desktops into
+the same release and wrote `latest.json` again.  
+**Rule:** a desktop build that fails twice the same way is fixed in the workflow, then dispatched again (a re-run can't
+pick up the fix); any asset attached by hand must be invisible to the release guards.
+
+**Tracking issue:** (not filed; captured here) **Status:** Open
+
+---
+
 ## Template for New Entries
 
 Copy this template when adding a new lesson:
