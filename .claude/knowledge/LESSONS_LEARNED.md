@@ -2625,7 +2625,8 @@ the same release and wrote `latest.json` again.
 **Rule:** a desktop build that fails twice the same way is fixed in the workflow, then dispatched again (a re-run can't
 pick up the fix); any asset attached by hand must be invisible to the release guards.
 
-**Tracking issue:** (not filed; captured here) **Status:** Open
+**Tracking issue:** (not filed; captured here) **Status:** Resolved  
+**Resolved:** 2026-11-16 **Resolved in:** 5263348 (run 43831707274: the four desktops, Intel included, and `latest.json`)
 
 ---
 
