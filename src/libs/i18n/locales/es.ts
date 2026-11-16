@@ -23,6 +23,21 @@ const es = {
     previous: "Versiones anteriores",
 
     web: {
+      description_2_2_0: `• Editor renovado: títulos, citas, casillas, bloques de código, resaltador y Markdown, e imágenes pegadas o arrastradas.
+• Enlaces entre notas: escribe [[ para enlazar otra nota y ábrela con un clic.
+• Recordatorios: créalo desde una nota y sonará en tus teléfonos.
+• Búsqueda única: encuentra una palabra en todas las notas y categorías, y abre la nota justo ahí.
+• Historial: vuelve a una versión anterior de una nota.
+• Teclado: flechas para recorrer las notas, Intro para abrirlas, Supr para enviarlas a la papelera.
+• Clic derecho y selección: un menú en las notas, y selección con Ctrl/Cmd + clic y Mayús + clic.
+• Imprimir y PDF: desde el diálogo del sistema, con texto real y no una imagen.
+• Zoom de la ventana: con Ctrl/Cmd + y −, recordado al volver a abrirla.
+• Arrastra para reordenar: tableros, listas y categorías, más fluido.
+• Listas: Intro crea el siguiente elemento, y los completados se ocultan o se eliminan.
+• Notas de código: buscar y reemplazar.
+• Copias: duplica una nota desde su menú.
+• Varias correcciones y mejoras.`,
+
       description_2_1_0: `• El asistente de IA también en el ordenador: corrige, acorta, traduce y resume, todo en tu dispositivo.
 • Conecta agentes de IA como Claude o Cursor a tus notas mediante MCP: desactivado por defecto, y las notas bloqueadas u ocultas quedan fuera de su alcance.
 • Una ventana que se siente como una app: barra de título oscura, sin menús ni atajos del navegador.
@@ -69,6 +84,20 @@ const es = {
     },
 
     mobile: {
+      description_4_1_0: `• Editor renovado: títulos, citas, casillas, bloques de código, resaltador y Markdown.
+• Enlaces entre notas: escribe [[ para enlazar otra nota y ábrela con un toque.
+• Recordatorios: un aviso a la hora que elijas, desde una nota.
+• Búsqueda única: encuentra una palabra en todas las notas y categorías, y abre la nota justo ahí.
+• Widgets: una nota nueva desde la pantalla de inicio, o una nota siempre a la vista.
+• Historial: vuelve a una versión anterior de una nota.
+• Comparte con Fast Memo: texto, enlaces y fotos de otras apps se convierten en una nota.
+• Arrastra para reordenar: tableros, listas y categorías, más fluido.
+• Listas: Intro crea el siguiente elemento, y los completados se ocultan o se eliminan.
+• Notas de código: buscar y reemplazar.
+• Fotos y copias: haz una foto dentro de una nota de texto, o duplica una nota.
+• Atajos en el icono: nueva nota, nueva lista y dictado.
+• Una app más rápida y varias correcciones.`,
+
       description_4_0_0: `• Sincroniza con tu propio FastMemo Server, en lugar de Firebase.
 • Sincronización en tiempo real entre tus dispositivos.
 • Asistente de IA con los nuevos modelos Qwen3.5: corrige, acorta, traduce y resume.

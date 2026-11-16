@@ -1,7 +1,7 @@
 [package]
 name = "fastmemo"
-version = "2.1.0"
-description = "Fast Memo - Notes in one click"
+version = "2.2.0"
+description = "Fast Memo: Private Notes"
 authors = ["ontech7"]
 license = "GNU Affero General Public License v3.0"
 repository = "http://github.com/ontech7/fastmemo-app"

@@ -23,6 +23,21 @@ const en = {
     previous: "Earlier versions",
 
     web: {
+      description_2_2_0: `• Refreshed editor: headings, quotes, checkboxes, code blocks, highlighter and Markdown, and pictures pasted or dropped in.
+• Links between notes: type [[ to link another note, and open it with a click.
+• Reminders: set one from a note, and it rings on your phones.
+• One search: finds a word in every note and category, and opens the note right there.
+• History: go back to an earlier version of a note.
+• Keyboard: arrow keys move through the notes, Enter opens one, Delete trashes it.
+• Right-click and selection: a menu on notes, and selection with Ctrl/Cmd + click and Shift + click.
+• Print and PDF: from the system's dialog, with real text instead of a picture.
+• Window zoom: Ctrl/Cmd + and −, remembered when you reopen it.
+• Drag to reorder: boards, lists and categories, smoother.
+• Lists: Enter adds the next item, and completed items can be hidden or deleted.
+• Code notes: find and replace.
+• Copies: duplicate a note from its menu.
+• Various fixes and improvements.`,
+
       description_2_1_0: `• The AI assistant on the computer too: fix, shorten, translate and summarize, all on your device.
 • Connect AI agents like Claude or Cursor to your notes through MCP: off by default, and locked or hidden notes stay out of reach.
 • A window that feels like an app: a dark title bar, no browser menus or shortcuts.
@@ -69,6 +84,20 @@ const en = {
     },
 
     mobile: {
+      description_4_1_0: `• Refreshed editor: headings, quotes, checkboxes, code blocks, highlighter and Markdown.
+• Links between notes: type [[ to link another note, and open it with a tap.
+• Reminders: a notification at the time you choose, from a note.
+• One search: finds a word in every note and category, and opens the note right there.
+• Widgets: a new note from the Home screen, or a note always in sight.
+• History: go back to an earlier version of a note.
+• Share to Fast Memo: text, links and photos from other apps become a note.
+• Drag to reorder: boards, lists and categories, smoother.
+• Lists: Enter adds the next item, and completed items can be hidden or deleted.
+• Code notes: find and replace.
+• Photos and copies: take a photo right into a text note, or duplicate a note.
+• Icon shortcuts: new note, new list and dictation.
+• A faster app and various fixes.`,
+
       description_4_0_0: `• Sync with your own FastMemo Server, instead of Firebase.
 • Real-time sync across your devices.
 • AI assistant with the new Qwen3.5 models: fix, shorten, translate and summarize.

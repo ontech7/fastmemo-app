@@ -23,6 +23,21 @@ const it = {
     previous: "Versioni precedenti",
 
     web: {
+      description_2_2_0: `• Editor rinnovato: titoli, citazioni, caselle, blocchi di codice, evidenziatore e Markdown, e immagini incollate o trascinate.
+• Link tra note: scrivi [[ per collegare un'altra nota e aprila con un clic.
+• Promemoria: impostalo da una nota e suona sui tuoi telefoni.
+• Ricerca unica: trova una parola in ogni nota e categoria, e apre la nota proprio lì.
+• Cronologia: torna a una versione precedente di una nota.
+• Tastiera: frecce per scorrere le note, Invio per aprirle, Canc per cestinarle.
+• Clic destro e selezione: un menu sulle note, e selezione con Ctrl/Cmd + clic e Maiusc + clic.
+• Stampa e PDF: dal dialogo di sistema, con testo vero e non più un'immagine.
+• Zoom della finestra: con Ctrl/Cmd + e −, ricordato alla riapertura.
+• Trascina per riordinare: schede, liste e categorie, più fluido.
+• Liste: Invio crea la voce successiva, e le voci completate si nascondono o si eliminano.
+• Note di codice: trova e sostituisci.
+• Copie: duplica una nota dal suo menu.
+• Varie correzioni e miglioramenti.`,
+
       description_2_1_0: `• L'assistente AI anche sul computer: correggi, accorcia, traduci e riassumi, tutto sul tuo dispositivo.
 • Collega alle tue note agenti AI come Claude o Cursor tramite MCP: disattivato di default, e le note bloccate o nascoste restano fuori portata.
 • Una finestra da app: barra del titolo scura, niente menu o scorciatoie del browser.
@@ -69,6 +84,20 @@ const it = {
     },
 
     mobile: {
+      description_4_1_0: `• Editor rinnovato: titoli, citazioni, caselle, blocchi di codice, evidenziatore e Markdown.
+• Link tra note: scrivi [[ per collegare un'altra nota e aprila con un tocco.
+• Promemoria: un avviso all'ora che scegli, da una nota.
+• Ricerca unica: trova una parola in ogni nota e categoria, e apre la nota proprio lì.
+• Widget: una nuova nota dalla Home, o una nota sempre in vista.
+• Cronologia: torna a una versione precedente di una nota.
+• Condividi in Fast Memo: testo, link e foto da altre app diventano una nota.
+• Trascina per riordinare: schede, liste e categorie, più fluido.
+• Liste: Invio crea la voce successiva, e le voci completate si nascondono o si eliminano.
+• Note di codice: trova e sostituisci.
+• Foto e copie: scatta una foto dentro una nota di testo, o duplica una nota.
+• Scorciatoie sull'icona: nuova nota, nuova lista e dettatura.
+• App più veloce e varie correzioni.`,
+
       description_4_0_0: `• Sincronizza con il tuo FastMemo Server, in alternativa a Firebase.
 • Sincronizzazione in tempo reale tra i tuoi dispositivi.
 • Assistente AI con i nuovi modelli Qwen3.5: correggi, accorcia, traduci e riassumi.

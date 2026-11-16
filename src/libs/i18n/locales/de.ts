@@ -23,6 +23,21 @@ const de = {
     previous: "Frühere Versionen",
 
     web: {
+      description_2_2_0: `• Neuer Editor: Überschriften, Zitate, Kontrollkästchen, Codeblöcke, Textmarker und Markdown, dazu eingefügte oder hineingezogene Bilder.
+• Links zwischen Notizen: mit [[ eine andere Notiz verlinken und per Klick öffnen.
+• Erinnerungen: in einer Notiz festlegen, sie klingelt auf Ihren Handys.
+• Eine Suche: findet ein Wort in allen Notizen und Kategorien und öffnet die Notiz genau dort.
+• Verlauf: zurück zu einer früheren Version einer Notiz.
+• Tastatur: Pfeiltasten gehen durch die Notizen, Enter öffnet eine, Entf verschiebt sie in den Papierkorb.
+• Rechtsklick und Auswahl: ein Menü auf Notizen und Auswahl mit Strg/Cmd + Klick und Umschalt + Klick.
+• Drucken und PDF: über den Dialog des Systems, mit echtem Text statt eines Bildes.
+• Fensterzoom: mit Strg/Cmd + und −, beim nächsten Öffnen gemerkt.
+• Ziehen zum Sortieren: Boards, Listen und Kategorien, flüssiger.
+• Listen: Enter legt den nächsten Eintrag an, erledigte Einträge lassen sich ausblenden oder löschen.
+• Code-Notizen: Suchen und Ersetzen.
+• Kopien: eine Notiz über ihr Menü duplizieren.
+• Verschiedene Fehlerbehebungen und Verbesserungen.`,
+
       description_2_1_0: `• Der KI-Assistent jetzt auch am Computer: korrigieren, kürzen, übersetzen und zusammenfassen, alles auf Ihrem Gerät.
 • Verbinden Sie KI-Agenten wie Claude oder Cursor über MCP mit Ihren Notizen: standardmäßig aus, gesperrte und versteckte Notizen bleiben unerreichbar.
 • Ein Fenster wie eine App: dunkle Titelleiste, keine Browser-Menüs oder -Tastenkürzel.
@@ -69,6 +84,20 @@ const de = {
     },
 
     mobile: {
+      description_4_1_0: `• Neuer Editor: Überschriften, Zitate, Kontrollkästchen, Codeblöcke, Textmarker und Markdown.
+• Links zwischen Notizen: mit [[ eine andere Notiz verlinken und per Tippen öffnen.
+• Erinnerungen: eine Benachrichtigung zur gewünschten Zeit, direkt aus einer Notiz.
+• Eine Suche: findet ein Wort in allen Notizen und Kategorien und öffnet die Notiz genau dort.
+• Widgets: eine neue Notiz vom Startbildschirm oder eine Notiz immer im Blick.
+• Verlauf: zurück zu einer früheren Version einer Notiz.
+• Mit Fast Memo teilen: Text, Links und Fotos aus anderen Apps werden zu einer Notiz.
+• Ziehen zum Sortieren: Boards, Listen und Kategorien, flüssiger.
+• Listen: Enter legt den nächsten Eintrag an, erledigte Einträge lassen sich ausblenden oder löschen.
+• Code-Notizen: Suchen und Ersetzen.
+• Fotos und Kopien: ein Foto direkt in eine Textnotiz aufnehmen oder eine Notiz duplizieren.
+• Verknüpfungen am Symbol: neue Notiz, neue Liste und Diktat.
+• Eine schnellere App und verschiedene Korrekturen.`,
+
       description_4_0_0: `• Synchronisieren Sie mit Ihrem eigenen FastMemo Server statt mit Firebase.
 • Echtzeit-Synchronisierung zwischen Ihren Geräten.
 • KI-Assistent mit den neuen Qwen3.5-Modellen: korrigieren, kürzen, übersetzen und zusammenfassen.

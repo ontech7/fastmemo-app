@@ -496,7 +496,7 @@ export default ({ config }: ConfigContext): ExpoConfig =>
                   owner: "dontrok1",
                   name: appName,
                   slug: appSlug,
-                  version: "4.0.0",
+                  version: "4.1.0",
                   runtimeVersion: { policy: "fingerprint" },
                   updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
                   orientation: "portrait",
