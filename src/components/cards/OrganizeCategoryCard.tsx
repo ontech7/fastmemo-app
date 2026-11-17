@@ -1,6 +1,8 @@
 import { memo, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View, type ViewInstance } from "react-native";
+import LockClosedIcon from "react-native-heroicons/outline/LockClosedIcon";
+import Squares2X2Icon from "react-native-heroicons/outline/Squares2X2Icon";
 import Animated from "react-native-reanimated";
 import { useSelector } from "react-redux";
 
@@ -23,7 +25,7 @@ export const CATEGORIES_CONTAINER = "categories";
 
 interface Props {
   category: Category;
-  /** "All", the index category: first, and no handle (it doesn't move). */
+  /** "All", the index category: first, and a lock where the handle is (it doesn't move). */
   locked?: boolean;
   /** The category in the air: its place folds away while it stays mounted (its gesture is the one running). */
   folded?: boolean;
@@ -60,7 +62,7 @@ function OrganizeCategoryCard({ category, locked = false, folded = false, slotHe
       {slotHeight ? <ReorderSlot height={slotHeight} style={styles.slot} /> : null}
       <Animated.View ref={cardRef} layout={slide.inner} style={styles.card}>
         <TouchableOpacity
-          style={[styles.button, locked && styles.buttonLocked]}
+          style={styles.button}
           activeOpacity={locked ? 1 : 0.7}
           disabled={locked}
           onPress={openEditPage}
@@ -69,7 +71,13 @@ function OrganizeCategoryCard({ category, locked = false, folded = false, slotHe
           <CategoryCardBody category={category} />
         </TouchableOpacity>
 
-        {locked ? null : <ReorderHandle item={item} containerId={CATEGORIES_CONTAINER} style={styles.handle} />}
+        {locked ? (
+          <View style={styles.handle} aria-hidden focusable={false}>
+            <LockClosedIcon size={20} color={COLOR.textMuted} />
+          </View>
+        ) : (
+          <ReorderHandle item={item} containerId={CATEGORIES_CONTAINER} style={styles.handle} />
+        )}
       </Animated.View>
     </Animated.View>
   );
@@ -86,7 +94,12 @@ function CategoryCardBody({ category }: { category: Category }) {
   return (
     <>
       <View style={styles.categoryWrapper}>
-        <CategoryIcon name={category.icon} color={COLOR.textPrimary} />
+        {/* "All" shows the sidebar's icon, so its row reads as that button. */}
+        {category.index ? (
+          <Squares2X2Icon size={28} color={COLOR.textPrimary} />
+        ) : (
+          <CategoryIcon name={category.icon} color={COLOR.textPrimary} />
+        )}
         <Text style={styles.categoryName}>{t(category.name)}</Text>
       </View>
 
@@ -156,10 +169,7 @@ const styles = StyleSheet.create({
     paddingVertical: PADDING_MARGIN.md,
     paddingLeft: PADDING_MARGIN.md,
   },
-  // "All" has no handle: its count keeps the card's right padding.
-  buttonLocked: {
-    paddingRight: PADDING_MARGIN.md,
-  },
+  // The drag handle, or "All"'s lock in the same place.
   handle: {
     alignItems: "center",
     justifyContent: "center",
