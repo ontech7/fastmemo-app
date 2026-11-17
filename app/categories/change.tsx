@@ -13,7 +13,7 @@ import AppBackground from "@/components/ui/AppBackground";
 import IconChip from "@/components/ui/IconChip";
 import { useRouter } from "@/hooks/useRouter";
 import { storeUnlockedNote } from "@/libs/registry";
-import { getCategories } from "@/slicers/categoriesSlice";
+import { getCategoriesInOrder } from "@/slicers/categoriesSlice";
 import { changeNoteCategory, getNote } from "@/slicers/notesSlice";
 
 import { defaultCategory } from "@/configs/default";
@@ -27,7 +27,7 @@ export default function ChangeCategoryScreen() {
   const currentNote = useSelector(getNote(noteId));
 
   const [selectedCategory, setSelectedCategory] = useState(currentNote?.category || defaultCategory);
-  const categories = useSelector(getCategories);
+  const categories = useSelector(getCategoriesInOrder);
 
   const router = useRouter();
 

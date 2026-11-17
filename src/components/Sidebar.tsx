@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { BORDER, GLASS, PADDING_MARGIN } from "@/constants/styles";
 import { useTourTarget } from "@/hooks/useTourTarget";
 
-import { getCategories } from "@/slicers/categoriesSlice";
+import { getCategoriesInOrder } from "@/slicers/categoriesSlice";
 import GeneralSettingsButton from "./buttons/GeneralSettingsButton";
 import ReorganizeButton from "./buttons/ReorganizeButton";
 import TemporaryTrashButton from "./buttons/TemporaryTrashButton";
@@ -14,7 +14,8 @@ import FavoriteCategoryList from "./lists/FavoriteCategoryList";
 import GlassSurface from "./ui/GlassSurface";
 
 export default function Sidebar() {
-  const categories = useSelector(getCategories);
+  // "All" first whatever the stored order, as on the Organize page.
+  const categories = useSelector(getCategoriesInOrder);
   // The first-note tour's last step shows where categories, the trash and the settings are.
   const tourTarget = useTourTarget("sidebar");
 

@@ -108,6 +108,28 @@ console.log("\nimportant notes first, in the chosen order");
   );
 }
 
+console.log("\nthe categories as a list shows them: All first");
+{
+  const { categoriesInOrder } = M;
+  const c = (icon, order, index = false) => ({ icon, order, index });
+  const icons = (list) =>
+    categoriesInOrder(list)
+      .map((x) => x.icon)
+      .join();
+  ok("in order already", icons([c("none", 0, true), c("user", 1), c("moon", 2)]) === "none,user,moon");
+  ok("by order, whatever the array", icons([c("moon", 2), c("none", 0, true), c("user", 1)]) === "none,user,moon");
+  ok("All with the highest order still leads", icons([c("user", 1), c("moon", 2), c("none", 9, true)]) === "none,user,moon");
+  ok(
+    "a tie with All at 0: All leads, the rest by icon",
+    icons([c("computer", 0), c("alert", 0), c("none", 0, true), c("user", 1)]) === "none,alert,computer,user"
+  );
+  ok("no order counts as 0", icons([c("user", 1), c("bank", undefined), c("none", 0, true)]) === "none,bank,user");
+  const input = [c("moon", 2), c("none", 0, true)];
+  categoriesInOrder(input);
+  ok("the array given is left as it is", input.map((x) => x.icon).join() === "moon,none");
+  ok("no categories", categoriesInOrder([]).length === 0);
+}
+
 console.log("\nthe quick note bar's draft");
 {
   const { loadQuickNoteDraft, saveQuickNoteDraft, QUICK_NOTE_DRAFT_KEY } = M;

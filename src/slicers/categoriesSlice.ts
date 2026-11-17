@@ -10,7 +10,7 @@ import type { CategoriesPushed } from "@/libs/cloud/syncEngine";
 import { defaultCategory } from "@/configs/default";
 import { only_if_cloudConnected } from "@/libs/cloud";
 import { moveById } from "@/libs/reorderDrop";
-import { category_order_sort } from "@/utils/sort";
+import { categoriesInOrder, category_order_sort } from "@/utils/sort";
 
 import { CATEGORY_MAP } from "@/constants/icons";
 
@@ -244,6 +244,9 @@ export const {
 } = categoriesSlice.actions;
 
 export const getCategories = (state: RootState): Category[] => state.categories.items;
+
+/** The categories in the order every list shows them: "All" first, then by `order` (`categoriesInOrder`). */
+export const getCategoriesInOrder = createSelector([getCategories], (categories): Category[] => categoriesInOrder(categories));
 
 export const getCurrentCategory = createSelector([getCategories], (categories): Category | undefined =>
   categories.find((cat) => cat.selected)
