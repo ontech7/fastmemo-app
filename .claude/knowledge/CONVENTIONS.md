@@ -296,6 +296,9 @@ export const getCategories = (state: RootState): Category[] => state.categories.
 export const selectorLanguage = (state: RootState): string => state.settings.language;
 ```
 
+A list that **shows** the categories (the sidebar, Change category) reads `getCategoriesInOrder`: "All" first whatever its
+stored `order`, then by `order` (`categoriesInOrder` in `utils/sort.ts`). `getCategories` is the stored array, for lookups.
+
 For memoized selectors, use `createSelector` from `reselect`:
 
 ```ts
