@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import CheckIcon from "react-native-heroicons/outline/CheckIcon";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -13,8 +14,8 @@ import SafeAreaView from "@/components/SafeAreaView";
 import { COLOR, FONT, FONTSIZE, PADDING_MARGIN, SIZE } from "@/constants/styles";
 
 import AppBackground from "@/components/ui/AppBackground";
+import IconChip from "@/components/ui/IconChip";
 import BackButton from "@/components/buttons/BackButton";
-import SaveButton from "@/components/buttons/SaveButton";
 import UnusedCategoryButton from "@/components/buttons/UnusedCategoryButton";
 import BaseInput from "@/components/inputs/BaseInput";
 import { createCategory, getUnusedCategories, updateCategory } from "@/slicers/categoriesSlice";
@@ -117,7 +118,10 @@ export default function CreateCategoryScreen() {
     router.back();
   };
 
+  const canSave = !!categoryIcon && !!categoryName;
+
   const onPressHandler = () => {
+    if (!canSave) return;
     if (!isUpdateCategory) {
       saveNewCategory();
     } else {
@@ -135,7 +139,20 @@ export default function CreateCategoryScreen() {
 
           <Text style={styles.headerTitle}>{t(headerTitle)}</Text>
 
-          <View style={styles.headerSpacer} />
+          {/* In the header, as on Change category: a button floating over the icon grid covered icons and got missed. */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            disabled={!canSave}
+            onPress={onPressHandler}
+            style={!canSave && styles.saveDisabled}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.save")}
+            aria-disabled={!canSave}
+          >
+            <IconChip>
+              <CheckIcon size={20} color={COLOR.softWhite} />
+            </IconChip>
+          </TouchableOpacity>
         </View>
 
         <ScrollView>
@@ -176,8 +193,6 @@ export default function CreateCategoryScreen() {
             ))}
           </View>
         </ScrollView>
-
-        {categoryIcon && categoryName && <SaveButton onPress={onPressHandler} />}
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -208,8 +223,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     textAlign: "center",
   },
-  headerSpacer: {
-    width: 42,
+  // Until a name and an icon are chosen.
+  saveDisabled: {
+    opacity: 0.4,
   },
   categoryList: {
     flexDirection: "row",
