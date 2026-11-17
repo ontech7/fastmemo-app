@@ -23,6 +23,9 @@ const it = {
     previous: "Versioni precedenti",
 
     web: {
+      description_2_2_1: `• 30 nuove icone per le categorie di tutti i giorni: famiglia, cibo, salute, viaggi, animali, bollette e altre, suggerite mentre scrivi il nome.
+• "Tutte" è sempre la prima nella barra delle categorie, e nella pagina Organizza ha la sua icona e un lucchetto.
+• Creare una categoria: il pulsante di conferma ora è in alto e non copre più le icone.`,
       description_2_2_0: `• Editor rinnovato: titoli, citazioni, caselle, blocchi di codice, evidenziatore e Markdown, e immagini incollate o trascinate.
 • Link tra note: scrivi [[ per collegare un'altra nota e aprila con un clic.
 • Promemoria: impostalo da una nota e suona sui tuoi telefoni.

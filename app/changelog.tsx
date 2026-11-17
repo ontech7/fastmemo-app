@@ -14,6 +14,7 @@ import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 function getVersionChangelogs(t: (key: string) => string) {
   return Platform.OS === "web"
     ? [
+        { version: "v2.2.1", text: t("changelog.web.description_2_2_1") },
         { version: "v2.2.0", text: t("changelog.web.description_2_2_0") },
         { version: "v2.1.0", text: t("changelog.web.description_2_1_0") },
         { version: "v2.0.0", text: t("changelog.web.description_2_0_0") },

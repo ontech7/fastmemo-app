@@ -23,6 +23,9 @@ const es = {
     previous: "Versiones anteriores",
 
     web: {
+      description_2_2_1: `• 30 iconos nuevos para categorías del día a día: familia, comida, salud, viajes, mascotas, facturas y más, sugeridos mientras escribes el nombre.
+• "Todo" siempre aparece primero en la barra de categorías, y en la página Organizar tiene su propio icono y un candado.
+• Crear una categoría: el botón de confirmar ahora está arriba y ya no tapa los iconos.`,
       description_2_2_0: `• Editor renovado: títulos, citas, casillas, bloques de código, resaltador y Markdown, e imágenes pegadas o arrastradas.
 • Enlaces entre notas: escribe [[ para enlazar otra nota y ábrela con un clic.
 • Recordatorios: créalo desde una nota y sonará en tus teléfonos.

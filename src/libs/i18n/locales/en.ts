@@ -23,6 +23,9 @@ const en = {
     previous: "Earlier versions",
 
     web: {
+      description_2_2_1: `• 30 new category icons for everyday topics: family, food, health, travel, pets, bills and more, suggested as you type the name.
+• "All" always comes first in the category bar, and on the Organize page it has its own icon and a lock.
+• Creating a category: the confirm button is now at the top and no longer covers the icons.`,
       description_2_2_0: `• Refreshed editor: headings, quotes, checkboxes, code blocks, highlighter and Markdown, and pictures pasted or dropped in.
 • Links between notes: type [[ to link another note, and open it with a click.
 • Reminders: set one from a note, and it rings on your phones.

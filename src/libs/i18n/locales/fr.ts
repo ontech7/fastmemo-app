@@ -23,6 +23,9 @@ const fr = {
     previous: "Versions précédentes",
 
     web: {
+      description_2_2_1: `• 30 nouvelles icônes de catégories pour le quotidien : famille, repas, santé, voyages, animaux, factures et plus, suggérées pendant que vous tapez le nom.
+• « Tous » est toujours en premier dans la barre des catégories, et sur la page Organiser il a sa propre icône et un cadenas.
+• Créer une catégorie : le bouton de confirmation est désormais en haut et ne cache plus les icônes.`,
       description_2_2_0: `• Éditeur repensé : titres, citations, cases à cocher, blocs de code, surligneur et Markdown, et images collées ou glissées.
 • Liens entre notes : tapez [[ pour lier une autre note, et ouvrez-la d'un clic.
 • Rappels : créez-le depuis une note, il sonne sur vos téléphones.

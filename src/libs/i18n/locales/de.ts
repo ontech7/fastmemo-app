@@ -23,6 +23,9 @@ const de = {
     previous: "Frühere Versionen",
 
     web: {
+      description_2_2_1: `• 30 neue Kategorie-Symbole für den Alltag: Familie, Essen, Gesundheit, Reisen, Haustiere, Rechnungen und mehr, vorgeschlagen, während Sie den Namen tippen.
+• „Alle“ steht in der Kategorieleiste immer an erster Stelle und hat auf der Seite Organisieren ein eigenes Symbol und ein Schloss.
+• Kategorie erstellen: Der Bestätigen-Knopf ist jetzt oben und verdeckt die Symbole nicht mehr.`,
       description_2_2_0: `• Neuer Editor: Überschriften, Zitate, Kontrollkästchen, Codeblöcke, Textmarker und Markdown, dazu eingefügte oder hineingezogene Bilder.
 • Links zwischen Notizen: mit [[ eine andere Notiz verlinken und per Klick öffnen.
 • Erinnerungen: in einer Notiz festlegen, sie klingelt auf Ihren Handys.
