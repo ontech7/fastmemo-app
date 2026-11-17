@@ -18,6 +18,7 @@ import BellSnoozeIcon from "react-native-heroicons/outline/BellSnoozeIcon";
 import BoltIcon from "react-native-heroicons/outline/BoltIcon";
 import BookOpenIcon from "react-native-heroicons/outline/BookOpenIcon";
 import BookmarkIcon from "react-native-heroicons/outline/BookmarkIcon";
+import BriefcaseIcon from "react-native-heroicons/outline/BriefcaseIcon";
 import BugAntIcon from "react-native-heroicons/outline/BugAntIcon";
 import BuildingOffice2Icon from "react-native-heroicons/outline/BuildingOffice2Icon";
 import BuildingStorefrontIcon from "react-native-heroicons/outline/BuildingStorefrontIcon";
@@ -51,24 +52,56 @@ import HeartIcon from "react-native-heroicons/outline/HeartIcon";
 import HomeIcon from "react-native-heroicons/outline/HomeIcon";
 import HomeModernIcon from "react-native-heroicons/outline/HomeModernIcon";
 import KeyIcon from "react-native-heroicons/outline/KeyIcon";
+import LanguageIcon from "react-native-heroicons/outline/LanguageIcon";
 import LightBulbIcon from "react-native-heroicons/outline/LightBulbIcon";
 import ListBulletIcon from "react-native-heroicons/outline/ListBulletIcon";
+import MapIcon from "react-native-heroicons/outline/MapIcon";
 import MoonIcon from "react-native-heroicons/outline/MoonIcon";
 import MusicalNoteIcon from "react-native-heroicons/outline/MusicalNoteIcon";
+import NewspaperIcon from "react-native-heroicons/outline/NewspaperIcon";
+import PaintBrushIcon from "react-native-heroicons/outline/PaintBrushIcon";
 import PencilIcon from "react-native-heroicons/outline/PencilIcon";
 import PhoneIcon from "react-native-heroicons/outline/PhoneIcon";
 import PresentationChartBarIcon from "react-native-heroicons/outline/PresentationChartBarIcon";
+import PuzzlePieceIcon from "react-native-heroicons/outline/PuzzlePieceIcon";
 import QrCodeIcon from "react-native-heroicons/outline/QrCodeIcon";
 import RocketLaunchIcon from "react-native-heroicons/outline/RocketLaunchIcon";
+import ScaleIcon from "react-native-heroicons/outline/ScaleIcon";
 import ShareIcon from "react-native-heroicons/outline/ShareIcon";
+import ShoppingBagIcon from "react-native-heroicons/outline/ShoppingBagIcon";
 import ShoppingCartIcon from "react-native-heroicons/outline/ShoppingCartIcon";
 import SparklesIcon from "react-native-heroicons/outline/SparklesIcon";
 import StarIcon from "react-native-heroicons/outline/StarIcon";
+import SunIcon from "react-native-heroicons/outline/SunIcon";
+import TicketIcon from "react-native-heroicons/outline/TicketIcon";
 import TrophyIcon from "react-native-heroicons/outline/TrophyIcon";
 import TruckIcon from "react-native-heroicons/outline/TruckIcon";
+import TvIcon from "react-native-heroicons/outline/TvIcon";
 import UserIcon from "react-native-heroicons/outline/UserIcon";
+import UsersIcon from "react-native-heroicons/outline/UsersIcon";
 import VariableIcon from "react-native-heroicons/outline/VariableIcon";
 import WrenchIcon from "react-native-heroicons/outline/WrenchIcon";
+
+import {
+  BabyBottleIcon,
+  BallIcon,
+  BeachIcon,
+  BikeIcon,
+  CarIcon,
+  CoffeeIcon,
+  DumbbellIcon,
+  FoodIcon,
+  GamepadIcon,
+  MountainIcon,
+  PawIcon,
+  PillIcon,
+  PlaneIcon,
+  PlantIcon,
+  ReceiptIcon,
+  ShirtIcon,
+  ToothIcon,
+  WineIcon,
+} from "@/components/icons/everydayIcons";
 
 export interface CategoryMapEntry {
   name: string;
@@ -146,4 +179,35 @@ export const CATEGORY_MAP: Record<string, CategoryMapEntry> = {
   wrench: { name: "wrench", Icon: WrenchIcon },
   variable: { name: "variable", Icon: VariableIcon },
   truck: { name: "truck", Icon: TruckIcon },
+  // Everyday topics (2026-11-17): heroicons where they draw one, the others in `everydayIcons` (same style).
+  family: { name: "family", Icon: UsersIcon },
+  work: { name: "work", Icon: BriefcaseIcon },
+  food: { name: "food", Icon: FoodIcon },
+  coffee: { name: "coffee", Icon: CoffeeIcon },
+  bag: { name: "bag", Icon: ShoppingBagIcon },
+  pill: { name: "pill", Icon: PillIcon },
+  fitness: { name: "fitness", Icon: DumbbellIcon },
+  sport: { name: "sport", Icon: BallIcon },
+  bike: { name: "bike", Icon: BikeIcon },
+  car: { name: "car", Icon: CarIcon },
+  plane: { name: "plane", Icon: PlaneIcon },
+  map: { name: "map", Icon: MapIcon },
+  ticket: { name: "ticket", Icon: TicketIcon },
+  pet: { name: "pet", Icon: PawIcon },
+  plant: { name: "plant", Icon: PlantIcon },
+  clothes: { name: "clothes", Icon: ShirtIcon },
+  gamepad: { name: "gamepad", Icon: GamepadIcon },
+  news: { name: "news", Icon: NewspaperIcon },
+  law: { name: "law", Icon: ScaleIcon },
+  art: { name: "art", Icon: PaintBrushIcon },
+  weather: { name: "weather", Icon: SunIcon },
+  beach: { name: "beach", Icon: BeachIcon },
+  mountain: { name: "mountain", Icon: MountainIcon },
+  baby: { name: "baby", Icon: BabyBottleIcon },
+  dentist: { name: "dentist", Icon: ToothIcon },
+  wine: { name: "wine", Icon: WineIcon },
+  bills: { name: "bills", Icon: ReceiptIcon },
+  tv: { name: "tv", Icon: TvIcon },
+  language: { name: "language", Icon: LanguageIcon },
+  hobby: { name: "hobby", Icon: PuzzlePieceIcon },
 };

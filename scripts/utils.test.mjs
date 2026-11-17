@@ -19,6 +19,8 @@ await build({
     contents: `
       export * from "@/utils/imageSize";
       export * from "@/utils/sort";
+      export { suggestIcons } from "@/utils/suggestIcons";
+      export { ICON_KEYWORDS } from "@/constants/icon-keywords";
       export * from "@/libs/quickNoteDraft";
       export * from "@/utils/noteEmpty";
       export * from "@/utils/noteType";
@@ -128,6 +130,23 @@ console.log("\nthe categories as a list shows them: All first");
   categoriesInOrder(input);
   ok("the array given is left as it is", input.map((x) => x.icon).join() === "moon,none");
   ok("no categories", categoriesInOrder([]).length === 0);
+}
+
+console.log("\nicons suggested from a category's name");
+{
+  const { suggestIcons, ICON_KEYWORDS } = M;
+  const all = Object.keys(ICON_KEYWORDS);
+  const first = (name) => suggestIcons(name, all)[0];
+  ok("Palestra: the dumbbell", first("Palestra") === "fitness");
+  ok("Cane: the paw", first("Cane") === "pet");
+  ok("Voli: the plane", first("Voli") === "plane");
+  ok("Bollette: the receipt", first("Bollette") === "bills");
+  ok("Dentista: the tooth", first("Dentista") === "dentist");
+  ok("弁護士補助制度 (CJK, no spaces): the scale", first("弁護士補助制度") === "law");
+  ok("労災文書: the document", first("労災文書") === "document");
+  ok("Carta d'identità doesn't suggest the car", !suggestIcons("Carta d'identità", all).includes("car"));
+  ok("Categoria doesn't suggest the pet", !suggestIcons("Categoria", all).includes("pet"));
+  ok("only icons still free", suggestIcons("Palestra", ["user", "pet"]).length === 0);
 }
 
 console.log("\nthe quick note bar's draft");
